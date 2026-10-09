@@ -51,9 +51,12 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         sutProvider.GetDependency<IInviteLinkEligibilityValidator>().Received(1)
             .Validate(Arg.Is<InviteLinkEligibilityValidationRequest>(r =>
                 r.InviteLink == inviteLink && r.Code == request.Code && r.Organization == organization && r.User == user));
+        await sutProvider.GetDependency<IInviteLinkFreeOrganizationAdminValidator>().Received(1)
+            .ValidateAsync(Arg.Is<InviteLinkFreeOrganizationAdminValidationRequest>(r =>
+                r.Organization == organization && r.User == user && r.ExistingOrganizationUser == existingOrganizationUser));
         await sutProvider.GetDependency<IInviteLinkOrganizationCapabilityValidator>().Received(1)
             .ValidateAsync(Arg.Is<InviteLinkOrganizationCapabilityValidationRequest>(r =>
-                r.Organization == organization && r.User == user && r.ExistingOrganizationUser == existingOrganizationUser));
+                r.Organization == organization && r.ExistingOrganizationUser == existingOrganizationUser));
         await sutProvider.GetDependency<IInviteLinkPolicyValidator>().Received(1)
             .ValidateAsync(Arg.Is<InviteLinkPolicyValidationRequest>(r =>
                 r.Organization == organization && r.User == user && r.ExistingOrganizationUser == existingOrganizationUser));
@@ -70,6 +73,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         sutProvider.GetDependency<IInviteLinkEligibilityValidator>()
             .Validate(Arg.Any<InviteLinkEligibilityValidationRequest>())
             .Returns(ci => Invalid(ci.Arg<InviteLinkEligibilityValidationRequest>(), new EmailNotVerified()));
+        SetFreeOrganizationAdminError(sutProvider);
         SetCapabilityError(sutProvider);
         SetPolicyError(sutProvider);
 
@@ -89,7 +93,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         // Arrange
         var request = SetupHappyPath(organization, inviteLink, user, existingOrganizationUser: null, sutProvider);
         inviteLink.SupportsConfirmation = false;
-        SetCapabilityError(sutProvider);
+        SetFreeOrganizationAdminError(sutProvider);
 
         // Act
         var result = await sutProvider.Sut.ValidateAsync(request);
@@ -125,7 +129,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         existingOrganizationUser.Status = OrganizationUserStatusType.Confirmed;
         existingOrganizationUser.RevocationReason = null;
         var request = SetupHappyPath(organization, inviteLink, user, existingOrganizationUser, sutProvider);
-        SetCapabilityError(sutProvider);
+        SetFreeOrganizationAdminError(sutProvider);
 
         // Act
         var result = await sutProvider.Sut.ValidateAsync(request);
@@ -133,6 +137,24 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         // Assert
         Assert.True(result.IsError);
         Assert.IsType<ConfirmAlreadyOrganizationMember>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_WhenFreeOrganizationAdminFails_ReturnsMappedErrorBeforeCapability(
+        Organization organization, OrganizationInviteLink inviteLink, User user,
+        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
+    {
+        // Arrange
+        var request = SetupHappyPath(organization, inviteLink, user, existingOrganizationUser: null, sutProvider);
+        SetFreeOrganizationAdminError(sutProvider);
+        SetCapabilityError(sutProvider);
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<ConfirmOnlyOneFreeOrganizationAdminAllowed>(result.AsError);
     }
 
     [Theory, BitAutoData]
@@ -170,6 +192,12 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         Assert.IsType<ConfirmTwoFactorRequiredForMembership>(result.AsError);
     }
 
+    private static void SetFreeOrganizationAdminError(SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider) =>
+        sutProvider.GetDependency<IInviteLinkFreeOrganizationAdminValidator>()
+            .ValidateAsync(Arg.Any<InviteLinkFreeOrganizationAdminValidationRequest>())
+            .Returns(ci => Invalid(ci.Arg<InviteLinkFreeOrganizationAdminValidationRequest>(),
+                new OnlyOneFreeOrganizationAdminAllowed()));
+
     private static void SetCapabilityError(SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider) =>
         sutProvider.GetDependency<IInviteLinkOrganizationCapabilityValidator>()
             .ValidateAsync(Arg.Any<InviteLinkOrganizationCapabilityValidationRequest>())
@@ -195,6 +223,9 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         sutProvider.GetDependency<IInviteLinkEligibilityValidator>()
             .Validate(Arg.Any<InviteLinkEligibilityValidationRequest>())
             .Returns(ci => Valid(ci.Arg<InviteLinkEligibilityValidationRequest>()));
+        sutProvider.GetDependency<IInviteLinkFreeOrganizationAdminValidator>()
+            .ValidateAsync(Arg.Any<InviteLinkFreeOrganizationAdminValidationRequest>())
+            .Returns(ci => Valid(ci.Arg<InviteLinkFreeOrganizationAdminValidationRequest>()));
         sutProvider.GetDependency<IInviteLinkOrganizationCapabilityValidator>()
             .ValidateAsync(Arg.Any<InviteLinkOrganizationCapabilityValidationRequest>())
             .Returns(ci => Valid(ci.Arg<InviteLinkOrganizationCapabilityValidationRequest>()));

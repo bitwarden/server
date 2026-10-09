@@ -14,11 +14,6 @@ public record InviteLinkOrganizationCapabilityValidationRequest
     public required Organization Organization { get; init; }
 
     /// <summary>
-    /// The user joining the organization.
-    /// </summary>
-    public required User User { get; init; }
-
-    /// <summary>
     /// The user's existing membership in the organization, or <see langword="null"/> when joining would create a
     /// brand-new membership. A brand-new or Staged membership needs an available seat.
     /// </summary>

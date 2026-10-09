@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -19,6 +20,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
+using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.InviteLinks;
 
@@ -46,7 +48,7 @@ public class ConfirmOrganizationInviteLinkCommandTests
         // Arrange
         sutProvider.GetDependency<IConfirmOrganizationInviteLinkValidator>()
             .ValidateAsync(Arg.Any<ConfirmOrganizationInviteLinkValidationRequest>())
-            .Returns(new InviteLinkNotFound());
+            .Returns(ci => Invalid(ci.Arg<ConfirmOrganizationInviteLinkValidationRequest>(), new InviteLinkNotFound()));
 
         // Act
         var result = await sutProvider.Sut.ConfirmAsync(request);
@@ -64,6 +66,59 @@ public class ConfirmOrganizationInviteLinkCommandTests
             .DidNotReceiveWithAnyArgs()
             .UpdateUserResetPasswordEnrollmentAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Guid?>());
         AssertNoMembershipWritten(sutProvider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmAsync_PassesLookedUpLinkOrganizationAndMembershipToValidator(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser existingOrganizationUser,
+        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
+    {
+        // Arrange
+        SetupHappyPath(organization, inviteLink, user, existingOrganizationUser, sutProvider);
+        var request = BuildRequest(inviteLink, user);
+
+        // Act
+        await sutProvider.Sut.ConfirmAsync(request);
+
+        // Assert
+        await sutProvider.GetDependency<IConfirmOrganizationInviteLinkValidator>()
+            .Received(1)
+            .ValidateAsync(Arg.Is<ConfirmOrganizationInviteLinkValidationRequest>(r =>
+                r.InviteLink == inviteLink &&
+                r.Code == request.Code &&
+                r.Organization == organization &&
+                r.User == user &&
+                r.ExistingOrganizationUser == existingOrganizationUser));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmAsync_WithEmailInvitation_PassesItAsExistingMembership(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser invitedOrganizationUser,
+        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
+    {
+        // Arrange
+        SetupHappyPath(organization, inviteLink, user, existingOrganizationUser: null, sutProvider);
+        invitedOrganizationUser.Status = OrganizationUserStatusType.Invited;
+        invitedOrganizationUser.UserId = null;
+        invitedOrganizationUser.Email = user.Email;
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationEmailAsync(organization.Id, user.Email)
+            .Returns(invitedOrganizationUser);
+
+        // Act
+        await sutProvider.Sut.ConfirmAsync(BuildRequest(inviteLink, user));
+
+        // Assert
+        await sutProvider.GetDependency<IConfirmOrganizationInviteLinkValidator>()
+            .Received(1)
+            .ValidateAsync(Arg.Is<ConfirmOrganizationInviteLinkValidationRequest>(r =>
+                r.ExistingOrganizationUser == invitedOrganizationUser));
     }
 
     [Theory]
@@ -429,7 +484,8 @@ public class ConfirmOrganizationInviteLinkCommandTests
         SetupValidatedConfirmation(organization, inviteLink, user, existingOrganizationUser, sutProvider);
     }
 
-    // Stubs a successful validation that resolves to the given membership, leaving the membership untouched.
+    // Stubs the lookups to resolve the given link, organization, and membership, and a successful validation,
+    // leaving the membership untouched.
     private static void SetupValidatedConfirmation(
         Organization organization,
         OrganizationInviteLink inviteLink,
@@ -440,14 +496,19 @@ public class ConfirmOrganizationInviteLinkCommandTests
         inviteLink.OrganizationId = organization.Id;
         inviteLink.Code = Guid.NewGuid().ToString();
 
+        sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
+            .GetByOrganizationIdAsync(organization.Id)
+            .Returns(inviteLink);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organization.Id, user.Id)
+            .Returns(existingOrganizationUser);
+
         sutProvider.GetDependency<IConfirmOrganizationInviteLinkValidator>()
             .ValidateAsync(Arg.Any<ConfirmOrganizationInviteLinkValidationRequest>())
-            .Returns(new ConfirmOrganizationInviteLinkValidationResult
-            {
-                InviteLink = inviteLink,
-                Organization = organization,
-                ExistingOrganizationUser = existingOrganizationUser,
-            });
+            .Returns(ci => Valid(ci.Arg<ConfirmOrganizationInviteLinkValidationRequest>()));
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)

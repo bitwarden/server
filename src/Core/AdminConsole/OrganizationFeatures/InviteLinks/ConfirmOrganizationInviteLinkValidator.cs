@@ -18,6 +18,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 /// </remarks>
 public class ConfirmOrganizationInviteLinkValidator(
     IInviteLinkEligibilityValidator inviteLinkEligibilityValidator,
+    IInviteLinkFreeOrganizationAdminValidator inviteLinkFreeOrganizationAdminValidator,
     IInviteLinkOrganizationCapabilityValidator inviteLinkOrganizationCapabilityValidator,
     IInviteLinkPolicyValidator inviteLinkPolicyValidator)
     : IConfirmOrganizationInviteLinkValidator
@@ -55,11 +56,23 @@ public class ConfirmOrganizationInviteLinkValidator(
             return Invalid(request, membershipStatusError);
         }
 
+        var freeOrganizationAdminResult = await inviteLinkFreeOrganizationAdminValidator.ValidateAsync(
+            new InviteLinkFreeOrganizationAdminValidationRequest
+            {
+                Organization = validOrganization,
+                User = user,
+                ExistingOrganizationUser = existingOrganizationUser,
+            });
+        if (freeOrganizationAdminResult.IsError)
+        {
+            return Invalid(request,
+                ConfirmOrganizationInviteLinkErrorMapper.ToValidationError(freeOrganizationAdminResult.AsError));
+        }
+
         var capabilityResult = await inviteLinkOrganizationCapabilityValidator.ValidateAsync(
             new InviteLinkOrganizationCapabilityValidationRequest
             {
                 Organization = validOrganization,
-                User = user,
                 ExistingOrganizationUser = existingOrganizationUser,
             });
         if (capabilityResult.IsError)

@@ -15,8 +15,9 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 ///     verified.</item>
 ///     <item>The link supports confirmation.</item>
 ///     <item>Any existing membership is neither revoked nor already confirmed.</item>
-///     <item><see cref="IInviteLinkOrganizationCapabilityValidator"/>: the one-admin-per-Free-organization limit, and
-///     seat availability for a brand-new member.</item>
+///     <item><see cref="IInviteLinkFreeOrganizationAdminValidator"/>: the one-admin-per-Free-organization limit.</item>
+///     <item><see cref="IInviteLinkOrganizationCapabilityValidator"/>: seat availability for a brand-new or Staged
+///     member.</item>
 ///     <item><see cref="IInviteLinkPolicyValidator"/>: the Single Organization, Require Two-Factor Authentication, and
 ///     Automatic User Confirmation policies.</item>
 /// </list>
