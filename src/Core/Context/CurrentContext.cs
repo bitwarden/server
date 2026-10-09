@@ -55,7 +55,7 @@ public class CurrentContext(
         HttpContext = httpContext;
         await BuildAsync(httpContext.User, globalSettings);
 
-        if (DeviceIdentifier == null && httpContext.Request.Headers.TryGetValue("Device-Identifier", out var deviceIdentifier))
+        if (DeviceIdentifier == null && httpContext.Request.Headers.TryGetValue(RequestHeaderNames.DeviceIdentifier, out var deviceIdentifier))
         {
             DeviceIdentifier = deviceIdentifier;
         }
