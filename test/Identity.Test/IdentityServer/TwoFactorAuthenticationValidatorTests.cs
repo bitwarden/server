@@ -1,8 +1,10 @@
-﻿using Bit.Core.AdminConsole.AbilitiesCache;
+﻿using System.Globalization;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -11,6 +13,7 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
+using Bit.Core.Utilities;
 using Bit.Identity.IdentityServer.RequestValidators;
 using Bit.Identity.Test.Wrappers;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -35,7 +38,10 @@ public class TwoFactorAuthenticationValidatorTests
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _ssoEmail2faSessionTokenable;
     private readonly ITwoFactorIsEnabledQuery _twoFactorEnabledQuery;
     private readonly ICurrentContext _currentContext;
+    private readonly ITwoFactorEmailService _twoFactorEmailService;
     private readonly TwoFactorAuthenticationValidator _sut;
+
+    private const string DeviceIdentifier = "device-identifier";
 
     public TwoFactorAuthenticationValidatorTests()
     {
@@ -48,6 +54,7 @@ public class TwoFactorAuthenticationValidatorTests
         _ssoEmail2faSessionTokenable = Substitute.For<IDataProtectorTokenFactory<SsoEmail2faSessionTokenable>>();
         _twoFactorEnabledQuery = Substitute.For<ITwoFactorIsEnabledQuery>();
         _currentContext = Substitute.For<ICurrentContext>();
+        _twoFactorEmailService = Substitute.For<ITwoFactorEmailService>();
 
         _sut = new TwoFactorAuthenticationValidator(
                     _userService,
@@ -58,7 +65,8 @@ public class TwoFactorAuthenticationValidatorTests
                     _organizationRepository,
                     _ssoEmail2faSessionTokenable,
                     _twoFactorEnabledQuery,
-                    _currentContext);
+                    _currentContext,
+                    _twoFactorEmailService);
     }
 
     [Theory]
@@ -364,6 +372,31 @@ public class TwoFactorAuthenticationValidatorTests
         Assert.True(providers.ContainsKey(providerTypeInt.ToString()));
     }
 
+    /// <summary>
+    /// Building the challenge issues no email code, because the email code is issued and emailed separately when
+    /// the client asks for it. Providers whose challenge needs a token still generate one.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async void BuildTwoFactorResultAsync_EmailAndWebAuthn_GeneratesTokenOnlyForWebAuthn(User user)
+    {
+        // Arrange
+        user.TwoFactorProviders = GetTwoFactorEmailAndWebAuthnProvidersJson();
+        _userManager.TWO_FACTOR_ENABLED = true;
+        _userManager.SUPPORTS_TWO_FACTOR = true;
+        _userManager.TWO_FACTOR_TOKEN = "{\"Key1\":\"WebauthnToken\"}";
+        _userService.CanAccessPremium(user).Returns(true);
+
+        // Act
+        var result = await _sut.BuildTwoFactorResultAsync(user, null);
+
+        // Assert
+        var providers = (Dictionary<string, Dictionary<string, object>>)result["TwoFactorProviders2"];
+        Assert.True(providers.ContainsKey(((int)TwoFactorProviderType.Email).ToString(CultureInfo.InvariantCulture)));
+        Assert.Equal(
+            [CoreHelpers.CustomProviderName(TwoFactorProviderType.WebAuthn)],
+            _userManager.GENERATED_TWO_FACTOR_TOKEN_PROVIDERS);
+    }
+
     [Theory]
     [BitAutoData]
     public async void VerifyTwoFactorAsync_Individual_TypeNull_ReturnsFalse(
@@ -375,7 +408,7 @@ public class TwoFactorAuthenticationValidatorTests
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
-            user, null, TwoFactorProviderType.U2f, token);
+            user, null, TwoFactorProviderType.U2f, token, DeviceIdentifier);
 
         // Assert
         Assert.False(result);
@@ -393,10 +426,11 @@ public class TwoFactorAuthenticationValidatorTests
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
-            user, null, TwoFactorProviderType.Email, token);
+            user, null, TwoFactorProviderType.Email, token, DeviceIdentifier);
 
         // Assert
         Assert.False(result);
+        await _twoFactorEmailService.DidNotReceiveWithAnyArgs().VerifyTwoFactorLoginTokenAsync(default, default, default);
     }
 
     [Theory]
@@ -410,7 +444,7 @@ public class TwoFactorAuthenticationValidatorTests
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
-            user, null, TwoFactorProviderType.OrganizationDuo, token);
+            user, null, TwoFactorProviderType.OrganizationDuo, token, DeviceIdentifier);
 
         // Assert
         Assert.False(result);
@@ -419,7 +453,6 @@ public class TwoFactorAuthenticationValidatorTests
     [Theory]
     [BitAutoData(TwoFactorProviderType.Duo)]
     [BitAutoData(TwoFactorProviderType.WebAuthn)]
-    [BitAutoData(TwoFactorProviderType.Email)]
     [BitAutoData(TwoFactorProviderType.YubiKey)]
     [BitAutoData(TwoFactorProviderType.Remember)]
     public async void VerifyTwoFactorAsync_Individual_ValidToken_ReturnsTrue(
@@ -433,7 +466,7 @@ public class TwoFactorAuthenticationValidatorTests
         user.TwoFactorProviders = GetTwoFactorIndividualProviderJson(providerType);
 
         // Act
-        var result = await _sut.VerifyTwoFactorAsync(user, null, providerType, token);
+        var result = await _sut.VerifyTwoFactorAsync(user, null, providerType, token, DeviceIdentifier);
 
         // Assert
         Assert.True(result);
@@ -442,7 +475,6 @@ public class TwoFactorAuthenticationValidatorTests
     [Theory]
     [BitAutoData(TwoFactorProviderType.Duo)]
     [BitAutoData(TwoFactorProviderType.WebAuthn)]
-    [BitAutoData(TwoFactorProviderType.Email)]
     [BitAutoData(TwoFactorProviderType.YubiKey)]
     [BitAutoData(TwoFactorProviderType.Remember)]
     public async void VerifyTwoFactorAsync_Individual_InvalidToken_ReturnsFalse(
@@ -456,10 +488,36 @@ public class TwoFactorAuthenticationValidatorTests
         user.TwoFactorProviders = GetTwoFactorIndividualProviderJson(providerType);
 
         // Act
-        var result = await _sut.VerifyTwoFactorAsync(user, null, providerType, token);
+        var result = await _sut.VerifyTwoFactorAsync(user, null, providerType, token, DeviceIdentifier);
 
         // Assert
         Assert.False(result);
+    }
+
+    /// <summary>
+    /// An email code is verified by the email service against the requesting device, not by UserManager; the
+    /// service's answer is returned even when UserManager would accept the code.
+    /// </summary>
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async void VerifyTwoFactorAsync_Email_ReturnsEmailServiceResultForRequestingDevice(
+        bool emailServiceResult,
+        User user,
+        string token)
+    {
+        // Arrange
+        _userManager.TWO_FACTOR_ENABLED = true;
+        _userManager.TWO_FACTOR_TOKEN_VERIFIED = true;
+        user.TwoFactorProviders = GetTwoFactorIndividualProviderJson(TwoFactorProviderType.Email);
+        _twoFactorEmailService.VerifyTwoFactorLoginTokenAsync(user, DeviceIdentifier, token).Returns(emailServiceResult);
+
+        // Act
+        var result = await _sut.VerifyTwoFactorAsync(
+            user, null, TwoFactorProviderType.Email, token, DeviceIdentifier);
+
+        // Assert
+        Assert.Equal(emailServiceResult, result);
     }
 
     [Theory]
@@ -483,7 +541,7 @@ public class TwoFactorAuthenticationValidatorTests
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
-            user, organization, providerType, token);
+            user, organization, providerType, token, DeviceIdentifier);
 
         // Assert
         Assert.True(result);
@@ -503,7 +561,7 @@ public class TwoFactorAuthenticationValidatorTests
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
-            user, organization, providerType, token);
+            user, organization, providerType, token, DeviceIdentifier);
 
         // Assert
         Assert.True(result);
@@ -524,7 +582,7 @@ public class TwoFactorAuthenticationValidatorTests
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
-            user, organization, providerType, token);
+            user, organization, providerType, token, DeviceIdentifier);
 
         // Assert
         Assert.False(result);
@@ -567,6 +625,13 @@ public class TwoFactorAuthenticationValidatorTests
             TwoFactorProviderType.OrganizationDuo => "{\"6\":{\"Enabled\":true,\"MetaData\":{\"ClientSecret\":\"secretClientSecret\",\"ClientId\":\"clientId\",\"Host\":\"example.com\"}}}",
             _ => "{}",
         };
+    }
+
+    private static string GetTwoFactorEmailAndWebAuthnProvidersJson()
+    {
+        var email = GetTwoFactorIndividualProviderJson(TwoFactorProviderType.Email);
+        var webAuthn = GetTwoFactorIndividualProviderJson(TwoFactorProviderType.WebAuthn);
+        return email[..^1] + "," + webAuthn[1..];
     }
 
     private static string GetTwoFactorIndividualNotEnabledProviderJson(TwoFactorProviderType providerType)

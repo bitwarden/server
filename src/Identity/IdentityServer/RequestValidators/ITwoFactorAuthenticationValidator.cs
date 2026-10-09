@@ -33,6 +33,10 @@ public interface ITwoFactorAuthenticationValidator
     /// <param name="organization">organization of user; can be null</param>
     /// <param name="twoFactorProviderType">Two Factor Provider to use to verify the token</param>
     /// <param name="token">secret passed from the user and consumed by the two-factor provider's verify method</param>
+    /// <param name="deviceIdentifier">
+    /// identifier of the device making the request; an email code only verifies for the device it was issued to
+    /// </param>
     /// <returns>boolean</returns>
-    Task<bool> VerifyTwoFactorAsync(User user, Organization organization, TwoFactorProviderType twoFactorProviderType, string token);
+    Task<bool> VerifyTwoFactorAsync(User user, Organization organization, TwoFactorProviderType twoFactorProviderType,
+        string token, string deviceIdentifier);
 }

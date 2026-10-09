@@ -4,53 +4,52 @@
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Core.Auth.Enums;
-using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Auth.Services;
 
 public class TwoFactorEmailService : ITwoFactorEmailService
 {
+    private const string TokenProviderName = "TwoFactorEmail";
+    private const string LoginPurpose = "LoginCode";
+    private const string SetupPurpose = "SetupCode";
+
     private readonly ICurrentContext _currentContext;
-    private readonly UserManager<User> _userManager;
     private readonly IMailService _mailService;
     private readonly INewDeviceVerificationOtpStore _newDeviceVerificationOtpStore;
+    private readonly IOtpTokenProvider<DefaultOtpTokenProviderOptions> _otpTokenProvider;
 
     public TwoFactorEmailService(
         ICurrentContext currentContext,
         IMailService mailService,
-        UserManager<User> userManager,
-        INewDeviceVerificationOtpStore newDeviceVerificationOtpStore
+        INewDeviceVerificationOtpStore newDeviceVerificationOtpStore,
+        IOtpTokenProvider<DefaultOtpTokenProviderOptions> otpTokenProvider
     )
     {
         _currentContext = currentContext;
-        _userManager = userManager;
         _mailService = mailService;
         _newDeviceVerificationOtpStore = newDeviceVerificationOtpStore;
+        _otpTokenProvider = otpTokenProvider;
     }
 
-    /// <summary>
-    /// Sends a two-factor email to the user with an OTP token for login
-    /// </summary>
-    /// <param name="user">The user to whom the email should be sent</param>
-    /// <exception cref="ArgumentNullException">Thrown if the user does not have an email for email 2FA</exception>
-    public async Task SendTwoFactorEmailAsync(User user)
+    /// <inheritdoc />
+    public async Task SendTwoFactorLoginEmailAsync(User user, string deviceIdentifier)
     {
-        await VerifyAndSendTwoFactorEmailAsync(user, TwoFactorEmailPurpose.Login);
+        ArgumentException.ThrowIfNullOrWhiteSpace(deviceIdentifier);
+
+        await VerifyAndSendTwoFactorEmailAsync(user, LoginPurpose, deviceIdentifier, TwoFactorEmailPurpose.Login);
     }
 
-    /// <summary>
-    /// Sends a two-factor email to the user with an OTP for setting up 2FA
-    /// </summary>
-    /// <param name="user">The user to whom the email should be sent</param>
-    /// <exception cref="ArgumentNullException">Thrown if the user does not have an email for email 2FA</exception>
-    public async Task SendTwoFactorSetupEmailAsync(User user)
+    /// <inheritdoc />
+    public async Task SendTwoFactorSetupEmailAsync(User user, string deviceIdentifier)
     {
-        await VerifyAndSendTwoFactorEmailAsync(user, TwoFactorEmailPurpose.Setup);
+        ArgumentException.ThrowIfNullOrWhiteSpace(deviceIdentifier);
+
+        await VerifyAndSendTwoFactorEmailAsync(user, SetupPurpose, deviceIdentifier, TwoFactorEmailPurpose.Setup);
     }
 
     /// <inheritdoc />
@@ -87,36 +86,64 @@ public class TwoFactorEmailService : ITwoFactorEmailService
         return await _newDeviceVerificationOtpStore.ValidateAndConsumeAsync(user, deviceIdentifier, otp);
     }
 
-    /// <summary>
-    /// Verifies the two-factor token for the specified user
-    /// </summary>
-    /// <param name="user">The user for whom the token should be verified</param>
-    /// <param name="token">The token to verify</param>
-    /// <exception cref="ArgumentNullException">Thrown if the user does not have an email for email 2FA</exception>
-    public async Task<bool> VerifyTwoFactorTokenAsync(User user, string token)
+    /// <inheritdoc />
+    public async Task<bool> VerifyTwoFactorLoginTokenAsync(User user, string deviceIdentifier, string token)
     {
-        var email = GetUserTwoFactorEmail(user);
-        return await _userManager.VerifyTwoFactorTokenAsync(user,
-            CoreHelpers.CustomProviderName(TwoFactorProviderType.Email), token);
+        ArgumentNullException.ThrowIfNull(user);
+
+        if (string.IsNullOrWhiteSpace(deviceIdentifier) || string.IsNullOrEmpty(token))
+        {
+            return false;
+        }
+
+        return await _otpTokenProvider.ValidateTokenAsync(
+            token, TokenProviderName, LoginPurpose, UniqueIdentifier(user), deviceIdentifier);
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> VerifyTwoFactorSetupTokenAsync(User user, string deviceIdentifier, string token)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        if (string.IsNullOrWhiteSpace(deviceIdentifier) || string.IsNullOrEmpty(token))
+        {
+            return false;
+        }
+
+        return await _otpTokenProvider.ValidateTokenAsync(
+            token, TokenProviderName, SetupPurpose, UniqueIdentifier(user), deviceIdentifier);
     }
 
     /// <summary>
-    /// Sends a two-factor email with the specified purpose to the user only if they have 2FA email set up
+    /// Issues a code bound to the given device and emails it to the user's two-factor email address, only if
+    /// they have one.
     /// </summary>
     /// <param name="user">The user to whom the email should be sent</param>
-    /// <param name="purpose">The purpose of the email</param>
+    /// <param name="otpPurpose">Which code to issue; login and setup codes are stored apart</param>
+    /// <param name="deviceIdentifier">The device the code is bound to</param>
+    /// <param name="emailPurpose">The purpose of the email</param>
     /// <exception cref="ArgumentNullException">Thrown if the user does not have an email set up for 2FA</exception>
-    private async Task VerifyAndSendTwoFactorEmailAsync(User user, TwoFactorEmailPurpose purpose)
+    private async Task VerifyAndSendTwoFactorEmailAsync(
+        User user, string otpPurpose, string deviceIdentifier, TwoFactorEmailPurpose emailPurpose)
     {
         var email = GetUserTwoFactorEmail(user);
-        var token = await _userManager.GenerateTwoFactorTokenAsync(user,
-            CoreHelpers.CustomProviderName(TwoFactorProviderType.Email));
+        var token = await _otpTokenProvider.GenerateTokenAsync(
+            TokenProviderName, otpPurpose, UniqueIdentifier(user), deviceIdentifier);
 
         var deviceType = _currentContext.DeviceType?.GetType().GetMember(_currentContext.DeviceType?.ToString())
             .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName() ?? "Unknown Browser";
 
         await _mailService.SendTwoFactorEmailAsync(
-            email, user.Email, token, _currentContext.IpAddress, deviceType, purpose);
+            email, user.Email, token, _currentContext.IpAddress, deviceType, emailPurpose);
+    }
+
+    /// <summary>
+    /// Keyed by user and security stamp, so a security-stamp-changing event (e.g. a password change) invalidates
+    /// any pending code.
+    /// </summary>
+    private static string UniqueIdentifier(User user)
+    {
+        return $"{user.Id}_{user.SecurityStamp}";
     }
 
     /// <summary>
@@ -128,7 +155,8 @@ public class TwoFactorEmailService : ITwoFactorEmailService
     private string GetUserTwoFactorEmail(User user)
     {
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
-        if (provider == null || provider.MetaData == null || !provider.MetaData.TryGetValue("Email", out var emailValue))
+        if (provider == null || provider.MetaData == null || !provider.MetaData.TryGetValue("Email", out var emailValue)
+            || string.IsNullOrWhiteSpace((string)emailValue))
         {
             throw new ArgumentNullException("No email.");
         }
