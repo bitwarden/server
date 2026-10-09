@@ -86,6 +86,40 @@ public class ServerContextBuilderTests
     }
 
     [Fact]
+    public void Build_AccessConnectorClientType_ReturnsAccessConnectorContext()
+    {
+        var accessConnectorId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        var orgId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        var currentContext = Substitute.For<ICurrentContext>();
+        currentContext.IdentityClientType.Returns(IdentityClientType.AccessConnector);
+        currentContext.PamAccessConnectorId.Returns(accessConnectorId);
+        currentContext.PamAccessConnectorOrganizationId.Returns(orgId);
+
+        var builder = new ServerContextBuilder(BuildAccessor(currentContext));
+
+        var context = builder.Build();
+
+        Assert.True(context.TryGetContextByKind(ContextKind.Of("access-connector"), out var accessConnector));
+        Assert.Equal(accessConnectorId.ToString(), accessConnector.Key);
+        Assert.Equal(LdValue.ArrayOf(LdValue.Of(orgId.ToString())),
+            accessConnector.GetValue("organizations"));
+    }
+
+    [Fact]
+    public void Build_AccessConnectorWithoutId_OmitsAccessConnectorContext()
+    {
+        var currentContext = Substitute.For<ICurrentContext>();
+        currentContext.IdentityClientType.Returns(IdentityClientType.AccessConnector);
+        currentContext.PamAccessConnectorId.Returns((Guid?)null);
+
+        var builder = new ServerContextBuilder(BuildAccessor(currentContext));
+
+        var context = builder.Build();
+
+        Assert.False(context.TryGetContextByKind(ContextKind.Of("access-connector"), out _));
+    }
+
+    [Fact]
     public void Build_SendClient_ReturnsValidAnonymousDefaultContext()
     {
         // A send-access token carries no user/org identity (and CurrentContext is short-circuited for it),
