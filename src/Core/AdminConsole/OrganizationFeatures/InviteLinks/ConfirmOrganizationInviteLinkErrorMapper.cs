@@ -27,6 +27,8 @@ public static class ConfirmOrganizationInviteLinkErrorMapper
         InviteLinkNotAvailable => new ConfirmInviteLinkNotAvailable(),
         EmailDomainNotAllowed e => new ConfirmEmailDomainNotAllowed(e.OrgName),
         EmailNotVerified => new ConfirmEmailNotVerified(),
+        OrganizationAccessRevoked e => new ConfirmOrganizationAccessRevoked(e.OrgName),
+        AlreadyOrganizationMember e => new ConfirmAlreadyOrganizationMember(e.OrgName),
         OnlyOneFreeOrganizationAdminAllowed => new ConfirmOnlyOneFreeOrganizationAdminAllowed(),
         OrganizationHasNoAvailableSeats e => new ConfirmOrganizationHasNoAvailableSeats(e.OrgName),
         UserIsAMemberOfAnotherOrganization => new ConfirmUserIsAMemberOfAnotherOrganization(),

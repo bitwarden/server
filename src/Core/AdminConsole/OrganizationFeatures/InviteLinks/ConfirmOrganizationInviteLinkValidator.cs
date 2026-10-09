@@ -1,8 +1,5 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
-using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
-using Bit.Core.Entities;
-using Bit.Core.Enums;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
@@ -18,6 +15,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 /// </remarks>
 public class ConfirmOrganizationInviteLinkValidator(
     IInviteLinkEligibilityValidator inviteLinkEligibilityValidator,
+    IConfirmInviteLinkMembershipStatusValidator confirmInviteLinkMembershipStatusValidator,
     IInviteLinkFreeOrganizationAdminValidator inviteLinkFreeOrganizationAdminValidator,
     IInviteLinkOrganizationCapabilityValidator inviteLinkOrganizationCapabilityValidator,
     IInviteLinkPolicyValidator inviteLinkPolicyValidator)
@@ -50,10 +48,15 @@ public class ConfirmOrganizationInviteLinkValidator(
             return Invalid(request, new ConfirmInviteLinkConfirmationNotSupported());
         }
 
-        var membershipStatusError = ValidateExistingMembershipStatus(existingOrganizationUser, validOrganization.DisplayName());
-        if (membershipStatusError is not null)
+        var membershipStatusResult = confirmInviteLinkMembershipStatusValidator.Validate(
+            new InviteLinkMembershipStatusValidationRequest
+            {
+                Organization = validOrganization,
+                ExistingOrganizationUser = existingOrganizationUser,
+            });
+        if (membershipStatusResult.IsError)
         {
-            return Invalid(request, membershipStatusError);
+            return Invalid(request, ConfirmOrganizationInviteLinkErrorMapper.ToValidationError(membershipStatusResult.AsError));
         }
 
         var freeOrganizationAdminResult = await inviteLinkFreeOrganizationAdminValidator.ValidateAsync(
@@ -93,12 +96,4 @@ public class ConfirmOrganizationInviteLinkValidator(
 
         return Valid(request);
     }
-
-    private static Error? ValidateExistingMembershipStatus(OrganizationUser? existingOrganizationUser, string orgName) =>
-        existingOrganizationUser switch
-        {
-            { RevocationReason: not null } => new ConfirmOrganizationAccessRevoked(orgName),
-            { Status: OrganizationUserStatusType.Confirmed } => new ConfirmAlreadyOrganizationMember(orgName),
-            _ => null
-        };
 }

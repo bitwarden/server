@@ -16,6 +16,8 @@ public class ConfirmOrganizationInviteLinkErrorMapperTests
         { new InviteLinkNotAvailable(), typeof(ConfirmInviteLinkNotAvailable) },
         { new EmailDomainNotAllowed("Org"), typeof(ConfirmEmailDomainNotAllowed) },
         { new EmailNotVerified(), typeof(ConfirmEmailNotVerified) },
+        { new OrganizationAccessRevoked("Org"), typeof(ConfirmOrganizationAccessRevoked) },
+        { new AlreadyOrganizationMember("Org"), typeof(ConfirmAlreadyOrganizationMember) },
         { new OnlyOneFreeOrganizationAdminAllowed(), typeof(ConfirmOnlyOneFreeOrganizationAdminAllowed) },
         { new OrganizationHasNoAvailableSeats("Org"), typeof(ConfirmOrganizationHasNoAvailableSeats) },
         { new UserIsAMemberOfAnotherOrganization(), typeof(ConfirmUserIsAMemberOfAnotherOrganization) },

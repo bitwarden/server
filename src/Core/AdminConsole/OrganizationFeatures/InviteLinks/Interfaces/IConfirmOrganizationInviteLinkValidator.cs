@@ -14,7 +14,8 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 ///     organization is enabled and supports invite links, the user's email domain is allowed, and the email is
 ///     verified.</item>
 ///     <item>The link supports confirmation.</item>
-///     <item>Any existing membership is neither revoked nor already confirmed.</item>
+///     <item><see cref="IConfirmInviteLinkMembershipStatusValidator"/>: any existing membership is neither revoked nor
+///     already confirmed.</item>
 ///     <item><see cref="IInviteLinkFreeOrganizationAdminValidator"/>: the one-admin-per-Free-organization limit.</item>
 ///     <item><see cref="IInviteLinkOrganizationCapabilityValidator"/>: seat availability for a brand-new or Staged
 ///     member.</item>
