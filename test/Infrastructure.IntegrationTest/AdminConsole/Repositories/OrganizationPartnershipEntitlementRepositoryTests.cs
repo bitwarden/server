@@ -536,6 +536,20 @@ public class OrganizationPartnershipEntitlementRepositoryTests
     }
 
     [Theory, DatabaseData]
+    public async Task ReplaceIfUnchangedAsync_RevisionDateNotAdvanced_Throws(
+        IOrganizationPartnershipEntitlementRepository repository,
+        IOrganizationPartnershipRepository partnershipRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        var partnership = await CreatePartnershipAsync(partnershipRepository, organizationRepository);
+        await repository.CreateAsync(NewEntitlement(partnership, "customer-1"));
+        var read = (await repository.GetByExternalIdAsync(partnership.Id, "customer-1"))!;
+        read.State = PartnershipEntitlementState.Suspended;
+
+        await Assert.ThrowsAsync<ArgumentException>(() => repository.ReplaceIfUnchangedAsync(read, read.RevisionDate));
+    }
+
+    [Theory, DatabaseData]
     public async Task ReplaceIfUnchangedAsync_ChangedSinceRead_LeavesRowUntouched(
         IOrganizationPartnershipEntitlementRepository repository,
         IOrganizationPartnershipRepository partnershipRepository,
