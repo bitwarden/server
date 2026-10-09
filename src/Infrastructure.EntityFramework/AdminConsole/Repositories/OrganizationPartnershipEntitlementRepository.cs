@@ -68,6 +68,33 @@ public class OrganizationPartnershipEntitlementRepository
         return entitlements;
     }
 
+    public async Task<bool> ReplaceIfUnchangedAsync(
+        AdminConsoleEntities.OrganizationPartnershipEntitlement entitlement, DateTime expectedRevisionDate)
+    {
+        var rowsAffected = 0;
+        await ProtectDataAndSaveAsync(entitlement, async () =>
+        {
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetDatabaseContext(scope);
+            rowsAffected = await dbContext.OrganizationPartnershipEntitlements
+                .Where(e => e.Id == entitlement.Id && e.RevisionDate == expectedRevisionDate)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(e => e.ExternalId, entitlement.ExternalId)
+                    .SetProperty(e => e.ExternalIdHash, entitlement.ExternalIdHash)
+                    .SetProperty(e => e.State, entitlement.State)
+                    .SetProperty(e => e.UserId, entitlement.UserId)
+                    .SetProperty(e => e.AccountRef, entitlement.AccountRef)
+                    .SetProperty(e => e.Metadata, entitlement.Metadata)
+                    .SetProperty(e => e.BoundDate, entitlement.BoundDate)
+                    .SetProperty(e => e.SuspendedDate, entitlement.SuspendedDate)
+                    .SetProperty(e => e.CanceledDate, entitlement.CanceledDate)
+                    .SetProperty(e => e.ResumeWindowExpirationDate, entitlement.ResumeWindowExpirationDate)
+                    .SetProperty(e => e.LastAppliedEffectiveDate, entitlement.LastAppliedEffectiveDate)
+                    .SetProperty(e => e.RevisionDate, entitlement.RevisionDate));
+        });
+        return rowsAffected > 0;
+    }
+
     public async Task<bool> ReleaseExpiredResumeWindowBindingAsync(Guid id, DateTime asOf, DateTime revisionDate)
     {
         using var scope = ServiceScopeFactory.CreateScope();

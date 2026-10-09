@@ -511,6 +511,57 @@ public class OrganizationPartnershipEntitlementRepositoryTests
     }
 
     [Theory, DatabaseData]
+    public async Task ReplaceIfUnchangedAsync_Unchanged_WritesRow(
+        IOrganizationPartnershipEntitlementRepository repository,
+        IOrganizationPartnershipRepository partnershipRepository,
+        IOrganizationRepository organizationRepository,
+        IUserRepository userRepository)
+    {
+        var partnership = await CreatePartnershipAsync(partnershipRepository, organizationRepository);
+        var user = await userRepository.CreateTestUserAsync();
+        await repository.CreateAsync(NewEntitlement(partnership, "customer-1"));
+        var read = (await repository.GetByExternalIdAsync(partnership.Id, "customer-1"))!;
+        var expected = read.RevisionDate;
+        read.State = PartnershipEntitlementState.Active;
+        read.UserId = user.Id;
+        read.RevisionDate = expected.AddMinutes(1);
+
+        var written = await repository.ReplaceIfUnchangedAsync(read, expected);
+
+        Assert.True(written);
+        var stored = await repository.GetByIdAsync(read.Id);
+        Assert.Equal(PartnershipEntitlementState.Active, stored!.State);
+        Assert.Equal(user.Id, stored.UserId);
+        Assert.Equal("customer-1", stored.ExternalId);
+    }
+
+    [Theory, DatabaseData]
+    public async Task ReplaceIfUnchangedAsync_ChangedSinceRead_LeavesRowUntouched(
+        IOrganizationPartnershipEntitlementRepository repository,
+        IOrganizationPartnershipRepository partnershipRepository,
+        IOrganizationRepository organizationRepository,
+        IUserRepository userRepository)
+    {
+        var partnership = await CreatePartnershipAsync(partnershipRepository, organizationRepository);
+        var firstUser = await userRepository.CreateTestUserAsync();
+        var secondUser = await userRepository.CreateTestUserAsync();
+        await repository.CreateAsync(NewEntitlement(partnership, "customer-1"));
+        var first = (await repository.GetByExternalIdAsync(partnership.Id, "customer-1"))!;
+        var second = (await repository.GetByExternalIdAsync(partnership.Id, "customer-1"))!;
+        var expected = first.RevisionDate;
+        first.UserId = firstUser.Id;
+        first.RevisionDate = expected.AddMinutes(1);
+        await repository.ReplaceIfUnchangedAsync(first, expected);
+        second.UserId = secondUser.Id;
+        second.RevisionDate = expected.AddMinutes(2);
+
+        var written = await repository.ReplaceIfUnchangedAsync(second, expected);
+
+        Assert.False(written);
+        Assert.Equal(firstUser.Id, (await repository.GetByIdAsync(first.Id))!.UserId);
+    }
+
+    [Theory, DatabaseData]
     public async Task ReleaseExpiredResumeWindowBindingAsync_Qualifying_ReleasesBinding(
         IOrganizationPartnershipEntitlementRepository repository,
         IOrganizationPartnershipRepository partnershipRepository,
