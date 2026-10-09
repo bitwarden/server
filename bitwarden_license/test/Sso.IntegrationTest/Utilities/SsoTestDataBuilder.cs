@@ -47,6 +47,7 @@ public class SsoTestDataBuilder
     private Action<OrganizationUser>? _stagedOrgUserConfig;
     private Action<SsoConfig>? _ssoConfigConfig;
     private Action<SsoUser>? _ssoUserConfig;
+    private readonly Dictionary<string, string?> _configuration = new();
 
     private bool _includeUser = false;
     private bool _includeSsoUser = false;
@@ -110,6 +111,18 @@ public class SsoTestDataBuilder
     {
         _includeSsoUser = true;
         _ssoUserConfig = configure;
+        return this;
+    }
+
+    /// <summary>
+    /// Overrides a host configuration entry. The override is applied before the host starts, so it
+    /// also reaches values read while services are registered, which <see cref="AsSelfHosted"/>
+    /// does not.
+    /// </summary>
+    /// <param name="key">The fully qualified setting name, using <c>:</c> between sections.</param>
+    public SsoTestDataBuilder WithConfiguration(string key, string? value)
+    {
+        _configuration[key] = value;
         return this;
     }
 
@@ -266,6 +279,12 @@ public class SsoTestDataBuilder
         {
             globalSettings.SelfHosted.Returns(_isSelfHosted);
         });
+
+        // 1.a.i Apply host configuration overrides requested by the test
+        foreach (var (key, value) in _configuration)
+        {
+            factory.UpdateConfiguration(key, value);
+        }
 
         // 1.b Replace SamlEnvironment with a version that has a test SP signing certificate, if the test requests it
         if (_samlSigningCertificate != null)
