@@ -6,7 +6,7 @@ using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Repositories;
-using Bit.IntegrationTestCommon.Fido2;
+using Bit.Test.Common.Fakes;
 using Fido2NetLib;
 using Xunit;
 

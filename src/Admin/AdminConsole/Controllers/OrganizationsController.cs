@@ -657,6 +657,7 @@ public class OrganizationsController : Controller
         return RedirectToAction("Edit", new { id });
     }
 
+    [HttpPost]
     public async Task<IActionResult> TriggerBillingSync(Guid id)
     {
         var organization = await _organizationRepository.GetByIdAsync(id);

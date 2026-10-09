@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using Bit.Core.Entities;
-using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;

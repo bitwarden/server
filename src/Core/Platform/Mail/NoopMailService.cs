@@ -39,7 +39,8 @@ public class NoopMailService : IMailService
         ProductTierType productTier,
         IEnumerable<ProductType> products,
         int trailLength,
-        bool paymentOptional = false)
+        bool paymentOptional = false,
+        int? pamSeatMinimum = null)
     {
         return Task.FromResult(0);
     }
