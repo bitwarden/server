@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -10,7 +11,8 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Organizat
 
 /// <inheritdoc />
 public class OrganizationUserValidationService(
-    IOrganizationUserRepository organizationUserRepository) : IOrganizationUserValidationService
+    IOrganizationUserRepository organizationUserRepository,
+    ICurrentContext currentContext) : IOrganizationUserValidationService
 {
     public Error? CanManage(IOrganizationUserRole? actingUser, IOrganizationUserRole targetUser) =>
         IsAuthorizedByRole(actingUser, targetUser.Type) ? null : CannotManageError(targetUser.Type);
@@ -28,6 +30,13 @@ public class OrganizationUserValidationService(
 
     public Error? CanManageRoleChange(IActingUser performedBy, IOrganizationUserRole targetUser, IOrganizationUserRole newTargetUser)
     {
+        if (currentContext.IsScopedOrganizationApiKey)
+        {
+            return targetUser.Type == OrganizationUserType.User && newTargetUser.Type == OrganizationUserType.User
+                ? null
+                : new ScopedApiKeyCanOnlyManageUsers();
+        }
+
         // SystemUsers exist outside the organization hierarchy.
         if (performedBy is not StandardUser standardUser)
         {

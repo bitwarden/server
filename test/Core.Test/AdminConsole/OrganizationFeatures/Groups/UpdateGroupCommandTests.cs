@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -210,6 +211,40 @@ public class UpdateGroupCommandTests
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.UpdateGroupAsync(group, organization, null, userAccess));
+    }
+
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
+    public async Task UpdateGroup_WithUsers_ValidatesScopedApiKeyMemberChanges(
+        Group group, Group oldGroup, Organization organization, EventSystemUser eventSystemUser, List<Guid> userAccess)
+    {
+        var sutProvider = SetupSutProvider();
+        ArrangeGroup(sutProvider, group, oldGroup);
+        ArrangeUsers(sutProvider, group);
+
+        await sutProvider.Sut.UpdateGroupAsync(group, organization, eventSystemUser, null, userAccess);
+
+        await sutProvider.GetDependency<IScopedApiKeyGroupMemberValidator>().Received(1)
+            .ValidateAsync(group.OrganizationId, group.Id, Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(userAccess)));
+    }
+
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
+    public async Task UpdateGroup_WithUsersRejectedForScopedApiKey_Throws(
+        Group group, Group oldGroup, Organization organization, EventSystemUser eventSystemUser, List<Guid> userAccess)
+    {
+        var sutProvider = SetupSutProvider();
+        ArrangeGroup(sutProvider, group, oldGroup);
+        ArrangeUsers(sutProvider, group);
+        sutProvider.GetDependency<IScopedApiKeyGroupMemberValidator>()
+            .ValidateAsync(Arg.Any<Guid>(), Arg.Any<Guid?>(), Arg.Any<IEnumerable<Guid>>())
+            .Returns(new ScopedApiKeyCanOnlyManageUsers());
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateGroupAsync(group, organization, eventSystemUser, null, userAccess));
+
+        Assert.Equal(new ScopedApiKeyCanOnlyManageUsers().Message, exception.Message);
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs()
+            .UpdateUsersAsync(default, default!, default);
     }
 
     private static SutProvider<UpdateGroupCommand> SetupSutProvider()

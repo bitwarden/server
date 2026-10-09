@@ -235,6 +235,37 @@ public class CurrentContextTests
         Assert.Equal(organizationId, sutProvider.Sut.OrganizationId);
     }
 
+    [Theory]
+    [BitAutoData("organization.a9a4ad6f-5c1e-4f4a-9a0b-3f2d6c1e8b70.0b7f3c2e-9d41-4e6a-8f15-2c7a9e4d1b36", "api.organization.members.write", true)]
+    [BitAutoData("organization.a9a4ad6f-5c1e-4f4a-9a0b-3f2d6c1e8b70", "api.organization", false)]
+    [BitAutoData("organization.a9a4ad6f-5c1e-4f4a-9a0b-3f2d6c1e8b70", "api.scim", false)]
+    [BitAutoData("organization.a9a4ad6f-5c1e-4f4a-9a0b-3f2d6c1e8b70", null, false)]
+    [BitAutoData("organization.a9a4ad6f-5c1e-4f4a-9a0b-3f2d6c1e8b70.12345", "api.organization.members.write", false)]
+    [BitAutoData("organization.12345.0b7f3c2e-9d41-4e6a-8f15-2c7a9e4d1b36", "api.organization.members.write", false)]
+    [BitAutoData("organization.a9a4ad6f-5c1e-4f4a-9a0b-3f2d6c1e8b70.0b7f3c2e-9d41-4e6a-8f15-2c7a9e4d1b36.extra", "api.organization.members.write", false)]
+    [BitAutoData("web", "api", false)]
+    public async Task SetContextAsync_SetsIsScopedOrganizationApiKey(
+        string clientId,
+        string? scope,
+        bool expected,
+        SutProvider<CurrentContext> sutProvider,
+        Guid organizationId)
+    {
+        var claims = new List<Claim>
+        {
+            new("client_id", clientId),
+            new("client_sub", organizationId.ToString())
+        };
+        if (scope != null)
+        {
+            claims.Add(new Claim("scope", scope));
+        }
+
+        await sutProvider.Sut.SetContextAsync(new ClaimsPrincipal(new ClaimsIdentity(claims)));
+
+        Assert.Equal(expected, sutProvider.Sut.IsScopedOrganizationApiKey);
+    }
+
     [Theory, BitAutoData]
     public async Task SetContextAsync_ServiceAccount_SetsServiceAccountOrganizationId(
         SutProvider<CurrentContext> sutProvider,

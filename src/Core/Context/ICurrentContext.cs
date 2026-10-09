@@ -34,6 +34,10 @@ public interface ICurrentContext
     string ClientId { get; set; }
     Version? ClientVersion { get; set; }
     bool ClientVersionIsPrerelease { get; set; }
+    /// <summary>
+    /// True when the client id has the scoped organization API key shape, organization.{organizationId}.{keyId}.
+    /// </summary>
+    bool IsScopedOrganizationApiKey { get; }
 
     Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings);
     Task BuildAsync(ClaimsPrincipal user, GlobalSettings globalSettings);

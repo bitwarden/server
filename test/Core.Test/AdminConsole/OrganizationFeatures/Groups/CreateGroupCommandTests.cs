@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -177,6 +178,36 @@ public class CreateGroupCommandTests
 
         await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default, default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
+    }
+
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
+    public async Task CreateGroup_WithUsers_ValidatesScopedApiKeyMemberChanges(
+        Organization organization, Group group, EventSystemUser eventSystemUser, List<Guid> users)
+    {
+        var sutProvider = SetupSutProvider();
+
+        await sutProvider.Sut.CreateGroupAsync(group, organization, eventSystemUser, null, users);
+
+        await sutProvider.GetDependency<IScopedApiKeyGroupMemberValidator>().Received(1)
+            .ValidateAsync(group.OrganizationId, null, users);
+    }
+
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
+    public async Task CreateGroup_WithUsersRejectedForScopedApiKey_Throws(
+        Organization organization, Group group, EventSystemUser eventSystemUser, List<Guid> users)
+    {
+        var sutProvider = SetupSutProvider();
+        sutProvider.GetDependency<IScopedApiKeyGroupMemberValidator>()
+            .ValidateAsync(Arg.Any<Guid>(), Arg.Any<Guid?>(), Arg.Any<IEnumerable<Guid>>())
+            .Returns(new ScopedApiKeyCanOnlyManageUsers());
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.CreateGroupAsync(group, organization, eventSystemUser, null, users));
+
+        Assert.Equal(new ScopedApiKeyCanOnlyManageUsers().Message, exception.Message);
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs()
+            .UpdateUsersAsync(default, default, default);
     }
 
     private static void SetAccessToNonManage(IEnumerable<CollectionAccessSelection> collections)

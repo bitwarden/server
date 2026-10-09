@@ -11,3 +11,5 @@ public record CustomUsersCanOnlyGrantOwnPermissions() : BadRequestError("Custom 
 public record CannotBeAdminOfMultipleFreeOrganizations() : BadRequestError("User can only be an admin of 1 free organization vault.");
 
 public record ActingUserMustBeMemberOrProvider() : BadRequestError("StandardUser must be organization member or managing provider member.");
+
+public record ScopedApiKeyCanOnlyManageUsers() : BadRequestError("Scoped organization API keys can only manage members with the User role.");

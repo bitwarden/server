@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Services;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -25,6 +26,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
     private readonly IEventService _eventService;
     private readonly IOrganizationService _organizationService;
     private readonly ICreateStagedOrganizationUsersCommand _createStagedOrganizationUsersCommand;
+    private readonly ICurrentContext _currentContext;
 
     private readonly EventSystemUser _EventSystemUser = EventSystemUser.PublicApi;
 
@@ -34,7 +36,8 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
             IGroupRepository groupRepository,
             IEventService eventService,
             IOrganizationService organizationService,
-            ICreateStagedOrganizationUsersCommand createStagedOrganizationUsersCommand)
+            ICreateStagedOrganizationUsersCommand createStagedOrganizationUsersCommand,
+            ICurrentContext currentContext)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -43,6 +46,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
         _eventService = eventService;
         _organizationService = organizationService;
         _createStagedOrganizationUsersCommand = createStagedOrganizationUsersCommand;
+        _currentContext = currentContext;
     }
 
     /// <summary>
@@ -114,10 +118,13 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
 
         var existingUsersDict = importUserData.ExistingExternalUsers.ToDictionary(u => u.ExternalId);
         // Determine which ids in removeUserExternalIds to delete based on:
-        // They are not in ImportedExternalIds, they are in existingUsersDict, and they are not an owner.
+        // They are not in ImportedExternalIds, they are in existingUsersDict, they are not an owner, and a scoped API key
+        // only removes Users.
         var removeUsersSet = new HashSet<string>(removeUserExternalIds)
             .Except(importUserData.ImportedExternalIds)
-            .Where(u => existingUsersDict.ContainsKey(u) && existingUsersDict[u].Type != OrganizationUserType.Owner)
+            .Where(u => existingUsersDict.TryGetValue(u, out var existingUser) &&
+                        existingUser.Type != OrganizationUserType.Owner &&
+                        !IsProtectedFromScopedApiKey(existingUser.Type))
             .Select(u => existingUsersDict[u]);
 
         await _organizationUserRepository.DeleteManyAsync(removeUsersSet.Select(u => u.Id));
@@ -147,7 +154,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
 
         // Map existing and imported users to dicts keyed by Email
         var existingUsersEmailsDict = importUserData.ExistingUsers
-            .Where(u => string.IsNullOrWhiteSpace(u.ExternalId))
+            .Where(u => string.IsNullOrWhiteSpace(u.ExternalId) && !IsProtectedFromScopedApiKey(u.Type))
             .ToDictionary(u => u.Email);
         var importedUsersEmailsDict = importedUsers.ToDictionary(u => u.Email);
 
@@ -280,6 +287,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
         var usersToDelete = importUserData.ExistingExternalUsers
             .Where(u =>
                 u.Type != OrganizationUserType.Owner &&
+                !IsProtectedFromScopedApiKey(u.Type) &&
                 !importUserData.ImportedExternalIds.Contains(u.ExternalId) &&
                 importUserData.ExistingExternalUsersIdDict.ContainsKey(u.ExternalId))
             .ToList();
@@ -326,9 +334,13 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
 
         var existingGroups = await _groupRepository.GetManyByOrganizationIdAsync(organization.Id);
         var importGroupData = new OrganizationGroupImportData(importedGroups, existingGroups);
+        var protectedUserIds = importUserData.ExistingUsers
+            .Where(u => IsProtectedFromScopedApiKey(u.Type))
+            .Select(u => u.Id)
+            .ToHashSet();
 
-        await SaveNewGroups(importGroupData, importUserData);
-        await UpdateExistingGroups(importGroupData, importUserData, organization);
+        await SaveNewGroups(importGroupData, importUserData, protectedUserIds);
+        await UpdateExistingGroups(importGroupData, importUserData, organization, protectedUserIds);
     }
 
     /// <summary>
@@ -337,7 +349,9 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
     /// </summary>
     /// <param name="importGroupData">Data containing both imported and existing groups.</param>
     /// <param name="importUserData">Data containing information about existing and imported users.</param>
-    private async Task SaveNewGroups(OrganizationGroupImportData importGroupData, OrganizationUserImportData importUserData)
+    /// <param name="protectedUserIds">Ids of members whose group memberships this import must not change.</param>
+    private async Task SaveNewGroups(OrganizationGroupImportData importGroupData, OrganizationUserImportData importUserData,
+        HashSet<Guid> protectedUserIds)
     {
         var existingExternalGroupsDict = importGroupData.ExistingExternalGroups.ToDictionary(g => g.ExternalId!);
         var newGroups = importGroupData.Groups
@@ -352,7 +366,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
 
             savedGroups.Add(await _groupRepository.CreateAsync(group));
             await UpdateUsersAsync(group, importGroupData.GroupsDict[group.ExternalId!].ExternalUserIds,
-                importUserData.ExistingExternalUsersIdDict);
+                importUserData.ExistingExternalUsersIdDict, protectedUserIds);
         }
 
         await _eventService.LogGroupEventsAsync(
@@ -367,9 +381,11 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
     /// <param name="importGroupData">Data containing imported groups and their user associations.</param>
     /// <param name="importUserData">Data containing imported and existing organization users.</param>
     /// <param name="organization">The organization to which the groups belong.</param>
+    /// <param name="protectedUserIds">Ids of members whose group memberships this import must not change.</param>
     private async Task UpdateExistingGroups(OrganizationGroupImportData importGroupData,
             OrganizationUserImportData importUserData,
-            Organization organization)
+            Organization organization,
+            HashSet<Guid> protectedUserIds)
     {
         var updateGroups = importGroupData.ExistingExternalGroups
             .Where(g => importGroupData.GroupsDict.ContainsKey(g.ExternalId!))
@@ -398,6 +414,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
                 // compare and update user group associations
                 await UpdateUsersAsync(group, importGroupData.GroupsDict[group.ExternalId!].ExternalUserIds,
                     importUserData.ExistingExternalUsersIdDict,
+                    protectedUserIds,
                     existingGroupUsers.ContainsKey(group.Id) ? existingGroupUsers[group.Id] : null);
 
             }
@@ -412,16 +429,24 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
     /// Updates the user associations for a given group.
     /// Only updates if the set of associated users differs from the current group membership.
     /// Filters users based on those present in the existing user Id dictionary.
+    /// Protected users keep their current membership of the group.
     /// </summary>
     /// <param name="group">The group whose user associations are being updated.</param>
     /// <param name="groupUsers">A set of ExternalUserIds to be associated with the group.</param>
     /// <param name="existingUsersIdDict">A dictionary mapping ExternalUserIds to internal user Ids.</param>
+    /// <param name="protectedUserIds">Ids of members whose group membership must not change.</param>
     /// <param name="existingUsers">Optional set of currently associated user Ids for comparison.</param>
     private async Task UpdateUsersAsync(Group group, HashSet<string> groupUsers,
-        Dictionary<string, Guid> existingUsersIdDict, HashSet<Guid>? existingUsers = null)
+        Dictionary<string, Guid> existingUsersIdDict, HashSet<Guid> protectedUserIds,
+        HashSet<Guid>? existingUsers = null)
     {
         var availableUsers = groupUsers.Intersect(existingUsersIdDict.Keys);
         var users = new HashSet<Guid>(availableUsers.Select(u => existingUsersIdDict[u]));
+        users.ExceptWith(protectedUserIds);
+        if (existingUsers is not null)
+        {
+            users.UnionWith(existingUsers.Intersect(protectedUserIds));
+        }
         if (existingUsers is not null && existingUsers.Count == users.Count && users.SetEquals(existingUsers))
         {
             return;
@@ -429,6 +454,9 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
 
         await _groupRepository.UpdateUsersAsync(group.Id, users, group.RevisionDate);
     }
+
+    private bool IsProtectedFromScopedApiKey(OrganizationUserType type) =>
+        _currentContext.IsScopedOrganizationApiKey && type != OrganizationUserType.User;
 
     private async Task<Organization?> GetOrgById(Guid id)
     {
