@@ -464,6 +464,45 @@ public class TwoFactorAuthenticationValidatorTests
         await _validateTwoFactorRememberTokenQuery.Received(1).ValidateAsync(user, DeviceIdentifier, token);
     }
 
+    [Theory, BitAutoData]
+    public async void VerifyTwoFactorAsync_Remember_OrgEnforcesTwoFactor_NoPersonalTwoFactor_DelegatesToRememberTokenQuery(
+        User user, Organization organization, string tokenBody)
+    {
+        // Arrange
+        organization.Use2fa = true;
+        organization.TwoFactorProviders = GetTwoFactorOrganizationDuoProviderJson();
+        var token = TwoFactorRememberTokenable.ClearTextPrefix + tokenBody;
+        _twoFactorEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(false);
+        _validateTwoFactorRememberTokenQuery.ValidateAsync(user, DeviceIdentifier, token).Returns(true);
+
+        // Act
+        var result = await _sut.VerifyTwoFactorAsync(
+            user, organization, TwoFactorProviderType.Remember, token, DeviceIdentifier);
+
+        // Assert
+        Assert.True(result.Succeeded);
+    }
+
+    [Theory, BitAutoData]
+    public async void VerifyTwoFactorAsync_Remember_OrgDoesNotEnforceTwoFactor_NoPersonalTwoFactor_ReturnsFalse(
+        User user, Organization organization, string tokenBody)
+    {
+        // Arrange
+        organization.Use2fa = false;
+        organization.TwoFactorProviders = GetTwoFactorOrganizationDuoProviderJson();
+        var token = TwoFactorRememberTokenable.ClearTextPrefix + tokenBody;
+        _twoFactorEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(false);
+        _validateTwoFactorRememberTokenQuery.ValidateAsync(user, DeviceIdentifier, token).Returns(true);
+
+        // Act
+        var result = await _sut.VerifyTwoFactorAsync(
+            user, organization, TwoFactorProviderType.Remember, token, DeviceIdentifier);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        await _validateTwoFactorRememberTokenQuery.DidNotReceiveWithAnyArgs().ValidateAsync(default!, default!, default!);
+    }
+
     // ---------------------------------------------------------------------------------------
     // Tokens issued before the current format existed. This whole region goes away with the
     // legacy branch once no such token can still be within its lifetime.
@@ -522,6 +561,25 @@ public class TwoFactorAuthenticationValidatorTests
 
         // Assert
         Assert.False(result.Succeeded);
+    }
+
+    [Theory, BitAutoData]
+    public async void VerifyTwoFactorAsync_LegacyRemember_OrgEnforcesTwoFactor_NoPersonalTwoFactor_ReturnsTrue(
+        User user, Organization organization)
+    {
+        // Arrange
+        organization.Use2fa = true;
+        organization.TwoFactorProviders = GetTwoFactorOrganizationDuoProviderJson();
+        _twoFactorEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(false);
+        _userManager.TWO_FACTOR_TOKEN_VERIFIED = true;
+
+        // Act
+        var result = await _sut.VerifyTwoFactorAsync(
+            user, organization, TwoFactorProviderType.Remember, "legacy-format-token", DeviceIdentifier);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.True(result.LegacyRememberUpgradeRequired);
     }
 
     /// <summary>Accepting one signals that a replacement should be issued on this response.</summary>

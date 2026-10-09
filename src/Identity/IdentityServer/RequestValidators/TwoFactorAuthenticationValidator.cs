@@ -158,8 +158,10 @@ public class TwoFactorAuthenticationValidator(
         if (type is TwoFactorProviderType.Remember)
         {
             // A remember token stands in for a second factor, so it cannot be honored by an account
-            // that has none configured. Applied ahead of the format branch so it covers both.
-            if (!await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
+            // that has none, whether configured by the user or enforced by their organization.
+            // Applied ahead of the format branch so it covers both.
+            if (organization?.TwoFactorIsEnabled() != true &&
+                !await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
             {
                 return new TwoFactorVerificationResult(false);
             }
