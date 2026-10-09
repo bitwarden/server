@@ -210,9 +210,9 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
     }
 
     public async Task<string> TokenFromOrganizationApiKeyAsync(string clientId, string clientSecret,
-        DeviceType deviceType = DeviceType.FirefoxBrowser)
+        DeviceType deviceType = DeviceType.FirefoxBrowser, string scope = "api.organization")
     {
-        var context = await ContextFromOrganizationApiKeyAsync(clientId, clientSecret, deviceType);
+        var context = await ContextFromOrganizationApiKeyAsync(clientId, clientSecret, deviceType, scope);
 
         using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = body.RootElement;
@@ -224,12 +224,12 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
     }
 
     public async Task<HttpContext> ContextFromOrganizationApiKeyAsync(string clientId, string clientSecret,
-        DeviceType deviceType = DeviceType.FirefoxBrowser)
+        DeviceType deviceType = DeviceType.FirefoxBrowser, string scope = "api.organization")
     {
         var context = await Server.PostAsync("/connect/token",
             new FormUrlEncodedContent(new Dictionary<string, string>
             {
-                { "scope", "api.organization" },
+                { "scope", scope },
                 { "client_id", clientId },
                 { "client_secret", clientSecret },
                 { "grant_type", "client_credentials" },

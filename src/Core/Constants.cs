@@ -152,6 +152,7 @@ public static partial class FeatureFlagKeys
     public const string DesktopMigrationMilestone3 = "desktop-ui-migration-milestone-3";
     public const string DesktopMigrationMilestone4 = "desktop-ui-migration-milestone-4";
     public const string DesktopMigrationSettings = "desktop-ui-settings-dialog";
+    public const string ScopedOrganizationApiKeys = "pm-28993-scoped-organization-api-keys";
 
     /* Auth Team */
     public const string Otp6Digits = "pm-18612-otp-6-digits";
