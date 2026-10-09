@@ -118,8 +118,8 @@ public class TransitionPartnershipEntitlementCommandTests
 
         await sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>()
             .Received(1)
-            .ReplaceAsync(Arg.Is<OrganizationPartnershipEntitlement>(e =>
-                e == entitlement && e.LastAppliedEffectiveDate == _now && e.RevisionDate == _now));
+            .ReplaceIfUnchangedAsync(Arg.Is<OrganizationPartnershipEntitlement>(e =>
+                e == entitlement && e.LastAppliedEffectiveDate == _now && e.RevisionDate == _now), Arg.Any<DateTime>());
     }
 
     [Theory]
@@ -166,7 +166,7 @@ public class TransitionPartnershipEntitlementCommandTests
 
         await sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>()
             .DidNotReceiveWithAnyArgs()
-            .ReplaceAsync(default!);
+            .ReplaceIfUnchangedAsync(default!, default);
     }
 
     [Fact]
@@ -201,6 +201,23 @@ public class TransitionPartnershipEntitlementCommandTests
         Assert.Equal(effectiveAt + _resumeWindow, canceled.ResumeWindowExpirationDate);
         Assert.Equal(_boundUserId, canceled.UserId);
         Assert.Equal(accountRef, canceled.AccountRef);
+    }
+
+    [Fact]
+    public async Task TransitionAsync_ChangedSinceRead_ReturnsConflictAndLogsNothing()
+    {
+        var sutProvider = CreateSutProvider();
+        var entitlement = CreateEntitlement(PartnershipEntitlementState.Active);
+        var readRevisionDate = entitlement.RevisionDate;
+        ArrangePartnership(sutProvider, entitlement);
+        sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>()
+            .ReplaceIfUnchangedAsync(entitlement, readRevisionDate)
+            .Returns(false);
+
+        var result = await sutProvider.Sut.TransitionAsync(CreateRequest(entitlement, PartnershipEntitlementAction.Suspend));
+
+        Assert.Equal("entitlement_conflict", Assert.IsType<EntitlementConcurrentlyModified>(result.AsError).Code);
+        Assert.Empty(sutProvider.GetDependency<IEventService>().ReceivedCalls());
     }
 
     [Fact]
@@ -375,7 +392,7 @@ public class TransitionPartnershipEntitlementCommandTests
 
         await sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>()
             .DidNotReceiveWithAnyArgs()
-            .ReplaceAsync(default!);
+            .ReplaceIfUnchangedAsync(default!, default);
         Assert.Empty(sutProvider.GetDependency<IEventService>().ReceivedCalls());
     }
 
@@ -551,6 +568,9 @@ public class TransitionPartnershipEntitlementCommandTests
             .WithFakeTimeProvider()
             .Create();
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
+        sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>()
+            .ReplaceIfUnchangedAsync(Arg.Any<OrganizationPartnershipEntitlement>(), Arg.Any<DateTime>())
+            .Returns(true);
         return sutProvider;
     }
 

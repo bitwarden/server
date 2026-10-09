@@ -83,6 +83,7 @@ public class ProvisionPartnershipEntitlementCommand(
                 PartnershipEntitlementAppliedReasons.StaleTransition, existing.LastAppliedEffectiveDate);
         }
 
+        var expectedRevisionDate = existing.RevisionDate;
         existing.State = PartnershipEntitlementState.Provisioned;
         existing.UserId = null;
         existing.AccountRef = null;
@@ -94,7 +95,10 @@ public class ProvisionPartnershipEntitlementCommand(
         existing.LastAppliedEffectiveDate = effectiveAt;
         existing.RevisionDate = now;
 
-        await organizationPartnershipEntitlementRepository.ReplaceAsync(existing);
+        if (!await organizationPartnershipEntitlementRepository.ReplaceIfUnchangedAsync(existing, expectedRevisionDate))
+        {
+            return new EntitlementConcurrentlyModified();
+        }
         await LogProvisionedAsync(partnership, effectiveAt);
 
         return new ProvisionPartnershipEntitlementResult(existing, Created: false, Applied: true, null, effectiveAt);

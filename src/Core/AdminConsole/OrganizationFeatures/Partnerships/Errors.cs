@@ -92,6 +92,13 @@ public record PartnershipNotActive() : ConflictError("The partnership is not act
     public string Code => "partnership_not_active";
 }
 
+public record EntitlementConcurrentlyModified()
+    : ConflictError("The entitlement changed while this request was being processed. Read it again and retry."),
+      IPartnershipError
+{
+    public string Code => "entitlement_conflict";
+}
+
 public record IllegalEntitlementTransition()
     : ConflictError("The entitlement cannot make this transition from its current state."), IPartnershipError
 {

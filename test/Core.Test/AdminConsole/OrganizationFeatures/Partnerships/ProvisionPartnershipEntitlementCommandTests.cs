@@ -66,7 +66,7 @@ public class ProvisionPartnershipEntitlementCommandTests
         Assert.False(result.AsSuccess.Created);
         Assert.False(result.AsSuccess.Applied);
         Assert.Equal(state, existing.State);
-        await sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+        await sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>().DidNotReceiveWithAnyArgs().ReplaceIfUnchangedAsync(default!, default);
         await sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
     }
 
@@ -90,7 +90,23 @@ public class ProvisionPartnershipEntitlementCommandTests
         Assert.Null(reprovisioned.SuspendedDate);
         Assert.Null(reprovisioned.CanceledDate);
         Assert.Null(reprovisioned.ResumeWindowExpirationDate);
-        await sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>().Received(1).ReplaceAsync(existing);
+        await sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>().Received(1).ReplaceIfUnchangedAsync(existing, Arg.Any<DateTime>());
+    }
+
+    [Fact]
+    public async Task ProvisionAsync_ReprovisionChangedSinceRead_ReturnsConflictAndLogsNothing()
+    {
+        var sutProvider = CreateSutProvider();
+        var partnership = ArrangePartnership(sutProvider);
+        var existing = ArrangeExisting(sutProvider, partnership, PartnershipEntitlementState.Canceled);
+        sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>()
+            .ReplaceIfUnchangedAsync(existing, Arg.Any<DateTime>())
+            .Returns(false);
+
+        var result = await sutProvider.Sut.ProvisionAsync(CreateRequest(partnership));
+
+        Assert.Equal("entitlement_conflict", Assert.IsType<EntitlementConcurrentlyModified>(result.AsError).Code);
+        Assert.Empty(sutProvider.GetDependency<IEventService>().ReceivedCalls());
     }
 
     [Fact]
@@ -108,6 +124,8 @@ public class ProvisionPartnershipEntitlementCommandTests
         transitionSut.GetDependency<IOrganizationPartnershipRepository>().GetByIdAsync(partnership.Id).Returns(partnership);
         transitionSut.GetDependency<IOrganizationPartnershipEntitlementRepository>()
             .GetByExternalIdAsync(partnership.Id, entitlement.ExternalId).Returns(entitlement);
+        transitionSut.GetDependency<IOrganizationPartnershipEntitlementRepository>()
+            .ReplaceIfUnchangedAsync(Arg.Any<OrganizationPartnershipEntitlement>(), Arg.Any<DateTime>()).Returns(true);
         var newUserId = Guid.NewGuid();
 
         await provisionSut.Sut.ProvisionAsync(CreateRequest(partnership));
@@ -141,7 +159,7 @@ public class ProvisionPartnershipEntitlementCommandTests
         Assert.Equal(PartnershipEntitlementAppliedReasons.StaleTransition, result.AsSuccess.AppliedReason);
         Assert.Equal(lastApplied, result.AsSuccess.LastAppliedAt);
         Assert.Equal(PartnershipEntitlementState.Canceled, existing.State);
-        await sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+        await sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>().DidNotReceiveWithAnyArgs().ReplaceIfUnchangedAsync(default!, default);
     }
 
     [Fact]
@@ -260,6 +278,9 @@ public class ProvisionPartnershipEntitlementCommandTests
             .WithFakeTimeProvider()
             .Create();
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
+        sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>()
+            .ReplaceIfUnchangedAsync(Arg.Any<OrganizationPartnershipEntitlement>(), Arg.Any<DateTime>())
+            .Returns(true);
         return sutProvider;
     }
 
