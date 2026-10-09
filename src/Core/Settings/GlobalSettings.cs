@@ -777,7 +777,7 @@ public class GlobalSettings : IGlobalSettings
         /// Minimum number of days between RSA 1.5 deprecation emails to one organization.
         /// The default is 14. PM-43927 lowers it to 7. A value of 0 or less turns the email off.
         /// </summary>
-        public int Rsa15DeprecationEmailIntervalInDays { get; set; } = 14;
+        public int Rsa15DeprecationEmailCooldownInDays { get; set; } = 14;
     }
 
     public class StripeSettings

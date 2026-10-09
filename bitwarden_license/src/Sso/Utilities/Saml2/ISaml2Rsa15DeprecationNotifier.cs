@@ -1,23 +1,16 @@
 ﻿namespace Bit.Sso.Utilities.Saml2;
 
 /// <summary>
-/// Queues the RSA 1.5 deprecation email for an organization in the background, so the SAML login path does not wait.
+/// Runs the RSA 1.5 deprecation notice in the background, so the SAML login request does not wait for it.
 /// </summary>
 public interface ISaml2Rsa15DeprecationNotifier
 {
     /// <summary>
-    /// Queues the RSA 1.5 deprecation email for an organization.
-    /// Returns at once. The claim and the send run in the background.
-    /// Never throws.
+    /// Starts a background email send of the RSA 1.5 deprecation notice for an organization.
+    /// Returns at once and never throws.
     /// </summary>
     /// <remarks>
-    /// A claim is one call to
-    /// <see cref="Bit.Core.Auth.Sso.ISaml2Rsa15DeprecationNoticeInterval.TryClaimIntervalAsync"/>.
-    /// The claim records the current time before the send, so a failed send still uses the interval.
-    /// A claim is in flight from the moment this method adds the organization to its internal guard 
-    /// until the claim returns or throws.
-    /// While an organization has a claim processing, this method ignores more calls for that organization
-    /// to prevent eager notifications.
+    /// When an email send for the organization is already pending on this server instance, this method drops the call.
     /// </remarks>
     /// <param name="organizationId">The organization to notify.</param>
     void TryQueue(Guid organizationId);

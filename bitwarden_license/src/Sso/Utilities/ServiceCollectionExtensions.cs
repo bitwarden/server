@@ -43,7 +43,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Microsoft.Extensions.Options.IOptionsMonitorCache<Saml2Options>,
             ExtendedOptionsMonitorCache<Saml2Options>>();
         // Saml2 RSA 1.5 deprecation notice
-        services.TryAddSingleton<ISaml2Rsa15DeprecationNoticeInterval, Saml2Rsa15DeprecationNoticeInterval>();
         services.TryAddSingleton<ISaml2Rsa15DeprecationNoticeCommand, Saml2Rsa15DeprecationNoticeCommand>();
         services.TryAddSingleton<ISaml2Rsa15DeprecationNotifier, Saml2Rsa15DeprecationNotifier>();
 

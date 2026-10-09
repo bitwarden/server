@@ -300,7 +300,7 @@ public class SsoTestDataBuilder
         factory.SubstituteService<IGlobalSettings>(globalSettings =>
         {
             globalSettings.SelfHosted.Returns(_isSelfHosted);
-            globalSettings.Sso.Rsa15DeprecationEmailIntervalInDays = 14;
+            globalSettings.Sso.Rsa15DeprecationEmailCooldownInDays = 14;
         });
 
         // 1.b Replace SamlEnvironment with a version that has a test SP signing certificate, if the test requests it

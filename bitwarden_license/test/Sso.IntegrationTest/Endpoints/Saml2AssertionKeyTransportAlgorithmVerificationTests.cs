@@ -88,10 +88,10 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
 
     /// <summary>
     /// Posts two RSA 1.5 requests for the same organization, one after the other. It proves that
-    /// the second request in the same interval sends no second email.
+    /// the second request in the same email send cooldown sends no second email.
     /// </summary>
     [Fact]
-    public async Task CouldHandleAsync_SecondRsa15RequestWithinInterval_DoesNotSendAgain()
+    public async Task CouldHandleAsync_SecondRsa15RequestWithinCooldown_DoesNotSendAgain()
     {
         // Arrange
         using var arrangement = await ArrangeAsync(
@@ -270,6 +270,49 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
 
         // Assert
         Assert.True(result);
+    }
+
+    /// <summary>
+    /// Makes the mailer throw on the first email send only. It proves that a failed email send does not block
+    /// the next RSA 1.5 request for a full cooldown: a later request sends the email. It also proves that the
+    /// successful email send blocks a third email send.
+    /// </summary>
+    [Fact]
+    public async Task CouldHandleAsync_MailerThrowsThenRecovers_LaterRsa15RequestSendsEmail()
+    {
+        // Arrange
+        using var arrangement = await ArrangeAsync(
+            Saml2AcsPostHarness.BuildEncryptedAssertion(Rsa15), configure: MockedMailerWithFlagOn);
+        var (samlOptions, organizationId, context, factory) = arrangement;
+        await SeedOrganizationUserAsync(
+            factory, organizationId, OrganizationUserType.Owner, OrganizationUserStatusType.Confirmed, NewEmail("owner"));
+        var mailerCalls = 0;
+        arrangement.Mailer.When(m => m.SendEmail(Arg.Any<Saml2Rsa15DeprecationMail>())).Do(_ =>
+        {
+            if (Interlocked.Increment(ref mailerCalls) == 1)
+            {
+                throw new InvalidOperationException("simulated mailer failure");
+            }
+        });
+
+        // Act
+        // The failed email send runs in the background, so a request can arrive before the cooldown is removed.
+        // Repeat the request until the mailer receives the second call.
+        var deadline = DateTime.UtcNow + _wait;
+        while (Volatile.Read(ref mailerCalls) < 2)
+        {
+            if (DateTime.UtcNow > deadline)
+            {
+                throw new TimeoutException("Expected a second mailer call after the failed email send.");
+            }
+            await samlOptions.CouldHandleAsync(organizationId.ToString(), context);
+            await Task.Delay(10);
+        }
+        await samlOptions.CouldHandleAsync(organizationId.ToString(), context);
+        await Task.Delay(_negativeWait);
+
+        // Assert
+        Assert.Equal(2, Volatile.Read(ref mailerCalls));
     }
 
     /// <summary>
