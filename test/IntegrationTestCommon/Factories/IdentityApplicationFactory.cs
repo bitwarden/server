@@ -153,12 +153,6 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         return context;
     }
 
-    /// <param name="twoFactorProviderType">
-    /// Send the numeric provider value rather than the enum name where the distinction matters:
-    /// <see cref="BaseRequestValidator.DetermineValidationOrder"/> selects the validator order with
-    /// <c>int.TryParse</c>, while <c>ValidateTwoFactorAsync</c> parses the same value with
-    /// <c>Enum.TryParse</c>. A name therefore authenticates but silently takes the ordinary order.
-    /// </param>
     /// <param name="twoFactorRemember">
     /// "1" asks the server to remember the device. Pass "0" to mirror a client re-authenticating
     /// with a stored remember token, which is what clients actually send in that case.
@@ -229,10 +223,6 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         return (accessTokenString, rememberToken);
     }
 
-    /// <summary>
-    /// Mints a remember token the way the server did before this feature existed, for tests that
-    /// need to present one issued by a prior release.
-    /// </summary>
     public async Task<string> GenerateLegacyRememberTokenAsync(User user)
     {
         var userManager = GetService<UserManager<User>>();

@@ -29,8 +29,7 @@ public class RememberedDeviceLoginTests
         """{"1": { "Enabled": true, "MetaData": { "Email": "test+rememberdevice@email.com"}}}""";
 
     /// <summary>
-    /// The numeric value of <see cref="TwoFactorProviderType.Remember"/>. Sent as a number rather
-    /// than the name because the validator-order selection parses it with <c>int.TryParse</c>.
+    /// The numeric value of <see cref="TwoFactorProviderType.Remember"/>.
     /// </summary>
     private const string _rememberProvider = "5";
 
@@ -88,9 +87,7 @@ public class RememberedDeviceLoginTests
     }
 
     /// <summary>
-    /// The token is honored on a later login, with no second factor supplied. This is the
-    /// behavior the whole feature exists to preserve; it must stay green through every change to the
-    /// token format.
+    /// The token is honored on a later login, with no second factor supplied.
     /// </summary>
     [Fact]
     public async Task RememberToken_ReplayedOnNextLogin_SkipsTwoFactorChallenge()
@@ -117,14 +114,9 @@ public class RememberedDeviceLoginTests
     }
 
     /// <summary>
-    /// A login that presents a remember token must not be issued another one.
+    /// A login that presents a remember token must not be issued another one, or an active user's
+    /// remember-me would renew forever.
     /// </summary>
-    /// <remarks>
-    /// This is what bounds the remember-me lifetime. The token's lifespan is an absolute cap only
-    /// because the server refuses to re-issue on a remember-login; if it did re-issue, an active
-    /// user's remember-me would be extended on every login and never expire. Asserted over HTTP
-    /// deliberately — it inspects the same response field a client would.
-    /// </remarks>
     [Fact]
     public async Task RememberToken_ReplayedOnNextLogin_DoesNotIssueAnotherToken()
     {
@@ -148,10 +140,6 @@ public class RememberedDeviceLoginTests
         Assert.False(root.TryGetProperty("TwoFactorToken", out _));
     }
 
-    /// <summary>
-    /// A token minted the way a previous release minted them is still accepted, so nobody is
-    /// challenged again purely because this release shipped.
-    /// </summary>
     [Fact]
     public async Task LegacyRememberToken_IsStillAccepted()
     {
