@@ -37,8 +37,8 @@ internal sealed class AddPrivilegedControlsCommand(
             throw new BadRequestException("Cannot set max seat autoscaling below the Privileged Controls seat count.");
         }
 
-        var seatChange = (await seatChangeSetFactory.CreateAsync(organization, seats)).Unwrap();
-        (await updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet)).Unwrap();
+        var seatChange = (await seatChangeSetFactory.CreateAsync(organization, seats)).GetValueOrThrowHttpException();
+        (await updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet)).GetValueOrThrowHttpException();
 
         organization.PamSeats = seats;
         organization.MaxAutoscalePamSeats = maxAutoscaleSeats;

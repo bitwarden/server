@@ -57,8 +57,8 @@ internal sealed class ChangePrivilegedControlsSeatsCommand(
 
         if (seats != organization.PamSeats)
         {
-            var seatChange = (await seatChangeSetFactory.CreateAsync(organization, seats)).Unwrap();
-            (await updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet)).Unwrap();
+            var seatChange = (await seatChangeSetFactory.CreateAsync(organization, seats)).GetValueOrThrowHttpException();
+            (await updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet)).GetValueOrThrowHttpException();
         }
 
         organization.PamSeats = seats;
