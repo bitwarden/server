@@ -12,7 +12,8 @@ See [LIBRARY.md](../LIBRARY.md) for the shape all libraries under `src/Libraries
 (`GetOrganizationSubscriptionPreviewHandler`, `PreviewOrganizationPlanChangeHandler`, `PreviewOrganizationSubscriptionPurchaseHandler`), each depending
 only on `IOrganizationRepository` (or `IUserService` for purchases) and the query or command it runs; the plan-change command
 (`IPreviewOrganizationPlanChangeCommand`), the first Privileged Controls purchase command
-(`IAddPrivilegedControlsCommand`), and the purchase query (`IPreviewOrganizationSubscriptionPurchaseQuery`); the `StandaloneOrganizationOwnerRequirementHandler`
+(`IAddPrivilegedControlsCommand`), the Privileged Controls seat change command
+(`IChangePrivilegedControlsSeatsCommand`), and the purchase query (`IPreviewOrganizationSubscriptionPurchaseQuery`); the `StandaloneOrganizationOwnerRequirementHandler`
 authorization handler; and the `Bit.Invoicing` library they depend on. One handler class per endpoint
 avoids a shared handler that accumulates a dependency per route.
 

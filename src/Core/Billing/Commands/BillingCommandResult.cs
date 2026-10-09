@@ -1,4 +1,5 @@
-﻿using OneOf;
+﻿using Bit.Core.Exceptions;
+using OneOf;
 
 namespace Bit.Core.Billing.Commands;
 
@@ -47,6 +48,24 @@ public class BillingCommandResult<T>(OneOf<T, BadRequest, Conflict, Unhandled> i
         badRequest => throw new BillingException(badRequest.Response),
         conflict => throw new BillingException(message: conflict.Response),
         unhandled => throw new BillingException(message: unhandled.Response, innerException: unhandled.Exception));
+
+    /// <summary>
+    /// Returns the value of a successful result, or throws the exception that maps to the failure's HTTP status.
+    /// Use this instead of <see cref="GetValueOrThrow"/> where the caller's exception filter has no case for
+    /// <see cref="BillingException"/>.
+    /// </summary>
+    /// <returns>The value of the successful result.</returns>
+    /// <exception cref="BadRequestException">Thrown when the result is a <see cref="BadRequest"/>.</exception>
+    /// <exception cref="ConflictException">Thrown when the result is a <see cref="Conflict"/>.</exception>
+    /// <exception cref="Exception">
+    /// Thrown when the result is <see cref="Unhandled"/>: the underlying exception if there is one, otherwise an
+    /// <see cref="InvalidOperationException"/> carrying the response message.
+    /// </exception>
+    public T GetValueOrThrowHttpException() => Match(
+        value => value,
+        badRequest => throw new BadRequestException(badRequest.Response),
+        conflict => throw new ConflictException(conflict.Response),
+        unhandled => throw unhandled.Exception ?? new InvalidOperationException(unhandled.Response));
 }
 
 public static class BillingCommandResultExtensions
