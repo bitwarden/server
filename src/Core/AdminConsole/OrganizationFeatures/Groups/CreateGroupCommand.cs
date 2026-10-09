@@ -18,6 +18,7 @@ public class CreateGroupCommand : ICreateGroupCommand
     private readonly IGroupRepository _groupRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IGroupCollectionAccessValidator _groupCollectionAccessValidator;
+    private readonly IScopedApiKeyGroupMemberValidator _scopedApiKeyGroupMemberValidator;
     private readonly TimeProvider _timeProvider;
 
     public CreateGroupCommand(
@@ -25,6 +26,7 @@ public class CreateGroupCommand : ICreateGroupCommand
         IGroupRepository groupRepository,
         IOrganizationUserRepository organizationUserRepository,
         IGroupCollectionAccessValidator groupCollectionAccessValidator,
+        IScopedApiKeyGroupMemberValidator scopedApiKeyGroupMemberValidator,
         TimeProvider timeProvider
         )
     {
@@ -32,6 +34,7 @@ public class CreateGroupCommand : ICreateGroupCommand
         _groupRepository = groupRepository;
         _organizationUserRepository = organizationUserRepository;
         _groupCollectionAccessValidator = groupCollectionAccessValidator;
+        _scopedApiKeyGroupMemberValidator = scopedApiKeyGroupMemberValidator;
         _timeProvider = timeProvider;
     }
 
@@ -39,7 +42,7 @@ public class CreateGroupCommand : ICreateGroupCommand
         ICollection<CollectionAccessSelection> collections = null,
         IEnumerable<Guid> users = null)
     {
-        await ValidateAsync(organization, group, collections);
+        await ValidateAsync(organization, group, collections, users);
         await GroupRepositoryCreateGroupAsync(group, organization, collections);
 
         if (users != null)
@@ -54,7 +57,7 @@ public class CreateGroupCommand : ICreateGroupCommand
         ICollection<CollectionAccessSelection> collections = null,
         IEnumerable<Guid> users = null)
     {
-        await ValidateAsync(organization, group, collections);
+        await ValidateAsync(organization, group, collections, users);
         await GroupRepositoryCreateGroupAsync(group, organization, collections);
 
         if (users != null)
@@ -102,7 +105,8 @@ public class CreateGroupCommand : ICreateGroupCommand
         }
     }
 
-    private async Task ValidateAsync(Organization organization, Group group, ICollection<CollectionAccessSelection> collections)
+    private async Task ValidateAsync(Organization organization, Group group, ICollection<CollectionAccessSelection> collections,
+        IEnumerable<Guid> users)
     {
         if (organization == null)
         {
@@ -112,6 +116,15 @@ public class CreateGroupCommand : ICreateGroupCommand
         if (!organization.UseGroups)
         {
             throw new BadRequestException("This organization cannot use groups.");
+        }
+
+        if (users != null)
+        {
+            var memberError = await _scopedApiKeyGroupMemberValidator.ValidateAsync(group.OrganizationId, null, users);
+            if (memberError is not null)
+            {
+                throw memberError.ToException();
+            }
         }
 
         if (collections?.Any() == true)

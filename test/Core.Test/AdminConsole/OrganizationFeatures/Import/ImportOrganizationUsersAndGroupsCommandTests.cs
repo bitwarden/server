@@ -1,6 +1,8 @@
-﻿using Bit.Core.AdminConsole.Models.Business;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.Import;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Services;
@@ -360,6 +362,82 @@ public class ImportOrganizationUsersAndGroupsCommandTests
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
             .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.ToHashSet().SetEquals(expectedIds)));
     }
+
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task ImportAsync_WhenScopedApiKeySyncsExistingGroup_KeepsElevatedMembersInGroup(
+            SutProvider<ImportOrganizationUsersAndGroupsCommand> sutProvider,
+            Organization org)
+    {
+        var existingUsers = ExistingExternalMemberOfEachRole();
+        SetupScopedImport(sutProvider, org, existingUsers, isScopedApiKey: true);
+        var admin = MemberOfRole(existingUsers, OrganizationUserType.Admin);
+        var user = MemberOfRole(existingUsers, OrganizationUserType.User);
+        var group = SetupExistingGroup(sutProvider, org, admin.Id);
+
+        await sutProvider.Sut.ImportAsync(org.Id, [ImportedGroupWithMembers(group, user)], [], [], false, false);
+
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(group.Id,
+            Arg.Is<IEnumerable<Guid>>(ids => ids.ToHashSet().SetEquals(new[] { user.Id, admin.Id })),
+            Arg.Any<DateTime>());
+    }
+
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task ImportAsync_WhenScopedApiKeySyncsNewGroup_OnlyAddsUsers(
+            SutProvider<ImportOrganizationUsersAndGroupsCommand> sutProvider,
+            Organization org, Group group)
+    {
+        var existingUsers = ExistingExternalMemberOfEachRole();
+        SetupScopedImport(sutProvider, org, existingUsers, isScopedApiKey: true);
+        org.UseGroups = true;
+        group.OrganizationId = org.Id;
+        sutProvider.GetDependency<IGroupRepository>().GetManyByOrganizationIdAsync(org.Id).Returns([]);
+        var user = MemberOfRole(existingUsers, OrganizationUserType.User);
+
+        await sutProvider.Sut.ImportAsync(org.Id, [ImportedGroupWithMembers(group, existingUsers.ToArray())], [], [],
+            false, false);
+
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(group.Id,
+            Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(new[] { user.Id })), Arg.Any<DateTime>());
+    }
+
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task ImportAsync_WhenLegacyKeySyncsExistingGroup_AddsAndRemovesEveryRole(
+            SutProvider<ImportOrganizationUsersAndGroupsCommand> sutProvider,
+            Organization org)
+    {
+        var existingUsers = ExistingExternalMemberOfEachRole();
+        SetupScopedImport(sutProvider, org, existingUsers, isScopedApiKey: false);
+        var admin = MemberOfRole(existingUsers, OrganizationUserType.Admin);
+        var group = SetupExistingGroup(sutProvider, org, admin.Id);
+        var importedMembers = existingUsers.Where(u => u.Type != OrganizationUserType.Admin).ToArray();
+
+        await sutProvider.Sut.ImportAsync(org.Id, [ImportedGroupWithMembers(group, importedMembers)], [], [], false,
+            false);
+
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(group.Id,
+            Arg.Is<IEnumerable<Guid>>(ids => ids.ToHashSet().SetEquals(importedMembers.Select(u => u.Id))),
+            Arg.Any<DateTime>());
+    }
+
+    private static Group SetupExistingGroup(
+            SutProvider<ImportOrganizationUsersAndGroupsCommand> sutProvider,
+            Organization org,
+            Guid currentMemberId)
+    {
+        org.UseGroups = true;
+        var group = new Group { Id = Guid.NewGuid(), OrganizationId = org.Id, Name = "Group", ExternalId = "external-group" };
+        sutProvider.GetDependency<IGroupRepository>().GetManyByOrganizationIdAsync(org.Id).Returns([group]);
+        sutProvider.GetDependency<IGroupRepository>().GetManyGroupUsersByOrganizationIdAsync(org.Id)
+            .Returns([new GroupUser { GroupId = group.Id, OrganizationUserId = currentMemberId }]);
+        return group;
+    }
+
+    private static ImportedGroup ImportedGroupWithMembers(Group group, params OrganizationUserUserDetails[] members) =>
+        new()
+        {
+            Group = group,
+            ExternalUserIds = members.Select(m => m.ExternalId).ToHashSet()
+        };
 
     private static List<OrganizationUserUserDetails> ExistingExternalMemberOfEachRole() =>
         new[] { OrganizationUserType.Owner, OrganizationUserType.Admin, OrganizationUserType.Custom, OrganizationUserType.User }
