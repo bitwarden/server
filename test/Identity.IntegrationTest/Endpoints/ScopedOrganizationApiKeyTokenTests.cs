@@ -320,7 +320,7 @@ public class ScopedOrganizationApiKeyTokenTests
         return (key, secret);
     }
 
-    private static Task<HttpContext> PostTokenAsync(
+    private static async Task<HttpContext> PostTokenAsync(
         IdentityApplicationFactory factory, string clientId, string clientSecret, string? scope)
     {
         var form = new Dictionary<string, string>
@@ -334,7 +334,8 @@ public class ScopedOrganizationApiKeyTokenTests
             form["scope"] = scope;
         }
 
-        return factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(form));
+        using var content = new FormUrlEncodedContent(form);
+        return await factory.Server.PostAsync("/connect/token", content);
     }
 
     private static async Task<JsonWebToken> ReadAccessTokenAsync(HttpContext context)
