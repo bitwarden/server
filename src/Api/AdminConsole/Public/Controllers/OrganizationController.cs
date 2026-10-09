@@ -5,6 +5,7 @@ using System.Net;
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
@@ -15,7 +16,6 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.AdminConsole.Public.Controllers;
 
 [Route("public/organization")]
-[Authorize("Organization")]
 public class OrganizationController : Controller
 {
     private readonly IOrganizationService _organizationService;
@@ -45,6 +45,8 @@ public class OrganizationController : Controller
     /// Import members and groups from an external system.
     /// </remarks>
     /// <param name="model">The request model.</param>
+    [Authorize(Policies.OrganizationMembersWrite)]
+    [Authorize(Policies.OrganizationGroupsWrite)]
     [HttpPost("import")]
     [ProducesResponseType(typeof(OkResult), (int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
