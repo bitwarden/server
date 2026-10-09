@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.Utilities.v2.Validation;
+﻿using Bit.Core.AdminConsole.Utilities.v2.Results;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 
@@ -8,25 +8,19 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 /// performed; the caller is responsible for any state changes once validation succeeds.
 /// </summary>
 /// <remarks>
-/// The following are validated, in this order:
+/// The following are validated:
 /// <list type="bullet">
-///     <item><see cref="IInviteLinkEligibilityValidator"/>: the invite link exists and its code matches, its
-///     organization is enabled and supports invite links, the user's email domain is allowed, and the email is
-///     verified.</item>
-///     <item>The link supports confirmation.</item>
-///     <item><see cref="IConfirmInviteLinkMembershipStatusValidator"/>: any existing membership is neither revoked nor
-///     already confirmed.</item>
-///     <item><see cref="IInviteLinkFreeOrganizationAdminValidator"/>: the one-admin-per-Free-organization limit.</item>
-///     <item><see cref="IInviteLinkOrganizationCapabilityValidator"/>: seat availability for a brand-new or Staged
-///     member.</item>
-///     <item><see cref="IInviteLinkPolicyValidator"/>: the Single Organization, Require Two-Factor Authentication, and
-///     Automatic User Confirmation policies.</item>
+///     <item>The invite link exists, its organization is enabled and supports invite links, and the link supports confirmation.</item>
+///     <item>The user has verified their email address.</item>
+///     <item>The user's email domain is allowed by the link.</item>
+///     <item>The user is not a provider user.</item>
+///     <item>Any existing membership is neither revoked nor already confirmed.</item>
+///     <item>The organization has an available seat for a new or Staged member.</item>
+///     <item>The Require Two-Factor Authentication and Single Organization policies.</item>
 /// </list>
-/// The caller supplies the invite link, organization, and existing membership. Errors from the shared validators are
-/// translated by <see cref="ConfirmOrganizationInviteLinkErrorMapper"/>.
 /// </remarks>
 public interface IConfirmOrganizationInviteLinkValidator
 {
-    Task<ValidationResult<OrganizationInviteLinkValidationRequest>> ValidateAsync(
-        OrganizationInviteLinkValidationRequest request);
+    Task<CommandResult<ConfirmOrganizationInviteLinkValidationResult>> ValidateAsync(
+        ConfirmOrganizationInviteLinkValidationRequest request);
 }

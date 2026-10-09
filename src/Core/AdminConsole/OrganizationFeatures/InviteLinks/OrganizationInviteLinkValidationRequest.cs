@@ -5,8 +5,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 
 /// <summary>
 /// The data the invite link validators need to decide whether a user may use an invite link. The caller looks it up
-/// and passes it in. Shared by <see cref="Interfaces.IGetOrganizationInviteValidator"/> and
-/// <see cref="Interfaces.IConfirmOrganizationInviteLinkValidator"/>.
+/// and passes it in. Used by <see cref="Interfaces.IGetOrganizationInviteValidator"/>.
 /// </summary>
 public record OrganizationInviteLinkValidationRequest
 {
