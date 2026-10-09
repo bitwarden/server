@@ -60,6 +60,7 @@ using Bit.Core.Vault.Services;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
 using Bit.SharedWeb.Play;
+using Bit.SharedWeb.Swagger;
 using DnsClient;
 using Duende.IdentityModel;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -815,10 +816,8 @@ public static class ServiceCollectionExtensions
                 ClientCredentials = new OpenApiOAuthFlow
                 {
                     TokenUrl = new Uri(identityTokenUrl),
-                    Scopes = new Dictionary<string, string>
-                    {
-                        { ApiScopes.ApiOrganization, $"Organization APIs ({serverDescription})" },
-                    },
+                    Scopes = OrganizationScopesOperationFilter.GetClientCredentialsScopes(
+                        $"Organization APIs ({serverDescription})"),
                 }
             },
         });

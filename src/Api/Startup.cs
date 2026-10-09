@@ -14,6 +14,7 @@ using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core.Auth.Entities;
 using Bit.SharedWeb.Health;
+using Bit.SharedWeb.Swagger;
 using Microsoft.OpenApi;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -340,6 +341,8 @@ public class Startup
                         }
                     ];
 
+                    OrganizationScopesOperationFilter.RebindOperationRequirements(swaggerDoc, "oauth2-client-credentials");
+
                     swaggerDoc.Components ??= new OpenApiComponents();
                     swaggerDoc.Components.SecuritySchemes = new Dictionary<string, IOpenApiSecurityScheme>
                     {
@@ -353,10 +356,7 @@ public class Startup
                                     ClientCredentials = new OpenApiOAuthFlow
                                     {
                                         TokenUrl = new Uri($"{globalSettings.BaseServiceUri.Identity}/connect/token"),
-                                        Scopes = new Dictionary<string, string>
-                                {
-                                    { ApiScopes.ApiOrganization, "Organization APIs" }
-                                }
+                                        Scopes = OrganizationScopesOperationFilter.GetClientCredentialsScopes("Organization APIs")
                                     }
                                 }
                             }

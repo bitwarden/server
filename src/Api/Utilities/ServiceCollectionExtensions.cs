@@ -39,6 +39,25 @@ public static class ServiceCollectionExtensions
                               [this document](https://bitwarden.com/help/vault-management-api/).
 
                               **Note:** your authorization must match the server you have selected.
+
+                              ## Authorization
+
+                              Get an access token from the Identity server's `/connect/token` endpoint using the
+                              `client_credentials` grant, then send it in the `Authorization: Bearer <token>` header.
+                              Never put a token in the query string.
+
+                              The organization API key has the `api.organization` scope and can call every endpoint.
+                              A scoped API key can only call endpoints that accept one of its scopes. Scopes have the
+                              form `api.organization.<resource>.<action>`, for example `api.organization.members.read`.
+                              Each endpoint lists the scopes it accepts.
+
+                              - A write scope does not include read. Grant both if you need both.
+                              - `members.write`, `groups.write` and `collections.write` can each give members access
+                                to collections.
+                              - `subscription.write` changes seats and storage, which can change what the
+                                organization is billed.
+                              - Revoking an API key can take up to about 65 minutes to fully take effect: Identity
+                                caches API keys for up to 5 minutes, and issued access tokens last 1 hour.
                               """,
                 License = new OpenApiLicense
                 {
@@ -80,6 +99,7 @@ public static class ServiceCollectionExtensions
             // config.UseReferencedDefinitionsForEnums();
 
             config.InitializeSwaggerFilters(environment);
+            config.OperationFilter<OrganizationScopesOperationFilter>();
 
             // Include every assembly documentation file emitted into the output directory (each XML is paired with
             // its .dll). A project's docs surface in the spec simply by emitting a <DocumentationFile> — no change is
