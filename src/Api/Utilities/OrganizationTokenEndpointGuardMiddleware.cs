@@ -13,10 +13,9 @@ public sealed class OrganizationTokenEndpointGuardMiddleware(RequestDelegate nex
     /// Authorization policy names that admit organization API key tokens.
     /// </summary>
     // Case-insensitive to match how AuthorizationOptions resolves policy names.
-    public static readonly IReadOnlySet<string> OrganizationScopePolicies = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
-        Policies.Organization,
-    };
+    public static readonly IReadOnlySet<string> OrganizationScopePolicies = new HashSet<string>(
+        [Policies.Organization, .. Policies.OrganizationScopedPolicyScopes.Keys],
+        StringComparer.OrdinalIgnoreCase);
 
     public async Task InvokeAsync(HttpContext context)
     {
