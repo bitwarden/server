@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Api.Dirt.Models;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -22,8 +23,8 @@ public class EventResponseModel : IResponseModel
         CollectionId = ev.CollectionId;
         GroupId = ev.GroupId;
         PolicyId = ev.PolicyId;
-        MemberId = ev.OrganizationUserId;
-        ActingUserId = ev.ActingUserId;
+        MemberId = EventLegacyFieldResolver.ResolveOrganizationUserId(ev);
+        ActingUserId = EventLegacyFieldResolver.ResolveActingUserId(ev);
         Date = ev.Date;
         Device = ev.DeviceType;
         IpAddress = ev.IpAddress;
