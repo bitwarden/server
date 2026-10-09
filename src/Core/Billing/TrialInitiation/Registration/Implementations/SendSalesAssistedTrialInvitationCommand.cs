@@ -49,7 +49,7 @@ public class SendSalesAssistedTrialInvitationCommand(
 
         if (requestedProducts.Contains(ProductType.PasswordManager) && requestedProducts.Contains(ProductType.SecretsManager))
         {
-            throw new BadRequestException("Secrets Manager cannot be combined with Password Manager.");
+            throw new BadRequestException("A Secrets Manager trial already includes Password Manager; select Secrets Manager on its own.");
         }
 
         var existingUser = await userRepository.GetByEmailAsync(email);

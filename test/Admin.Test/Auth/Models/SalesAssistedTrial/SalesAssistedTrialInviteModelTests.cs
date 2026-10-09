@@ -70,7 +70,7 @@ public class SalesAssistedTrialInviteModelTests
         var results = model.Validate(new ValidationContext(model)).ToList();
 
         Assert.Single(results);
-        Assert.Contains("Secrets Manager cannot be combined with Password Manager", results[0].ErrorMessage);
+        Assert.Contains("select Secrets Manager on its own", results[0].ErrorMessage);
         Assert.Contains(nameof(model.Products), results[0].MemberNames);
     }
 

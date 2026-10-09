@@ -256,7 +256,7 @@ public class SendSalesAssistedTrialInvitationCommandTests
         string senderEmail,
         SutProvider<SendSalesAssistedTrialInvitationCommand> sutProvider)
     {
-        var products = new[] { ProductType.PasswordManager, ProductType.SecretsManager };
+        var products = new[] { ProductType.SecretsManager };
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.HandleAsync(email, name, senderEmail, ProductTierType.Families, products, 7));
@@ -280,7 +280,7 @@ public class SendSalesAssistedTrialInvitationCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.HandleAsync(email, name, senderEmail, ProductTierType.Enterprise, products, 7));
 
-        Assert.Equal("Secrets Manager cannot be combined with Password Manager.", exception.Message);
+        Assert.Equal("A Secrets Manager trial already includes Password Manager; select Secrets Manager on its own.", exception.Message);
         await sutProvider.GetDependency<IMailer>()
             .DidNotReceiveWithAnyArgs()
             .SendEmail(Arg.Any<SalesAssistedTrialInvitationEmail>());
