@@ -1,8 +1,8 @@
-﻿using Bit.Core.AdminConsole.AbilitiesCache;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
+using Bit.Core.Entities;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
@@ -11,39 +11,65 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 /// Retrieves the opaque invite for an invite link. See
 /// <see cref="IGetOrganizationInviteCommand"/> for the behavior.
 /// </summary>
+/// <remarks>
+/// This command looks up the invite link, organization, and existing membership, and delegates eligibility to
+/// <see cref="IGetOrganizationInviteValidator"/>.
+/// </remarks>
 public class GetOrganizationInviteCommand(
+    IGetOrganizationInviteValidator getOrganizationInviteValidator,
     IOrganizationInviteLinkRepository organizationInviteLinkRepository,
-    IOrganizationAbilityCacheService organizationAbilityCacheService,
-    IOrganizationRepository organizationRepository)
+    IOrganizationRepository organizationRepository,
+    IOrganizationUserRepository organizationUserRepository)
     : IGetOrganizationInviteCommand
 {
     public async Task<CommandResult<string>> GetInviteAsync(GetOrganizationInviteRequest request)
     {
-        var user = request.User;
-
-        var link = await organizationInviteLinkRepository.GetByOrganizationIdAsync(request.OrganizationId);
-        if (link is null || !link.CodeMatches(request.Code.ToString()))
+        var validationResult = await getOrganizationInviteValidator.ValidateAsync(await BuildValidationRequestAsync(request));
+        if (validationResult.IsError)
         {
-            return new InviteLinkNotFound();
+            return validationResult.AsError;
         }
 
-        var organizationAbility = await organizationAbilityCacheService.GetOrganizationAbilityAsync(link.OrganizationId);
-        if (organizationAbility is null or { Enabled: false })
+        // Validation guarantees the invite link exists.
+        return validationResult.Request.InviteLink!.Invite;
+    }
+
+    /// <summary>
+    /// Looks up the invite link, its organization, and the user's existing membership for the validator.
+    /// </summary>
+    private async Task<OrganizationInviteLinkValidationRequest> BuildValidationRequestAsync(
+        GetOrganizationInviteRequest request)
+    {
+        var inviteLink = await organizationInviteLinkRepository.GetByOrganizationIdAsync(request.OrganizationId);
+        var organization = inviteLink is null
+            ? null
+            : await organizationRepository.GetByIdAsync(request.OrganizationId);
+        var existingOrganizationUser = organization is null
+            ? null
+            : await ResolveExistingOrganizationUserAsync(organization, request.User);
+
+        return new OrganizationInviteLinkValidationRequest
         {
-            return new InviteLinkNotFound();
+            InviteLink = inviteLink,
+            Code = request.Code,
+            Organization = organization,
+            User = request.User,
+            ExistingOrganizationUser = existingOrganizationUser,
+        };
+    }
+
+    /// <summary>
+    /// Resolves the user's existing membership, preferring a user-linked membership and falling back to a
+    /// pending email invitation for the same address.
+    /// </summary>
+    private async Task<OrganizationUser?> ResolveExistingOrganizationUserAsync(Organization organization, User user)
+    {
+        var userLinkedOrganizationUser = await organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id);
+        if (userLinkedOrganizationUser is not null)
+        {
+            return userLinkedOrganizationUser;
         }
 
-        if (!organizationAbility.UseInviteLinks)
-        {
-            return new InviteLinkNotAvailable();
-        }
-
-        if (!InviteLinkDomainValidator.IsEmailDomainAllowed(user.Email, link.GetAllowedDomains()))
-        {
-            var organization = await organizationRepository.GetByIdAsync(link.OrganizationId);
-            return new EmailDomainNotAllowed(organization?.DisplayName() ?? string.Empty);
-        }
-
-        return link.Invite;
+        return await organizationUserRepository.GetByOrganizationEmailAsync(organization.Id, user.Email);
     }
 }
