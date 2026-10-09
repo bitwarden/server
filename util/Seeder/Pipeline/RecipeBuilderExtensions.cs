@@ -1,6 +1,8 @@
-﻿using Bit.Core.Auth.Enums;
+﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Services;
+using Bit.Core.Enums;
 using Bit.Core.Vault.Enums;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
@@ -233,7 +235,12 @@ public static class RecipeBuilderExtensions
     /// <param name="realisticStatusMix">If true, includes revoked/invited users; if false, all confirmed</param>
     /// <returns>The builder for fluent chaining</returns>
     /// <exception cref="InvalidOperationException">Thrown when UseRoster() was already called</exception>
-    public static RecipeBuilder AddUsers(this RecipeBuilder builder, int count, bool realisticStatusMix = false)
+    public static RecipeBuilder AddUsers(
+        this RecipeBuilder builder,
+        int count,
+        bool realisticStatusMix = false,
+        Distribution<OrganizationUserStatusType>? statusMix = null,
+        int adminCount = 0)
     {
         if (builder.HasRosterUsers)
         {
@@ -242,7 +249,77 @@ public static class RecipeBuilderExtensions
         }
 
         builder.HasGeneratedUsers = true;
-        builder.AddStep(_ => new CreateUsersStep(count, realisticStatusMix));
+        builder.AddStep(_ => new CreateUsersStep(count, realisticStatusMix, statusMix, adminCount));
+        return builder;
+    }
+
+    /// <summary>
+    /// Adds groups with overlapping, long-tailed membership (access shape). Replaces <see cref="AddGroups"/>.
+    /// </summary>
+    internal static RecipeBuilder AddShapedGroups(this RecipeBuilder builder, int count, SeedPresetAccessShape shape, int seed)
+    {
+        if (!builder.HasRosterUsers && !builder.HasGeneratedUsers)
+        {
+            throw new InvalidOperationException(
+                "Groups require users. Call UseRoster() or AddUsers() first.");
+        }
+
+        builder.AddStep(_ => new CreateShapedGroupsStep(count, shape, seed));
+        return builder;
+    }
+
+    /// <summary>
+    /// Adds shared collections with long-tailed target sizes and shaped group/user grants. Replaces <see cref="AddCollections(RecipeBuilder, int, DensityProfile?)"/>.
+    /// </summary>
+    internal static RecipeBuilder AddShapedCollections(
+        this RecipeBuilder builder,
+        int count,
+        SeedPresetAccessShape shape,
+        Distribution<PermissionWeight> permissions,
+        int seed)
+    {
+        if (!builder.HasRosterUsers && !builder.HasGeneratedUsers)
+        {
+            throw new InvalidOperationException(
+                "Collections require users. Call UseRoster() or AddUsers() first.");
+        }
+
+        builder.AddStep(_ => new CreateShapedCollectionsStep(count, shape, permissions, seed));
+        return builder;
+    }
+
+    /// <summary>
+    /// Adds My Items (default user) collections for every confirmed member, filled with already-migrated org ciphers.
+    /// </summary>
+    internal static RecipeBuilder AddMyItems(
+        this RecipeBuilder builder,
+        SeedPresetMyItems shape,
+        DateTime policyEnabledDate,
+        int seed,
+        Distribution<CipherType>? typeDist = null)
+    {
+        if (!builder.HasGenerator)
+        {
+            throw new InvalidOperationException("My Items requires a generator. Call WithGenerator() first.");
+        }
+
+        builder.AddStep(_ => new CreateMyItemsStep(shape, policyEnabledDate, seed, typeDist));
+        return builder;
+    }
+
+    /// <summary>
+    /// Adds enabled organization policies.
+    /// </summary>
+    internal static RecipeBuilder AddPolicies(
+        this RecipeBuilder builder,
+        IReadOnlyList<(PolicyType Type, bool Enabled, string? Data)> policies)
+    {
+        if (!builder.HasOrg)
+        {
+            throw new InvalidOperationException("Policies require an organization. Call CreateOrganization() or UseOrganization() first.");
+        }
+
+        builder.AddStep(_ => new CreatePoliciesStep(policies));
         return builder;
     }
 

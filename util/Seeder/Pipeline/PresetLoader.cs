@@ -1,4 +1,6 @@
-﻿using Bit.Core.Auth.Enums;
+﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Enums;
 using Bit.Core.Vault.Enums;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
@@ -132,6 +134,12 @@ internal static class PresetLoader
 
         builder.AddOrganizationApiKey();
 
+        var policyTypes = ParsePolicies(preset.Policies);
+        if (policyTypes.Count > 0)
+        {
+            builder.AddPolicies(policyTypes);
+        }
+
         if (org.ClaimedDomains is { Count: > 0 })
         {
             builder.WithOrganizationDomain(org.ClaimedDomains);
@@ -165,24 +173,43 @@ internal static class PresetLoader
             preset.PersonalCiphers?.CountPerUser > 0 ||
             preset.Folders == true ||
             density?.FolderDistribution is not null ||
-            density?.PersonalCipherDistribution is not null))
+            density?.PersonalCipherDistribution is not null ||
+            preset.MyItems is not null))
         {
             builder.WithGenerator(domain);
         }
 
         if (preset.Users is not null)
         {
-            builder.AddUsers(preset.Users.Count, preset.Users.RealisticStatusMix);
+            builder.AddUsers(preset.Users.Count, preset.Users.RealisticStatusMix, ParseStatusMix(preset.Users.StatusMix), preset.Users.AdminCount);
         }
+
+        var shape = preset.AccessShape;
+        var shapeSeed = shape?.Seed ?? 1;
 
         if (preset.Groups is not null)
         {
-            builder.AddGroups(preset.Groups.Count, density);
+            if (shape?.Groups is not null)
+            {
+                builder.AddShapedGroups(preset.Groups.Count, shape, shapeSeed);
+            }
+            else
+            {
+                builder.AddGroups(preset.Groups.Count, density);
+            }
         }
 
         if (preset.Collections is not null)
         {
-            builder.AddCollections(preset.Collections.Count, density);
+            if (shape is not null)
+            {
+                builder.AddShapedCollections(preset.Collections.Count, shape,
+                    density?.PermissionDistribution ?? PermissionDistributions.Enterprise, shapeSeed);
+            }
+            else
+            {
+                builder.AddCollections(preset.Collections.Count, density);
+            }
         }
 
         if (preset.Folders == true || density?.FolderDistribution is not null)
@@ -217,6 +244,12 @@ internal static class PresetLoader
             builder.CreateCipherFavorites(preset.FavoriteAssignments);
         }
 
+        if (preset.MyItems is not null)
+        {
+            var daysAgo = preset.MyItems.PolicyEnabledDaysAgo ?? 14;
+            builder.AddMyItems(preset.MyItems, DateTime.UtcNow.Date.AddDays(-daysAgo), shapeSeed, density?.CipherTypeDistribution);
+        }
+
         if (preset.PersonalCiphers is not null && preset.PersonalCiphers.CountPerUser > 0)
         {
             builder.AddPersonalCiphers(preset.PersonalCiphers.CountPerUser, density: density, repromptEveryNthCipher: preset.PersonalCiphers.RepromptEveryNthCipher);
@@ -242,6 +275,51 @@ internal static class PresetLoader
         LimitCollectionCreation = org.LimitCollectionCreation,
         LimitCollectionDeletion = org.LimitCollectionDeletion,
     };
+
+    private static Distribution<OrganizationUserStatusType>? ParseStatusMix(SeedPresetStatusMix? mix)
+    {
+        if (mix is null)
+        {
+            return null;
+        }
+
+        var total = mix.Confirmed + mix.Invited + mix.Accepted + mix.Revoked;
+        if (total <= 0)
+        {
+            throw new InvalidOperationException("users.statusMix needs at least one positive weight.");
+        }
+
+        return new Distribution<OrganizationUserStatusType>(
+            (OrganizationUserStatusType.Confirmed, mix.Confirmed / total),
+            (OrganizationUserStatusType.Invited, mix.Invited / total),
+            (OrganizationUserStatusType.Accepted, mix.Accepted / total),
+            (OrganizationUserStatusType.Revoked, mix.Revoked / total));
+    }
+
+    private static List<(PolicyType Type, bool Enabled, string? Data)> ParsePolicies(SeedPresetPolicies? policies)
+    {
+        if (policies is null)
+        {
+            return [];
+        }
+
+        var data = new Dictionary<PolicyType, string>();
+        foreach (var (name, json) in policies.Data ?? [])
+        {
+            data[ParseEnum(name, PolicyType.TwoFactorAuthentication)] = json.GetRawText();
+        }
+
+        // enableAll/except are still not implemented (features.policy-enterprise relies on them being ignored);
+        // only explicitly listed types are created.
+        return (policies.Enable ?? []).Select(name => (name, enabled: true))
+            .Concat((policies.Disable ?? []).Select(name => (name, enabled: false)))
+            .Select(p =>
+            {
+                var type = ParseEnum(p.name, PolicyType.TwoFactorAuthentication);
+                return (type, p.enabled, data.GetValueOrDefault(type));
+            })
+            .ToList();
+    }
 
     private static MemberDecryptionType ParseMemberDecryptionType(string? encryptionType) =>
         encryptionType?.ToLowerInvariant() switch

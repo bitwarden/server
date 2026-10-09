@@ -103,6 +103,34 @@
           "type": "boolean",
           "default": false,
           "description": "When true and count >= 10, creates realistic mix: 85% Confirmed, 5% Invited, 5% Accepted, 5% Revoked."
+        },
+        "adminCount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of confirmed generated members created as Admins (the rest are Users)."
+        },
+        "statusMix": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Explicit member status weights (normalized). Overrides realisticStatusMix.",
+          "properties": {
+            "confirmed": {
+              "type": "number",
+              "minimum": 0
+            },
+            "invited": {
+              "type": "number",
+              "minimum": 0
+            },
+            "accepted": {
+              "type": "number",
+              "minimum": 0
+            },
+            "revoked": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
         }
       },
       "required": ["count"]
@@ -198,7 +226,7 @@
         "enableAll": {
           "type": "boolean",
           "default": false,
-          "description": "When true, enables all policy types."
+          "description": "Not implemented yet: ignored. List types in 'enable' instead."
         },
         "except": {
           "type": "array",
@@ -208,7 +236,375 @@
         "enable": {
           "type": "array",
           "items": { "type": "string" },
-          "description": "Specific policy types to enable (alternative to enableAll)."
+          "description": "PolicyType names to create as enabled policies (e.g. organizationDataOwnership). OrganizationDataOwnership gets {\"enableIndividualItemsTransfer\":true}."
+        },
+        "disable": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "PolicyType names to create as disabled policy rows."
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Policy Data JSON keyed by PolicyType name; overrides the built-in default."
+        }
+      }
+    },
+    "accessShape": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Production-calibrated access shape (overlapping groups, long-tailed collection sizes, explicit grant pairing). When present, replaces the density group/collection/cipher-assignment algorithms. See Seeds/docs/access-shape.md.",
+      "properties": {
+        "seed": {
+          "type": "integer",
+          "description": "Random seed for the shape."
+        },
+        "departments": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Org-structure locality for groups, grants and multi-collection items.",
+          "properties": {
+            "count": {
+              "type": "integer",
+              "description": "Number of departments.",
+              "minimum": 1
+            },
+            "locality": {
+              "type": "number",
+              "description": "Probability a pick stays in-department (0-1).",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "groups": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "everyoneGroupRate": {
+              "type": "number",
+              "description": "Fraction of confirmed members in one 'Everyone' group (0 = none).",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "hotGroupSizes": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "description": "Exact member counts for hot groups."
+            },
+            "hotGroupOverlap": {
+              "type": "number",
+              "description": "Fraction of each later hot group's members drawn from its parent hot group.",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "nestedGroupRate": {
+              "type": "number",
+              "description": "Fraction of regular groups built as a subset of a larger group in the same department.",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxGroupsPerUser": {
+              "type": "integer",
+              "description": "Cap on groups per member, including the everyone group.",
+              "minimum": 1
+            },
+            "userAffinityAlpha": {
+              "type": "number",
+              "description": "Pareto exponent for member group affinity; lower = heavier tail.",
+              "exclusiveMinimum": 0
+            },
+            "sizes": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "min",
+                  "max",
+                  "weight"
+                ],
+                "properties": {
+                  "min": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "max": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "weight": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                }
+              },
+              "description": "Member-count histogram for the regular groups."
+            },
+            "hotGroupParents": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": -1
+              },
+              "description": "Parent hot group index per hot group (-1 = none), for chains like C inside B inside A. Default: every later hot group draws from the first."
+            }
+          }
+        },
+        "collections": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "totalAssignments": {
+              "type": "integer",
+              "description": "Total collection-cipher rows on shared collections (histogram draws are scaled to it).",
+              "minimum": 0
+            },
+            "maxCollectionsPerCipher": {
+              "type": "integer",
+              "description": "Cap on collections per cipher.",
+              "minimum": 1
+            },
+            "sizes": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "min",
+                  "max",
+                  "weight"
+                ],
+                "properties": {
+                  "min": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "max": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "weight": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                }
+              },
+              "description": "Item-count histogram for shared collections; a 0-0 bucket makes empty collections."
+            }
+          }
+        },
+        "groupGrants": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "total": {
+              "type": "integer",
+              "description": "Total CollectionGroup rows.",
+              "minimum": 0
+            },
+            "grantedGroupRate": {
+              "type": "number",
+              "description": "Fraction of regular groups eligible for random grants, largest first; the smallest groups get none.",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "groupSizeBias": {
+              "type": "number",
+              "description": "Group pick weight = members^-bias; higher favors small groups."
+            },
+            "groupAppetiteAlpha": {
+              "type": "number",
+              "description": "Pareto exponent for per-group grant appetite; lower = a few groups hold most grants.",
+              "exclusiveMinimum": 0
+            },
+            "collectionPopularityAlpha": {
+              "type": "number",
+              "description": "Pareto exponent for per-collection grant popularity.",
+              "exclusiveMinimum": 0
+            },
+            "collectionSizeBias": {
+              "type": "number",
+              "description": "Collection pick weight multiplier = (items+1)^bias; negative favors small collections."
+            },
+            "echoRate": {
+              "type": "number",
+              "description": "Fraction of grants copied to a nested child or overlapping smaller group.",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "everyoneGroupCollections": {
+              "type": "integer",
+              "description": "Tiny collections granted to the everyone group.",
+              "minimum": 0
+            },
+            "hotCollections": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "description": "Exact item counts of the collections reserved for hot pairs."
+            },
+            "hotPairs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "group",
+                  "collections"
+                ],
+                "properties": {
+                  "group": {
+                    "type": "integer",
+                    "description": "Index into groups.hotGroupSizes.",
+                    "minimum": 0
+                  },
+                  "collections": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "description": "Indices into hotCollections."
+                  }
+                }
+              }
+            },
+            "maxGrantsPerGroup": {
+              "type": "integer",
+              "description": "Cap on random grants per group (hot and wide grants excluded).",
+              "minimum": 1
+            },
+            "wideGroups": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Tiny groups granted nested prefixes of one block of near-empty collections (admin-style wide reach with few items).",
+              "properties": {
+                "count": {
+                  "type": "integer",
+                  "description": "Number of wide groups.",
+                  "minimum": 0
+                },
+                "blockSize": {
+                  "type": "integer",
+                  "description": "Collections in the shared block.",
+                  "minimum": 0
+                },
+                "blockMaxItems": {
+                  "type": "integer",
+                  "description": "Only collections with at most this many items go into the block.",
+                  "minimum": 0
+                },
+                "minGrants": {
+                  "type": "integer",
+                  "description": "Minimum grants per wide group (log-uniform; the first wide group gets maxGrants).",
+                  "minimum": 0
+                },
+                "maxGrants": {
+                  "type": "integer",
+                  "description": "Maximum grants per wide group.",
+                  "minimum": 0
+                },
+                "maxMembers": {
+                  "type": "integer",
+                  "description": "Wide groups are picked from regular groups with at most this many members.",
+                  "minimum": 1
+                }
+              }
+            }
+          }
+        },
+        "directGrants": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "total": {
+              "type": "integer",
+              "description": "Total CollectionUser rows on shared collections.",
+              "minimum": 0
+            },
+            "collectionSizeBias": {
+              "type": "number",
+              "description": "Collection pick weight = (items+1)^bias; higher favors big collections."
+            },
+            "userAffinityAlpha": {
+              "type": "number",
+              "description": "Pareto exponent for member direct-grant affinity.",
+              "exclusiveMinimum": 0
+            },
+            "ungroupedBoost": {
+              "type": "number",
+              "description": "Weight multiplier for members in no group other than the everyone group.",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "myItems": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "My Items (default user) collections for every confirmed member, as created by the Organization Data Ownership policy, filled with already-migrated org ciphers.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "default": "My Items",
+          "description": "Plaintext collection name, encrypted once with the org key."
+        },
+        "nonEmptyRate": {
+          "type": "number",
+          "description": "Fraction of My Items collections holding at least one item.",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "largest": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "Exact item counts for the heaviest members."
+        },
+        "policyEnabledDaysAgo": {
+          "type": "integer",
+          "description": "Days before now the policy was enabled; items migrate between then and now.",
+          "minimum": 0
+        },
+        "sizes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "min",
+              "max",
+              "weight"
+            ],
+            "properties": {
+              "min": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "max": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "weight": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          },
+          "description": "Item-count histogram for non-empty My Items collections."
         }
       }
     },

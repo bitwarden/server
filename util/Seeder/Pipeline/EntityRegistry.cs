@@ -73,6 +73,54 @@ internal sealed class EntityRegistry
     internal Dictionary<string, Guid> FixtureCollectionNameToId { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
+    /// Member count per group. Populated by the access-shape group step for grant weighting.
+    /// </summary>
+    internal Dictionary<Guid, int> GroupMemberCounts { get; } = [];
+
+    /// <summary>
+    /// The access-shape "everyone" group, if one was created.
+    /// </summary>
+    internal Guid? EveryoneGroupId { get; set; }
+
+    /// <summary>
+    /// Access-shape hot groups, in preset order. Paired with dedicated large collections.
+    /// </summary>
+    internal List<Guid> HotGroupIds { get; } = [];
+
+    /// <summary>
+    /// Target item count per collection, aligned with <see cref="CollectionIds"/>. When non-empty,
+    /// <see cref="Steps.GenerateCiphersStep"/> fills collections to these sizes instead of using density skew.
+    /// </summary>
+    internal List<int> CollectionTargetSizes { get; } = [];
+
+    /// <summary>
+    /// Access-shape department per collection, aligned with <see cref="CollectionIds"/>. Empty when departments are off.
+    /// </summary>
+    internal List<int> CollectionDepartments { get; } = [];
+
+    /// <summary>
+    /// Access-shape department per member, aligned with <see cref="HardenedOrgUserIds"/>, and per group.
+    /// </summary>
+    internal List<int> MemberDepartments { get; } = [];
+
+    internal Dictionary<Guid, int> GroupDepartments { get; } = [];
+
+    /// <summary>
+    /// Access-shape nested groups: parent group → child groups whose members are a subset of the parent's.
+    /// </summary>
+    internal Dictionary<Guid, List<Guid>> GroupChildren { get; } = [];
+
+    /// <summary>
+    /// Probability that a shaped pick stays inside the home department.
+    /// </summary>
+    internal double DepartmentLocality { get; set; }
+
+    /// <summary>
+    /// Cap on collections per cipher when filling <see cref="CollectionTargetSizes"/>.
+    /// </summary>
+    internal int MaxCollectionsPerCipher { get; set; } = 1;
+
+    /// <summary>
     /// Clears all registry lists. Called by <see cref="RecipeExecutor"/> before each pipeline run.
     /// </summary>
     internal void Clear()
@@ -87,5 +135,15 @@ internal sealed class EntityRegistry
         UserEmailPrefixToUserId.Clear();
         FixtureCipherNameToId.Clear();
         FixtureCollectionNameToId.Clear();
+        GroupMemberCounts.Clear();
+        EveryoneGroupId = null;
+        HotGroupIds.Clear();
+        CollectionTargetSizes.Clear();
+        MaxCollectionsPerCipher = 1;
+        CollectionDepartments.Clear();
+        MemberDepartments.Clear();
+        GroupDepartments.Clear();
+        GroupChildren.Clear();
+        DepartmentLocality = 0;
     }
 }
