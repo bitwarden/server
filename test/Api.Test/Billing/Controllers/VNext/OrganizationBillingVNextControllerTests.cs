@@ -13,8 +13,8 @@ using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Subscriptions.Commands;
-using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using NSubstitute;
@@ -173,21 +173,18 @@ public class OrganizationBillingVNextControllerTests
     [InlineData(nameof(OrganizationBillingVNextController.RedeemAnnualUpgradeOfferAsync))]
     public void AnnualUpgradeOfferEndpoints_AreGatedOnTheirOwnFlag(string methodName)
     {
-        // RequireFeature throws FeatureUnavailableException, which derives from NotFoundException,
-        // so a flag-off environment answers 404 on both endpoints. RequireFeatureAttribute exposes
-        // no public accessor for the flag key it carries, but the field is still readable by
-        // reflection, and pinning the key here is worth that coupling: without it, nothing on the
-        // server confirms these endpoints are gated on their own flag rather than some other
-        // program's.
+        // A failed RequireFeature check answers 404 on both endpoints. Running the attribute's
+        // FeatureCheck against a feature service where only the expected flag is on pins the key:
+        // without it, nothing on the server confirms these endpoints are gated on their own flag
+        // rather than some other program's.
         var method = typeof(OrganizationBillingVNextController).GetMethod(methodName);
 
         Assert.NotNull(method);
         var attribute = method.GetCustomAttributes<RequireFeatureAttribute>().SingleOrDefault();
         Assert.NotNull(attribute);
 
-        var featureFlagKeyField = typeof(RequireFeatureAttribute).GetField(
-            "_featureFlagKey", BindingFlags.NonPublic | BindingFlags.Instance);
-        Assert.NotNull(featureFlagKeyField);
-        Assert.Equal(FeatureFlagKeys.PM38333_AnnualBillingSavings, featureFlagKeyField.GetValue(attribute));
+        var featureService = Substitute.For<IFeatureService>();
+        featureService.IsEnabled(FeatureFlagKeys.PM38333_AnnualBillingSavings, Arg.Any<bool>()).Returns(true);
+        Assert.True(attribute.FeatureCheck(featureService));
     }
 }

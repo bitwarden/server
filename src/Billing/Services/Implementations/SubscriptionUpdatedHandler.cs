@@ -43,7 +43,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IProviderService _providerService;
     private readonly IPushNotificationAdapter _pushNotificationAdapter;
     private readonly IPriceIncreaseScheduler _priceIncreaseScheduler;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IOrganizationPlanMigrationCohortRepository _cohortRepository;
     private readonly IOrganizationPlanMigrationCohortAssignmentRepository _cohortAssignmentRepository;
     private readonly ILogger<SubscriptionUpdatedHandler> _logger;
@@ -64,7 +64,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IProviderService providerService,
         IPushNotificationAdapter pushNotificationAdapter,
         IPriceIncreaseScheduler priceIncreaseScheduler,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         IOrganizationPlanMigrationCohortRepository cohortRepository,
         IOrganizationPlanMigrationCohortAssignmentRepository cohortAssignmentRepository,
         ILogger<SubscriptionUpdatedHandler> logger)
