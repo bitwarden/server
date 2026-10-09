@@ -2459,6 +2459,9 @@ public class CipherServiceTests
     {
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.GetAttachmentDownloadDataAsync(null, attachmentId));
+
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
+            .LogCipherEventAsync(default, default);
     }
 
     [Theory, BitAutoData]
@@ -2469,6 +2472,9 @@ public class CipherServiceTests
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.GetAttachmentDownloadDataAsync(cipher, "nonexistent"));
+
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
+            .LogCipherEventAsync(default, default);
     }
 
     [Theory, BitAutoData]
@@ -2501,6 +2507,9 @@ public class CipherServiceTests
 
         Assert.Equal(expectedUrl, result.Url);
         Assert.Equal(attachmentId, result.Id);
+
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogCipherEventAsync(cipher, EventType.Cipher_AttachmentDownloaded);
     }
 
     [Theory, BitAutoData]
