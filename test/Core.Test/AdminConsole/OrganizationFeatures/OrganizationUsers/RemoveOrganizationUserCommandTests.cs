@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -218,6 +219,63 @@ public class RemoveOrganizationUserCommandTests
         await sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
             .Received(1)
             .GetUsersOrganizationClaimedStatusAsync(orgUser.OrganizationId, Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser.Id)));
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task RemoveUser_WhenScopedApiKeyRemovesElevatedMember_ThrowsAndDoesNotDelete(
+        OrganizationUserType targetRole,
+        OrganizationUser organizationUser,
+        SutProvider<RemoveOrganizationUserCommand> sutProvider)
+    {
+        organizationUser.Type = targetRole;
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+        sutProvider.GetDependency<ICurrentContext>().IsScopedOrganizationApiKey.Returns(true);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RemoveUserAsync(organizationUser.OrganizationId, organizationUser.Id, null));
+
+        Assert.Equal(new ScopedApiKeyCanOnlyManageUsers().Message, exception.Message);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RemoveUser_WhenScopedApiKeyRemovesUser_Deletes(
+        [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser organizationUser,
+        SutProvider<RemoveOrganizationUserCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+        sutProvider.GetDependency<ICurrentContext>().IsScopedOrganizationApiKey.Returns(true);
+
+        await sutProvider.Sut.RemoveUserAsync(organizationUser.OrganizationId, organizationUser.Id, null);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .DeleteAsync(organizationUser);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RemoveUser_WhenLegacyPublicApiRemovesAdmin_Deletes(
+        [OrganizationUser(type: OrganizationUserType.Admin)] OrganizationUser organizationUser,
+        SutProvider<RemoveOrganizationUserCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+
+        await sutProvider.Sut.RemoveUserAsync(organizationUser.OrganizationId, organizationUser.Id, null);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .DeleteAsync(organizationUser);
     }
 
     [Theory, BitAutoData]

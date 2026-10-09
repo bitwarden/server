@@ -2,6 +2,7 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -140,6 +141,11 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
 
     private async Task RepositoryRemoveUserAsync(OrganizationUser orgUser, Guid? deletingUserId, EventSystemUser? eventSystemUser)
     {
+        if (_currentContext.IsScopedOrganizationApiKey && orgUser.Type != OrganizationUserType.User)
+        {
+            throw new BadRequestException(new ScopedApiKeyCanOnlyManageUsers().Message);
+        }
+
         if (deletingUserId.HasValue && orgUser.UserId == deletingUserId.Value)
         {
             throw new BadRequestException(RemoveYourselfErrorMessage);

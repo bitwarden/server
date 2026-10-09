@@ -1,6 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.Utilities.DebuggingInstruments;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -15,17 +17,20 @@ public class ResendOrganizationInviteCommand : IResendOrganizationInviteCommand
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
     private readonly ILogger<ResendOrganizationInviteCommand> _logger;
+    private readonly ICurrentContext _currentContext;
 
     public ResendOrganizationInviteCommand(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
         ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
-        ILogger<ResendOrganizationInviteCommand> logger)
+        ILogger<ResendOrganizationInviteCommand> logger,
+        ICurrentContext currentContext)
     {
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
         _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
         _logger = logger;
+        _currentContext = currentContext;
     }
 
     public async Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId,
@@ -36,6 +41,11 @@ public class ResendOrganizationInviteCommand : IResendOrganizationInviteCommand
             organizationUser.Status != OrganizationUserStatusType.Invited)
         {
             throw new BadRequestException("User invalid.");
+        }
+
+        if (_currentContext.IsScopedOrganizationApiKey && organizationUser.Type != OrganizationUserType.User)
+        {
+            throw new BadRequestException(new ScopedApiKeyCanOnlyManageUsers().Message);
         }
 
         _logger.LogUserInviteStateDiagnostics(organizationUser);
