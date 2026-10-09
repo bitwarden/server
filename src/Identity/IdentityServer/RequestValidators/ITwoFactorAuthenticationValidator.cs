@@ -35,9 +35,7 @@ public interface ITwoFactorAuthenticationValidator
     /// <param name="token">secret passed from the user and consumed by the two-factor provider's verify method</param>
     /// <param name="deviceIdentifier">
     /// The client-generated device identifier from the raw request. An email code only verifies for the
-    /// device it was issued to, and the Remember provider binds its token to a device. It is read from
-    /// the request rather than from <c>CurrentContext</c> or the validated device: device validation runs
-    /// after this point, so neither is populated yet.
+    /// device it was issued to, and a remember token is bound to its device.
     /// </param>
     Task<TwoFactorVerificationResult> VerifyTwoFactorAsync(
         User user,
