@@ -105,6 +105,9 @@ public static class UserServiceCollectionExtensions
         services.AddScoped<IDeleteTwoFactorWebAuthnCredentialCommand, DeleteTwoFactorWebAuthnCredentialCommand>();
         services.AddScoped<ITwoFactorIsEnabledQuery, TwoFactorIsEnabledQuery>();
         services.AddScoped<IResetUserTwoFactorCommand, ResetUserTwoFactorCommand>();
+        services.AddScoped<IIssueTwoFactorRememberTokenCommand, IssueTwoFactorRememberTokenCommand>();
+        services.AddScoped<IValidateTwoFactorRememberTokenQuery, ValidateTwoFactorRememberTokenQuery>();
+        services.AddScoped<IRevokeTwoFactorRememberTokensCommand, RevokeTwoFactorRememberTokensCommand>();
     }
 
 }
