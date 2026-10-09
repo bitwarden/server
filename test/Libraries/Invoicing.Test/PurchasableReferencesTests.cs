@@ -12,6 +12,7 @@ public class PurchasableReferencesTests
     [InlineData(StripeConstants.PurchasableReferences.PasswordManagerStorage)]
     [InlineData(StripeConstants.PurchasableReferences.SecretsManagerSeat)]
     [InlineData(StripeConstants.PurchasableReferences.SecretsManagerServiceAccount)]
+    [InlineData(StripeConstants.PurchasableReferences.PrivilegedControlsSeat)]
     public void IsKnown_TrueForKnownReference(string reference)
         => Assert.True(PurchasableReferences.IsKnown(reference));
 
@@ -20,6 +21,8 @@ public class PurchasableReferencesTests
     [InlineData(null)]
     [InlineData("provider-seat")]
     [InlineData("PM-SEAT")]
+    [InlineData("pc-seat")]
+    [InlineData("PAM-SEAT")]
     public void IsKnown_FalseForUnknownReference(string? reference)
         => Assert.False(PurchasableReferences.IsKnown(reference));
 
@@ -28,6 +31,7 @@ public class PurchasableReferencesTests
     [InlineData(StripeConstants.PurchasableReferences.PasswordManagerStorage, ProductType.PasswordManager)]
     [InlineData(StripeConstants.PurchasableReferences.SecretsManagerSeat, ProductType.SecretsManager)]
     [InlineData(StripeConstants.PurchasableReferences.SecretsManagerServiceAccount, ProductType.SecretsManager)]
+    [InlineData(StripeConstants.PurchasableReferences.PrivilegedControlsSeat, ProductType.PrivilegedControls)]
     public void ProductOf_MapsReferenceToProduct(string reference, ProductType expected)
         => Assert.Equal(expected, PurchasableReferences.ProductOf(reference));
 
