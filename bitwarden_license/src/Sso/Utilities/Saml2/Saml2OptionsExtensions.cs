@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Text;
 using System.Xml;
 using Bit.Core;
+using Bit.Core.Settings;
 using Bitwarden.Server.Sdk.Features;
 using Sustainsys.Saml2;
 using Sustainsys.Saml2.AspNetCore2;
@@ -92,7 +93,7 @@ public static class Saml2OptionsExtensions
             return false;
         }
 
-        Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
+        NotifyWhenRsa15Deprecated(envelope, scheme, context);
 
         if (options.SPOptions.WantAssertionsSigned)
         {
@@ -121,4 +122,32 @@ public static class Saml2OptionsExtensions
         return true;
     }
 
+    /// <summary>
+    /// Queues the RSA 1.5 deprecation notice for the organization when the assertion uses RSA 1.5 key transport.
+    /// This method never throws, because a throw blocks single sign-on (SSO) login.
+    /// </summary>
+    private static void NotifyWhenRsa15Deprecated(XmlElement envelope, string scheme, HttpContext context)
+    {
+        try
+        {
+            if (!Saml2EncryptedAssertionInspector.UsesRsa15KeyTransport(envelope) ||
+                !Guid.TryParse(scheme, out var organizationId))
+            {
+                return;
+            }
+
+            var globalSettings = context.RequestServices.GetRequiredService<IGlobalSettings>();
+            var featureService = context.RequestServices.GetRequiredService<IFeatureService>();
+            if (!globalSettings.SelfHosted && !featureService.IsEnabled(FeatureFlagKeys.PM43819_Rsa15DeprecationEmail))
+            {
+                return;
+            }
+
+            context.RequestServices.GetRequiredService<ISaml2Rsa15DeprecationNotifier>().TryQueue(organizationId);
+        }
+        catch
+        {
+            // The notice is best effort. It must never block login, and it must not log the organization ID.
+        }
+    }
 }

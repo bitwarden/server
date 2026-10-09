@@ -1,16 +1,19 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.Auth.Sso;
 using Bit.Core.Business.Sso;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Bit.Sso.IdentityServer;
 using Bit.Sso.Models;
+using Bit.Sso.Utilities.Saml2;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.ResponseHandling;
 using Duende.IdentityServer.Stores;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Sustainsys.Saml2.AspNetCore2;
 
 namespace Bit.Sso.Utilities;
@@ -39,6 +42,10 @@ public static class ServiceCollectionExtensions
             PostConfigureSaml2Options>();
         services.AddSingleton<Microsoft.Extensions.Options.IOptionsMonitorCache<Saml2Options>,
             ExtendedOptionsMonitorCache<Saml2Options>>();
+        // Saml2 RSA 1.5 deprecation notice
+        services.TryAddSingleton<ISaml2Rsa15DeprecationNoticeInterval, Saml2Rsa15DeprecationNoticeInterval>();
+        services.TryAddSingleton<ISaml2Rsa15DeprecationNoticeCommand, Saml2Rsa15DeprecationNoticeCommand>();
+        services.TryAddSingleton<ISaml2Rsa15DeprecationNotifier, Saml2Rsa15DeprecationNotifier>();
 
         return services;
     }

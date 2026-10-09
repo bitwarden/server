@@ -7,9 +7,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Bit.Sso.Utilities;
-using Bit.Sso.Utilities.Saml2;
 using Duende.IdentityServer.Services;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Stripe;
 
 namespace Bit.Sso;
@@ -46,9 +44,6 @@ public class Startup
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
-
-        // Metrics
-        services.TryAddSingleton<Saml2AssertionMetrics>();
 
         // Caching
         services.AddMemoryCache();

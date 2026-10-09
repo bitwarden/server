@@ -168,6 +168,7 @@ public static partial class FeatureFlagKeys
     public const string PM35092AuthSalesAssistedTrials = "pm-35092-auth-sales-assisted-trials";
     public const string PM27060_PasswordPreloginFromSdk = "pm-27060-password-prelogin-from-sdk";
     public const string PM42982_WantAssertionsSigned = "pm-42982-want-assertions-signed";
+    public const string PM43819_Rsa15DeprecationEmail = "pm-43819-rsa15-deprecation-email";
     public const string PM44303_EmergencyAccessSdkApi = "pm-44303-emergency-access-sdk-api";
 
     /* Autofill Team */
