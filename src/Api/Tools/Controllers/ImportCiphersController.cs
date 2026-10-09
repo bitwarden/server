@@ -8,6 +8,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.ImportFeatures.Interfaces;
+using LinqToDB.Internal.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -76,81 +77,60 @@ public class ImportCiphersController : Controller
         var orgId = new Guid(organizationId);
         var collections = model.Collections.Select(c => c.ToCollection(orgId)).ToList();
 
-        // A User is allowed to import if CanCreate Collections or has AccessToImportExport
-        var authorized = await CheckOrgImportPermissionAsync(collections, orgId);
+        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
+        var authorized = await CheckOrgImportPermissionAsync(collections, orgId, userId);
         if (!authorized)
         {
             throw new BadRequestException("Not enough privileges to import into this organization.");
         }
 
-        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var ciphers = model.Ciphers.Select(l => l.ToOrganizationCipherDetails(orgId)).ToList();
         var folders = model.Folders.Select(f => f.ToFolder(userId)).ToList();
         await _importCiphersCommand.ImportIntoOrganizationalVaultAsync(collections, ciphers, model.CollectionRelationships, userId, folders, model.FolderRelationships);
     }
 
-    private async Task<bool> CheckOrgImportPermissionAsync(List<Collection> collections, Guid orgId)
+    private async Task<bool> CheckOrgImportPermissionAsync(List<Collection> collections, Guid orgId, Guid userId)
     {
-        //Users are allowed to import if they have the AccessToImportExport permission
-        if (await _currentContext.AccessImportExport(orgId))
+        // If we're importing into the default collection then all we check
+        // is whether the user has access to the import feature at all
+        if (collections.IsNullOrEmpty())
         {
+            if (!await _currentContext.AccessImportExport(orgId)) {
+                return false;
+            }
             return true;
         }
 
-        //Calling Repository instead of Service as we want to get all the collections, regardless of permission
-        //Permissions check will be done later on AuthorizationService
+        // Calling Repository instead of Service as we want to get all the collections, regardless of permission
+        // Permissions check will be done later on AuthorizationService
         var orgCollectionIds =
             (await _collectionRepository.GetManyByOrganizationIdAsync(orgId))
             .Select(c => c.Id)
             .ToHashSet();
 
-        // are we trying to import into existing collections?
         var existingCollections = collections.Where(tc => orgCollectionIds.Contains(tc.Id));
-
-        // are we trying to create new collections?
         var hasNewCollections = collections.Any(tc => !orgCollectionIds.Contains(tc.Id));
 
-        // suppose we have both new and existing collections
-        if (hasNewCollections && existingCollections.Any())
+        if (hasNewCollections)
         {
-            // since we are creating new collection, user must have import/manage and create collection permission
-            if ((await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.Create)).Succeeded
-                && (await _authorizationService.AuthorizeAsync(User, existingCollections, BulkCollectionOperations.ImportCiphers)).Succeeded)
+            var canCreateNewCollections =
+                (await _currentContext.AccessImportExport(orgId)) ||
+                (await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.Create)).Succeeded;
+            if (!canCreateNewCollections)
             {
-                // can import collections and create new ones
-                return true;
-            }
-            else
-            {
-                // user does not have permission to import
                 return false;
             }
         }
 
-        // suppose we have new collections and none of our collections exist
-        if (hasNewCollections && !existingCollections.Any())
+        if (existingCollections.Any())
         {
-            // user is trying to create new collections
-            // we need to check if the user has permission to create collections
-            if ((await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.Create)).Succeeded)
+            var canImportIntoExistingCollections = (await _authorizationService.AuthorizeAsync(User, existingCollections, BulkCollectionOperations.ImportCiphers)).Succeeded;
+            if (!canImportIntoExistingCollections)
             {
-                return true;
-            }
-            else
-            {
-                // user does not have permission to create new collections
                 return false;
             }
         }
 
-        // in many import formats, we don't create collections, we just import ciphers into an existing collection
-
-        // When importing, we need to verify if the user has ImportCiphers permission
-        if (existingCollections.Any() && (await _authorizationService.AuthorizeAsync(User, existingCollections, BulkCollectionOperations.ImportCiphers)).Succeeded)
-        {
-            return true;
-        }
-
-        return false;
+        return true;
     }
 }

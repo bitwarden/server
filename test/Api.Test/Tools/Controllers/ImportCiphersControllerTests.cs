@@ -8,6 +8,7 @@ using Bit.Api.Tools.Models.Request.Organizations;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Tools.ImportFeatures.Interfaces;
@@ -809,6 +810,135 @@ public class ImportCiphersControllerTests
 
         Assert.Equal("Not enough privileges to import into this organization.", exception.Message);
 
+        await sutProvider.GetDependency<IImportCiphersCommand>()
+            .DidNotReceive()
+            .ImportIntoOrganizationalVaultAsync(
+                Arg.Any<List<Collection>>(),
+                Arg.Any<List<CipherDetails>>(),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
+                Arg.Any<Guid>(),
+                Arg.Any<List<Folder>>(),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostImportOrganization_CanImportIntoOwnDefaultUserCollection_Succeeds(
+        SutProvider<ImportCiphersController> sutProvider,
+        IFixture fixture,
+        User user)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var userId = user.Id;
+        var ownDefaultCollection = new Collection
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            Type = CollectionType.DefaultUserCollection,
+            Name = "My Items"
+        };
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .ImportCiphersLimitation = _organizationCiphersLimitations;
+
+        SetupUserService(sutProvider, user);
+
+        var request = fixture.Build<ImportOrganizationCiphersRequestModel>()
+            .With(x => x.Ciphers, fixture.Build<CipherRequestModel>()
+                .With(c => c.OrganizationId, orgId.ToString())
+                .With(c => c.FolderId, Guid.NewGuid().ToString())
+                .With(c => c.ArchivedDate, (DateTime?)null)
+                .CreateMany(1).ToArray())
+            .With(y => y.Collections, new[] { new CollectionWithIdRequestModel { Id = ownDefaultCollection.Id } })
+            .Create();
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .AccessImportExport(Arg.Any<Guid>())
+            .Returns(false);
+
+        // Authorization succeeds for user's own DefaultUserCollection
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
+                    reqs.Contains(BulkCollectionOperations.ImportCiphers)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(orgId)
+            .Returns(new[] { ownDefaultCollection }.ToList());
+
+        // Act
+        await sutProvider.Sut.PostImportOrganization(orgId.ToString(), request);
+
+        // Assert
+        await sutProvider.GetDependency<IImportCiphersCommand>()
+            .Received(1)
+            .ImportIntoOrganizationalVaultAsync(
+                Arg.Any<List<Collection>>(),
+                Arg.Any<List<CipherDetails>>(),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
+                Arg.Any<Guid>(),
+                Arg.Any<List<Folder>>(),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostImportOrganization_CannotImportIntoAnotherUsersDefaultUserCollection_ThrowsException(
+        SutProvider<ImportCiphersController> sutProvider,
+        IFixture fixture,
+        User user)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var otherUsersDefaultCollection = new Collection
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            Type = CollectionType.DefaultUserCollection,
+            Name = "Other User's Items"
+        };
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .ImportCiphersLimitation = _organizationCiphersLimitations;
+
+        SetupUserService(sutProvider, user);
+
+        var request = fixture.Build<ImportOrganizationCiphersRequestModel>()
+            .With(x => x.Ciphers, fixture.Build<CipherRequestModel>()
+                .With(c => c.OrganizationId, orgId.ToString())
+                .With(c => c.FolderId, Guid.NewGuid().ToString())
+                .With(c => c.ArchivedDate, (DateTime?)null)
+                .CreateMany(1).ToArray())
+            .With(y => y.Collections, new[] { new CollectionWithIdRequestModel { Id = otherUsersDefaultCollection.Id } })
+            .Create();
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .AccessImportExport(Arg.Any<Guid>())
+            .Returns(false);
+
+        // Authorization fails for another user's DefaultUserCollection
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
+                    reqs.Contains(BulkCollectionOperations.ImportCiphers)))
+            .Returns(AuthorizationResult.Failed());
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(orgId)
+            .Returns(new[] { otherUsersDefaultCollection }.ToList());
+
+        // Act
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.PostImportOrganization(orgId.ToString(), request));
+
+        // Assert
+        Assert.IsType<BadRequestException>(exception);
         await sutProvider.GetDependency<IImportCiphersCommand>()
             .DidNotReceive()
             .ImportIntoOrganizationalVaultAsync(
