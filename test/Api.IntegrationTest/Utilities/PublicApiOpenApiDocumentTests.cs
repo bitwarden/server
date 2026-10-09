@@ -28,9 +28,8 @@ public class PublicApiOpenApiDocumentTests : IClassFixture<ApiApplicationFactory
         var schemes = ClientCredentialsSchemes(document);
 
         Assert.NotEmpty(schemes);
-        foreach (var scheme in schemes.Values)
+        foreach (var scopes in schemes.Values.Select(s => s.Flows!.ClientCredentials!.Scopes!.Keys))
         {
-            var scopes = scheme.Flows!.ClientCredentials!.Scopes!.Keys;
             Assert.Equivalent(ApiScopes.OrganizationApiKeyScopes.Append(ApiScopes.ApiOrganization), scopes, strict: true);
         }
     }
