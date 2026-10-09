@@ -22,9 +22,11 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
@@ -79,6 +81,7 @@ public class OrganizationsController : Controller
     private readonly IOrganizationPlanMigrationCohortRepository _organizationPlanMigrationCohortRepository;
     private readonly IOrganizationPlanMigrationCohortAssignmentRepository _organizationPlanMigrationCohortAssignmentRepository;
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
+    private readonly IGetOrganizationTrialQuery _getOrganizationTrialQuery;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -111,7 +114,8 @@ public class OrganizationsController : Controller
         ISubscriberService subscriberService,
         IOrganizationPlanMigrationCohortRepository organizationPlanMigrationCohortRepository,
         IOrganizationPlanMigrationCohortAssignmentRepository organizationPlanMigrationCohortAssignmentRepository,
-        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
+        IGetOrganizationTrialQuery getOrganizationTrialQuery)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -144,6 +148,7 @@ public class OrganizationsController : Controller
         _organizationPlanMigrationCohortRepository = organizationPlanMigrationCohortRepository;
         _organizationPlanMigrationCohortAssignmentRepository = organizationPlanMigrationCohortAssignmentRepository;
         _featureService = featureService;
+        _getOrganizationTrialQuery = getOrganizationTrialQuery;
     }
 
     private bool CanManagePlanMigrationCohortAssignment() =>
@@ -346,9 +351,35 @@ public class OrganizationsController : Controller
                 { ChurnDiscountAppliedDate: not null } => "Locked: a churn-mitigation discount has already been applied to this organization.",
                 _ => null,
             },
+            Trial = await GetTrialAsync(organization),
         };
 
         return View(model);
+    }
+
+    /// <summary>
+    /// The organization's trial when the current user may extend trials, otherwise null.
+    /// </summary>
+    private async Task<OrganizationTrial> GetTrialAsync(Organization organization)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.PM35092AuthSalesAssistedTrials)
+            || !_accessControlService.UserHasPermission(Permission.Org_ExtendTrial))
+        {
+            return null;
+        }
+
+        try
+        {
+            return await _getOrganizationTrialQuery.Run(organization);
+        }
+        catch (Exception ex)
+        {
+            // Stripe being unreachable must not block the Edit page; the command re-validates on POST.
+            _logger.LogError(ex,
+                "Failed to load the trial for organization {OrganizationId}.",
+                organization.Id);
+            return null;
+        }
     }
 
     [HttpPost]

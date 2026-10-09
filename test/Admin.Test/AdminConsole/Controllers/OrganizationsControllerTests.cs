@@ -11,9 +11,11 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
@@ -28,6 +30,7 @@ using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using NSubstitute.ReturnsExtensions;
 using Stripe;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
@@ -2120,4 +2123,141 @@ public class OrganizationsControllerTests
     }
 
     #endregion
+
+    private static void StubTrialExtensionAccess(
+        SutProvider<OrganizationsController> sutProvider,
+        Organization organization,
+        bool flagEnabled = true,
+        bool hasPermission = true)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(Bit.Core.FeatureFlagKeys.PM35092AuthSalesAssistedTrials)
+            .Returns(flagEnabled);
+        sutProvider.GetDependency<IAccessControlService>()
+            .UserHasPermission(Permission.Org_ExtendTrial)
+            .Returns(hasPermission);
+    }
+
+    private static async Task<OrganizationEditModel> GetEditModelAsync(
+        SutProvider<OrganizationsController> sutProvider,
+        Organization organization)
+    {
+        var result = await sutProvider.Sut.Edit(organization.Id);
+        return Assert.IsType<OrganizationEditModel>(Assert.IsType<ViewResult>(result).Model);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_TrialExtensionEligible_ShowsTrialEndAndExtendForm(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubTrialExtensionAccess(sutProvider, organization);
+        var trial = new OrganizationTrial(DateTime.UtcNow.AddDays(10), ExtensionBlockedReason: null);
+        sutProvider.GetDependency<IGetOrganizationTrialQuery>().Run(organization).Returns(trial);
+
+        var model = await GetEditModelAsync(sutProvider, organization);
+
+        Assert.Same(trial, model.Trial);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_TrialNotExtendable_ShowsTrialEndWithBlockedReason(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubTrialExtensionAccess(sutProvider, organization);
+        var trial = new OrganizationTrial(
+            DateTime.UtcNow.AddDays(45),
+            TrialExtensionPolicy.TooManyDaysRemainingMessage);
+        sutProvider.GetDependency<IGetOrganizationTrialQuery>().Run(organization).Returns(trial);
+
+        var model = await GetEditModelAsync(sutProvider, organization);
+
+        Assert.Same(trial, model.Trial);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_NoTrial_HidesTrialSection(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubTrialExtensionAccess(sutProvider, organization);
+        sutProvider.GetDependency<IGetOrganizationTrialQuery>().Run(organization).ReturnsNull();
+
+        var model = await GetEditModelAsync(sutProvider, organization);
+
+        Assert.Null(model.Trial);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_WithoutExtendTrialPermission_DoesNotLoadTrial(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubTrialExtensionAccess(sutProvider, organization, hasPermission: false);
+
+        var model = await GetEditModelAsync(sutProvider, organization);
+
+        Assert.Null(model.Trial);
+        await sutProvider.GetDependency<IGetOrganizationTrialQuery>().DidNotReceiveWithAnyArgs().Run(default);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_ExtendTrialFlagOff_DoesNotLoadTrial(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubTrialExtensionAccess(sutProvider, organization, flagEnabled: false);
+
+        var model = await GetEditModelAsync(sutProvider, organization);
+
+        Assert.Null(model.Trial);
+        await sutProvider.GetDependency<IGetOrganizationTrialQuery>().DidNotReceiveWithAnyArgs().Run(default);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_ProviderManagedOrganization_StillOffersExtendTrial(
+        Organization organization,
+        Provider provider,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // Provider-managed client organizations are not excluded from trial extension (PM-39077).
+        StubTrialExtensionAccess(sutProvider, organization);
+        sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).Returns(provider);
+        var trial = new OrganizationTrial(DateTime.UtcNow.AddDays(10), ExtensionBlockedReason: null);
+        sutProvider.GetDependency<IGetOrganizationTrialQuery>().Run(organization).Returns(trial);
+
+        var model = await GetEditModelAsync(sutProvider, organization);
+
+        Assert.Same(trial, model.Trial);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_TrialLoadThrows_HidesTrialSectionAndRendersPage(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubTrialExtensionAccess(sutProvider, organization);
+        sutProvider.GetDependency<IGetOrganizationTrialQuery>().Run(organization)
+            .ThrowsAsync(new StripeException { StripeError = new StripeError { Code = "api_error" } });
+
+        var model = await GetEditModelAsync(sutProvider, organization);
+
+        Assert.Null(model.Trial);
+    }
 }

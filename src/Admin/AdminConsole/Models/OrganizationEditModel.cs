@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -232,6 +233,14 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
     public bool MigrationCohortMismatch { get; set; }
 
     public bool MigrationCohortOrphaned { get; set; }
+
+    /// <summary>
+    /// The organization's Stripe trial; null when the subscription is not trialing, or when the current user lacks
+    /// <c>Org_ExtendTrial</c> and the Trial section is not rendered. <see cref="OrganizationTrial.CanExtend"/> is Stripe
+    /// eligibility, not the user's permission.
+    /// </summary>
+    public OrganizationTrial Trial { get; set; }
+
     /**
      * Creates a Plan[] object for use in Javascript
      * This is mapped manually below to provide some type safety in case the plan objects change
