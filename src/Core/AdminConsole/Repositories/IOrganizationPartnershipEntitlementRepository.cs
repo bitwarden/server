@@ -21,6 +21,13 @@ public interface IOrganizationPartnershipEntitlementRepository
     Task<ICollection<OrganizationPartnershipEntitlement>> GetManyCanceledWithExpiredResumeWindowAsync(DateTime asOf);
 
     /// <summary>
+    /// Writes <paramref name="entitlement"/> only if the stored row's RevisionDate still equals
+    /// <paramref name="expectedRevisionDate"/>, so a change made after it was read is never overwritten.
+    /// </summary>
+    /// <returns>True if the row was written.</returns>
+    Task<bool> ReplaceIfUnchangedAsync(OrganizationPartnershipEntitlement entitlement, DateTime expectedRevisionDate);
+
+    /// <summary>
     /// Clears the held binding only if the entitlement is still canceled, still bound, and its resume window
     /// ended at or before <paramref name="asOf"/>, so a concurrent change to the row is never overwritten.
     /// </summary>
