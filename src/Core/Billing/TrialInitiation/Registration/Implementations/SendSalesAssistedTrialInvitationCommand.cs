@@ -35,6 +35,23 @@ public class SendSalesAssistedTrialInvitationCommand(
             throw new BadRequestException("Trial length must be between 1 and 30 days.");
         }
 
+        var requestedProducts = products as IReadOnlyCollection<ProductType> ?? [.. products];
+
+        if (productTier == ProductTierType.Families && requestedProducts.Contains(ProductType.SecretsManager))
+        {
+            throw new BadRequestException("Secrets Manager is not available for the Families plan.");
+        }
+
+        if (requestedProducts.Contains(ProductType.PrivilegedControls))
+        {
+            ValidatePrivilegedControlsConfiguration(productTier, requestedProducts);
+        }
+
+        if (requestedProducts.Contains(ProductType.PasswordManager) && requestedProducts.Contains(ProductType.SecretsManager))
+        {
+            throw new BadRequestException("A Secrets Manager trial already includes Password Manager; select Secrets Manager on its own.");
+        }
+
         var existingUser = await userRepository.GetByEmailAsync(email);
         if (existingUser != null)
         {
@@ -49,7 +66,7 @@ public class SendSalesAssistedTrialInvitationCommand(
             Token = token,
             Email = email,
             ProductTier = productTier,
-            Products = products,
+            Products = requestedProducts,
             TrialLength = trialLength,
             SenderEmail = senderEmail,
             ExpiryDays = globalSettings.SalesAssistedRegistrationTokenLifetimeDays,
@@ -60,5 +77,25 @@ public class SendSalesAssistedTrialInvitationCommand(
             ToEmails = [email],
             View = view,
         });
+    }
+
+    private static void ValidatePrivilegedControlsConfiguration(
+        ProductTierType productTier,
+        IReadOnlyCollection<ProductType> products)
+    {
+        if (!products.Contains(ProductType.PasswordManager))
+        {
+            throw new BadRequestException("Privileged Controls requires Password Manager.");
+        }
+
+        if (productTier != ProductTierType.Enterprise)
+        {
+            throw new BadRequestException("Privileged Controls is only available on Password Manager Enterprise.");
+        }
+
+        if (products.Contains(ProductType.SecretsManager))
+        {
+            throw new BadRequestException("Privileged Controls cannot be combined with Secrets Manager.");
+        }
     }
 }

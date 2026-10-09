@@ -190,6 +190,127 @@ public class SendSalesAssistedTrialInvitationCommandTests
 
     [Theory]
     [BitAutoData]
+    public async Task HandleAsync_PrivilegedControlsWithoutPasswordManager_ThrowsBadRequest(
+        string email,
+        string name,
+        string senderEmail,
+        SutProvider<SendSalesAssistedTrialInvitationCommand> sutProvider)
+    {
+        var products = new[] { ProductType.PrivilegedControls };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.HandleAsync(email, name, senderEmail, ProductTierType.Enterprise, products, 7));
+
+        Assert.Equal("Privileged Controls requires Password Manager.", exception.Message);
+        await sutProvider.GetDependency<IMailer>()
+            .DidNotReceiveWithAnyArgs()
+            .SendEmail(Arg.Any<SalesAssistedTrialInvitationEmail>());
+    }
+
+    [Theory]
+    [BitAutoData(ProductTierType.Teams)]
+    [BitAutoData(ProductTierType.Families)]
+    [BitAutoData(ProductTierType.Free)]
+    public async Task HandleAsync_PrivilegedControlsOnNonEnterpriseTier_ThrowsBadRequest(
+        ProductTierType productTier,
+        string email,
+        string name,
+        string senderEmail,
+        SutProvider<SendSalesAssistedTrialInvitationCommand> sutProvider)
+    {
+        var products = new[] { ProductType.PasswordManager, ProductType.PrivilegedControls };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.HandleAsync(email, name, senderEmail, productTier, products, 7));
+
+        Assert.Equal("Privileged Controls is only available on Password Manager Enterprise.", exception.Message);
+        await sutProvider.GetDependency<IMailer>()
+            .DidNotReceiveWithAnyArgs()
+            .SendEmail(Arg.Any<SalesAssistedTrialInvitationEmail>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task HandleAsync_PrivilegedControlsWithSecretsManager_ThrowsBadRequest(
+        string email,
+        string name,
+        string senderEmail,
+        SutProvider<SendSalesAssistedTrialInvitationCommand> sutProvider)
+    {
+        var products = new[] { ProductType.PasswordManager, ProductType.SecretsManager, ProductType.PrivilegedControls };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.HandleAsync(email, name, senderEmail, ProductTierType.Enterprise, products, 7));
+
+        Assert.Equal("Privileged Controls cannot be combined with Secrets Manager.", exception.Message);
+        await sutProvider.GetDependency<IMailer>()
+            .DidNotReceiveWithAnyArgs()
+            .SendEmail(Arg.Any<SalesAssistedTrialInvitationEmail>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task HandleAsync_SecretsManagerOnFamiliesTier_ThrowsBadRequest(
+        string email,
+        string name,
+        string senderEmail,
+        SutProvider<SendSalesAssistedTrialInvitationCommand> sutProvider)
+    {
+        var products = new[] { ProductType.SecretsManager };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.HandleAsync(email, name, senderEmail, ProductTierType.Families, products, 7));
+
+        Assert.Equal("Secrets Manager is not available for the Families plan.", exception.Message);
+        await sutProvider.GetDependency<IMailer>()
+            .DidNotReceiveWithAnyArgs()
+            .SendEmail(Arg.Any<SalesAssistedTrialInvitationEmail>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task HandleAsync_PasswordManagerAndSecretsManager_ThrowsBadRequest(
+        string email,
+        string name,
+        string senderEmail,
+        SutProvider<SendSalesAssistedTrialInvitationCommand> sutProvider)
+    {
+        var products = new[] { ProductType.PasswordManager, ProductType.SecretsManager };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.HandleAsync(email, name, senderEmail, ProductTierType.Enterprise, products, 7));
+
+        Assert.Equal("A Secrets Manager trial already includes Password Manager; select Secrets Manager on its own.", exception.Message);
+        await sutProvider.GetDependency<IMailer>()
+            .DidNotReceiveWithAnyArgs()
+            .SendEmail(Arg.Any<SalesAssistedTrialInvitationEmail>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task HandleAsync_PasswordManagerAndPrivilegedControls_SendsEmailWithBothProducts(
+        string email,
+        string name,
+        string senderEmail,
+        SutProvider<SendSalesAssistedTrialInvitationCommand> sutProvider)
+    {
+        var products = new[] { ProductType.PasswordManager, ProductType.PrivilegedControls };
+
+        sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(email).Returns((User?)null);
+        sutProvider.GetDependency<ISalesAssistedRegistrationTokenableFactory>()
+            .CreateToken(email, name)
+            .Returns(new SalesAssistedRegistrationTokenable { Email = email, Name = name });
+
+        await sutProvider.Sut.HandleAsync(email, name, senderEmail, ProductTierType.Enterprise, products, 7);
+
+        await sutProvider.GetDependency<IMailer>()
+            .Received(1)
+            .SendEmail(Arg.Is<SalesAssistedTrialInvitationEmail>(mail =>
+                mail.View.Products.SequenceEqual(products)));
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task HandleAsync_TeamsStarter_ThrowsBadRequest(
         string email,
         string name,
