@@ -153,8 +153,8 @@ public class TwoFactorAuthenticationValidator(
             return new TwoFactorVerificationResult(false);
         }
 
-        // Remember is not a provider a user configures, so it has no entry to look up in the checks
-        // below. It carries its own server-side state and is validated against that instead.
+        // Remember is not a provider a user configures, so user.GetTwoFactorProvider(Remember) is always
+        // null and the lookup below would reject it. It is validated on its own terms here instead.
         if (type is TwoFactorProviderType.Remember)
         {
             // A remember token stands in for a second factor, so it cannot be honored by an account
