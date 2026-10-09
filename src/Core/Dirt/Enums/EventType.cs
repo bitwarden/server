@@ -173,4 +173,12 @@ public enum EventType : int
     Send_Accessed_File = 2511,
     Send_PolicyDisabled = 2512,
     Send_PolicyEnabled = 2513,
+
+    PartnershipEntitlement_Provisioned = 2600,
+    PartnershipEntitlement_Activated = 2601,
+    PartnershipEntitlement_Suspended = 2602,
+    PartnershipEntitlement_Deactivated = 2603,
+    PartnershipEntitlement_BindingFailed = 2604,
+    PartnershipEntitlement_ResumeWindowExpired = 2605,
+    PartnershipEntitlement_PlanChanged = 2606,
 }

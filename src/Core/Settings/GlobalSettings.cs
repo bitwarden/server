@@ -2,8 +2,10 @@
 #nullable disable
 
 using System.Globalization;
+using System.Text;
 
 using Bit.Core.Auth.Settings;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Settings;
 
@@ -89,6 +91,7 @@ public class GlobalSettings : IGlobalSettings
         new DistributedIpRateLimitingSettings();
     public virtual IPasswordlessAuthSettings PasswordlessAuth { get; set; } = new PasswordlessAuthSettings();
     public virtual IDomainVerificationSettings DomainVerification { get; set; } = new DomainVerificationSettings();
+    public virtual PartnershipSettings Partnerships { get; set; } = new PartnershipSettings();
     public virtual ILaunchDarklySettings LaunchDarkly { get; set; } = new LaunchDarklySettings();
     public virtual string DevelopmentDirectory { get; set; }
     public virtual IWebPushSettings WebPush { get; set; } = new WebPushSettings();
@@ -812,6 +815,28 @@ public class GlobalSettings : IGlobalSettings
         public TimeSpan UserRequestExpiration { get; set; } = TimeSpan.FromMinutes(15);
         public TimeSpan AdminRequestExpiration { get; set; } = TimeSpan.FromDays(7);
         public TimeSpan AfterAdminApprovalExpiration { get; set; } = TimeSpan.FromHours(12);
+    }
+
+    public class PartnershipSettings
+    {
+        /// <summary>
+        /// How long a suspended entitlement keeps the sponsored plan before reverting to Free.
+        /// </summary>
+        public TimeSpan SuspensionGracePeriod { get; set; } = TimeSpan.FromDays(7);
+        /// <summary>
+        /// How long a canceled entitlement holds its binding so a resume returns the customer to the same account.
+        /// </summary>
+        public TimeSpan ResumeWindow { get; set; } = TimeSpan.FromDays(30);
+        /// <summary>
+        /// Secret HMAC key for the external ID lookup hash, so the stored hash can't be reversed by enumeration.
+        /// </summary>
+        public string ExternalIdHashKey { get; set; }
+
+        /// <exception cref="InvalidOperationException">The key is not configured.</exception>
+        public byte[] GetExternalIdHashKey() =>
+            CoreHelpers.SettingHasValue(ExternalIdHashKey)
+                ? Encoding.UTF8.GetBytes(ExternalIdHashKey)
+                : throw new InvalidOperationException("Partnership external ID hash key is not configured.");
     }
 
     public class DomainVerificationSettings : IDomainVerificationSettings
