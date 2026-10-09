@@ -95,8 +95,8 @@ public static class ServiceCollectionExtension
         });
 
         // SubscriberService → PriceIncreaseScheduler (and other billing services) have hard constructor
-        // dependencies on IFeatureService — both the SDK interface and, until migration finishes, the obsolete
-        // one. NoopFeatureService satisfies both without pulling in the LaunchDarkly-backed SDK.
+        // dependencies on IFeatureService. NoopFeatureService satisfies it without pulling in the
+        // LaunchDarkly-backed SDK.
         services.TryAddSingleton<Bitwarden.Server.Sdk.Features.IFeatureService, NoopFeatureService>();
 
         services.AddScoped<IStripeBillingInitializer, StripeBillingInitializer>();
