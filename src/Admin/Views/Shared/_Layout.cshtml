@@ -4,7 +4,7 @@
 @inject SignInManager<IdentityUser> SignInManager
 @inject Bit.Core.Settings.GlobalSettings GlobalSettings
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
-@inject Bit.Core.Services.IFeatureService FeatureService
+@inject Bitwarden.Server.Sdk.Features.IFeatureService FeatureService
 
 @{
     var canViewUsers = AccessControlService.UserHasPermission(Permission.User_List_View);
@@ -171,6 +171,18 @@
     </footer>
 
     <script src="~/assets/site.js" asp-append-version="true"></script>
+
+    @Html.AntiForgeryToken()
+    <script>
+        $(document).ready(function () {
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            $(document).ajaxSend(function (event, jqxhr, settings) {
+                if (settings.type && settings.type.toUpperCase() !== "GET") {
+                    jqxhr.setRequestHeader("X-XSRF-TOKEN", token);
+                }
+            });
+        });
+    </script>
 
     @if (TempData["Error"] != null)
     {

@@ -44,6 +44,7 @@ public static class AnnualUpgradeSchedulePhaseRebuilder
         {
             StartDate = sourcePhase.StartDate,
             EndDate = sourcePhase.EndDate,
+            TrialEnd = sourcePhase.TrialEnd,
             Items = SchedulePhaseMapper.ApplyChangesToPhaseItems(sourcePhase.Items, changes, source, target),
             Discounts = sourcePhase.Discounts is { Count: > 0 }
                 ? [.. sourcePhase.Discounts.Select(PreservePhaseDiscount)]

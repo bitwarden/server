@@ -13,6 +13,7 @@ public class Plan
     public Scalable? ManagedSeats { get; set; }
     public Scalable? Storage { get; set; }
     public SecretsManagerPurchasables? SecretsManager { get; set; }
+    public PrivilegedControlsPurchasables? PrivilegedControls { get; set; }
     public int? TrialPeriodDays { get; set; }
     public required string[] CanUpgradeTo { get; set; }
     public required Dictionary<string, string> AdditionalData { get; set; }
@@ -22,4 +23,11 @@ public class SecretsManagerPurchasables
 {
     public required FreeOrScalable Seats { get; set; }
     public required FreeOrScalable ServiceAccounts { get; set; }
+}
+
+public class PrivilegedControlsPurchasables
+{
+    public required Scalable Seats { get; set; }
+    public required int DefaultSeatMinimum { get; set; }
+    public required int[] PromotionalSeatMinimums { get; set; }
 }
