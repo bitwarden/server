@@ -24,7 +24,13 @@ public interface IOrganizationPartnershipEntitlementRepository
     /// Writes <paramref name="entitlement"/> only if the stored row's RevisionDate still equals
     /// <paramref name="expectedRevisionDate"/>, so a change made after it was read is never overwritten.
     /// </summary>
+    /// <remarks>
+    /// Callers capture RevisionDate when they read and advance it on the entity before calling; implementations
+    /// persist the entity's RevisionDate as the new value.
+    /// </remarks>
     /// <returns>True if the row was written.</returns>
+    /// <exception cref="ArgumentException">The entity's RevisionDate was not advanced past
+    /// <paramref name="expectedRevisionDate"/>.</exception>
     Task<bool> ReplaceIfUnchangedAsync(OrganizationPartnershipEntitlement entitlement, DateTime expectedRevisionDate);
 
     /// <summary>
