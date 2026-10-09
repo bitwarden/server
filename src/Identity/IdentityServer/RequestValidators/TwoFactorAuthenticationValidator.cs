@@ -170,7 +170,7 @@ public class TwoFactorAuthenticationValidator(
                     await _validateTwoFactorRememberTokenQuery.ValidateAsync(user, deviceIdentifier, token));
             }
 
-            // TODO: PM-XXXXX - Remove the legacy token path below once every token issued before this
+            // TODO: PM-44171 - Remove the legacy token path below once every token issued before this
             // release has expired. Both formats validate until then. The token lifespan bounds that at
             // 30 days from the release date, so no token predating it can validate after that point.
             var legacyTokenValid = await _userManager.VerifyTwoFactorTokenAsync(
