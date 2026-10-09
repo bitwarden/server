@@ -20,7 +20,7 @@ public record InviteLinkOrganizationCapabilityValidationRequest
 
     /// <summary>
     /// The user's existing membership in the organization, or <see langword="null"/> when joining would create a
-    /// brand-new membership.
+    /// brand-new membership. A brand-new or Staged membership needs an available seat.
     /// </summary>
     public OrganizationUser? ExistingOrganizationUser { get; init; }
 }

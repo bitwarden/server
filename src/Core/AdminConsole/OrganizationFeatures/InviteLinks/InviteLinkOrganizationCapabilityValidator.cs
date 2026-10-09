@@ -35,7 +35,10 @@ public class InviteLinkOrganizationCapabilityValidator(
             return Invalid(request, new OnlyOneFreeOrganizationAdminAllowed());
         }
 
-        if (existingOrganizationUser is null && !await HasAvailablePasswordManagerSeatAsync(request))
+        // A seat is only consumed when a brand-new membership is created or a Staged membership is promoted, since
+        // Staged rows are excluded from the occupied seat count. Any other existing membership already occupies one.
+        if (existingOrganizationUser is null or { Status: OrganizationUserStatusType.Staged }
+            && !await HasAvailablePasswordManagerSeatAsync(request))
         {
             return Invalid(request, new OrganizationHasNoAvailableSeats(organization.DisplayName()));
         }
