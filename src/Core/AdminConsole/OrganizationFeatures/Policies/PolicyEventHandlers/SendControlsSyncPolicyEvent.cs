@@ -23,7 +23,7 @@ public class SendControlsSyncPolicyEvent(
     IPolicyRepository policyRepository,
     TimeProvider timeProvider,
     ISendRepository sendRepository,
-    IFeatureService featureService,
+    Bitwarden.Server.Sdk.Features.IFeatureService featureService,
     IOrganizationUserRepository orgUserRepository,
     IEventService eventService) : IOnPolicyPostUpdateEvent, IPolicyValidationEvent
 {

@@ -148,7 +148,7 @@ public class UserEmailTokenCodeQueryTests
     public async Task Execute_UserVerification_ReturnsBareCachedCode()
     {
         var (query, cache, user) = Arrange();
-        var issuedCode = await new EmailTokenProvider(cache, Substitute.For<IFeatureService>())
+        var issuedCode = await new EmailTokenProvider(cache, Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>())
             .GenerateAsync($"otp:{user.Email}", null!, user);
 
         var response = await query.Execute(new UserEmailTokenCodeQuery.Request

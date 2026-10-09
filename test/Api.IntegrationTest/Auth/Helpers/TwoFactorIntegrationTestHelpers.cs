@@ -6,7 +6,7 @@ using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
-using Bit.IntegrationTestCommon.Fido2;
+using Bit.Test.Common.Fakes;
 using Core.Auth.Enums;
 using NSubstitute;
 

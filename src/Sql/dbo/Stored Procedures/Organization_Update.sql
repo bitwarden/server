@@ -67,7 +67,8 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @UseInviteLinks BIT = 0,
     @UsePam BIT = 0,
     @PamSeats INT = null,
-    @MaxAutoscalePamSeats INT = null
+    @MaxAutoscalePamSeats INT = null,
+    @PamSeatMinimum INT = null
 AS
 BEGIN
     SET NOCOUNT ON
@@ -143,7 +144,8 @@ BEGIN
         [UseInviteLinks] = @UseInviteLinks,
         [UsePam] = @UsePam,
         [PamSeats] = @PamSeats,
-        [MaxAutoscalePamSeats] = @MaxAutoscalePamSeats
+        [MaxAutoscalePamSeats] = @MaxAutoscalePamSeats,
+        [PamSeatMinimum] = @PamSeatMinimum
     WHERE
         [Id] = @Id;
 END

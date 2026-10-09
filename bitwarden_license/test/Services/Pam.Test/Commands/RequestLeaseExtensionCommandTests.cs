@@ -2,6 +2,7 @@
 using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.Models;
@@ -23,7 +24,7 @@ public class RequestLeaseExtensionCommandTests
     private const int _maxExtensionDurationSeconds = 4 * 60 * 60;
     private const string _requesterIp = "10.1.2.3";
 
-    /// <summary>Pinned rather than shared with the command: the wording is part of what the denial promises.</summary>
+    /// <summary>Hard-coded rather than shared, since the stored wording is part of what the denial promises.</summary>
     private const string _leaseEndedComment = "The lease being extended has ended";
 
     [Theory, BitAutoData]
@@ -106,8 +107,7 @@ public class RequestLeaseExtensionCommandTests
         Assert.Contains("does not require a lease", ex.Message);
     }
 
-    // PM-43689: the cipher became reachable through a collection carrying no rule after the lease was minted, so
-    // live resolution now finds an escape. The lease's own rule still governs its extension.
+    // Live resolution now finds an escape, but the lease's own rule still governs its extension.
     [Theory, BitAutoData]
     public async Task ExtendAsync_UngovernedPathAddedSinceMint_StillExtendsUnderThePinnedRule(
         AccessLease lease, Guid ruleId)
@@ -125,8 +125,7 @@ public class RequestLeaseExtensionCommandTests
         Assert.Equal(ruleId, result.RuleId);
     }
 
-    // The other half: a rule created or re-pointed since the lease started must not take over the extension's
-    // provenance or its cap.
+    // A rule created or re-pointed since the lease started must not take over the extension's provenance or cap.
     [Theory, BitAutoData]
     public async Task ExtendAsync_PinnedRuleWins_DoesNotReResolveFromTheCallersCollections(
         AccessLease lease, Guid pinnedRuleId, Guid todaysRuleId)
@@ -249,7 +248,6 @@ public class RequestLeaseExtensionCommandTests
     [Theory, BitAutoData]
     public async Task ExtendAsync_IpAllowlistNoLongerAdmitsCaller_ThrowsBadRequestWithoutWriting(AccessLease lease)
     {
-        // The holder activated from an allowed network and has since left it.
         var sutProvider = Setup();
         SetupExtendableLease(sutProvider, lease);
         SetupRuleConditions(sutProvider, lease, new HumanApprovalCondition(),
@@ -302,7 +300,6 @@ public class RequestLeaseExtensionCommandTests
     {
         var sutProvider = Setup();
         SetupExtendableLease(sutProvider, lease);
-        // An existing extension request blocks another.
         sutProvider.GetDependency<IAccessRequestRepository>()
             .CountExtensionsByLeaseIdAsync(lease.Id).Returns(1);
 
@@ -323,7 +320,6 @@ public class RequestLeaseExtensionCommandTests
 
         var result = await sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id, duration, "incident"));
 
-        // Auto-approved extension request, pointing at the parent lease, spanning [old end .. new end].
         Assert.Equal(AccessRequestStatus.Approved, result.Status);
         Assert.Equal(lease.Id, result.ExtensionOfLeaseId);
         Assert.Equal(lease.CipherId, result.CipherId);
@@ -341,7 +337,7 @@ public class RequestLeaseExtensionCommandTests
         Assert.Equal(AccessDecisionVerdict.Approve, decision.Verdict);
         Assert.Null(decision.Comment);
 
-        // The repo applies the request + decision + lease bump atomically.
+        // The repository applies the request, decision and lease bump atomically.
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).CreateApprovedExtensionAsync(
             Arg.Is<AccessRequest>(r =>
                 r.ExtensionOfLeaseId == lease.Id
@@ -353,6 +349,11 @@ public class RequestLeaseExtensionCommandTests
                 d.DeciderKind == AccessDeciderKind.Automatic && d.Verdict == AccessDecisionVerdict.Approve),
             _now,
             Arg.Any<string?>());
+
+        await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
+            .NotifyCollectionApproversAsync(lease.CollectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(lease.RequesterId);
     }
 
     [Theory, BitAutoData]
@@ -366,7 +367,6 @@ public class RequestLeaseExtensionCommandTests
         var result = await sutProvider.Sut.ExtendAsync(
             lease.RequesterId, Submission(lease.Id, duration, "incident"));
 
-        // A lease that ended under the request resolves denied rather than failing the call.
         Assert.Equal(AccessRequestStatus.Denied, result.Status);
         Assert.Equal(lease.Id, result.ExtensionOfLeaseId);
         Assert.Equal(lease.NotAfter, result.NotBefore);
@@ -374,7 +374,7 @@ public class RequestLeaseExtensionCommandTests
         Assert.Equal("incident", result.Reason);
         Assert.Equal(_now, result.ActionDate);
 
-        // The automatic verdict names why, so the requester's history can show it without guessing from the status.
+        // The verdict names why, so the requester's history need not guess from the status.
         var decision = Assert.Single(result.Decisions);
         Assert.Equal(AccessDeciderKind.Automatic, decision.DeciderKind);
         Assert.Equal(AccessDecisionVerdict.Deny, decision.Verdict);
@@ -391,9 +391,30 @@ public class RequestLeaseExtensionCommandTests
 
         await sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id));
 
-        // The repository records the command-supplied comment on the Deny it writes.
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).CreateApprovedExtensionAsync(
             Arg.Any<AccessRequest>(), Arg.Any<AccessDecision>(), _now, _leaseEndedComment);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExtendAsync_RepoReportsLeaseNotActive_AuditsTheDenialAndNotifiesOnlyTheRequester(AccessLease lease)
+    {
+        var sutProvider = Setup();
+        SetupExtendableLease(sutProvider, lease);
+        SetupOutcome(sutProvider, AccessLeaseExtendOutcome.LeaseNotActive);
+
+        await sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id));
+
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
+            Arg.Is<AccessAuditEventData>(e =>
+                e.Kind == AccessAuditEventKind.RequestDenied
+                && e.Phase == AccessAuditEventPhase.Outcome
+                && e.AccessLeaseId == lease.Id
+                && e.LeaseNotAfter == lease.NotAfter
+                && e.Detail == _leaseEndedComment));
+
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1).NotifyRequesterAsync(lease.RequesterId);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
     }
 
     [Theory, BitAutoData]
@@ -401,7 +422,7 @@ public class RequestLeaseExtensionCommandTests
     {
         var sutProvider = Setup();
         SetupExtendableLease(sutProvider, lease);
-        // Lost a race: another extension landed between the pre-check and the guarded write.
+        // Another extension landed between the pre-check and the guarded write.
         SetupOutcome(sutProvider, AccessLeaseExtendOutcome.AlreadyExtended);
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
@@ -417,14 +438,13 @@ public class RequestLeaseExtensionCommandTests
     {
         var sutProvider = new SutProvider<RequestLeaseExtensionCommand>()
             .WithFakeTimeProvider()
-            // Real engine, not a stub: these tests exercise actual IP allowlist evaluation.
+            // Real engine, so these tests exercise actual IP allowlist evaluation.
             .SetDependency<IAccessRuleEngine>(new AccessRuleEngine())
             .Create();
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
         return sutProvider;
     }
 
-    // An active, in-window lease with no extension used yet; tests override the precondition they exercise.
     private static void SetupExtendableLease(
         SutProvider<RequestLeaseExtensionCommand> sutProvider, AccessLease lease, bool allowsExtensions = true,
         Guid ruleId = default)
@@ -436,7 +456,7 @@ public class RequestLeaseExtensionCommandTests
         sutProvider.GetDependency<ICurrentContext>().AccessPam(lease.OrganizationId).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(_requesterIp);
 
-        // A human-approval rule still yields automatic extensions — the approval gate never applies to extensions.
+        // A human-approval rule still yields automatic extensions; the approval gate never applies to them.
         sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(lease.RequesterId, lease.CipherId, Arg.Any<AccessSignals>())
             .Returns(new GoverningRule(lease.OrganizationId, lease.CollectionId, RequiresHumanApproval: true,
@@ -464,7 +484,6 @@ public class RequestLeaseExtensionCommandTests
             });
     }
 
-    // The rule the lease was granted under, reached through the request that birthed it.
     private static void PinOriginatingRule(
         SutProvider<RequestLeaseExtensionCommand> sutProvider, AccessLease lease, Guid ruleId)
     {
@@ -483,7 +502,7 @@ public class RequestLeaseExtensionCommandTests
             });
     }
 
-    /// <summary>What the guarded write reports back — the authority on whether there was anything left to extend.</summary>
+    /// <summary>The guarded write's outcome, which decides whether there was anything left to extend.</summary>
     private static void SetupOutcome(
         SutProvider<RequestLeaseExtensionCommand> sutProvider, AccessLeaseExtendOutcome outcome) =>
         sutProvider.GetDependency<IAccessRequestRepository>()

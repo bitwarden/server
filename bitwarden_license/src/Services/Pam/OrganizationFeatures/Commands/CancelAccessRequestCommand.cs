@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.Services;
@@ -12,17 +13,26 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
     private readonly IAccessRequestRepository _accessRequestRepository;
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IApproverCollectionAccessQuery _approverCollectionAccessQuery;
+    private readonly IApproverInboxNotifier _approverInboxNotifier;
+    private readonly IRequesterNotifier _requesterNotifier;
+    private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
     public CancelAccessRequestCommand(
         IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository,
         IApproverCollectionAccessQuery approverCollectionAccessQuery,
+        IApproverInboxNotifier approverInboxNotifier,
+        IRequesterNotifier requesterNotifier,
+        IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
         _accessRequestRepository = accessRequestRepository;
         _accessLeaseRepository = accessLeaseRepository;
         _approverCollectionAccessQuery = approverCollectionAccessQuery;
+        _approverInboxNotifier = approverInboxNotifier;
+        _requesterNotifier = requesterNotifier;
+        _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
 
@@ -51,7 +61,6 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
                 "This request extended an existing lease and cannot be revoked; revoke the lease instead.");
         }
 
-        // Only an open request, or an approved one not yet activated, can be cancelled.
         if (request.Action is not (AccessRequestAction.None or AccessRequestAction.Approved))
         {
             throw new ConflictException("This request has already been resolved.");
@@ -59,8 +68,7 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // A minted lease governs the request. Checked before the window guard, since an extension can keep the lease
-        // live after the request's window lapses.
+        // Checked before the window guard, since an extension can keep the lease live past the request's window.
         var lease = await _accessLeaseRepository.GetByAccessRequestIdAsync(requestId);
         if (lease is not null)
         {
@@ -80,6 +88,21 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
         {
             throw new BadRequestException("A reason is required when revoking a request.");
         }
+
+        // Withdrawal by the requester and retraction by a manager are both RequestCancelled.
+        var audit = new AccessAuditEventData
+        {
+            Kind = AccessAuditEventKind.RequestCancelled,
+            OccurredDate = now,
+            OrganizationId = request.OrganizationId,
+            ActorId = userId,
+            RequesterId = request.RequesterId,
+            CollectionId = request.CollectionId,
+            CipherId = request.CipherId,
+            AccessRequestId = request.Id,
+            Detail = comment,
+        };
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
         bool cancelled;
         if (isRequester)
@@ -107,5 +130,10 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
         {
             throw new ConflictException("This request has already been resolved.");
         }
+
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
+
+        await _approverInboxNotifier.NotifyCollectionApproversAsync(request.CollectionId);
+        await _requesterNotifier.NotifyRequesterAsync(request.RequesterId);
     }
 }

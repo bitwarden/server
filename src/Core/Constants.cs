@@ -260,11 +260,9 @@ public static partial class FeatureFlagKeys
     public const string PM28190CipherSharingOpsToSdk = "pm-28190-cipher-sharing-ops-to-sdk";
     public const string PhishingDetection = "phishing-detection";
     public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
-    public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
     public const string MigrateMyVaultToMyItems = "pm-20558-migrate-myvault-to-myitems";
     public const string PM27632_CipherCrudOperationsToSdk = "pm-27632-cipher-crud-operations-to-sdk";
     public const string PM28191_CipherAdminOpsToSdk = "pm-28191-cipher-admin-ops-to-sdk";
-    public const string PM30521_AutofillButtonViewLoginScreen = "pm-30521-autofill-button-view-login-screen";
     public const string PM32180_PremiumUpsellAccountAge = "pm-32180-premium-upsell-account-age";
 
     public const string PM29438_DialogWithExtensionPromptAccountAge = "pm-29438-dialog-with-extension-prompt-account-age";
@@ -304,10 +302,16 @@ public static partial class FeatureFlagKeys
     public const string BrowserExtensionHealthReport = "pm-35928-premium-user-health-reports";
     public const string OrganizationEventCleanup = "pm-33527-organization-event-cleanup";
     public const string AccessIntelligencePerformanceAtScale = "pm-43231-access-intelligence-performance-at-scale";
+    public const string HealthReportExclusions = "pm-39196-health-report-exclusions";
 
     /* PAM */
     public const string Pam = "pm-37044-pam-v-0";
     public const string PamAccessConnector = "pm-42354-rotation-daemon";
+
+    /// <summary>
+    /// Kill switch for the PAM SQL audit trail. Turning it on stops the writes and withdraws the read endpoint.
+    /// </summary>
+    public const string PamDisableSqlAuditLogging = "pm-42480-disable-pam-sql-audit-logging";
 
     /* VFO */
     public const string VFO1Foundation = "vfo1-foundation";
