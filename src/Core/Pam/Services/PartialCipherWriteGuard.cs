@@ -11,13 +11,6 @@ namespace Bit.Core.Pam.Services;
 
 public class PartialCipherWriteGuard : IPartialCipherWriteGuard
 {
-    // What a partial keeps, plus Uri (legacy alias of Uris[0]). PasswordHistory is left out because a leased legacy
-    // save drops it today (PAM-316).
-    private static readonly HashSet<string> _notSecretContent = new(
-        typeof(PartialCipherData).GetProperties().Select(p => p.Name)
-            .Append(nameof(CipherLoginData.Uri)).Append(nameof(CipherData.PasswordHistory)),
-        StringComparer.OrdinalIgnoreCase);
-
     private readonly IFeatureService _featureService;
     private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly ICipherRepository _cipherRepository;
@@ -70,7 +63,7 @@ public class PartialCipherWriteGuard : IPartialCipherWriteGuard
     /// Whether the JSON <c>Data</c> blob holds any non-empty encrypted value beyond what a partial keeps.
     /// </summary>
     internal static bool HasSecretContent(string? data) =>
-        TopLevelProperties(data).Any(p => !_notSecretContent.Contains(p.Name) && HasNonEmptyValue(p.Value));
+        TopLevelProperties(data).Any(p => !PartialCipherData.KeptKeys.Contains(p.Name) && HasNonEmptyValue(p.Value));
 
     private static IEnumerable<JsonProperty> TopLevelProperties(string? data) =>
         !string.IsNullOrWhiteSpace(data) &&

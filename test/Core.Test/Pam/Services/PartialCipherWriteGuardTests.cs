@@ -50,7 +50,7 @@ public class PartialCipherWriteGuardTests
     [InlineData("""{"Name":"2.A|B|C","Notes":"2.A|B|C"}""", true)]
     [InlineData("""{"notes":"2.A|B|C"}""", true)]
     [InlineData("""{"Name":"2.A|B|C","Fields":[{"Type":0,"Name":"2.A|B|C"}]}""", true)]
-    [InlineData("""{"Name":"2.A|B|C","PasswordHistory":[{"Password":"2.A|B|C","LastUsedDate":"2026-10-09T12:00:00Z"}]}""", false)]
+    [InlineData("""{"Name":"2.A|B|C","PasswordHistory":[{"Password":"2.A|B|C","LastUsedDate":"2026-10-09T12:00:00Z"}]}""", true)]
     [InlineData("""{"Name":"2.A|B|C","Number":"2.A|B|C","Brand":null}""", true)]
     [InlineData("", false)]
     public void HasSecretContent_ReadsOnlyValuesAPartialWithholds(string data, bool expected)
