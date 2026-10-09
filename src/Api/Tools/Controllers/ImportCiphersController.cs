@@ -76,19 +76,19 @@ public class ImportCiphersController : Controller
         var orgId = new Guid(organizationId);
         var collections = model.Collections.Select(c => c.ToCollection(orgId)).ToList();
 
-        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
-        var authorized = await CheckOrgImportPermissionAsync(collections, orgId, userId);
+        var authorized = await CheckOrgImportPermissionAsync(collections, orgId);
         if (!authorized)
         {
             throw new BadRequestException("Not enough privileges to import into this organization.");
         }
 
+        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var ciphers = model.Ciphers.Select(l => l.ToOrganizationCipherDetails(orgId)).ToList();
         var folders = model.Folders.Select(f => f.ToFolder(userId)).ToList();
         await _importCiphersCommand.ImportIntoOrganizationalVaultAsync(collections, ciphers, model.CollectionRelationships, userId, folders, model.FolderRelationships);
     }
 
-    private async Task<bool> CheckOrgImportPermissionAsync(List<Collection> collections, Guid orgId, Guid userId)
+    private async Task<bool> CheckOrgImportPermissionAsync(List<Collection> collections, Guid orgId)
     {
         // If we're importing into the default collection then all we check
         // is whether the user has access to the import feature at all
