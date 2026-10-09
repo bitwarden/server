@@ -76,6 +76,18 @@ public class CreateOrganizationPartnershipCommandTests
         Assert.Equal("unsupported_binding_mode", Assert.IsType<UnsupportedBindingMode>(result.AsError).Code);
     }
 
+    [Theory, BitAutoData]
+    public async Task CreateAsync_UndefinedSponsoredPlanType_ReturnsValidationError(
+        Organization organization, SutProvider<CreateOrganizationPartnershipCommand> sutProvider)
+    {
+        ArrangeOrganization(sutProvider, organization);
+
+        var result = await sutProvider.Sut.CreateAsync(
+            CreateRequest(organization, "https://partner.example.com") with { SponsoredPlanType = (SponsoredPlanType)5 });
+
+        Assert.Equal("unsupported_sponsored_plan_type", Assert.IsType<UnsupportedSponsoredPlanType>(result.AsError).Code);
+    }
+
     [Theory]
     [BitAutoData("")]
     [BitAutoData("   ")]

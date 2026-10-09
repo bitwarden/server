@@ -51,6 +51,10 @@ public record InvalidPartnershipName()
 public record UnsupportedBindingMode()
     : PartnershipValidationError("Only token binding is supported.", "bindingMode", "unsupported_binding_mode");
 
+public record UnsupportedSponsoredPlanType()
+    : PartnershipValidationError(
+        "Sponsored plan type is not supported.", "sponsoredPlanType", "unsupported_sponsored_plan_type");
+
 public record InvalidReturnOrigin()
     : PartnershipValidationError(
         "Each return origin must be an absolute https origin with no path, query, or fragment.",
