@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -427,6 +428,72 @@ public class RevokeOrganizationUsersValidatorTests
         await sutProvider.GetDependency<ICurrentContext>()
             .DidNotReceiveWithAnyArgs()
             .OrganizationAdmin(default);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task ValidateAsync_WhenScopedApiKeyRevokesElevatedMember_ReturnsScopedApiKeyCanOnlyManageUsers(
+        OrganizationUserType targetRole,
+        SutProvider<RevokeOrganizationUsersValidator> sutProvider,
+        Guid organizationId,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed)] OrganizationUser orgUser)
+    {
+        orgUser.OrganizationId = organizationId;
+        orgUser.Type = targetRole;
+        var request = CreateValidationRequest(organizationId, [orgUser],
+            CreateActingUser(null, false, EventSystemUser.PublicApi));
+
+        sutProvider.GetDependency<ICurrentContext>().IsScopedOrganizationApiKey.Returns(true);
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
+        var results = (await sutProvider.Sut.ValidateAsync(request)).ToList();
+
+        Assert.IsType<ScopedApiKeyCanOnlyManageUsers>(Assert.Single(results).AsError);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenScopedApiKeyRevokesUser_ReturnsSuccess(
+        SutProvider<RevokeOrganizationUsersValidator> sutProvider,
+        Guid organizationId,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        orgUser.OrganizationId = organizationId;
+        var request = CreateValidationRequest(organizationId, [orgUser],
+            CreateActingUser(null, false, EventSystemUser.PublicApi));
+
+        sutProvider.GetDependency<ICurrentContext>().IsScopedOrganizationApiKey.Returns(true);
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
+        var results = (await sutProvider.Sut.ValidateAsync(request)).ToList();
+
+        Assert.True(Assert.Single(results).IsValid);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenLegacyPublicApiRevokesOwner_ReturnsSuccess(
+        SutProvider<RevokeOrganizationUsersValidator> sutProvider,
+        Guid organizationId,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser orgUser)
+    {
+        orgUser.OrganizationId = organizationId;
+        var request = CreateValidationRequest(organizationId, [orgUser],
+            CreateActingUser(null, false, EventSystemUser.PublicApi));
+
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
+        var results = (await sutProvider.Sut.ValidateAsync(request)).ToList();
+
+        Assert.True(Assert.Single(results).IsValid);
     }
 
     private static IActingUser CreateActingUser(Guid? userId, bool isOwnerOrProvider, EventSystemUser? systemUserType) =>

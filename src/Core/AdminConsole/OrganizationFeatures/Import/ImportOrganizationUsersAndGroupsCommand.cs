@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Services;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -25,6 +26,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
     private readonly IEventService _eventService;
     private readonly IOrganizationService _organizationService;
     private readonly ICreateStagedOrganizationUsersCommand _createStagedOrganizationUsersCommand;
+    private readonly ICurrentContext _currentContext;
 
     private readonly EventSystemUser _EventSystemUser = EventSystemUser.PublicApi;
 
@@ -34,7 +36,8 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
             IGroupRepository groupRepository,
             IEventService eventService,
             IOrganizationService organizationService,
-            ICreateStagedOrganizationUsersCommand createStagedOrganizationUsersCommand)
+            ICreateStagedOrganizationUsersCommand createStagedOrganizationUsersCommand,
+            ICurrentContext currentContext)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -43,6 +46,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
         _eventService = eventService;
         _organizationService = organizationService;
         _createStagedOrganizationUsersCommand = createStagedOrganizationUsersCommand;
+        _currentContext = currentContext;
     }
 
     /// <summary>
@@ -114,10 +118,12 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
 
         var existingUsersDict = importUserData.ExistingExternalUsers.ToDictionary(u => u.ExternalId);
         // Determine which ids in removeUserExternalIds to delete based on:
-        // They are not in ImportedExternalIds, they are in existingUsersDict, and they are not an owner.
+        // They are not in ImportedExternalIds, they are in existingUsersDict, they are not an owner, and a scoped API key
+        // only removes Users.
         var removeUsersSet = new HashSet<string>(removeUserExternalIds)
             .Except(importUserData.ImportedExternalIds)
-            .Where(u => existingUsersDict.ContainsKey(u) && existingUsersDict[u].Type != OrganizationUserType.Owner)
+            .Where(u => existingUsersDict.ContainsKey(u) && existingUsersDict[u].Type != OrganizationUserType.Owner &&
+                        !IsProtectedFromScopedApiKey(existingUsersDict[u].Type))
             .Select(u => existingUsersDict[u]);
 
         await _organizationUserRepository.DeleteManyAsync(removeUsersSet.Select(u => u.Id));
@@ -147,7 +153,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
 
         // Map existing and imported users to dicts keyed by Email
         var existingUsersEmailsDict = importUserData.ExistingUsers
-            .Where(u => string.IsNullOrWhiteSpace(u.ExternalId))
+            .Where(u => string.IsNullOrWhiteSpace(u.ExternalId) && !IsProtectedFromScopedApiKey(u.Type))
             .ToDictionary(u => u.Email);
         var importedUsersEmailsDict = importedUsers.ToDictionary(u => u.Email);
 
@@ -280,6 +286,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
         var usersToDelete = importUserData.ExistingExternalUsers
             .Where(u =>
                 u.Type != OrganizationUserType.Owner &&
+                !IsProtectedFromScopedApiKey(u.Type) &&
                 !importUserData.ImportedExternalIds.Contains(u.ExternalId) &&
                 importUserData.ExistingExternalUsersIdDict.ContainsKey(u.ExternalId))
             .ToList();
@@ -429,6 +436,9 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
 
         await _groupRepository.UpdateUsersAsync(group.Id, users, group.RevisionDate);
     }
+
+    private bool IsProtectedFromScopedApiKey(OrganizationUserType type) =>
+        _currentContext.IsScopedOrganizationApiKey && type != OrganizationUserType.User;
 
     private async Task<Organization?> GetOrgById(Guid id)
     {

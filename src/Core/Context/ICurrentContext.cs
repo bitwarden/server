@@ -34,6 +34,10 @@ public interface ICurrentContext
     string ClientId { get; set; }
     Version? ClientVersion { get; set; }
     bool ClientVersionIsPrerelease { get; set; }
+    /// <summary>
+    /// True when the request uses an organization API key token without the legacy api.organization scope.
+    /// </summary>
+    bool IsScopedOrganizationApiKey { get; }
 
     Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings);
     Task BuildAsync(ClaimsPrincipal user, GlobalSettings globalSettings);
