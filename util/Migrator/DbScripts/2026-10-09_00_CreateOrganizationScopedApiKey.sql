@@ -1,4 +1,134 @@
-﻿CREATE PROCEDURE [dbo].[Organization_DeleteById]
+IF OBJECT_ID('[dbo].[OrganizationScopedApiKey]') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[OrganizationScopedApiKey]
+    (
+        [Id]               UNIQUEIDENTIFIER NOT NULL,
+        [OrganizationId]   UNIQUEIDENTIFIER NOT NULL,
+        [Name]             NVARCHAR(200)    NOT NULL,
+        [ClientSecretHash] VARCHAR(128)     NOT NULL,
+        [Scopes]           NVARCHAR(4000)   NOT NULL,
+        [ExpireAt]         DATETIME2(7)     NULL,
+        [CreationDate]     DATETIME2(7)     NOT NULL,
+        [RevisionDate]     DATETIME2(7)     NOT NULL,
+        CONSTRAINT [PK_OrganizationScopedApiKey] PRIMARY KEY CLUSTERED ([Id] ASC),
+        CONSTRAINT [FK_OrganizationScopedApiKey_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
+    );
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE [name] = 'IX_OrganizationScopedApiKey_OrganizationId'
+    AND [object_id] = OBJECT_ID('[dbo].[OrganizationScopedApiKey]'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_OrganizationScopedApiKey_OrganizationId]
+        ON [dbo].[OrganizationScopedApiKey]([OrganizationId] ASC);
+END
+GO
+
+CREATE OR ALTER VIEW [dbo].[OrganizationScopedApiKeyView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[OrganizationScopedApiKey]
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationScopedApiKey_Create]
+    @Id               UNIQUEIDENTIFIER OUTPUT,
+    @OrganizationId   UNIQUEIDENTIFIER,
+    @Name             NVARCHAR(200),
+    @ClientSecretHash VARCHAR(128),
+    @Scopes           NVARCHAR(4000),
+    @ExpireAt         DATETIME2(7),
+    @CreationDate     DATETIME2(7),
+    @RevisionDate     DATETIME2(7)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    INSERT INTO [dbo].[OrganizationScopedApiKey]
+    (
+        [Id],
+        [OrganizationId],
+        [Name],
+        [ClientSecretHash],
+        [Scopes],
+        [ExpireAt],
+        [CreationDate],
+        [RevisionDate]
+    )
+    VALUES
+    (
+        @Id,
+        @OrganizationId,
+        @Name,
+        @ClientSecretHash,
+        @Scopes,
+        @ExpireAt,
+        @CreationDate,
+        @RevisionDate
+    )
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationScopedApiKey_ReadById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[OrganizationScopedApiKeyView]
+    WHERE
+        [Id] = @Id
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationScopedApiKey_ReadManyByOrganizationId]
+    @OrganizationId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[OrganizationScopedApiKeyView]
+    WHERE
+        [OrganizationId] = @OrganizationId
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationScopedApiKey_DeleteById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    DELETE
+    FROM
+        [dbo].[OrganizationScopedApiKey]
+    WHERE
+        [Id] = @Id
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationScopedApiKey_OrganizationDeleted]
+    @OrganizationId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    DELETE
+    FROM
+        [dbo].[OrganizationScopedApiKey]
+    WHERE
+        [OrganizationId] = @OrganizationId
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[Organization_DeleteById]
     @Id UNIQUEIDENTIFIER,
     @OrganizationDeleteTasks NVARCHAR(MAX) = NULL
 WITH RECOMPILE
@@ -203,3 +333,4 @@ BEGIN
 
     COMMIT TRANSACTION Organization_DeleteById
 END
+GO

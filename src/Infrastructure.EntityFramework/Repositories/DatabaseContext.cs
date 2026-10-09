@@ -67,6 +67,7 @@ public class DatabaseContext : DbContext
     public DbSet<OrganizationIntegrationConfiguration> OrganizationIntegrationConfigurations { get; set; }
     public DbSet<OrganizationUser> OrganizationUsers { get; set; }
     public DbSet<OrganizationInviteLink> OrganizationInviteLinks { get; set; }
+    public DbSet<OrganizationScopedApiKey> OrganizationScopedApiKeys { get; set; }
     public DbSet<Policy> Policies { get; set; }
     public DbSet<Provider> Providers { get; set; }
     public DbSet<Secret> Secret { get; set; }
