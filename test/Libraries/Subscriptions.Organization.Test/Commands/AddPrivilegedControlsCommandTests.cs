@@ -2,7 +2,6 @@
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
-using Bit.Core.Billing.Pricing;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Subscriptions.Organization.Commands;
@@ -10,40 +9,35 @@ using NSubstitute;
 using Stripe;
 using Xunit;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
-using PlanFeatures = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Subscriptions.Organization.Test.Commands;
 
 public class AddPrivilegedControlsCommandTests
 {
-    private const int _planDefaultMinimum = 10;
+    private const int _seatMinimum = 10;
 
     private readonly IPrivilegedControlsSeatChangeSetFactory _seatChangeSetFactory =
         Substitute.For<IPrivilegedControlsSeatChangeSetFactory>();
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand =
         Substitute.For<IUpdateOrganizationSubscriptionCommand>();
-    private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IOrganizationService _organizationService = Substitute.For<IOrganizationService>();
     private readonly AddPrivilegedControlsCommand _sut;
 
-    public AddPrivilegedControlsCommandTests()
-    {
-        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(EnterprisePlan());
+    public AddPrivilegedControlsCommandTests() =>
         _sut = new AddPrivilegedControlsCommand(
-            _seatChangeSetFactory, _updateOrganizationSubscriptionCommand, _pricingClient, _organizationService);
-    }
+            _seatChangeSetFactory, _updateOrganizationSubscriptionCommand, _organizationService);
 
     [Fact]
     public async Task Run_FirstPurchase_AppliesTheChangeSetFromTheSeatChangeStep()
     {
         var organization = CreateOrganization();
-        var changeSet = ChangeSet();
-        _seatChangeSetFactory.CreateAsync(organization, 15).Returns(changeSet);
-        _updateOrganizationSubscriptionCommand.Run(organization, changeSet).Returns(new Subscription());
+        var seatChange = SeatChange();
+        _seatChangeSetFactory.CreateAsync(organization, 15).Returns(seatChange);
+        _updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet).Returns(new Subscription());
 
         await _sut.Run(organization, 15, 20);
 
-        await _updateOrganizationSubscriptionCommand.Received(1).Run(organization, changeSet);
+        await _updateOrganizationSubscriptionCommand.Received(1).Run(organization, seatChange.ChangeSet);
     }
 
     [Fact]
@@ -61,21 +55,23 @@ public class AddPrivilegedControlsCommandTests
     }
 
     [Fact]
-    public async Task Run_NoSavedMinimum_SavesThePlanDefault()
+    public async Task Run_FirstPurchase_SavesTheSeatMinimumFromTheSeatChangeStep()
     {
         var organization = CreateOrganization(pamSeatMinimum: null);
         SucceedWith(organization, 15);
 
         await _sut.Run(organization, 15, null);
 
-        Assert.Equal(_planDefaultMinimum, organization.PamSeatMinimum);
+        Assert.Equal(_seatMinimum, organization.PamSeatMinimum);
     }
 
     [Fact]
-    public async Task Run_SavedMinimum_KeepsIt()
+    public async Task Run_SavedMinimum_KeepsItWhenTheSeatChangeStepReturnsIt()
     {
         var organization = CreateOrganization(pamSeatMinimum: 6);
-        SucceedWith(organization, 15);
+        var seatChange = SeatChange(minimum: 6);
+        _seatChangeSetFactory.CreateAsync(organization, 15).Returns(seatChange);
+        _updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet).Returns(new Subscription());
 
         await _sut.Run(organization, 15, null);
 
@@ -186,9 +182,9 @@ public class AddPrivilegedControlsCommandTests
     public async Task Run_SubscriptionUpdateRejected_ThrowsBadRequestWithItsMessage()
     {
         var organization = CreateOrganization();
-        var changeSet = ChangeSet();
-        _seatChangeSetFactory.CreateAsync(organization, 15).Returns(changeSet);
-        _updateOrganizationSubscriptionCommand.Run(organization, changeSet)
+        var seatChange = SeatChange();
+        _seatChangeSetFactory.CreateAsync(organization, 15).Returns(seatChange);
+        _updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet)
             .Returns(new BadRequest("Your card was declined."));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, 15, null));
@@ -200,9 +196,9 @@ public class AddPrivilegedControlsCommandTests
     public async Task Run_SubscriptionUpdateFails_LeavesTheOrganizationUntouchedAndUnsaved()
     {
         var organization = CreateOrganization();
-        var changeSet = ChangeSet();
-        _seatChangeSetFactory.CreateAsync(organization, 15).Returns(changeSet);
-        _updateOrganizationSubscriptionCommand.Run(organization, changeSet)
+        var seatChange = SeatChange();
+        _seatChangeSetFactory.CreateAsync(organization, 15).Returns(seatChange);
+        _updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet)
             .Returns(new BadRequest("Your card was declined."));
 
         await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, 15, 20));
@@ -219,10 +215,11 @@ public class AddPrivilegedControlsCommandTests
     public async Task Run_SubscriptionUpdateHitsAnUnhandledError_RethrowsTheUnderlyingException()
     {
         var organization = CreateOrganization();
-        var changeSet = ChangeSet();
+        var seatChange = SeatChange();
         var underlying = new InvalidOperationException("Stripe is down.");
-        _seatChangeSetFactory.CreateAsync(organization, 15).Returns(changeSet);
-        _updateOrganizationSubscriptionCommand.Run(organization, changeSet).Returns(new Unhandled(underlying));
+        _seatChangeSetFactory.CreateAsync(organization, 15).Returns(seatChange);
+        _updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet)
+            .Returns(new Unhandled(underlying));
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.Run(organization, 15, null));
 
@@ -231,16 +228,18 @@ public class AddPrivilegedControlsCommandTests
 
     private void SucceedWith(OrganizationEntity organization, int seats)
     {
-        var changeSet = ChangeSet();
-        _seatChangeSetFactory.CreateAsync(organization, seats).Returns(changeSet);
-        _updateOrganizationSubscriptionCommand.Run(organization, changeSet).Returns(new Subscription());
+        var seatChange = SeatChange();
+        _seatChangeSetFactory.CreateAsync(organization, seats).Returns(seatChange);
+        _updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet).Returns(new Subscription());
     }
 
-    private static OrganizationSubscriptionChangeSet ChangeSet() => new()
-    {
-        Changes = [new AddItem("privileged-controls-enterprise-seat-annually", 15)],
-        ChargeImmediately = true
-    };
+    private static PrivilegedControlsSeatChange SeatChange(int minimum = _seatMinimum) => new(
+        new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new AddItem("privileged-controls-enterprise-seat-annually", 15)],
+            ChargeImmediately = true
+        },
+        minimum);
 
     private static OrganizationEntity CreateOrganization(
         int? seats = 50,
@@ -255,12 +254,4 @@ public class AddPrivilegedControlsCommandTests
             PamSeatMinimum = pamSeatMinimum,
             UsePam = usePam
         };
-
-    private static PlanFeatures EnterprisePlan() => new TestPlan();
-
-    private sealed record TestPlan : PlanFeatures
-    {
-        public TestPlan() =>
-            PrivilegedControls = new PrivilegedControlsPlanFeatures { DefaultSeatMinimum = _planDefaultMinimum };
-    }
 }

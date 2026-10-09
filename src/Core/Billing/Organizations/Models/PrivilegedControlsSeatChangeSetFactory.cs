@@ -21,16 +21,17 @@ public interface IPrivilegedControlsSeatChangeSetFactory
     /// <param name="organization">The organization whose seats are changing.</param>
     /// <param name="seats">The total number of Privileged Controls seats being requested.</param>
     /// <returns>
-    /// The change set on success, or a <see cref="BadRequest"/> when the request violates a seat rule.
+    /// The change set and the seat minimum it was validated against on success, or a <see cref="BadRequest"/>
+    /// when the request violates a seat rule.
     /// </returns>
-    Task<BillingCommandResult<OrganizationSubscriptionChangeSet>> CreateAsync(Organization organization, int seats);
+    Task<BillingCommandResult<PrivilegedControlsSeatChange>> CreateAsync(Organization organization, int seats);
 }
 
 public class PrivilegedControlsSeatChangeSetFactory(
     IOrganizationUserRepository organizationUserRepository,
     IPricingClient pricingClient) : IPrivilegedControlsSeatChangeSetFactory
 {
-    public async Task<BillingCommandResult<OrganizationSubscriptionChangeSet>> CreateAsync(
+    public async Task<BillingCommandResult<PrivilegedControlsSeatChange>> CreateAsync(
         Organization organization,
         int seats)
     {
@@ -56,7 +57,7 @@ public class PrivilegedControlsSeatChangeSetFactory(
         {
             return seats < minimum
                 ? BelowMinimum(minimum)
-                : builder.AddPrivilegedControlsSeats(seats).Build();
+                : new PrivilegedControlsSeatChange(builder.AddPrivilegedControlsSeats(seats).Build(), minimum);
         }
 
         if (seats == currentSeats)
@@ -81,7 +82,7 @@ public class PrivilegedControlsSeatChangeSetFactory(
             }
         }
 
-        return builder.UpdatePrivilegedControlsSeats(seats).Build();
+        return new PrivilegedControlsSeatChange(builder.UpdatePrivilegedControlsSeats(seats).Build(), minimum);
     }
 
     private static BadRequest BelowMinimum(int minimum) =>

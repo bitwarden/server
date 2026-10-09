@@ -39,7 +39,7 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
 
         var result = await _factory.CreateAsync(organization, _planDefaultMinimum);
 
-        var item = Assert.Single(result.AsT0.Changes).AsT0;
+        var item = Assert.Single(result.AsT0.ChangeSet.Changes).AsT0;
         Assert.Equal(_planDefaultMinimum, item.Quantity);
     }
 
@@ -60,7 +60,7 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
 
         var result = await _factory.CreateAsync(organization, _planDefaultMinimum);
 
-        var item = Assert.Single(result.AsT0.Changes).AsT0;
+        var item = Assert.Single(result.AsT0.ChangeSet.Changes).AsT0;
         Assert.Equal(_planDefaultMinimum, item.Quantity);
     }
 
@@ -96,7 +96,7 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
 
         var result = await _factory.CreateAsync(organization, 12);
 
-        var item = Assert.Single(result.AsT0.Changes).AsT3;
+        var item = Assert.Single(result.AsT0.ChangeSet.Changes).AsT3;
         Assert.Equal(12, item.Quantity);
     }
 
@@ -107,7 +107,7 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
 
         var result = await _factory.CreateAsync(organization, 30);
 
-        var item = Assert.Single(result.AsT0.Changes).AsT3;
+        var item = Assert.Single(result.AsT0.ChangeSet.Changes).AsT3;
         Assert.Equal(30, item.Quantity);
     }
 
@@ -150,6 +150,36 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
         var result = await _factory.CreateAsync(organization, 6);
 
         Assert.True(result.Success);
+    }
+
+    [Fact]
+    public async Task CreateAsync_SavedMinimum_ReturnsSavedMinimum()
+    {
+        var organization = CreateOrganization(pamSeatMinimum: 6);
+
+        var result = await _factory.CreateAsync(organization, 6);
+
+        Assert.Equal(6, result.AsT0.SeatMinimum);
+    }
+
+    [Fact]
+    public async Task CreateAsync_NoSavedMinimum_ReturnsPlanDefaultMinimum()
+    {
+        var organization = CreateOrganization(pamSeatMinimum: null);
+
+        var result = await _factory.CreateAsync(organization, _planDefaultMinimum);
+
+        Assert.Equal(_planDefaultMinimum, result.AsT0.SeatMinimum);
+    }
+
+    [Fact]
+    public async Task CreateAsync_SeatChangeOnExistingSeats_ReturnsMinimum()
+    {
+        var organization = CreateOrganization(pamSeats: 12, pamSeatMinimum: 6);
+
+        var result = await _factory.CreateAsync(organization, 30);
+
+        Assert.Equal(6, result.AsT0.SeatMinimum);
     }
 
     [Fact]
