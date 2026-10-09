@@ -1,5 +1,6 @@
 using Bit.AgentFill.Commands;
 using Bit.AgentFill.Entities;
+using Bit.AgentFill.Notifiers;
 using Bit.AgentFill.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Platform.Push;
@@ -21,7 +22,7 @@ public class CreateApprovalRequestCommandTests
 
     public CreateApprovalRequestCommandTests()
     {
-        _sut = new CreateApprovalRequestCommand(_repository, _push, new FakeTimeProvider(_now),
+        _sut = new CreateApprovalRequestCommand(_repository, new PushAgentFillRequestNotifier(_push), new FakeTimeProvider(_now),
             NullLogger<CreateApprovalRequestCommand>.Instance);
     }
 

@@ -1,6 +1,6 @@
 using Bit.AgentFill.Entities;
+using Bit.AgentFill.Notifiers;
 using Bit.AgentFill.Repositories;
-using Bit.Core.Platform.Push;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 
@@ -14,7 +14,7 @@ internal interface ICreateApprovalRequestCommand
 
 internal sealed class CreateApprovalRequestCommand(
     IAgentFillApprovalRequestRepository repository,
-    IPushNotificationService pushNotificationService,
+    IAgentFillRequestNotifier notifier,
     TimeProvider timeProvider,
     ILogger<CreateApprovalRequestCommand> logger) : ICreateApprovalRequestCommand
 {
@@ -32,7 +32,7 @@ internal sealed class CreateApprovalRequestCommand(
         };
 
         await repository.CreateAsync(request);
-        await pushNotificationService.PushAgentFillApprovalRequestAsync(request);
+        await notifier.NotifyAsync(request);
 
         logger.LogInformation("Agent fill approval {ApprovalId} for {UserId}: {Outcome}",
             request.Id, userId, "Created");

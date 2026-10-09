@@ -1,9 +1,13 @@
 using Bit.AgentFill.Commands;
+using Bit.AgentFill.Notifiers;
 using Bit.AgentFill.Queries;
 using Bit.AgentFill.Repositories;
 using Bit.Core.Settings;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.AgentFill;
 
@@ -28,6 +32,15 @@ public static class AgentFillServiceCollectionExtensions
                 ? sp.GetRequiredService<DapperAgentFillApprovalRequestRepository>()
                 : sp.GetRequiredService<EntityFrameworkAgentFillApprovalRequestRepository>());
 
+        services.TryAddScoped<IAgentFillRequestNotifier>(sp =>
+        {
+            // Development only: AgentFill:SimulatePushScript runs a local script in place of the APNS push.
+            var script = sp.GetRequiredService<IConfiguration>()["AgentFill:SimulatePushScript"];
+            return !string.IsNullOrWhiteSpace(script) && sp.GetRequiredService<IHostEnvironment>().IsDevelopment()
+                ? new LocalScriptAgentFillRequestNotifier(script,
+                    sp.GetRequiredService<ILogger<LocalScriptAgentFillRequestNotifier>>())
+                : ActivatorUtilities.CreateInstance<PushAgentFillRequestNotifier>(sp);
+        });
         services.TryAddScoped<ICreateApprovalRequestCommand, CreateApprovalRequestCommand>();
         services.TryAddScoped<IAnswerApprovalRequestCommand, AnswerApprovalRequestCommand>();
         services.TryAddScoped<IGetApprovalRequestQuery, GetApprovalRequestQuery>();
