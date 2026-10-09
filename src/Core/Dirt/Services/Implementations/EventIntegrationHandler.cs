@@ -30,6 +30,13 @@ public class EventIntegrationHandler<T>(
     {
         foreach (var configuration in await GetConfigurationDetailsListAsync(eventMessage))
         {
+            if (configuration.DisabledDate is not null)
+            {
+                // The circuit breaker disabled this configuration; nothing re-enables it on a timer. The circuit
+                // breaker section of the EventIntegrations README covers the three recovery paths.
+                continue;
+            }
+
             try
             {
                 if (configuration.Filters is string filterJson)
@@ -56,6 +63,7 @@ public class EventIntegrationHandler<T>(
                     IntegrationType = integrationType,
                     MessageId = messageId.ToString(),
                     OrganizationId = eventMessage.OrganizationId?.ToString(),
+                    ConfigurationId = configuration.Id,
                     Configuration = config,
                     RenderedTemplate = renderedTemplate,
                     RetryCount = 0,

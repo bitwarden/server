@@ -1,4 +1,5 @@
-﻿using Bit.Core.Dirt.Models.Data.EventIntegrations;
+﻿using Bit.Core.Dirt.Enums;
+using Bit.Core.Dirt.Models.Data.EventIntegrations;
 
 namespace Bit.Core.Dirt.Services.Implementations;
 
