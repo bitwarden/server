@@ -7,6 +7,7 @@ using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Authorization;
@@ -15,7 +16,6 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.AdminConsole.Public.Controllers;
 
 [Route("public/groups")]
-[Authorize("Organization")]
 public class GroupsController : Controller
 {
     private readonly IGroupRepository _groupRepository;
@@ -49,6 +49,7 @@ public class GroupsController : Controller
     /// that was returned upon group creation.
     /// </remarks>
     /// <param name="id">The identifier of the group to be retrieved.</param>
+    [Authorize(Policies.OrganizationGroupsRead)]
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(GroupResponseModel), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
@@ -72,6 +73,7 @@ public class GroupsController : Controller
     /// supply the unique group identifier that was returned upon group creation.
     /// </remarks>
     /// <param name="id">The identifier of the group to be retrieved.</param>
+    [Authorize(Policies.OrganizationGroupsRead)]
     [HttpGet("{id}/member-ids")]
     [ProducesResponseType(typeof(HashSet<Guid>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
@@ -93,6 +95,7 @@ public class GroupsController : Controller
     /// Returns a list of your organization's groups.
     /// Group objects listed in this call include information about their associated collections.
     /// </remarks>
+    [Authorize(Policies.OrganizationGroupsRead)]
     [HttpGet]
     [ProducesResponseType(typeof(ListResponseModel<GroupResponseModel>), (int)HttpStatusCode.OK)]
     public async Task<IActionResult> List()
@@ -110,6 +113,7 @@ public class GroupsController : Controller
     /// Creates a new group object.
     /// </remarks>
     /// <param name="model">The request model.</param>
+    [Authorize(Policies.OrganizationGroupsWrite)]
     [HttpPost]
     [ProducesResponseType(typeof(GroupResponseModel), (int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
@@ -133,6 +137,7 @@ public class GroupsController : Controller
     /// </remarks>
     /// <param name="id">The identifier of the group to be updated.</param>
     /// <param name="model">The request model.</param>
+    [Authorize(Policies.OrganizationGroupsWrite)]
     [HttpPut("{id}")]
     [ProducesResponseType(typeof(GroupResponseModel), (int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
@@ -161,6 +166,7 @@ public class GroupsController : Controller
     /// </remarks>
     /// <param name="id">The identifier of the group to be updated.</param>
     /// <param name="model">The request model.</param>
+    [Authorize(Policies.OrganizationGroupsWrite)]
     [HttpPut("{id}/member-ids")]
     [ProducesResponseType((int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
@@ -183,6 +189,7 @@ public class GroupsController : Controller
     /// Permanently deletes a group. This cannot be undone.
     /// </remarks>
     /// <param name="id">The identifier of the group to be deleted.</param>
+    [Authorize(Policies.OrganizationGroupsWrite)]
     [HttpDelete("{id}")]
     [ProducesResponseType((int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
