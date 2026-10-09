@@ -257,6 +257,53 @@ public class CurrentContextTests
     }
 
     [Theory, BitAutoData]
+    public async Task SetContextAsync_AccessConnector_SetsAccessConnectorIds(
+        SutProvider<CurrentContext> sutProvider,
+        Guid accessConnectorId,
+        Guid organizationId)
+    {
+        // Arrange
+        var claims = new List<Claim>
+        {
+            new("sub", accessConnectorId.ToString()),
+            new(Claims.Type, IdentityClientType.AccessConnector.ToString()),
+            new(Claims.Organization, organizationId.ToString())
+        };
+        var user = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        // Act
+        await sutProvider.Sut.SetContextAsync(user);
+
+        // Assert
+        Assert.Equal(IdentityClientType.AccessConnector, sutProvider.Sut.IdentityClientType);
+        Assert.Equal(accessConnectorId, sutProvider.Sut.PamAccessConnectorId);
+        Assert.Equal(organizationId, sutProvider.Sut.PamAccessConnectorOrganizationId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SetContextAsync_AccessConnectorWithInvalidSubject_DoesNotSetAccessConnectorId(
+        SutProvider<CurrentContext> sutProvider,
+        Guid organizationId)
+    {
+        // Arrange
+        sutProvider.Sut.PamAccessConnectorId = null;
+        var claims = new List<Claim>
+        {
+            new("sub", "not-a-guid"),
+            new(Claims.Type, IdentityClientType.AccessConnector.ToString()),
+            new(Claims.Organization, organizationId.ToString())
+        };
+        var user = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        // Act
+        await sutProvider.Sut.SetContextAsync(user);
+
+        // Assert
+        Assert.Null(sutProvider.Sut.PamAccessConnectorId);
+        Assert.Equal(organizationId, sutProvider.Sut.PamAccessConnectorOrganizationId);
+    }
+
+    [Theory, BitAutoData]
     public async Task SetContextAsync_WithDeviceClaims_SetsDeviceInfo(
         SutProvider<CurrentContext> sutProvider,
         string deviceIdentifier)
