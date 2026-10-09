@@ -42,10 +42,10 @@ public class ScopedOrganizationApiKeyTokenTests
     }
 
     [Fact]
-    public async Task ScopedToken_LegacyOrganizationPolicyEndpoint_ReturnsForbidden()
+    public async Task ScopedToken_EndpointOutsideItsScope_ReturnsForbidden()
     {
         await new LoginHelper(_factory, _client)
-            .LoginWithScopedOrganizationApiKeyAsync(_organization.Id, ApiScopes.ApiOrganizationMembersRead);
+            .LoginWithScopedOrganizationApiKeyAsync(_organization.Id, ApiScopes.ApiOrganizationEventsRead);
 
         var response = await _client.GetAsync("public/members");
 
