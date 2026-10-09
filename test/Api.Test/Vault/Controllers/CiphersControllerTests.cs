@@ -3676,4 +3676,46 @@ public class CiphersControllerTests
         await sutProvider.GetDependency<ICipherRepository>()
             .DidNotReceiveWithAnyArgs().UpdatePartialAsync(default, default, default, default);
     }
+
+    [Theory]
+    [BitAutoData(false)]
+    [BitAutoData(true)]
+    public async Task PostBulkCollections_LeasingGatedCipher_ThrowsAndDoesNotWrite(
+        bool removeCollections, Guid userId, Guid organizationId, Guid cipherId, Guid collectionId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>()
+            .GetOrganization(organizationId)
+            .Returns(new CurrentContextOrganization { Id = organizationId, Type = OrganizationUserType.User });
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(userId)
+            .Returns(new List<CipherDetails>
+            {
+                new() { Id = cipherId, OrganizationId = organizationId, Edit = true, ViewPassword = true },
+            });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByUserIdAsync(userId)
+            .Returns(new List<CollectionDetails>
+            {
+                new() { Id = collectionId, OrganizationId = organizationId, ReadOnly = false },
+            });
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .EnsureCanMutateManyAsync(userId, Arg.Is<IEnumerable<Cipher>>(c => c.Single().Id == cipherId))
+            .ThrowsAsync(new NotFoundException());
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostBulkCollections(
+            new CipherBulkUpdateCollectionsRequestModel
+            {
+                OrganizationId = organizationId,
+                CipherIds = [cipherId],
+                CollectionIds = [collectionId],
+                RemoveCollections = removeCollections,
+            }));
+
+        await sutProvider.GetDependency<ICollectionCipherRepository>()
+            .DidNotReceiveWithAnyArgs().AddCollectionsForManyCiphersAsync(default, default, default);
+        await sutProvider.GetDependency<ICollectionCipherRepository>()
+            .DidNotReceiveWithAnyArgs().RemoveCollectionsForManyCiphersAsync(default, default, default);
+    }
 }
