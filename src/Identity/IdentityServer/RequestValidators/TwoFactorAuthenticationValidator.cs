@@ -169,7 +169,7 @@ public class TwoFactorAuthenticationValidator(
             if (token?.StartsWith(TwoFactorRememberTokenable.ClearTextPrefix, StringComparison.Ordinal) == true)
             {
                 return new TwoFactorVerificationResult(
-                    await _validateTwoFactorRememberTokenQuery.ValidateAsync(user, deviceIdentifier, token));
+                    await _validateTwoFactorRememberTokenQuery.ValidateAsync(user, organization, deviceIdentifier, token));
             }
 
             // TODO: PM-44171 - Remove the legacy token path below once every token issued before this
