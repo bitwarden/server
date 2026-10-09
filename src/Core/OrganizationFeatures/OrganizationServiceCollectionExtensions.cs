@@ -17,6 +17,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Update;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationScopedApiKeys;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationScopedApiKeys.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
@@ -183,6 +185,9 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IGetOrganizationApiKeyQuery, GetOrganizationApiKeyQuery>();
         services.AddScoped<IRotateOrganizationApiKeyCommand, RotateOrganizationApiKeyCommand>();
         services.AddScoped<ICreateOrganizationApiKeyCommand, CreateOrganizationApiKeyCommand>();
+        services.TryAddScoped<ICreateOrganizationScopedApiKeyCommand, CreateOrganizationScopedApiKeyCommand>();
+        services.TryAddScoped<IGetOrganizationScopedApiKeysQuery, GetOrganizationScopedApiKeysQuery>();
+        services.TryAddScoped<IRevokeOrganizationScopedApiKeyCommand, RevokeOrganizationScopedApiKeyCommand>();
     }
 
     public static void AddOrganizationCollectionCommands(this IServiceCollection services)
