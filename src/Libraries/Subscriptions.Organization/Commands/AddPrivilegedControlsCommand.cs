@@ -1,5 +1,4 @@
-﻿using Bit.Core.Billing.Commands;
-using Bit.Core.Billing.Organizations.Commands;
+﻿using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
@@ -38,8 +37,8 @@ internal sealed class AddPrivilegedControlsCommand(
             throw new BadRequestException("Cannot set max seat autoscaling below the Privileged Controls seat count.");
         }
 
-        var seatChange = Unwrap(await seatChangeSetFactory.CreateAsync(organization, seats));
-        Unwrap(await updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet));
+        var seatChange = (await seatChangeSetFactory.CreateAsync(organization, seats)).Unwrap();
+        (await updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet)).Unwrap();
 
         organization.PamSeats = seats;
         organization.MaxAutoscalePamSeats = maxAutoscaleSeats;
@@ -47,13 +46,4 @@ internal sealed class AddPrivilegedControlsCommand(
         organization.PamSeatMinimum = seatChange.SeatMinimum;
         await organizationService.ReplaceAndUpdateCacheAsync(organization);
     }
-
-    // The seat change step and the subscription update still report failures as a BillingCommandResult. The
-    // endpoint exception filter has no case for BillingException, so surface each failure as the exception that
-    // maps to its HTTP status.
-    private static T Unwrap<T>(BillingCommandResult<T> result) => result.Match(
-        value => value,
-        badRequest => throw new BadRequestException(badRequest.Response),
-        conflict => throw new ConflictException(conflict.Response),
-        unhandled => throw unhandled.Exception ?? new InvalidOperationException(unhandled.Response));
 }
