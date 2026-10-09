@@ -72,6 +72,22 @@ public class OrganizationScopedPolicyTests : IClassFixture<ApiApplicationFactory
         Assert.False(result.Succeeded);
     }
 
+    [Fact]
+    public async Task SubscriptionReadToken_SubscriptionWritePolicy_Fails()
+    {
+        var result = await AuthorizeAsync(ApiScopes.ApiOrganizationSubscriptionRead, Policies.OrganizationSubscriptionWrite);
+
+        Assert.False(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task MembersReadToken_SubscriptionReadPolicy_Fails()
+    {
+        var result = await AuthorizeAsync(ApiScopes.ApiOrganizationMembersRead, Policies.OrganizationSubscriptionRead);
+
+        Assert.False(result.Succeeded);
+    }
+
     [Theory]
     [MemberData(nameof(ScopedPolicies))]
     public async Task ScopedPolicy_RejectsUnauthenticatedPrincipal(string policy, string scope)
