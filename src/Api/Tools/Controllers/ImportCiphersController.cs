@@ -8,7 +8,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.ImportFeatures.Interfaces;
-using LinqToDB.Internal.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -93,7 +92,7 @@ public class ImportCiphersController : Controller
     {
         // If we're importing into the default collection then all we check
         // is whether the user has access to the import feature at all
-        if (collections.IsNullOrEmpty())
+        if (collections.Count == 0)
         {
             if (!await _currentContext.AccessImportExport(orgId)) {
                 return false;
