@@ -189,6 +189,9 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IRotateOrganizationApiKeyCommand, RotateOrganizationApiKeyCommand>();
         services.AddScoped<ICreateOrganizationApiKeyCommand, CreateOrganizationApiKeyCommand>();
         services.TryAddScoped<IGetScopedOrganizationApiKeyClientQuery, GetScopedOrganizationApiKeyClientQuery>();
+        services.TryAddScoped<ICreateScopedOrganizationApiKeyCommand, CreateScopedOrganizationApiKeyCommand>();
+        services.TryAddScoped<IGetScopedOrganizationApiKeysQuery, GetScopedOrganizationApiKeysQuery>();
+        services.TryAddScoped<IRevokeScopedOrganizationApiKeyCommand, RevokeScopedOrganizationApiKeyCommand>();
     }
 
     public static void AddOrganizationCollectionCommands(this IServiceCollection services)
