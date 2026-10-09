@@ -1,13 +1,13 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Organizations.Models;
+﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Repositories;
-using Bit.Core.Test.Billing.Mocks;
+using Bit.Subscriptions.Organization.Commands;
 using NSubstitute;
 using Xunit;
+using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
+using PlanFeatures = Bit.Core.Models.StaticStore.Plan;
 
-namespace Bit.Core.Test.Billing.Organizations.Models;
+namespace Bit.Subscriptions.Organization.Test.Commands;
 
 public class PrivilegedControlsSeatChangeSetFactoryTests
 {
@@ -39,7 +39,7 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
 
         var result = await _factory.CreateAsync(organization, _planDefaultMinimum);
 
-        var item = Assert.Single(result.AsT0.Changes).AsT0;
+        var item = Assert.Single(result.AsT0.ChangeSet.Changes).AsT0;
         Assert.Equal(_planDefaultMinimum, item.Quantity);
     }
 
@@ -60,7 +60,7 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
 
         var result = await _factory.CreateAsync(organization, _planDefaultMinimum);
 
-        var item = Assert.Single(result.AsT0.Changes).AsT0;
+        var item = Assert.Single(result.AsT0.ChangeSet.Changes).AsT0;
         Assert.Equal(_planDefaultMinimum, item.Quantity);
     }
 
@@ -96,7 +96,7 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
 
         var result = await _factory.CreateAsync(organization, 12);
 
-        var item = Assert.Single(result.AsT0.Changes).AsT3;
+        var item = Assert.Single(result.AsT0.ChangeSet.Changes).AsT3;
         Assert.Equal(12, item.Quantity);
     }
 
@@ -107,7 +107,7 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
 
         var result = await _factory.CreateAsync(organization, 30);
 
-        var item = Assert.Single(result.AsT0.Changes).AsT3;
+        var item = Assert.Single(result.AsT0.ChangeSet.Changes).AsT3;
         Assert.Equal(30, item.Quantity);
     }
 
@@ -150,6 +150,36 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
         var result = await _factory.CreateAsync(organization, 6);
 
         Assert.True(result.Success);
+    }
+
+    [Fact]
+    public async Task CreateAsync_SavedMinimum_ReturnsSavedMinimum()
+    {
+        var organization = CreateOrganization(pamSeatMinimum: 6);
+
+        var result = await _factory.CreateAsync(organization, 6);
+
+        Assert.Equal(6, result.AsT0.SeatMinimum);
+    }
+
+    [Fact]
+    public async Task CreateAsync_NoSavedMinimum_ReturnsPlanDefaultMinimum()
+    {
+        var organization = CreateOrganization(pamSeatMinimum: null);
+
+        var result = await _factory.CreateAsync(organization, _planDefaultMinimum);
+
+        Assert.Equal(_planDefaultMinimum, result.AsT0.SeatMinimum);
+    }
+
+    [Fact]
+    public async Task CreateAsync_SeatChangeOnExistingSeats_ReturnsMinimum()
+    {
+        var organization = CreateOrganization(pamSeats: 12, pamSeatMinimum: 6);
+
+        var result = await _factory.CreateAsync(organization, 30);
+
+        Assert.Equal(6, result.AsT0.SeatMinimum);
     }
 
     [Fact]
@@ -205,19 +235,34 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
         Assert.True(result.Success);
     }
 
-    private Organization CreateOrganization(
+    private OrganizationEntity CreateOrganization(
         PlanType planType = PlanType.EnterpriseAnnually,
         int? pamSeats = null,
         int? pamSeatMinimum = null)
     {
-        var organization = new Organization
+        var organization = new OrganizationEntity
         {
             Id = Guid.NewGuid(),
             PlanType = planType,
             PamSeats = pamSeats,
             PamSeatMinimum = pamSeatMinimum
         };
-        _pricingClient.GetPlanOrThrow(planType).Returns(MockPlans.Get(planType));
+        _pricingClient.GetPlanOrThrow(planType).Returns(new TestPlan(planType == PlanType.EnterpriseAnnually));
         return organization;
+    }
+
+    private sealed record TestPlan : PlanFeatures
+    {
+        public TestPlan(bool supportsPrivilegedControls)
+        {
+            if (supportsPrivilegedControls)
+            {
+                PrivilegedControls = new PrivilegedControlsPlanFeatures
+                {
+                    StripeSeatPlanId = "privileged-controls-enterprise-seat-annually",
+                    DefaultSeatMinimum = _planDefaultMinimum
+                };
+            }
+        }
     }
 }

@@ -23,6 +23,8 @@ public static class SubscriptionsOrganizationServiceCollectionExtensions
         services.TryAddScoped<PreviewOrganizationSubscriptionPurchaseHandler>();
         services.TryAddScoped<PreviewOrganizationPlanChangeHandler>();
         services.TryAddScoped<IPreviewOrganizationPlanChangeCommand, PreviewOrganizationPlanChangeCommand>();
+        services.TryAddScoped<IPrivilegedControlsSeatChangeSetFactory, PrivilegedControlsSeatChangeSetFactory>();
+        services.TryAddScoped<IAddPrivilegedControlsCommand, AddPrivilegedControlsCommand>();
         services.TryAddEnumerable(
             ServiceDescriptor.Scoped<IAuthorizationHandler, StandaloneOrganizationOwnerRequirementHandler>());
         return services;

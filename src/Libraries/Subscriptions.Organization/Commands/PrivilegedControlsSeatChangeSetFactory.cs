@@ -1,37 +1,41 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Commands;
+﻿using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Repositories;
+using Bit.Subscriptions.Organization.Models;
+using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
 
-namespace Bit.Core.Billing.Organizations.Models;
+namespace Bit.Subscriptions.Organization.Commands;
 
 /// <summary>
 /// Validates a requested Privileged Controls seat count against the organization's minimum and the
 /// seats in use, then builds the change set that applies it. Every Privileged Controls seat change
 /// goes through this type, and a request it rejects returns a bad request result.
 /// </summary>
-public interface IPrivilegedControlsSeatChangeSetFactory
+internal interface IPrivilegedControlsSeatChangeSetFactory
 {
     /// <summary>
     /// Builds the change set that moves the organization to <paramref name="seats"/> Privileged Controls
     /// seats. Does not call Stripe or save anything: the caller applies the change set through
-    /// <see cref="Commands.IUpdateOrganizationSubscriptionCommand"/> and saves
-    /// <see cref="Organization.PamSeats"/>.
+    /// <see cref="IUpdateOrganizationSubscriptionCommand"/> and saves
+    /// <see cref="OrganizationEntity.PamSeats"/>.
     /// </summary>
     /// <param name="organization">The organization whose seats are changing.</param>
     /// <param name="seats">The total number of Privileged Controls seats being requested.</param>
     /// <returns>
-    /// The change set on success, or a <see cref="BadRequest"/> when the request violates a seat rule.
+    /// The change set and the seat minimum it was validated against on success, or a <see cref="BadRequest"/>
+    /// when the request violates a seat rule.
     /// </returns>
-    Task<BillingCommandResult<OrganizationSubscriptionChangeSet>> CreateAsync(Organization organization, int seats);
+    Task<BillingCommandResult<PrivilegedControlsSeatChange>> CreateAsync(OrganizationEntity organization, int seats);
 }
 
-public class PrivilegedControlsSeatChangeSetFactory(
+internal sealed class PrivilegedControlsSeatChangeSetFactory(
     IOrganizationUserRepository organizationUserRepository,
     IPricingClient pricingClient) : IPrivilegedControlsSeatChangeSetFactory
 {
-    public async Task<BillingCommandResult<OrganizationSubscriptionChangeSet>> CreateAsync(
-        Organization organization,
+    public async Task<BillingCommandResult<PrivilegedControlsSeatChange>> CreateAsync(
+        OrganizationEntity organization,
         int seats)
     {
         var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
@@ -56,7 +60,7 @@ public class PrivilegedControlsSeatChangeSetFactory(
         {
             return seats < minimum
                 ? BelowMinimum(minimum)
-                : builder.AddPrivilegedControlsSeats(seats).Build();
+                : new PrivilegedControlsSeatChange(builder.AddPrivilegedControlsSeats(seats).Build(), minimum);
         }
 
         if (seats == currentSeats)
@@ -81,7 +85,7 @@ public class PrivilegedControlsSeatChangeSetFactory(
             }
         }
 
-        return builder.UpdatePrivilegedControlsSeats(seats).Build();
+        return new PrivilegedControlsSeatChange(builder.UpdatePrivilegedControlsSeats(seats).Build(), minimum);
     }
 
     private static BadRequest BelowMinimum(int minimum) =>
