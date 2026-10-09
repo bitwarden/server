@@ -1,5 +1,4 @@
 ﻿using Bit.Core;
-using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -9,6 +8,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
