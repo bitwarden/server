@@ -7,7 +7,6 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Identity;
-using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -152,8 +151,8 @@ public class CurrentContext(
             }
         }
 
-        IsScopedOrganizationApiKey = (ClientId?.StartsWith("organization.") ?? false) &&
-            !(claimsDict.TryGetValue("scope", out var scopes) && scopes.Any(c => c.Value == ApiScopes.ApiOrganization));
+        IsScopedOrganizationApiKey = ClientId?.Split('.') is ["organization", var orgIdPart, var keyIdPart] &&
+            Guid.TryParse(orgIdPart, out _) && Guid.TryParse(keyIdPart, out _);
 
         if (IdentityClientType == IdentityClientType.ServiceAccount)
         {

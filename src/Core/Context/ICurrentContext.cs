@@ -35,7 +35,7 @@ public interface ICurrentContext
     Version? ClientVersion { get; set; }
     bool ClientVersionIsPrerelease { get; set; }
     /// <summary>
-    /// True when the request uses an organization API key token without the legacy api.organization scope.
+    /// True when the client id has the scoped organization API key shape, organization.{organizationId}.{keyId}.
     /// </summary>
     bool IsScopedOrganizationApiKey { get; }
 
