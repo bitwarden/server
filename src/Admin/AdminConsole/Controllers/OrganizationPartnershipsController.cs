@@ -96,6 +96,7 @@ public class OrganizationPartnershipsController(
             "invalid_name" => (nameof(model.Name),
                 $"Name is required and must be at most {CreateOrganizationPartnershipRequest.NameMaxLength} characters."),
             "unsupported_binding_mode" => (nameof(model.BindingMode), "Only token binding is supported."),
+            "unsupported_sponsored_plan_type" => (nameof(model.SponsoredPlanType), "Choose a supported sponsored plan."),
             "invalid_return_origin" => (nameof(model.RegisteredReturnOrigins),
                 "Each return origin must be an https origin such as https://partner.example.com, " +
                 "with no path, query, fragment, credentials, or default port."),

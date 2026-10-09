@@ -18,6 +18,7 @@ public class CreateOrganizationPartnershipModel
     public string? Name { get; set; }
 
     [Display(Name = "Sponsored plan type")]
+    [EnumDataType(typeof(SponsoredPlanType))]
     public SponsoredPlanType SponsoredPlanType { get; set; } = SponsoredPlanType.Premium;
 
     [Display(Name = "Binding mode")]
