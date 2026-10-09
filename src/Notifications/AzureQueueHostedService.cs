@@ -74,34 +74,19 @@ public class AzureQueueHostedService : IHostedService, IDisposable
                     {
                         try
                         {
-                            // CoreHelpers.DecodeMessageText inlined, so that a successful decode can
-                            // be reported: nothing writes base64 to this queue any more, and the
-                            // decode exists only to tolerate a sender that predates that. The warning
-                            // is how we find out whether any still does, so the tolerance can be
-                            // dropped on evidence rather than on the assumption that it is unused.
-                            var decodedMessage = message.MessageText;
-                            if (!string.IsNullOrWhiteSpace(decodedMessage))
+                            // The default options are case-sensitive, which matches the PascalCase
+                            // the push engines write.
+                            var notification = message.Body.ToObjectFromJson<InboundNotification>();
+                            if (notification is null)
                             {
-                                try
-                                {
-                                    decodedMessage = CoreHelpers.Base64DecodeString(decodedMessage);
-                                    _logger.LogWarning(
-                                        "Dequeued a base64-encoded message: {MessageId}. Decoding it is legacy tolerance, not something a current sender needs.",
-                                        message.MessageId);
-                                }
-                                catch
-                                {
-                                    // Not base64, so it is the plain text a current sender writes.
-                                    // Catching everything is what CoreHelpers.DecodeMessageText does,
-                                    // and this is only meant to inline it, not to change it.
-                                }
+                                // A JSON null will never become a notification, so retrying it is pointless.
+                                _logger.LogError("Dequeued message {MessageId} was null and will be deleted.",
+                                    message.MessageId);
+                                await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt,
+                                    cancellationToken);
+                                continue;
                             }
-
-                            if (!string.IsNullOrWhiteSpace(decodedMessage))
-                            {
-                                await _hubHelpers.SendNotificationToHubAsync(decodedMessage, cancellationToken);
-                            }
-
+                            await _hubHelpers.SendNotificationToHubAsync(notification, cancellationToken);
                             await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt,
                                 cancellationToken);
                         }
