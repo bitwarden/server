@@ -42,7 +42,7 @@ public class UpcomingInvoiceHandler(
     IUserRepository userRepository,
     IValidateSponsorshipCommand validateSponsorshipCommand,
     IMailer mailer,
-    IFeatureService featureService,
+    Bitwarden.Server.Sdk.Features.IFeatureService featureService,
     IBusinessPlanMigrationCoordinator businessPlanMigrationCoordinator)
     : IUpcomingInvoiceHandler
 {

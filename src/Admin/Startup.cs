@@ -6,6 +6,7 @@ using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Identity;
 using Stripe;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Admin.Controllers;
@@ -103,9 +104,11 @@ public class Startup
 #endif
 
         // Mvc
+        services.AddAntiforgery(options => options.HeaderName = "X-XSRF-TOKEN");
         services.AddMvc(config =>
         {
             config.Filters.Add(new LoggingExceptionHandlerFilterAttribute());
+            config.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
         });
         services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
 

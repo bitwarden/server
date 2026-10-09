@@ -50,7 +50,7 @@ public class SubscriptionUpdatedHandlerTests
     private readonly IProviderService _providerService;
     private readonly IPushNotificationAdapter _pushNotificationAdapter;
     private readonly IPriceIncreaseScheduler _priceIncreaseScheduler;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IOrganizationPlanMigrationCohortRepository _cohortRepository;
     private readonly IOrganizationPlanMigrationCohortAssignmentRepository _cohortAssignmentRepository;
     private readonly ILogger<SubscriptionUpdatedHandler> _logger;
@@ -74,7 +74,7 @@ public class SubscriptionUpdatedHandlerTests
         _providerService = Substitute.For<IProviderService>();
         _pushNotificationAdapter = Substitute.For<IPushNotificationAdapter>();
         _priceIncreaseScheduler = Substitute.For<IPriceIncreaseScheduler>();
-        _featureService = Substitute.For<IFeatureService>();
+        _featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
         _cohortRepository = Substitute.For<IOrganizationPlanMigrationCohortRepository>();
         _cohortAssignmentRepository = Substitute.For<IOrganizationPlanMigrationCohortAssignmentRepository>();
         _logger = Substitute.For<ILogger<SubscriptionUpdatedHandler>>();

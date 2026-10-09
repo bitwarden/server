@@ -14,16 +14,15 @@ namespace Bit.Services.Pam.OrganizationFeatures.Commands;
 
 public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
 {
-    /// <summary>
-    /// Recorded on the automatic Deny decision if the parent lease ended before the extension could apply.
-    /// Stored, not translated, so it has to mean one thing to whoever reads the request later.
-    /// </summary>
+    /// <summary>The automatic Deny decision's comment when the lease ended before the extension could apply.</summary>
     private const string LeaseEndedDenialComment = "The lease being extended has ended";
 
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IGoverningRuleResolver _resolver;
     private readonly IAccessRuleEngine _ruleEngine;
     private readonly IAccessRequestRepository _accessRequestRepository;
+    private readonly IApproverInboxNotifier _approverInboxNotifier;
+    private readonly IRequesterNotifier _requesterNotifier;
     private readonly ICurrentContext _currentContext;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
@@ -33,6 +32,8 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         IGoverningRuleResolver resolver,
         IAccessRuleEngine ruleEngine,
         IAccessRequestRepository accessRequestRepository,
+        IApproverInboxNotifier approverInboxNotifier,
+        IRequesterNotifier requesterNotifier,
         ICurrentContext currentContext,
         IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
@@ -41,6 +42,8 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         _resolver = resolver;
         _ruleEngine = ruleEngine;
         _accessRequestRepository = accessRequestRepository;
+        _approverInboxNotifier = approverInboxNotifier;
+        _requesterNotifier = requesterNotifier;
         _currentContext = currentContext;
         _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
@@ -56,8 +59,7 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
             throw new NotFoundException();
         }
 
-        // An extension buys new access, so it needs the license the original lease was taken under. The
-        // lease already running is untouched.
+        // An extension buys new access, so it needs a license; the running lease is unaffected.
         _currentContext.RequireLicense(lease.OrganizationId);
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
@@ -65,8 +67,7 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         // Liveness is decided under the per-lease lock in CreateApprovedExtensionAsync; an ended lease yields a
         // denied request.
 
-        // Extensions are judged against the rule the lease was granted under (falling back to the current rule when
-        // none was recorded) and are auto-approved, subject to the rule's extension settings and automated conditions.
+        // Judged against the rule pinned on the lease's request, or the current rule when none is pinned.
         var signals = AccessSignals.From(_currentContext.IpAddress, new DateTimeOffset(now, TimeSpan.Zero));
         var originatingRequest = await _accessRequestRepository.GetByIdAsync(lease.AccessRequestId);
         var pinnedRuleId = originatingRequest?.RuleId;
@@ -90,8 +91,7 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
             throw new BadRequestException("A positive duration is required.");
         }
 
-        // The rule's max extension length is the cap. A missing cap is treated as zero so a misconfigured
-        // rule denies.
+        // A missing cap counts as zero, so a misconfigured rule denies.
         if (submission.DurationSeconds > (governingRule.MaxExtensionDurationSeconds ?? 0))
         {
             throw new BadRequestException("The requested duration exceeds the maximum extension length for this item.");
@@ -109,14 +109,12 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
             throw new BadRequestException(AccessDenialMessage.For(denial));
         }
 
-        // A lease may be extended once. Friendly early check; the mint proc re-counts under a per-lease lock
-        // and is the race-safe authority.
+        // A lease may be extended once. An early check; the extension proc re-counts under the per-lease lock.
         if (await _accessRequestRepository.CountExtensionsByLeaseIdAsync(lease.Id) >= 1)
         {
             throw new BadRequestException("This lease has already been extended.");
         }
 
-        // The extension window spans from the lease's current end to its new end; NotAfter is the lease's new end.
         var request = new AccessRequest
         {
             ExtensionOfLeaseId = lease.Id,
@@ -170,8 +168,7 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
 
         if (outcome == AccessLeaseExtendOutcome.LeaseNotActive)
         {
-            // The lease ran out or was ended under the request. The repository recorded that as a denied request
-            // rather than refusing the write, so this is a resolved outcome to report, not an error to throw.
+            // The lease ended first. The repository recorded a denied request, which is reported, not thrown.
             await _accessAuditEventEmitter.EmitAsync(
                 audit with
                 {
@@ -181,21 +178,21 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
                     Detail = LeaseEndedDenialComment,
                 });
 
+            await _requesterNotifier.NotifyRequesterAsync(lease.RequesterId);
+
             return Project(request, AccessRequestAction.Denied, AccessDecisionVerdict.Deny,
                 LeaseEndedDenialComment, now);
         }
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
 
-        // The parent lease's end has already been pushed out, so the next access-state snapshot re-emits the longer
-        // countdown.
+        await _approverInboxNotifier.NotifyCollectionApproversAsync(lease.CollectionId);
+        await _requesterNotifier.NotifyRequesterAsync(lease.RequesterId);
+
+        // The lease's end is already pushed out, so the next access-state read shows the longer countdown.
         return Project(request, AccessRequestAction.Approved, AccessDecisionVerdict.Approve, comment: null, now);
     }
 
-    /// <summary>
-    /// Evaluates the governing rule's automated conditions against the caller's signals, with the approval gate
-    /// stripped.
-    /// </summary>
     private AccessEvaluation? FindConditionDenial(GoverningRule governingRule, AccessSignals signals)
     {
         if (governingRule.ConditionsUnreadable)
@@ -213,9 +210,8 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
     }
 
     /// <summary>
-    /// Projects the extension state the client renders from what was just written. <paramref name="action"/> and
-    /// <paramref name="verdict"/> come from the repository's outcome rather than <paramref name="request"/>, since a
-    /// lease that ended under the request is written Denied.
+    /// Projects what was just written. <paramref name="action"/> and <paramref name="verdict"/> come from the
+    /// repository's outcome, since a lease that ended first is written Denied.
     /// </summary>
     private static AccessRequestDetails Project(AccessRequest request, AccessRequestAction action,
         AccessDecisionVerdict verdict, string? comment, DateTime now)

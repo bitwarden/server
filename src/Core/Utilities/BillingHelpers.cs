@@ -5,7 +5,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.StaticStore;
-using Bit.Core.Services;
+using Bitwarden.Server.Sdk.Features;
 
 namespace Bit.Core.Utilities;
 
