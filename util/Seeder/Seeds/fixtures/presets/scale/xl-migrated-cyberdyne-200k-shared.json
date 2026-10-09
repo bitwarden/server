@@ -23,7 +23,7 @@
     "count": 6000
   },
   "ciphers": {
-    "count": 160000
+    "count": 149800
   },
   "policies": {
     "enable": ["masterPassword", "passwordGenerator", "singleOrg", "organizationDataOwnership", "sendOptions", "resetPassword", "maximumVaultTimeout"],
@@ -73,12 +73,13 @@
     },
     "cipherAssignment": {
       "orphanRate": 0.28,
-      "deletedRate": 0.085,
-      "maxDeletedCiphers": 13600
+      "deletedRate": 0.023,
+      "maxDeletedCiphers": 3400
     }
   },
   "accessShape": {
     "seed": 20261007,
+    "inactiveAccessRate": 0.38,
     "departments": {
       "count": 25,
       "locality": 0.95
@@ -102,7 +103,7 @@
       ]
     },
     "collections": {
-      "totalAssignments": 137800,
+      "totalAssignments": 129100,
       "maxCollectionsPerCipher": 12,
       "sizes": [
         { "min": 0, "max": 0, "weight": 0.43 },
@@ -124,7 +125,7 @@
       "collectionSizeBias": 0.15,
       "echoRate": 0.15,
       "everyoneGroupCollections": 0,
-      "hotCollections": [4833, 1944, 959, 1458, 378, 292, 189, 132, 97, 49],
+      "hotCollections": [4526, 1821, 898, 1365, 354, 273, 177, 124, 91, 46],
       "hotPairs": [
         { "group": 0, "collections": [0, 1, 2] },
         { "group": 1, "collections": [0, 1, 2, 3] },
@@ -152,6 +153,7 @@
   "myItems": {
     "name": "My Items",
     "nonEmptyRate": 0.42,
+    "deletedRate": 0.075,
     "largest": [2980, 2070, 1410, 1390, 1385],
     "policyEnabledDaysAgo": 14,
     "sizes": [
@@ -159,6 +161,7 @@
       { "min": 4, "max": 10, "weight": 0.17 },
       { "min": 11, "max": 50, "weight": 0.277 },
       { "min": 51, "max": 150, "weight": 0.129 },
+      { "min": 151, "max": 200, "weight": 0.004 },
       { "min": 201, "max": 600, "weight": 0.02 }
     ]
   }

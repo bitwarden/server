@@ -26,6 +26,11 @@ internal sealed class EntityRegistry
     internal List<Guid> HardenedOrgUserIds { get; } = [];
 
     /// <summary>
+    /// Organization user IDs for invited, accepted and revoked generated members. The access-shape collection step can give some of them access.
+    /// </summary>
+    internal List<Guid> InactiveOrgUserIds { get; } = [];
+
+    /// <summary>
     /// Full user references including symmetric keys. Used for per-user encrypted content.
     /// </summary>
     /// <seealso cref="UserDigest"/>
@@ -126,6 +131,7 @@ internal sealed class EntityRegistry
     internal void Clear()
     {
         HardenedOrgUserIds.Clear();
+        InactiveOrgUserIds.Clear();
         UserDigests.Clear();
         GroupIds.Clear();
         CollectionIds.Clear();

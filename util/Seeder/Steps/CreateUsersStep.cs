@@ -105,6 +105,7 @@ internal sealed class CreateUsersStep(
         var users = new List<User>(count);
         var organizationUsers = new List<OrganizationUser>(count);
         var hardenedOrgUserIds = new List<Guid>(count);
+        var inactiveOrgUserIds = new List<Guid>();
         var userDigests = new List<EntityRegistry.UserDigest>(count);
 
         for (var i = 0; i < count; i++)
@@ -118,11 +119,16 @@ internal sealed class CreateUsersStep(
                 hardenedOrgUserIds.Add(r.OrgUser.Id);
                 userDigests.Add(new EntityRegistry.UserDigest(r.User.Id, r.OrgUser.Id, r.Keys.Key));
             }
+            else
+            {
+                inactiveOrgUserIds.Add(r.OrgUser.Id);
+            }
         }
 
         context.Users.AddRange(users);
         context.OrganizationUsers.AddRange(organizationUsers);
         context.Registry.HardenedOrgUserIds.AddRange(hardenedOrgUserIds);
+        context.Registry.InactiveOrgUserIds.AddRange(inactiveOrgUserIds);
         context.Registry.UserDigests.AddRange(userDigests);
 
         progress?.Report(new PhaseCompleted(SeederPhases.CreatingUsers));

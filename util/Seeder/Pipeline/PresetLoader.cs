@@ -309,8 +309,7 @@ internal static class PresetLoader
             data[ParseEnum(name, PolicyType.TwoFactorAuthentication)] = json.GetRawText();
         }
 
-        // enableAll/except are still not implemented (features.policy-enterprise relies on them being ignored);
-        // only explicitly listed types are created.
+        // PresetValidator has already rejected enableAll/except, enable/disable overlaps and missing dependencies
         return (policies.Enable ?? []).Select(name => (name, enabled: true))
             .Concat((policies.Disable ?? []).Select(name => (name, enabled: false)))
             .Select(p =>

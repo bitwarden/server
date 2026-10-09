@@ -277,6 +277,8 @@ internal sealed class GenerateCiphersStep(
             }
         }
 
+        // Each cipher is in at most maxPerCipher collections, so a tight cap can leave slots unfilled
+        ShapeTargets.EnsureReached("collection-cipher rows", result.Count, slotArray.Length);
         return result;
     }
 

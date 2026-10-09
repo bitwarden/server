@@ -46,7 +46,7 @@ dotnet run -- preset --name features.{name} --mangle
 | sso-enterprise    | requireSso policy (OIDC SSO config is not seeded by the Seeder yet) | verdant-health   | starter-team     | enterprise-basic |
 | tde-enterprise    | requireSso policy (OIDC SSO config is not seeded by the Seeder yet) | obsidian-labs    | starter-team     | enterprise-basic |
 | local-sso         | SSO (SAML 2.0, masterPassword) — local-IdP login org                | verdant-health   | enterprise-basic | enterprise-basic |
-| policy-enterprise | All policies except requireSso and require2fa                       | pinnacle-designs | starter-team     | —                |
+| policy-enterprise | Common enterprise policies (7, with Single Organization)            | pinnacle-designs | starter-team     | —                |
 
 `policy-enterprise` has no ciphers — it exists purely for testing policy enforcement.
 
@@ -95,9 +95,9 @@ dotnet run -- preset --name scale.{name} --mangle
 | lg-highperm-tyrell-corp            | LG   | High permission density     | 2,500  | 75     | 2,300       | 17,000  |
 | xl-highperm-weyland-yutani         | XL   | Mega corp, many groups      | 5,000  | 500    | 1,200       | 15,000  |
 | xl-broad-initech                   | XL   | Mega corp, many collections | 10,000 | 5      | 12,000      | 15,000  |
-| xl-migrated-cyberdyne              | XL   | Large org, post-migration   | 5,041  | 465    | 9,941       | 121,758 |
-| xl-migrated-cyberdyne-200k-myitems | XL   | 200k, growth in My Items    | 5,041  | 465    | 9,941       | 213,567 |
-| xl-migrated-cyberdyne-200k-shared  | XL   | 200k, growth in shared      | 5,041  | 465    | 9,941       | 216,758 |
+| xl-migrated-cyberdyne              | XL   | Large org, post-migration   | 5,041  | 465    | 9,941       | 123,018 |
+| xl-migrated-cyberdyne-200k-myitems | XL   | 200k, growth in My Items    | 5,041  | 465    | 9,941       | 220,826 |
+| xl-migrated-cyberdyne-200k-shared  | XL   | 200k, growth in shared      | 5,041  | 465    | 9,941       | 211,918 |
 
 **Notes:**
 
@@ -105,10 +105,10 @@ dotnet run -- preset --name scale.{name} --mangle
 - **Cipher types**: Most use `realistic` (60% Login, 15% SecureNote, 12% Card, 10% Identity, 3% SSHKey). Umbrella Corp uses `documentationHeavy` (40/40 Login/SecureNote). Tyrell Corp uses `developerFocused` (50% Login, 20% SSHKey).
 - **Personal ciphers**: Sterling Cooper and Wayne Enterprises use `realistic` distribution. Weyland-Yutani uses `lightUsage`. Use `heavyUsage` only for small/mid orgs — at XL scale it produces 300K+ ciphers and will timeout.
 - **Folders**: Wayne Enterprises uses `enterprise` folder distribution. Weyland-Yutani uses `minimal`.
-- **Archive & delete**: All nine presets set `cipherAssignment.deletedRate` (2-5%, capped at 25) and `archivedRate` (4-8%, capped at 50), tuned to each org's orphan-rate/permission story — tidier orgs (Central Perk) trend lower, locked-down/hierarchical orgs (Bluth Company, Tyrell Corp) and Initech's high-orphan mega-dump trend higher. Both rates apply to org ciphers (archived-for a round-robin-selected org member); the three presets with personal ciphers enabled (Sterling Cooper, Wayne Enterprises, Weyland-Yutani) apply the same rates a second time against their personal-cipher pool, so those three seed archived/deleted items in both places.
+- **Archive & delete**: The nine density presets set `cipherAssignment.deletedRate` (2-5%, capped at 25) and `archivedRate` (4-8%, capped at 50), tuned to each org's orphan-rate/permission story — tidier orgs (Central Perk) trend lower, locked-down/hierarchical orgs (Bluth Company, Tyrell Corp) and Initech's high-orphan mega-dump trend higher. Both rates apply to org ciphers (archived-for a round-robin-selected org member); the three presets with personal ciphers enabled (Sterling Cooper, Wayne Enterprises, Weyland-Yutani) apply the same rates a second time against their personal-cipher pool, so those three seed archived/deleted items in both places.
 
-- **`xl-migrated-cyberdyne`** models a large enterprise org after the Organization Data Ownership migration. It uses the `accessShape`, `myItems`, `users.statusMix` / `adminCount` and `policies` blocks rather than the density algorithms: a no-grant everyone group, a nested hot-group cluster sharing ~2.9k-item collections, admin-style wide groups, long-tailed shared collections, one My Items collection per confirmed member and the ownership policy. It produces roughly 1.3M member-access report rows. See [access-shape.md](access-shape.md).
-- **`xl-migrated-cyberdyne-200k-myitems`** and **`xl-migrated-cyberdyne-200k-shared`** take the same org to ~200k active org items, two ways. **myitems** grows only My Items (about 45% of members non-empty, a tail up to 7,200 items): report rows barely move (~1.4M) and per-member sync is unchanged. It exercises org-wide volume and My Items. **shared** grows shared collections 2.7× under the same groups and grants (largest collection ~4.4k items): report rows reach ~3.5M and the P99 member syncs ~16k rows. It is the worst case for sync and the member-access report. Each uses its own email domain, so all three presets can share one database.
+- **`xl-migrated-cyberdyne`** models a large enterprise org after the Organization Data Ownership migration. It uses the `accessShape`, `myItems`, `users.statusMix` / `adminCount` and `policies` blocks rather than the density algorithms: a no-grant everyone group, a nested hot-group cluster sharing ~2.9k-item collections, admin-style wide groups, long-tailed shared collections, one My Items collection per confirmed member (most of the trash sits there) and the ownership policy. Some revoked and invited members keep their groups and grants, as in real orgs. It produces roughly 1.0M Access Intelligence member-item pairs (about 9.5% from non-confirmed members) and 1.3M member-access report rows. See [access-shape.md](access-shape.md).
+- **`xl-migrated-cyberdyne-200k-myitems`** and **`xl-migrated-cyberdyne-200k-shared`** take the same org to ~200k active org items, two ways. **myitems** grows only My Items (about 45% of members non-empty, a tail up to 7,200 items): member-item pairs don't move (~1.0M), report rows barely do (~1.4M), and per-member sync is unchanged. It exercises org-wide volume and My Items. **shared** grows shared collections 2.7× under the same groups and grants (largest collection ~4.4k items): member-item pairs reach ~2.6M, report rows ~3.6M, and the P99 member syncs ~16k rows. It is the worst case for sync and the member-access report. Each uses its own email domain, so all three presets can share one database.
 
 For per-preset expected values and verification queries, see [verification.md](verification.md).
 

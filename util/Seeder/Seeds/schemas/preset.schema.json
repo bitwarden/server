@@ -226,12 +226,12 @@
         "enableAll": {
           "type": "boolean",
           "default": false,
-          "description": "Not implemented yet: ignored. List types in 'enable' instead."
+          "description": "Not supported: a preset that sets it fails to load. List types in 'enable' instead."
         },
         "except": {
           "type": "array",
           "items": { "type": "string" },
-          "description": "Policy types to exclude when enableAll is true."
+          "description": "Not supported: a preset that sets it fails to load."
         },
         "enable": {
           "type": "array",
@@ -258,6 +258,12 @@
         "seed": {
           "type": "integer",
           "description": "Random seed for the shape."
+        },
+        "inactiveAccessRate": {
+          "type": "number",
+          "description": "Fraction of invited, accepted and revoked members who copy a random confirmed member's group memberships (except the everyone group) and direct grants.",
+          "minimum": 0,
+          "maximum": 1
         },
         "departments": {
           "type": "object",
@@ -558,6 +564,11 @@
           "minLength": 1,
           "default": "My Items",
           "description": "Plaintext collection name, encrypted once with the org key."
+        },
+        "deletedRate": {
+          "type": "number",
+          "description": "Trashed items added per member, as a fraction of that member's active My Items items.",
+          "minimum": 0
         },
         "nonEmptyRate": {
           "type": "number",

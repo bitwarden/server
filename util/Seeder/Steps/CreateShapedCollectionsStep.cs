@@ -57,7 +57,9 @@ internal sealed class CreateShapedCollectionsStep(
         var drawn = new SizeHistogram(buckets.Select(b => (b.Min, b.Max, b.Weight))).Draw(drawnCount, random);
         if (collectionShape.TotalAssignments is { } totalAssignments)
         {
-            SizeHistogram.ScaleTo(drawn, totalAssignments - pinned.Sum(p => p.size), buckets.Max(b => b.Max));
+            var drawnTarget = totalAssignments - pinned.Sum(p => p.size);
+            SizeHistogram.ScaleTo(drawn, drawnTarget, buckets.Max(b => b.Max));
+            ShapeTargets.EnsureReached("collection slots", drawn.Sum(s => (long)s), drawnTarget);
         }
 
         var sizes = pinned.Select(p => p.size).Concat(drawn).ToArray();
@@ -93,9 +95,52 @@ internal sealed class CreateShapedCollectionsStep(
             .ToArray();
 
         context.CollectionGroups.AddRange(BuildGroupGrants(registry, context.GroupUsers, collectionIds, sizes, pinned, byDepartment, grantShape, random));
-        context.CollectionUsers.AddRange(BuildDirectGrants(registry, context.GroupUsers, collectionIds, sizes, byDepartment, directShape, random));
+        var directGrants = BuildDirectGrants(registry, context.GroupUsers, collectionIds, sizes, byDepartment, directShape, random);
+        context.CollectionUsers.AddRange(directGrants);
+
+        // Own random stream, so confirmed members' shape is the same with or without inactive access
+        AddInactiveMemberAccess(context, directGrants, new Random(seed + 3));
 
         progress?.Report(new PhaseCompleted(SeederPhases.CreatingCollections));
+    }
+
+    /// <summary>
+    /// Gives <see cref="SeedPresetAccessShape.InactiveAccessRate"/> of invited, accepted and revoked members the group
+    /// memberships (except the everyone group) and direct grants of a random confirmed member. Real orgs leave
+    /// revoked members in their groups and collections, and Access Intelligence maps them like anyone else.
+    /// </summary>
+    private void AddInactiveMemberAccess(SeederContext context, List<CollectionUser> directGrants, Random random)
+    {
+        var registry = context.Registry;
+        var rate = shape.InactiveAccessRate ?? 0;
+        var confirmed = registry.HardenedOrgUserIds;
+        if (rate <= 0 || confirmed.Count == 0)
+        {
+            return;
+        }
+
+        var groupsByMember = context.GroupUsers
+            .Where(gu => gu.GroupId != registry.EveryoneGroupId)
+            .ToLookup(gu => gu.OrganizationUserId, gu => gu.GroupId);
+        var grantsByMember = directGrants.ToLookup(cu => cu.OrganizationUserId);
+        var groupUsers = new List<GroupUser>();
+        var collectionUsers = new List<CollectionUser>();
+
+        foreach (var member in registry.InactiveOrgUserIds)
+        {
+            if (random.NextDouble() >= rate)
+            {
+                continue;
+            }
+
+            var twin = confirmed[random.Next(confirmed.Count)];
+            groupUsers.AddRange(groupsByMember[twin].Select(groupId => GroupUserSeeder.Create(groupId, member)));
+            collectionUsers.AddRange(grantsByMember[twin].Select(cu =>
+                CollectionUserSeeder.Create(cu.CollectionId, member, cu.ReadOnly, cu.HidePasswords, cu.Manage)));
+        }
+
+        context.GroupUsers.AddRange(groupUsers);
+        context.CollectionUsers.AddRange(collectionUsers);
     }
 
     private List<CollectionGroup> BuildGroupGrants(
@@ -226,6 +271,11 @@ internal sealed class CreateShapedCollectionsStep(
                 randomGrants.Add((c, groupId));
                 randomGrantCounts[groupId] = randomGrantCounts.GetValueOrDefault(groupId) + 1;
             }
+        }
+
+        if (grantShape.Total is { } total)
+        {
+            ShapeTargets.EnsureReached("group grants", grants.Count, total);
         }
 
         ApplyShuffledPermissions(grants, random,
@@ -361,6 +411,8 @@ internal sealed class CreateShapedCollectionsStep(
                 grants.Add(CollectionUserSeeder.Create(collectionIds[c], members[u]));
             }
         }
+
+        ShapeTargets.EnsureReached("direct grants", grants.Count, target);
 
         ApplyShuffledPermissions(grants, random,
             CreateCollectionsStep.ApplyUserPermissions);

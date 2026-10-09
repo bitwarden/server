@@ -51,7 +51,7 @@ Need to create test data?
 
 **Fixture/preset separation**: Fixtures (organizations, rosters, ciphers) are independent and never reference each other. The preset is the only layer that composes fixtures and defines cross-cutting relationships (folder assignments, favorites). See `Seeds/docs/architecture.md`.
 
-**Phase order (org presets)**: Org → OrgApiKey → Roster → Owner (conditional) → Generator (conditional) → Users → Groups → Collections → Folders → Ciphers → CipherAttachments → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
+**Phase order (org presets)**: Org → OrgApiKey → Policies (conditional) → Roster → Owner (conditional) → Generator (conditional) → Users → Groups (or ShapedGroups) → Collections (or ShapedCollections) → Folders → Ciphers → CipherAttachments → CipherCollections → CipherFolders → CipherFavorites → MyItems (conditional) → PersonalCiphers
 **Phase order (individual presets)**: IndividualUser → SelfHostUserLicense (conditional) → NamedFolders → Generator → Folders → Ciphers → CipherAttachments → FolderAssignments → FavoriteAssignments
 
 **Individual user presets** use the Pipeline with `CreateIndividualUserStep` (no org, no groups, no collections). These presets live in `Seeds/fixtures/presets/individual/` and are identified by having a `"user"` key instead of `"organization"`. They support `folderNames`, `folderAssignments`, and `favoriteAssignments` for fixture-driven personal vault organization. See `Seeds/docs/presets.md` for the catalog.
@@ -95,6 +95,21 @@ Steps accept an optional `DensityProfile` that controls relationship patterns be
 **Backward compatibility contract**: `DensityProfile? == null` MUST produce identical output to the original code. Every step guards this with `if (_density == null) { /* original path */ }`.
 
 **Preset JSON**: Add an optional `"density": { ... }` block. See `Seeds/schemas/preset.schema.json` for the full schema.
+
+## Access Shape
+
+A preset with an `accessShape` block (the `scale.xl-migrated-*` presets) replaces the density group, collection and
+cipher-assignment algorithms with `CreateShapedGroupsStep` and `CreateShapedCollectionsStep`; `myItems` and `policies`
+add `CreateMyItemsStep` and `CreatePoliciesStep`. Rules `PresetValidator` enforces:
+
+- One model at a time: density settings `accessShape` would ignore (membership, fan-out, user collections, cipher skew
+  and multi-collection settings) are rejected. Cipher types, permissions and orphan/archive/delete rates still apply.
+- Presets without `accessShape` are unchanged.
+- Policy rows follow the server's rules: no enable/disable overlap, no data for unlisted types, `singleOrg` whenever a
+  policy requires it, no `enableAll`. `myItems` needs the `organizationDataOwnership` policy and an enterprise plan.
+- Shaped loops fail the run if they fall more than 1% short of a preset target (`ShapeTargets`).
+
+Design, knobs and calibration: `Seeds/docs/access-shape.md`.
 
 **Presets**: Organized into `dev/`, `features/`, `qa/`, `scale/`, `individual/`, `validation/` folders under `Seeds/fixtures/presets/`. See `Seeds/docs/presets.md` for the full catalog.
 

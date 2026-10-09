@@ -14,7 +14,7 @@ namespace Bit.Seeder.Steps;
 
 /// <summary>
 /// Seeds the end state of the Organization Data Ownership migration: one My Items
-/// (<see cref="CollectionType.DefaultUserCollection"/>) collection per confirmed member, plus the
+/// (<see cref="CollectionType.DefaultUserCollection"/>) collection per confirmed User or Custom member, plus the
 /// personal items each member has already moved into it.
 /// </summary>
 /// <remarks>
@@ -23,9 +23,10 @@ namespace Bit.Seeder.Steps;
 /// <item><description>Collections match <c>Collection_CreateDefaultCollections</c>: Type 1, no ExternalId or
 /// DefaultUserCollectionEmail, created when the policy was enabled, one <c>CollectionUser</c> grant to the owner
 /// with Manage and no group grants. Every collection shares a single org-key ciphertext of the name, because the
-/// client encrypts the name once in the policy request.</description></item>
+/// client encrypts the name once in the policy request. Owners and Admins get none: the policy exempts them.</description></item>
 /// <item><description>Migrated items are org ciphers encrypted with the org key (what <c>PUT /ciphers/share</c> leaves
-/// behind), created before the policy date, revised after it, in exactly one collection — the owner's My Items.</description></item>
+/// behind), created before the policy date, revised after it, in exactly one collection — the owner's My Items.
+/// With <see cref="SeedPresetMyItems.DeletedRate"/>, some are also trashed after they migrated.</description></item>
 /// </list>
 /// </remarks>
 internal sealed class CreateMyItemsStep(
@@ -39,7 +40,12 @@ internal sealed class CreateMyItemsStep(
         var orgId = context.RequireOrgId();
         var orgKey = context.RequireOrgKey();
         var generator = context.RequireGenerator();
-        var members = context.Registry.UserDigests;
+        // The server exempts Owners and Admins from the policy, so it never creates My Items for them
+        var exempt = context.OrganizationUsers
+            .Where(ou => ou.Type is OrganizationUserType.Owner or OrganizationUserType.Admin)
+            .Select(ou => ou.Id)
+            .ToHashSet();
+        var members = context.Registry.UserDigests.Where(d => !exempt.Contains(d.OrgUserId)).ToList();
         var progress = context.GetProgress();
         var random = new Random(seed + 2);
 
@@ -63,6 +69,14 @@ internal sealed class CreateMyItemsStep(
         }
 
         var itemCounts = ComputeItemCounts(members.Count, random);
+
+        // Trashed items come on top of the active ones, so the active My Items tail keeps its calibrated shape
+        var deletedRate = shape.DeletedRate ?? 0;
+        var trashCounts = itemCounts.Select(n => n > 0 && deletedRate > 0 ? (int)(n * deletedRate + random.NextDouble()) : 0).ToArray();
+        for (var u = 0; u < itemCounts.Length; u++)
+        {
+            itemCounts[u] += trashCounts[u];
+        }
         var total = itemCounts.Sum();
 
         progress?.Report(new PhaseStarted(SeederPhases.CreatingMyItems, total));
@@ -89,6 +103,7 @@ internal sealed class CreateMyItemsStep(
         {
             var localRandom = new Random(seed ^ (u * 7919));
             var n = itemCounts[u];
+            var active = n - trashCounts[u];
             var ciphers = new Cipher[n];
             var links = new CollectionCipher[n];
             var migratedAt = policyEnabledDate.AddSeconds(localRandom.NextDouble() * migrationWindow);
@@ -101,6 +116,11 @@ internal sealed class CreateMyItemsStep(
                     passwordDistribution, organizationId: orgId);
                 cipher.CreationDate = policyEnabledDate.AddDays(-localRandom.Next(1, 1500));
                 cipher.RevisionDate = migratedAt;
+                if (i >= active)
+                {
+                    cipher.DeletedDate = migratedAt.AddSeconds(localRandom.NextDouble() * (now - migratedAt).TotalSeconds);
+                    cipher.RevisionDate = cipher.DeletedDate.Value;
+                }
                 ciphers[i] = cipher;
                 links[i] = new CollectionCipher { CipherId = cipher.Id, CollectionId = collections[u].Id };
             }
@@ -126,8 +146,7 @@ internal sealed class CreateMyItemsStep(
 
     /// <summary>
     /// Per-member item counts: <see cref="SeedPresetMyItems.NonEmptyRate"/> of members are non-empty, the
-    /// heaviest get <see cref="SeedPresetMyItems.Largest"/>, the rest draw from the histogram. The owner
-    /// (index 0) is skipped for the pinned tail so manual logins stay fast.
+    /// heaviest get <see cref="SeedPresetMyItems.Largest"/>, the rest draw from the histogram.
     /// </summary>
     private int[] ComputeItemCounts(int memberCount, Random random)
     {
@@ -144,7 +163,7 @@ internal sealed class CreateMyItemsStep(
             ? new SizeHistogram(shape.Sizes.Select(b => (b.Min, b.Max, b.Weight))).Draw(drawCount, random)
             : Enumerable.Repeat(1, drawCount).ToArray();
 
-        var chosen = Enumerable.Range(1, memberCount - 1).ToArray();
+        var chosen = Enumerable.Range(0, memberCount).ToArray();
         random.Shuffle(chosen);
         var values = largest.Concat(drawn).ToArray();
         for (var k = 0; k < values.Length && k < chosen.Length; k++)

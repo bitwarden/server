@@ -30,6 +30,10 @@ internal record SeedPresetAccessShape
     public SeedPresetShapeDirectGrants? DirectGrants { get; init; }
 
     public SeedPresetShapeDepartments? Departments { get; init; }
+
+    /// <summary>Fraction of invited, accepted and revoked members who copy a random confirmed member's group
+    /// memberships (except the everyone group) and direct grants. Real orgs leave revoked members in their groups.</summary>
+    public double? InactiveAccessRate { get; init; }
 }
 
 /// <summary>
@@ -199,15 +203,19 @@ internal record SeedPresetMyItems
     /// <summary>Exact item counts for the heaviest members (the long tail).</summary>
     public List<int>? Largest { get; init; }
 
+    /// <summary>Trashed items added per member, as a fraction of that member's active My Items items.</summary>
+    public double? DeletedRate { get; init; }
+
     /// <summary>Days before now that the policy was enabled; collections are created then, items migrate after.</summary>
     public int? PolicyEnabledDaysAgo { get; init; }
 }
 
 internal record SeedPresetPolicies
 {
-    /// <summary>Accepted for schema compatibility; not implemented.</summary>
+    /// <summary>Not supported. Kept so <see cref="Pipeline.PresetValidator"/> can reject it rather than silently ignore it.</summary>
     public bool? EnableAll { get; init; }
 
+    /// <summary>Not supported; see <see cref="EnableAll"/>.</summary>
     public List<string>? Except { get; init; }
 
     /// <summary>PolicyType names to create as enabled policies.</summary>
