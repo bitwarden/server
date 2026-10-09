@@ -63,6 +63,8 @@ public class TransitionPartnershipEntitlementCommand(
             return new EntitlementNotFound();
         }
 
+        var expectedRevisionDate = entitlement.RevisionDate;
+
         if (request.Action == PartnershipEntitlementAction.UserExit && entitlement.UserId != request.UserId)
         {
             return new EntitlementNotFound();
@@ -95,7 +97,10 @@ public class TransitionPartnershipEntitlementCommand(
 
         entitlement.LastAppliedEffectiveDate = effectiveAt;
         entitlement.RevisionDate = now;
-        await organizationPartnershipEntitlementRepository.ReplaceAsync(entitlement);
+        if (!await organizationPartnershipEntitlementRepository.ReplaceIfUnchangedAsync(entitlement, expectedRevisionDate))
+        {
+            return new EntitlementConcurrentlyModified();
+        }
 
         await eventService.LogOrganizationPartnershipEventAsync(
             partnership.OrganizationId, EventTypeFor(entitlement.State), effectiveAt);
