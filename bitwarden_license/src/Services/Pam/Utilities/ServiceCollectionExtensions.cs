@@ -32,7 +32,7 @@ public static class ServiceCollectionExtensions
         // Must stay AddScoped, not TryAdd, to override AddBaseServices' UnrestrictedCipherLeaseGate.
         services.AddScoped<ICipherLeaseGate, CipherLeaseGate>();
 
-        // Rule evaluation engine. Pure and stateless, so a singleton is safe.
+        // Pure and stateless, so a singleton is safe.
         services.AddSingleton<IAccessRuleEngine, AccessRuleEngine>();
 
         services.AddScoped<IGoverningRuleResolver, GoverningRuleResolver>();
@@ -67,7 +67,15 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IApproverCollectionAccessQuery, ApproverCollectionAccessQuery>();
         services.AddScoped<ISingleActiveLeaseEvaluator, SingleActiveLeaseEvaluator>();
 
+        // Side channels the commands emit through.
+        services.AddScoped<IApproverInboxNotifier, ApproverInboxNotifier>();
+        services.AddScoped<IRequesterNotifier, RequesterNotifier>();
         services.AddScoped<IAccessAuditEventEmitter, AccessAuditEventEmitter>();
+
+        services.TryAddScoped<IAccessMailNotifier, AccessMailNotifier>();
+        services.TryAddScoped<IApproverMailNotifier, ApproverMailNotifier>();
+        services.TryAddScoped<IRequesterMailNotifier, RequesterMailNotifier>();
+        services.TryAddScoped<ILeaseRevokedMailNotifier, LeaseRevokedMailNotifier>();
 
         services.AddPamOpenApiEndpointDataSource();
 
@@ -75,10 +83,8 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers the PAM Minimal API endpoints (see <c>MapPamEndpoints</c>) so the offline OpenAPI generator
-    /// (<c>dotnet swagger tofile</c>) can discover them — it never runs the <c>Configure</c> pipeline where the
-    /// endpoints are normally mapped. The discovery and swagger-only gating live in
-    /// <see cref="EndpointDataSourceServiceCollectionExtensions.AddOpenApiEndpointDataSource"/>.
+    /// Exposes the PAM endpoints to the offline OpenAPI generator (<c>dotnet swagger tofile</c>), which never runs the
+    /// <c>Configure</c> pipeline that maps them.
     /// </summary>
     private static IServiceCollection AddPamOpenApiEndpointDataSource(this IServiceCollection services)
         => services.AddOpenApiEndpointDataSource(endpoints => endpoints.MapPamEndpoints());
