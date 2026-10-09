@@ -18,12 +18,8 @@ internal interface IAddPrivilegedControlsCommand
     /// <param name="organization">The organization making its first purchase.</param>
     /// <param name="seats">The number of Privileged Controls seats to buy.</param>
     /// <param name="maxAutoscaleSeats">The most seats the organization can autoscale to, or null for no limit.</param>
-    /// <exception cref="BadRequestException">
-    /// Thrown when the organization already has Privileged Controls, the autoscale limit is below
-    /// <paramref name="seats"/>, the seat change step rejects the purchase (for example, below the seat minimum
-    /// or an unsupported plan), or the subscription update is rejected (for example, a declined card).
-    /// </exception>
-    /// <exception cref="ConflictException">Thrown when the seat change step or the subscription update reports a conflict.</exception>
+    /// <exception cref="BadRequestException">Thrown when the purchase is invalid or rejected.</exception>
+    /// <exception cref="ConflictException">Thrown when the organization's subscription is in a state that prevents the purchase.</exception>
     Task Run(OrganizationEntity organization, int seats, int? maxAutoscaleSeats);
 }
 
