@@ -156,7 +156,20 @@ BEGIN
         [dbo].[Notification]
     WHERE
         [UserId] IN (SELECT * FROM @ParsedIds)
-    
+
+    -- Account deletion ends a sponsorship like a user exit: canceled and released, with no resume window
+    UPDATE
+        [dbo].[OrganizationPartnershipEntitlement]
+    SET
+        [State] = 3,
+        [CanceledDate] = CASE WHEN [State] = 3 THEN [CanceledDate] ELSE GETUTCDATE() END,
+        [ResumeWindowExpirationDate] = NULL,
+        [UserId] = NULL,
+        [AccountRef] = NULL,
+        [RevisionDate] = GETUTCDATE()
+    WHERE
+        [UserId] IN (SELECT * FROM @ParsedIds)
+
     -- Finally, delete the user
     DELETE
     FROM
