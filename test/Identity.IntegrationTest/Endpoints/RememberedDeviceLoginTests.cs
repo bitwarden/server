@@ -75,7 +75,7 @@ public class RememberedDeviceLoginTests
     }
 
     /// <summary>
-    /// H1 — a two-factor login that asks to be remembered gets a token back.
+    /// A two-factor login that asks to be remembered gets a token back.
     /// </summary>
     [Fact]
     public async Task RememberRequested_ResponseCarriesRememberToken()
@@ -90,7 +90,7 @@ public class RememberedDeviceLoginTests
     }
 
     /// <summary>
-    /// H2 — the token is honored on a later login, with no second factor supplied. This is the
+    /// The token is honored on a later login, with no second factor supplied. This is the
     /// behavior the whole feature exists to preserve; it must stay green through every change to the
     /// token format.
     /// </summary>
@@ -119,7 +119,7 @@ public class RememberedDeviceLoginTests
     }
 
     /// <summary>
-    /// H6 — a login that presents a remember token must not be issued another one.
+    /// A login that presents a remember token must not be issued another one.
     /// </summary>
     /// <remarks>
     /// This is what bounds the remember-me lifetime. The token's lifespan is an absolute cap only
@@ -151,7 +151,7 @@ public class RememberedDeviceLoginTests
     }
 
     /// <summary>
-    /// H4 — a token minted the way a previous release minted them is still accepted, so nobody is
+    /// A token minted the way a previous release minted them is still accepted, so nobody is
     /// challenged again purely because this release shipped.
     /// </summary>
     [Fact]
@@ -174,7 +174,7 @@ public class RememberedDeviceLoginTests
     }
 
     /// <summary>
-    /// H5 — accepting a legacy token also replaces it, so each device moves to the current format on
+    /// Accepting a legacy token also replaces it, so each device moves to the current format on
     /// its next login rather than waiting for its token to expire.
     /// </summary>
     [Fact]
@@ -209,7 +209,7 @@ public class RememberedDeviceLoginTests
     }
 
     /// <summary>
-    /// H3 — the token is bound to the device it was issued to, so presenting it from another device
+    /// The token is bound to the device it was issued to, so presenting it from another device
     /// falls back to a two-factor challenge.
     /// </summary>
     [Fact]
