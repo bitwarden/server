@@ -8,6 +8,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;
+using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Queries.Projects.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
@@ -29,14 +30,14 @@ public class ProjectsControllerTests
 {
     private static void SetupAdmin(SutProvider<ProjectsController> sutProvider, Guid organizationId)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(default).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(true);
     }
 
     private static void SetupUserWithPermission(SutProvider<ProjectsController> sutProvider, Guid organizationId)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(default).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
         sutProvider.GetDependency<ICurrentContext>().OrganizationUser(default).ReturnsForAnyArgs(true);
@@ -46,7 +47,7 @@ public class ProjectsControllerTests
     [BitAutoData]
     public async Task ListByOrganization_SmAccessDenied_Throws(SutProvider<ProjectsController> sutProvider, Guid data)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(data).Returns(false);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(data).Returns(false);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.ListByOrganizationAsync(data));
     }
@@ -208,7 +209,7 @@ public class ProjectsControllerTests
     public async Task Get_SmAccessDenied_Throws(SutProvider<ProjectsController> sutProvider, Guid data, Guid orgId)
     {
         SetupAdmin(sutProvider, orgId);
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(orgId).Returns(false);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(orgId).Returns(false);
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(data));
     }
 
@@ -309,7 +310,7 @@ public class ProjectsControllerTests
         {
             project.OrganizationId = organizationId;
         }
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(Arg.Is(organizationId)).ReturnsForAnyArgs(false);
         sutProvider.GetDependency<IProjectRepository>().GetManyWithSecretsByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.BulkDeleteAsync(ids));
     }
@@ -334,7 +335,7 @@ public class ProjectsControllerTests
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Failed());
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IProjectRepository>().GetManyWithSecretsByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
         var results = await sutProvider.Sut.BulkDeleteAsync(ids);
         Assert.Equal(data.Count, results.Data.Count());
@@ -360,7 +361,7 @@ public class ProjectsControllerTests
         }
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<IProjectRepository>().GetManyWithSecretsByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
 
         var results = await sutProvider.Sut.BulkDeleteAsync(ids);
         await sutProvider.GetDependency<IDeleteProjectCommand>().Received(1)

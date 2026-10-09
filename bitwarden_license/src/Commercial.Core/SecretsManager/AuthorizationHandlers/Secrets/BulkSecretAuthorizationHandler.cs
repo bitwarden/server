@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Bit.Core.Context;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Queries.Interfaces;
@@ -12,13 +11,13 @@ public class
     BulkSecretAuthorizationHandler : AuthorizationHandler<BulkSecretOperationRequirement, IReadOnlyList<Secret>>
 {
     private readonly IAccessClientQuery _accessClientQuery;
-    private readonly ICurrentContext _currentContext;
+    private readonly ISecretsManagerAccessQuery _secretsManagerAccessQuery;
     private readonly ISecretRepository _secretRepository;
 
-    public BulkSecretAuthorizationHandler(ICurrentContext currentContext, IAccessClientQuery accessClientQuery,
+    public BulkSecretAuthorizationHandler(ISecretsManagerAccessQuery secretsManagerAccessQuery, IAccessClientQuery accessClientQuery,
         ISecretRepository secretRepository)
     {
-        _currentContext = currentContext;
+        _secretsManagerAccessQuery = secretsManagerAccessQuery;
         _accessClientQuery = accessClientQuery;
         _secretRepository = secretRepository;
     }
@@ -31,7 +30,7 @@ public class
         // Ensure all secrets belong to the same organization.
         var organizationId = resources[0].OrganizationId;
         if (resources.Any(secret => secret.OrganizationId != organizationId) ||
-            !_currentContext.AccessSecretsManager(organizationId))
+            !await _secretsManagerAccessQuery.HasAccessAsync(organizationId))
         {
             return;
         }

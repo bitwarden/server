@@ -15,6 +15,7 @@ using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
 using Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Queries.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
@@ -29,6 +30,7 @@ namespace Bit.Api.SecretsManager.Controllers;
 public class ServiceAccountsController : Controller
 {
     private readonly ICurrentContext _currentContext;
+    private readonly ISecretsManagerAccessQuery _secretsManagerAccessQuery;
     private readonly IUserService _userService;
     private readonly IAuthorizationService _authorizationService;
     private readonly IServiceAccountRepository _serviceAccountRepository;
@@ -48,6 +50,7 @@ public class ServiceAccountsController : Controller
 
     public ServiceAccountsController(
         ICurrentContext currentContext,
+        ISecretsManagerAccessQuery secretsManagerAccessQuery,
         IUserService userService,
         IAuthorizationService authorizationService,
         IServiceAccountRepository serviceAccountRepository,
@@ -66,6 +69,7 @@ public class ServiceAccountsController : Controller
         IGlobalSettings globalSettings)
     {
         _currentContext = currentContext;
+        _secretsManagerAccessQuery = secretsManagerAccessQuery;
         _userService = userService;
         _authorizationService = authorizationService;
         _serviceAccountRepository = serviceAccountRepository;
@@ -88,7 +92,7 @@ public class ServiceAccountsController : Controller
     public async Task<ListResponseModel<ServiceAccountSecretsDetailsResponseModel>> ListByOrganizationAsync(
         [FromRoute] Guid organizationId, [FromQuery] bool includeAccessToSecrets = false)
     {
-        if (!_currentContext.AccessSecretsManager(organizationId))
+        if (!await _secretsManagerAccessQuery.HasAccessAsync(organizationId))
         {
             throw new NotFoundException();
         }
@@ -192,7 +196,7 @@ public class ServiceAccountsController : Controller
         // Ensure all service accounts belong to the same organization
         var organizationId = serviceAccounts.First().OrganizationId;
         if (serviceAccounts.Any(sa => sa.OrganizationId != organizationId) ||
-            !_currentContext.AccessSecretsManager(organizationId))
+            !await _secretsManagerAccessQuery.HasAccessAsync(organizationId))
         {
             throw new NotFoundException();
         }

@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Models.Data;
@@ -14,16 +13,16 @@ public class ServiceAccountGrantedPoliciesAuthorizationHandler : AuthorizationHa
     ServiceAccountGrantedPoliciesUpdates>
 {
     private readonly IAccessClientQuery _accessClientQuery;
-    private readonly ICurrentContext _currentContext;
+    private readonly ISecretsManagerAccessQuery _secretsManagerAccessQuery;
     private readonly IProjectRepository _projectRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
 
-    public ServiceAccountGrantedPoliciesAuthorizationHandler(ICurrentContext currentContext,
+    public ServiceAccountGrantedPoliciesAuthorizationHandler(ISecretsManagerAccessQuery secretsManagerAccessQuery,
         IAccessClientQuery accessClientQuery,
         IProjectRepository projectRepository,
         IServiceAccountRepository serviceAccountRepository)
     {
-        _currentContext = currentContext;
+        _secretsManagerAccessQuery = secretsManagerAccessQuery;
         _accessClientQuery = accessClientQuery;
         _serviceAccountRepository = serviceAccountRepository;
         _projectRepository = projectRepository;
@@ -33,7 +32,7 @@ public class ServiceAccountGrantedPoliciesAuthorizationHandler : AuthorizationHa
         ServiceAccountGrantedPoliciesOperationRequirement requirement,
         ServiceAccountGrantedPoliciesUpdates resource)
     {
-        if (!_currentContext.AccessSecretsManager(resource.OrganizationId))
+        if (!await _secretsManagerAccessQuery.HasAccessAsync(resource.OrganizationId))
         {
             return;
         }

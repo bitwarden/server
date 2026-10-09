@@ -1,5 +1,4 @@
-﻿using Bit.Core.Context;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Queries.Interfaces;
@@ -12,14 +11,14 @@ public class
     ServiceAccountAuthorizationHandler : AuthorizationHandler<ServiceAccountOperationRequirement, ServiceAccount>
 {
     private readonly IAccessClientQuery _accessClientQuery;
-    private readonly ICurrentContext _currentContext;
+    private readonly ISecretsManagerAccessQuery _secretsManagerAccessQuery;
     private readonly IServiceAccountRepository _serviceAccountRepository;
 
-    public ServiceAccountAuthorizationHandler(ICurrentContext currentContext,
+    public ServiceAccountAuthorizationHandler(ISecretsManagerAccessQuery secretsManagerAccessQuery,
         IAccessClientQuery accessClientQuery,
         IServiceAccountRepository serviceAccountRepository)
     {
-        _currentContext = currentContext;
+        _secretsManagerAccessQuery = secretsManagerAccessQuery;
         _accessClientQuery = accessClientQuery;
         _serviceAccountRepository = serviceAccountRepository;
     }
@@ -28,7 +27,7 @@ public class
         ServiceAccountOperationRequirement requirement,
         ServiceAccount resource)
     {
-        if (!_currentContext.AccessSecretsManager(resource.OrganizationId))
+        if (!await _secretsManagerAccessQuery.HasAccessAsync(resource.OrganizationId))
         {
             return;
         }

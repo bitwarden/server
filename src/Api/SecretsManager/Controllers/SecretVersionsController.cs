@@ -7,6 +7,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.HttpExtensions;
@@ -21,6 +22,7 @@ namespace Bit.Api.SecretsManager.Controllers;
 public class SecretVersionsController : Controller
 {
     private readonly ICurrentContext _currentContext;
+    private readonly ISecretsManagerAccessQuery _secretsManagerAccessQuery;
     private readonly ISecretVersionRepository _secretVersionRepository;
     private readonly ISecretRepository _secretRepository;
     private readonly IUserService _userService;
@@ -30,6 +32,7 @@ public class SecretVersionsController : Controller
 
     public SecretVersionsController(
         ICurrentContext currentContext,
+        ISecretsManagerAccessQuery secretsManagerAccessQuery,
         ISecretVersionRepository secretVersionRepository,
         ISecretRepository secretRepository,
         IUserService userService,
@@ -38,6 +41,7 @@ public class SecretVersionsController : Controller
         Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
         _currentContext = currentContext;
+        _secretsManagerAccessQuery = secretsManagerAccessQuery;
         _secretVersionRepository = secretVersionRepository;
         _secretRepository = secretRepository;
         _userService = userService;
@@ -50,7 +54,7 @@ public class SecretVersionsController : Controller
     public async Task<ListResponseModel<SecretVersionResponseModel>> GetVersionsBySecretIdAsync([FromRoute] Guid secretId)
     {
         var secret = await _secretRepository.GetByIdAsync(secretId);
-        if (secret == null || !_currentContext.AccessSecretsManager(secret.OrganizationId))
+        if (secret == null || !await _secretsManagerAccessQuery.HasAccessAsync(secret.OrganizationId))
         {
             throw new NotFoundException();
         }
@@ -89,7 +93,7 @@ public class SecretVersionsController : Controller
         }
 
         var secret = await _secretRepository.GetByIdAsync(secretVersion.SecretId);
-        if (secret == null || !_currentContext.AccessSecretsManager(secret.OrganizationId))
+        if (secret == null || !await _secretsManagerAccessQuery.HasAccessAsync(secret.OrganizationId))
         {
             throw new NotFoundException();
         }
@@ -145,7 +149,7 @@ public class SecretVersionsController : Controller
         // Ensure all secrets belong to the same organization
         var organizationId = secrets.First().OrganizationId;
         if (secrets.Any(s => s.OrganizationId != organizationId) ||
-            !_currentContext.AccessSecretsManager(organizationId))
+            !await _secretsManagerAccessQuery.HasAccessAsync(organizationId))
         {
             throw new NotFoundException();
         }
@@ -182,7 +186,7 @@ public class SecretVersionsController : Controller
         }
 
         var secret = await _secretRepository.GetByIdAsync(secretId);
-        if (secret == null || !_currentContext.AccessSecretsManager(secret.OrganizationId))
+        if (secret == null || !await _secretsManagerAccessQuery.HasAccessAsync(secret.OrganizationId))
         {
             throw new NotFoundException();
         }
@@ -240,7 +244,7 @@ public class SecretVersionsController : Controller
 
         var organizationId = secretsList.First().OrganizationId;
         if (secretsList.Any(s => s.OrganizationId != organizationId) ||
-            !_currentContext.AccessSecretsManager(organizationId))
+            !await _secretsManagerAccessQuery.HasAccessAsync(organizationId))
         {
             throw new NotFoundException();
         }
