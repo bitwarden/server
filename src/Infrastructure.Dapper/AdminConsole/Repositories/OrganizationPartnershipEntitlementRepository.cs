@@ -77,6 +77,23 @@ public class OrganizationPartnershipEntitlementRepository
         return entitlements;
     }
 
+    public async Task<bool> ReplaceIfUnchangedAsync(
+        OrganizationPartnershipEntitlement entitlement, DateTime expectedRevisionDate)
+    {
+        var rowsAffected = 0;
+        await ProtectDataAndSaveAsync(entitlement, async () =>
+        {
+            var parameters = new DynamicParameters(entitlement);
+            parameters.Add("ExpectedRevisionDate", expectedRevisionDate);
+            using var connection = new SqlConnection(ConnectionString);
+            rowsAffected = await connection.ExecuteScalarAsync<int>(
+                $"[{Schema}].[{Table}_UpdateIfUnchanged]",
+                parameters,
+                commandType: CommandType.StoredProcedure);
+        });
+        return rowsAffected > 0;
+    }
+
     public async Task<bool> ReleaseExpiredResumeWindowBindingAsync(Guid id, DateTime asOf, DateTime revisionDate)
     {
         using var connection = new SqlConnection(ConnectionString);
