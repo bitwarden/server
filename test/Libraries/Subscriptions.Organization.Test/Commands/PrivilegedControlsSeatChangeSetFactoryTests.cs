@@ -1,13 +1,13 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Organizations.Models;
+﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Repositories;
-using Bit.Core.Test.Billing.Mocks;
+using Bit.Subscriptions.Organization.Commands;
 using NSubstitute;
 using Xunit;
+using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
+using PlanFeatures = Bit.Core.Models.StaticStore.Plan;
 
-namespace Bit.Core.Test.Billing.Organizations.Models;
+namespace Bit.Subscriptions.Organization.Test.Commands;
 
 public class PrivilegedControlsSeatChangeSetFactoryTests
 {
@@ -235,19 +235,34 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
         Assert.True(result.Success);
     }
 
-    private Organization CreateOrganization(
+    private OrganizationEntity CreateOrganization(
         PlanType planType = PlanType.EnterpriseAnnually,
         int? pamSeats = null,
         int? pamSeatMinimum = null)
     {
-        var organization = new Organization
+        var organization = new OrganizationEntity
         {
             Id = Guid.NewGuid(),
             PlanType = planType,
             PamSeats = pamSeats,
             PamSeatMinimum = pamSeatMinimum
         };
-        _pricingClient.GetPlanOrThrow(planType).Returns(MockPlans.Get(planType));
+        _pricingClient.GetPlanOrThrow(planType).Returns(new TestPlan(planType == PlanType.EnterpriseAnnually));
         return organization;
+    }
+
+    private sealed record TestPlan : PlanFeatures
+    {
+        public TestPlan(bool supportsPrivilegedControls)
+        {
+            if (supportsPrivilegedControls)
+            {
+                PrivilegedControls = new PrivilegedControlsPlanFeatures
+                {
+                    StripeSeatPlanId = "privileged-controls-enterprise-seat-annually",
+                    DefaultSeatMinimum = _planDefaultMinimum
+                };
+            }
+        }
     }
 }

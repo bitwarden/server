@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Organizations.Commands;
-using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
