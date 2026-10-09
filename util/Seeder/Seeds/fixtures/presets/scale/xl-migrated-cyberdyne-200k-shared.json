@@ -1,0 +1,165 @@
+{
+  "$schema": "../../../schemas/preset.schema.json",
+  "organization": {
+    "name": "Cyberdyne Systems 200k Shared",
+    "domain": "cyberdyne-shared.example",
+    "planType": "enterprise-annually",
+    "seats": 5500
+  },
+  "users": {
+    "count": 5040,
+    "adminCount": 4,
+    "statusMix": {
+      "confirmed": 3940,
+      "accepted": 60,
+      "invited": 160,
+      "revoked": 880
+    }
+  },
+  "groups": {
+    "count": 465
+  },
+  "collections": {
+    "count": 6000
+  },
+  "ciphers": {
+    "count": 160000
+  },
+  "policies": {
+    "enable": ["masterPassword", "passwordGenerator", "singleOrg", "organizationDataOwnership", "sendOptions", "resetPassword", "maximumVaultTimeout"],
+    "disable": ["disablePersonalVaultExport"],
+    "data": {
+      "masterPassword": {
+        "minComplexity": 3,
+        "minLength": 14,
+        "requireUpper": true,
+        "requireLower": true,
+        "requireNumbers": true,
+        "requireSpecial": false,
+        "enforceOnLogin": false
+      },
+      "passwordGenerator": {
+        "overridePasswordType": null,
+        "minLength": 14,
+        "useUpper": true,
+        "useLower": true,
+        "useNumbers": true,
+        "useSpecial": true,
+        "minNumbers": 1,
+        "minSpecial": 1,
+        "minNumberWords": 4,
+        "capitalize": true,
+        "includeNumber": true
+      },
+      "sendOptions": {
+        "disableHideEmail": true
+      },
+      "resetPassword": {
+        "autoEnrollEnabled": true
+      },
+      "maximumVaultTimeout": {
+        "minutes": 30,
+        "action": "lock"
+      }
+    }
+  },
+  "density": {
+    "cipherTypes": {
+      "login": 0.95,
+      "secureNote": 0.046,
+      "card": 0.002,
+      "identity": 0.002,
+      "sshKey": 0
+    },
+    "cipherAssignment": {
+      "orphanRate": 0.28,
+      "deletedRate": 0.085,
+      "maxDeletedCiphers": 13600
+    }
+  },
+  "accessShape": {
+    "seed": 20261007,
+    "departments": {
+      "count": 25,
+      "locality": 0.95
+    },
+    "groups": {
+      "everyoneGroupRate": 0.95,
+      "hotGroupSizes": [80, 66, 24, 16, 11, 385],
+      "hotGroupOverlap": 0.98,
+      "hotGroupParents": [-1, 0, 1, 2, 3, 0],
+      "nestedGroupRate": 0.15,
+      "maxGroupsPerUser": 17,
+      "userAffinityAlpha": 3.0,
+      "sizes": [
+        { "min": 0, "max": 0, "weight": 0.03 },
+        { "min": 1, "max": 1, "weight": 0.29 },
+        { "min": 2, "max": 2, "weight": 0.24 },
+        { "min": 3, "max": 6, "weight": 0.23 },
+        { "min": 7, "max": 13, "weight": 0.15 },
+        { "min": 14, "max": 60, "weight": 0.06 },
+        { "min": 61, "max": 182, "weight": 0.012 }
+      ]
+    },
+    "collections": {
+      "totalAssignments": 137800,
+      "maxCollectionsPerCipher": 12,
+      "sizes": [
+        { "min": 0, "max": 0, "weight": 0.43 },
+        { "min": 1, "max": 3, "weight": 0.1 },
+        { "min": 4, "max": 14, "weight": 0.19 },
+        { "min": 15, "max": 32, "weight": 0.18 },
+        { "min": 33, "max": 300, "weight": 0.09 },
+        { "min": 301, "max": 1620, "weight": 0.009 },
+        { "min": 1621, "max": 2700, "weight": 0.001 }
+      ]
+    },
+    "groupGrants": {
+      "total": 27300,
+      "grantedGroupRate": 0.8,
+      "groupSizeBias": 1.1,
+      "groupAppetiteAlpha": 1.0,
+      "maxGrantsPerGroup": 150,
+      "collectionPopularityAlpha": 2.0,
+      "collectionSizeBias": 0.15,
+      "echoRate": 0.15,
+      "everyoneGroupCollections": 0,
+      "hotCollections": [4833, 1944, 959, 1458, 378, 292, 189, 132, 97, 49],
+      "hotPairs": [
+        { "group": 0, "collections": [0, 1, 2] },
+        { "group": 1, "collections": [0, 1, 2, 3] },
+        { "group": 2, "collections": [0, 1, 2] },
+        { "group": 3, "collections": [0, 1, 2] },
+        { "group": 4, "collections": [0, 1, 2] },
+        { "group": 5, "collections": [4, 5, 6, 7, 8, 9] }
+      ],
+      "wideGroups": {
+        "count": 19,
+        "blockSize": 1890,
+        "blockMaxItems": 5,
+        "minGrants": 600,
+        "maxGrants": 1890,
+        "maxMembers": 3
+      }
+    },
+    "directGrants": {
+      "total": 7600,
+      "collectionSizeBias": 0.45,
+      "userAffinityAlpha": 0.9,
+      "ungroupedBoost": 6.0
+    }
+  },
+  "myItems": {
+    "name": "My Items",
+    "nonEmptyRate": 0.42,
+    "largest": [2980, 2070, 1410, 1390, 1385],
+    "policyEnabledDaysAgo": 14,
+    "sizes": [
+      { "min": 1, "max": 3, "weight": 0.4 },
+      { "min": 4, "max": 10, "weight": 0.17 },
+      { "min": 11, "max": 50, "weight": 0.277 },
+      { "min": 51, "max": 150, "weight": 0.129 },
+      { "min": 201, "max": 600, "weight": 0.02 }
+    ]
+  }
+}
