@@ -299,6 +299,7 @@ public class OrganizationSponsorshipsController : Controller
         await RemoveSponsorship(sponsoredOrgId);
     }
 
+    [Authorize("Application")]
     [HttpGet("{sponsoringOrgId}/sync-status")]
     public async Task<object> GetSyncStatus(Guid sponsoringOrgId)
     {
