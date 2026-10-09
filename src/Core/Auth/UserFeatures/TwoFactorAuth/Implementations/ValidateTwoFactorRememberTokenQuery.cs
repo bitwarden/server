@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Models.Business.Tokenables;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Entities;
@@ -12,7 +13,7 @@ public class ValidateTwoFactorRememberTokenQuery(
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
     TimeProvider timeProvider) : IValidateTwoFactorRememberTokenQuery
 {
-    public async Task<bool> ValidateAsync(User user, string deviceIdentifier, string token)
+    public async Task<bool> ValidateAsync(User user, Organization? organization, string deviceIdentifier, string token)
     {
         if (TwoFactorRememberTokenable.ValidateTwoFactorRememberToken(tokenFactory, token, out var tokenable) != null
             || tokenable is null)
@@ -40,9 +41,10 @@ public class ValidateTwoFactorRememberTokenQuery(
         }
 
         // A remember token stands in for a second factor, so it cannot be honored by an account that
-        // has no second factor configured. Ordered ahead of the row read because a user with no
-        // enabled providers resolves without a database call.
-        if (!await twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
+        // has none, whether configured by the user or enforced by their organization. Ordered ahead
+        // of the row read because a user with no enabled providers resolves without a database call.
+        if (organization?.TwoFactorIsEnabled() != true &&
+            !await twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
         {
             return false;
         }
