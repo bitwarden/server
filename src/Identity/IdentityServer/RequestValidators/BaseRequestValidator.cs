@@ -23,7 +23,6 @@ using Bit.Core.Models.Api.Response;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
 
