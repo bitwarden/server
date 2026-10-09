@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
@@ -23,12 +24,14 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 /// <see cref="IConfirmOrganizationInviteLinkCommand"/> for the behavior.
 /// </summary>
 /// <remarks>
-/// Eligibility is delegated to <see cref="IConfirmOrganizationInviteLinkValidator"/>, which performs the
-/// read-only prechecks. This command owns the write side effects: creating the membership when needed,
-/// confirming it with the organization key, and running the policy-driven follow-ups.
+/// This command looks up the invite link, organization, and existing membership, and delegates eligibility to
+/// <see cref="IConfirmOrganizationInviteLinkValidator"/>, which performs the read-only prechecks. This command
+/// owns the write side effects: creating the membership when needed, confirming it with the organization key, and
+/// running the policy-driven follow-ups.
 /// </remarks>
 public class ConfirmOrganizationInviteLinkCommand(
     IConfirmOrganizationInviteLinkValidator confirmOrganizationInviteLinkValidator,
+    IOrganizationInviteLinkRepository organizationInviteLinkRepository,
     IOrganizationRepository organizationRepository,
     IOrganizationUserRepository organizationUserRepository,
     ICollectionRepository collectionRepository,
@@ -43,39 +46,74 @@ public class ConfirmOrganizationInviteLinkCommand(
 {
     public async Task<CommandResult> ConfirmAsync(ConfirmOrganizationInviteLinkRequest request)
     {
-        var user = request.User;
-
-        var validationResult = await confirmOrganizationInviteLinkValidator.ValidateAsync(
-            new ConfirmOrganizationInviteLinkValidationRequest
-            {
-                OrganizationId = request.OrganizationId,
-                Code = request.Code,
-                User = user,
-            });
+        var validationRequest = await BuildValidationRequestAsync(request);
+        var validationResult = await confirmOrganizationInviteLinkValidator.ValidateAsync(validationRequest);
         if (validationResult.IsError)
         {
             return validationResult.AsError;
         }
 
-        var organization = validationResult.AsSuccess.Organization;
-        var existingOrganizationUser = validationResult.AsSuccess.ExistingOrganizationUser;
+        // Validation guarantees the organization exists.
+        var organization = validationRequest.Organization!;
 
         // Account recovery enrollment is validated before any writes so a missing key fails the request
         // without leaving a partially confirmed membership behind.
-        var resetPasswordRequirement = await policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id);
-        var autoEnrollEnabled = resetPasswordRequirement.AutoEnrollEnabled(organization.Id);
+        var autoEnrollEnabled = await IsAccountRecoveryAutoEnrollEnabledAsync(request.User, organization);
         if (autoEnrollEnabled && !OrganizationUser.IsValidResetPasswordKey(request.ResetPasswordKey))
         {
             return new ConfirmResetPasswordKeyRequired();
         }
 
-        var membershipResult = await AddUserToOrganizationAsync(request, existingOrganizationUser, user, organization);
+        var membershipResult = await AddUserToOrganizationAsync(
+            request, validationRequest.ExistingOrganizationUser, request.User, organization);
         if (membershipResult.IsError)
         {
             return membershipResult.AsError;
         }
 
-        var organizationUser = membershipResult.AsSuccess;
+        await PerformPostConfirmSideEffectsAsync(request, organization, membershipResult.AsSuccess, autoEnrollEnabled);
+
+        return new None();
+    }
+
+    /// <summary>
+    /// Looks up the invite link, its organization, and the user's existing membership for the validator.
+    /// </summary>
+    private async Task<ConfirmOrganizationInviteLinkValidationRequest> BuildValidationRequestAsync(
+        ConfirmOrganizationInviteLinkRequest request)
+    {
+        var inviteLink = await organizationInviteLinkRepository.GetByOrganizationIdAsync(request.OrganizationId);
+        var organization = inviteLink is null
+            ? null
+            : await organizationRepository.GetByIdAsync(request.OrganizationId);
+        var existingOrganizationUser = organization is null
+            ? null
+            : await ResolveExistingOrganizationUserAsync(organization, request.User);
+
+        return new ConfirmOrganizationInviteLinkValidationRequest
+        {
+            InviteLink = inviteLink,
+            Code = request.Code,
+            Organization = organization,
+            User = request.User,
+            ExistingOrganizationUser = existingOrganizationUser,
+        };
+    }
+
+    private async Task<bool> IsAccountRecoveryAutoEnrollEnabledAsync(User user, Organization organization)
+    {
+        var resetPasswordRequirement = await policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id);
+        return resetPasswordRequirement.AutoEnrollEnabled(organization.Id);
+    }
+
+    /// <summary>
+    /// The follow-ups once the user is confirmed: the audit event, the default collection, account recovery
+    /// enrollment, and syncing the organization key to the user's other devices.
+    /// </summary>
+    private async Task PerformPostConfirmSideEffectsAsync(ConfirmOrganizationInviteLinkRequest request,
+        Organization organization, OrganizationUser organizationUser, bool autoEnrollEnabled)
+    {
+        var user = request.User;
 
         await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_InviteLinkConfirmed);
 
@@ -89,8 +127,21 @@ public class ConfirmOrganizationInviteLinkCommand(
 
         // The membership now carries the organization key, so notify the user's other devices to sync it.
         await pushNotificationService.PushSyncOrgKeysAsync(user.Id);
+    }
 
-        return new None();
+    /// <summary>
+    /// Resolves the membership to confirm, preferring an existing user-linked membership and falling
+    /// back to a pending email invitation for the same address.
+    /// </summary>
+    private async Task<OrganizationUser?> ResolveExistingOrganizationUserAsync(Organization organization, User user)
+    {
+        var userLinkedOrganizationUser = await organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id);
+        if (userLinkedOrganizationUser is not null)
+        {
+            return userLinkedOrganizationUser;
+        }
+
+        return await organizationUserRepository.GetByOrganizationEmailAsync(organization.Id, user.Email);
     }
 
     private async Task<CommandResult<OrganizationUser>> AddUserToOrganizationAsync(ConfirmOrganizationInviteLinkRequest request,
