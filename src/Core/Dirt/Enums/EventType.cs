@@ -118,6 +118,8 @@ public enum EventType : int
     Organization_InviteLinkRefreshed = 1628, // Admin refreshed an organization invite link
     Organization_InviteLinkConfirmEnabled = 1629, // Admin enabled automatic confirmation for an organization invite link
     Organization_InviteLinkConfirmDisabled = 1630, // Admin disabled automatic confirmation for an organization invite link
+    Organization_ScopedApiKeyCreated = 1631, // Owner created a scoped organization API key
+    Organization_ScopedApiKeyRevoked = 1632, // Owner revoked a scoped organization API key
 
     Policy_Updated = 1700,
 
