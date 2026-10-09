@@ -1,7 +1,6 @@
 ﻿using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
-using Bit.Core.Billing.Pricing;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
@@ -26,7 +25,6 @@ internal interface IAddPrivilegedControlsCommand
 internal sealed class AddPrivilegedControlsCommand(
     IPrivilegedControlsSeatChangeSetFactory seatChangeSetFactory,
     IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
-    IPricingClient pricingClient,
     IOrganizationService organizationService) : IAddPrivilegedControlsCommand
 {
     public async Task Run(OrganizationEntity organization, int seats, int? maxAutoscaleSeats)
@@ -41,15 +39,13 @@ internal sealed class AddPrivilegedControlsCommand(
             throw new BadRequestException("Cannot set max seat autoscaling below the Privileged Controls seat count.");
         }
 
-        var changeSet = Unwrap(await seatChangeSetFactory.CreateAsync(organization, seats));
-        Unwrap(await updateOrganizationSubscriptionCommand.Run(organization, changeSet));
-
-        var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
+        var seatChange = Unwrap(await seatChangeSetFactory.CreateAsync(organization, seats));
+        Unwrap(await updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet));
 
         organization.PamSeats = seats;
         organization.MaxAutoscalePamSeats = maxAutoscaleSeats;
         organization.UsePam = true;
-        organization.PamSeatMinimum ??= plan.PrivilegedControls.DefaultSeatMinimum;
+        organization.PamSeatMinimum = seatChange.SeatMinimum;
         await organizationService.ReplaceAndUpdateCacheAsync(organization);
     }
 
