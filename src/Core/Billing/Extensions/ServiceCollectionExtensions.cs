@@ -3,7 +3,6 @@ using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Commands;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 using Bit.Core.Billing.Organizations.Commands;
-using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Commands;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Organizations.PlanMigration.Services;
