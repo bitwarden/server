@@ -173,6 +173,71 @@ public class OrganizationSponsorshipsControllerTests
 
     [Theory]
     [BitAutoData]
+    public async Task ResendOwnSponsorshipOffer_SendsCallersOwnSponsorship(
+        Organization sponsoringOrg,
+        OrganizationUser callingOrgUser,
+        OrganizationSponsorship sponsorship,
+        [Policy(PolicyType.FreeFamiliesSponsorshipPolicy, false)] PolicyStatus policy,
+        SutProvider<OrganizationSponsorshipsController> sutProvider)
+    {
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(sponsoringOrg.Id, PolicyType.FreeFamiliesSponsorshipPolicy).Returns(policy);
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(callingOrgUser.UserId);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(sponsoringOrg.Id, callingOrgUser.UserId!.Value).Returns(callingOrgUser);
+        sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+            .GetBySponsoringOrganizationUserIdAsync(callingOrgUser.Id).Returns(sponsorship);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(sponsoringOrg.Id).Returns(sponsoringOrg);
+
+        await sutProvider.Sut.ResendOwnSponsorshipOffer(sponsoringOrg.Id);
+
+        await sutProvider.GetDependency<ISendSponsorshipOfferCommand>().Received(1)
+            .SendSponsorshipOfferAsync(sponsoringOrg, callingOrgUser, sponsorship);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ResendOwnSponsorshipOffer_PolicyEnabled_ThrowsBadRequest(
+        Guid sponsoringOrgId,
+        [Policy(PolicyType.FreeFamiliesSponsorshipPolicy, true)] PolicyStatus policy,
+        SutProvider<OrganizationSponsorshipsController> sutProvider)
+    {
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(sponsoringOrgId, PolicyType.FreeFamiliesSponsorshipPolicy).Returns(policy);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.ResendOwnSponsorshipOffer(sponsoringOrgId));
+
+        Assert.Contains("Free Bitwarden Families sponsorship has been disabled", exception.Message);
+        await sutProvider.GetDependency<ISendSponsorshipOfferCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .SendSponsorshipOfferAsync(default, default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ResendOwnSponsorshipOffer_NotAMember_PassesNullsToCommand(
+        Organization sponsoringOrg,
+        [Policy(PolicyType.FreeFamiliesSponsorshipPolicy, false)] PolicyStatus policy,
+        SutProvider<OrganizationSponsorshipsController> sutProvider)
+    {
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(sponsoringOrg.Id, PolicyType.FreeFamiliesSponsorshipPolicy).Returns(policy);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(sponsoringOrg.Id, Arg.Any<Guid>()).ReturnsNull();
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(sponsoringOrg.Id).Returns(sponsoringOrg);
+
+        await sutProvider.Sut.ResendOwnSponsorshipOffer(sponsoringOrg.Id);
+
+        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetBySponsoringOrganizationUserIdAsync(default);
+        await sutProvider.GetDependency<ISendSponsorshipOfferCommand>().Received(1)
+            .SendSponsorshipOfferAsync(sponsoringOrg, null, null);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task RemoveSponsorship_WrongOrgUserType_ThrowsBadRequest(Organization sponsoredOrg,
         SutProvider<OrganizationSponsorshipsController> sutProvider)
     {
