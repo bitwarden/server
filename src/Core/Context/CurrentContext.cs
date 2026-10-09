@@ -159,7 +159,11 @@ public class CurrentContext(
 
         if (IdentityClientType == IdentityClientType.AccessConnector)
         {
-            PamAccessConnectorId = subIdGuid;
+            if (Guid.TryParse(subject, out var accessConnectorId))
+            {
+                PamAccessConnectorId = accessConnectorId;
+            }
+
             PamAccessConnectorOrganizationId = new Guid(GetClaimValue(claimsDict, Claims.Organization));
         }
 
