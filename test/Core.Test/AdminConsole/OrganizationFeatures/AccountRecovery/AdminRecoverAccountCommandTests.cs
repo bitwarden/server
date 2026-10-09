@@ -76,6 +76,11 @@ public class AdminRecoverAccountCommandTests
             Arg.Any<OrganizationUser>(),
             Arg.Is(EventType.OrganizationUser_AdminResetTwoFactor));
 
+        // The two flags are independent, and a password-only recovery must not tear down two-factor
+        // state — including the devices the user has remembered.
+        await sutProvider.GetDependency<IResetUserTwoFactorCommand>().DidNotReceiveWithAnyArgs()
+            .ResetAsync(default!);
+
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
             .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }

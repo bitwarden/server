@@ -38,6 +38,9 @@ public class RememberedDeviceLoginTests
 
     private const string _emailProvider = "1";
 
+    /// <summary>The numeric value of <see cref="TwoFactorProviderType.RecoveryCode"/>.</summary>
+    private const string _recoveryCodeProvider = "8";
+
     private static async Task<(IdentityApplicationFactory Factory, User User)> CreateFactoryWithTwoFactorUserAsync()
     {
         var factory = new IdentityApplicationFactory();
@@ -206,6 +209,65 @@ public class RememberedDeviceLoginTests
 
         using var replayBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(replayContext);
         AssertHelper.AssertJsonProperty(replayBody.RootElement, "access_token", JsonValueKind.String);
+    }
+
+    /// <summary>
+    /// H8 — using a recovery code tears two-factor down, and the devices trusted under the old
+    /// configuration stop being trusted with it.
+    /// </summary>
+    /// <remarks>
+    /// The replay happens <em>after</em> two-factor is re-enabled, deliberately. While the account
+    /// has no second factor the token is refused for that reason alone, so a test that stopped at
+    /// the teardown would pass even with the revocation removed entirely — it would prove the
+    /// product behavior and nothing about the mechanism.
+    /// </remarks>
+    [Fact]
+    public async Task RecoveryCodeTeardown_RevokesRememberedDevices()
+    {
+        var (factory, user) = await CreateFactoryWithTwoFactorUserAsync();
+        var userRepository = factory.Services.GetRequiredService<IUserRepository>();
+
+        const string recoveryCode = "recoverycode123";
+        user.TwoFactorRecoveryCode = recoveryCode;
+        await userRepository.ReplaceAsync(user);
+
+        var (_, rememberToken) = await factory.TokensFromPasswordWithTwoFactorAsync(
+            _testEmail, _testPassword, twoFactorProviderType: _emailProvider, twoFactorToken: _emailToken);
+        Assert.False(string.IsNullOrEmpty(rememberToken));
+
+        // Tear down two-factor with the recovery code. Provider sent as a number, per the validator
+        // ordering note on the factory helper.
+        var teardown = await factory.ContextFromPasswordWithTwoFactorAsync(
+            _testEmail,
+            _testPassword,
+            twoFactorProviderType: _recoveryCodeProvider,
+            twoFactorToken: recoveryCode,
+            twoFactorRemember: "0");
+        using (var teardownBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(teardown))
+        {
+            AssertHelper.AssertJsonProperty(teardownBody.RootElement, "access_token", JsonValueKind.String);
+        }
+
+        // Put a second factor back, so the replay below is decided by the remembered-device state
+        // rather than by the account simply having no second factor.
+        var recoveredUser = await userRepository.GetByEmailAsync(_testEmail);
+        Assert.NotNull(recoveredUser);
+        recoveredUser.TwoFactorProviders = _userEmailTwoFactor;
+        await userRepository.ReplaceAsync(recoveredUser);
+
+        var replay = await factory.ContextFromPasswordWithTwoFactorAsync(
+            _testEmail,
+            _testPassword,
+            twoFactorProviderType: _rememberProvider,
+            twoFactorToken: rememberToken!,
+            twoFactorRemember: "0");
+
+        using var replayBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(replay);
+        var root = replayBody.RootElement;
+
+        Assert.False(root.TryGetProperty("access_token", out _));
+        var error = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
+        Assert.Equal("Two factor required.", error);
     }
 
     /// <summary>
