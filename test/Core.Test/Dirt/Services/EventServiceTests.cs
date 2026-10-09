@@ -11,6 +11,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tools.Entities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -593,6 +594,77 @@ public class EventServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task LogSendEvent_NoContext_NullDeviceType_DefaultsToServer(
+        Guid ownerUserId, Guid sendId, Guid orgId, SutProvider<EventService> sutProvider)
+    {
+        // Create/edit/delete Send events (no org context) can be triggered by a server-to-server
+        // callback with no Device-Type header (e.g. the Azure blob-upload confirmation webhook).
+        // Report Server rather than leaving these rows attributed to an unknown client.
+        var type = EventType.Send_Edited_File;
+
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns((DeviceType?)null);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, OrganizationAbility>
+            {
+                { orgId, new OrganizationAbility { UseEvents = true, Enabled = true } }
+            });
+        sutProvider.GetDependency<IProviderAbilityCacheService>()
+            .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, ProviderAbility>());
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextOrganization> { new() { Id = orgId } });
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderMembershipAsync(Arg.Any<IProviderUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextProvider>());
+
+        await sutProvider.Sut.LogSendEventAsync(ownerUserId, sendId, type);
+
+        await sutProvider.GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
+                events.Count() == 2
+                && events.All(e => e.DeviceType == DeviceType.Server)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogSendAccessEvent_NullDeviceType_StaysUnattributed(
+        Guid ownerUserId, Guid sendId, Guid orgId, SutProvider<EventService> sutProvider)
+    {
+        // Access events (org context present) come from real client requests, including anonymous
+        // public-link access, so a null Device-Type here is a genuine unknown client, not a
+        // server-to-server callback. The Server default must not apply.
+        var type = EventType.Send_Accessed_Text;
+
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns((DeviceType?)null);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, OrganizationAbility>
+            {
+                { orgId, new OrganizationAbility { UseEvents = true, Enabled = true } }
+            });
+        sutProvider.GetDependency<IProviderAbilityCacheService>()
+            .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, ProviderAbility>());
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextOrganization> { new() { Id = orgId } });
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderMembershipAsync(Arg.Any<IProviderUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextProvider>());
+
+        await sutProvider.Sut.LogSendEventAsync(ownerUserId, sendId, type,
+            new Dictionary<Guid, SendAccessEventOrgContext>());
+
+        await sutProvider.GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
+                events.Count() == 2
+                && events.All(e => e.DeviceType == null)));
+    }
+
+    [Theory, BitAutoData]
     public async Task LogSendEvent_AccessEvent_ProviderRowIsExternalNotOwner(
         Guid ownerUserId, Guid sendId, Guid providerId, SutProvider<EventService> sutProvider)
     {
@@ -653,6 +725,80 @@ public class EventServiceTests
             .Received(1)
             .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
                 events.Any(e => e.ProviderId == providerId && e.ActingUserId == ownerUserId)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogSendEventsAsync_UsesGivenOrganizationId_NotActingUsersOwnMemberships(
+        Send send1, Send send2, EventType eventType, Guid organizationId, Guid actingUserId,
+        SutProvider<EventService> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { UseEvents = true, Enabled = true });
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().ProviderIdForOrg(organizationId).Returns((Guid?)null);
+
+        await sutProvider.Sut.LogSendEventsAsync(
+            new[] { (send1, eventType), (send2, eventType) }, organizationId);
+
+        await sutProvider.GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
+                events.Count() == 2
+                && events.All(e => e.Type == eventType && e.OrganizationId == organizationId && e.ActingUserId == actingUserId && e.ProviderId == null)
+                && events.Any(e => e.SendId == send1.Id && e.UserId == send1.UserId)
+                && events.Any(e => e.SendId == send2.Id && e.UserId == send2.UserId)));
+        await sutProvider.GetDependency<ICurrentContext>()
+            .DidNotReceiveWithAnyArgs()
+            .OrganizationMembershipAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogSendEventsAsync_ActingUserIsProviderForOrg_AttributesRowToProvider(
+        Send send, EventType eventType, Guid organizationId, Guid providerId,
+        SutProvider<EventService> sutProvider)
+    {
+        // A provider user (e.g. MSP staff) managing the org via the provider relationship, rather than
+        // a direct org member, should still surface in that provider's own event log.
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { UseEvents = true, Enabled = true });
+        sutProvider.GetDependency<ICurrentContext>().ProviderIdForOrg(organizationId).Returns(providerId);
+
+        await sutProvider.Sut.LogSendEventsAsync(new[] { (send, eventType) }, organizationId);
+
+        await sutProvider.GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
+                events.Single().ProviderId == providerId && events.Single().OrganizationId == organizationId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogSendEventsAsync_SkipsSendsWithNoUserId(
+        Send send, EventType eventType, Guid organizationId, SutProvider<EventService> sutProvider)
+    {
+        send.UserId = null;
+
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { UseEvents = true, Enabled = true });
+
+        await sutProvider.Sut.LogSendEventsAsync(new[] { (send, eventType) }, organizationId);
+
+        await sutProvider.GetDependency<IEventWriteService>().DidNotReceiveWithAnyArgs().CreateManyAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogSendEventsAsync_WhenEventsDisabled_DoesNotLog(
+        Send send, EventType eventType, Guid organizationId, SutProvider<EventService> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { UseEvents = false, Enabled = true });
+
+        await sutProvider.Sut.LogSendEventsAsync(new[] { (send, eventType) }, organizationId);
+
+        await sutProvider.GetDependency<IEventWriteService>().DidNotReceiveWithAnyArgs().CreateManyAsync(default);
     }
 
     [Theory, BitAutoData]

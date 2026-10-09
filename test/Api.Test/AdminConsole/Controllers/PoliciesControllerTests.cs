@@ -71,15 +71,19 @@ public class PoliciesControllerTests
         Assert.Equal(policy.Type, result.Type);
         Assert.Equal(policy.Enabled, result.Enabled);
 
-        // Assert that the data is deserialized correctly into a Dictionary<string, object>
-        // for all MasterPasswordPolicyData properties
-        Assert.Equal(mpPolicyData.MinComplexity, ((JsonElement)result.Data["minComplexity"]).GetInt32());
-        Assert.Equal(mpPolicyData.MinLength, ((JsonElement)result.Data["minLength"]).GetInt32());
-        Assert.Equal(mpPolicyData.RequireLower, ((JsonElement)result.Data["requireLower"]).GetBoolean());
-        Assert.Equal(mpPolicyData.RequireUpper, ((JsonElement)result.Data["requireUpper"]).GetBoolean());
-        Assert.Equal(mpPolicyData.RequireNumbers, ((JsonElement)result.Data["requireNumbers"]).GetBoolean());
-        Assert.Equal(mpPolicyData.RequireSpecial, ((JsonElement)result.Data["requireSpecial"]).GetBoolean());
-        Assert.Equal(mpPolicyData.EnforceOnLogin, ((JsonElement)result.Data["enforceOnLogin"]).GetBoolean());
+        // Assert that Data is passed through as the raw JSON string, and still contains
+        // all the expected MasterPasswordPolicyData properties.
+        Assert.Equal(policy.Data, result.Data);
+
+        using var dataDocument = JsonDocument.Parse(result.Data);
+        var dataElement = dataDocument.RootElement;
+        Assert.Equal(mpPolicyData.MinComplexity, dataElement.GetProperty("minComplexity").GetInt32());
+        Assert.Equal(mpPolicyData.MinLength, dataElement.GetProperty("minLength").GetInt32());
+        Assert.Equal(mpPolicyData.RequireLower, dataElement.GetProperty("requireLower").GetBoolean());
+        Assert.Equal(mpPolicyData.RequireUpper, dataElement.GetProperty("requireUpper").GetBoolean());
+        Assert.Equal(mpPolicyData.RequireNumbers, dataElement.GetProperty("requireNumbers").GetBoolean());
+        Assert.Equal(mpPolicyData.RequireSpecial, dataElement.GetProperty("requireSpecial").GetBoolean());
+        Assert.Equal(mpPolicyData.EnforceOnLogin, dataElement.GetProperty("enforceOnLogin").GetBoolean());
     }
 
 

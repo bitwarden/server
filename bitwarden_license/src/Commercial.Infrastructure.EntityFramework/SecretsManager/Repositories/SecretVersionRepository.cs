@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
@@ -7,6 +8,13 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Commercial.Infrastructure.EntityFramework.SecretsManager.Repositories;
 
+/// <summary>
+/// Read access to a secret's version history.
+/// </summary>
+/// <remarks>
+/// Versions are written only via <see cref="ISecretRepository"/>, inside the owning secret's
+/// transaction — see <c>SecretVersionWriter.AddWithPruningAsync</c> for the retention cap.
+/// </remarks>
 public class SecretVersionRepository : Repository<Core.SecretsManager.Entities.SecretVersion, SecretVersion, Guid>, ISecretVersionRepository
 {
     public SecretVersionRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
@@ -30,6 +38,7 @@ public class SecretVersionRepository : Repository<Core.SecretsManager.Entities.S
         var secretVersions = await dbContext.SecretVersion
             .Where(sv => sv.SecretId == secretId)
             .OrderByDescending(sv => sv.VersionDate)
+            .ThenByDescending(sv => sv.Id)
             .ToListAsync();
         return Mapper.Map<List<Core.SecretsManager.Entities.SecretVersion>>(secretVersions);
     }
@@ -42,43 +51,9 @@ public class SecretVersionRepository : Repository<Core.SecretsManager.Entities.S
         var secretVersions = await dbContext.SecretVersion
             .Where(sv => versionIds.Contains(sv.Id))
             .OrderByDescending(sv => sv.VersionDate)
+            .ThenByDescending(sv => sv.Id)
             .ToListAsync();
         return Mapper.Map<List<Core.SecretsManager.Entities.SecretVersion>>(secretVersions);
-    }
-
-    public override async Task<Core.SecretsManager.Entities.SecretVersion> CreateAsync(Core.SecretsManager.Entities.SecretVersion secretVersion)
-    {
-        const int maxVersionsToKeep = 10;
-
-        await using var scope = ServiceScopeFactory.CreateAsyncScope();
-        var dbContext = GetDatabaseContext(scope);
-
-        await using var transaction = await dbContext.Database.BeginTransactionAsync();
-
-        // Get the IDs of the most recent (maxVersionsToKeep - 1) versions to keep
-        var versionsToKeepIds = await dbContext.SecretVersion
-            .Where(sv => sv.SecretId == secretVersion.SecretId)
-            .OrderByDescending(sv => sv.VersionDate)
-            .Take(maxVersionsToKeep - 1)
-            .Select(sv => sv.Id)
-            .ToListAsync();
-
-        // Delete all versions for this secret that are not in the "keep" list
-        if (versionsToKeepIds.Any())
-        {
-            await dbContext.SecretVersion
-                .Where(sv => sv.SecretId == secretVersion.SecretId && !versionsToKeepIds.Contains(sv.Id))
-                .ExecuteDeleteAsync();
-        }
-
-        secretVersion.SetNewId();
-        var entity = Mapper.Map<SecretVersion>(secretVersion);
-
-        await dbContext.AddAsync(entity);
-        await dbContext.SaveChangesAsync();
-        await transaction.CommitAsync();
-
-        return secretVersion;
     }
 
     public async Task DeleteManyByIdAsync(IEnumerable<Guid> ids)
@@ -90,5 +65,66 @@ public class SecretVersionRepository : Repository<Core.SecretsManager.Entities.S
         await dbContext.SecretVersion
             .Where(sv => secretVersionIds.Contains(sv.Id))
             .ExecuteDeleteAsync();
+    }
+
+    public async Task<SecretVersionDetails?> GetDetailsByIdAsync(Guid id)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var details = await ToDetailsAsync(dbContext.SecretVersion
+            .AsNoTracking()
+            .Where(sv => sv.Id == id));
+
+        return details.FirstOrDefault();
+    }
+
+    public async Task<IEnumerable<SecretVersionDetails>> GetManyDetailsBySecretIdAsync(Guid secretId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        return await ToDetailsAsync(dbContext.SecretVersion
+            .AsNoTracking()
+            .Where(sv => sv.SecretId == secretId)
+            .OrderByDescending(sv => sv.VersionDate)
+            .ThenByDescending(sv => sv.Id));
+    }
+
+    public async Task<IEnumerable<SecretVersionDetails>> GetManyDetailsByIdsAsync(IEnumerable<Guid> ids)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var versionIds = ids.ToList();
+
+        return await ToDetailsAsync(dbContext.SecretVersion
+            .AsNoTracking()
+            .Where(sv => versionIds.Contains(sv.Id))
+            .OrderByDescending(sv => sv.VersionDate)
+            .ThenByDescending(sv => sv.Id));
+    }
+
+    private async Task<List<SecretVersionDetails>> ToDetailsAsync(IQueryable<SecretVersion> query)
+    {
+        var rows = await query
+            .Select(sv => new
+            {
+                SecretVersion = sv,
+                EditorUserName = sv.EditorOrganizationUser!.User.Name,
+                EditorUserEmail = sv.EditorOrganizationUser!.User.Email,
+                EditorServiceAccountName = sv.EditorServiceAccount!.Name
+            })
+            .ToListAsync();
+
+        return rows
+            .Select(row => new SecretVersionDetails
+            {
+                SecretVersion = Mapper.Map<Core.SecretsManager.Entities.SecretVersion>(row.SecretVersion),
+                EditorUserName = row.EditorUserName,
+                EditorUserEmail = row.EditorUserEmail,
+                EditorServiceAccountName = row.EditorServiceAccountName
+            })
+            .ToList();
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Bit.Api.Vault.Models;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core.Vault.Entities;
@@ -262,5 +263,167 @@ public class CipherRequestModelTests
         request.ToCipher(cipher);
 
         Assert.Equal(expectedData, cipher.Data);
+    }
+
+    [Fact]
+    public void Validate_BlobEncrypted_NameOmitted_Passes()
+    {
+        var request = new CipherRequestModel
+        {
+            Type = CipherType.Login,
+            Data = "{\"format_version\":1}",
+        };
+
+        var results = ValidateModel(request);
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public void Validate_NonBlobData_NameOmitted_Fails()
+    {
+        var request = new CipherRequestModel
+        {
+            Type = CipherType.Login,
+            Data = "{\"username\":\"2.aGVsbG8=|aGVsbG8=|aGVsbG8=\"}",
+        };
+
+        var results = ValidateModel(request);
+
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(CipherRequestModel.Name)));
+    }
+
+    [Fact]
+    public void Validate_NeitherDataNorNameProvided_Fails()
+    {
+        var request = new CipherRequestModel
+        {
+            Type = CipherType.Login,
+        };
+
+        var results = ValidateModel(request);
+
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(CipherRequestModel.Name)));
+    }
+
+    [Fact]
+    public void Validate_DataOmitted_NameProvided_Passes()
+    {
+        var request = new CipherRequestModel
+        {
+            Type = CipherType.Login,
+            Name = "2.AAECAwQFBgcICQoLDA0ODw==|aGVsbG8=|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+        };
+
+        var results = ValidateModel(request);
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public void ToCipher_LegacyAttachmentsMap_DoesNotClearKeyOfKeyedAttachment()
+    {
+        const string attachmentId = "attachment-id";
+        var cipher = new Cipher { Type = CipherType.Login };
+        cipher.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            {
+                attachmentId,
+                new CipherAttachment.MetaData
+                {
+                    AttachmentId = attachmentId,
+                    FileName = ENC_STRING,
+                    Key = ENC_STRING,
+                }
+            }
+        });
+
+        var request = new CipherRequestModel
+        {
+            Type = CipherType.Login,
+            Name = ENC_STRING,
+            Login = new CipherLoginModel(),
+            Attachments = new Dictionary<string, string> { { attachmentId, ENC_STRING } },
+        };
+
+        request.ToCipher(cipher);
+
+        var attachment = cipher.GetAttachments()[attachmentId];
+        Assert.Equal(ENC_STRING, attachment.Key);
+        Assert.Equal(ENC_STRING, attachment.FileName);
+    }
+
+    [Fact]
+    public void ToCipher_LegacyAttachmentsMap_StillAppliesToKeylessAttachment()
+    {
+        const string attachmentId = "attachment-id";
+        const string newFileName = "2.BBECAwQFBgcICQoLDA0ODw==|aGVsbG8=|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=";
+        var cipher = new Cipher { Type = CipherType.Login };
+        cipher.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            {
+                attachmentId,
+                new CipherAttachment.MetaData
+                {
+                    AttachmentId = attachmentId,
+                    FileName = ENC_STRING,
+                    Key = null,
+                }
+            }
+        });
+
+        var request = new CipherRequestModel
+        {
+            Type = CipherType.Login,
+            Name = ENC_STRING,
+            Login = new CipherLoginModel(),
+            Attachments = new Dictionary<string, string> { { attachmentId, newFileName } },
+        };
+
+        request.ToCipher(cipher);
+
+        var attachment = cipher.GetAttachments()[attachmentId];
+        Assert.Null(attachment.Key);
+        Assert.Equal(newFileName, attachment.FileName);
+    }
+
+    [Fact]
+    public void Validate_LegacyAttachmentsMap_NonEncryptedFileName_Fails()
+    {
+        var request = new CipherRequestModel
+        {
+            Type = CipherType.Login,
+            Name = ENC_STRING,
+            Attachments = new Dictionary<string, string> { { "attachment-id", "OWNED-not-an-encstring" } },
+        };
+
+        var results = ValidateModel(request);
+
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(CipherRequestModel.Attachments)));
+    }
+
+    [Fact]
+    public void Validate_LegacyAttachmentsMap_EncryptedFileName_Passes()
+    {
+        var request = new CipherRequestModel
+        {
+            Type = CipherType.Login,
+            Name = ENC_STRING,
+            Attachments = new Dictionary<string, string> { { "attachment-id", ENC_STRING } },
+        };
+
+        var results = ValidateModel(request);
+
+        Assert.Empty(results);
+    }
+
+    private const string ENC_STRING =
+        "2.AAECAwQFBgcICQoLDA0ODw==|aGVsbG8=|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=";
+
+    private static List<ValidationResult> ValidateModel(CipherRequestModel request)
+    {
+        var results = new List<ValidationResult>();
+        Validator.TryValidateObject(request, new ValidationContext(request), results, validateAllProperties: true);
+        return results;
     }
 }

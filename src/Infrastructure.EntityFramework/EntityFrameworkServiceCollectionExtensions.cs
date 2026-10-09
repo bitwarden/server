@@ -106,6 +106,7 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IAccessRuleRepository, Pam.Repositories.AccessRuleRepository>();
         services.AddSingleton<IAccessRequestRepository, Pam.Repositories.AccessRequestRepository>();
         services.AddSingleton<IAccessLeaseRepository, Pam.Repositories.AccessLeaseRepository>();
+        services.AddSingleton<IAccessAuditEventRepository, Pam.Repositories.AccessAuditEventRepository>();
         services.AddSingleton<IWebAuthnCredentialRepository, WebAuthnCredentialRepository>();
         services.AddSingleton<IProviderPlanRepository, ProviderPlanRepository>();
         services.AddSingleton<IProviderInvoiceItemRepository, ProviderInvoiceItemRepository>();
@@ -124,6 +125,7 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IOrganizationReportRepository, OrganizationReportRepository>();
         services.AddSingleton<IOrganizationApplicationRepository, OrganizationApplicationRepository>();
         services.AddSingleton<IOrganizationMemberBaseDetailRepository, OrganizationMemberBaseDetailRepository>();
+        services.AddSingleton<IOrganizationDeleteTaskRepository, OrganizationDeleteTaskRepository>();
 
         if (selfHosted)
         {

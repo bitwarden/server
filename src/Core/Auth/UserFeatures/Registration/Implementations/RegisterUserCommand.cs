@@ -33,7 +33,7 @@ public class RegisterUserCommand : IRegisterUserCommand
     private readonly IPolicyQuery _policyQuery;
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly IValidateOrganizationInviteLinkQuery _validateOrganizationInviteLinkQuery;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
@@ -57,7 +57,7 @@ public class RegisterUserCommand : IRegisterUserCommand
             IPolicyQuery policyQuery,
             IOrganizationDomainRepository organizationDomainRepository,
             IValidateOrganizationInviteLinkQuery validateOrganizationInviteLinkQuery,
-            IFeatureService featureService,
+            Bitwarden.Server.Sdk.Features.IFeatureService featureService,
             IDataProtectionProvider dataProtectionProvider,
             IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
             IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,
@@ -279,8 +279,6 @@ public class RegisterUserCommand : IRegisterUserCommand
         User user, RegisterFinishData registerFinishData,
         string emailVerificationToken, OpenOrgInviteRequestModel openOrgInvite)
     {
-        ValidateOpenRegistrationAllowed();
-
         var validationResult = await _validateOrganizationInviteLinkQuery.ValidateAsync(
             openOrgInvite.OrganizationId, openOrgInvite.Code, user.Email);
         if (validationResult.IsError)

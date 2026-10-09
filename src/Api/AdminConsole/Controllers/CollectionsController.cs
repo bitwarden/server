@@ -1,7 +1,9 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Api.AdminConsole.Attributes;
 using Bit.Api.AdminConsole.Authorization.Collections;
+using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
@@ -14,6 +16,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Bit.OrganizationAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -56,9 +59,8 @@ public class CollectionsController : Controller
     }
 
     [HttpGet("{id}")]
-    public async Task<CollectionResponseModel> Get(Guid orgId, Guid id)
+    public async Task<CollectionResponseModel> Get(Guid orgId, [InjectCollection] Collection collection)
     {
-        var collection = await _collectionRepository.GetByIdAsync(id);
         var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.Read)).Succeeded;
         if (!authorized)
         {
@@ -73,6 +75,11 @@ public class CollectionsController : Controller
     {
         var collectionAdminDetails =
             await _collectionRepository.GetByIdWithPermissionsAsync(id, _currentContext.UserId, true);
+
+        if (collectionAdminDetails is null || collectionAdminDetails.OrganizationId != orgId)
+        {
+            throw new NotFoundException();
+        }
 
         var authorized = (await _authorizationService.AuthorizeAsync(User, collectionAdminDetails, BulkCollectionOperations.ReadWithAccess)).Succeeded;
         if (!authorized)
@@ -110,6 +117,30 @@ public class CollectionsController : Controller
         ));
     }
 
+    /// <summary>
+    /// Returns all collections in the organization along with the full list of user and group assignments for each
+    /// collection. Intended for Access Intelligence consumers that need complete member attribution across both shared
+    /// and default collections.
+    /// This endpoint differs from <see cref="GetManyWithDetails"/> in two ways: it always includes default collections
+    /// (Type = 1) and it is restricted to users who can read reports, rather than users who manage collections.
+    /// </summary>
+    [HttpGet("access")]
+    [Authorize<AccessReportsRequirement>]
+    public async Task<ListResponseModel<CollectionAccessDetailsResponseModel>> GetAllWithAccess([FromRoute] Guid orgId)
+    {
+        var allOrgCollections = await _collectionRepository
+            .GetManyOrganizationCollectionsWithPermissionsAsync(orgId, _currentContext.UserId.Value);
+
+        if (await _currentContext.ProviderUserForOrgAsync(orgId))
+        {
+            await _providerService.LogProviderAccessToOrganizationAsync(orgId);
+        }
+
+        return new ListResponseModel<CollectionAccessDetailsResponseModel>(
+            allOrgCollections.Select(c => new CollectionAccessDetailsResponseModel(c))
+        );
+    }
+
     [HttpGet("")]
     public async Task<ListResponseModel<CollectionResponseModel>> GetAll(Guid orgId)
     {
@@ -140,9 +171,8 @@ public class CollectionsController : Controller
     }
 
     [HttpGet("{id}/users")]
-    public async Task<IEnumerable<SelectionReadOnlyResponseModel>> GetUsers(Guid orgId, Guid id)
+    public async Task<IEnumerable<SelectionReadOnlyResponseModel>> GetUsers(Guid orgId, [InjectCollection] Collection collection)
     {
-        var collection = await _collectionRepository.GetByIdAsync(id);
         var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ReadAccess)).Succeeded;
         if (!authorized)
         {
@@ -188,9 +218,8 @@ public class CollectionsController : Controller
     }
 
     [HttpPut("{id}")]
-    public async Task<CollectionResponseModel> Put(Guid orgId, Guid id, [FromBody] UpdateCollectionRequestModel model)
+    public async Task<CollectionResponseModel> Put(Guid orgId, [InjectCollection] Collection collection, [FromBody] UpdateCollectionRequestModel model)
     {
-        var collection = await _collectionRepository.GetByIdAsync(id);
         var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.Update)).Succeeded;
         if (!authorized)
         {
@@ -218,13 +247,6 @@ public class CollectionsController : Controller
         return new CollectionAccessDetailsResponseModel(collectionWithPermissions);
     }
 
-    [HttpPost("{id}")]
-    [Obsolete("This endpoint is deprecated. Use PUT /{id} instead.")]
-    public async Task<CollectionResponseModel> PostPut(Guid orgId, Guid id, [FromBody] UpdateCollectionRequestModel model)
-    {
-        return await Put(orgId, id, model);
-    }
-
     [HttpPost("bulk-access")]
     public async Task PostBulkCollectionAccess(Guid orgId, [FromBody] BulkCollectionAccessRequestModel model)
     {
@@ -235,7 +257,7 @@ public class CollectionsController : Controller
         }
 
         var result = await _authorizationService.AuthorizeAsync(User, collections,
-            new[] { BulkCollectionOperations.ModifyUserAccess, BulkCollectionOperations.ModifyGroupAccess });
+            [BulkCollectionOperations.ModifyUserAccess, BulkCollectionOperations.ModifyGroupAccess]);
 
         if (!result.Succeeded)
         {
@@ -249,9 +271,8 @@ public class CollectionsController : Controller
     }
 
     [HttpDelete("{id}")]
-    public async Task Delete(Guid orgId, Guid id)
+    public async Task Delete(Guid orgId, [InjectCollection] Collection collection)
     {
-        var collection = await _collectionRepository.GetByIdAsync(id);
         var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.Delete)).Succeeded;
         if (!authorized)
         {
@@ -261,17 +282,15 @@ public class CollectionsController : Controller
         await _deleteCollectionCommand.DeleteAsync(collection);
     }
 
-    [HttpPost("{id}/delete")]
-    [Obsolete("This endpoint is deprecated. Use DELETE /{id} instead.")]
-    public async Task PostDelete(Guid orgId, Guid id)
-    {
-        await Delete(orgId, id);
-    }
-
     [HttpDelete("")]
     public async Task DeleteMany(Guid orgId, [FromBody] CollectionBulkDeleteRequestModel model)
     {
         var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Ids);
+        if (collections.Count(c => c.OrganizationId == orgId) != model.Ids.Count())
+        {
+            throw new NotFoundException();
+        }
+
         var result = await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.Delete);
         if (!result.Succeeded)
         {
@@ -279,12 +298,5 @@ public class CollectionsController : Controller
         }
 
         await _deleteCollectionCommand.DeleteManyAsync(collections);
-    }
-
-    [HttpPost("delete")]
-    [Obsolete("This endpoint is deprecated. Use DELETE / instead.")]
-    public async Task PostDeleteMany(Guid orgId, [FromBody] CollectionBulkDeleteRequestModel model)
-    {
-        await DeleteMany(orgId, model);
     }
 }

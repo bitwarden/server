@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Models;
 using Bit.Core.Billing.Organizations.PlanMigration;
-using Bit.Core.Billing.Organizations.Schedules;
-using Bit.Core.Billing.Organizations.Schedules.Enums;
+using Bit.Core.Billing.Subscriptions.Schedules;
+using Bit.Core.Billing.Subscriptions.Schedules.Enums;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using Plan = Bit.Core.Models.StaticStore.Plan;
@@ -33,27 +33,40 @@ internal static class AnnualUpgradeLineMapper
 
         switch (SubscriptionScheduleOwnershipMapper.Map(subscription))
         {
-            case OrganizationSubscriptionScheduleOwnership.Unexpanded:
+            case SubscriptionScheduleOwnership.Unexpanded:
                 logger.LogError(
                     "{Caller}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) reports schedule ({ScheduleId}) but it was not expanded; refusing the annual upgrade",
                     caller, subscription.Id, organizationId, subscription.ScheduleId);
                 return null;
 
-            case OrganizationSubscriptionScheduleOwnership.AnnualUpgrade:
+            case SubscriptionScheduleOwnership.AnnualUpgrade:
                 logger.LogInformation(
                     "{Caller}: Organization ({OrganizationId}) already redeemed the annual upgrade offer",
                     caller, organizationId);
                 return null;
 
-            case OrganizationSubscriptionScheduleOwnership.Foreign:
+            case SubscriptionScheduleOwnership.Foreign:
                 logger.LogWarning(
                     "{Caller}: Organization ({OrganizationId}) has an unrecognized schedule ({ScheduleId}) on subscription ({SubscriptionId}); phase metadata keys present: {MetadataKeys}; refusing the annual upgrade",
                     caller, organizationId, subscription.ScheduleId, subscription.Id,
                     string.Join(", ", SubscriptionScheduleOwnershipMapper.DistinctPhaseMetadataKeys(subscription.Schedule)));
                 return null;
 
-            case OrganizationSubscriptionScheduleOwnership.None:
-            case OrganizationSubscriptionScheduleOwnership.PriceMigration:
+            case SubscriptionScheduleOwnership.Unrecognized:
+                logger.LogWarning(
+                    "{Caller}: Organization ({OrganizationId}) has a schedule ({ScheduleId}) on subscription ({SubscriptionId}) with an unrecognized managing system ({ManagingSystem}); refusing the annual upgrade",
+                    caller, organizationId, subscription.ScheduleId, subscription.Id,
+                    SubscriptionScheduleOwnershipMapper.ManagingSystemOf(subscription.Schedule));
+                return null;
+
+            case SubscriptionScheduleOwnership.PersonalPriceIncrease:
+                logger.LogWarning(
+                    "{Caller}: Organization ({OrganizationId}) has a pending personal price increase schedule ({ScheduleId}) on subscription ({SubscriptionId}); refusing the annual upgrade",
+                    caller, organizationId, subscription.ScheduleId, subscription.Id);
+                return null;
+
+            case SubscriptionScheduleOwnership.None:
+            case SubscriptionScheduleOwnership.BusinessPriceIncrease:
                 break;
 
             default:
@@ -97,7 +110,11 @@ internal static class AnnualUpgradeLineMapper
     private static bool IsUnusable(Discount? discount) =>
         discount is null || string.IsNullOrEmpty(discount.Source?.CouponId);
 
-    // A discount with no coupon would silently drop a subscription-level coupon, so redemption refuses instead.
+    // A discount with no coupon id would only come from a promotion-code source; Bitwarden applies discounts
+    // exclusively via bare coupons (no promotion codes), so every real discount has one and this never rejects
+    // a valid subscriber. It exists to refuse rather than silently drop a discount that couldn't be carried.
+    // If promotion-code discounts are ever introduced, revisit this: a promo code's coupon lives on
+    // discount.Coupon, not necessarily Source.CouponId.
     private static bool HasUnusableDiscounts(Subscription subscription) =>
         (subscription.Discounts ?? []).Any(IsUnusable) ||
         subscription.Items.Data.Any(item => (item.Discounts ?? []).Any(IsUnusable));

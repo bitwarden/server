@@ -15,6 +15,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 
 namespace Bit.Core.Services;
@@ -713,6 +714,15 @@ public class EventService : IEventService
     public async Task LogSendEventAsync(Guid sendOwnerUserId, Guid sendId, EventType type,
         IReadOnlyDictionary<Guid, SendAccessEventOrgContext> organizationContext = null)
     {
+        // Create/edit/delete events have no org context and can come from a request with no
+        // Device-Type header at all, e.g. DeleteSendsJob's scheduled expiration cleanup, which runs
+        // with no HTTP request and thus no CurrentContext.DeviceType. Report Server instead of unknown.
+        var deviceType = _currentContext.DeviceType;
+        if (deviceType == null && organizationContext == null)
+        {
+            deviceType = DeviceType.Server;
+        }
+
         var events = new List<IEvent>
         {
             new EventMessage(_currentContext)
@@ -721,6 +731,7 @@ public class EventService : IEventService
                 ActingUserId = sendOwnerUserId,
                 Type = type,
                 SendId = sendId,
+                DeviceType = deviceType,
                 Date = DateTime.UtcNow
             }
         };
@@ -752,6 +763,7 @@ public class EventService : IEventService
                     DomainName = domainName,
                     Type = type,
                     SendId = sendId,
+                    DeviceType = deviceType,
                     Date = DateTime.UtcNow
                 };
             }));
@@ -770,6 +782,7 @@ public class EventService : IEventService
                 ActingUserId = organizationContext == null ? sendOwnerUserId : null,
                 Type = type,
                 SendId = sendId,
+                DeviceType = deviceType,
                 Date = DateTime.UtcNow
             }));
 
@@ -780,6 +793,36 @@ public class EventService : IEventService
         else
         {
             await _eventWriteService.CreateAsync(events.First());
+        }
+    }
+
+    public async Task LogSendEventsAsync(IEnumerable<(Send send, EventType type)> events, Guid organizationId)
+    {
+        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
+        if (!CanUseEvents(orgAbility))
+        {
+            return;
+        }
+
+        var providerId = await GetProviderIdAsync(organizationId);
+
+        var eventMessages = events
+            .Where(e => e.send.UserId.HasValue)
+            .Select(e => new EventMessage(_currentContext)
+            {
+                OrganizationId = organizationId,
+                ProviderId = providerId,
+                UserId = e.send.UserId,
+                ActingUserId = _currentContext?.UserId,
+                Type = e.type,
+                SendId = e.send.Id,
+                Date = DateTime.UtcNow
+            })
+            .ToList();
+
+        if (eventMessages.Count > 0)
+        {
+            await _eventWriteService.CreateManyAsync(eventMessages);
         }
     }
 

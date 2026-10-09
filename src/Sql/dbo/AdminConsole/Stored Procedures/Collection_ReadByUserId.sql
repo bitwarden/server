@@ -5,28 +5,31 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT
-        Id,
-        OrganizationId,
-        [Name],
-        CreationDate,
-        RevisionDate,
-        ExternalId,
-        MIN([ReadOnly]) AS [ReadOnly],
-        MIN([HidePasswords]) AS [HidePasswords],
-        MAX([Manage]) AS [Manage],
-        [DefaultUserCollectionEmail],
-        [Type],
-        [AccessRuleId]
+        UCD.[Id],
+        UCD.[OrganizationId],
+        UCD.[Name],
+        UCD.[CreationDate],
+        UCD.[RevisionDate],
+        UCD.[ExternalId],
+        MIN(UCD.[ReadOnly]) AS [ReadOnly],
+        MIN(UCD.[HidePasswords]) AS [HidePasswords],
+        MAX(UCD.[Manage]) AS [Manage],
+        UCD.[DefaultUserCollectionEmail],
+        UCD.[Type],
+        UCD.[AccessRuleId],
+        MAX(CASE WHEN AR.[Enabled] = 1 THEN 1 ELSE 0 END) AS [HasEnabledAccessRule]
     FROM
-        [dbo].[UserCollectionDetails](@UserId)
+        [dbo].[UserCollectionDetails](@UserId) UCD
+    LEFT JOIN
+        [dbo].[AccessRule] AR ON AR.[Id] = UCD.[AccessRuleId]
     GROUP BY
-        Id,
-        OrganizationId,
-        [Name],
-        CreationDate,
-        RevisionDate,
-        ExternalId,
-        [DefaultUserCollectionEmail],
-        [Type],
-        [AccessRuleId]
+        UCD.[Id],
+        UCD.[OrganizationId],
+        UCD.[Name],
+        UCD.[CreationDate],
+        UCD.[RevisionDate],
+        UCD.[ExternalId],
+        UCD.[DefaultUserCollectionEmail],
+        UCD.[Type],
+        UCD.[AccessRuleId]
 END

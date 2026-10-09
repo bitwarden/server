@@ -154,6 +154,19 @@ public class AnnualUpgradeLineMapperTests
     }
 
     [Fact]
+    public void MapOrNull_CouponSourcedDiscounts_AreNotUnusable()
+    {
+        var couponDiscount = new Discount { Source = new DiscountSource { CouponId = "coupon_1" } };
+
+        var result = Map(SubscriptionWith(
+            items: [Item("2023-teams-org-seat-monthly", discounts: [couponDiscount])],
+            discounts: [couponDiscount]));
+
+        Assert.NotNull(result);
+        AssertNothingLogged();
+    }
+
+    [Fact]
     public void MapOrNull_NullItemDiscountEntry_ReturnsNullAndLogsUnusableDiscount()
     {
         // Same JSON-deserialization workaround as UnexpandedDiscountSubscription() above.
@@ -214,6 +227,34 @@ public class AnnualUpgradeLineMapperTests
             schedule: Schedule(new Dictionary<string, string> { ["negotiated_term"] = "3y" }))));
 
         AssertLogged(LogLevel.Warning, "unrecognized schedule");
+    }
+
+    [Fact]
+    public void MapOrNull_PersonalPriceIncreaseSchedule_ReturnsNullAndLogsWarning()
+    {
+        var schedule = Schedule(phaseMetadata: null);
+        schedule.Metadata = new Dictionary<string, string>
+        {
+            [StripeConstants.MetadataKeys.ManagingSystem] = StripeConstants.ManagingSystems.PersonalPriceIncrease
+        };
+
+        Assert.Null(Map(SubscriptionWith(schedule: schedule)));
+
+        AssertLogged(LogLevel.Warning, "pending personal price increase schedule");
+    }
+
+    [Fact]
+    public void MapOrNull_UnrecognizedManagingSystemSchedule_ReturnsNullAndLogsWarningWithTheValue()
+    {
+        var schedule = Schedule(phaseMetadata: null);
+        schedule.Metadata = new Dictionary<string, string>
+        {
+            [StripeConstants.MetadataKeys.ManagingSystem] = "some_future_system"
+        };
+
+        Assert.Null(Map(SubscriptionWith(schedule: schedule)));
+
+        AssertLogged(LogLevel.Warning, "unrecognized managing system (some_future_system)");
     }
 
     [Fact]

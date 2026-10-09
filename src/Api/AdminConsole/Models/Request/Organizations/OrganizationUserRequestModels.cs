@@ -56,6 +56,8 @@ public class OrganizationUserAcceptRequestModel
     [Required]
     public string Token { get; set; }
     // Used to auto-enroll in master password reset
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
     public string ResetPasswordKey { get; set; }
 }
 
@@ -117,7 +119,11 @@ public class OrganizationUserUpdateRequestModel
     public OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
     {
         existingUser.Type = Type.Value;
-        existingUser.Permissions = CoreHelpers.ClassToJsonData(Permissions);
+        // Custom permissions only apply to the Custom role. Clear them for any other role so a member demoted from
+        // Custom doesn't keep a stale permissions blob.
+        existingUser.Permissions = Type.Value == OrganizationUserType.Custom
+            ? CoreHelpers.ClassToJsonData(Permissions)
+            : null;
         existingUser.AccessSecretsManager = AccessSecretsManager;
         existingUser.AccessPam = AccessPam;
         return existingUser;
@@ -126,6 +132,7 @@ public class OrganizationUserUpdateRequestModel
 
 public class OrganizationUserResetPasswordEnrollmentRequestModel
 {
+    [EncryptedStringLength(1000)]
     public string ResetPasswordKey { get; set; }
     public string MasterPasswordHash { get; set; }
 }

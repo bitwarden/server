@@ -24,15 +24,17 @@ public class OrganizationRecipe(SeederDependencies deps)
     /// <param name="kdfIterations">Optional KDF iteration count override</param>
     /// <param name="orgName">Optional organization name override. Replaces the preset/fixture name when provided.</param>
     /// <param name="ownerEmail">Optional owner email override. Replaces the default <c>owner@&lt;domain&gt;</c> when provided.</param>
+    /// <param name="stripeBilling">When set, creates real Stripe test-environment billing for the organization.</param>
     /// <returns>The organization ID and summary statistics.</returns>
     public async Task<OrganizationSeedResult> SeedAsync(
         string presetName,
         string? password = null,
         int? kdfIterations = null,
         string? orgName = null,
-        string? ownerEmail = null)
+        string? ownerEmail = null,
+        StripeBillingOptions? stripeBilling = null)
     {
-        var result = await _orchestrator.ExecuteAsync(presetName, password, kdfIterations, orgName, ownerEmail);
+        var result = await _orchestrator.ExecuteAsync(presetName, password, kdfIterations, orgName, ownerEmail, stripeBilling);
 
         if (result.OrganizationId is null)
         {

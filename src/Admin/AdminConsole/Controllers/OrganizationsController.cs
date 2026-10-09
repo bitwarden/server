@@ -29,6 +29,7 @@ using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -77,7 +78,7 @@ public class OrganizationsController : Controller
     private readonly ISubscriberService _subscriberService;
     private readonly IOrganizationPlanMigrationCohortRepository _organizationPlanMigrationCohortRepository;
     private readonly IOrganizationPlanMigrationCohortAssignmentRepository _organizationPlanMigrationCohortAssignmentRepository;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -110,7 +111,7 @@ public class OrganizationsController : Controller
         ISubscriberService subscriberService,
         IOrganizationPlanMigrationCohortRepository organizationPlanMigrationCohortRepository,
         IOrganizationPlanMigrationCohortAssignmentRepository organizationPlanMigrationCohortAssignmentRepository,
-        IFeatureService featureService)
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -587,7 +588,10 @@ public class OrganizationsController : Controller
             }
         }
 
-        await _organizationRepository.DeleteAsync(organization);
+        // Enqueue the event-log cleanup in the same transaction as the delete. This is an
+        // established organization, so its events must be purged from storage for GDPR.
+        await _organizationRepository.DeleteAndCreateDeleteTasksAsync(
+            organization, [OrganizationDeleteTaskType.EventsCleanup]);
         await _organizationAbilityCacheService.DeleteOrganizationAbilityAsync(organization.Id);
 
         return RedirectToAction("Index");

@@ -5,6 +5,7 @@ using Azure.Storage.Blobs;
 using Bit.Core.Settings;
 using Bit.SharedWeb.Utilities;
 using DotNet.Testcontainers.Builders;
+using DotNet.Testcontainers.Containers;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -15,6 +16,9 @@ namespace Bit.SharedWeb.Test.DataProtectionServicesTests;
 
 public class DataProtectionServicesTests
 {
+    private const string AzuriteImage =
+        "mcr.microsoft.com/azure-storage/azurite:3.37.0@sha256:830430c1da1a2d537e08f3e6764dd1f5ae00cf0346bcaf625b968ec3f0971fd5";
+
     // Created using:
     // using var rsa = RSA.Create(2048);
     // var now = DateTimeOffset.UtcNow;
@@ -111,9 +115,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
     [Fact]
     public async Task StorageManaged_PersistsUnwrappedKeysWithoutAcquiringCertificates()
     {
-        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
-            .WithPortBinding(10000, true)
-            .Build();
+        await using var azurite = CreateAzuriteContainer();
 
         await azurite.StartAsync();
 
@@ -263,9 +265,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         // for a deployment sequence that is safe regardless of the order changes land.
 
         // Setup "existing" azure infrastructure.
-        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
-            .WithPortBinding(10000, true)
-            .Build();
+        await using var azurite = CreateAzuriteContainer();
 
         await azurite.StartAsync();
 
@@ -399,9 +399,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         //   Secret:     CertificatePassword = NewPw
         //   Non-secret: BlobName = "mynewcert.pfx"
         //   Non-secret: PendingProtection:Enabled = false  → falls back to updated BlobName/CertificatePassword
-        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
-            .WithPortBinding(10000, true)
-            .Build();
+        await using var azurite = CreateAzuriteContainer();
 
         await azurite.StartAsync();
 
@@ -528,9 +526,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         // Previously, PendingProtection was nested inside the CertificatePassword branch, so
         // an absent/placeholder CertificatePassword silently skipped pending and caused a
         // misleading "check your blob storage connection string" startup failure.
-        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
-            .WithPortBinding(10000, true)
-            .Build();
+        await using var azurite = CreateAzuriteContainer();
 
         await azurite.StartAsync();
 
@@ -574,9 +570,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         // divergent key ring across a rolling deploy. The current implementation throws
         // InvalidOperationException at startup with the call-site context ("Unprotect 0") in
         // the message so operators can tell which entry went wrong from the log alone.
-        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
-            .WithPortBinding(10000, true)
-            .Build();
+        await using var azurite = CreateAzuriteContainer();
 
         await azurite.StartAsync();
 
@@ -613,9 +607,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         // implementation throws InvalidOperationException at startup with the call-site context
         // ("Unprotect 0") in the message and the underlying CryptographicException as the inner
         // exception so operators can tell which entry went wrong from the log alone.
-        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
-            .WithPortBinding(10000, true)
-            .Build();
+        await using var azurite = CreateAzuriteContainer();
 
         await azurite.StartAsync();
 
@@ -655,9 +647,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         // become an object but with a null `FileName` which led to an ArgumentNullException that was
         // swallowed and `null` was returned. In our new fail-fast code this properly leads to an exception
         // at startup.
-        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
-            .WithPortBinding(10000, true)
-            .Build();
+        await using var azurite = CreateAzuriteContainer();
 
         await azurite.StartAsync();
 
@@ -702,9 +692,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         // but as long as Enabled=false is in their that unprotect certificate will not attempt to be
         // loaded and an otherwise invalid configuration does not cause startup issues and can be used.
         // An unprotect certificate that has been used to actually protect keys should NEVER be disabled
-        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
-            .WithPortBinding(10000, true)
-            .Build();
+        await using var azurite = CreateAzuriteContainer();
 
         await azurite.StartAsync();
 
@@ -755,9 +743,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         // InvalidOperationException with the call-site context ("protect") in the message and
         // the underlying RequestFailedException as the inner exception so operators can tell
         // which cert went wrong from the log alone.
-        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
-            .WithPortBinding(10000, true)
-            .Build();
+        await using var azurite = CreateAzuriteContainer();
 
         await azurite.StartAsync();
 
@@ -827,9 +813,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         // throws InvalidOperationException with the call-site context ("protect") in the message
         // and the underlying CryptographicException as the inner exception so operators can tell
         // which cert went wrong from the log alone.
-        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
-            .WithPortBinding(10000, true)
-            .Build();
+        await using var azurite = CreateAzuriteContainer();
 
         await azurite.StartAsync();
 
@@ -870,12 +854,15 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         return protectedData;
     }
 
+    private static IContainer CreateAzuriteContainer() =>
+        new ContainerBuilder(AzuriteImage)
+            .WithPortBinding(10000, true)
+            .Build();
+
     private static async Task RunTestAsync(Func<TestSetupContext, Task> testSetup, Action<TestRunContext> test)
     {
         // Start azurite
-        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
-            .WithPortBinding(10000, true)
-            .Build();
+        await using var azurite = CreateAzuriteContainer();
 
         await azurite.StartAsync();
 

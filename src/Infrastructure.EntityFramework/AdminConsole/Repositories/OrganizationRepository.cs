@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -200,7 +201,15 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         await OrganizationUpdateStorage(id);
     }
 
-    public override async Task DeleteAsync(Core.AdminConsole.Entities.Organization organization)
+    public override Task DeleteAsync(Core.AdminConsole.Entities.Organization organization)
+        => DeleteInternalAsync(organization, []);
+
+    public Task DeleteAndCreateDeleteTasksAsync(Core.AdminConsole.Entities.Organization organization,
+        IEnumerable<OrganizationDeleteTaskType> taskTypes)
+        => DeleteInternalAsync(organization, taskTypes);
+
+    private async Task DeleteInternalAsync(Core.AdminConsole.Entities.Organization organization,
+        IEnumerable<OrganizationDeleteTaskType> deleteTaskTypes)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -293,8 +302,28 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             var orgEntity = await dbContext.FindAsync<Organization>(organization.Id);
             dbContext.Remove(orgEntity);
 
-            await organizationDeleteTransaction.CommitAsync();
+            // Atomically enqueue the cleanup tasks within the same transaction as the
+            // deletion, so durable downstream cleanup is never lost if the delete commits.
+            // One row is created per supplied task type.
+            var creationDate = DateTime.UtcNow;
+            var deleteTasks = deleteTaskTypes
+                .Select(taskType =>
+                {
+                    var deleteTask = new Dirt.Models.OrganizationDeleteTask
+                    {
+                        OrganizationId = organization.Id,
+                        TaskType = taskType,
+                        CreationDate = creationDate,
+                        RevisionDate = creationDate,
+                    };
+                    deleteTask.SetNewId();
+                    return deleteTask;
+                })
+                .ToList();
+            await dbContext.OrganizationDeleteTasks.AddRangeAsync(deleteTasks);
+
             await dbContext.SaveChangesAsync();
+            await organizationDeleteTransaction.CommitAsync();
         }
     }
 

@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Repositories;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -8,7 +9,7 @@ using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
-using Microsoft.Data.SqlClient;
+using Microsoft.AspNetCore.DataProtection;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Repositories;
@@ -507,7 +508,8 @@ public class UserRepositoryTests
     }
 
     [Theory, DatabaseData]
-    public async Task SetKeyConnectorUserKey_UpdatesUserKey(IUserRepository userRepository, Database database)
+    public async Task SetKeyConnectorUserKey_UpdatesUserKey(IUserRepository userRepository, Database database,
+        IServiceProvider serviceProvider)
     {
         var user = await userRepository.CreateTestUserAsync();
 
@@ -515,7 +517,7 @@ public class UserRepositoryTests
 
         var setKeyConnectorUserKeyDelegate = userRepository.SetKeyConnectorUserKey(user.Id, keyConnectorWrappedKey);
 
-        await RunUpdateUserDataAsync(setKeyConnectorUserKeyDelegate, database);
+        await RunUpdateUserDataAsync(setKeyConnectorUserKeyDelegate, database, serviceProvider);
 
         var updatedUser = await userRepository.GetByIdAsync(user.Id);
 
@@ -674,7 +676,7 @@ public class UserRepositoryTests
     /// </summary>
     [Theory, DatabaseData]
     public async Task UpdateMasterPassword_MasterPasswordSaltIsUpdated(
-        IUserRepository userRepository, Database database)
+        IUserRepository userRepository, Database database, IServiceProvider serviceProvider)
     {
         // Arrange
         var originalEmail = $"OriGinaL+{Guid.NewGuid()}@example.com";
@@ -706,7 +708,7 @@ public class UserRepositoryTests
         // Act
         var result = userRepository.SetMasterPassword(user.Id, masterPasswordUnlockData, "newMasterPasswordHash", "hint");
         Assert.NotNull(result);
-        await RunUpdateUserDataAsync(result, database);
+        await RunUpdateUserDataAsync(result, database, serviceProvider);
 
         var updatedUser = await userRepository.GetByIdAsync(user.Id);
         Assert.NotNull(updatedUser);
@@ -923,6 +925,48 @@ public class UserRepositoryTests
         Assert.Equal("wrapped-user-key", updatedUser.Key);
     }
 
+    // A value that starts with the database field protection sentinel ("P|") but cannot be
+    // unprotected is ambiguous: it may be caller-supplied data that merely starts with the
+    // sentinel, or genuine protector output whose key is no longer available. Silently
+    // re-protecting it either way would wrap it a second time, and a later read would
+    // unprotect only the outer layer and return the still-protected inner value as if it were
+    // plaintext. The write must be rejected instead of guessing.
+    [DatabaseTheory, DatabaseData]
+    public async Task ReplaceAsync_KeyStartsWithProtectionSentinelButIsNotProtected_ThrowsAndDoesNotStore(
+        IUserRepository userRepository)
+    {
+        var user = await userRepository.CreateTestUserAsync();
+
+        var poisonedKey = "P|poisoned-key";
+        user.Key = poisonedKey;
+
+        await Assert.ThrowsAnyAsync<Exception>(() => userRepository.ReplaceAsync(user));
+
+        var readBack = await userRepository.GetByIdAsync(user.Id);
+
+        Assert.NotNull(readBack);
+        Assert.NotEqual(poisonedKey, readBack.Key);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task ReplaceAsync_KeyIsAlreadyGenuinelyProtectedValue_DoesNotDoubleProtect(
+        IUserRepository userRepository, IDataProtectionProvider dataProtectionProvider)
+    {
+        var dataProtector = dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose);
+        var alreadyProtectedKey = string.Concat(
+            Constants.DatabaseFieldProtectedPrefix, dataProtector.Protect("wrapped-user-key"));
+
+        var user = await userRepository.CreateTestUserAsync();
+
+        user.Key = alreadyProtectedKey;
+        await userRepository.ReplaceAsync(user);
+
+        var readBack = await userRepository.GetByIdAsync(user.Id);
+
+        Assert.NotNull(readBack);
+        Assert.Equal("wrapped-user-key", readBack.Key);
+    }
+
     private static UserAccountKeysData BuildV2AccountKeysData() => new()
     {
         PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
@@ -940,29 +984,13 @@ public class UserRepositoryTests
         }
     };
 
-    private static async Task RunUpdateUserDataAsync(UpdateUserData task, Database database)
-    {
-        if (database.Type == SupportedDatabaseProviders.SqlServer && !database.UseEf)
-        {
-            await using var connection = new SqlConnection(database.ConnectionString);
-            connection.Open();
-
-            await using var transaction = connection.BeginTransaction();
-            try
-            {
-                await task(connection, transaction);
-
-                transaction.Commit();
-            }
-            catch
-            {
-                transaction.Rollback();
-                throw;
-            }
-        }
-        else
-        {
-            await task();
-        }
-    }
+    /// <summary>
+    /// <see cref="UpdateUserData"/> declares its connection and transaction as optional, so it needs a cast to bind
+    /// to <see cref="DatabaseTransactionAction"/>.
+    /// </summary>
+    private static Task RunUpdateUserDataAsync(UpdateUserData task, Database database,
+        IServiceProvider serviceProvider)
+        => DatabaseTransactionActionTestHelper.ExecuteAsync(database,
+            new DatabaseTransactionAction((connection, transaction) => task(connection, transaction)),
+            serviceProvider);
 }

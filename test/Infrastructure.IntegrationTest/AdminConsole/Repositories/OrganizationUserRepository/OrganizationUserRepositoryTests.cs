@@ -17,6 +17,10 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.Organizat
 
 public class OrganizationUserRepositoryTests
 {
+    private const string _resetPasswordKey = "4.reset-password-key";
+    private const string _v2UpgradeToken = """{"WrappedUserKey1":"7.key-one","WrappedUserKey2":"2.key-two"}""";
+    private const string _otherV2UpgradeToken = """{"WrappedUserKey1":"7.key-three","WrappedUserKey2":"2.key-four"}""";
+
     [Theory, DatabaseData]
     public async Task GetOccupiedSmSeatCountByOrganizationIdAsync_ExcludesRevokedAndStaged(
         IUserRepository userRepository,
@@ -1834,5 +1838,158 @@ public class OrganizationUserRepositoryTests
         await DatabaseTransactionActionTestHelper.ExecuteAsync(database, action, serviceProvider);
 
         Assert.Null(await organizationUserRepository.GetByIdAsync(orgUser.Id));
+    }
+
+    [Theory, DatabaseData]
+    public async Task UpdateForKeyRotation_WithV2UpgradeToken_PersistsResetPasswordKeyAndToken(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var organizationUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+
+        organizationUser.ResetPasswordKey = _resetPasswordKey;
+        organizationUser.V2UpgradeToken = _v2UpgradeToken;
+
+        // Act
+        await userRepository.UpdateUserKeyAndEncryptedDataV2Async(user,
+            [organizationUserRepository.UpdateForKeyRotation(user.Id, [organizationUser])]);
+
+        // Assert
+        var updated = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(updated);
+        Assert.Equal(_resetPasswordKey, updated.ResetPasswordKey);
+        Assert.Equal(_v2UpgradeToken, updated.V2UpgradeToken);
+    }
+
+    [Theory, DatabaseData]
+    public async Task UpdateForKeyRotation_WithoutV2UpgradeToken_ClearsStaleToken(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var organizationUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+
+        // A previous upgrade rotation left a token behind
+        organizationUser.ResetPasswordKey = _resetPasswordKey;
+        organizationUser.V2UpgradeToken = _v2UpgradeToken;
+        await userRepository.UpdateUserKeyAndEncryptedDataV2Async(user,
+            [organizationUserRepository.UpdateForKeyRotation(user.Id, [organizationUser])]);
+
+        organizationUser.V2UpgradeToken = null;
+
+        // Act
+        await userRepository.UpdateUserKeyAndEncryptedDataV2Async(user,
+            [organizationUserRepository.UpdateForKeyRotation(user.Id, [organizationUser])]);
+
+        // Assert
+        var updated = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(updated);
+        Assert.Equal(_resetPasswordKey, updated.ResetPasswordKey);
+        Assert.Null(updated.V2UpgradeToken);
+    }
+
+    [Theory, DatabaseData]
+    public async Task UpdateForKeyRotation_WithOtherUsersMembership_LeavesItUnchanged(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync("rotating");
+        var otherUser = await userRepository.CreateTestUserAsync("other");
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var otherOrganizationUser =
+            await organizationUserRepository.CreateTestOrganizationUserAsync(organization, otherUser);
+
+        otherOrganizationUser.ResetPasswordKey = _resetPasswordKey;
+        otherOrganizationUser.V2UpgradeToken = _v2UpgradeToken;
+        await userRepository.UpdateUserKeyAndEncryptedDataV2Async(otherUser,
+            [organizationUserRepository.UpdateForKeyRotation(otherUser.Id, [otherOrganizationUser])]);
+
+        // Act - the rotating user submits another member's membership, carrying their own token
+        otherOrganizationUser.V2UpgradeToken = _otherV2UpgradeToken;
+        await userRepository.UpdateUserKeyAndEncryptedDataV2Async(user,
+            [organizationUserRepository.UpdateForKeyRotation(user.Id, [otherOrganizationUser])]);
+
+        // Assert - the UserId filter keeps the caller from writing onto a membership they do not own
+        var updated = await organizationUserRepository.GetByIdAsync(otherOrganizationUser.Id);
+        Assert.NotNull(updated);
+        Assert.Equal(_v2UpgradeToken, updated.V2UpgradeToken);
+    }
+
+    [Theory, DatabaseData]
+    public async Task DeleteManyAsync_WithSsoUser_SsoUserIsDeleted(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ISsoUserRepository ssoUserRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var organizationUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+
+        await ssoUserRepository.CreateAsync(new SsoUser
+        {
+            UserId = user.Id,
+            OrganizationId = organization.Id,
+            ExternalId = "external-id",
+        });
+
+        // Act
+        await organizationUserRepository.DeleteManyAsync(new[] { organizationUser.Id });
+
+        // Assert
+        var deletedOrganizationUser = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.Null(deletedOrganizationUser);
+
+        var deletedSsoUser = await ssoUserRepository.GetByUserIdOrganizationIdAsync(organization.Id, user.Id);
+        Assert.Null(deletedSsoUser);
+    }
+
+    [Theory, DatabaseData]
+    public async Task DeleteManyAsync_WithSsoUserInAnotherOrganization_OnlyDeletesRemovedOrganizationsSsoUser(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ISsoUserRepository ssoUserRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        var organizationA = await organizationRepository.CreateTestOrganizationAsync();
+        var organizationB = await organizationRepository.CreateTestOrganizationAsync();
+
+        var organizationUserA = await organizationUserRepository.CreateTestOrganizationUserAsync(organizationA, user);
+        await organizationUserRepository.CreateTestOrganizationUserAsync(organizationB, user);
+
+        await ssoUserRepository.CreateAsync(new SsoUser
+        {
+            UserId = user.Id,
+            OrganizationId = organizationA.Id,
+            ExternalId = "external-id-a",
+        });
+        await ssoUserRepository.CreateAsync(new SsoUser
+        {
+            UserId = user.Id,
+            OrganizationId = organizationB.Id,
+            ExternalId = "external-id-b",
+        });
+
+        // Act
+        await organizationUserRepository.DeleteManyAsync(new[] { organizationUserA.Id });
+
+        // Assert - only the SSO user tied to the removed organization is deleted
+        var deletedSsoUser = await ssoUserRepository.GetByUserIdOrganizationIdAsync(organizationA.Id, user.Id);
+        Assert.Null(deletedSsoUser);
+
+        var remainingSsoUser = await ssoUserRepository.GetByUserIdOrganizationIdAsync(organizationB.Id, user.Id);
+        Assert.NotNull(remainingSsoUser);
     }
 }

@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
@@ -319,7 +318,7 @@ public class EmergencyAccessControllerTest : IClassFixture<ApiApplicationFactory
         await _loginHelper.LoginAsync(_granteeEmail);
 
         using var message = new HttpRequestMessage(HttpMethod.Post, $"/emergency-access/{invitedEa.Id}/accept");
-        message.Content = JsonContent.Create(new OrganizationUserAcceptRequestModel { Token = expiredToken });
+        message.Content = JsonContent.Create(new EmergencyAccessAcceptRequestModel { Token = expiredToken });
         var response = await _client.SendAsync(message);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);

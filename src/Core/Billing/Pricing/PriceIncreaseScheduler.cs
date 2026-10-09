@@ -7,6 +7,7 @@ using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
+using Bit.Core.Billing.Subscriptions.Schedules;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -92,6 +93,7 @@ public interface IPriceIncreaseScheduler
 
 public class PriceIncreaseScheduler(
     IStripeAdapter stripeAdapter,
+    ISubscriptionScheduleCreator subscriptionScheduleCreator,
     IFeatureService featureService,
     IPricingClient pricingClient,
     IOrganizationRepository organizationRepository,
@@ -112,7 +114,8 @@ public class PriceIncreaseScheduler(
             return false;
         }
 
-        await CreateAndConfigureScheduleAsync(subscription, phase2);
+        await subscriptionScheduleCreator.CreateWithPhasesAsync(
+            subscription, phase2, ManagingSystems.PersonalPriceIncrease);
         return true;
     }
 
@@ -176,7 +179,8 @@ public class PriceIncreaseScheduler(
             [MetadataKeys.MigrationCohortName] = cohort.Name
         };
 
-        await CreateAndConfigureScheduleAsync(subscription, phase2, phaseMetadata);
+        await subscriptionScheduleCreator.CreateWithPhasesAsync(
+            subscription, phase2, ManagingSystems.BusinessPriceIncrease, phaseMetadata);
 
         var assignment = await assignmentRepository.GetByOrganizationIdAsync(organizationId);
         if (assignment is null)
@@ -291,73 +295,6 @@ public class PriceIncreaseScheduler(
         return exists;
     }
 
-    private async Task<SubscriptionSchedule> CreateAndConfigureScheduleAsync(
-        Subscription subscription,
-        SubscriptionSchedulePhaseOptions phase2Options,
-        Dictionary<string, string>? phaseMetadata = null)
-    {
-        var schedule = await stripeAdapter.CreateSubscriptionScheduleAsync(
-            new SubscriptionScheduleCreateOptions { FromSubscription = subscription.Id });
-
-        try
-        {
-            var phase1 = schedule.Phases[0];
-
-            var phase1Options = new SubscriptionSchedulePhaseOptions
-            {
-                StartDate = phase1.StartDate,
-                EndDate = phase1.EndDate,
-                Items = [.. phase1.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
-                {
-                    Price = i.PriceId,
-                    Quantity = i.Quantity
-                })],
-                Discounts = phase1.Discounts is null ? null :
-                [
-                    .. phase1.Discounts.Select(d => new SubscriptionSchedulePhaseDiscountOptions
-                    {
-                        Coupon = d.CouponId
-                    })
-                ],
-                ProrationBehavior = ProrationBehavior.None
-            };
-
-            if (phaseMetadata is not null)
-            {
-                phase1Options.Metadata = phaseMetadata;
-                phase2Options.Metadata = phaseMetadata;
-            }
-
-            await stripeAdapter.UpdateSubscriptionScheduleAsync(schedule.Id,
-                new SubscriptionScheduleUpdateOptions
-                {
-                    EndBehavior = SubscriptionScheduleEndBehavior.Release,
-                    Phases = [phase1Options, phase2Options]
-                });
-
-            return schedule;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex,
-                "Failed to update subscription schedule ({ScheduleId}) for subscription ({SubscriptionId}), attempting to release orphaned schedule",
-                schedule.Id, subscription.Id);
-
-            try
-            {
-                await stripeAdapter.ReleaseSubscriptionScheduleAsync(schedule.Id);
-            }
-            catch (Exception releaseEx)
-            {
-                logger.LogError(releaseEx,
-                    "Failed to release orphaned subscription schedule ({ScheduleId}) for subscription ({SubscriptionId})",
-                    schedule.Id, subscription.Id);
-            }
-
-            throw;
-        }
-    }
-
     private async Task<SubscriptionSchedulePhaseOptions?> ResolvePersonalPhase2Async(Subscription subscription)
     {
         // Stripe.NET deserializes an unexpanded "discounts" array as a list of null entries, and a discount
@@ -445,9 +382,8 @@ public class PriceIncreaseScheduler(
             return null;
         }
 
-        var discounts = (subscription.Customer?.Discount).MergeDiscountCouponIds(
-            subscription.Discounts?.Select(d => d.Source.Coupon.Id),
-            CouponIDs.Milestone2SubscriptionDiscount).ToPhaseDiscountOptions();
+        var discounts = DiscountExtensions.BuildPhaseLevelDiscounts(
+            subscription, [CouponIDs.Milestone2SubscriptionDiscount]);
 
         return new SubscriptionSchedulePhaseOptions
         {
@@ -496,10 +432,9 @@ public class PriceIncreaseScheduler(
             });
         }
 
-        var discounts = (subscription.Customer?.Discount).MergeDiscountCouponIds(
-            subscription.Discounts?.Select(d => d.Source.Coupon.Id),
-            oldPlan.Type == PlanType.FamiliesAnnually2019 ? CouponIDs.Milestone3SubscriptionDiscount : null)
-            .ToPhaseDiscountOptions();
+        var discounts = DiscountExtensions.BuildPhaseLevelDiscounts(
+            subscription,
+            oldPlan.Type == PlanType.FamiliesAnnually2019 ? [CouponIDs.Milestone3SubscriptionDiscount] : []);
 
         var startDate = subscription.GetCurrentPeriodEnd();
         if (startDate == null)
@@ -515,7 +450,7 @@ public class PriceIncreaseScheduler(
             StartDate = startDate,
             EndDate = startDate.Value.AddYears(1),
             Items = items,
-            Discounts = discounts.Count > 0 ? discounts : null,
+            Discounts = discounts,
             ProrationBehavior = ProrationBehavior.None
         };
     }
@@ -607,10 +542,10 @@ public class PriceIncreaseScheduler(
             });
         }
 
-        // Merge de-duplicates, so a coupon on both the customer and the subscription isn't double-added.
-        var discounts = (subscription.Customer?.Discount).MergeDiscountCouponIds(
-            subscription.Discounts?.Select(d => d.Source.Coupon.Id),
-            cohort.ProactiveDiscountCouponCode).ToPhaseDiscountOptions();
+        // BuildPhaseLevelDiscounts de-duplicates, so a coupon on both the customer and the subscription isn't double-added.
+        var discounts = DiscountExtensions.BuildPhaseLevelDiscounts(
+            subscription,
+            cohort.ProactiveDiscountCouponCode is { } proactiveCode ? [proactiveCode] : []);
 
         if (subscription.GetCurrentPeriod() is not { Start: { } currentStart, End: { } currentEnd })
         {
@@ -627,7 +562,7 @@ public class PriceIncreaseScheduler(
             StartDate = currentEnd,
             EndDate = currentEnd + periodLength,
             Items = items,
-            Discounts = discounts.Count > 0 ? discounts : null,
+            Discounts = discounts,
             ProrationBehavior = ProrationBehavior.None
         };
     }

@@ -1,7 +1,6 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
@@ -19,6 +18,7 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Bit.OrganizationAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -141,15 +141,19 @@ public class OrganizationSponsorshipsController : Controller
     public async Task<PreValidateSponsorshipResponseModel> PreValidateSponsorshipToken([FromQuery] string sponsorshipToken)
     {
         var isFreeFamilyPolicyEnabled = false;
+        string sponsoringOrganizationName = null;
         var (isValid, sponsorship) = await _validateRedemptionTokenCommand.ValidateRedemptionTokenAsync(sponsorshipToken, (await CurrentUser).Email);
         if (isValid && sponsorship.SponsoringOrganizationId.HasValue)
         {
             var policy = await _policyQuery.RunAsync(sponsorship.SponsoringOrganizationId.Value,
                 PolicyType.FreeFamiliesSponsorshipPolicy);
             isFreeFamilyPolicyEnabled = policy.Enabled;
+
+            var sponsoringOrganization = await _organizationRepository.GetByIdAsync(sponsorship.SponsoringOrganizationId.Value);
+            sponsoringOrganizationName = sponsoringOrganization?.DisplayName();
         }
 
-        var response = PreValidateSponsorshipResponseModel.From(isValid, isFreeFamilyPolicyEnabled);
+        var response = PreValidateSponsorshipResponseModel.From(isValid, isFreeFamilyPolicyEnabled, sponsoringOrganizationName);
 
         return response;
     }

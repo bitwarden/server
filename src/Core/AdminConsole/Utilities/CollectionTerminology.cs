@@ -1,4 +1,4 @@
-﻿using Bit.Core.Services;
+﻿using Bitwarden.Server.Sdk.Features;
 
 namespace Bit.Core.AdminConsole.Utilities;
 
@@ -18,6 +18,11 @@ public static class CollectionTerminology
     /// enabled, otherwise "collections".
     /// </summary>
     public static string Plural(IFeatureService featureService) =>
+        Plural(featureService.IsEnabled(FeatureFlagKeys.VFO1Foundation));
+
+    /// <inheritdoc cref="Plural(IFeatureService)"/>
+    [Obsolete("Use the Bitwarden.Server.Sdk.Features.IFeatureService overload instead", DiagnosticId = "BWA0002")]
+    public static string Plural(Bit.Core.Services.IFeatureService featureService) =>
         Plural(featureService.IsEnabled(FeatureFlagKeys.VFO1Foundation));
 
     /// <summary>

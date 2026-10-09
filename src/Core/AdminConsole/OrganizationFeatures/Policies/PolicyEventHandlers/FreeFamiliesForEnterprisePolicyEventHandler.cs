@@ -36,8 +36,7 @@ public class FreeFamiliesForEnterprisePolicyEventHandler(
 
         foreach (var org in organizationSponsorships)
         {
-            var offerAcceptanceDate = org.ValidUntil!.Value.AddDays(-7).ToString("MM/dd/yyyy");
-            await mailService.SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(org.FriendlyName, offerAcceptanceDate,
+            await mailService.SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(org.FriendlyName,
                 org.SponsoredOrganizationId.ToString(), organizationName);
         }
     }

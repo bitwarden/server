@@ -57,12 +57,13 @@ public class OrganizationCollectionManagementAccessHandlerTests
     }
 
     [Theory]
-    [BitAutoData(true, false, false)]
-    [BitAutoData(false, true, false)]
-    [BitAutoData(false, false, true)]
-    public async Task HandleRequirementAsync_WhenCustomUserManagesUsersOrGroupsOrAccessesReports_Authorized_WithoutQueryingCollections(
-        bool manageUsers, bool manageGroups, bool accessReports, Guid orgId, Guid userId, User user,
-        SutProvider<OrganizationCollectionManagementAccessHandler> sutProvider)
+    [BitAutoData(true, false, false, false)]
+    [BitAutoData(false, true, false, false)]
+    [BitAutoData(false, false, true, false)]
+    [BitAutoData(false, false, false, true)]
+    public async Task HandleRequirementAsync_WhenCustomUserManagesUsersOrGroupsOrResetPasswordOrAccessesReports_Authorized_WithoutQueryingCollections(
+        bool manageUsers, bool manageGroups, bool manageResetPassword, bool accessReports, Guid orgId, Guid userId,
+        User user, SutProvider<OrganizationCollectionManagementAccessHandler> sutProvider)
     {
         ArrangeRoute(sutProvider, orgId, userId);
         ArrangeOrganizationAbility(sutProvider, orgId, limitCollectionCreation: true);
@@ -74,6 +75,7 @@ public class OrganizationCollectionManagementAccessHandlerTests
             {
                 ManageUsers = manageUsers,
                 ManageGroups = manageGroups,
+                ManageResetPassword = manageResetPassword,
                 AccessReports = accessReports,
             }
         });

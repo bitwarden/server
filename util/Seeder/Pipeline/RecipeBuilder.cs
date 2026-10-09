@@ -43,6 +43,8 @@ public class RecipeBuilder(string name, IServiceCollection services)
 
     internal bool HasNamedFolders { get; set; }
 
+    internal bool HasBilling { get; set; }
+
     /// <summary>
     /// Registers a step as a keyed singleton service with preserved ordering.
     /// </summary>

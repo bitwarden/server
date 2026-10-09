@@ -28,7 +28,9 @@ public class OrganizationUserResponseModel : ResponseModel
         ExternalId = organizationUser.ExternalId;
         AccessSecretsManager = organizationUser.AccessSecretsManager;
         AccessPam = organizationUser.AccessPam;
-        Permissions = organizationUser.GetPermissions();
+        // The stored permissions blob is not guaranteed to be cleared when a member moves off Custom, so the role
+        // rather than the blob decides whether custom permissions are exposed.
+        Permissions = Type == OrganizationUserType.Custom ? organizationUser.GetPermissions() : null;
         ResetPasswordEnrolled = OrganizationUser.IsValidResetPasswordKey(organizationUser.ResetPasswordKey);
     }
 
@@ -48,7 +50,7 @@ public class OrganizationUserResponseModel : ResponseModel
         ExternalId = organizationUser.ExternalId;
         AccessSecretsManager = organizationUser.AccessSecretsManager;
         AccessPam = organizationUser.AccessPam;
-        Permissions = organizationUser.GetPermissions();
+        Permissions = Type == OrganizationUserType.Custom ? organizationUser.GetPermissions() : null;
         ResetPasswordEnrolled = OrganizationUser.IsValidResetPasswordKey(organizationUser.ResetPasswordKey);
         UsesKeyConnector = organizationUser.UsesKeyConnector;
         HasMasterPassword = organizationUser.HasMasterPassword;

@@ -3,6 +3,7 @@ using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -543,11 +544,37 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task DeleteAsync_WithClaimedAccount_ThrowsBadRequestException(
+        User user,
+        Organization organization,
+        SutProvider<UserService> sutProvider)
+    {
+        organization.Enabled = true;
+        organization.UseOrganizationDomains = true;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByVerifiedUserEmailDomainAsync(user.Id)
+            .Returns([organization]);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.DeleteAsync(user));
+
+        Assert.Equal(new CannotDeleteClaimedAccountError().Message, exception.Message);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceive().GetCountByOnlyOwnerAsync(user.Id);
+        await sutProvider.GetDependency<IUserRepository>().DidNotReceive().DeleteAsync(user);
+    }
+
+    [Theory, BitAutoData]
     public async Task DeleteAsync_WithGatewaySubscription_CallsSubscriberService(
         User user,
         SutProvider<UserService> sutProvider)
     {
         user.GatewaySubscriptionId = "sub_test";
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByVerifiedUserEmailDomainAsync(user.Id)
+            .Returns([]);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetCountByOnlyOwnerAsync(user.Id)
@@ -580,6 +607,10 @@ public class UserServiceTests
         // 3. File blob still exists but with no parent Send
         user.GatewaySubscriptionId = null;
 
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByVerifiedUserEmailDomainAsync(user.Id)
+            .Returns([]);
+
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetCountByOnlyOwnerAsync(user.Id)
             .Returns(0);
@@ -604,6 +635,66 @@ public class UserServiceTests
         await sutProvider.GetDependency<ISendFileStorageService>()
             .Received(1).DeleteFilesForUserAsync(user.Id);
         Assert.Equal(new[] { "file", "db" }, callOrder);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAsync_WithTokenAndInvalidToken_ReturnsFailedResult(User user)
+    {
+        var sutProvider = new SutProvider<UserService>()
+            .CreateWithUserServiceCustomizations(user);
+
+        var result = await sutProvider.Sut.DeleteAsync(user, "not_the_right_token");
+
+        Assert.False(result.Succeeded);
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .DidNotReceive().GetByVerifiedUserEmailDomainAsync(Arg.Any<Guid>());
+        await sutProvider.GetDependency<IUserRepository>().DidNotReceive().DeleteAsync(user);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAsync_WithTokenAndClaimedAccount_ThrowsBadRequestException(
+        User user, Organization organization)
+    {
+        organization.Enabled = true;
+        organization.UseOrganizationDomains = true;
+
+        var sutProvider = new SutProvider<UserService>()
+            .CreateWithUserServiceCustomizations(user);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByVerifiedUserEmailDomainAsync(user.Id)
+            .Returns([organization]);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.DeleteAsync(user, "otp_token"));
+
+        Assert.Equal(new CannotDeleteClaimedAccountError().Message, exception.Message);
+        await sutProvider.GetDependency<IUserRepository>().DidNotReceive().DeleteAsync(user);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAsync_WithTokenAndUnclaimedAccount_DeletesUser(User user)
+    {
+        user.GatewaySubscriptionId = null;
+
+        var sutProvider = new SutProvider<UserService>()
+            .CreateWithUserServiceCustomizations(user);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByVerifiedUserEmailDomainAsync(user.Id)
+            .Returns([]);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetCountByOnlyOwnerAsync(user.Id)
+            .Returns(0);
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetCountByOnlyOwnerAsync(user.Id)
+            .Returns(0);
+
+        var result = await sutProvider.Sut.DeleteAsync(user, "otp_token");
+
+        Assert.True(result.Succeeded);
+        await sutProvider.GetDependency<IUserRepository>().Received(1).DeleteAsync(user);
     }
 
     // PM-37165: locks in the legacy path's non-write of LastApiKeyRotationDate. Once the
@@ -656,6 +747,11 @@ public static class UserServiceSutProviderExtensions
                     ProviderMap = new Dictionary<string, TokenProviderDescriptor>()
                     {
                         ["Email"] = new TokenProviderDescriptor(typeof(IUserTwoFactorTokenProvider<User>))
+                        {
+                            ProviderInstance = fakeUserTwoFactorProvider,
+                        },
+                        // The delete-recover-token endpoint's DeleteAsync(User, string) looks up by "Default", not "Email".
+                        [TokenOptions.DefaultProvider] = new TokenProviderDescriptor(typeof(IUserTwoFactorTokenProvider<User>))
                         {
                             ProviderInstance = fakeUserTwoFactorProvider,
                         }

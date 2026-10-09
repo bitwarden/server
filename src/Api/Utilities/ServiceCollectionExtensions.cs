@@ -2,11 +2,13 @@
 using Bit.Api.Tools.Authorization;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Authorization.Ciphers;
 using Bit.Core.Vault.Authorization.SecurityTasks;
 using Bit.SharedWeb.Health;
 using Bit.SharedWeb.Swagger;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi;
 
 namespace Bit.Api.Utilities;
@@ -114,8 +116,12 @@ public static class ServiceCollectionExtensions
         // Changing to singleton would allow one user's cached permissions to be reused by other users in the same organization.
         services.AddScoped<IAuthorizationHandler, SecurityTaskAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, SecurityTaskOrganizationAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, CipherOrganizationAuthorizationHandler>();
 
         // Admin Console authorization handlers
         services.AddAdminConsoleAuthorizationHandlers();
+
+        // Admin Console ActingUserQuery
+        services.TryAddScoped<IGetActingUserForOrganizationQuery, GetActingUserForOrganizationQuery>();
     }
 }

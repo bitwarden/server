@@ -96,6 +96,7 @@ services:
       SIMPLESAMLPHP_SP_SINGLE_LOGOUT_SERVICE: null
     volumes:
       - ./authsources.php:/var/www/simplesamlphp/config/authsources.php
+      - ./saml20-sp-remote.php:/var/www/simplesamlphp/metadata/saml20-sp-remote.php
     profiles:
       - idp
 

@@ -2,16 +2,43 @@
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
 
+/// <summary>
+/// The organization is at its seat cap and the member inviting can manage billing, so they can raise the cap
+/// themselves.
+/// </summary>
 public record PasswordManagerSeatLimitHasBeenReachedError(PasswordManagerSubscriptionUpdate InvalidRequest)
-    : Error<PasswordManagerSubscriptionUpdate>(Code, InvalidRequest)
+    : Error<PasswordManagerSubscriptionUpdate>(GetErrorMessage(InvalidRequest), InvalidRequest)
 {
-    public const string Code = "Seat limit has been reached.";
+    // Reported against the autoscale cap, not Seats: this error only comes from the MaxSeatsExceeded branch, and
+    // the limit that was breached there is MaxAutoScaleSeats.
+    private static string GetErrorMessage(PasswordManagerSubscriptionUpdate invalidRequest) =>
+        string.Format(Code, invalidRequest.MaxAutoScaleSeats);
+
+    public const string Code = "Seat limit of {0} has been reached. Increase your seat limit to invite more members.";
+}
+
+/// <summary>
+/// The organization is at its seat cap and the member inviting cannot manage billing, so they have to go through
+/// an owner to raise the cap.
+/// </summary>
+public record PasswordManagerSeatLimitHasBeenReachedNoBillingAccessError(PasswordManagerSubscriptionUpdate InvalidRequest)
+    : Error<PasswordManagerSubscriptionUpdate>(GetErrorMessage(InvalidRequest), InvalidRequest)
+{
+    // Reported against the autoscale cap, not Seats: this error only comes from the MaxSeatsExceeded branch, and
+    // the limit that was breached there is MaxAutoScaleSeats.
+    private static string GetErrorMessage(PasswordManagerSubscriptionUpdate invalidRequest) =>
+        string.Format(Code, invalidRequest.MaxAutoScaleSeats);
+
+    public const string Code = "Seat limit of {0} has been reached. Contact your organization owner to increase the seat limit.";
 }
 
 public record PasswordManagerPlanDoesNotAllowAdditionalSeatsError(PasswordManagerSubscriptionUpdate InvalidRequest)
-    : Error<PasswordManagerSubscriptionUpdate>(Code, InvalidRequest)
+    : Error<PasswordManagerSubscriptionUpdate>(GetErrorMessage(InvalidRequest), InvalidRequest)
 {
-    public const string Code = "Plan does not allow additional seats.";
+    private static string GetErrorMessage(PasswordManagerSubscriptionUpdate invalidRequest) =>
+        string.Format(Code, invalidRequest.Seats);
+
+    public const string Code = "Seat limit of {0} has been reached. Contact Customer Support to upgrade your plan.";
 }
 
 public record PasswordManagerPlanOnlyAllowsMaxAdditionalSeatsError(PasswordManagerSubscriptionUpdate InvalidRequest)
