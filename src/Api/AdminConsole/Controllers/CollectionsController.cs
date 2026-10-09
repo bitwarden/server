@@ -7,6 +7,7 @@ using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Collections.Interfaces;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
@@ -35,6 +36,8 @@ public class CollectionsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly IBulkAddCollectionAccessCommand _bulkAddCollectionAccessCommand;
     private readonly IProviderService _providerService;
+    private readonly ICollectionAuthorizationService _collectionAuthorizationService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public CollectionsController(
         ICollectionRepository collectionRepository,
@@ -45,7 +48,9 @@ public class CollectionsController : Controller
         IAuthorizationService authorizationService,
         ICurrentContext currentContext,
         IBulkAddCollectionAccessCommand bulkAddCollectionAccessCommand,
-        IProviderService providerService)
+        IProviderService providerService,
+        ICollectionAuthorizationService collectionAuthorizationService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
         _collectionRepository = collectionRepository;
         _createCollectionCommand = createCollectionCommand;
@@ -56,6 +61,8 @@ public class CollectionsController : Controller
         _currentContext = currentContext;
         _bulkAddCollectionAccessCommand = bulkAddCollectionAccessCommand;
         _providerService = providerService;
+        _collectionAuthorizationService = collectionAuthorizationService;
+        _featureService = featureService;
     }
 
     [HttpGet("{id}")]
@@ -220,7 +227,9 @@ public class CollectionsController : Controller
     [HttpPut("{id}")]
     public async Task<CollectionResponseModel> Put(Guid orgId, [InjectCollection] Collection collection, [FromBody] UpdateCollectionRequestModel model)
     {
-        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.Update)).Succeeded;
+        var authorized = _featureService.IsEnabled(FeatureFlagKeys.AuthorizationServices)
+            ? await _collectionAuthorizationService.AuthorizeUpdateAsync(orgId, collection.Id)
+            : (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.Update)).Succeeded;
         if (!authorized)
         {
             throw new NotFoundException();
