@@ -64,6 +64,79 @@ namespace Bit.SqliteMigrations.Migrations
                     b.ToTable("OrganizationMemberBaseDetails");
                 });
 
+            modelBuilder.Entity("Bit.DataMigrations.DataMigrationState", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CompletedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Cursor")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LeaseExpiresDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LeaseOwner")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Partition")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("PausedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RangeEnd")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RangeStart")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("RowsConverted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("RowsFailed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("RowsScanned")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("RowsSkippedByRace")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("StartedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("TotalRows")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name", "Partition")
+                        .IsUnique();
+
+                    b.ToTable("DataMigrationState", (string)null);
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Collection", b =>
                 {
                     b.Property<Guid>("Id")
