@@ -43,6 +43,11 @@ public interface IEventService
     /// </summary>
     Task LogOrganizationEventAsync(OrganizationAbility organization, EventType type, DateTime? date = null);
     Task LogOrganizationEventAsync(Organization organization, EventType type, EventSystemUser systemUser, DateTime? date = null);
+    /// <summary>
+    /// Logs a partnership lifecycle event for the organization with no acting user, user, or client IP address,
+    /// since these events are delivered to partner-configured destinations.
+    /// </summary>
+    Task LogOrganizationPartnershipEventAsync(Guid organizationId, EventType type, DateTime? date = null);
     Task LogProviderUserEventAsync(ProviderUser providerUser, EventType type, DateTime? date = null);
     Task LogProviderUsersEventAsync(IEnumerable<(ProviderUser, EventType, DateTime?)> events);
     Task LogProviderOrganizationEventAsync(ProviderOrganization providerOrganization, EventType type, DateTime? date = null);

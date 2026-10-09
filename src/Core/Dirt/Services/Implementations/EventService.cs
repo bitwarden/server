@@ -379,6 +379,25 @@ public class EventService : IEventService
         await _eventWriteService.CreateAsync(EventMessage);
     }
 
+    public async Task LogOrganizationPartnershipEventAsync(Guid organizationId, EventType type, DateTime? date = null)
+    {
+        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
+        if (!CanUseEvents(orgAbility))
+        {
+            return;
+        }
+
+        var e = new EventMessage
+        {
+            OrganizationId = organizationId,
+            ProviderId = await GetProviderIdAsync(organizationId),
+            Type = type,
+            Date = date.GetValueOrDefault(DateTime.UtcNow),
+            DeviceType = DeviceType.Server
+        };
+        await _eventWriteService.CreateAsync(e);
+    }
+
     public async Task LogProviderUserEventAsync(ProviderUser providerUser, EventType type, DateTime? date = null)
     {
         await LogProviderUsersEventAsync(new[] { (providerUser, type, date) });
