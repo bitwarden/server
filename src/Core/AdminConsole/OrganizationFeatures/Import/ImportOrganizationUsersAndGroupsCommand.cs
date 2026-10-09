@@ -122,8 +122,9 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
         // only removes Users.
         var removeUsersSet = new HashSet<string>(removeUserExternalIds)
             .Except(importUserData.ImportedExternalIds)
-            .Where(u => existingUsersDict.ContainsKey(u) && existingUsersDict[u].Type != OrganizationUserType.Owner &&
-                        !IsProtectedFromScopedApiKey(existingUsersDict[u].Type))
+            .Where(u => existingUsersDict.TryGetValue(u, out var existingUser) &&
+                        existingUser.Type != OrganizationUserType.Owner &&
+                        !IsProtectedFromScopedApiKey(existingUser.Type))
             .Select(u => existingUsersDict[u]);
 
         await _organizationUserRepository.DeleteManyAsync(removeUsersSet.Select(u => u.Id));
