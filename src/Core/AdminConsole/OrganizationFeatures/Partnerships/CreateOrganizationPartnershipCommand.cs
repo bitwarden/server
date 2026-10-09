@@ -25,6 +25,11 @@ public class CreateOrganizationPartnershipCommand(
             return new UnsupportedBindingMode();
         }
 
+        if (!Enum.IsDefined(request.SponsoredPlanType))
+        {
+            return new UnsupportedSponsoredPlanType();
+        }
+
         var origins = new List<string>();
         foreach (var origin in request.RegisteredReturnOrigins)
         {
