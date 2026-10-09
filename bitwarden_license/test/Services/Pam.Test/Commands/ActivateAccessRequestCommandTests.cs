@@ -80,7 +80,7 @@ public class ActivateAccessRequestCommandTests
         var sutProvider = Setup();
         SetupApprovedRequest(sutProvider, request);
         request.ExtensionOfLeaseId = parentLeaseId;
-        // Revoking the parent clears the only thing refusing the mint.
+        // With the parent revoked, the extension guard is the only thing refusing the mint.
         sutProvider.GetDependency<ISingleActiveLeaseEvaluator>()
             .AppliesAsync(request.RequesterId, request.CipherId).Returns(true);
 
@@ -121,6 +121,8 @@ public class ActivateAccessRequestCommandTests
         Assert.Same(existing, result);
         await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
             .CreateFromApprovedRequestAsync(default!, default, default);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
     }
 
     [Theory]
@@ -134,7 +136,6 @@ public class ActivateAccessRequestCommandTests
         existing.Action = leaseAction;
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByAccessRequestIdAsync(request.Id).Returns(existing);
 
-        // A revoked or lapsed lease is final.
         await Assert.ThrowsAsync<ConflictException>(
             () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now));
     }
@@ -204,6 +205,10 @@ public class ActivateAccessRequestCommandTests
         Assert.NotEqual(default, result.Id);
         await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1)
             .CreateFromApprovedRequestAsync(result, _now, Arg.Any<bool>());
+        await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
+            .NotifyCollectionApproversAsync(request.CollectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(request.RequesterId);
     }
 
     [Theory, BitAutoData]
@@ -222,6 +227,10 @@ public class ActivateAccessRequestCommandTests
         var result = await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now);
 
         Assert.Same(winner, result);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
     }
 
     [Theory, BitAutoData]
@@ -244,7 +253,6 @@ public class ActivateAccessRequestCommandTests
     {
         var sutProvider = Setup();
         SetupApprovedRequest(sutProvider, request);
-        // The constraint binds for this caller and cipher: enforcement must be passed through to the mint.
         sutProvider.GetDependency<ISingleActiveLeaseEvaluator>().AppliesAsync(request.RequesterId, request.CipherId)
             .Returns(true);
         sutProvider.GetDependency<IAccessLeaseRepository>()
@@ -272,6 +280,10 @@ public class ActivateAccessRequestCommandTests
         var ex = await Assert.ThrowsAsync<ConflictException>(
             () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now));
         Assert.Contains("Another active lease exists", ex.Message);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
     }
 
     [Theory, BitAutoData]
@@ -279,7 +291,7 @@ public class ActivateAccessRequestCommandTests
     {
         var sutProvider = Setup();
         SetupApprovedRequest(sutProvider, request);
-        // An escape path leaves the caller unconstrained, so enforcement must be passed as false.
+        // An escape path leaves the caller unconstrained.
         sutProvider.GetDependency<ISingleActiveLeaseEvaluator>().AppliesAsync(request.RequesterId, request.CipherId)
             .Returns(false);
         sutProvider.GetDependency<IAccessLeaseRepository>()
@@ -292,7 +304,6 @@ public class ActivateAccessRequestCommandTests
             .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, false);
     }
 
-    // Attempt before the mint, LeaseActivated outcome after.
     [Theory, BitAutoData]
     public async Task ActivateAsync_Minted_EmitsActivatedAttemptThenOutcome(AccessRequest request)
     {
@@ -313,7 +324,6 @@ public class ActivateAccessRequestCommandTests
             && e.AccessRequestId == request.Id));
     }
 
-    // Outcome kind follows the mint result.
     [Theory, BitAutoData]
     public async Task ActivateAsync_SingleActiveLeaseConflict_EmitsAttemptThenRejectedOutcome(AccessRequest request)
     {
@@ -335,6 +345,7 @@ public class ActivateAccessRequestCommandTests
             e.Kind == AccessAuditEventKind.LeaseActivationRejected && e.Phase == AccessAuditEventPhase.Outcome));
     }
 
+    // The rule pinned at submit is re-evaluated before the mint; nothing downstream re-asks.
     [Theory, BitAutoData]
     public async Task ActivateAsync_PinnedRuleStillAdmitsCaller_Mints(AccessRequest request)
     {
@@ -354,7 +365,6 @@ public class ActivateAccessRequestCommandTests
     {
         var sutProvider = Setup();
         SetupApprovedRequest(sutProvider, request);
-        // Allowlist narrowed since approval to a range the caller is no longer in.
         SetupPinnedRule(sutProvider, request, new IpAllowlistCondition { Cidrs = ["192.168.0.0/16"] });
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
@@ -363,6 +373,10 @@ public class ActivateAccessRequestCommandTests
         Assert.Contains("current network", ex.Message);
         await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
             .CreateFromApprovedRequestAsync(default!, default, default);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
         // Held to the rule that approved it, not whatever rule governs the cipher today.
         await sutProvider.GetDependency<IGoverningRuleResolver>().DidNotReceiveWithAnyArgs()
             .ResolveAsync(default, default, default!);
@@ -441,7 +455,6 @@ public class ActivateAccessRequestCommandTests
     {
         var sutProvider = Setup();
         SetupApprovedRequest(sutProvider, request);
-        // Rows written before RuleId existed carry no pin; falls back to resolution.
         request.RuleId = null;
         sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(request.RequesterId, request.CipherId, Arg.Any<AccessSignals>())
@@ -494,12 +507,11 @@ public class ActivateAccessRequestCommandTests
     {
         // No TimeProvider: the command takes the caller's clock as a parameter.
         return new SutProvider<ActivateAccessRequestCommand>()
-            // Real engine, not a stub: these tests exercise actual IP allowlist evaluation.
+            // Real engine, so these tests exercise actual IP allowlist evaluation.
             .SetDependency<IAccessRuleEngine>(new AccessRuleEngine())
             .Create();
     }
 
-    // Approved request with an open window containing _now, a pinned rule, and no produced lease.
     private static void SetupApprovedRequest(SutProvider<ActivateAccessRequestCommand> sutProvider, AccessRequest request)
     {
         request.Action = AccessRequestAction.Approved;
