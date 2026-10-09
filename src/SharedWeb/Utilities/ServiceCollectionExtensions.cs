@@ -157,6 +157,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<ICipherService, CipherService>();
         services.TryAddScoped<ICipherSyncPushService, CipherSyncPushService>();
+        services.TryAddScoped<IPartialCipherWriteGuard, PartialCipherWriteGuard>();
         // PAM credential leasing is commercial; OSS builds never gate. The commercial Pam library
         // overrides this default by registering the real gate after AddBaseServices, where the last
         // registration wins — the shape AddOosServices uses for IProviderService. That override must
