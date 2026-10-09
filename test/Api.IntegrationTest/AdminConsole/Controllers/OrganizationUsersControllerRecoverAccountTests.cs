@@ -15,6 +15,7 @@ using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.Models.Api;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Identity;
 using Xunit;
@@ -350,6 +351,44 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
     }
 
     [Fact]
+    public async Task RecoverAccount_AsCustomWithFewerPermissions_CannotRecoverCustomWithMorePermissions()
+    {
+        // Arrange
+        var targetCustomOrgUser = await LoginAsAccountRecoveryManagerWithMorePermissionedTargetAsync();
+
+        var resetPasswordRequest = new OrganizationUserResetPasswordRequestModel
+        {
+            ResetMasterPassword = true,
+            NewMasterPasswordHash = "new-master-password-hash",
+            Key = "encrypted-recovery-key"
+        };
+
+        // Act
+        var response = await _client.PutAsJsonAsync(
+            $"organizations/{_organization.Id}/users/{targetCustomOrgUser.Id}/recover-account",
+            resetPasswordRequest);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var model = await response.Content.ReadFromJsonAsync<ErrorResponseModel>();
+        Assert.Contains(RecoverAccountAuthorizationHandler.FailureReason, model.Message);
+    }
+
+    [Fact]
+    public async Task GetResetPasswordDetails_AsCustomWithFewerPermissions_DoesNotDiscloseKeyMaterial()
+    {
+        // Arrange
+        var targetCustomOrgUser = await LoginAsAccountRecoveryManagerWithMorePermissionedTargetAsync();
+
+        // Act
+        var response = await _client.GetAsync(
+            $"organizations/{_organization.Id}/users/{targetCustomOrgUser.Id}/reset-password-details");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
     public async Task GetResetPasswordDetails_ForProviderMemberOutsideCallersProviders_DoesNotDiscloseKeyMaterial()
     {
         // Arrange - the caller is an organization Owner with no membership of the target's provider
@@ -472,5 +511,23 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
             .ReadFromJsonAsync<AccountRecoveryDetailsList>();
         var details = Assert.Single(result.Data);
         Assert.Equal(memberOrgUser.Id, details.OrganizationUserId);
+    }
+
+    /// <summary>
+    /// Logs in as a Custom user who can only manage account recovery, and returns an enrolled Custom user
+    /// who holds permissions the caller does not.
+    /// </summary>
+    private async Task<OrganizationUser> LoginAsAccountRecoveryManagerWithMorePermissionedTargetAsync()
+    {
+        var (customEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.Custom, new Permissions { ManageResetPassword = true });
+        await _loginHelper.LoginAsync(customEmail);
+
+        var (_, targetCustomOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.Custom,
+            new Permissions { EditAnyCollection = true, AccessImportExport = true });
+        await SetResetPasswordKeyAsync(targetCustomOrgUser);
+
+        return targetCustomOrgUser;
     }
 }

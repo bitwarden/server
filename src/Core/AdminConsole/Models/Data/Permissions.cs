@@ -36,4 +36,19 @@ public class Permissions
         (ManageScim, Claims.CustomPermissions.ManageScim),
         (ManageAccessRules, Claims.CustomPermissions.ManageAccessRules),
     };
+
+    /// <summary>
+    /// Returns true if this permission set holds every permission granted in <paramref name="other"/>.
+    /// A null <paramref name="other"/> grants nothing, so it is always included.
+    /// </summary>
+    public bool Includes(Permissions? other)
+    {
+        if (other is null)
+        {
+            return true;
+        }
+
+        var claims = ClaimsMap.ToDictionary(c => c.ClaimName, c => c.Permission);
+        return other.ClaimsMap.All(granted => !granted.Permission || claims[granted.ClaimName]);
+    }
 }
