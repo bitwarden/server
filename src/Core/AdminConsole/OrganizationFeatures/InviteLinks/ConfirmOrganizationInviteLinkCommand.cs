@@ -79,7 +79,7 @@ public class ConfirmOrganizationInviteLinkCommand(
     /// <summary>
     /// Looks up the invite link, its organization, and the user's existing membership for the validator.
     /// </summary>
-    private async Task<ConfirmOrganizationInviteLinkValidationRequest> BuildValidationRequestAsync(
+    private async Task<OrganizationInviteLinkValidationRequest> BuildValidationRequestAsync(
         ConfirmOrganizationInviteLinkRequest request)
     {
         var inviteLink = await organizationInviteLinkRepository.GetByOrganizationIdAsync(request.OrganizationId);
@@ -90,7 +90,7 @@ public class ConfirmOrganizationInviteLinkCommand(
             ? null
             : await ResolveExistingOrganizationUserAsync(organization, request.User);
 
-        return new ConfirmOrganizationInviteLinkValidationRequest
+        return new OrganizationInviteLinkValidationRequest
         {
             InviteLink = inviteLink,
             Code = request.Code,

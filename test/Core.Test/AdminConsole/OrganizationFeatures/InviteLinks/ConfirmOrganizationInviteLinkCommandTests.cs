@@ -47,8 +47,8 @@ public class ConfirmOrganizationInviteLinkCommandTests
     {
         // Arrange
         sutProvider.GetDependency<IConfirmOrganizationInviteLinkValidator>()
-            .ValidateAsync(Arg.Any<ConfirmOrganizationInviteLinkValidationRequest>())
-            .Returns(ci => Invalid(ci.Arg<ConfirmOrganizationInviteLinkValidationRequest>(), new InviteLinkNotFound()));
+            .ValidateAsync(Arg.Any<OrganizationInviteLinkValidationRequest>())
+            .Returns(ci => Invalid(ci.Arg<OrganizationInviteLinkValidationRequest>(), new InviteLinkNotFound()));
 
         // Act
         var result = await sutProvider.Sut.ConfirmAsync(request);
@@ -86,7 +86,7 @@ public class ConfirmOrganizationInviteLinkCommandTests
         // Assert
         await sutProvider.GetDependency<IConfirmOrganizationInviteLinkValidator>()
             .Received(1)
-            .ValidateAsync(Arg.Is<ConfirmOrganizationInviteLinkValidationRequest>(r =>
+            .ValidateAsync(Arg.Is<OrganizationInviteLinkValidationRequest>(r =>
                 r.InviteLink == inviteLink &&
                 r.Code == request.Code &&
                 r.Organization == organization &&
@@ -117,7 +117,7 @@ public class ConfirmOrganizationInviteLinkCommandTests
         // Assert
         await sutProvider.GetDependency<IConfirmOrganizationInviteLinkValidator>()
             .Received(1)
-            .ValidateAsync(Arg.Is<ConfirmOrganizationInviteLinkValidationRequest>(r =>
+            .ValidateAsync(Arg.Is<OrganizationInviteLinkValidationRequest>(r =>
                 r.ExistingOrganizationUser == invitedOrganizationUser));
     }
 
@@ -507,8 +507,8 @@ public class ConfirmOrganizationInviteLinkCommandTests
             .Returns(existingOrganizationUser);
 
         sutProvider.GetDependency<IConfirmOrganizationInviteLinkValidator>()
-            .ValidateAsync(Arg.Any<ConfirmOrganizationInviteLinkValidationRequest>())
-            .Returns(ci => Valid(ci.Arg<ConfirmOrganizationInviteLinkValidationRequest>()));
+            .ValidateAsync(Arg.Any<OrganizationInviteLinkValidationRequest>())
+            .Returns(ci => Valid(ci.Arg<OrganizationInviteLinkValidationRequest>()));
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)

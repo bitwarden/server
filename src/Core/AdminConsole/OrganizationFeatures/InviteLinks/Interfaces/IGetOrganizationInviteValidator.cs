@@ -3,9 +3,7 @@
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 
 /// <summary>
-/// Performs the read-only validation and policy precheck shared by the invite link confirmation
-/// endpoints (retrieving the encrypted org key and confirming the user). No write operations are
-/// performed; the caller is responsible for any state changes once validation succeeds.
+/// Validates that a user is eligible to retrieve the invite for an invite link.
 /// </summary>
 /// <remarks>
 /// The following are validated, in this order:
@@ -13,19 +11,18 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 ///     <item><see cref="IInviteLinkEligibilityValidator"/>: the invite link exists and its code matches, its
 ///     organization is enabled and supports invite links, the user's email domain is allowed, and the email is
 ///     verified.</item>
-///     <item>The link supports confirmation.</item>
-///     <item><see cref="IConfirmInviteLinkMembershipStatusValidator"/>: any existing membership is neither revoked nor
-///     already confirmed.</item>
+///     <item>The existing membership's status: <see cref="IConfirmInviteLinkMembershipStatusValidator"/> when the link
+///     supports confirmation, otherwise <see cref="IAcceptInviteLinkMembershipStatusValidator"/>.</item>
 ///     <item><see cref="IInviteLinkFreeOrganizationAdminValidator"/>: the one-admin-per-Free-organization limit.</item>
 ///     <item><see cref="IInviteLinkOrganizationCapabilityValidator"/>: seat availability for a brand-new or Staged
 ///     member.</item>
 ///     <item><see cref="IInviteLinkPolicyValidator"/>: the Single Organization, Require Two-Factor Authentication, and
 ///     Automatic User Confirmation policies.</item>
 /// </list>
-/// The caller supplies the invite link, organization, and existing membership. Errors from the shared validators are
-/// translated by <see cref="ConfirmOrganizationInviteLinkErrorMapper"/>.
+/// The caller supplies the invite link, organization, and existing membership. The reset password key is left to the
+/// accept and confirm endpoints.
 /// </remarks>
-public interface IConfirmOrganizationInviteLinkValidator
+public interface IGetOrganizationInviteValidator
 {
     Task<ValidationResult<OrganizationInviteLinkValidationRequest>> ValidateAsync(
         OrganizationInviteLinkValidationRequest request);

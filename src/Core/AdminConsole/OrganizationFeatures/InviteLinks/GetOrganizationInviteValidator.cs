@@ -1,25 +1,22 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
+using Bit.Core.Entities;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 
 /// <summary>
-/// Read-only precheck for the invite link confirmation flow. See
-/// <see cref="IConfirmOrganizationInviteLinkValidator"/> for the checks performed.
+/// See <see cref="IGetOrganizationInviteValidator"/>.
 /// </summary>
-/// <remarks>
-/// This performs the eligibility checks without any write side effects, so the confirmation endpoints
-/// can verify a user before they are given the organization key. Write-time concerns (e.g. creating the
-/// default collection, auto-scaling seats) are left to the consuming command.
-/// </remarks>
-public class ConfirmOrganizationInviteLinkValidator(
+public class GetOrganizationInviteValidator(
     IInviteLinkEligibilityValidator inviteLinkEligibilityValidator,
+    IAcceptInviteLinkMembershipStatusValidator acceptInviteLinkMembershipStatusValidator,
     IConfirmInviteLinkMembershipStatusValidator confirmInviteLinkMembershipStatusValidator,
     IInviteLinkFreeOrganizationAdminValidator inviteLinkFreeOrganizationAdminValidator,
     IInviteLinkOrganizationCapabilityValidator inviteLinkOrganizationCapabilityValidator,
     IInviteLinkPolicyValidator inviteLinkPolicyValidator)
-    : IConfirmOrganizationInviteLinkValidator
+    : IGetOrganizationInviteValidator
 {
     public async Task<ValidationResult<OrganizationInviteLinkValidationRequest>> ValidateAsync(
         OrganizationInviteLinkValidationRequest request)
@@ -36,27 +33,17 @@ public class ConfirmOrganizationInviteLinkValidator(
         });
         if (eligibilityResult.IsError)
         {
-            return Invalid(request, ConfirmOrganizationInviteLinkErrorMapper.ToValidationError(eligibilityResult.AsError));
+            return Invalid(request, eligibilityResult.AsError);
         }
 
         // The eligibility check guarantees both exist.
         var validLink = request.InviteLink!;
         var validOrganization = request.Organization!;
 
-        if (!validLink.SupportsConfirmation)
-        {
-            return Invalid(request, new ConfirmInviteLinkConfirmationNotSupported());
-        }
-
-        var membershipStatusResult = confirmInviteLinkMembershipStatusValidator.Validate(
-            new InviteLinkMembershipStatusValidationRequest
-            {
-                Organization = validOrganization,
-                ExistingOrganizationUser = existingOrganizationUser,
-            });
+        var membershipStatusResult = ValidateMembershipStatus(validLink, validOrganization, existingOrganizationUser);
         if (membershipStatusResult.IsError)
         {
-            return Invalid(request, ConfirmOrganizationInviteLinkErrorMapper.ToValidationError(membershipStatusResult.AsError));
+            return Invalid(request, membershipStatusResult.AsError);
         }
 
         var freeOrganizationAdminResult = await inviteLinkFreeOrganizationAdminValidator.ValidateAsync(
@@ -68,8 +55,7 @@ public class ConfirmOrganizationInviteLinkValidator(
             });
         if (freeOrganizationAdminResult.IsError)
         {
-            return Invalid(request,
-                ConfirmOrganizationInviteLinkErrorMapper.ToValidationError(freeOrganizationAdminResult.AsError));
+            return Invalid(request, freeOrganizationAdminResult.AsError);
         }
 
         var capabilityResult = await inviteLinkOrganizationCapabilityValidator.ValidateAsync(
@@ -80,7 +66,7 @@ public class ConfirmOrganizationInviteLinkValidator(
             });
         if (capabilityResult.IsError)
         {
-            return Invalid(request, ConfirmOrganizationInviteLinkErrorMapper.ToValidationError(capabilityResult.AsError));
+            return Invalid(request, capabilityResult.AsError);
         }
 
         var policyResult = await inviteLinkPolicyValidator.ValidateAsync(new InviteLinkPolicyValidationRequest
@@ -91,9 +77,29 @@ public class ConfirmOrganizationInviteLinkValidator(
         });
         if (policyResult.IsError)
         {
-            return Invalid(request, ConfirmOrganizationInviteLinkErrorMapper.ToValidationError(policyResult.AsError));
+            return Invalid(request, policyResult.AsError);
         }
 
         return Valid(request);
+    }
+
+    /// <summary>
+    /// The existing membership must allow the step the link leads to: confirming, or accepting.
+    /// </summary>
+    private ValidationResult<InviteLinkMembershipStatusValidationRequest> ValidateMembershipStatus(
+        OrganizationInviteLink inviteLink, Organization organization, OrganizationUser? existingOrganizationUser)
+    {
+        var request = new InviteLinkMembershipStatusValidationRequest
+        {
+            Organization = organization,
+            ExistingOrganizationUser = existingOrganizationUser,
+        };
+
+        if (inviteLink.SupportsConfirmation)
+        {
+            return confirmInviteLinkMembershipStatusValidator.Validate(request);
+        }
+
+        return acceptInviteLinkMembershipStatusValidator.Validate(request);
     }
 }

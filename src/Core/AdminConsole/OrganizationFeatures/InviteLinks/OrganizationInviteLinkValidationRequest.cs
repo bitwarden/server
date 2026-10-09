@@ -4,11 +4,11 @@ using Bit.Core.Entities;
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 
 /// <summary>
-/// The data required to determine whether a user is eligible to be confirmed into an organization
-/// via an invite link. This is the input for the read-only precheck performed before the
-/// org key is released and before the user is confirmed.
+/// The data the invite link validators need to decide whether a user may use an invite link. The caller looks it up
+/// and passes it in. Shared by <see cref="Interfaces.IGetOrganizationInviteValidator"/> and
+/// <see cref="Interfaces.IConfirmOrganizationInviteLinkValidator"/>.
 /// </summary>
-public record ConfirmOrganizationInviteLinkValidationRequest
+public record OrganizationInviteLinkValidationRequest
 {
     /// <summary>
     /// The organization's invite link, or <see langword="null"/> if it has none.
@@ -26,13 +26,13 @@ public record ConfirmOrganizationInviteLinkValidationRequest
     public required Organization? Organization { get; init; }
 
     /// <summary>
-    /// The authenticated user attempting to confirm their membership.
+    /// The authenticated user using the invite link.
     /// </summary>
     public required User User { get; init; }
 
     /// <summary>
     /// The user's existing membership in the organization, or <see langword="null"/> when the user is
-    /// not yet a member and a new membership will be created during confirmation.
+    /// not yet a member.
     /// </summary>
     public OrganizationUser? ExistingOrganizationUser { get; init; }
 }
