@@ -512,6 +512,20 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     }
 
     [Fact]
+    public async Task Put_RevokeAdminUser_Success()
+    {
+        var organizationUserId = ScimApplicationFactory.TestOrganizationUserId2;
+        SetOrganizationUserType(organizationUserId, OrganizationUserType.Admin);
+
+        var context = await _factory.UsersPutAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId,
+            new ScimUserRequestModel { Active = false });
+
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+        var revokedUser = _factory.GetDatabaseContext().OrganizationUsers.Single(ou => ou.Id == organizationUserId);
+        Assert.Equal(OrganizationUserStatusType.Revoked, revokedUser.Status);
+    }
+
+    [Fact]
     public async Task Put_RestoreUser_Success()
     {
         var organizationUserId = ScimApplicationFactory.TestOrganizationUserId3;
@@ -769,6 +783,19 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     }
 
     [Fact]
+    public async Task Delete_AdminUser_Success()
+    {
+        var organizationUserId = ScimApplicationFactory.TestOrganizationUserId1;
+        SetOrganizationUserType(organizationUserId, OrganizationUserType.Admin);
+
+        var context = await _factory.UsersDeleteAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId,
+            new ScimUserRequestModel());
+
+        Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
+        Assert.False(_factory.GetDatabaseContext().OrganizationUsers.Any(ou => ou.Id == organizationUserId));
+    }
+
+    [Fact]
     public async Task Delete_NotFound()
     {
         var organizationUserId = Guid.NewGuid();
@@ -789,5 +816,12 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
 
         var databaseContext = _factory.GetDatabaseContext();
         Assert.Equal(_initialUserCount, databaseContext.OrganizationUsers.Count());
+    }
+
+    private void SetOrganizationUserType(Guid organizationUserId, OrganizationUserType type)
+    {
+        var databaseContext = _factory.GetDatabaseContext();
+        databaseContext.OrganizationUsers.Single(ou => ou.Id == organizationUserId).Type = type;
+        databaseContext.SaveChanges();
     }
 }

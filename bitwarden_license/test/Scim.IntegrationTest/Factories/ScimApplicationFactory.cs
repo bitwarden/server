@@ -8,6 +8,7 @@ using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Scim.Models;
+using Duende.IdentityModel;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
@@ -240,10 +241,12 @@ public class ScimApplicationFactory : WebApplicationFactoryBase<Startup>
 
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
+            // Mirrors the principal built by ApiKeyAuthenticationHandler.
             var claims = new[]
             {
-                new Claim(ClaimTypes.Name, "Test user"),
-                new Claim("orgadmin", TestOrganizationId1.ToString())
+                new Claim(JwtClaimTypes.ClientId, $"organization.{TestOrganizationId1}"),
+                new Claim("client_sub", TestOrganizationId1.ToString()),
+                new Claim(JwtClaimTypes.Scope, "api.scim"),
             };
             var identity = new ClaimsIdentity(claims, "Test");
             var principal = new ClaimsPrincipal(identity);
