@@ -1,4 +1,4 @@
-using Bit.Api.KeyManagement.Models.Requirements;
+﻿using Bit.Api.KeyManagement.Models.Requirements;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
