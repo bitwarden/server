@@ -205,7 +205,6 @@ public static partial class FeatureFlagKeys
     public const string SharedUnlockPart2 = "innovation-sprint-shared-unlock-part-2";
     public const string EnrollAeadOnKeyRotation = "enroll-aead-on-key-rotation";
     public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
-    public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
     public const string NoLogoutOnKdfChange = "pm-23995-no-logout-on-kdf-change";
     public const string V2RegistrationTDEJIT = "pm-27279-v2-registration-tde-jit";
     public const string EnableAccountEncryptionV2KeyConnectorRegistration = "enable-account-encryption-v2-key-connector-registration";
