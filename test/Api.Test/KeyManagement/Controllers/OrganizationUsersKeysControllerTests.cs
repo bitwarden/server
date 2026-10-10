@@ -64,29 +64,35 @@ public class OrganizationUsersKeysControllerTests
         Assert.Equal(organizationUserId, response.OrganizationUserId);
         Assert.Equal(_userKeyId, response.UserKeyId);
         Assert.Equal(_accountRecoveryKey, response.AccountRecoveryKey);
+        Assert.NotNull(response.V2UpgradeToken);
         Assert.Equal(_wrappedUserKey1, response.V2UpgradeToken.WrappedUserKey1);
         Assert.Equal(_wrappedUserKey2, response.V2UpgradeToken.WrappedUserKey2);
     }
 
-    [Theory, BitAutoData]
-    public async Task GetPendingV2UpgradesAsync_TokenIsNotReadableJson_IsLeftOut(
+    [Theory]
+    [BitAutoData("not-json")]
+    [BitAutoData("""{"WrappedUserKey1":"7.AOs41Hd8OQiCPXjyJKCiDA=="}""")]
+    public async Task GetPendingV2UpgradesAsync_TokenCannotBeParsed_ReturnsTheRowWithANullToken(
+        string unparseableToken,
         Guid orgId,
         Guid organizationUserId,
-        Guid readableOrganizationUserId,
         SutProvider<OrganizationUsersKeysController> sutProvider)
     {
         // Arrange
-        var unreadable = Details(organizationUserId);
-        unreadable.V2UpgradeToken = "not-json";
+        var unparseable = Details(organizationUserId);
+        unparseable.V2UpgradeToken = unparseableToken;
         MockCallerType(sutProvider, orgId, OrganizationUserType.Owner);
-        MockPendingUpgrades(sutProvider, orgId, includeOwners: true, unreadable, Details(readableOrganizationUserId));
+        MockPendingUpgrades(sutProvider, orgId, includeOwners: true, unparseable);
 
         // Act
         var result = await sutProvider.Sut.GetPendingV2UpgradesAsync(orgId);
 
         // Assert
         var response = Assert.Single(result.Data);
-        Assert.Equal(readableOrganizationUserId, response.OrganizationUserId);
+        Assert.Equal(organizationUserId, response.OrganizationUserId);
+        Assert.Equal(_userKeyId, response.UserKeyId);
+        Assert.Equal(_accountRecoveryKey, response.AccountRecoveryKey);
+        Assert.Null(response.V2UpgradeToken);
     }
 
     [Theory, BitAutoData]

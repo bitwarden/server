@@ -58,15 +58,10 @@ public class OrganizationUsersKeysController : Controller
         var pending = await _organizationUserKeyRepository.GetManyPendingV2UpgradesByOrganizationIdAsync(
             orgId, IsOwner(orgId), OrganizationUserV2UpgradesRequestModel.MaxUpgrades);
 
-        var responses = pending
-            // A token the server cannot parse is unusable to the admin, so the row is left out of the response.
-            .Select(details => new
-            {
-                Details = details,
-                Token = V2UpgradeTokenData.FromJson(details.V2UpgradeToken)
-            })
-            .Where(row => row.Token is not null)
-            .Select(row => new OrganizationUserPendingV2UpgradeResponseModel(row.Details, row.Token!));
+        // A token the server cannot parse is returned as null, so the admin can unenroll the member. Leaving the row
+        // out would keep it pending forever.
+        var responses = pending.Select(details => new OrganizationUserPendingV2UpgradeResponseModel(details,
+            V2UpgradeTokenData.FromJson(details.V2UpgradeToken)));
 
         return new ListResponseModel<OrganizationUserPendingV2UpgradeResponseModel>(responses);
     }
@@ -76,9 +71,9 @@ public class OrganizationUsersKeysController : Controller
     /// whose entry carries no key.
     /// </summary>
     /// <remarks>
-    /// A V2 upgrade token does not always contain a usable user key. The admin then sends no key, which unenrolls
-    /// the member from account recovery and clears the token. The member keeps their vault, and the organization's
-    /// enrollment policy prompts them to enroll again.
+    /// A V2 upgrade token does not always contain a usable user key, and the server returns a token it cannot parse
+    /// as null. The admin then sends no key, which unenrolls the member from account recovery and clears the token.
+    /// The member keeps their vault, and the organization's enrollment policy prompts them to enroll again.
     ///
     /// A membership that changed since the read, or that the caller cannot access, is skipped rather than rejected.
     /// </remarks>

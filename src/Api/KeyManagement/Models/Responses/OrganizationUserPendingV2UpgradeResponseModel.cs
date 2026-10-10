@@ -11,23 +11,25 @@ namespace Bit.Api.KeyManagement.Models.Responses;
 /// </summary>
 /// <remarks>
 /// The organization's private key is not included. Read it from <c>GET organizations/{orgId}/private-key</c>.
-/// Callers of this endpoint always hold the ManageUsers permission that route requires.
+/// Callers of this endpoint are Owners and Admins, who can always read that route.
 /// </remarks>
 public class OrganizationUserPendingV2UpgradeResponseModel : ResponseModel
 {
     [SetsRequiredMembers]
     public OrganizationUserPendingV2UpgradeResponseModel(OrganizationUserV2UpgradeDetails details,
-        V2UpgradeTokenData token)
+        V2UpgradeTokenData? token)
         : base("organizationUserPendingV2Upgrade")
     {
         OrganizationUserId = details.OrganizationUserId;
         UserKeyId = details.UserKeyId;
         AccountRecoveryKey = details.AccountRecoveryKey;
-        V2UpgradeToken = new V2UpgradeTokenResponseModel
-        {
-            WrappedUserKey1 = token.WrappedUserKey1,
-            WrappedUserKey2 = token.WrappedUserKey2
-        };
+        V2UpgradeToken = token is null
+            ? null
+            : new V2UpgradeTokenResponseModel
+            {
+                WrappedUserKey1 = token.WrappedUserKey1,
+                WrappedUserKey2 = token.WrappedUserKey2
+            };
     }
 
     public required Guid OrganizationUserId { get; init; }
@@ -45,7 +47,9 @@ public class OrganizationUserPendingV2UpgradeResponseModel : ResponseModel
     public required string AccountRecoveryKey { get; init; }
 
     /// <summary>
-    /// Contains the V2 user key wrapped with the V1 user key, in <c>WrappedUserKey2</c>.
+    /// Contains the V2 user key wrapped with the V1 user key, in <c>WrappedUserKey2</c>. It is null when the
+    /// server cannot parse the stored token. The token then holds no usable user key, so send no key to unenroll
+    /// the member.
     /// </summary>
-    public required V2UpgradeTokenResponseModel V2UpgradeToken { get; init; }
+    public required V2UpgradeTokenResponseModel? V2UpgradeToken { get; init; }
 }

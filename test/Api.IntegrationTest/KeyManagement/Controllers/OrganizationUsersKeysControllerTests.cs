@@ -223,6 +223,39 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
     }
 
     [Fact]
+    public async Task V2Upgrade_TokenCannotBeParsed_ListedWithANullTokenAndUnenrolled()
+    {
+        // Arrange
+        var memberEmail = await CreateMemberAsync(OrganizationUserType.User);
+        var organizationUser = await GivenAPendingUpgradeAsync(memberEmail, v2UpgradeToken: "not-json");
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        // Act - the admin reads the pending upgrade
+        var pending = await _client.GetAsync(PendingUpgradesUri());
+        pending.EnsureSuccessStatusCode();
+        var pendingBody = await pending.Content.ReadAsStringAsync();
+
+        // Assert - the membership is listed with a null token
+        Assert.Contains(organizationUser.Id.ToString(), pendingBody);
+        Assert.Contains("\"v2UpgradeToken\":null", pendingBody);
+
+        // Act - the admin sends no key
+        var upgrade = await _client.PostAsJsonAsync(UpgradesUri(),
+            RequestFor(organizationUser.Id, _userKeyId, accountRecoveryKey: null));
+        upgrade.EnsureSuccessStatusCode();
+
+        // Assert - the member is unenrolled and the token is cleared
+        var written = await _organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(written);
+        Assert.Null(written.ResetPasswordKey);
+        Assert.Null(written.V2UpgradeToken);
+
+        var pendingAfter = await _client.GetAsync(PendingUpgradesUri());
+        pendingAfter.EnsureSuccessStatusCode();
+        Assert.DoesNotContain(organizationUser.Id.ToString(), await pendingAfter.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
     public async Task PostV2UpgradesAsync_NoAccountRecoveryKey_UnenrollsTheMemberAndEmptiesThePendingList()
     {
         // Arrange - the upgrade cannot be completed, so the admin unenrolls the member instead
@@ -339,7 +372,8 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
     /// Sets up a membership in the state left by a V1 to V2 upgrade rotation: an account recovery key that still
     /// wraps the V1 user key, a V2 upgrade token, and a user row with the new key id.
     /// </summary>
-    private async Task<OrganizationUser> GivenAPendingUpgradeAsync(string memberEmail)
+    private async Task<OrganizationUser> GivenAPendingUpgradeAsync(string memberEmail,
+        string v2UpgradeToken = _v2UpgradeToken)
     {
         var user = await _userRepository.GetByEmailAsync(memberEmail);
         Assert.NotNull(user);
@@ -349,7 +383,7 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
         var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(_organization.Id, user.Id);
         Assert.NotNull(organizationUser);
         organizationUser.ResetPasswordKey = _v1AccountRecoveryKey;
-        organizationUser.V2UpgradeToken = _v2UpgradeToken;
+        organizationUser.V2UpgradeToken = v2UpgradeToken;
         await _organizationUserRepository.ReplaceAsync(organizationUser);
 
         return organizationUser;
