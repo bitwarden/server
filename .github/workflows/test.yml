@@ -34,6 +34,14 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
 
+      - name: Verify NuGet lock files are up to date
+        run: |
+          dotnet restore bitwarden-server.slnx --force-evaluate
+          if ! git diff --exit-code -- '**/packages.lock.json'; then
+            echo "One or more packages.lock.json files are out of date. Run 'dotnet restore bitwarden-server.slnx --force-evaluate' locally and commit the changes." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
       - name: Install rust
         uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
         with:
