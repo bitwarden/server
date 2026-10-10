@@ -170,20 +170,18 @@ public static class ServiceCollectionExtensions
                 // Request that the IdP prompts for credentials on every Admin Portal sign-in
                 // rather than silently reusing an existing IdP session. Per OIDC Core 3.1.2.1
                 // this is a request the IdP SHOULD honor - it's not something we enforce
-                // server-side (nothing in the response proves it happened). Auth0, Okta, Entra,
-                // and Keycloak all honor it in practice; a non-conformant IdP would allow a
-                // stolen IdP session cookie to ride into the Admin Portal silently.
-                options.AdditionalAuthorizationParameters.Add("prompt", "login");
+                // server-side (nothing in the response proves it happened).
+                options.AdditionalAuthorizationParameters.Add(
+                    OpenIdConnectParameterNames.Prompt, OpenIdConnectPrompt.Login);
 
                 // Server-enforced complement to prompt=login. Setting MaxAge adds `max_age=0` to
                 // the authorize request. Per OIDC Core 3.1.2.1 the IdP MUST then return an
                 // `auth_time` claim and the user MUST have authenticated at or after this request.
                 //
                 // The ASP.NET OIDC handler does NOT enforce this on the response - it only writes
-                // max_age out on the request. The OnTokenValidated below is where enforcement
+                // max_age out on the request. The OnTokenValidated is where enforcement
                 // actually happens: we reject when auth_time is absent, unparseable, or older than
-                // MaxAge+ClockSkew. Without this, a non-conformant IdP that ignored both
-                // prompt=login and max_age could ride a stale IdP session into the Admin Portal.
+                // MaxAge+ClockSkew.
                 options.MaxAge = TimeSpan.Zero;
 
                 // Pin the OIDC helper cookies explicitly (default is SameSite=None, which the
@@ -203,7 +201,7 @@ public static class ServiceCollectionExtensions
                 // Allowed Logout URLs, which rejects our app-level URL.
                 options.Events.OnRedirectToIdentityProviderForSignOut = ctx =>
                 {
-                    var idToken = ctx.Properties?.GetTokenValue("id_token");
+                    var idToken = ctx.Properties?.GetTokenValue(OpenIdConnectParameterNames.IdToken);
                     if (!string.IsNullOrEmpty(idToken))
                     {
                         ctx.ProtocolMessage.IdTokenHint = idToken;
