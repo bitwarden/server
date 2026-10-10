@@ -27,7 +27,8 @@ public class ApplyOrganizationUserV2UpgradesCommand : IApplyOrganizationUserV2Up
     }
 
     /// <inheritdoc />
-    public async Task ApplyAsync(Guid organizationId, IEnumerable<OrganizationUserAccountRecoveryKeyUpdate> updates)
+    public async Task ApplyAsync(Guid organizationId, bool includeOwners,
+        IEnumerable<OrganizationUserAccountRecoveryKeyUpdate> updates)
     {
         var requested = updates.ToList();
         if (requested.Count == 0)
@@ -35,40 +36,27 @@ public class ApplyOrganizationUserV2UpgradesCommand : IApplyOrganizationUserV2Up
             return;
         }
 
-        var pending = (await _organizationUserKeyRepository
-                .GetManyPendingV2UpgradesByOrganizationIdAsync(organizationId))
-            .ToDictionary(details => details.OrganizationUserId);
-
-        // A membership that moved on is dropped instead of failing the request. Its upgrade is still pending, so
-        // the admin reads it again and completes it then. The repository checks each key id once more as it
-        // writes, which closes the window between this read and that write.
-        var upgradable = requested
-            .Where(update => pending.TryGetValue(update.OrganizationUserId, out var details)
-                && details.UserKeyId == update.UserKeyId)
-            .ToList();
-
-        if (upgradable.Count == 0)
-        {
-            return;
-        }
-
         // One date for the rows and their events, so the audit log matches what was written.
         var revisionDate = _timeProvider.GetUtcNow().UtcDateTime;
+
+        // A membership that moved on is skipped by the write instead of failing the request. The repository checks
+        // the organization, the membership type, the token, the enrollment, and the key id as it writes each row.
         var updatedIds = (await _organizationUserKeyRepository
-                .UpdateManyV2UpgradedAccountRecoveryKeysAsync(organizationId, upgradable, revisionDate))
+                .UpdateManyV2UpgradedAccountRecoveryKeysAsync(organizationId, includeOwners, requested,
+                    revisionDate))
             .ToHashSet();
 
-        await LogUnenrollmentsAsync(upgradable, updatedIds, revisionDate);
+        await LogUnenrollmentsAsync(requested, updatedIds, revisionDate);
     }
 
     /// <summary>
     /// Logs a withdrawal for each member the admin unenrolled. A re-wrapped key is not logged, because the member
     /// stays enrolled and only the key that wraps their user key changes.
     /// </summary>
-    private async Task LogUnenrollmentsAsync(IEnumerable<OrganizationUserAccountRecoveryKeyUpdate> upgradable,
+    private async Task LogUnenrollmentsAsync(IEnumerable<OrganizationUserAccountRecoveryKeyUpdate> requested,
         IReadOnlySet<Guid> updatedIds, DateTime revisionDate)
     {
-        var unenrolledIds = upgradable
+        var unenrolledIds = requested
             .Where(update => update.AccountRecoveryKey is null && updatedIds.Contains(update.OrganizationUserId))
             .Select(update => update.OrganizationUserId)
             .ToList();

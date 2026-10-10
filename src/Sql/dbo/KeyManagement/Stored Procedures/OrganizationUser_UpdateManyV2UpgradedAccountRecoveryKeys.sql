@@ -1,5 +1,6 @@
 ﻿CREATE PROCEDURE [dbo].[OrganizationUser_UpdateManyV2UpgradedAccountRecoveryKeys]
     @OrganizationId UNIQUEIDENTIFIER,
+    @ExcludedType TINYINT,
     @OrganizationUserJson NVARCHAR(MAX),
     @RevisionDate DATETIME2(7)
 AS
@@ -53,6 +54,7 @@ BEGIN
         OU.[OrganizationId] = @OrganizationId
         AND OU.[V2UpgradeToken] IS NOT NULL
         AND OU.[ResetPasswordKey] IS NOT NULL
+        AND (@ExcludedType IS NULL OR OU.[Type] <> @ExcludedType)
 
     -- Bump the account revision date of the members whose row was updated.
     INSERT INTO @UpdatedUserIds ([Id])

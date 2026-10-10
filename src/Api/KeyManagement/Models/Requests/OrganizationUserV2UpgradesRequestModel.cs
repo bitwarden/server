@@ -10,8 +10,16 @@ namespace Bit.Api.KeyManagement.Models.Requests;
 /// </summary>
 public class OrganizationUserV2UpgradesRequestModel : IValidatableObject
 {
+    /// <summary>
+    /// The maximum number of upgrades in one request and in one page of pending upgrades. It keeps each request
+    /// within the gateway timeout.
+    /// </summary>
+    public const int MaxUpgrades = 100;
+
     [Required]
     [MinLength(1)]
+    [MaxLength(MaxUpgrades)]
+    [ValidateSequence<RequiredAttribute>]
     public required IReadOnlyList<OrganizationUserV2UpgradeRequestModel> Upgrades { get; init; }
 
     public IEnumerable<OrganizationUserAccountRecoveryKeyUpdate> ToData() => Upgrades.Select(upgrade => upgrade.ToData());

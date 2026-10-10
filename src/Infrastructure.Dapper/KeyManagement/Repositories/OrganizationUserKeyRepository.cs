@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using System.Text.Json;
+using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.Settings;
@@ -23,20 +24,20 @@ public class OrganizationUserKeyRepository : IOrganizationUserKeyRepository
     }
 
     public async Task<ICollection<OrganizationUserV2UpgradeDetails>> GetManyPendingV2UpgradesByOrganizationIdAsync(
-        Guid organizationId)
+        Guid organizationId, bool includeOwners, int maxCount)
     {
         await using var connection = new SqlConnection(_connectionString);
 
         var results = await connection.QueryAsync<OrganizationUserV2UpgradeDetails>(
             "[dbo].[OrganizationUser_ReadManyV2UpgradeDetailsByOrganizationId]",
-            new { OrganizationId = organizationId },
+            new { OrganizationId = organizationId, ExcludedType = ExcludedType(includeOwners), MaxCount = maxCount },
             commandType: CommandType.StoredProcedure);
 
         return results.ToList();
     }
 
     public async Task<ICollection<Guid>> UpdateManyV2UpgradedAccountRecoveryKeysAsync(Guid organizationId,
-        IEnumerable<OrganizationUserAccountRecoveryKeyUpdate> updates, DateTime revisionDate)
+        bool includeOwners, IEnumerable<OrganizationUserAccountRecoveryKeyUpdate> updates, DateTime revisionDate)
     {
         await using var connection = new SqlConnection(_connectionString);
 
@@ -45,6 +46,7 @@ public class OrganizationUserKeyRepository : IOrganizationUserKeyRepository
             new
             {
                 OrganizationId = organizationId,
+                ExcludedType = ExcludedType(includeOwners),
                 OrganizationUserJson = JsonSerializer.Serialize(updates),
                 RevisionDate = revisionDate
             },
@@ -52,4 +54,7 @@ public class OrganizationUserKeyRepository : IOrganizationUserKeyRepository
 
         return updatedIds.ToList();
     }
+
+    private static OrganizationUserType? ExcludedType(bool includeOwners) =>
+        includeOwners ? null : OrganizationUserType.Owner;
 }

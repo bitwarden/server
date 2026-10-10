@@ -15,6 +15,10 @@ public interface IApplyOrganizationUserV2UpgradesCommand
     /// than rejected, and the membership stays pending. Each member who is unenrolled gets a withdrawal event.
     /// </remarks>
     /// <param name="organizationId">The organization the memberships belong to.</param>
+    /// <param name="includeOwners">
+    /// Whether Owners can be updated. Only an Owner can update another Owner, so this is false for an Admin.
+    /// </param>
     /// <param name="updates">The re-wrapped account recovery keys.</param>
-    Task ApplyAsync(Guid organizationId, IEnumerable<OrganizationUserAccountRecoveryKeyUpdate> updates);
+    Task ApplyAsync(Guid organizationId, bool includeOwners,
+        IEnumerable<OrganizationUserAccountRecoveryKeyUpdate> updates);
 }

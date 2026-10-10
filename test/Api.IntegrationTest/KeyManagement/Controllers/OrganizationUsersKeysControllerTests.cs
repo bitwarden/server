@@ -58,7 +58,7 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
     }
 
     [Fact]
-    public async Task GetPendingV2UpgradesAsync_MemberWithoutAccountRecoveryPermission_Forbidden()
+    public async Task GetPendingV2UpgradesAsync_User_Forbidden()
     {
         // Arrange
         var memberEmail = await CreateMemberAsync(OrganizationUserType.User);
@@ -72,7 +72,7 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
     }
 
     [Fact]
-    public async Task PostV2UpgradesAsync_MemberWithoutAccountRecoveryPermission_ForbiddenAndKeyIsUnchanged()
+    public async Task PostV2UpgradesAsync_User_ForbiddenAndKeyIsUnchanged()
     {
         // Arrange
         var memberEmail = await CreateMemberAsync(OrganizationUserType.User);
@@ -92,31 +92,12 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
     }
 
     [Fact]
-    public async Task GetPendingV2UpgradesAsync_CustomWithAccountRecoveryButNotManageUsers_Forbidden()
+    public async Task GetPendingV2UpgradesAsync_CustomWithAccountRecoveryAndManageUsers_Forbidden()
     {
-        // Arrange - ManageUsers is also required, because the admin must read the organization's private key from
-        // GET organizations/{orgId}/private-key to unwrap anything
+        // Arrange - only Owners and Admins are supported, whatever permissions a Custom user has
         var memberEmail = await CreateCustomMemberAsync(new Permissions
         {
             ManageResetPassword = true,
-            ManageUsers = false
-        });
-        await _loginHelper.LoginAsync(memberEmail);
-
-        // Act
-        var response = await _client.GetAsync(PendingUpgradesUri());
-
-        // Assert
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task GetPendingV2UpgradesAsync_CustomWithManageUsersButNotAccountRecovery_Forbidden()
-    {
-        // Arrange - neither permission alone grants access to the endpoint
-        var memberEmail = await CreateCustomMemberAsync(new Permissions
-        {
-            ManageResetPassword = false,
             ManageUsers = true
         });
         await _loginHelper.LoginAsync(memberEmail);
@@ -129,21 +110,54 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
     }
 
     [Fact]
-    public async Task GetPendingV2UpgradesAsync_CustomWithBothPermissions_Succeeds()
+    public async Task PostV2UpgradesAsync_CustomWithAccountRecoveryAndManageUsers_ForbiddenAndKeyIsUnchanged()
     {
         // Arrange
-        var memberEmail = await CreateCustomMemberAsync(new Permissions
+        var memberEmail = await CreateMemberAsync(OrganizationUserType.User);
+        var organizationUser = await GivenAPendingUpgradeAsync(memberEmail);
+        var customEmail = await CreateCustomMemberAsync(new Permissions
         {
             ManageResetPassword = true,
             ManageUsers = true
         });
-        await _loginHelper.LoginAsync(memberEmail);
+        await _loginHelper.LoginAsync(customEmail);
 
         // Act
-        var response = await _client.GetAsync(PendingUpgradesUri());
+        var response = await _client.PostAsJsonAsync(UpgradesUri(), RequestFor(organizationUser.Id, _userKeyId));
 
         // Assert
-        response.EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+
+        var written = await _organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(written);
+        Assert.Equal(_v1AccountRecoveryKey, written.ResetPasswordKey);
+        Assert.Equal(_v2UpgradeToken, written.V2UpgradeToken);
+    }
+
+    [Fact]
+    public async Task V2Upgrade_AdminActingOnAnOwner_OwnerIsNotListedAndKeyIsUnchanged()
+    {
+        // Arrange - an Admin cannot access the key material of an Owner
+        var organizationUser = await GivenAPendingUpgradeAsync(_ownerEmail);
+        var adminEmail = await CreateMemberAsync(OrganizationUserType.Admin);
+        await _loginHelper.LoginAsync(adminEmail);
+
+        // Act - the admin reads the pending upgrades
+        var pending = await _client.GetAsync(PendingUpgradesUri());
+
+        // Assert - the owner's membership is not listed
+        pending.EnsureSuccessStatusCode();
+        Assert.DoesNotContain(organizationUser.Id.ToString(), await pending.Content.ReadAsStringAsync());
+
+        // Act - the admin posts a key for the owner anyway
+        var upgrade = await _client.PostAsJsonAsync(UpgradesUri(), RequestFor(organizationUser.Id, _userKeyId));
+
+        // Assert - the owner's membership is skipped
+        upgrade.EnsureSuccessStatusCode();
+        var written = await _organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(written);
+        Assert.Equal(_v1AccountRecoveryKey, written.ResetPasswordKey);
+        Assert.Equal(_v2UpgradeToken, written.V2UpgradeToken);
     }
 
     [Fact]

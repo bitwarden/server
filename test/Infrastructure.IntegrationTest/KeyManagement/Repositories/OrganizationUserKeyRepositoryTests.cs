@@ -1,4 +1,8 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.Repositories;
@@ -14,6 +18,7 @@ public class OrganizationUserKeyRepositoryTests
     private const string _v1AccountRecoveryKey = "4.v1-account-recovery-key";
     private const string _v2AccountRecoveryKey = "4.v2-account-recovery-key";
     private const string _v2UpgradeToken = """{"WrappedUserKey1":"7.key-one","WrappedUserKey2":"2.key-two"}""";
+    private const int _maxCount = 100;
 
     [Theory, DatabaseData]
     public async Task GetManyPendingV2UpgradesByOrganizationIdAsync_MembershipWithAToken_IsReturned(
@@ -28,7 +33,7 @@ public class OrganizationUserKeyRepositoryTests
             _userKeyId, _v1AccountRecoveryKey, _v2UpgradeToken);
 
         // Act
-        var pending = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id);
+        var pending = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id, includeOwners: true, _maxCount);
 
         // Assert
         var result = Assert.Single(pending);
@@ -51,7 +56,7 @@ public class OrganizationUserKeyRepositoryTests
             _userKeyId, _v1AccountRecoveryKey, v2UpgradeToken: null);
 
         // Act
-        var pending = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id);
+        var pending = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id, includeOwners: true, _maxCount);
 
         // Assert
         Assert.Empty(pending);
@@ -70,7 +75,7 @@ public class OrganizationUserKeyRepositoryTests
             userKeyId: null, _v1AccountRecoveryKey, _v2UpgradeToken);
 
         // Act
-        var pending = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id);
+        var pending = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id, includeOwners: true, _maxCount);
 
         // Assert
         Assert.Empty(pending);
@@ -90,7 +95,7 @@ public class OrganizationUserKeyRepositoryTests
             _userKeyId, _v1AccountRecoveryKey, _v2UpgradeToken);
 
         // Act
-        var pending = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id);
+        var pending = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id, includeOwners: true, _maxCount);
 
         // Assert
         Assert.Empty(pending);
@@ -112,7 +117,7 @@ public class OrganizationUserKeyRepositoryTests
         var revisionDate = DateTime.UtcNow.AddMinutes(1);
 
         // Act
-        var updatedIds = await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
+        var updatedIds = await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id, includeOwners: true,
             [Update(organizationUser.Id, _userKeyId)], revisionDate);
 
         // Assert
@@ -140,7 +145,7 @@ public class OrganizationUserKeyRepositoryTests
             _userKeyId, _v1AccountRecoveryKey, _v2UpgradeToken);
 
         // Act
-        await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
+        await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id, includeOwners: true,
             [Update(organizationUser.Id, _userKeyId, accountRecoveryKey: null)], DateTime.UtcNow);
 
         // Assert
@@ -163,7 +168,7 @@ public class OrganizationUserKeyRepositoryTests
         var before = (await userRepository.GetByIdAsync(user.Id))!.AccountRevisionDate;
 
         // Act
-        await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
+        await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id, includeOwners: true,
             [Update(organizationUser.Id, _userKeyId, accountRecoveryKey: null)], DateTime.UtcNow);
 
         // Assert
@@ -188,7 +193,7 @@ public class OrganizationUserKeyRepositoryTests
         var before = (await organizationUserRepository.GetByIdAsync(organizationUser.Id))!.RevisionDate;
 
         // Act
-        var updatedIds = await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
+        var updatedIds = await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id, includeOwners: true,
             [Update(organizationUser.Id, _userKeyId)], DateTime.UtcNow);
 
         // Assert
@@ -212,7 +217,7 @@ public class OrganizationUserKeyRepositoryTests
             _userKeyId, accountRecoveryKey: null, _v2UpgradeToken);
 
         // Act
-        var updatedIds = await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
+        var updatedIds = await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id, includeOwners: true,
             [Update(organizationUser.Id, _userKeyId)], DateTime.UtcNow);
 
         // Assert
@@ -237,7 +242,7 @@ public class OrganizationUserKeyRepositoryTests
             _rotatedUserKeyId, _v1AccountRecoveryKey, _v2UpgradeToken);
 
         // Act
-        var updatedIds = await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
+        var updatedIds = await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id, includeOwners: true,
             [Update(fresh.Id, _userKeyId), Update(stale.Id, _userKeyId)], DateTime.UtcNow);
 
         // Assert
@@ -265,7 +270,7 @@ public class OrganizationUserKeyRepositoryTests
             otherOrganization, _userKeyId, _v1AccountRecoveryKey, _v2UpgradeToken);
 
         // Act
-        await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
+        await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id, includeOwners: true,
             [Update(organizationUser.Id, _userKeyId)], DateTime.UtcNow);
 
         // Assert
@@ -287,7 +292,7 @@ public class OrganizationUserKeyRepositoryTests
             _userKeyId, _v1AccountRecoveryKey, v2UpgradeToken: null);
 
         // Act
-        await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
+        await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id, includeOwners: true,
             [Update(organizationUser.Id, _userKeyId)], DateTime.UtcNow);
 
         // Assert
@@ -308,13 +313,196 @@ public class OrganizationUserKeyRepositoryTests
             _userKeyId, _v1AccountRecoveryKey, _v2UpgradeToken);
 
         // Act
-        await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
+        await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id, includeOwners: true,
             [Update(organizationUser.Id, _userKeyId), Update(organizationUser.Id, _userKeyId)], DateTime.UtcNow);
 
         // Assert
         var written = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
         Assert.Equal(_v2AccountRecoveryKey, written!.ResetPasswordKey);
         Assert.Null(written.V2UpgradeToken);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetManyPendingV2UpgradesByOrganizationIdAsync_OwnersNotIncluded_LeavesOutTheOwner(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationUserKeyRepository sut)
+    {
+        // Arrange - an Admin cannot access the key material of an Owner
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        await CreateMemberAsync(userRepository, organizationUserRepository, organization,
+            _userKeyId, _v1AccountRecoveryKey, _v2UpgradeToken, OrganizationUserType.Owner);
+        var (_, admin) = await CreateMemberAsync(userRepository, organizationUserRepository, organization,
+            _userKeyId, _v1AccountRecoveryKey, _v2UpgradeToken, OrganizationUserType.Admin);
+
+        // Act
+        var pending = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id,
+            includeOwners: false, _maxCount);
+
+        // Assert
+        var result = Assert.Single(pending);
+        Assert.Equal(admin.Id, result.OrganizationUserId);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetManyPendingV2UpgradesByOrganizationIdAsync_OwnersIncluded_ReturnsTheOwner(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationUserKeyRepository sut)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var (_, owner) = await CreateMemberAsync(userRepository, organizationUserRepository, organization,
+            _userKeyId, _v1AccountRecoveryKey, _v2UpgradeToken, OrganizationUserType.Owner);
+
+        // Act
+        var pending = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id,
+            includeOwners: true, _maxCount);
+
+        // Assert
+        var result = Assert.Single(pending);
+        Assert.Equal(owner.Id, result.OrganizationUserId);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetManyPendingV2UpgradesByOrganizationIdAsync_MemberOfAProvider_IsReturned(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IProviderRepository providerRepository,
+        IProviderUserRepository providerUserRepository,
+        IOrganizationUserKeyRepository sut)
+    {
+        // Arrange - the members of a provider's own organization are upgraded by that organization's admins
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var (user, organizationUser) = await CreateMemberAsync(userRepository, organizationUserRepository,
+            organization, _userKeyId, _v1AccountRecoveryKey, _v2UpgradeToken);
+        await AddToProviderAsync(providerRepository, providerUserRepository, user);
+
+        // Act
+        var pending = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id,
+            includeOwners: true, _maxCount);
+
+        // Assert
+        var result = Assert.Single(pending);
+        Assert.Equal(organizationUser.Id, result.OrganizationUserId);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetManyPendingV2UpgradesByOrganizationIdAsync_MoreThanTheMaxCount_ReturnsTheMaxCount(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationUserKeyRepository sut)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        for (var i = 0; i < 3; i++)
+        {
+            await CreateMemberAsync(userRepository, organizationUserRepository, organization,
+                _userKeyId, _v1AccountRecoveryKey, _v2UpgradeToken);
+        }
+
+        // Act
+        var pending = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id,
+            includeOwners: true, maxCount: 2);
+
+        // Assert
+        Assert.Equal(2, pending.Count);
+    }
+
+    [Theory, DatabaseData]
+    public async Task UpdateManyV2UpgradedAccountRecoveryKeysAsync_OwnerAndOwnersNotIncluded_WritesNothing(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationUserKeyRepository sut)
+    {
+        // Arrange - an Admin cannot change the key material of an Owner
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var (_, owner) = await CreateMemberAsync(userRepository, organizationUserRepository, organization,
+            _userKeyId, _v1AccountRecoveryKey, _v2UpgradeToken, OrganizationUserType.Owner);
+
+        // Act
+        var updatedIds = await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
+            includeOwners: false, [Update(owner.Id, _userKeyId)], DateTime.UtcNow);
+
+        // Assert
+        Assert.Empty(updatedIds);
+        var written = await organizationUserRepository.GetByIdAsync(owner.Id);
+        Assert.Equal(_v1AccountRecoveryKey, written!.ResetPasswordKey);
+        Assert.Equal(_v2UpgradeToken, written.V2UpgradeToken);
+    }
+
+    [Theory, DatabaseData]
+    public async Task UpdateManyV2UpgradedAccountRecoveryKeysAsync_OwnerAndOwnersIncluded_WritesTheKey(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationUserKeyRepository sut)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var (_, owner) = await CreateMemberAsync(userRepository, organizationUserRepository, organization,
+            _userKeyId, _v1AccountRecoveryKey, _v2UpgradeToken, OrganizationUserType.Owner);
+
+        // Act
+        var updatedIds = await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
+            includeOwners: true, [Update(owner.Id, _userKeyId)], DateTime.UtcNow);
+
+        // Assert
+        Assert.Equal([owner.Id], updatedIds);
+        var written = await organizationUserRepository.GetByIdAsync(owner.Id);
+        Assert.Equal(_v2AccountRecoveryKey, written!.ResetPasswordKey);
+        Assert.Null(written.V2UpgradeToken);
+    }
+
+    [Theory, DatabaseData]
+    public async Task UpdateManyV2UpgradedAccountRecoveryKeysAsync_MemberOfAProvider_WritesTheKey(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IProviderRepository providerRepository,
+        IProviderUserRepository providerUserRepository,
+        IOrganizationUserKeyRepository sut)
+    {
+        // Arrange - the members of a provider's own organization are upgraded by that organization's admins
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var (user, organizationUser) = await CreateMemberAsync(userRepository, organizationUserRepository,
+            organization, _userKeyId, _v1AccountRecoveryKey, _v2UpgradeToken);
+        await AddToProviderAsync(providerRepository, providerUserRepository, user);
+
+        // Act
+        var updatedIds = await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
+            includeOwners: true, [Update(organizationUser.Id, _userKeyId)], DateTime.UtcNow);
+
+        // Assert
+        Assert.Equal([organizationUser.Id], updatedIds);
+        var written = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.Equal(_v2AccountRecoveryKey, written!.ResetPasswordKey);
+        Assert.Null(written.V2UpgradeToken);
+    }
+
+    private static async Task AddToProviderAsync(IProviderRepository providerRepository,
+        IProviderUserRepository providerUserRepository, User user)
+    {
+        var provider = await providerRepository.CreateAsync(new Provider
+        {
+            Name = "Test Provider",
+            Type = ProviderType.Msp,
+            Status = ProviderStatusType.Created,
+            Enabled = true
+        });
+
+        await providerUserRepository.CreateAsync(new ProviderUser
+        {
+            ProviderId = provider.Id,
+            UserId = user.Id,
+            Type = ProviderUserType.ServiceUser,
+            Status = ProviderUserStatusType.Confirmed
+        });
     }
 
     private static OrganizationUserAccountRecoveryKeyUpdate Update(Guid organizationUserId, string userKeyId,
@@ -332,7 +520,8 @@ public class OrganizationUserKeyRepositoryTests
         Bit.Core.AdminConsole.Entities.Organization organization,
         string? userKeyId,
         string? accountRecoveryKey,
-        string? v2UpgradeToken)
+        string? v2UpgradeToken,
+        OrganizationUserType type = OrganizationUserType.User)
     {
         var user = await userRepository.CreateTestUserAsync();
         user.UserKeyId = userKeyId;
@@ -341,6 +530,7 @@ public class OrganizationUserKeyRepositoryTests
         await userRepository.ReplaceAsync(user);
 
         var organizationUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+        organizationUser.Type = type;
         organizationUser.ResetPasswordKey = accountRecoveryKey;
         organizationUser.V2UpgradeToken = v2UpgradeToken;
         // Dated back, so a test can tell a revision date the write bumped from the one it was created with

@@ -1,4 +1,4 @@
-﻿using Bit.Core.Entities;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Commands;
 using Bit.Core.KeyManagement.Models.Data;
@@ -19,8 +19,11 @@ public class ApplyOrganizationUserV2UpgradesCommandTests
     private const string UserKeyId = "0123456789abcdef0123456789abcdef";
     private const string OtherUserKeyId = "fedcba9876543210fedcba9876543210";
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
     public async Task ApplyAsync_KeyIdsMatch_WritesTheRewrappedKeys(
+        bool includeOwners,
         Guid organizationId,
         Guid organizationUserId,
         string accountRecoveryKey)
@@ -28,17 +31,16 @@ public class ApplyOrganizationUserV2UpgradesCommandTests
         // Arrange
         var sutProvider = GetSutProvider();
         var repository = sutProvider.GetDependency<IOrganizationUserKeyRepository>();
-        repository.GetManyPendingV2UpgradesByOrganizationIdAsync(organizationId)
-            .Returns(PendingUpgrades((organizationUserId, UserKeyId)));
 
         var updates = new[] { Update(organizationUserId, UserKeyId, accountRecoveryKey) };
 
         // Act
-        await sutProvider.Sut.ApplyAsync(organizationId, updates);
+        await sutProvider.Sut.ApplyAsync(organizationId, includeOwners, updates);
 
         // Assert
         await repository.Received(1).UpdateManyV2UpgradedAccountRecoveryKeysAsync(
             organizationId,
+            includeOwners,
             Arg.Is<IEnumerable<OrganizationUserAccountRecoveryKeyUpdate>>(written =>
                 written.Count() == 1
                 && written.Single().OrganizationUserId == organizationUserId
@@ -55,17 +57,16 @@ public class ApplyOrganizationUserV2UpgradesCommandTests
         // Arrange - the upgrade cannot be completed, so the admin clears the member's enrollment instead
         var sutProvider = GetSutProvider();
         var repository = sutProvider.GetDependency<IOrganizationUserKeyRepository>();
-        repository.GetManyPendingV2UpgradesByOrganizationIdAsync(organizationId)
-            .Returns(PendingUpgrades((organizationUserId, UserKeyId)));
 
         var updates = new[] { Update(organizationUserId, UserKeyId, accountRecoveryKey: null) };
 
         // Act
-        await sutProvider.Sut.ApplyAsync(organizationId, updates);
+        await sutProvider.Sut.ApplyAsync(organizationId, includeOwners: true, updates);
 
         // Assert
         await repository.Received(1).UpdateManyV2UpgradedAccountRecoveryKeysAsync(
             organizationId,
+            true,
             Arg.Is<IEnumerable<OrganizationUserAccountRecoveryKeyUpdate>>(written =>
                 written.Count() == 1
                 && written.Single().OrganizationUserId == organizationUserId
@@ -75,102 +76,40 @@ public class ApplyOrganizationUserV2UpgradesCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ApplyAsync_NoKeyGivenAndKeyIdDoesNotMatchTheUserRow_SkipsTheUpgradeAndWritesNothing(
+    public async Task ApplyAsync_TwoUpgrades_WritesBothWithoutReadingThePendingUpgrades(
         Guid organizationId,
-        Guid organizationUserId)
-    {
-        // Arrange - the member rotated again, so their pending upgrade is not the one the admin abandoned
-        var sutProvider = GetSutProvider();
-        var repository = sutProvider.GetDependency<IOrganizationUserKeyRepository>();
-        repository.GetManyPendingV2UpgradesByOrganizationIdAsync(organizationId)
-            .Returns(PendingUpgrades((organizationUserId, OtherUserKeyId)));
-
-        var updates = new[] { Update(organizationUserId, UserKeyId, accountRecoveryKey: null) };
-
-        // Act
-        await sutProvider.Sut.ApplyAsync(organizationId, updates);
-
-        // Assert
-        await repository.DidNotReceiveWithAnyArgs().UpdateManyV2UpgradedAccountRecoveryKeysAsync(
-            Arg.Any<Guid>(), Arg.Any<IEnumerable<OrganizationUserAccountRecoveryKeyUpdate>>(), Arg.Any<DateTime>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task ApplyAsync_KeyIdDoesNotMatchTheUserRow_SkipsTheUpgradeAndWritesNothing(
-        Guid organizationId,
-        Guid organizationUserId,
+        Guid firstOrganizationUserId,
+        Guid secondOrganizationUserId,
         string accountRecoveryKey)
     {
-        // Arrange - the member rotated again, so the re-wrapped key uses a user key they no longer hold
+        // Arrange - the write checks each row itself, so a stale update is skipped there and not before
         var sutProvider = GetSutProvider();
         var repository = sutProvider.GetDependency<IOrganizationUserKeyRepository>();
-        repository.GetManyPendingV2UpgradesByOrganizationIdAsync(organizationId)
-            .Returns(PendingUpgrades((organizationUserId, OtherUserKeyId)));
-
-        var updates = new[] { Update(organizationUserId, UserKeyId, accountRecoveryKey) };
-
-        // Act
-        await sutProvider.Sut.ApplyAsync(organizationId, updates);
-
-        // Assert
-        await repository.DidNotReceiveWithAnyArgs().UpdateManyV2UpgradedAccountRecoveryKeysAsync(
-            Arg.Any<Guid>(), Arg.Any<IEnumerable<OrganizationUserAccountRecoveryKeyUpdate>>(), Arg.Any<DateTime>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task ApplyAsync_MembershipHasNoPendingUpgrade_SkipsTheUpgradeAndWritesNothing(
-        Guid organizationId,
-        Guid organizationUserId,
-        string accountRecoveryKey)
-    {
-        // Arrange - covers an unknown id, an id from another organization, a membership with no token, and an
-        var sutProvider = GetSutProvider();
-        // upgrade another admin completed first. None of these appear in the pending set.
-        var repository = sutProvider.GetDependency<IOrganizationUserKeyRepository>();
-        repository.GetManyPendingV2UpgradesByOrganizationIdAsync(organizationId)
-            .Returns(PendingUpgrades());
-
-        var updates = new[] { Update(organizationUserId, UserKeyId, accountRecoveryKey) };
-
-        // Act
-        await sutProvider.Sut.ApplyAsync(organizationId, updates);
-
-        // Assert
-        await repository.DidNotReceiveWithAnyArgs().UpdateManyV2UpgradedAccountRecoveryKeysAsync(
-            Arg.Any<Guid>(), Arg.Any<IEnumerable<OrganizationUserAccountRecoveryKeyUpdate>>(), Arg.Any<DateTime>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task ApplyAsync_OneOfTwoMembershipsIsStale_WritesTheOtherOne(
-        Guid organizationId,
-        Guid freshOrganizationUserId,
-        Guid staleOrganizationUserId,
-        string accountRecoveryKey)
-    {
-        // Arrange - a stale membership must not hold back the memberships that can still be upgraded
-        var sutProvider = GetSutProvider();
-        var repository = sutProvider.GetDependency<IOrganizationUserKeyRepository>();
-        repository.GetManyPendingV2UpgradesByOrganizationIdAsync(organizationId)
-            .Returns(PendingUpgrades(
-                (freshOrganizationUserId, UserKeyId),
-                (staleOrganizationUserId, OtherUserKeyId)));
 
         var updates = new[]
         {
-            Update(freshOrganizationUserId, UserKeyId, accountRecoveryKey),
-            Update(staleOrganizationUserId, UserKeyId, accountRecoveryKey)
+            Update(firstOrganizationUserId, UserKeyId, accountRecoveryKey),
+            Update(secondOrganizationUserId, OtherUserKeyId, accountRecoveryKey: null)
         };
 
         // Act
-        await sutProvider.Sut.ApplyAsync(organizationId, updates);
+        await sutProvider.Sut.ApplyAsync(organizationId, includeOwners: true, updates);
 
         // Assert
         await repository.Received(1).UpdateManyV2UpgradedAccountRecoveryKeysAsync(
             organizationId,
+            true,
             Arg.Is<IEnumerable<OrganizationUserAccountRecoveryKeyUpdate>>(written =>
-                written.Count() == 1
-                && written.Single().OrganizationUserId == freshOrganizationUserId),
+                written.Count() == 2
+                && written.Any(update => update.OrganizationUserId == firstOrganizationUserId
+                    && update.UserKeyId == UserKeyId
+                    && update.AccountRecoveryKey == accountRecoveryKey)
+                && written.Any(update => update.OrganizationUserId == secondOrganizationUserId
+                    && update.UserKeyId == OtherUserKeyId
+                    && update.AccountRecoveryKey == null)),
             RevisionDate(sutProvider));
+        await repository.DidNotReceiveWithAnyArgs().GetManyPendingV2UpgradesByOrganizationIdAsync(
+            Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<int>());
     }
 
     [Theory, BitAutoData]
@@ -181,9 +120,7 @@ public class ApplyOrganizationUserV2UpgradesCommandTests
         // Arrange
         var sutProvider = GetSutProvider();
         var repository = sutProvider.GetDependency<IOrganizationUserKeyRepository>();
-        repository.GetManyPendingV2UpgradesByOrganizationIdAsync(organizationId)
-            .Returns(PendingUpgrades((organizationUser.Id, UserKeyId)));
-        repository.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organizationId,
+        repository.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organizationId, true,
                 Arg.Any<IEnumerable<OrganizationUserAccountRecoveryKeyUpdate>>(), Arg.Any<DateTime>())
             .Returns([organizationUser.Id]);
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -193,7 +130,7 @@ public class ApplyOrganizationUserV2UpgradesCommandTests
         var updates = new[] { Update(organizationUser.Id, UserKeyId, accountRecoveryKey: null) };
 
         // Act
-        await sutProvider.Sut.ApplyAsync(organizationId, updates);
+        await sutProvider.Sut.ApplyAsync(organizationId, includeOwners: true, updates);
 
         // Assert
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventsAsync(
@@ -209,19 +146,17 @@ public class ApplyOrganizationUserV2UpgradesCommandTests
         Guid organizationId,
         Guid organizationUserId)
     {
-        // Arrange - the member rotated or withdrew between the read and the write, so the row was not written
+        // Arrange - the member rotated or withdrew after the admin's read, so the row was not written
         var sutProvider = GetSutProvider();
         var repository = sutProvider.GetDependency<IOrganizationUserKeyRepository>();
-        repository.GetManyPendingV2UpgradesByOrganizationIdAsync(organizationId)
-            .Returns(PendingUpgrades((organizationUserId, UserKeyId)));
-        repository.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organizationId,
+        repository.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organizationId, true,
                 Arg.Any<IEnumerable<OrganizationUserAccountRecoveryKeyUpdate>>(), Arg.Any<DateTime>())
             .Returns(new List<Guid>());
 
         var updates = new[] { Update(organizationUserId, UserKeyId, accountRecoveryKey: null) };
 
         // Act
-        await sutProvider.Sut.ApplyAsync(organizationId, updates);
+        await sutProvider.Sut.ApplyAsync(organizationId, includeOwners: true, updates);
 
         // Assert
         await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
@@ -239,16 +174,14 @@ public class ApplyOrganizationUserV2UpgradesCommandTests
         // Arrange - the member stays enrolled, only the key that wraps their user key changes
         var sutProvider = GetSutProvider();
         var repository = sutProvider.GetDependency<IOrganizationUserKeyRepository>();
-        repository.GetManyPendingV2UpgradesByOrganizationIdAsync(organizationId)
-            .Returns(PendingUpgrades((organizationUserId, UserKeyId)));
-        repository.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organizationId,
+        repository.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organizationId, true,
                 Arg.Any<IEnumerable<OrganizationUserAccountRecoveryKeyUpdate>>(), Arg.Any<DateTime>())
             .Returns([organizationUserId]);
 
         var updates = new[] { Update(organizationUserId, UserKeyId, accountRecoveryKey) };
 
         // Act
-        await sutProvider.Sut.ApplyAsync(organizationId, updates);
+        await sutProvider.Sut.ApplyAsync(organizationId, includeOwners: true, updates);
 
         // Assert
         await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
@@ -265,13 +198,15 @@ public class ApplyOrganizationUserV2UpgradesCommandTests
         var sutProvider = GetSutProvider();
 
         // Act
-        await sutProvider.Sut.ApplyAsync(organizationId, []);
+        await sutProvider.Sut.ApplyAsync(organizationId, includeOwners: true, []);
 
         // Assert
         var repository = sutProvider.GetDependency<IOrganizationUserKeyRepository>();
-        await repository.DidNotReceiveWithAnyArgs().GetManyPendingV2UpgradesByOrganizationIdAsync(Arg.Any<Guid>());
+        await repository.DidNotReceiveWithAnyArgs().GetManyPendingV2UpgradesByOrganizationIdAsync(
+            Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<int>());
         await repository.DidNotReceiveWithAnyArgs().UpdateManyV2UpgradedAccountRecoveryKeysAsync(
-            Arg.Any<Guid>(), Arg.Any<IEnumerable<OrganizationUserAccountRecoveryKeyUpdate>>(), Arg.Any<DateTime>());
+            Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<IEnumerable<OrganizationUserAccountRecoveryKeyUpdate>>(),
+            Arg.Any<DateTime>());
     }
 
     private static SutProvider<ApplyOrganizationUserV2UpgradesCommand> GetSutProvider() =>
@@ -281,16 +216,6 @@ public class ApplyOrganizationUserV2UpgradesCommandTests
 
     private static DateTime RevisionDate(SutProvider<ApplyOrganizationUserV2UpgradesCommand> sutProvider) =>
         sutProvider.GetDependency<FakeTimeProvider>().GetUtcNow().UtcDateTime;
-
-    private static ICollection<OrganizationUserV2UpgradeDetails> PendingUpgrades(
-        params (Guid OrganizationUserId, string UserKeyId)[] rows) =>
-        rows.Select(row => new OrganizationUserV2UpgradeDetails
-        {
-            OrganizationUserId = row.OrganizationUserId,
-            UserKeyId = row.UserKeyId,
-            AccountRecoveryKey = "2.stale|key|mac",
-            V2UpgradeToken = """{"WrappedUserKey1":"2.a|b|c","WrappedUserKey2":"2.d|e|f"}"""
-        }).ToList();
 
     private static OrganizationUserAccountRecoveryKeyUpdate Update(Guid organizationUserId, string userKeyId,
         string? accountRecoveryKey) =>

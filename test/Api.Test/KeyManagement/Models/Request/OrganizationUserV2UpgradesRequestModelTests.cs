@@ -37,6 +37,48 @@ public class OrganizationUserV2UpgradesRequestModelTests
     }
 
     [Fact]
+    public void Validate_WithTheMaximumNumberOfUpgrades_ReturnsNoErrors()
+    {
+        // Arrange
+        var model = ModelFor(Upgrades(OrganizationUserV2UpgradesRequestModel.MaxUpgrades));
+
+        // Act
+        var results = Validate(model);
+
+        // Assert
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public void Validate_WithMoreThanTheMaximumNumberOfUpgrades_ReturnsValidationError()
+    {
+        // Arrange
+        var model = ModelFor(Upgrades(OrganizationUserV2UpgradesRequestModel.MaxUpgrades + 1));
+
+        // Act
+        var results = Validate(model);
+
+        // Assert
+        var result = Assert.Single(results);
+        Assert.Equal([nameof(model.Upgrades)], result.MemberNames);
+    }
+
+    [Fact]
+    public void Validate_WithANullUpgrade_ReturnsValidationError()
+    {
+        // Arrange - the body {"upgrades":[null]} binds to a null entry
+        var model = ModelFor(Upgrade(Guid.NewGuid()), null!);
+
+        // Act
+        var results = Validate(model);
+
+        // Assert
+        var result = Assert.Single(results);
+        Assert.Equal([nameof(model.Upgrades)], result.MemberNames);
+        Assert.Equal("The following items are not valid: ''", result.ErrorMessage);
+    }
+
+    [Fact]
     public void Validate_WithTwoUpgradesForOneMembership_ReturnsValidationError()
     {
         // Arrange - two updates for one membership would make the outcome depend on write order
@@ -179,6 +221,9 @@ public class OrganizationUserV2UpgradesRequestModelTests
             UserKeyId = _validUserKeyId,
             AccountRecoveryKey = _validAccountRecoveryKey
         };
+
+    private static OrganizationUserV2UpgradeRequestModel[] Upgrades(int count) =>
+        Enumerable.Range(0, count).Select(_ => Upgrade(Guid.NewGuid())).ToArray();
 
     private static OrganizationUserV2UpgradesRequestModel ModelFor(
         params OrganizationUserV2UpgradeRequestModel[] upgrades) =>

@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -15,7 +16,7 @@ public class OrganizationUserKeyRepository : BaseEntityFrameworkRepository, IOrg
     }
 
     public async Task<ICollection<OrganizationUserV2UpgradeDetails>> GetManyPendingV2UpgradesByOrganizationIdAsync(
-        Guid organizationId)
+        Guid organizationId, bool includeOwners, int maxCount)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
@@ -29,20 +30,23 @@ public class OrganizationUserKeyRepository : BaseEntityFrameworkRepository, IOrg
                 && organizationUser.V2UpgradeToken != null
                 && organizationUser.ResetPasswordKey != null
                 && user.UserKeyId != null
+                && (includeOwners || organizationUser.Type != OrganizationUserType.Owner)
             select new OrganizationUserV2UpgradeDetails
             {
                 OrganizationUserId = organizationUser.Id,
                 UserKeyId = user.UserKeyId!,
                 AccountRecoveryKey = organizationUser.ResetPasswordKey!,
                 V2UpgradeToken = organizationUser.V2UpgradeToken!
-            }).ToListAsync();
+            }).Take(maxCount).ToListAsync();
     }
 
     public async Task<ICollection<Guid>> UpdateManyV2UpgradedAccountRecoveryKeysAsync(Guid organizationId,
-        IEnumerable<OrganizationUserAccountRecoveryKeyUpdate> updates, DateTime revisionDate)
+        bool includeOwners, IEnumerable<OrganizationUserAccountRecoveryKeyUpdate> updates, DateTime revisionDate)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
         var updatedIds = new List<Guid>();
         foreach (var update in updates)
@@ -54,6 +58,7 @@ public class OrganizationUserKeyRepository : BaseEntityFrameworkRepository, IOrg
                     && organizationUser.OrganizationId == organizationId
                     && organizationUser.V2UpgradeToken != null
                     && organizationUser.ResetPasswordKey != null
+                    && (includeOwners || organizationUser.Type != OrganizationUserType.Owner)
                     && dbContext.Users.Any(user =>
                         user.Id == organizationUser.UserId && user.UserKeyId == update.UserKeyId))
                 .ExecuteUpdateAsync(setters => setters
@@ -75,6 +80,8 @@ public class OrganizationUserKeyRepository : BaseEntityFrameworkRepository, IOrg
                     && organizationUser.UserId == user.Id))
             .ExecuteUpdateAsync(setters =>
                 setters.SetProperty(user => user.AccountRevisionDate, revisionDate));
+
+        await transaction.CommitAsync();
 
         return updatedIds;
     }

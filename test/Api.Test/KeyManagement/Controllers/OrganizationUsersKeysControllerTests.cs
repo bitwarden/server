@@ -1,16 +1,14 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.KeyManagement.Controllers;
 using Bit.Api.KeyManagement.Models.Requests;
-using Bit.Core.Entities;
-using Bit.Core.Exceptions;
+using Bit.Core.Context;
+using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Commands.Interfaces;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
-using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Microsoft.AspNetCore.Authorization;
 using NSubstitute;
 using Xunit;
 
@@ -25,16 +23,38 @@ public class OrganizationUsersKeysControllerTests
         "2.BPt52Ie9PQjDQYkzKLDjEB==|P7PIiu3V3iKHCTOHojnKnh==|jE44t9C79D9KiZZiTb5W2uBskwMs9fFbHrPW8CSp6Kl=";
     private const string _wrappedUserKey1 = "7.AOs41Hd8OQiCPXjyJKCiDA==";
     private const string _wrappedUserKey2 = "7.BPt52Ie9PQjDQYkzKLDjEB==";
+    private const int _pageSize = OrganizationUserV2UpgradesRequestModel.MaxUpgrades;
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Owner, true)]
+    [BitAutoData(OrganizationUserType.Admin, false)]
+    public async Task GetPendingV2UpgradesAsync_ReadsOnePageWithOwnersOnlyForAnOwner(
+        OrganizationUserType callerType,
+        bool expectedIncludeOwners,
+        Guid orgId,
+        SutProvider<OrganizationUsersKeysController> sutProvider)
+    {
+        // Arrange
+        MockCallerType(sutProvider, orgId, callerType);
+        MockPendingUpgrades(sutProvider, orgId, expectedIncludeOwners);
+
+        // Act
+        await sutProvider.Sut.GetPendingV2UpgradesAsync(orgId);
+
+        // Assert
+        await sutProvider.GetDependency<IOrganizationUserKeyRepository>().Received(1)
+            .GetManyPendingV2UpgradesByOrganizationIdAsync(orgId, expectedIncludeOwners, _pageSize);
+    }
 
     [Theory, BitAutoData]
-    public async Task GetPendingV2UpgradesAsync_MembershipAuthorizedForRecovery_ReturnsTheTokenAndKeyId(
+    public async Task GetPendingV2UpgradesAsync_PendingUpgrade_ReturnsTheTokenAndKeyId(
         Guid orgId,
         Guid organizationUserId,
         SutProvider<OrganizationUsersKeysController> sutProvider)
     {
         // Arrange
-        MockPendingUpgrades(sutProvider, orgId, Details(organizationUserId));
-        MockMemberships(sutProvider, orgId, [organizationUserId], authorizedIds: [organizationUserId]);
+        MockCallerType(sutProvider, orgId, OrganizationUserType.Owner);
+        MockPendingUpgrades(sutProvider, orgId, includeOwners: true, Details(organizationUserId));
 
         // Act
         var result = await sutProvider.Sut.GetPendingV2UpgradesAsync(orgId);
@@ -49,66 +69,54 @@ public class OrganizationUsersKeysControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetPendingV2UpgradesAsync_MembershipTheCallerCannotRecover_IsLeftOut(
-        Guid orgId,
-        Guid organizationUserId,
-        SutProvider<OrganizationUsersKeysController> sutProvider)
-    {
-        // Arrange - ManageResetPassword is not sufficient to read an Owner's key material
-        MockPendingUpgrades(sutProvider, orgId, Details(organizationUserId));
-        MockMemberships(sutProvider, orgId, [organizationUserId], authorizedIds: []);
-
-        // Act
-        var result = await sutProvider.Sut.GetPendingV2UpgradesAsync(orgId);
-
-        // Assert
-        Assert.Empty(result.Data);
-    }
-
-    [Theory, BitAutoData]
     public async Task GetPendingV2UpgradesAsync_TokenIsNotReadableJson_IsLeftOut(
         Guid orgId,
         Guid organizationUserId,
+        Guid readableOrganizationUserId,
         SutProvider<OrganizationUsersKeysController> sutProvider)
     {
         // Arrange
-        var details = Details(organizationUserId);
-        details.V2UpgradeToken = "not-json";
-        MockPendingUpgrades(sutProvider, orgId, details);
-        MockMemberships(sutProvider, orgId, [organizationUserId], authorizedIds: [organizationUserId]);
+        var unreadable = Details(organizationUserId);
+        unreadable.V2UpgradeToken = "not-json";
+        MockCallerType(sutProvider, orgId, OrganizationUserType.Owner);
+        MockPendingUpgrades(sutProvider, orgId, includeOwners: true, unreadable, Details(readableOrganizationUserId));
 
         // Act
         var result = await sutProvider.Sut.GetPendingV2UpgradesAsync(orgId);
 
         // Assert
-        Assert.Empty(result.Data);
+        var response = Assert.Single(result.Data);
+        Assert.Equal(readableOrganizationUserId, response.OrganizationUserId);
     }
 
     [Theory, BitAutoData]
-    public async Task GetPendingV2UpgradesAsync_NoPendingUpgrades_ReadsNoMemberships(
+    public async Task GetPendingV2UpgradesAsync_NoPendingUpgrades_ReturnsNothing(
         Guid orgId,
         SutProvider<OrganizationUsersKeysController> sutProvider)
     {
         // Arrange
-        MockPendingUpgrades(sutProvider, orgId);
+        MockCallerType(sutProvider, orgId, OrganizationUserType.Owner);
+        MockPendingUpgrades(sutProvider, orgId, includeOwners: true);
 
         // Act
         var result = await sutProvider.Sut.GetPendingV2UpgradesAsync(orgId);
 
         // Assert
         Assert.Empty(result.Data);
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .DidNotReceiveWithAnyArgs().GetManyAsync(default!);
     }
 
-    [Theory, BitAutoData]
-    public async Task PostV2UpgradesAsync_MembershipAuthorizedForRecovery_AppliesTheUpgrade(
+    [Theory]
+    [BitAutoData(OrganizationUserType.Owner, true)]
+    [BitAutoData(OrganizationUserType.Admin, false)]
+    public async Task PostV2UpgradesAsync_AppliesTheUpgradesWithOwnersOnlyForAnOwner(
+        OrganizationUserType callerType,
+        bool expectedIncludeOwners,
         Guid orgId,
         Guid organizationUserId,
         SutProvider<OrganizationUsersKeysController> sutProvider)
     {
         // Arrange
-        MockMemberships(sutProvider, orgId, [organizationUserId], authorizedIds: [organizationUserId]);
+        MockCallerType(sutProvider, orgId, callerType);
         var model = ModelFor(organizationUserId);
 
         // Act
@@ -117,109 +125,12 @@ public class OrganizationUsersKeysControllerTests
         // Assert
         await sutProvider.GetDependency<IApplyOrganizationUserV2UpgradesCommand>().Received(1).ApplyAsync(
             orgId,
+            expectedIncludeOwners,
             Arg.Is<IEnumerable<OrganizationUserAccountRecoveryKeyUpdate>>(updates =>
                 updates.Count() == 1
                 && updates.Single().OrganizationUserId == organizationUserId
                 && updates.Single().UserKeyId == _userKeyId
                 && updates.Single().AccountRecoveryKey == _accountRecoveryKey));
-    }
-
-    [Theory, BitAutoData]
-    public async Task PostV2UpgradesAsync_MembershipTheCallerCannotRecover_ThrowsAndAppliesNothing(
-        Guid orgId,
-        Guid organizationUserId,
-        SutProvider<OrganizationUsersKeysController> sutProvider)
-    {
-        // Arrange
-        MockMemberships(sutProvider, orgId, [organizationUserId], authorizedIds: []);
-        var model = ModelFor(organizationUserId);
-
-        // Act
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostV2UpgradesAsync(orgId, model));
-
-        // Assert
-        await sutProvider.GetDependency<IApplyOrganizationUserV2UpgradesCommand>()
-            .DidNotReceiveWithAnyArgs().ApplyAsync(default, default!);
-    }
-
-    [Theory, BitAutoData]
-    public async Task PostV2UpgradesAsync_OneOfTwoMembershipsIsNotAuthorized_ThrowsAndAppliesNothing(
-        Guid orgId,
-        Guid authorizedId,
-        Guid unauthorizedId,
-        SutProvider<OrganizationUsersKeysController> sutProvider)
-    {
-        // Arrange
-        MockMemberships(sutProvider, orgId, [authorizedId, unauthorizedId],
-            authorizedIds: [authorizedId]);
-
-        var model = ModelFor(authorizedId, unauthorizedId);
-
-        // Act
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostV2UpgradesAsync(orgId, model));
-
-        // Assert
-        await sutProvider.GetDependency<IApplyOrganizationUserV2UpgradesCommand>()
-            .DidNotReceiveWithAnyArgs().ApplyAsync(default, default!);
-    }
-
-    [Theory, BitAutoData]
-    public async Task PostV2UpgradesAsync_MembershipOfAnotherOrganization_ThrowsAndAppliesNothing(
-        Guid orgId,
-        Guid otherOrgId,
-        Guid organizationUserId,
-        SutProvider<OrganizationUsersKeysController> sutProvider)
-    {
-        // Arrange - an admin of both organizations passes the per-membership check, so the route's organization
-        // must be enforced separately
-        MockMemberships(sutProvider, otherOrgId, [organizationUserId], authorizedIds: [organizationUserId]);
-        var model = ModelFor(organizationUserId);
-
-        // Act
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostV2UpgradesAsync(orgId, model));
-
-        // Assert
-        await sutProvider.GetDependency<IApplyOrganizationUserV2UpgradesCommand>()
-            .DidNotReceiveWithAnyArgs().ApplyAsync(default, default!);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetPendingV2UpgradesAsync_MembershipOfAnotherOrganization_IsLeftOut(
-        Guid orgId,
-        Guid otherOrgId,
-        Guid organizationUserId,
-        SutProvider<OrganizationUsersKeysController> sutProvider)
-    {
-        // Arrange
-        MockPendingUpgrades(sutProvider, orgId, Details(organizationUserId));
-        MockMemberships(sutProvider, otherOrgId, [organizationUserId], authorizedIds: [organizationUserId]);
-
-        // Act
-        var result = await sutProvider.Sut.GetPendingV2UpgradesAsync(orgId);
-
-        // Assert
-        Assert.Empty(result.Data);
-    }
-
-    [Theory, BitAutoData]
-    public async Task PostV2UpgradesAsync_MembershipIsUnknown_ThrowsAndAppliesNothing(
-        Guid orgId,
-        Guid organizationUserId,
-        SutProvider<OrganizationUsersKeysController> sutProvider)
-    {
-        // Arrange - the repository returns nothing, so there is no membership to authorize
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns([]);
-
-        var model = ModelFor(organizationUserId);
-
-        // Act
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostV2UpgradesAsync(orgId, model));
-
-        // Assert
-        await sutProvider.GetDependency<IApplyOrganizationUserV2UpgradesCommand>()
-            .DidNotReceiveWithAnyArgs().ApplyAsync(default, default!);
     }
 
     private static OrganizationUserV2UpgradeDetails Details(Guid organizationUserId) =>
@@ -243,38 +154,15 @@ public class OrganizationUsersKeysControllerTests
             }).ToList()
         };
 
+    private static void MockCallerType(SutProvider<OrganizationUsersKeysController> sutProvider, Guid orgId,
+        OrganizationUserType callerType) =>
+        sutProvider.GetDependency<IOrganizationContext>()
+            .GetOrganizationClaims(Arg.Any<ClaimsPrincipal>(), orgId)
+            .Returns(new CurrentContextOrganization { Id = orgId, Type = callerType });
+
     private static void MockPendingUpgrades(SutProvider<OrganizationUsersKeysController> sutProvider, Guid orgId,
-        params OrganizationUserV2UpgradeDetails[] pending) =>
+        bool includeOwners, params OrganizationUserV2UpgradeDetails[] pending) =>
         sutProvider.GetDependency<IOrganizationUserKeyRepository>()
-            .GetManyPendingV2UpgradesByOrganizationIdAsync(orgId)
+            .GetManyPendingV2UpgradesByOrganizationIdAsync(orgId, includeOwners, _pageSize)
             .Returns(pending.ToList());
-
-    /// <summary>
-    /// Stubs the membership lookup for <paramref name="orgId"/> and sets, per membership, whether the caller is
-    /// authorized to recover that account. Ids that are not in <paramref name="authorizedIds"/> return unauthorized.
-    /// </summary>
-    private static void MockMemberships(SutProvider<OrganizationUsersKeysController> sutProvider, Guid orgId,
-        Guid[] allIds, Guid[] authorizedIds)
-    {
-        var organizationUsers = allIds
-            .Select(id => new OrganizationUser { Id = id, OrganizationId = orgId, UserId = Guid.NewGuid() })
-            .ToList();
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(organizationUsers);
-
-        foreach (var organizationUser in organizationUsers)
-        {
-            sutProvider.GetDependency<IAuthorizationService>()
-                .AuthorizeAsync(
-                    Arg.Any<ClaimsPrincipal>(),
-                    organizationUser,
-                    Arg.Is<IEnumerable<IAuthorizationRequirement>>(requirements =>
-                        requirements.SingleOrDefault() is RecoverAccountAuthorizationRequirement))
-                .Returns(authorizedIds.Contains(organizationUser.Id)
-                    ? AuthorizationResult.Success()
-                    : AuthorizationResult.Failed());
-        }
-    }
 }
