@@ -266,6 +266,27 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
         Assert.Equal(1, _db.Users.Count());
     }
 
+    [Fact]
+    public async Task Execute_Options_DisableDataProtectionOnNonSqlServer_ThrowsBeforeAnyWriteAsync()
+    {
+        var orchestrator = NewOrchestrator(
+            new NoOpManglerService(),
+            mapper: CreateRealMapper(),
+            attachmentStorageService: new NoopAttachmentStorageService(),
+            disableDataProtection: true);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            orchestrator.ExecuteAsync(new OrganizationVaultOptions
+            {
+                Name = "Data Protection Org",
+                Domain = "dataprotection.example",
+                Users = 0,
+            }));
+
+        Assert.Contains("SQL Server", ex.Message);
+        Assert.Equal(0, _db.Users.Count());
+    }
+
     private static OrganizationVaultOptions BillingOptions(PlanType planType = PlanType.EnterpriseAnnually) => new()
     {
         Name = "Billing Test",
@@ -291,7 +312,8 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
         IManglerService mangler,
         IStripeBillingInitializer? billingInitializer = null,
         IMapper? mapper = null,
-        IAttachmentStorageService? attachmentStorageService = null)
+        IAttachmentStorageService? attachmentStorageService = null,
+        bool disableDataProtection = false)
     {
         // Mapper, LicensingService, and AttachmentStorageService are not exercised by the pre-flight
         // guard, which fires before BulkCommitter or any AutoMapper usage. Null-forgive them; if the
@@ -308,6 +330,7 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
             NullLoggerFactory.Instance)
         {
             BillingInitializer = billingInitializer is null ? null : () => billingInitializer,
+            DisableDataProtection = disableDataProtection,
         };
         return new RecipeOrchestrator(deps);
     }

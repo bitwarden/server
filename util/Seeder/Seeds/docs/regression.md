@@ -56,6 +56,7 @@ ASPNETCORE_ENVIRONMENT=Development dotnet run -- preset --name <name> --mangle
 | `CreatePoliciesStep` (`policies.enable` / `disable` / `data`) | `features.sso-enterprise`, `scale.xl-migrated-cyberdyne` | sso: one `Policy` with `Type=4`, `Enabled=1`. sso: also `Type=1` (Single Organization). cyberdyne: 7 enabled and 1 disabled row; `Type=5` has `Data` `{"enableIndividualItemsTransfer":true}`. `features.policy-enterprise`: 7 enabled rows. A preset with `enableAll`, an enable/disable overlap or `requireSso` without `singleOrg` fails to load |
 | `CreateUsersStep` `statusMix` / `adminCount` | `scale.xl-migrated-cyberdyne` | `OrganizationUser`: 3,941 confirmed (owner included), 60 accepted, 160 invited, 880 revoked; 4 with `Type=1` |
 | `BulkCommitter` bulk copy | `scale.xl-migrated-cyberdyne-200k-shared` | Seeds without `Execution Timeout Expired` (the cipher insert is ~450 MB) |
+| `BulkCommitter` / `UserBulkRow` (`--no-data-protection`) | `scale.xs-central-perk`, with and without the flag | `LEFT(MasterPassword,2)` and `LEFT([Key],2)` are `P|` for every org user without the flag and never with it; every other `User` column matches between the two runs. **Developer logs in** as the flagged run's owner |
 
 Only three presets set `density.personalCiphers`, so only they exercise `GeneratePersonalCiphersStep` at volume and only they have Q10 expected values: `scale.md-balanced-sterling-cooper`, `scale.lg-balanced-wayne-enterprises`, `scale.xl-highperm-weyland-yutani`. Sterling Cooper is the cheapest of the three.
 

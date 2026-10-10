@@ -45,7 +45,7 @@ Need to create test data?
 - **SeederContext**: Shared mutable state bag (NOT thread-safe)
 - **RecipeExecutor**: Awaits steps sequentially, captures statistics, commits via BulkCommitter, then runs any post-commit steps
 - **RecipeOrchestrator**: Orchestrates recipe building and execution (from presets or options)
-- **SeederDependencies** (`Options/`): Bundles infrastructure services (`DatabaseContext`, `IMapper`, `IPasswordHasher<User>`, `IManglerService`, `Func<ILicensingService>` (a factory, because `LicensingService` throws on construction when the licensing certificate cannot be loaded), `IAttachmentStorageService`, `ISeederLicenseSigner`, `ILoggerFactory`) into a single record, plus two optional `init` properties — `Progress` and `Func<IStripeBillingInitializer>? BillingInitializer` (a factory, so the billing DI graph is only built by commands that opt in). Recipes and the Orchestrator accept this instead of loose parameters. The CLI utility builds it via `SeederServiceFactory.Create().ToDependencies()`. Add new optional services as `init` properties rather than growing the positional list.
+- **SeederDependencies** (`Options/`): Bundles infrastructure services (`DatabaseContext`, `IMapper`, `IPasswordHasher<User>`, `IManglerService`, `Func<ILicensingService>` (a factory, because `LicensingService` throws on construction when the licensing certificate cannot be loaded), `IAttachmentStorageService`, `ISeederLicenseSigner`, `ILoggerFactory`) into a single record, plus three optional `init` properties — `Progress`, `Func<IStripeBillingInitializer>? BillingInitializer` (a factory, so the billing DI graph is only built by commands that opt in) and `DisableDataProtection` (see Server Data Protection). Recipes and the Orchestrator accept this instead of loose parameters. The CLI utility builds it via `SeederServiceFactory.Create().ToDependencies()`. Add new optional services as `init` properties rather than growing the positional list.
 
 **Why two step interfaces, not one async contract?** Deliberate — don't unify. Collapsing to one `Task ExecuteAsync(SeederContext)` costs: rewrite every step class in `Steps/` plus the step test doubles in `test/SeederApi.IntegrationTest/`; force every `.Execute(context)` site in `test/SeederApi.IntegrationTest/Steps/` to `await`, their test methods to `async`; and `TreatWarningsAsErrors` is on repo-wide (`Directory.Build.props`), so CS1998 makes `async` without `await` a build error — every sync step needs `return Task.CompletedTask`. Permanent trap. The split costs less: two-arm union in `OrderedStep`, `object`-typed `Inner`, one duplicated `RecipeBuilder` registration. Diverges from `IScene`/`IQuery` — single `Task`-returning, no sync twin.
 
@@ -147,6 +147,10 @@ The Seeder uses the Rust SDK via FFI because it must behave like a real Bitwarde
 1. Generate encryption keys (like client account setup)
 2. Encrypt vault data client-side (same SDK as real clients)
 3. Store only encrypted result
+
+## Server Data Protection
+
+`User.Key` and `User.MasterPassword` pass through the EF `DataProtectionConverter`, so a default seed stores `P|` values that only a server holding the seeding machine's data-protection keys can read. `--no-data-protection` (`SeederDependencies.DisableDataProtection`) inserts users through `Pipeline/UserBulkRow.cs` instead, which skips the converter; the server reads unprefixed values as-is and re-protects them on the next save. SQL Server only: `RecipeOrchestrator` throws on other providers.
 
 ## Data Flow
 
