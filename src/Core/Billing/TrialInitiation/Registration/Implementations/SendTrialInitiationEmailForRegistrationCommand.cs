@@ -24,9 +24,17 @@ public class SendTrialInitiationEmailForRegistrationCommand(
         ProductTierType productTier,
         IEnumerable<ProductType> products,
         int trialLength,
-        bool paymentOptional = false)
+        bool paymentOptional = false,
+        int? pamSeatMinimum = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(email, nameof(email));
+        ArgumentException.ThrowIfNullOrWhiteSpace(email);
+
+        var requestedProducts = products as IReadOnlyCollection<ProductType> ?? [.. products];
+
+        if (requestedProducts.Contains(ProductType.PrivilegedControls))
+        {
+            ValidatePrivilegedControlsConfiguration(productTier, requestedProducts);
+        }
 
         var userExists = await CheckUserExistsConstantTimeAsync(email);
         var token = GenerateToken(email, name, receiveMarketingEmails);
@@ -45,9 +53,29 @@ public class SendTrialInitiationEmailForRegistrationCommand(
 
         await PerformConstantTimeOperationsAsync();
 
-        await mailService.SendTrialInitiationSignupEmailAsync(userExists, email, token, productTier, products, trialLength, paymentOptional);
+        await mailService.SendTrialInitiationSignupEmailAsync(userExists, email, token, productTier, requestedProducts, trialLength, paymentOptional, pamSeatMinimum);
 
         return null;
+    }
+
+    private static void ValidatePrivilegedControlsConfiguration(
+        ProductTierType productTier,
+        IReadOnlyCollection<ProductType> products)
+    {
+        if (!products.Contains(ProductType.PasswordManager))
+        {
+            throw new BadRequestException("Privileged Controls requires Password Manager.");
+        }
+
+        if (productTier != ProductTierType.Enterprise)
+        {
+            throw new BadRequestException("Privileged Controls is only available on Password Manager Enterprise.");
+        }
+
+        if (products.Contains(ProductType.SecretsManager))
+        {
+            throw new BadRequestException("Privileged Controls cannot be combined with Secrets Manager.");
+        }
     }
 
     /// <summary>

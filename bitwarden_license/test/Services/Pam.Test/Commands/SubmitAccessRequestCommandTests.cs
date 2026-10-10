@@ -4,6 +4,7 @@ using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.Enums;
@@ -15,6 +16,7 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Bit.Services.Pam.Test.Commands;
@@ -24,7 +26,6 @@ public class SubmitAccessRequestCommandTests
 {
     private static readonly DateTime _now = new(2026, 6, 4, 12, 0, 0, DateTimeKind.Utc);
 
-    /// <summary>Default organization for <see cref="SetupCipher"/>.</summary>
     private static readonly Guid _defaultOrganizationId = Guid.NewGuid();
 
     [Theory, BitAutoData]
@@ -49,7 +50,7 @@ public class SubmitAccessRequestCommandTests
             () => sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission { DurationSeconds = 3600 }));
         Assert.Contains("Privileged Controls license is required", ex.Message);
 
-        // Refused before the rule is consulted.
+        // Refused before resolution, so the refusal cannot leak whether the item is governed.
         await sutProvider.GetDependency<IGoverningRuleResolver>().DidNotReceiveWithAnyArgs()
             .ResolveAsync(default, default, default!);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
@@ -162,7 +163,7 @@ public class SubmitAccessRequestCommandTests
         Assert.Contains("maximum", ex.Message);
     }
 
-    // The rule's own MaxLeaseDurationSeconds must be read at submit, not just the global 24h ceiling.
+    // Submit enforces the rule's own MaxLeaseDurationSeconds as well as the global ceiling.
     [Theory, BitAutoData]
     public async Task SubmitAsync_AutomaticDurationExceedsRuleMax_ThrowsBadRequestAndCreatesNoRequest(
         Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
@@ -183,7 +184,7 @@ public class SubmitAccessRequestCommandTests
 
     [Theory]
     [BitAutoData(900)]
-    // Submit refused anything past 24h before the ceiling was raised, whatever the rule stored.
+    // A multi-day cap, still under the global ceiling.
     [BitAutoData(7 * 24 * 60 * 60)]
     public async Task SubmitAsync_AutomaticDurationEqualToRuleMax_CreatesRequest(
         int capSeconds, Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
@@ -257,9 +258,49 @@ public class SubmitAccessRequestCommandTests
         Assert.Equal(ruleId, result.Request.RuleId);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CreateAutoApprovedAsync(default!, default!);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
+            .NotifyCollectionApproversAsync(collectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(userId);
     }
 
-    // The window is pinned at submit, so the rule's cap must be refused here, not left for the approver.
+    [Theory, BitAutoData]
+    public async Task SubmitAsync_Human_MailsTheApproversTheCreatedRequest(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: true);
+        SetupHumanCreate(sutProvider);
+
+        var start = _now.AddHours(1);
+        var end = _now.AddHours(2);
+        await sutProvider.Sut.SubmitAsync(userId, cipherId,
+            new AccessRequestSubmission { Start = start, End = end, Reason = "audit" });
+
+        await sutProvider.GetDependency<IApproverMailNotifier>().Received(1)
+            .NotifyPendingRequestAsync(Arg.Is<AccessRequest>(r =>
+                r.CollectionId == collectionId && r.RequesterId == userId
+                && r.NotBefore == start && r.NotAfter == end));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SubmitAsync_Automatic_MailsNoApprovers(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false);
+        SetupEvaluation(sutProvider, AccessEvaluation.Allow);
+
+        await sutProvider.Sut.SubmitAsync(userId, cipherId,
+            new AccessRequestSubmission { DurationSeconds = 3600, Reason = "deploy" });
+
+        await sutProvider.GetDependency<IApproverMailNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyPendingRequestAsync(default!);
+    }
+
+    // The window is fixed at submit, so the rule's cap is enforced here rather than left to the approver.
     [Theory, BitAutoData]
     public async Task SubmitAsync_HumanWindowExceedsRuleMax_ThrowsBadRequestAndCreatesNoRequest(
         Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
@@ -302,6 +343,23 @@ public class SubmitAccessRequestCommandTests
         });
 
         Assert.Equal(AccessRequestAction.None, result.Request!.Action);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SubmitAsync_Automatic_DoesNotNotifyApprovers(Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false);
+        SetupEvaluation(sutProvider, AccessEvaluation.Allow);
+
+        await sutProvider.Sut.SubmitAsync(userId, cipherId,
+            new AccessRequestSubmission { DurationSeconds = 3600, Reason = "deploy" });
+
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(userId);
     }
 
     [Theory, BitAutoData]
@@ -411,6 +469,97 @@ public class SubmitAccessRequestCommandTests
             .CreateAsync(default!);
     }
 
+    [Theory, BitAutoData]
+    public async Task SubmitAsync_Human_EmitsSubmittedAttemptThenOutcome(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: true);
+        SetupHumanCreate(sutProvider);
+        var emitted = CaptureEmitted(sutProvider);
+
+        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
+            new AccessRequestSubmission { Start = _now.AddHours(1), End = _now.AddHours(2), Reason = "audit" });
+
+        Assert.Collection(emitted,
+            attempt => Assert.Equal(AccessAuditEventPhase.Attempt, attempt.Phase),
+            outcome =>
+            {
+                Assert.Equal(AccessAuditEventPhase.Outcome, outcome.Phase);
+                Assert.Equal(result.Request!.Id, outcome.AccessRequestId);
+            });
+        Assert.All(emitted, e =>
+        {
+            Assert.Equal(AccessAuditEventKind.RequestSubmitted, e.Kind);
+            Assert.Equal(userId, e.ActorId);
+        });
+        Assert.Equal(emitted[0].CorrelationId, emitted[1].CorrelationId);
+    }
+
+    // The auto-approval is a separate system event, with its own attempt and correlation id.
+    [Theory, BitAutoData]
+    public async Task SubmitAsync_Automatic_EmitsSubmissionAndApprovalAttemptsThenOutcomes(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false);
+        SetupEvaluation(sutProvider, AccessEvaluation.Allow);
+        var emitted = CaptureEmitted(sutProvider);
+
+        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
+            new AccessRequestSubmission { DurationSeconds = 3600 });
+
+        Assert.Equal(
+            [
+                (AccessAuditEventKind.RequestSubmitted, AccessAuditEventPhase.Attempt),
+                (AccessAuditEventKind.RequestApproved, AccessAuditEventPhase.Attempt),
+                (AccessAuditEventKind.RequestSubmitted, AccessAuditEventPhase.Outcome),
+                (AccessAuditEventKind.RequestApproved, AccessAuditEventPhase.Outcome),
+            ],
+            emitted.Select(e => (e.Kind, e.Phase)));
+        var submission = emitted.Where(e => e.Kind == AccessAuditEventKind.RequestSubmitted).ToList();
+        var approval = emitted.Where(e => e.Kind == AccessAuditEventKind.RequestApproved).ToList();
+        Assert.All(submission, e => Assert.Equal(userId, e.ActorId));
+        Assert.All(approval, e => Assert.Null(e.ActorId));
+        Assert.Single(submission.Select(e => e.CorrelationId).Distinct());
+        Assert.Single(approval.Select(e => e.CorrelationId).Distinct());
+        Assert.NotEqual(submission[0].CorrelationId, approval[0].CorrelationId);
+        Assert.All(emitted, e => Assert.Equal(result.Request.Id, e.AccessRequestId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SubmitAsync_AutomaticCreateFails_EmitsAttemptsWithoutOutcomes(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false);
+        SetupEvaluation(sutProvider, AccessEvaluation.Allow);
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .CreateAutoApprovedAsync(Arg.Any<AccessRequest>(), Arg.Any<AccessDecision>())
+            .ThrowsAsync(new InvalidOperationException());
+        var emitted = CaptureEmitted(sutProvider);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.SubmitAsync(userId, cipherId,
+            new AccessRequestSubmission { DurationSeconds = 3600 }));
+
+        Assert.Equal(
+            [
+                (AccessAuditEventKind.RequestSubmitted, AccessAuditEventPhase.Attempt),
+                (AccessAuditEventKind.RequestApproved, AccessAuditEventPhase.Attempt),
+            ],
+            emitted.Select(e => (e.Kind, e.Phase)));
+    }
+
+    private static List<AccessAuditEventData> CaptureEmitted(SutProvider<SubmitAccessRequestCommand> sutProvider)
+    {
+        var emitted = new List<AccessAuditEventData>();
+        sutProvider.GetDependency<IAccessAuditEventEmitter>().EmitAsync(Arg.Do<AccessAuditEventData>(emitted.Add));
+        return emitted;
+    }
+
     private static SutProvider<SubmitAccessRequestCommand> Setup()
     {
         var sutProvider = new SutProvider<SubmitAccessRequestCommand>().WithFakeTimeProvider().Create();
@@ -423,7 +572,6 @@ public class SubmitAccessRequestCommandTests
             .CreateAsync(Arg.Any<AccessRequest>())
             .Returns(callInfo => callInfo.Arg<AccessRequest>());
 
-    // Defaults to an organization-owned, licensed cipher; pass `licensed: false` or `organizationId: null` to override.
     private static void SetupCipher(SutProvider<SubmitAccessRequestCommand> sutProvider, Guid userId, Guid cipherId,
         Guid? organizationId = null, bool licensed = true, bool userOwned = false)
     {

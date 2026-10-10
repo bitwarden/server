@@ -38,7 +38,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
         IUserRepository userRepository,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IUpdateInstallationCommand updateInstallationCommand,

@@ -3,6 +3,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Vault.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.Models;
@@ -14,9 +15,6 @@ namespace Bit.Services.Pam.OrganizationFeatures.Commands;
 
 public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
 {
-    /// <summary>
-    /// The global maximum lease duration; see <see cref="LeaseDurationBounds"/>.
-    /// </summary>
     public const int MaxDurationSeconds = LeaseDurationBounds.GlobalMaxSeconds;
 
     private readonly ICipherRepository _cipherRepository;
@@ -25,6 +23,10 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
     private readonly ICurrentContext _currentContext;
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IAccessRequestRepository _accessRequestRepository;
+    private readonly IApproverInboxNotifier _approverInboxNotifier;
+    private readonly IApproverMailNotifier _approverMailNotifier;
+    private readonly IRequesterNotifier _requesterNotifier;
+    private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
     public SubmitAccessRequestCommand(
@@ -34,6 +36,10 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         ICurrentContext currentContext,
         IAccessLeaseRepository accessLeaseRepository,
         IAccessRequestRepository accessRequestRepository,
+        IApproverInboxNotifier approverInboxNotifier,
+        IApproverMailNotifier approverMailNotifier,
+        IRequesterNotifier requesterNotifier,
+        IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
         _cipherRepository = cipherRepository;
@@ -42,6 +48,10 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         _currentContext = currentContext;
         _accessLeaseRepository = accessLeaseRepository;
         _accessRequestRepository = accessRequestRepository;
+        _approverInboxNotifier = approverInboxNotifier;
+        _approverMailNotifier = approverMailNotifier;
+        _requesterNotifier = requesterNotifier;
+        _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
 
@@ -104,7 +114,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
             throw new BadRequestException("A positive duration is required.");
         }
 
-        // Activation mints exactly this window, so the cap is enforced here.
+        // Activation does not re-check the cap, so it is enforced here.
         var maxDurationSeconds = LeaseDurationBounds.EffectiveMax(governingRule.MaxLeaseDurationSeconds);
         if (durationSeconds > maxDurationSeconds)
         {
@@ -145,8 +155,35 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         };
         decision.SetNewId();
 
+        // The submission and the auto-approval are separate events, each recorded as an attempt and an outcome.
+        var audit = new AccessAuditEventData
+        {
+            Kind = AccessAuditEventKind.RequestSubmitted,
+            OccurredDate = now,
+            OrganizationId = governingRule.OrganizationId,
+            ActorId = userId,
+            RequesterId = userId,
+            CollectionId = governingRule.CollectionId,
+            CipherId = cipherId,
+            AccessRequestId = request.Id,
+            Detail = request.Reason,
+        };
+        var approvalAudit = audit with
+        {
+            Kind = AccessAuditEventKind.RequestApproved,
+            ActorId = null,
+            CorrelationId = Guid.NewGuid(),
+        };
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
+        await _accessAuditEventEmitter.EmitAsync(approvalAudit with { Phase = AccessAuditEventPhase.Attempt });
+
         // No lease here; the requester activates separately.
         await _accessRequestRepository.CreateAutoApprovedAsync(request, decision);
+
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
+        await _accessAuditEventEmitter.EmitAsync(approvalAudit with { Phase = AccessAuditEventPhase.Outcome });
+
+        await _requesterNotifier.NotifyRequesterAsync(userId);
 
         return AccessRequestResult.Automatic(request, decision);
     }
@@ -202,7 +239,28 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
             CreationDate = now,
         };
 
+        // Attempt now, outcome once the request has an id.
+        var audit = new AccessAuditEventData
+        {
+            Kind = AccessAuditEventKind.RequestSubmitted,
+            OccurredDate = now,
+            OrganizationId = governingRule.OrganizationId,
+            ActorId = userId,
+            RequesterId = userId,
+            CollectionId = governingRule.CollectionId,
+            CipherId = cipherId,
+            Detail = request.Reason,
+        };
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
+
         var created = await _accessRequestRepository.CreateAsync(request);
+
+        await _accessAuditEventEmitter.EmitAsync(
+            audit with { Phase = AccessAuditEventPhase.Outcome, AccessRequestId = created.Id });
+
+        await _approverInboxNotifier.NotifyCollectionApproversAsync(created.CollectionId);
+        await _approverMailNotifier.NotifyPendingRequestAsync(created);
+        await _requesterNotifier.NotifyRequesterAsync(userId);
 
         return AccessRequestResult.Human(created);
     }

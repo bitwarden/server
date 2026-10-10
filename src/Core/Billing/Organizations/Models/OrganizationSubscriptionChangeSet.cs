@@ -67,7 +67,8 @@ public record OrganizationSubscriptionChangeSet
 /// encapsulate the correct Stripe price IDs and proration behavior. Structural operations
 /// (plan upgrades, sponsorship swaps) automatically set
 /// <see cref="OrganizationSubscriptionChangeSet.ChargeImmediately"/> so that they are billed
-/// immediately. All other operations (add-ons, seat updates) default to proration.
+/// immediately, as does the first purchase of Privileged Controls seats. All other operations
+/// (add-ons, seat updates) default to proration.
 /// </summary>
 public class OrganizationSubscriptionChangeSetBuilder(Plan currentPlan)
 {
@@ -131,6 +132,26 @@ public class OrganizationSubscriptionChangeSetBuilder(Plan currentPlan)
     public OrganizationSubscriptionChangeSetBuilder UpdateSecretsManagerSeats(int quantity)
     {
         _changes.Add(new UpdateItemQuantity(currentPlan.SecretsManager.StripeSeatPlanId, quantity));
+        return this;
+    }
+
+    /// <summary>
+    /// Adds the Privileged Controls seat line item to the subscription (first purchase). Charges
+    /// immediately.
+    /// </summary>
+    public OrganizationSubscriptionChangeSetBuilder AddPrivilegedControlsSeats(int quantity)
+    {
+        _changes.Add(new AddItem(currentPlan.PrivilegedControls.StripeSeatPlanId, quantity));
+        _chargeImmediately = true;
+        return this;
+    }
+
+    /// <summary>
+    /// Updates the quantity of the existing Privileged Controls seat line item.
+    /// </summary>
+    public OrganizationSubscriptionChangeSetBuilder UpdatePrivilegedControlsSeats(int quantity)
+    {
+        _changes.Add(new UpdateItemQuantity(currentPlan.PrivilegedControls.StripeSeatPlanId, quantity));
         return this;
     }
 
