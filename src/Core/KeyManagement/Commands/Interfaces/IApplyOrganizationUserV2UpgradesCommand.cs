@@ -10,9 +10,10 @@ public interface IApplyOrganizationUserV2UpgradesCommand
     /// is how an admin clears an upgrade that cannot be completed.
     /// </summary>
     /// <remarks>
-    /// Each update is checked against the key id on the member's user row, so an admin cannot install a key
-    /// wrapped against a user key the member no longer holds. An update that fails this check is skipped rather
-    /// than rejected, and the membership stays pending. Each member who is unenrolled gets a withdrawal event.
+    /// Each update is checked against the key id on the member's user row, so an admin cannot accidentally install
+    /// a key wrapped against a user key the member no longer holds, for example after a concurrent rotation. The
+    /// check does not stop a malicious admin, who can send any key with the current key id. An update that fails
+    /// this check is skipped rather than rejected, and the membership stays pending. Each member who is unenrolled gets a withdrawal event.
     /// </remarks>
     /// <param name="organizationId">The organization the memberships belong to.</param>
     /// <param name="includeOwners">

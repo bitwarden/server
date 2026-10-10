@@ -47,8 +47,9 @@ public class OrganizationUserV2UpgradeRequestModel
 
     /// <summary>
     /// The key id of the user key the new <see cref="AccountRecoveryKey"/> wraps. The server checks it against the
-    /// member's user row and rejects the whole request when it no longer matches. It is required to unenroll a
-    /// member as well, so that a stale request cannot undo a rotation the admin has not read.
+    /// member's user row. When it no longer matches, the server skips the update and the membership stays pending.
+    /// It is required to unenroll a member as well, so that a stale request cannot undo a rotation the admin has not
+    /// read.
     /// </summary>
     [Required]
     [KeyId]
