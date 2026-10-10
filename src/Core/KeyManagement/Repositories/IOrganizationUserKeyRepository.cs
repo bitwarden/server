@@ -11,11 +11,16 @@ public interface IOrganizationUserKeyRepository
     /// Reads memberships in the organization that still have a V2 upgrade token, that is, members whose account
     /// recovery key an admin has not yet re-wrapped with the member's V2 user key.
     /// </summary>
+    /// <remarks>
+    /// The memberships are ordered by id. To read the next page, pass the id of the last membership of the previous
+    /// page as <paramref name="afterId"/>.
+    /// </remarks>
     /// <param name="organizationId">The organization the memberships belong to.</param>
     /// <param name="includeOwners">Whether memberships of the Owner type are returned.</param>
+    /// <param name="afterId">Only memberships with an id after this one are returned. Null starts from the first.</param>
     /// <param name="maxCount">The maximum number of memberships to return.</param>
     Task<ICollection<OrganizationUserV2UpgradeDetails>> GetManyPendingV2UpgradesByOrganizationIdAsync(
-        Guid organizationId, bool includeOwners, int maxCount);
+        Guid organizationId, bool includeOwners, Guid? afterId, int maxCount);
 
     /// <summary>
     /// Replaces the account recovery keys of the given memberships and clears their V2 upgrade tokens. An update

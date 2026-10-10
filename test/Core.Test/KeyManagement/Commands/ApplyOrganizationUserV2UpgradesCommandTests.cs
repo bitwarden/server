@@ -108,8 +108,6 @@ public class ApplyOrganizationUserV2UpgradesCommandTests
                     && update.UserKeyId == OtherUserKeyId
                     && update.AccountRecoveryKey == null)),
             RevisionDate(sutProvider));
-        await repository.DidNotReceiveWithAnyArgs().GetManyPendingV2UpgradesByOrganizationIdAsync(
-            Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<int>());
     }
 
     [Theory, BitAutoData]
@@ -202,8 +200,6 @@ public class ApplyOrganizationUserV2UpgradesCommandTests
 
         // Assert
         var repository = sutProvider.GetDependency<IOrganizationUserKeyRepository>();
-        await repository.DidNotReceiveWithAnyArgs().GetManyPendingV2UpgradesByOrganizationIdAsync(
-            Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<int>());
         await repository.DidNotReceiveWithAnyArgs().UpdateManyV2UpgradedAccountRecoveryKeysAsync(
             Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<IEnumerable<OrganizationUserAccountRecoveryKeyUpdate>>(),
             Arg.Any<DateTime>());

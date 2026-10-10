@@ -24,13 +24,19 @@ public class OrganizationUserKeyRepository : IOrganizationUserKeyRepository
     }
 
     public async Task<ICollection<OrganizationUserV2UpgradeDetails>> GetManyPendingV2UpgradesByOrganizationIdAsync(
-        Guid organizationId, bool includeOwners, int maxCount)
+        Guid organizationId, bool includeOwners, Guid? afterId, int maxCount)
     {
         await using var connection = new SqlConnection(_connectionString);
 
         var results = await connection.QueryAsync<OrganizationUserV2UpgradeDetails>(
             "[dbo].[OrganizationUser_ReadManyV2UpgradeDetailsByOrganizationId]",
-            new { OrganizationId = organizationId, ExcludedType = ExcludedType(includeOwners), MaxCount = maxCount },
+            new
+            {
+                OrganizationId = organizationId,
+                ExcludedType = ExcludedType(includeOwners),
+                AfterId = afterId,
+                MaxCount = maxCount
+            },
             commandType: CommandType.StoredProcedure);
 
         return results.ToList();

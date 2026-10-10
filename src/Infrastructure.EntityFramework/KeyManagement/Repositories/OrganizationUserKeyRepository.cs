@@ -16,21 +16,30 @@ public class OrganizationUserKeyRepository : BaseEntityFrameworkRepository, IOrg
     }
 
     public async Task<ICollection<OrganizationUserV2UpgradeDetails>> GetManyPendingV2UpgradesByOrganizationIdAsync(
-        Guid organizationId, bool includeOwners, int maxCount)
+        Guid organizationId, bool includeOwners, Guid? afterId, int maxCount)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
 
+        var organizationUsers = dbContext.OrganizationUsers
+            .Where(organizationUser => organizationUser.OrganizationId == organizationId);
+
+        if (afterId is { } after)
+        {
+            organizationUsers = organizationUsers
+                .Where(organizationUser => organizationUser.Id.CompareTo(after) > 0);
+        }
+
         // A row without a user key id cannot be upgraded. The server has nothing to validate the admin's
         // re-wrapped key against, so the row is not returned.
         return await (
-            from organizationUser in dbContext.OrganizationUsers
+            from organizationUser in organizationUsers
             join user in dbContext.Users on organizationUser.UserId equals user.Id
-            where organizationUser.OrganizationId == organizationId
-                && organizationUser.V2UpgradeToken != null
+            where organizationUser.V2UpgradeToken != null
                 && organizationUser.ResetPasswordKey != null
                 && user.UserKeyId != null
                 && (includeOwners || organizationUser.Type != OrganizationUserType.Owner)
+            orderby organizationUser.Id
             select new OrganizationUserV2UpgradeDetails
             {
                 OrganizationUserId = organizationUser.Id,

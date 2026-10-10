@@ -33,7 +33,7 @@ public class OrganizationUserKeyRepositoryTests
             _userKeyId, _v1AccountRecoveryKey, _v2UpgradeToken);
 
         // Act
-        var pending = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id, includeOwners: true, _maxCount);
+        var pending = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id, includeOwners: true, afterId: null, _maxCount);
 
         // Assert
         var result = Assert.Single(pending);
@@ -56,7 +56,7 @@ public class OrganizationUserKeyRepositoryTests
             _userKeyId, _v1AccountRecoveryKey, v2UpgradeToken: null);
 
         // Act
-        var pending = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id, includeOwners: true, _maxCount);
+        var pending = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id, includeOwners: true, afterId: null, _maxCount);
 
         // Assert
         Assert.Empty(pending);
@@ -75,7 +75,7 @@ public class OrganizationUserKeyRepositoryTests
             userKeyId: null, _v1AccountRecoveryKey, _v2UpgradeToken);
 
         // Act
-        var pending = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id, includeOwners: true, _maxCount);
+        var pending = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id, includeOwners: true, afterId: null, _maxCount);
 
         // Assert
         Assert.Empty(pending);
@@ -95,7 +95,7 @@ public class OrganizationUserKeyRepositoryTests
             _userKeyId, _v1AccountRecoveryKey, _v2UpgradeToken);
 
         // Act
-        var pending = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id, includeOwners: true, _maxCount);
+        var pending = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id, includeOwners: true, afterId: null, _maxCount);
 
         // Assert
         Assert.Empty(pending);
@@ -316,7 +316,7 @@ public class OrganizationUserKeyRepositoryTests
 
         // Act
         var pending = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id,
-            includeOwners: false, _maxCount);
+            includeOwners: false, afterId: null, _maxCount);
 
         // Assert
         var result = Assert.Single(pending);
@@ -337,7 +337,7 @@ public class OrganizationUserKeyRepositoryTests
 
         // Act
         var pending = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id,
-            includeOwners: true, _maxCount);
+            includeOwners: true, afterId: null, _maxCount);
 
         // Assert
         var result = Assert.Single(pending);
@@ -361,7 +361,7 @@ public class OrganizationUserKeyRepositoryTests
 
         // Act
         var pending = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id,
-            includeOwners: true, _maxCount);
+            includeOwners: true, afterId: null, _maxCount);
 
         // Assert
         var result = Assert.Single(pending);
@@ -385,10 +385,39 @@ public class OrganizationUserKeyRepositoryTests
 
         // Act
         var pending = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id,
-            includeOwners: true, maxCount: 2);
+            includeOwners: true, afterId: null, maxCount: 2);
 
         // Assert
         Assert.Equal(2, pending.Count);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetManyPendingV2UpgradesByOrganizationIdAsync_ReadAfterTheLastIdOfAPage_ReturnsTheRemainingMemberships(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationUserKeyRepository sut)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var organizationUserIds = new List<Guid>();
+        for (var i = 0; i < 3; i++)
+        {
+            var (_, organizationUser) = await CreateMemberAsync(userRepository, organizationUserRepository,
+                organization, _userKeyId, _v1AccountRecoveryKey, _v2UpgradeToken);
+            organizationUserIds.Add(organizationUser.Id);
+        }
+
+        var firstPage = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id,
+            includeOwners: true, afterId: null, maxCount: 2);
+
+        // Act
+        var secondPage = await sut.GetManyPendingV2UpgradesByOrganizationIdAsync(organization.Id,
+            includeOwners: true, afterId: firstPage.Last().OrganizationUserId, maxCount: 2);
+
+        // Assert
+        var read = firstPage.Concat(secondPage).Select(details => details.OrganizationUserId).ToList();
+        Assert.Equal(organizationUserIds.Order(), read.Order());
     }
 
     [Theory, DatabaseData]

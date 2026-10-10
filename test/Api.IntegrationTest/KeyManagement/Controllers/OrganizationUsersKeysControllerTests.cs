@@ -3,6 +3,7 @@ using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.KeyManagement.Models.Requests;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -135,7 +136,7 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
     }
 
     [Fact]
-    public async Task V2Upgrade_AdminActingOnAnOwner_OwnerIsNotListedAndKeyIsUnchanged()
+    public async Task V2Upgrade_AdminActingOnAnOwner_OwnerIsNotListedAndPostIsNotFound()
     {
         // Arrange - an Admin cannot access the key material of an Owner
         var organizationUser = await GivenAPendingUpgradeAsync(_ownerEmail);
@@ -152,8 +153,8 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
         // Act - the admin posts a key for the owner anyway
         var upgrade = await _client.PostAsJsonAsync(UpgradesUri(), RequestFor(organizationUser.Id, _userKeyId));
 
-        // Assert - the owner's membership is skipped
-        upgrade.EnsureSuccessStatusCode();
+        // Assert - the request is rejected
+        Assert.Equal(HttpStatusCode.NotFound, upgrade.StatusCode);
         var written = await _organizationUserRepository.GetByIdAsync(organizationUser.Id);
         Assert.NotNull(written);
         Assert.Equal(_v1AccountRecoveryKey, written.ResetPasswordKey);
@@ -329,6 +330,111 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetPendingV2UpgradesAsync_MalformedContinuationToken_BadRequest()
+    {
+        // Arrange
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        // Act
+        var response = await _client.GetAsync($"{PendingUpgradesUri()}?continuationToken=not-a-guid");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task V2Upgrade_OwnerActingOnAProviderAdminOfAnotherProvider_MemberIsNotListedAndPostIsNotFound()
+    {
+        // Arrange - an organization Owner who is not in the member's provider cannot recover the member
+        var memberEmail = await CreateMemberAsync(OrganizationUserType.User);
+        var organizationUser = await GivenAPendingUpgradeAsync(memberEmail);
+        var provider = await ProviderTestHelpers.CreateProviderAndLinkToOrganizationAsync(
+            _factory, _organization.Id, ProviderType.Msp);
+        await ProviderTestHelpers.CreateProviderUserAsync(_factory, provider.Id, memberEmail,
+            ProviderUserType.ProviderAdmin);
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        // Act - the owner reads the pending upgrades
+        var pending = await _client.GetAsync(PendingUpgradesUri());
+
+        // Assert - the member is not listed
+        pending.EnsureSuccessStatusCode();
+        Assert.DoesNotContain(organizationUser.Id.ToString(), await pending.Content.ReadAsStringAsync());
+
+        // Act - the owner posts a key for the member anyway
+        var upgrade = await _client.PostAsJsonAsync(UpgradesUri(), RequestFor(organizationUser.Id, _userKeyId));
+
+        // Assert - the request is rejected
+        Assert.Equal(HttpStatusCode.NotFound, upgrade.StatusCode);
+        var written = await _organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(written);
+        Assert.Equal(_v1AccountRecoveryKey, written.ResetPasswordKey);
+        Assert.Equal(_v2UpgradeToken, written.V2UpgradeToken);
+    }
+
+    [Fact]
+    public async Task GetPendingV2UpgradesAsync_ServiceUserActingOnAProviderAdminOfTheSameProvider_MemberIsNotListed()
+    {
+        // Arrange - a Service User cannot recover a Provider Admin of their own provider
+        var provider = await ProviderTestHelpers.CreateProviderAndLinkToOrganizationAsync(
+            _factory, _organization.Id, ProviderType.Msp);
+
+        var callerEmail = await CreateMemberAsync(OrganizationUserType.Owner);
+        await ProviderTestHelpers.CreateProviderUserAsync(_factory, provider.Id, callerEmail,
+            ProviderUserType.ServiceUser);
+
+        var memberEmail = await CreateMemberAsync(OrganizationUserType.User);
+        var organizationUser = await GivenAPendingUpgradeAsync(memberEmail);
+        await ProviderTestHelpers.CreateProviderUserAsync(_factory, provider.Id, memberEmail,
+            ProviderUserType.ProviderAdmin);
+
+        await _loginHelper.LoginAsync(callerEmail);
+
+        // Act
+        var pending = await _client.GetAsync(PendingUpgradesUri());
+
+        // Assert
+        pending.EnsureSuccessStatusCode();
+        Assert.DoesNotContain(organizationUser.Id.ToString(), await pending.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task V2Upgrade_ProviderAdminActingOnAProviderAdminOfTheSameProvider_ReplacesTheKey()
+    {
+        // Arrange - a Provider Admin can recover another Provider Admin of the same provider
+        var provider = await ProviderTestHelpers.CreateProviderAndLinkToOrganizationAsync(
+            _factory, _organization.Id, ProviderType.Msp);
+
+        var callerEmail = await CreateMemberAsync(OrganizationUserType.Owner);
+        await ProviderTestHelpers.CreateProviderUserAsync(_factory, provider.Id, callerEmail,
+            ProviderUserType.ProviderAdmin);
+
+        var memberEmail = await CreateMemberAsync(OrganizationUserType.User);
+        var organizationUser = await GivenAPendingUpgradeAsync(memberEmail);
+        await ProviderTestHelpers.CreateProviderUserAsync(_factory, provider.Id, memberEmail,
+            ProviderUserType.ProviderAdmin);
+
+        await _loginHelper.LoginAsync(callerEmail);
+
+        // Act - the caller reads the pending upgrades
+        var pending = await _client.GetAsync(PendingUpgradesUri());
+
+        // Assert - the member is listed
+        pending.EnsureSuccessStatusCode();
+        Assert.Contains(organizationUser.Id.ToString(), await pending.Content.ReadAsStringAsync());
+
+        // Act - the caller posts the re-wrapped key
+        var upgrade = await _client.PostAsJsonAsync(UpgradesUri(), RequestFor(organizationUser.Id, _userKeyId));
+
+        // Assert - the key is replaced and the token is cleared
+        upgrade.EnsureSuccessStatusCode();
+        var written = await _organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(written);
+        Assert.Equal(_v2AccountRecoveryKey, written.ResetPasswordKey);
+        Assert.Null(written.V2UpgradeToken);
     }
 
     private string PendingUpgradesUri() =>
