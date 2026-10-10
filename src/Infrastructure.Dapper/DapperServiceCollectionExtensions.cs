@@ -89,6 +89,7 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IOrganizationApplicationRepository, OrganizationApplicationRepository>();
         services.AddSingleton<IOrganizationDeleteTaskRepository, OrganizationDeleteTaskRepository>();
         services.AddSingleton<IOrganizationMemberBaseDetailRepository, OrganizationMemberBaseDetailRepository>();
+        services.AddSingleton<IMemberAdoptionReportRepository, MemberAdoptionReportRepository>();
 
         if (selfHosted)
         {
