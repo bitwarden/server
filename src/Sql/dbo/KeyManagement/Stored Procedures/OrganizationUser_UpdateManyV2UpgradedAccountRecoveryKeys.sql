@@ -8,13 +8,13 @@ BEGIN
     SET NOCOUNT ON
 
     DECLARE @OrganizationUserInput AS TABLE (
-        [Id] UNIQUEIDENTIFIER,
+        [Id] UNIQUEIDENTIFIER PRIMARY KEY,
         [UserKeyId] VARCHAR(32),
         [AccountRecoveryKey] VARCHAR(MAX)
     )
 
     DECLARE @Updated AS TABLE (
-        [OrganizationUserId] UNIQUEIDENTIFIER,
+        [OrganizationUserId] UNIQUEIDENTIFIER PRIMARY KEY,
         [UserId] UNIQUEIDENTIFIER
     )
 

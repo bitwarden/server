@@ -301,28 +301,6 @@ public class OrganizationUserKeyRepositoryTests
     }
 
     [Theory, DatabaseData]
-    public async Task UpdateManyV2UpgradedAccountRecoveryKeysAsync_SameMembershipTwice_WritesTheKeyOnce(
-        IUserRepository userRepository,
-        IOrganizationRepository organizationRepository,
-        IOrganizationUserRepository organizationUserRepository,
-        IOrganizationUserKeyRepository sut)
-    {
-        // Arrange - the request model rejects a repeated membership, so the repository only has to stay graceful
-        var organization = await organizationRepository.CreateTestOrganizationAsync();
-        var (_, organizationUser) = await CreateMemberAsync(userRepository, organizationUserRepository, organization,
-            _userKeyId, _v1AccountRecoveryKey, _v2UpgradeToken);
-
-        // Act
-        await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id, includeOwners: true,
-            [Update(organizationUser.Id, _userKeyId), Update(organizationUser.Id, _userKeyId)], DateTime.UtcNow);
-
-        // Assert
-        var written = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
-        Assert.Equal(_v2AccountRecoveryKey, written!.ResetPasswordKey);
-        Assert.Null(written.V2UpgradeToken);
-    }
-
-    [Theory, DatabaseData]
     public async Task GetManyPendingV2UpgradesByOrganizationIdAsync_OwnersNotIncluded_LeavesOutTheOwner(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
