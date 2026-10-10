@@ -448,6 +448,10 @@ give identical counts.
 | Q12 `MemberItemPairs` | ~976k, of which ~883k confirmed and ~93k (9.5%) invited, accepted or revoked |
 | Q12 `MyItemsItems` | ~62k (3,936 My Items collections, one per confirmed User member) |
 
+`scale.sm-migrated-cyberdyne` (1/10): 505 members (395 confirmed, 6 accepted, 16 invited, 88 revoked; 4 admins), 47
+groups, 990 collections (390 My Items), ~11.4k items fetched (~5.3k in My Items, ~0.5k trashed) and ~93k member-item
+pairs, ~13% of them from non-confirmed members. Groups per confirmed member P50/P90/P99/max 1/3/6/7.
+
 `-200k-myitems` keeps the same pairs with ~221k items fetched and ~160k My Items items. `-200k-shared` reaches ~2.6M
 pairs (8.4% not confirmed) with ~212k items fetched.
 
