@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Collections.Concurrent;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
@@ -44,7 +45,7 @@ public class LicensingService : ILicensingService
     private readonly ILicenseClaimsFactory<User> _userLicenseClaimsFactory;
     private readonly IPushNotificationService _pushNotificationService;
 
-    private IDictionary<Guid, DateTime> _userCheckCache = new Dictionary<Guid, DateTime>();
+    private IDictionary<Guid, DateTime> _userCheckCache = new ConcurrentDictionary<Guid, DateTime>();
 
     public LicensingService(
         IUserRepository userRepository,
@@ -246,7 +247,7 @@ public class LicensingService : ILicensingService
         }
         else
         {
-            _userCheckCache.Add(user.Id, now);
+            _userCheckCache.TryAdd(user.Id, now);
         }
 
         _logger.LogInformation(Core.Constants.BypassFiltersEventId, null,
