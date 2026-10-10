@@ -282,6 +282,7 @@ public static partial class FeatureFlagKeys
 
     /* Secrets Manager Team */
     public const string SecretsVersioning = "sm-1587-secrets-versioning";
+    public const string MachineAccountTokenPrefix = "sm-2093-machine-account-token-prefix";
 
     /* Skunkworks Team */
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
