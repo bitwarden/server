@@ -126,22 +126,14 @@ public static class ServiceCollectionExtensions
 
                 // Disable the legacy WS-* claim-name mapping so OIDC-native claims stay in their
                 // short form on the ClaimsPrincipal: `sub`, `email`, `email_verified`, and
-                // `auth_time`. The last one matters for the MaxAge enforcement below - the
-                // OnTokenValidated handler looks up `auth_time` by its short name, and
-                // MapInboundClaims=true would rename it to the xmlsoap URI and silently
-                // break staleness checks.
-                //
-                // Matches the JWT on the wire and simplifies config (`EmailClaimType=email`
-                // rather than the long xmlsoap URI).
-                //
-                // We deliberately do NOT call GetClaimsFromUserInfoEndpoint. UserInfo claims go
-                // through a separate ClaimActions pipeline that MapInboundClaims does not
-                // affect and whose defaults reintroduce the xmlsoap URIs - untangling that
-                // requires additional per-claim mapping. Rely on the ID token instead: it's a
-                // one-checkbox change at every mainstream IdP to include `email` and
-                // `email_verified` in the ID token, and it's already the default at Auth0,
-                // Azure AD/Entra, and Keycloak (Okta needs a small config change).
+                // `auth_time`.
                 options.MapInboundClaims = false;
+
+                // We deliberately do NOT call the UserInfo endpoint. UserInfo claims go through a
+                // separate ClaimActions pipeline that MapInboundClaims does not affect and whose
+                // defaults reintroduce the xmlsoap URIs - untangling that requires additional
+                // per-claim mapping. Rely on the ID token instead.
+                options.GetClaimsFromUserInfoEndpoint = false;
 
                 options.Scope.Clear();
                 foreach (var scope in oidc.Scopes.Split(' ', StringSplitOptions.RemoveEmptyEntries))
