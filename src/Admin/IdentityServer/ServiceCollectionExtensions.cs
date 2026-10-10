@@ -1,10 +1,12 @@
-﻿using Bit.Admin.Auth.IdentityServer;
+﻿using System.Globalization;
+using Bit.Admin.Auth.IdentityServer;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Entities;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
 namespace Bit.Admin.IdentityServer;
@@ -122,9 +124,15 @@ public static class ServiceCollectionExtensions
                 // attach it as id_token_hint on RP-initiated logout.
                 options.SaveTokens = true;
 
-                // Disable the legacy WS-* claim-name mapping so `sub`, `email`, `email_verified`
-                // stay in their OIDC-native short form. Matches the JWT on the wire and simplifies
-                // config (`EmailClaimType=email` rather than the long xmlsoap URI).
+                // Disable the legacy WS-* claim-name mapping so OIDC-native claims stay in their
+                // short form on the ClaimsPrincipal: `sub`, `email`, `email_verified`, and
+                // `auth_time`. The last one matters for the MaxAge enforcement below - the
+                // OnTokenValidated handler looks up `auth_time` by its short name, and
+                // MapInboundClaims=true would rename it to the xmlsoap URI and silently
+                // break staleness checks.
+                //
+                // Matches the JWT on the wire and simplifies config (`EmailClaimType=email`
+                // rather than the long xmlsoap URI).
                 //
                 // We deliberately do NOT call GetClaimsFromUserInfoEndpoint. UserInfo claims go
                 // through a separate ClaimActions pipeline that MapInboundClaims does not
@@ -167,11 +175,15 @@ public static class ServiceCollectionExtensions
                 // stolen IdP session cookie to ride into the Admin Portal silently.
                 options.AdditionalAuthorizationParameters.Add("prompt", "login");
 
-                // Server-enforced complement to prompt=login. Unlike prompt (a SHOULD), max_age
-                // is a MUST: the IdP returns an auth_time claim and the handler validates
-                // now - auth_time <= MaxAge. Zero means the user must have authenticated at or
-                // after this authorize request, so a stale IdP session cookie cannot ride into
-                // the Admin Portal even if the IdP ignores prompt=login.
+                // Server-enforced complement to prompt=login. Setting MaxAge adds `max_age=0` to
+                // the authorize request. Per OIDC Core 3.1.2.1 the IdP MUST then return an
+                // `auth_time` claim and the user MUST have authenticated at or after this request.
+                //
+                // The ASP.NET OIDC handler does NOT enforce this on the response - it only writes
+                // max_age out on the request. The OnTokenValidated below is where enforcement
+                // actually happens: we reject when auth_time is absent, unparseable, or older than
+                // MaxAge+ClockSkew. Without this, a non-conformant IdP that ignored both
+                // prompt=login and max_age could ride a stale IdP session into the Admin Portal.
                 options.MaxAge = TimeSpan.Zero;
 
                 // Pin the OIDC helper cookies explicitly (default is SameSite=None, which the
@@ -196,6 +208,30 @@ public static class ServiceCollectionExtensions
                     {
                         ctx.ProtocolMessage.IdTokenHint = idToken;
                     }
+                    return Task.CompletedTask;
+                };
+
+                // Response-side enforcement for the MaxAge above. The handler sends max_age on
+                // the request but doesn't validate auth_time on the response, so we do it here.
+                // Fail-closed on a missing or unparseable claim, and allow MaxAge+ClockSkew of
+                // tolerance to absorb normal IdP/app clock drift.
+                options.Events.OnTokenValidated = ctx =>
+                {
+                    var authTimeClaim = ctx.Principal?.FindFirst(JwtRegisteredClaimNames.AuthTime);
+                    if (authTimeClaim is null ||
+                        !long.TryParse(authTimeClaim.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var authTimeUnix))
+                    {
+                        ctx.Fail($"{JwtRegisteredClaimNames.AuthTime} claim is missing or invalid.");
+                        return Task.CompletedTask;
+                    }
+
+                    var authTime = DateTimeOffset.FromUnixTimeSeconds(authTimeUnix);
+                    var tolerance = options.MaxAge.GetValueOrDefault() + options.TokenValidationParameters.ClockSkew;
+                    if (DateTimeOffset.UtcNow - authTime > tolerance)
+                    {
+                        ctx.Fail($"{JwtRegisteredClaimNames.AuthTime} is older than MaxAge+ClockSkew.");
+                    }
+
                     return Task.CompletedTask;
                 };
             });
