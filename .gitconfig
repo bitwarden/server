@@ -1,0 +1,3 @@
+[hook "linter"]
+    event = pre-commit
+    command = ./scripts/format-staged.sh
