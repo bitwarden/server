@@ -4,6 +4,7 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,13 +12,15 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20260903163505_AddDeviceUserIdLastActivityDateIndex")]
+    partial class AddDeviceUserIdLastActivityDateIndex
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.11")
+                .HasAnnotation("ProductVersion", "8.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
@@ -235,9 +238,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("LimitItemDeletion")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<int?>("MaxAutoscalePamSeats")
-                        .HasColumnType("int");
-
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("int");
 
@@ -260,12 +260,6 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<DateTime?>("OwnersNotifiedOfAutoscaling")
                         .HasColumnType("datetime(6)");
-
-                    b.Property<int?>("PamSeatMinimum")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("PamSeats")
-                        .HasColumnType("int");
 
                     b.Property<string>("Plan")
                         .IsRequired()
@@ -2433,112 +2427,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("NotificationStatus", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessAuditEvent", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid?>("AccessConnectorId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("AccessConnectorName")
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
-
-                    b.Property<Guid?>("AccessLeaseId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid?>("AccessRequestId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid?>("AccessRuleId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("ActorEmail")
-                        .HasMaxLength(256)
-                        .HasColumnType("varchar(256)");
-
-                    b.Property<Guid?>("ActorId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("ActorName")
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
-
-                    b.Property<Guid?>("CipherId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid?>("CollectionId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid>("CorrelationId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("Detail")
-                        .HasColumnType("longtext");
-
-                    b.Property<byte>("Kind")
-                        .HasColumnType("tinyint unsigned");
-
-                    b.Property<DateTime?>("LeaseNotAfter")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime?>("LeaseNotBefore")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime>("OccurredDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<byte>("Phase")
-                        .HasColumnType("tinyint unsigned");
-
-                    b.Property<string>("RequesterEmail")
-                        .HasMaxLength(256)
-                        .HasColumnType("varchar(256)");
-
-                    b.Property<Guid?>("RequesterId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("RequesterName")
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
-
-                    b.Property<Guid?>("RotationConfigId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid?>("RotationJobId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<byte?>("RotationSource")
-                        .HasColumnType("tinyint unsigned");
-
-                    b.Property<string>("RuleName")
-                        .HasMaxLength(256)
-                        .HasColumnType("varchar(256)");
-
-                    b.Property<byte?>("SyncState")
-                        .HasColumnType("tinyint unsigned");
-
-                    b.Property<Guid?>("TargetSystemId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("TargetSystemName")
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CorrelationId");
-
-                    b.HasIndex("OrganizationId", "OccurredDate", "Id")
-                        .IsDescending(false, true, true);
-
-                    b.ToTable("AccessAuditEvent", (string)null);
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessDecision", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2583,9 +2471,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("AccessRequestId")
                         .HasColumnType("char(36)");
 
-                    b.Property<byte>("Action")
-                        .HasColumnType("tinyint unsigned");
-
                     b.Property<Guid>("CipherId")
                         .HasColumnType("char(36)");
 
@@ -2613,6 +2498,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime?>("RevokedDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint unsigned");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AccessRequestId")
@@ -2620,14 +2508,13 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("OrganizationId");
 
-                    b.HasIndex("CollectionId", "Action");
+                    b.HasIndex("CipherId", "Status");
 
-                    b.HasIndex("NotAfter", "Action");
+                    b.HasIndex("CollectionId", "Status");
 
-                    b.HasIndex("CipherId", "Action", "NotAfter")
-                        .IsDescending(false, false, true);
+                    b.HasIndex("NotAfter", "Status");
 
-                    b.HasIndex("RequesterId", "CipherId", "Action");
+                    b.HasIndex("RequesterId", "CipherId", "Status");
 
                     b.ToTable("AccessLease", (string)null);
                 });
@@ -2636,12 +2523,6 @@ namespace Bit.MySqlMigrations.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
-
-                    b.Property<byte>("Action")
-                        .HasColumnType("tinyint unsigned");
-
-                    b.Property<DateTime?>("ActionDate")
-                        .HasColumnType("datetime(6)");
 
                     b.Property<Guid>("CipherId")
                         .HasColumnType("char(36)");
@@ -2670,8 +2551,14 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("RequesterId")
                         .HasColumnType("char(36)");
 
+                    b.Property<DateTime?>("ResolvedDate")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<Guid?>("RuleId")
                         .HasColumnType("char(36)");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint unsigned");
 
                     b.HasKey("Id");
 
@@ -2679,15 +2566,11 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("RuleId");
 
-                    b.HasIndex("CollectionId", "CreationDate");
+                    b.HasIndex("CollectionId", "Status");
 
-                    b.HasIndex("OrganizationId", "Action");
+                    b.HasIndex("OrganizationId", "Status");
 
-                    b.HasIndex("RequesterId", "CreationDate");
-
-                    b.HasIndex("CollectionId", "Action", "NotAfter");
-
-                    b.HasIndex("RequesterId", "CipherId", "Action");
+                    b.HasIndex("RequesterId", "CipherId", "Status");
 
                     b.ToTable("AccessRequest", (string)null);
                 });
@@ -3825,17 +3708,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("Notification");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessAuditEvent", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
-                        .WithMany()
-                        .HasForeignKey("OrganizationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Organization");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessDecision", b =>
