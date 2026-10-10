@@ -164,12 +164,15 @@ public class RestartSubscriptionCommand(
             }
         }
 
+        var customer = await subscriberService.GetCustomer(organization);
+
         var options = new SubscriptionCreateOptions
         {
             AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
             BillingMode = new SubscriptionBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
             CollectionMethod = CollectionMethod.ChargeAutomatically,
             Customer = canceledSubscription.CustomerId,
+            DefaultPaymentMethod = customer.InvoiceSettings?.DefaultPaymentMethodId,
             Items = items,
             Metadata = canceledSubscription.Metadata,
             OffSession = true,
