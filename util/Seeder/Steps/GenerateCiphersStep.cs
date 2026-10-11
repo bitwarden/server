@@ -81,7 +81,7 @@ internal sealed class GenerateCiphersStep(
             var reprompt = repromptEveryNthCipher > 0 && i % repromptEveryNthCipher == 0
                 ? CipherRepromptType.Password
                 : CipherRepromptType.None;
-            var cipher = CipherComposer.Compose(i, cipherType, orgKey, companies, generator, passwordDistribution, organizationId: orgId, reprompt: reprompt);
+            var cipher = CipherComposer.Compose(i, count, cipherType, orgKey, companies, generator, passwordDistribution, organizationId: orgId, reprompt: reprompt);
 
             if (userDigests is { Count: > 0 } && userFolderIds is not null)
             {

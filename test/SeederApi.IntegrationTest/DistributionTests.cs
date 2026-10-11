@@ -82,15 +82,18 @@ public class DistributionTests
         Assert.Equal(3, distribution.Select(99, 100));
     }
 
-    [Fact]
-    public void Select_IndexBeyondTotal_ReturnsLastBucket()
+    [Theory]
+    [InlineData(150, 100)]
+    [InlineData(-1, 100)]
+    [InlineData(0, 0)]
+    public void Select_IndexOutsideTotal_Throws(int index, int total)
     {
         var distribution = new Distribution<string>(
             ("A", 0.50),
             ("B", 0.50)
         );
 
-        Assert.Equal("B", distribution.Select(150, 100));
+        Assert.Throws<ArgumentOutOfRangeException>(() => distribution.Select(index, total));
     }
 
     [Fact]

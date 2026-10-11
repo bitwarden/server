@@ -112,7 +112,7 @@ internal sealed class CreateMyItemsStep(
             {
                 var globalIndex = offsets[u] + i;
                 var cipherType = typeDistribution.Select(globalIndex, Math.Max(total, 1));
-                var cipher = CipherComposer.Compose(indexBase + globalIndex, cipherType, orgKey, companies, generator,
+                var cipher = CipherComposer.Compose(indexBase + globalIndex, Math.Max(total, 1), cipherType, orgKey, companies, generator,
                     passwordDistribution, organizationId: orgId);
                 cipher.CreationDate = policyEnabledDate.AddDays(-localRandom.Next(1, 1500));
                 cipher.RevisionDate = migratedAt;

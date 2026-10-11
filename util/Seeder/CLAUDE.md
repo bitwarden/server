@@ -195,6 +195,12 @@ Same domain = same seed = reproducible data:
 var seed = options.Seed ?? DeriveStableSeed(options.Domain);
 ```
 
+**Distribution totals are explicit.** `Distribution<T>.Select(index, total)` throws unless `0 <= index < total`.
+`CipherComposer.Compose(index, total, ...)` takes the caller's own index-space size and selects password strength
+and username category at `index % total`. Don't derive the total from the generator: preset recipes build it
+without a cipher count, and a zero total once put every generated preset login in the last password bucket
+(24 distinct "very strong" passwords).
+
 ## Fixture Contract Sync
 
 `Models/SeedModels.cs`, `Seeds/schemas/*.schema.json`, and `Seeds/docs/fixtures.md` describe one contract from three angles — the deserialization target, the editor validation, and the human documentation. A field present in only some of them is silently ignored or silently undocumented: `roster.schema.json` documented a per-user `email` for months while `SeedRosterUser` had no property to carry it.

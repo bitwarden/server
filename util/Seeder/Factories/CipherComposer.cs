@@ -16,8 +16,14 @@ namespace Bit.Seeder.Factories;
 /// </summary>
 internal static class CipherComposer
 {
+    /// <param name="index">Position of the item; drives the generated text.</param>
+    /// <param name="total">
+    /// Size of the caller's index space, used for distribution selection (password strength, username category)
+    /// at <c>index % total</c>. Must be positive.
+    /// </param>
     internal static Cipher Compose(
         int index,
+        int total,
         CipherType cipherType,
         string encryptionKey,
         Company[] companies,
@@ -27,9 +33,11 @@ internal static class CipherComposer
         Guid? userId = null,
         CipherRepromptType reprompt = CipherRepromptType.None)
     {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(total);
+
         return cipherType switch
         {
-            CipherType.Login => ComposeLogin(index, encryptionKey, companies, generator, passwordDistribution, organizationId, userId, reprompt),
+            CipherType.Login => ComposeLogin(index, total, encryptionKey, companies, generator, passwordDistribution, organizationId, userId, reprompt),
             CipherType.Card => ComposeCard(index, encryptionKey, generator, organizationId, userId, reprompt),
             CipherType.Identity => ComposeIdentity(index, encryptionKey, generator, organizationId, userId, reprompt),
             CipherType.SecureNote => ComposeSecureNote(index, encryptionKey, generator, organizationId, userId, reprompt),
@@ -40,6 +48,7 @@ internal static class CipherComposer
 
     private static Cipher ComposeLogin(
         int index,
+        int total,
         string encryptionKey,
         Company[] companies,
         GeneratorContext generator,
@@ -50,7 +59,8 @@ internal static class CipherComposer
     {
         var company = companies[index % companies.Length];
         var uri = $"https://{company.Domain}";
-        var username = generator.Username.GenerateByIndex(index, totalHint: generator.CipherCount, domain: company.Domain);
+        var slot = index % total;
+        var username = generator.Username.GenerateByIndex(slot, totalHint: total, domain: company.Domain);
 
         // ~20% of logins get a FIDO2 passkey; ~40% get a 1-3 entry password history. Deterministic by index.
         var fido2Credentials = index % 5 == 0
@@ -58,7 +68,7 @@ internal static class CipherComposer
             : null;
 
         var passwordHistory = index % 5 < 2
-            ? BuildPasswordHistory(index, 1 + (index % 3), generator.CipherCount, passwordDistribution)
+            ? BuildPasswordHistory(slot, 1 + (index % 3), total, passwordDistribution)
             : null;
 
         return LoginCipherSeeder.Create(new CipherSeed
@@ -72,7 +82,7 @@ internal static class CipherComposer
             Login = new LoginViewDto
             {
                 Username = username,
-                Password = Passwords.GetPassword(index, generator.CipherCount, passwordDistribution),
+                Password = Passwords.GetPassword(slot, total, passwordDistribution),
                 Uris = [new LoginUriViewDto { Uri = uri }],
                 Fido2Credentials = fido2Credentials,
                 PasswordHistory = passwordHistory
