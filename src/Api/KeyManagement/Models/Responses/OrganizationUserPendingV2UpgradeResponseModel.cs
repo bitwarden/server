@@ -51,5 +51,5 @@ public class OrganizationUserPendingV2UpgradeResponseModel : ResponseModel
     /// server cannot parse the stored token. The token then holds no usable user key, so send no key to unenroll
     /// the member.
     /// </summary>
-    public required V2UpgradeTokenResponseModel? V2UpgradeToken { get; init; }
+    public V2UpgradeTokenResponseModel? V2UpgradeToken { get; init; }
 }
