@@ -210,7 +210,9 @@ org: a URI on 32% of logins (`UriPer100Logins`; fleet 86%), 2+ URIs on 1%, notes
 TOTP on 2%. Note lengths have a long tail so `DATALENGTH(Data)` p95/p99 land near prod (2.9 KB / 6.1 KB). The site pool grows
 with the vault at `AppsPer100Logins` (24, the large-org median of applications per password in `OrganizationReport`), so
 Access Intelligence sees more than the 314 company domains: later passes use `{name}-{n}.example`. Stored login `Data`
-omits the legacy top-level `Uri`, as the API does. Re-measure before changing any of these.
+omits the legacy top-level `Uri`, as the API does. Every URI carries `uriChecksum` (base64 SHA-256 of the URI, set in
+`LoginCipherSeeder`): the SDK silently drops URIs without a valid checksum from items that have their own key, which hid
+every keyed login from Access Intelligence. Re-measure before changing any of these.
 
 ## Fixture Contract Sync
 

@@ -37,8 +37,8 @@ internal static class LoginExtras
         var tier = (index * 29 + 3) % 20;
         var targetLength = tier switch
         {
-            < 14 => 60 + (index % 120),
-            < 19 => 280 + (index % 420),
+            < 14 => 30 + (index % 80),
+            < 19 => 200 + (index % 300),
             _ => 1_800 + (index % 2_200)
         };
 

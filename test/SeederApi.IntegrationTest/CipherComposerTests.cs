@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
@@ -176,6 +178,30 @@ public class CipherComposerTests
 
         Assert.NotEmpty(withUris);
         Assert.All(withUris, data => Assert.False(data.ContainsKey("Uri")));
+    }
+
+    [Fact]
+    public void Compose_LoginUris_CarryTheChecksumClientsRequireOnKeyedItems()
+    {
+        // The SDK drops URIs without a valid checksum from items that have their own key
+        var generator = GeneratorContext.FromOptions(new OrganizationVaultOptions { Name = "sum", Domain = "sum.example", Users = 0 });
+        var orgKey = RustSdkService.GenerateOrganizationKeys().Key;
+
+        var withUris = Enumerable.Range(0, 200)
+            .Select(i => CipherComposer.Compose(i, 200, CipherType.Login, orgKey, Companies.All, generator,
+                PasswordDistributions.Realistic, organizationId: Guid.NewGuid()))
+            .Select(c => (c.Key, Data: JsonSerializer.Deserialize<CipherLoginData>(c.Data)!))
+            .Where(c => c.Data.Uris?.Any() == true)
+            .ToList();
+
+        Assert.Contains(withUris, c => c.Key is not null);
+        Assert.All(withUris.SelectMany(c => c.Data.Uris!), u => Assert.StartsWith("2.", u.UriChecksum));
+        Assert.All(withUris.Where(c => c.Key is null).SelectMany(c => c.Data.Uris!), u =>
+        {
+            var uri = RustSdkService.DecryptString(u.Uri!, orgKey);
+            var expected = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(uri)));
+            Assert.Equal(expected, RustSdkService.DecryptString(u.UriChecksum!, orgKey));
+        });
     }
 
     [Fact]
