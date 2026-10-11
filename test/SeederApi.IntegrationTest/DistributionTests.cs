@@ -213,4 +213,24 @@ public class DistributionTests
         Assert.Equal(("C", 1), counts[2]);
         Assert.Equal(("D", 0), counts[3]);
     }
+
+    [Fact]
+    public void PersonalCipherPendingMigration_MatchesLargeOrgBeforeMigration()
+    {
+        // Same per-user count as GeneratePersonalCiphersStep, over the XL preset's confirmed members plus the owner
+        const int users = 3941;
+        var dist = PersonalCipherDistributions.PendingMigration;
+        var counts = Enumerable.Range(0, users).Select(u =>
+        {
+            var (min, max) = dist.Select(u, users);
+            return min + u % Math.Max(max - min + 1, 1);
+        }).ToArray();
+
+        // Prod: 718 of 3,644 confirmed members (19.7%) hold 22.6k personal items; 3 hold more than 1,000
+        var holders = counts.Count(c => c > 0);
+        Assert.InRange(holders / (double)users, 0.18, 0.21);
+        Assert.InRange(counts.Sum(), 20_000, 27_000);
+        Assert.Equal(3, counts.Count(c => c > 1000));
+        Assert.Equal(0, counts[0]);
+    }
 }

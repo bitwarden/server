@@ -452,6 +452,10 @@ give identical counts.
 groups, 990 collections (390 My Items), ~11.4k items fetched (~5.3k in My Items, ~0.5k trashed) and ~93k member-item
 pairs, ~13% of them from non-confirmed members. Groups per confirmed member P50/P90/P99/max 1/3/6/7.
 
+`scale.xl-migrated-cyberdyne-premigration`: the same ~976k live pairs as `xl-migrated-cyberdyne`, ~98k items fetched
+(~37k in My Items, 905 of 3,936 My Items collections non-empty), ~16.7k active items in no collection, and ~24.9k
+personal items (OrganizationId NULL) on ~780 confirmed members.
+
 `-200k-myitems` keeps the same pairs with ~221k items fetched and ~160k My Items items. `-200k-shared` reaches ~2.6M
 pairs (8.4% not confirmed) with ~212k items fetched.
 
