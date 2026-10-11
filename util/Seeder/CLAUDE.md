@@ -205,7 +205,12 @@ without a cipher count, and a zero total once put every generated preset login i
 come from an EU prod measurement on 2026-10-11 (passkeys on 0.2-1.2% of logins, password history on 5-7% of items; login
 `Data` averages 1.4-1.5 KB). The previous 20% / 40% made generated logins ~1.7x larger than prod. `ItemKeysPer100` (55)
 encrypts that share of generated items, of every type, with their own key wrapped by the org or user key (`Cipher.Key`, ~180 B),
-matching the target org (fleet: 33%). Seed time is unchanged within noise. Re-measure before changing any of these.
+matching the target org (fleet: 33%). Seed time is unchanged within noise. The other login rates follow the same target
+org: a URI on 32% of logins (`UriPer100Logins`; fleet 86%), 2+ URIs on 1%, notes on 37% (fleet 8%), custom fields on 6%,
+TOTP on 2%. Note lengths have a long tail so `DATALENGTH(Data)` p95/p99 land near prod (2.9 KB / 6.1 KB). The site pool grows
+with the vault at `AppsPer100Logins` (24, the large-org median of applications per password in `OrganizationReport`), so
+Access Intelligence sees more than the 314 company domains: later passes use `{name}-{n}.example`. Stored login `Data`
+omits the legacy top-level `Uri`, as the API does. Re-measure before changing any of these.
 
 ## Fixture Contract Sync
 

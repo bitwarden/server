@@ -24,6 +24,20 @@ internal static class CipherComposer
     /// <summary>Items encrypted with their own key, wrapped by the org/user key. EU prod 2026-10-11: 55% in the target org, 33% fleet-wide.</summary>
     internal const int ItemKeysPer100 = 55;
 
+    // EU prod 2026-10-11, target org / fleet sample: a URI on 32% / 86% of logins, 2+ URIs on 0.9% / 2.4%, notes on
+    // 37% / 8%, custom fields on 6% / 4%, TOTP on 1.9% / 2.1%. Large orgs report ~24 applications per 100 passwords.
+    internal const int UriPer100Logins = 32;
+
+    internal const int MultiUriPer100Logins = 1;
+
+    internal const int NotesPer100Logins = 37;
+
+    internal const int FieldsPer100Logins = 6;
+
+    internal const int TotpPer100Logins = 2;
+
+    internal const int AppsPer100Logins = 24;
+
     // Stride 37 spreads keyed items across the index range instead of one block per 100
     private static CipherEncryptionType EncryptionFor(int index) =>
         (index * 37 + 11) % 100 < ItemKeysPer100 ? CipherEncryptionType.CipherKey : CipherEncryptionType.UserKey;
@@ -70,25 +84,35 @@ internal static class CipherComposer
         CipherRepromptType reprompt = CipherRepromptType.None)
     {
         var company = companies[index % companies.Length];
-        var uri = $"https://{company.Domain}";
         var slot = index % total;
-        var username = generator.Username.GenerateByIndex(slot, totalHint: total, domain: company.Domain);
+        var domain = AppDomain(company, index, total, companies.Length);
+        var username = generator.Username.GenerateByIndex(slot, totalHint: total, domain: domain);
 
         // Rates per 100 logins, deterministic by index, from EU prod (2026-10-11): passkeys on 0.2-1.2% of logins,
-        // password history on 5-7% of items.
+        // password history on 5-7% of items. The other extras use their own stride so they don't land on the same items.
         var per100 = index % 100;
         var fido2Credentials = per100 < PasskeysPer100Logins
-            ? new List<Fido2CredentialViewDto> { LoginCipherSeeder.CreateFido2Credential(company.Domain, company.Name, username) }
+            ? new List<Fido2CredentialViewDto> { LoginCipherSeeder.CreateFido2Credential(domain, company.Name, username) }
             : null;
 
         var passwordHistory = per100 >= 50 && per100 < 50 + PasswordHistoryPer100Logins
             ? BuildPasswordHistory(slot, 1 + (index % 3), total, passwordDistribution)
             : null;
 
+        var uriSlot = (index * 7 + 3) % 100;
+        List<LoginUriViewDto>? uris = uriSlot switch
+        {
+            < MultiUriPer100Logins => [new LoginUriViewDto { Uri = $"https://{domain}" }, new LoginUriViewDto { Uri = $"https://login.{domain}" }],
+            < UriPer100Logins => [new LoginUriViewDto { Uri = $"https://{domain}" }],
+            _ => null
+        };
+
         return LoginCipherSeeder.Create(new CipherSeed
         {
             Type = CipherType.Login,
             Name = $"{company.Name} ({company.Category})",
+            Notes = (index * 13 + 5) % 100 < NotesPer100Logins ? LoginExtras.Notes(index, company.Category.ToString()) : null,
+            Fields = (index * 17 + 7) % 100 < FieldsPer100Logins ? LoginExtras.Fields(index) : null,
             EncryptionKey = encryptionKey,
             CipherEncryption = EncryptionFor(index),
             OrganizationId = organizationId,
@@ -98,11 +122,24 @@ internal static class CipherComposer
             {
                 Username = username,
                 Password = Passwords.GetPassword(slot, total, passwordDistribution),
-                Uris = [new LoginUriViewDto { Uri = uri }],
+                Totp = (index * 23 + 19) % 100 < TotpPer100Logins ? LoginExtras.TotpSecret(index) : null,
+                Uris = uris,
                 Fido2Credentials = fido2Credentials,
                 PasswordHistory = passwordHistory
             }
         });
+    }
+
+    /// <summary>
+    /// The pool of distinct sites grows with the vault: about <see cref="AppsPer100Logins"/> per 100 items, rounded up
+    /// to whole passes over the company list. The first pass uses the real domains; later passes use
+    /// <c>{name}-{pass}.example</c>, so each pass adds distinct applications to the Access Intelligence report.
+    /// </summary>
+    private static string AppDomain(Company company, int index, int total, int companyCount)
+    {
+        var passes = Math.Max(1, (total * AppsPer100Logins / 100 + companyCount - 1) / companyCount);
+        var pass = index % (passes * companyCount) / companyCount;
+        return pass == 0 ? company.Domain : $"{company.Domain.Split('.')[0]}-{pass}.example";
     }
 
     internal static List<PasswordHistoryViewDto> BuildPasswordHistory(

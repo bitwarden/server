@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Nodes;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
@@ -152,6 +153,51 @@ public class CipherComposerTests
         Assert.Equal(CipherComposer.PasskeysPer100Logins * total / 100, ciphers.Count(c => c.Data!.Contains("\"Fido2Credentials\":[{")));
         Assert.Equal(CipherComposer.PasswordHistoryPer100Logins * total / 100, ciphers.Count(c => c.Data!.Contains("\"PasswordHistory\":[{")));
         Assert.Equal(CipherComposer.ItemKeysPer100 * total / 100, ciphers.Count(c => c.Key is not null));
+        Assert.Equal(CipherComposer.UriPer100Logins * total / 100, ciphers.Count(c => c.Data!.Contains("\"Uris\":[{")));
+        Assert.Equal(CipherComposer.MultiUriPer100Logins * total / 100, ciphers.Count(c => c.Data!.Contains("},{\"Uri\":")));
+        Assert.Equal(CipherComposer.NotesPer100Logins * total / 100, ciphers.Count(c => c.Data!.Contains("\"Notes\":\"2.")));
+        Assert.Equal(CipherComposer.FieldsPer100Logins * total / 100, ciphers.Count(c => c.Data!.Contains("\"Fields\":[{")));
+        Assert.Equal(CipherComposer.TotpPer100Logins * total / 100, ciphers.Count(c => c.Data!.Contains("\"Totp\":\"2.")));
+    }
+
+    [Fact]
+    public void Compose_Login_StoresUrisWithoutTheLegacyTopLevelUri()
+    {
+        // Matches what the API stores: CipherRequestModel drops the top-level Uri, which only repeats Uris[0]
+        var generator = GeneratorContext.FromOptions(new OrganizationVaultOptions { Name = "uri", Domain = "uri.example", Users = 0 });
+        var orgKey = RustSdkService.GenerateOrganizationKeys().Key;
+
+        var withUris = Enumerable.Range(0, 100)
+            .Select(i => CipherComposer.Compose(i, 100, CipherType.Login, orgKey, Companies.All, generator,
+                PasswordDistributions.Realistic, organizationId: Guid.NewGuid()))
+            .Select(c => JsonNode.Parse(c.Data!)!.AsObject())
+            .Where(data => data["Uris"] is not null)
+            .ToList();
+
+        Assert.NotEmpty(withUris);
+        Assert.All(withUris, data => Assert.False(data.ContainsKey("Uri")));
+    }
+
+    [Fact]
+    public void Compose_LargeVault_SpreadsLoginsOverMoreSitesThanTheCompanyList()
+    {
+        // Access Intelligence groups logins by domain; a fixed company list would cap applications at its length
+        const int total = 20_000;
+        var generator = GeneratorContext.FromOptions(new OrganizationVaultOptions { Name = "apps", Domain = "apps.example", Users = 0 });
+        var orgKey = RustSdkService.GenerateOrganizationKeys().Key;
+
+        var domains = Enumerable.Range(0, total)
+            .Select(i => CipherComposer.Compose(i, total, CipherType.Login, orgKey, Companies.All, generator,
+                PasswordDistributions.Realistic, organizationId: Guid.NewGuid()))
+            .Where(c => c.Key is null)
+            .Select(c => JsonSerializer.Deserialize<CipherLoginData>(c.Data)!.Uris?.FirstOrDefault()?.Uri)
+            .Where(u => u is not null)
+            .Select(u => new Uri(RustSdkService.DecryptString(u!, orgKey)).Host)
+            .Distinct()
+            .Count();
+
+        Assert.True(domains > Companies.All.Length * 3,
+            $"Expected well over {Companies.All.Length} distinct sites for {total} logins; got {domains}.");
     }
 
     [Fact]
