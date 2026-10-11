@@ -16,6 +16,10 @@ namespace Bit.Seeder.Factories;
 /// </summary>
 internal static class CipherComposer
 {
+    internal const int PasskeysPer100Logins = 1;
+
+    internal const int PasswordHistoryPer100Logins = 6;
+
     /// <param name="index">Position of the item; drives the generated text.</param>
     /// <param name="total">
     /// Size of the caller's index space, used for distribution selection (password strength, username category)
@@ -62,12 +66,14 @@ internal static class CipherComposer
         var slot = index % total;
         var username = generator.Username.GenerateByIndex(slot, totalHint: total, domain: company.Domain);
 
-        // ~20% of logins get a FIDO2 passkey; ~40% get a 1-3 entry password history. Deterministic by index.
-        var fido2Credentials = index % 5 == 0
+        // Rates per 100 logins, deterministic by index, from EU prod (2026-10-11): passkeys on 0.2-1.2% of logins,
+        // password history on 5-7% of items.
+        var per100 = index % 100;
+        var fido2Credentials = per100 < PasskeysPer100Logins
             ? new List<Fido2CredentialViewDto> { LoginCipherSeeder.CreateFido2Credential(company.Domain, company.Name, username) }
             : null;
 
-        var passwordHistory = index % 5 < 2
+        var passwordHistory = per100 >= 50 && per100 < 50 + PasswordHistoryPer100Logins
             ? BuildPasswordHistory(slot, 1 + (index % 3), total, passwordDistribution)
             : null;
 

@@ -135,6 +135,23 @@ public class CipherComposerTests
     }
 
     [Fact]
+    public void Compose_PasskeyAndHistoryRates_MatchProdCalibration()
+    {
+        // Same key-presence test as the prod measurement (EU, 2026-10-11): passkeys ~1% of logins, history ~6%
+        const int total = 1000;
+        var generator = GeneratorContext.FromOptions(new OrganizationVaultOptions { Name = "rates", Domain = "rates.example", Users = 0 });
+        var orgKey = RustSdkService.GenerateOrganizationKeys().Key;
+
+        var data = Enumerable.Range(0, total)
+            .Select(i => CipherComposer.Compose(i, total, CipherType.Login, orgKey, Companies.All, generator,
+                PasswordDistributions.Realistic, organizationId: Guid.NewGuid()).Data)
+            .ToList();
+
+        Assert.Equal(CipherComposer.PasskeysPer100Logins * total / 100, data.Count(d => d.Contains("\"Fido2Credentials\":[{")));
+        Assert.Equal(CipherComposer.PasswordHistoryPer100Logins * total / 100, data.Count(d => d.Contains("\"PasswordHistory\":[{")));
+    }
+
+    [Fact]
     public void BuildArchivesJson_ProducesExpectedShape()
     {
         // Uses a lowercase GUID with hex letters (not just digits) so the assertion actually

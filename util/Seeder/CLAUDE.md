@@ -201,6 +201,10 @@ and username category at `index % total`. Don't derive the total from the genera
 without a cipher count, and a zero total once put every generated preset login in the last password bucket
 (24 distinct "very strong" passwords).
 
+**Login extras are calibrated to prod.** `CipherComposer.PasskeysPer100Logins` (1) and `PasswordHistoryPer100Logins` (6)
+come from an EU prod measurement on 2026-10-11 (passkeys on 0.2-1.2% of logins, password history on 5-7% of items; login
+`Data` averages 1.4-1.5 KB). The previous 20% / 40% made generated logins ~1.7x larger than prod. Re-measure before changing them.
+
 ## Fixture Contract Sync
 
 `Models/SeedModels.cs`, `Seeds/schemas/*.schema.json`, and `Seeds/docs/fixtures.md` describe one contract from three angles — the deserialization target, the editor validation, and the human documentation. A field present in only some of them is silently ignored or silently undocumented: `roster.schema.json` documented a per-user `email` for months while `SeedRosterUser` had no property to carry it.
