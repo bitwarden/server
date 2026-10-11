@@ -6,6 +6,7 @@ using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Data.Generators;
 using Bit.Seeder.Data.Static;
+using Bit.Seeder.Enums;
 using Bit.Seeder.Models;
 
 namespace Bit.Seeder.Factories;
@@ -19,6 +20,13 @@ internal static class CipherComposer
     internal const int PasskeysPer100Logins = 1;
 
     internal const int PasswordHistoryPer100Logins = 6;
+
+    /// <summary>Items encrypted with their own key, wrapped by the org/user key. EU prod 2026-10-11: 55% in the target org, 33% fleet-wide.</summary>
+    internal const int ItemKeysPer100 = 55;
+
+    // Stride 37 spreads keyed items across the index range instead of one block per 100
+    private static CipherEncryptionType EncryptionFor(int index) =>
+        (index * 37 + 11) % 100 < ItemKeysPer100 ? CipherEncryptionType.CipherKey : CipherEncryptionType.UserKey;
 
     /// <param name="index">Position of the item; drives the generated text.</param>
     /// <param name="total">
@@ -82,6 +90,7 @@ internal static class CipherComposer
             Type = CipherType.Login,
             Name = $"{company.Name} ({company.Category})",
             EncryptionKey = encryptionKey,
+            CipherEncryption = EncryptionFor(index),
             OrganizationId = organizationId,
             UserId = userId,
             Reprompt = reprompt,
@@ -146,6 +155,7 @@ internal static class CipherComposer
             Type = CipherType.Card,
             Name = $"{card.CardholderName}'s {card.Brand}",
             EncryptionKey = encryptionKey,
+            CipherEncryption = EncryptionFor(index),
             OrganizationId = organizationId,
             UserId = userId,
             Reprompt = reprompt,
@@ -172,6 +182,7 @@ internal static class CipherComposer
             Type = CipherType.Identity,
             Name = name,
             EncryptionKey = encryptionKey,
+            CipherEncryption = EncryptionFor(index),
             OrganizationId = organizationId,
             UserId = userId,
             Reprompt = reprompt,
@@ -194,6 +205,7 @@ internal static class CipherComposer
             Name = name,
             Notes = notes,
             EncryptionKey = encryptionKey,
+            CipherEncryption = EncryptionFor(index),
             OrganizationId = organizationId,
             UserId = userId,
             Reprompt = reprompt
@@ -213,6 +225,7 @@ internal static class CipherComposer
             Type = CipherType.SSHKey,
             Name = $"SSH Key {index + 1}",
             EncryptionKey = encryptionKey,
+            CipherEncryption = EncryptionFor(index),
             OrganizationId = organizationId,
             UserId = userId,
             Reprompt = reprompt,

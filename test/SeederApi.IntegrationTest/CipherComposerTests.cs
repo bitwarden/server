@@ -123,9 +123,11 @@ public class CipherComposerTests
         var generator = GeneratorContext.FromOptions(new OrganizationVaultOptions { Name = "preset", Domain = "preset.example", Users = 0 });
         var orgKey = RustSdkService.GenerateOrganizationKeys().Key;
 
+        // Items with their own key can't be opened with the org key alone here; the rest show the password mix
         var passwords = Enumerable.Range(0, total)
             .Select(i => CipherComposer.Compose(i, total, CipherType.Login, orgKey, Companies.All, generator,
                 PasswordDistributions.Realistic, organizationId: Guid.NewGuid()))
+            .Where(c => c.Key is null)
             .Select(c => RustSdkService.DecryptString(JsonSerializer.Deserialize<CipherLoginData>(c.Data)!.Password!, orgKey))
             .ToList();
 
@@ -135,20 +137,21 @@ public class CipherComposerTests
     }
 
     [Fact]
-    public void Compose_PasskeyAndHistoryRates_MatchProdCalibration()
+    public void Compose_ItemShapeRates_MatchProdCalibration()
     {
-        // Same key-presence test as the prod measurement (EU, 2026-10-11): passkeys ~1% of logins, history ~6%
+        // Same tests as the prod measurement (EU, 2026-10-11): passkeys ~1% of logins, history ~6%, item keys 55%
         const int total = 1000;
         var generator = GeneratorContext.FromOptions(new OrganizationVaultOptions { Name = "rates", Domain = "rates.example", Users = 0 });
         var orgKey = RustSdkService.GenerateOrganizationKeys().Key;
 
-        var data = Enumerable.Range(0, total)
+        var ciphers = Enumerable.Range(0, total)
             .Select(i => CipherComposer.Compose(i, total, CipherType.Login, orgKey, Companies.All, generator,
-                PasswordDistributions.Realistic, organizationId: Guid.NewGuid()).Data)
+                PasswordDistributions.Realistic, organizationId: Guid.NewGuid()))
             .ToList();
 
-        Assert.Equal(CipherComposer.PasskeysPer100Logins * total / 100, data.Count(d => d.Contains("\"Fido2Credentials\":[{")));
-        Assert.Equal(CipherComposer.PasswordHistoryPer100Logins * total / 100, data.Count(d => d.Contains("\"PasswordHistory\":[{")));
+        Assert.Equal(CipherComposer.PasskeysPer100Logins * total / 100, ciphers.Count(c => c.Data!.Contains("\"Fido2Credentials\":[{")));
+        Assert.Equal(CipherComposer.PasswordHistoryPer100Logins * total / 100, ciphers.Count(c => c.Data!.Contains("\"PasswordHistory\":[{")));
+        Assert.Equal(CipherComposer.ItemKeysPer100 * total / 100, ciphers.Count(c => c.Key is not null));
     }
 
     [Fact]

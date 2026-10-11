@@ -203,7 +203,9 @@ without a cipher count, and a zero total once put every generated preset login i
 
 **Login extras are calibrated to prod.** `CipherComposer.PasskeysPer100Logins` (1) and `PasswordHistoryPer100Logins` (6)
 come from an EU prod measurement on 2026-10-11 (passkeys on 0.2-1.2% of logins, password history on 5-7% of items; login
-`Data` averages 1.4-1.5 KB). The previous 20% / 40% made generated logins ~1.7x larger than prod. Re-measure before changing them.
+`Data` averages 1.4-1.5 KB). The previous 20% / 40% made generated logins ~1.7x larger than prod. `ItemKeysPer100` (55)
+encrypts that share of generated items, of every type, with their own key wrapped by the org or user key (`Cipher.Key`, ~180 B),
+matching the target org (fleet: 33%). Seed time is unchanged within noise. Re-measure before changing any of these.
 
 ## Fixture Contract Sync
 
