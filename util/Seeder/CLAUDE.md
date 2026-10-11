@@ -212,7 +212,10 @@ with the vault at `AppsPer100Logins` (24, the large-org median of applications p
 Access Intelligence sees more than the 314 company domains: later passes use `{name}-{n}.example`. Stored login `Data`
 omits the legacy top-level `Uri`, as the API does. Every URI carries `uriChecksum` (base64 SHA-256 of the URI, set in
 `LoginCipherSeeder`): the SDK silently drops URIs without a valid checksum from items that have their own key, which hid
-every keyed login from Access Intelligence. Re-measure before changing any of these.
+every keyed login from Access Intelligence. `UniquePasswordsPer100Logins` (80) gives that share of logins a password of
+their strength tier generated for the item (`UniquePasswordGenerator`); the rest draw from the shared pools. Breach checks
+run once per distinct password, so pool-only vaults understated them. 80% is an assumption: prod reuse can't be counted
+because passwords are encrypted per item. Re-measure before changing any of these.
 
 ## Fixture Contract Sync
 

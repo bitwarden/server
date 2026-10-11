@@ -9,6 +9,7 @@ using Bit.RustSDK;
 using Bit.Seeder.Data;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
+using Bit.Seeder.Data.Generators;
 using Bit.Seeder.Data.Static;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Options;
@@ -122,7 +123,7 @@ public class CipherComposerTests
     {
         // Preset recipes build the generator without a cipher count. The composer must still spread logins across
         // every strength bucket, instead of putting all of them in the last bucket, as a zero total once did.
-        const int total = 300;
+        const int total = 2000;
         var generator = GeneratorContext.FromOptions(new OrganizationVaultOptions { Name = "preset", Domain = "preset.example", Users = 0 });
         var orgKey = RustSdkService.GenerateOrganizationKeys().Key;
 
@@ -134,9 +135,44 @@ public class CipherComposerTests
             .Select(c => RustSdkService.DecryptString(JsonSerializer.Deserialize<CipherLoginData>(c.Data)!.Password!, orgKey))
             .ToList();
 
-        Assert.Equal(5, passwords.Select(ClassifyStrength).Distinct().Count());
-        Assert.True(passwords.Distinct().Count() > Passwords.VeryStrong.Length,
-            "Logins should draw from the whole pool, not only the strongest bucket.");
+        var pooled = passwords.Where(p => Array.IndexOf(Passwords.All, p) >= 0).ToList();
+        Assert.Equal(5, pooled.Select(ClassifyStrength).Distinct().Count());
+        Assert.InRange(pooled.Count, passwords.Count * 15 / 100, passwords.Count * 25 / 100);
+    }
+
+    [Fact]
+    public void Compose_Logins_MostPasswordsAreUnique()
+    {
+        // Breach checks run once per distinct password; four in five logins get their own
+        const int total = 1000;
+        var generator = GeneratorContext.FromOptions(new OrganizationVaultOptions { Name = "uniq", Domain = "uniq.example", Users = 0 });
+        var orgKey = RustSdkService.GenerateOrganizationKeys().Key;
+
+        var passwords = Enumerable.Range(0, total)
+            .Select(i => CipherComposer.Compose(i, total, CipherType.Login, orgKey, Companies.All, generator,
+                PasswordDistributions.Realistic, organizationId: Guid.NewGuid()))
+            .Where(c => c.Key is null)
+            .Select(c => RustSdkService.DecryptString(JsonSerializer.Deserialize<CipherLoginData>(c.Data)!.Password!, orgKey))
+            .ToList();
+
+        var generated = passwords.Where(p => Array.IndexOf(Passwords.All, p) < 0).ToList();
+        Assert.InRange(generated.Count, passwords.Count * 75 / 100, passwords.Count * 85 / 100);
+        Assert.Equal(generated.Count, generated.Distinct().Count());
+    }
+
+    [Theory]
+    [InlineData(PasswordStrength.VeryWeak)]
+    [InlineData(PasswordStrength.Weak)]
+    [InlineData(PasswordStrength.Fair)]
+    [InlineData(PasswordStrength.Strong)]
+    [InlineData(PasswordStrength.VeryStrong)]
+    public void UniquePasswordGenerator_IsDeterministicAndRarelyRepeats(PasswordStrength strength)
+    {
+        var first = Enumerable.Range(0, 20_000).Select(i => UniquePasswordGenerator.Generate(i, strength)).ToList();
+        var again = Enumerable.Range(0, 20_000).Select(i => UniquePasswordGenerator.Generate(i, strength)).ToList();
+
+        Assert.Equal(first, again);
+        Assert.True(first.Distinct().Count() >= 19_900, $"{strength}: {first.Distinct().Count()} distinct of 20,000.");
     }
 
     [Fact]

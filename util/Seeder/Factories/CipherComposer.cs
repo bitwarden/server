@@ -38,6 +38,10 @@ internal static class CipherComposer
 
     internal const int AppsPer100Logins = 24;
 
+    // Assumption, not measured: vault passwords are encrypted per item, so prod reuse can't be counted. The rest of the
+    // logins draw from the shared pools, which keeps realistic reuse and the common passwords breach checks flag.
+    internal const int UniquePasswordsPer100Logins = 80;
+
     // Stride 37 spreads keyed items across the index range instead of one block per 100
     private static CipherEncryptionType EncryptionFor(int index) =>
         (index * 37 + 11) % 100 < ItemKeysPer100 ? CipherEncryptionType.CipherKey : CipherEncryptionType.UserKey;
@@ -121,7 +125,9 @@ internal static class CipherComposer
             Login = new LoginViewDto
             {
                 Username = username,
-                Password = Passwords.GetPassword(slot, total, passwordDistribution),
+                Password = (index * 43 + 29) % 100 < UniquePasswordsPer100Logins
+                    ? UniquePasswordGenerator.Generate(index, passwordDistribution.Select(slot, total))
+                    : Passwords.GetPassword(slot, total, passwordDistribution),
                 Totp = (index * 23 + 19) % 100 < TotpPer100Logins ? LoginExtras.TotpSecret(index) : null,
                 Uris = uris,
                 Fido2Credentials = fido2Credentials,
