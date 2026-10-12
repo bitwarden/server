@@ -11,7 +11,9 @@ using Microsoft.Extensions.Logging;
 namespace Bit.Core.Auth.Sso;
 
 public class Saml2Rsa15DeprecationNoticeCommand(
-    // TODO: replace distributed cache usage w/ FusionCache
+    // src/Core/Utilities/CACHING.md selects the persistent IDistributedCache for this data.
+    // Other server instances must see a new email send cooldown at once in a scaled scenario,
+    // and the cooldown lasts days.
     [FromKeyedServices("persistent")] IDistributedCache cache,
     IGlobalSettings globalSettings,
     TimeProvider timeProvider,
