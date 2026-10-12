@@ -1,9 +1,5 @@
--- pam/uat only: not GA, so no data migration. The admin client now seals every security-relevant target-system and
--- rotation-config field (kind, password policy, session-termination capability, account identity, terminate flag)
--- into an opaque SealedData blob under the org key; the server stores and hands it back verbatim and never parses
--- it. Existing rows predate sealing and cannot be re-derived server-side, so this wipes the rotation domain clean
--- (targets, configs, their jobs/attempts/timeout journal, and access-connector target assignments) and reshapes the
--- two tables. PamAccessConnector rows (registrations) are untouched.
+-- pam/uat only: not GA, so no data migration. Existing rows predate sealing and can't be re-derived
+-- server-side, so this wipes the rotation domain clean and reshapes both tables into SealedData blobs.
 
 -- Dependents first: NO ACTION FKs mean nothing cascades. PamRotationJobTimeoutSweep cascades from PamRotationJob.
 DELETE FROM [dbo].[PamRotationAttempt]

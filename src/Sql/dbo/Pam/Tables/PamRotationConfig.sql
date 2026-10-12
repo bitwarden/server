@@ -1,6 +1,4 @@
 -- One rotation policy per cipher (OneConfigPerCipher).
--- SealedData is an opaque blob the admin client seals under the org key (account identity, terminate-sessions
--- flag); the server never parses it.
 CREATE TABLE [dbo].[PamRotationConfig] (
     [Id]                    UNIQUEIDENTIFIER    NOT NULL,
     [OrganizationId]        UNIQUEIDENTIFIER    NOT NULL,

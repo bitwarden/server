@@ -75,8 +75,7 @@ BEGIN
 
     COMMIT TRANSACTION
 
-    -- ExecuteBy is this claim's lease end (ClaimedAt + ReleaseDelay). The two sealed blobs carry everything the
-    -- access connector needs to verify and execute the rotation; the server never parses them.
+    -- ExecuteBy is this claim's lease end (ClaimedAt + ReleaseDelay).
     SELECT
         1 AS [Outcome], -- Claimed
         @AttemptId AS [AttemptId],

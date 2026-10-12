@@ -1,6 +1,4 @@
--- Automatic (connector-driven) or Manual (person-driven) target. SealedData is an opaque blob the admin client
--- seals under the org key (kind, password policy, session-termination capability); the server never parses it, and
--- it is null while Status is PendingSeal (registered but not yet sealed).
+-- Automatic (connector-driven) or Manual (person-driven) target.
 CREATE TABLE [dbo].[PamTargetSystem] (
     [Id]                            UNIQUEIDENTIFIER    NOT NULL,
     [OrganizationId]                UNIQUEIDENTIFIER    NOT NULL,

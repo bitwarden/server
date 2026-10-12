@@ -12,12 +12,10 @@ leaves a claimable job for a real access connector to execute and report on:
     3. create a rotation config for a cipher   POST  organizations/{org}/access-connectors/rotation/configs
     4. trigger an on-demand rotation           POST  organizations/{org}/access-connectors/rotation/configs/{id}/rotate
 
-The server never parses `sealedData` — it is an opaque blob the admin client seals under the org
-key. This script has no org key, so it sends a placeholder string instead of a real seal. That is
-enough to exercise the admin/dispatch side and leave a claimable job, but a real access connector
-will refuse the job at claim-verification time (it cannot unseal a fake blob). For an end-to-end
-run against a real connector, seal the target and config from the admin client instead of this
-script.
+The server never parses `sealedData` — an opaque blob the admin client seals under the org key. This
+script has no org key, so it sends a placeholder instead of a real seal: enough to exercise the
+admin/dispatch side, but a real access connector will refuse the job at claim time. For an
+end-to-end run, seal the target and config from the admin client instead.
 
 By default it creates a fresh target and config on a fresh cipher, so repeated runs avoid the
 on-demand cooldown and the active-job guard.
@@ -96,8 +94,7 @@ def step(n, msg):
 
 
 def fake_sealed_data(note):
-    """A placeholder in the real sealed-blob shape ({formatVersion, wrappedCek, envelope}); not a real seal — this
-    script has no org key. A real access connector will refuse to unseal it."""
+    """Placeholder in the real sealed-blob shape ({formatVersion, wrappedCek, envelope}); not an actual seal."""
     return json.dumps({"formatVersion": 1, "wrappedCek": "fake", "envelope": f"fake-dev-sim:{note}"})
 
 

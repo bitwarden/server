@@ -4,9 +4,7 @@ using Bit.Pam.Enums;
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Request;
 
 /// <summary>
-/// Registers a target system's first phase (spec <c>RegisterTargetSystem</c>). The row is created
-/// <see cref="PamTargetSystemStatus.PendingSeal"/>; the client follows up with a <c>PUT</c> carrying the sealed blob,
-/// which is the only transition out of that status.
+/// Registers a target system's first phase (spec <c>RegisterTargetSystem</c>); a follow-up <c>PUT</c> seals it.
 /// </summary>
 public class RegisterTargetSystemRequestModel
 {

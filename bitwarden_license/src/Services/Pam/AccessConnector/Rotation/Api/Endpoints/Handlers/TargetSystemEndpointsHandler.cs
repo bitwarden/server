@@ -47,7 +47,6 @@ public class TargetSystemEndpointsHandler(
         await setTargetSystemStatusCommand.SetStatusAsync(orgId, currentContext.UserId!.Value, id, enable: false);
     }
 
-    /// <remarks>Fans out to the seal and rename commands, seal first since it carries the status transition.</remarks>
     public async Task Put(Guid orgId, Guid id, UpdateTargetSystemRequestModel model)
     {
         await sealTargetSystemCommand.SealAsync(orgId, currentContext.UserId!.Value, id, model.SealedData);

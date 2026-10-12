@@ -59,7 +59,7 @@ public class CreateRotationConfigCommand : ICreateRotationConfigCommand
             throw new NotFoundException();
         }
 
-        // A PendingSeal target is allowed: the config simply does not run until the target is sealed.
+        // PendingSeal is fine; only Disabled is refused.
         if (target.Status == PamTargetSystemStatus.Disabled)
         {
             throw new BadRequestException("The target system is disabled.");

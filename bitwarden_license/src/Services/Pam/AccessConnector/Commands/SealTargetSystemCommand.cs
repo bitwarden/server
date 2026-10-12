@@ -50,7 +50,6 @@ public class SealTargetSystemCommand : ISealTargetSystemCommand
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
         target.SealedData = sealedData;
-        // The only transition out of PendingSeal; a Disabled target stays Disabled.
         if (target.Status == PamTargetSystemStatus.PendingSeal)
         {
             target.Status = PamTargetSystemStatus.Active;

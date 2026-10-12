@@ -45,7 +45,7 @@ public class PamRotationConfigResponseModel : ResponseModel
     /// <summary>Whether a due rotation yields a job for an access connector or an operator obligation.</summary>
     public PamTargetSystemMethod TargetSystemMethod { get; set; }
 
-    /// <summary>The config's sealed blob, opaque to the server.</summary>
+    /// <summary>The config's sealed blob.</summary>
     public string SealedData { get; set; } = null!;
 
     /// <summary>A Quartz 6-field cron expression evaluated in UTC. Null means no scheduled rotation.</summary>

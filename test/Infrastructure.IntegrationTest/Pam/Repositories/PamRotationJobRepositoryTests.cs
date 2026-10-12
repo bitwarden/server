@@ -296,8 +296,8 @@ public class PamRotationJobRepositoryTests
         Assert.Empty(details.Attempts);
     }
 
-    // PendingSeal targets are registered but not yet sealed; the claim path refuses them the same way it refuses
-    // Disabled, even though a job can only have been offered while the target was still Active.
+    // A job can only have been offered while the target was Active, but the claim path must still refuse it
+    // once the target drops to PendingSeal.
     [DatabaseTheory, DatabaseData]
     public async Task ClaimAsync_PendingSealTarget_NotClaimable(
         IOrganizationRepository organizationRepository,

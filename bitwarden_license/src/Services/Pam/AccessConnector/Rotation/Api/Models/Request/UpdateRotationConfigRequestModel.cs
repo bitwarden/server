@@ -8,11 +8,7 @@ namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Request;
 /// </summary>
 public class UpdateRotationConfigRequestModel
 {
-    /// <summary>
-    /// The config's sealed blob (spec <c>RotationConfigSealedV1</c>), opaque to the server: the account identity to
-    /// rotate and whether to terminate sessions, sealed under the org key. Replaces any previously stored blob
-    /// wholesale.
-    /// </summary>
+    /// <summary>The config's sealed blob.</summary>
     [Required]
     [StringLength(10000)]
     public string SealedData { get; set; } = null!;

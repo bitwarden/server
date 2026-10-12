@@ -19,9 +19,7 @@ public class PamTargetSystem : ITableObject<Guid>
     public PamTargetSystemMethod Method { get; set; }
 
     /// <summary>
-    /// An opaque blob the admin client seals under the org key (spec <c>TargetSystemSealedV1</c>): the target's
-    /// kind, password policy and session-termination capability. The server never parses it. Null while
-    /// <see cref="PamTargetSystemStatus.PendingSeal"/>.
+    /// Sealed by the admin client under the org key; the server never reads it. Null while PendingSeal.
     /// </summary>
     [MaxLength(10000)]
     public string? SealedData { get; set; }

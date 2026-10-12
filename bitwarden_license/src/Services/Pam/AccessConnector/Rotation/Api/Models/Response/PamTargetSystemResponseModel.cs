@@ -34,9 +34,7 @@ public class PamTargetSystemResponseModel : ResponseModel
     /// <summary>Whether the target is offerable for rotation and accepts new rotation configs.</summary>
     public PamTargetSystemStatus Status { get; set; }
 
-    /// <summary>
-    /// The target system's sealed blob, opaque to the server. Null while <see cref="PamTargetSystemStatus.PendingSeal"/>.
-    /// </summary>
+    /// <summary>The target system's sealed blob.</summary>
     public string? SealedData { get; set; }
 
     public DateTime CreationDate { get; set; }

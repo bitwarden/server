@@ -10,9 +10,8 @@ public enum PamTargetSystemStatus : byte
     Disabled = 1,
 
     /// <summary>
-    /// Registered but not yet sealed: <see cref="Entities.PamTargetSystem.SealedData"/> is null. No jobs are offered
-    /// or claimed. A <c>PUT</c> that supplies <c>sealedData</c> is the only transition out of this status, moving the
-    /// target to <see cref="Active"/>; enable/disable both refuse until then.
+    /// Registered, not yet sealed; gets no jobs. Only a <c>PUT</c> with <c>sealedData</c> leaves it (to
+    /// <see cref="Active"/>); enable/disable refuse.
     /// </summary>
     PendingSeal = 2,
 }

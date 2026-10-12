@@ -17,12 +17,12 @@ public class PamRotationClaimResult
     public Guid? TargetSystemId { get; init; }
     public string? TargetSystemName { get; init; }
 
-    /// <summary>The target system's sealed blob (spec <c>TargetSystemSealedV1</c>), opaque to the server.</summary>
+    /// <summary>The target system's sealed blob.</summary>
     public string? TargetSystemSealedData { get; init; }
 
     public Guid? CipherId { get; init; }
 
-    /// <summary>The rotation config's sealed blob (spec <c>RotationConfigSealedV1</c>), opaque to the server.</summary>
+    /// <summary>The rotation config's sealed blob.</summary>
     public string? RotationConfigSealedData { get; init; }
 
     /// <summary><c>ClaimedAt + ReleaseDelay</c>; the access connector should finish before then.</summary>
