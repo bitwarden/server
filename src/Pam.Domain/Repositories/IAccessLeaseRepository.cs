@@ -1,5 +1,6 @@
 ﻿using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 
 namespace Bit.Pam.Repositories;
 
@@ -64,4 +65,7 @@ public interface IAccessLeaseRepository
     /// already ended or whose window has lapsed is left untouched.
     /// </summary>
     Task RevokeAsync(AccessLease lease, AccessLeaseAction endAction, AccessDecision auditDecision, DateTime now);
+
+    /// <summary>Returns each lease whose window closed on its own and that no earlier sweep returned.</summary>
+    Task<IReadOnlyList<PamExpiredLease>> ExpireDueAsync(DateTime now);
 }

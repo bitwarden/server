@@ -1,0 +1,20 @@
+CREATE PROCEDURE [dbo].[PamRotationJob_ReadManyClaimableByAccessConnectorId]
+    @AccessConnectorId UNIQUEIDENTIFIER,
+    @Now DATETIME2(7)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    -- The access connector poll; re-derives PamRotationJob_Claim's eligibility so the poll list matches what's claimable.
+    SELECT J.*, C.[TargetSystemId]
+    FROM [dbo].[PamRotationJob] J
+    INNER JOIN [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]
+    INNER JOIN [dbo].[PamTargetSystem] T ON T.[Id] = C.[TargetSystemId]
+    INNER JOIN [dbo].[PamAccessConnectorTargetAssignment] A ON A.[AccessConnectorId] = @AccessConnectorId AND A.[TargetSystemId] = C.[TargetSystemId]
+    INNER JOIN [dbo].[PamAccessConnector] D ON D.[Id] = @AccessConnectorId AND D.[OrganizationId] = C.[OrganizationId] AND D.[Status] = 0 -- Enabled
+    WHERE J.[Action] = 0 -- None
+        AND J.[ExpiresAt] > @Now
+        AND J.[NextClaimableAt] <= @Now
+        AND C.[Enabled] = 1
+        AND T.[Status] = 0 -- Active
+END
