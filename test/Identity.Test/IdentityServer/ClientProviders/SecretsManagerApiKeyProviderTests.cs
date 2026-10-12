@@ -54,6 +54,21 @@ public class SecretsManagerApiKeyProviderTests
     }
 
     [Fact]
+    public async Task GetAsync_OrganizationKey_ReturnsNull()
+    {
+        var organizationId = Guid.NewGuid();
+        var apiKey = SetupApiKey(serviceAccountId: null, organizationId);
+        apiKey.OrganizationId = organizationId;
+        apiKey.EncryptedPayload = null;
+        apiKey.Key = null;
+        SetupOrganization(organizationId, useSecretsManager: true, enabled: true);
+
+        var client = await _sut.GetAsync(apiKey.Id.ToString());
+
+        Assert.Null(client);
+    }
+
+    [Fact]
     public async Task GetAsync_OrganizationNotFound_ReturnsNull()
     {
         var organizationId = Guid.NewGuid();

@@ -10,11 +10,13 @@ using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.NotificationCenter.Models;
 using Bit.Infrastructure.EntityFramework.Pam.Models;
 using Bit.Infrastructure.EntityFramework.Platform;
+using Bit.Infrastructure.EntityFramework.SecretsManager.Configurations;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using DP = Microsoft.AspNetCore.DataProtection;
 
@@ -107,6 +109,7 @@ public class DatabaseContext : DbContext
         //  `Infrastructure.EntityFramework` Module. Note to get the assembly we can use a random class
         //   from this module.
         builder.ApplyConfigurationsFromAssembly(typeof(DatabaseContext).Assembly);
+        builder.ApplyConfiguration(new ApiKeyEntityTypeConfiguration(this.GetService<ISqlGenerationHelper>()));
 
         // Going forward use `IEntityTypeConfiguration` in the Configurations folder for managing
         // Entity Framework code first database configurations.
