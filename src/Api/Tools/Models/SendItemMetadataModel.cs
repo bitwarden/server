@@ -22,29 +22,19 @@ public class SendItemMetadataModel
     public string? FolderName { get; set; }
     public string[]? CollectionNames { get; set; }
     public string? OrganizationName { get; set; }
-    [Required]
     public DateTime? CreationDate { get; set; }
-    [Required]
     public DateTime? RevisionDate { get; set; }
 
     public SendItemMetadata ToSendItemMetadata()
     {
-        if (!CreationDate.HasValue)
-        {
-            throw new ArgumentNullException(nameof(CreationDate), "CreationDate is required item metadata");
-        }
-        if (!RevisionDate.HasValue)
-        {
-            throw new ArgumentNullException(nameof(RevisionDate), "RevisionDate is required item metadata");
-        }
         return new()
         {
             ItemId = ItemId,
             FolderName = FolderName,
             CollectionNames = CollectionNames,
             OrganizationName = OrganizationName,
-            CreationDate = CreationDate!.Value,
-            RevisionDate = RevisionDate!.Value
+            CreationDate = CreationDate.GetValueOrDefault(),
+            RevisionDate = RevisionDate.GetValueOrDefault()
         };
     }
 }
