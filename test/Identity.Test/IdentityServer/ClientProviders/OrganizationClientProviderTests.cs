@@ -1,12 +1,12 @@
 ﻿using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.ScopedOrganizationApiKeys;
+using Bit.Core.AdminConsole.OrganizationFeatures.ScopedOrganizationApiKeys.Interfaces;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.SecretsManager.Entities;
-using Bit.Core.SecretsManager.Repositories;
 using Bit.Identity.IdentityServer.ClientProviders;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Duende.IdentityModel;
@@ -22,7 +22,7 @@ public class OrganizationClientProviderTests
 
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
-    private readonly IApiKeyRepository _apiKeyRepository;
+    private readonly IGetScopedOrganizationApiKeyClientQuery _getScopedOrganizationApiKeyClientQuery;
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly OrganizationClientProvider _sut;
 
@@ -30,14 +30,14 @@ public class OrganizationClientProviderTests
     {
         _organizationRepository = Substitute.For<IOrganizationRepository>();
         _organizationApiKeyRepository = Substitute.For<IOrganizationApiKeyRepository>();
-        _apiKeyRepository = Substitute.For<IApiKeyRepository>();
+        _getScopedOrganizationApiKeyClientQuery = Substitute.For<IGetScopedOrganizationApiKeyClientQuery>();
         _featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
         _featureService.IsEnabled(FeatureFlagKeys.ScopedOrganizationApiKeys).Returns(true);
 
         _sut = new OrganizationClientProvider(
             _organizationRepository,
             _organizationApiKeyRepository,
-            _apiKeyRepository,
+            _getScopedOrganizationApiKeyClientQuery,
             _featureService);
     }
 
@@ -76,128 +76,34 @@ public class OrganizationClientProviderTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetAsync_ScopedIdentifier_FlagOff_ReturnsNull(Organization organization)
+    public async Task GetAsync_ScopedIdentifier_FlagOff_ReturnsNullWithoutLookingUpKey(Guid organizationId)
     {
-        var key = ArrangeValidScopedKey(organization);
+        var key = ArrangeKey(organizationId);
         _featureService.IsEnabled(FeatureFlagKeys.ScopedOrganizationApiKeys).Returns(false);
 
-        var client = await _sut.GetAsync($"{organization.Id}.{key.Id}");
+        var client = await _sut.GetAsync($"{organizationId}.{key.KeyId}");
+
+        Assert.Null(client);
+        await _getScopedOrganizationApiKeyClientQuery.DidNotReceiveWithAnyArgs().GetAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsync_ScopedIdentifier_KeyNotUsable_ReturnsNull(Guid organizationId, Guid keyId)
+    {
+        var client = await _sut.GetAsync($"{organizationId}.{keyId}");
 
         Assert.Null(client);
     }
 
     [Theory, BitAutoData]
-    public async Task GetAsync_ScopedIdentifier_KeyNotFound_ReturnsNull(Organization organization, Guid keyId)
+    public async Task GetAsync_ScopedIdentifier_ReturnsClientForKey(Guid organizationId)
     {
-        organization.Enabled = true;
-        organization.UseApi = true;
-        _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+        var key = ArrangeKey(organizationId);
 
-        var client = await _sut.GetAsync($"{organization.Id}.{keyId}");
-
-        Assert.Null(client);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetAsync_ScopedIdentifier_KeyBelongsToAnotherOrganization_ReturnsNull(
-        Organization organization, Organization otherOrganization)
-    {
-        var key = ArrangeValidScopedKey(organization);
-        otherOrganization.Enabled = true;
-        otherOrganization.UseApi = true;
-        _organizationRepository.GetByIdAsync(otherOrganization.Id).Returns(otherOrganization);
-
-        var client = await _sut.GetAsync($"{otherOrganization.Id}.{key.Id}");
-
-        Assert.Null(client);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetAsync_ScopedIdentifier_ServiceAccountKey_ReturnsNull(Organization organization, Guid serviceAccountId)
-    {
-        var key = ArrangeValidScopedKey(organization);
-        key.ServiceAccountId = serviceAccountId;
-
-        var client = await _sut.GetAsync($"{organization.Id}.{key.Id}");
-
-        Assert.Null(client);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetAsync_ScopedIdentifier_KeyExpired_ReturnsNull(Organization organization)
-    {
-        var key = ArrangeValidScopedKey(organization);
-        key.ExpireAt = DateTime.UtcNow.AddMinutes(-1);
-
-        var client = await _sut.GetAsync($"{organization.Id}.{key.Id}");
-
-        Assert.Null(client);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetAsync_ScopedIdentifier_KeyExpiresInFuture_ReturnsClient(Organization organization)
-    {
-        var key = ArrangeValidScopedKey(organization);
-        key.ExpireAt = DateTime.UtcNow.AddDays(1);
-
-        var client = await _sut.GetAsync($"{organization.Id}.{key.Id}");
+        var client = await _sut.GetAsync($"{organizationId}.{key.KeyId}");
 
         Assert.NotNull(client);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetAsync_ScopedIdentifier_SecretExpiresWithKey(Organization organization)
-    {
-        var key = ArrangeValidScopedKey(organization);
-        key.ExpireAt = DateTime.UtcNow.AddDays(1);
-
-        var client = await _sut.GetAsync($"{organization.Id}.{key.Id}");
-
-        Assert.Equal(key.ExpireAt, Assert.Single(client!.ClientSecrets).Expiration);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetAsync_ScopedIdentifier_OrganizationNotFound_ReturnsNull(Organization organization)
-    {
-        var key = ArrangeValidScopedKey(organization);
-        _organizationRepository.GetByIdAsync(organization.Id).Returns((Organization)null);
-
-        var client = await _sut.GetAsync($"{organization.Id}.{key.Id}");
-
-        Assert.Null(client);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetAsync_ScopedIdentifier_OrganizationDisabled_ReturnsNull(Organization organization)
-    {
-        var key = ArrangeValidScopedKey(organization);
-        organization.Enabled = false;
-
-        var client = await _sut.GetAsync($"{organization.Id}.{key.Id}");
-
-        Assert.Null(client);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetAsync_ScopedIdentifier_OrganizationWithoutUseApi_ReturnsNull(Organization organization)
-    {
-        var key = ArrangeValidScopedKey(organization);
-        organization.UseApi = false;
-
-        var client = await _sut.GetAsync($"{organization.Id}.{key.Id}");
-
-        Assert.Null(client);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetAsync_ScopedIdentifier_ReturnsClientForKey(Organization organization)
-    {
-        var key = ArrangeValidScopedKey(organization);
-
-        var client = await _sut.GetAsync($"{organization.Id}.{key.Id}");
-
-        Assert.NotNull(client);
-        Assert.Equal($"organization.{organization.Id}.{key.Id}", client.ClientId);
+        Assert.Equal($"organization.{organizationId}.{key.KeyId}", client.ClientId);
         Assert.True(client.RequireClientSecret);
         Assert.Equal(SecretHash, Assert.Single(client.ClientSecrets).Value);
         Assert.Equal(GrantTypes.ClientCredentials, client.AllowedGrantTypes);
@@ -206,11 +112,32 @@ public class OrganizationClientProviderTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetAsync_ScopedIdentifier_UsesOrganizationClaimsWithDefaultPrefix(Organization organization)
+    public async Task GetAsync_ScopedIdentifier_SecretExpiresWithKey(Guid organizationId)
     {
-        var key = ArrangeValidScopedKey(organization);
+        var key = ArrangeKey(organizationId, expireAt: new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc));
 
-        var client = await _sut.GetAsync($"{organization.Id}.{key.Id}");
+        var client = await _sut.GetAsync($"{organizationId}.{key.KeyId}");
+
+        Assert.Equal(key.ExpireAt, Assert.Single(client!.ClientSecrets).Expiration);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsync_ScopedIdentifier_AllowsKeyScopes(Guid organizationId)
+    {
+        var key = ArrangeKey(organizationId,
+            allowedScopes: [ApiScopes.ApiOrganizationMembersRead, ApiScopes.ApiOrganizationEventsRead]);
+
+        var client = await _sut.GetAsync($"{organizationId}.{key.KeyId}");
+
+        Assert.Equal(key.AllowedScopes, client!.AllowedScopes);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsync_ScopedIdentifier_UsesOrganizationClaimsWithDefaultPrefix(Guid organizationId)
+    {
+        var key = ArrangeKey(organizationId);
+
+        var client = await _sut.GetAsync($"{organizationId}.{key.KeyId}");
 
         Assert.NotNull(client);
         Assert.Equal("client_", client.ClientClaimsPrefix);
@@ -218,7 +145,7 @@ public class OrganizationClientProviderTests
             c =>
             {
                 Assert.Equal(JwtClaimTypes.Subject, c.Type);
-                Assert.Equal(organization.Id.ToString(), c.Value);
+                Assert.Equal(organizationId.ToString(), c.Value);
             },
             c =>
             {
@@ -228,47 +155,27 @@ public class OrganizationClientProviderTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetAsync_ScopedIdentifier_UppercaseIdentifier_ReturnsCanonicalClientId(Organization organization)
+    public async Task GetAsync_ScopedIdentifier_UppercaseIdentifier_ReturnsCanonicalClientId(Guid organizationId)
     {
-        var key = ArrangeValidScopedKey(organization);
+        var key = ArrangeKey(organizationId);
 
         var client = await _sut.GetAsync(
-            $"{organization.Id.ToString().ToUpperInvariant()}.{key.Id.ToString().ToUpperInvariant()}");
+            $"{organizationId.ToString().ToUpperInvariant()}.{key.KeyId.ToString().ToUpperInvariant()}");
 
         Assert.NotNull(client);
-        Assert.Equal($"organization.{organization.Id}.{key.Id}", client.ClientId);
+        Assert.Equal($"organization.{organizationId}.{key.KeyId}", client.ClientId);
     }
 
-    [Theory, BitAutoData]
-    public async Task GetAsync_ScopedIdentifier_AllowsOnlyCatalogScopesFromKey(Organization organization)
+    private ScopedOrganizationApiKeyClient ArrangeKey(Guid organizationId, DateTime? expireAt = null,
+        IReadOnlyCollection<string> allowedScopes = null)
     {
-        var key = ArrangeValidScopedKey(organization);
-        key.Scope =
-            $"[\"{ApiScopes.ApiOrganizationMembersRead}\",\"{ApiScopes.ApiOrganization}\",\"{ApiScopes.Api}\",\"api.organization.unknown\",\"{ApiScopes.ApiOrganizationEventsRead}\"]";
-
-        var client = await _sut.GetAsync($"{organization.Id}.{key.Id}");
-
-        Assert.NotNull(client);
-        Assert.Equal(
-            [ApiScopes.ApiOrganizationEventsRead, ApiScopes.ApiOrganizationMembersRead],
-            client.AllowedScopes.Order());
-    }
-
-    private ApiKey ArrangeValidScopedKey(Organization organization)
-    {
-        organization.Enabled = true;
-        organization.UseApi = true;
-        _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
-
-        var key = new ApiKey
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = organization.Id,
-            Name = "Test key",
-            ClientSecretHash = SecretHash,
-            Scope = $"[\"{ApiScopes.ApiOrganizationEventsRead}\"]",
-        };
-        _apiKeyRepository.GetByIdAsync(key.Id).Returns(key);
+        var key = new ScopedOrganizationApiKeyClient(
+            organizationId,
+            Guid.NewGuid(),
+            SecretHash,
+            expireAt,
+            allowedScopes ?? [ApiScopes.ApiOrganizationEventsRead]);
+        _getScopedOrganizationApiKeyClientQuery.GetAsync(organizationId, key.KeyId).Returns(key);
         return key;
     }
 }

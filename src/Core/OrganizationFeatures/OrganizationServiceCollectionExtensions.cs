@@ -36,6 +36,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.SelfRevokeUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
+using Bit.Core.AdminConsole.OrganizationFeatures.ScopedOrganizationApiKeys;
+using Bit.Core.AdminConsole.OrganizationFeatures.ScopedOrganizationApiKeys.Interfaces;
 using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
@@ -189,6 +191,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IGetOrganizationApiKeyQuery, GetOrganizationApiKeyQuery>();
         services.AddScoped<IRotateOrganizationApiKeyCommand, RotateOrganizationApiKeyCommand>();
         services.AddScoped<ICreateOrganizationApiKeyCommand, CreateOrganizationApiKeyCommand>();
+        services.TryAddScoped<IGetScopedOrganizationApiKeyClientQuery, GetScopedOrganizationApiKeyClientQuery>();
     }
 
     public static void AddOrganizationCollectionCommands(this IServiceCollection services)
