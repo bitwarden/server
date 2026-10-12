@@ -36,10 +36,10 @@ public enum AccessAuditEventKind : byte
     // Rotation lifecycle
     RotationConfigCreated = 50,
 
-    /// <summary>A rotation config's schedule settings were updated.</summary>
+    /// <summary>Not emitted; stored events may still carry it.</summary>
     RotationSettingsUpdated = 51,
 
-    /// <summary>A rotation config's target, account, or termination settings were updated.</summary>
+    /// <summary>Not emitted; stored events may still carry it.</summary>
     RotationAccountUpdated = 52,
 
     RotationPaused = 53,
@@ -77,6 +77,9 @@ public enum AccessAuditEventKind : byte
     /// <summary>An admin recorded a manual rotation as completed.</summary>
     ManualRotationRecorded = 66,
 
+    /// <summary>A rotation config's sealed blob, schedule and access-end trigger were written.</summary>
+    RotationConfigUpdated = 67,
+
     // Access connector and target administration
     AccessConnectorRegistered = 70,
 
@@ -93,9 +96,10 @@ public enum AccessAuditEventKind : byte
 
     TargetSystemEnabled = 76,
 
+    /// <summary>Not emitted; stored events may still carry it.</summary>
     TargetSystemRenamed = 77,
 
-    /// <summary>A target system's password policy or session-termination capability was updated.</summary>
+    /// <summary>Not emitted; stored events may still carry it.</summary>
     TargetSystemPolicyUpdated = 78,
 
     AccessConnectorDisabled = 79,
@@ -106,4 +110,7 @@ public enum AccessAuditEventKind : byte
 
     /// <summary>A target system was deleted along with its access connector assignments.</summary>
     TargetSystemDeleted = 82,
+
+    /// <summary>A target system's name and sealed blob were written.</summary>
+    TargetSystemUpdated = 83,
 }

@@ -5,13 +5,15 @@ use "./access-connector.allium" as connector
 
 -- Scope: Bitwarden server side of credential rotation
 -- Includes:
---   Target system definition and management (id, name, rotation method automatic/manual,
---     integration kind, password policy, session-termination capability; enable/disable,
---     update of name and policy)
+--   Target system definition and management (id, name, rotation method automatic/manual;
+--     two-phase registration and sealing of the integration kind, password policy and
+--     session-termination capability into an opaque blob the admin's client seals under
+--     the organization key and the server never interprets; enable/disable; renaming)
 --   Rotation configuration (linking a cipher to a target system) and its rotation
 --     triggers, set per credential: an optional schedule and the rotate-on-access-end
---     opt-in (inlined onto the configuration; no separate settings value); correcting
---     the account identity / termination opt-in, and deleting the configuration
+--     opt-in (inlined onto the configuration; no separate settings value); re-sealing the
+--     account identity / termination opt-in into its own opaque blob, and deleting the
+--     configuration
 --   Rotation scheduling and triggering: on a schedule (cron), on demand, and on
 --     access events (an upstream grant over the credential ending)
 --   Manual rotation fallback for systems that cannot be rotated automatically:
@@ -53,10 +55,17 @@ use "./access-connector.allium" as connector
 --     by RotationConfig and the closing open question)
 -- Dependencies:
 --   access connector/Cipher is governed by access-connector.allium and referenced here by qualified
---   name. The TargetSystem and its PasswordPolicy, the RotationConfig, the RotationJob and
---   the RotationAttempt are all owned HERE (server-side). The access connector holds no target-system
---   or attempt entity and receives the work snapshot it needs (attempt_id, id, name, kind,
---   password policy, cipher, account identity, terminate flag) on each claim.
+--   name. The TargetSystem, the RotationConfig, the RotationJob and the RotationAttempt are
+--   all owned HERE (server-side). kind, the password policy and the session-termination
+--   capability (TargetSystem), and the account identity and the terminate opt-in
+--   (RotationConfig), are sealed client-side into opaque DataEnvelope blobs under the
+--   organization key before the server ever sees them; it stores and forwards them
+--   unopened and never reads, validates or routes on their contents -- see
+--   pam-rotation-sealed-config-plan.md. The access connector holds no target-system or
+--   attempt entity and receives the work snapshot it needs (attempt_id, id, name,
+--   target_system_sealed_data, cipher, rotation_config_sealed_data) on each claim, unseals
+--   both locally with the organization key and verifies them against each other and the
+--   claim before touching the target.
 
 config {
     failure_retry_delay: Duration = 1.hour
@@ -121,21 +130,6 @@ value Schedule {
     cron: String
 }
 
--- What kind of password to generate for an automatic target: the constraints a new
--- password must satisfy. Server-side configuration the admin sets on the TargetSystem;
--- it is carried to the access connector on each claim (RotationClaimed) as an opaque snapshot
--- parameter, and the access connector generates a conforming password without modelling the shape
--- locally -- it holds NO typed copy (it cannot reference server types; see the snapshot
--- note in access-connector.allium).
-value PasswordPolicy {
-    min_length: Integer
-    max_length: Integer
-    include_uppercase: Boolean
-    include_lowercase: Boolean
-    include_digits: Boolean
-    include_symbols: Boolean
-}
-
 -- Enumerations
 
 -- The best-effort session-termination outcome the access connector reports alongside a successful
@@ -184,32 +178,39 @@ enum FailureSyncState { target_unchanged | target_updated | indeterminate }
 -- script, ...). Defined and owned server-side: the admin registers it with a name and a
 -- rotation method, and the server holds NO connection details -- those live in the
 -- access connector's local resolver, keyed by this id (see access-connector.allium). Status enables or
--- disables the whole target. Status literals (active|disabled) are deliberately distinct
--- from ConnectorRegistration's (enrolled|revoked) so untyped trigger-param inference stays
--- unambiguous.
+-- disables the whole target. Status literals (pending_seal|active|disabled) are deliberately
+-- distinct from ConnectorRegistration's (enrolled|revoked) so untyped trigger-param inference
+-- stays unambiguous.
+--
+-- Registration is two-phase (RegisterTargetSystem then UpdateTargetSystem) because the sealed
+-- blob must bind the target's own server-assigned id (TargetSystemSealedV1.target_system_id,
+-- checked by the access connector against the claim -- see pam-rotation-sealed-config-plan.md).
+-- TargetSystemsClient::create hides both calls behind one admin-client method.
 entity TargetSystem {
     id: String
     name: String
-    -- automatic: the access connector rotates this system's credentials; needs a kind so the access connector
-    --   knows which integration to run (and a password policy + session-termination
-    --   capability, carried to the access connector on a claim).
-    -- manual: no access connector integration -- rotations are recorded out of band (Goal 3); kind,
-    --   password_policy and supports_session_termination do not apply.
+    -- automatic: the access connector rotates this system's credentials; the sealed blob carries the
+    --   integration kind, a password policy and a session-termination capability it needs.
+    -- manual: no access connector integration -- rotations are recorded out of band (Goal 3); the
+    --   sealed kind and session-termination capability are absent.
     method: automatic | manual
-    -- Which integration the access connector runs (Entra, MSSQL, or a custom script).
-    kind: entra | mssql | custom_script when method = automatic
-    password_policy: PasswordPolicy when method = automatic
-    -- Whether the target can terminate active sessions for a rotated account. Used at
-    -- config time to reject terminate_sessions on a target that cannot honour it
-    -- (CreateRotationConfig) and shown to admins (TargetSystemView). Because that guard
-    -- makes "requested but unsupported" impossible, this capability no longer rides to the
-    -- access connector on a claim.
-    supports_session_termination: Boolean when method = automatic
-    -- Enable/disable the whole target: a disabled system stops new rotations being offered
-    -- for all of its credentials (jobs already claimed are unaffected).
-    status: active | disabled
+    -- Opaque: the sealed TargetSystemSealedV1 blob (kind, password policy,
+    -- session-termination capability), encrypted client-side under the organization key.
+    -- The server stores and forwards it unopened -- it never reads, validates or routes on
+    -- its contents (kind included: dispatch and claim routing never read it). Present once
+    -- the target has been sealed at least once (status active or disabled); absent while
+    -- pending_seal. See pam-rotation-sealed-config-plan.md.
+    sealed_data: String when status = active | disabled
+    -- pending_seal   : registered (name, method) but not yet sealed -- not rotatable, not
+    --                  offered, not enable/disable-able. UpdateTargetSystem is the only exit.
+    -- active/disabled: enable/disable the whole target; a disabled system stops new
+    --                  rotations being offered for all of its credentials (jobs already
+    --                  claimed are unaffected). Re-sealing (UpdateTargetSystem) does not
+    --                  change status: a disabled target stays disabled when re-sealed.
+    status: active | disabled | pending_seal
 
     transitions status {
+        pending_seal -> active
         active -> disabled
         disabled -> active
     }
@@ -292,13 +293,13 @@ entity RotationConfig {
     id: String
     cipher: connector/Cipher
     target_system: TargetSystem
-    -- account_identity is an opaque String: the account's identifier in the target system,
-    -- interpreted by the target's kind (an Entra UPN/email, a SQL Server login, a
-    -- custom-script argument). No type or kind discriminator -- the access connector's kind
-    -- integration knows how to read it; it is carried verbatim to the access connector on the claim
-    -- and never parsed server-side.
-    account_identity: String
-    terminate_sessions: Boolean
+    -- Opaque: the sealed RotationConfigSealedV1 blob (the account's identifier in the
+    -- target system -- an Entra UPN/email, a SQL Server login, a custom-script argument --
+    -- and the terminate-sessions opt-in), encrypted client-side under the organization key.
+    -- Present from creation (configs are single-call, not two-phase: both ids the blob
+    -- binds -- target_system_id, cipher_id -- already exist). The server stores and
+    -- forwards it unopened and never parses it. See pam-rotation-sealed-config-plan.md.
+    sealed_data: String
     -- Whether this credential rotates automatically or by hand is a property of its target
     -- system (target_system.method), not the configuration: every credential on an
     -- automatic target is rotated by the access connector; every credential on a manual target is
@@ -634,33 +635,64 @@ rule MarkConnectorDisconnected {
 
 -- Target system registration
 
-rule RegisterAutomaticTargetSystem {
-    when: RegisterAutomaticTargetSystem(name, kind, password_policy, supports_session_termination)
-    ensures: TargetSystem.created(
-        name: name,
-        method: automatic,
-        kind: kind,
-        password_policy: password_policy,
-        supports_session_termination: supports_session_termination,
-        status: active
-    )
+rule RegisterTargetSystem {
+    when: RegisterTargetSystem(name, method)
+    ensures: TargetSystem.created(name: name, method: method, status: pending_seal)
     ensures: AdministrationAudited(operation: target_registered, name: name)
     @guidance
-        -- The access connector rotates this system, so it carries the integration kind, the password
-        -- policy new credentials must satisfy, and whether it can terminate sessions. The
-        -- kind, password policy, cipher and account identity ride to the access connector on each
-        -- claim (ClaimRotation -> RotationClaimed); the session-termination capability stays
-        -- here (the config-time guard makes it unnecessary on the claim). Connection
-        -- details are NOT held here -- the access connector resolves them locally by id.
+        -- Phase 1 of two-phase registration (TargetSystemsClient::create hides both calls
+        -- behind one admin-client method). The server no longer collects kind, a password
+        -- policy or a session-termination capability at registration -- those are sealed
+        -- client-side (TargetSystemSealedV1) and supplied by UpdateTargetSystem, phase 2.
+        -- The row starts pending_seal: not rotatable, not offered, not enable/disable-able
+        -- (see TargetSystem.status) until sealed. If phase 2 fails the admin UI offers
+        -- finish (seal again) or delete; there is no server-side sweep of abandoned
+        -- pending_seal rows. Connection details are NOT held here -- the access connector
+        -- resolves them locally by id.
 }
 
-rule RegisterManualTargetSystem {
-    when: RegisterManualTargetSystem(name)
-    ensures: TargetSystem.created(name: name, method: manual, status: active)
-    ensures: AdministrationAudited(operation: target_registered, name: name)
+rule CompleteTargetSystemSeal {
+    when: UpdateTargetSystem(target_system, name, sealed_data)
+    requires: target_system.status = pending_seal
+    ensures: target_system.name = name
+    ensures: target_system.sealed_data = sealed_data
+    ensures: target_system.status = active
+    ensures: AdministrationAudited(operation: target_updated, target_system: target_system)
     @guidance
-        -- A system with no access connector integration: rotations are recorded out of band (Goal 3).
-        -- No kind, password policy or session-termination capability applies.
+        -- Phase 2 of two-phase registration, and the only transition out of pending_seal
+        -- (TargetSystem.status). The admin's client seals TargetSystemSealedV1 (the target's
+        -- own id, kind, password policy, session-termination capability) under the
+        -- organization key and supplies the opaque blob here; the server stores and
+        -- forwards it unopened. See pam-rotation-sealed-config-plan.md.
+}
+
+rule ReSealTargetSystem {
+    when: UpdateTargetSystem(target_system, name, sealed_data)
+    requires: target_system.status in {active, disabled}
+    ensures: target_system.name = name
+    ensures: target_system.sealed_data = sealed_data
+    ensures: AdministrationAudited(operation: target_updated, target_system: target_system)
+    @guidance
+        -- Re-seal: replaces the opaque blob with a freshly-sealed one (a fresh content key
+        -- per pam-rotation-sealed-config-plan.md) and writes the name, without touching
+        -- status -- a disabled target stays disabled when re-sealed. The name is the only
+        -- server-visible mutable field left, and display-only: the target's id -- which
+        -- keys the access connector's local credential resolution (access-connector.allium /
+        -- CredentialResolver) -- never changes. Kind, the password policy and the
+        -- session-termination capability are sealed and opaque, so the whole updatable
+        -- shape is written in one operation and one audit event; the server cannot read or
+        -- partially update opaque contents.
+        --
+        -- Withdrawing the session-termination capability while a configuration relies on it
+        -- was previously guarded here (the server could read supports_session_termination).
+        -- That guard is gone: the server can no longer see the capability or
+        -- terminate_sessions to compare them. The check moves to the admin client (config
+        -- create/update unseals the target to validate) and the access connector (claim
+        -- check 7: terminate = config.terminate_sessions && target.supports_session_termination,
+        -- computed from the unsealed blobs -- see pam-rotation-sealed-config-plan.md).
+        -- The integration kind is deliberately NOT editable via re-seal either in practice:
+        -- existing account identities are interpreted by the kind, so changing it
+        -- invalidates them (see the method-switching open question).
 }
 
 rule DisableTargetSystem {
@@ -669,6 +701,8 @@ rule DisableTargetSystem {
     ensures: target_system.status = disabled
     ensures: AdministrationAudited(operation: target_disabled, target_system: target_system)
     @guidance
+        -- Requires active, so a pending_seal target is rejected here too (it is neither
+        -- active nor disabled) -- disable/enable only make sense once a target is sealed.
         -- A disabled target system stops new rotations being offered for its
         -- configurations, and holds any still-pending job un-claimable (is_claimable).
         -- Jobs already CLAIMED are unaffected and are NOT cancelled (resolved): the access connector
@@ -683,6 +717,8 @@ rule EnableTargetSystem {
     requires: target_system.status = disabled
     ensures: target_system.status = active
     ensures: AdministrationAudited(operation: target_enabled, target_system: target_system)
+    -- Requires disabled, so a pending_seal target is rejected here too -- UpdateTargetSystem
+    -- is the only exit from pending_seal.
     -- Catch-up on re-enable, mirroring ResumeRotation, for each automatic-method config on
     -- this target. Schedule catch-up SKIPS missed windows (recompute from now); a deferred
     -- access-end (an EVENT trigger) is never lost -- it is discharged as a fresh offer.
@@ -714,44 +750,6 @@ rule EnableTargetSystem {
         -- discharge this is the full catch-up: schedules skip, events are preserved.
 }
 
-rule UpdateAutomaticTargetSystem {
-    when: UpdateAutomaticTargetSystem(target_system, name, password_policy, supports_session_termination)
-    requires: target_system.method = automatic
-    -- The capability may be withdrawn only while no configuration relies on it, preserving
-    -- the config-time guarantee that the access connector never sees "requested but unsupported"
-    -- (CreateRotationConfig / UpdateRotationConfig).
-    requires: supports_session_termination
-              or not RotationConfigs.any(c => c.target_system = target_system and c.terminate_sessions)
-    ensures: target_system.name = name
-    ensures: target_system.password_policy = password_policy
-    ensures: target_system.supports_session_termination = supports_session_termination
-    ensures: AdministrationAudited(operation: target_system_updated, target_system: target_system)
-    @guidance
-        -- One request carries the target's whole updatable shape, so the display name
-        -- travels with the policy rather than through a rename of its own. The name has no
-        -- operational effect: the target's id -- which keys the access connector's local credential
-        -- resolution (access-connector.allium / CredentialResolver) -- never changes.
-        -- The password policy and session-termination capability were previously immutable
-        -- after registration -- a wrong policy was permanent. The policy is carried to the
-        -- access connector per claim (RotationClaimed), so an update applies to the NEXT attempt of
-        -- every credential on this target; snapshots already claimed carry the old policy.
-        -- The integration kind is deliberately NOT editable: existing account identities
-        -- are interpreted by the kind, so changing it invalidates them (see the
-        -- method-switching open question).
-}
-
-rule UpdateManualTargetSystem {
-    when: UpdateManualTargetSystem(target_system, name)
-    requires: target_system.method = manual
-    ensures: target_system.name = name
-    ensures: AdministrationAudited(operation: target_system_updated, target_system: target_system)
-    @guidance
-        -- A manual target has no kind, password policy or session-termination capability, so
-        -- its updatable shape is the display name alone -- the same split by method that
-        -- RegisterAutomaticTargetSystem and RegisterManualTargetSystem make for one
-        -- registration request.
-}
-
 rule DeleteTargetSystem {
     when: DeleteTargetSystem(target_system)
     -- A configuration naming this target holds it: deleting the target would leave the
@@ -781,21 +779,19 @@ rule DeleteTargetSystem {
 -- Rotation configuration
 
 rule CreateRotationConfig {
-    when: CreateRotationConfig(cipher, target_system, account_identity, terminate_sessions, schedule, rotate_on_access_end)
-    requires: target_system.status = active
+    when: CreateRotationConfig(cipher, target_system, sealed_data, schedule, rotate_on_access_end)
+    -- A config may be created against a pending_seal target (both ids its blob binds --
+    -- target_system_id, cipher_id -- already exist); it simply does not run until the
+    -- target is sealed (OfferRotation / ClaimRotation both require target_system.status =
+    -- active). Still rejected against a disabled target, as before.
+    requires: target_system.status in {active, pending_seal}
     requires: not exists RotationConfig{cipher: cipher}
-    -- Session termination may be requested only if the target can honour it. terminate_sessions
-    -- short-circuits the implication, so supports_session_termination (a when-gated field,
-    -- present only for automatic targets) is read only when termination is actually requested,
-    -- which on an automatic target is the only case it can be requested in.
-    requires: not terminate_sessions or (target_system.method = automatic and target_system.supports_session_termination)
     let initial_next = if schedule != null: NextScheduledTime(schedule, now)
                        else: null
     ensures: RotationConfig.created(
         cipher: cipher,
         target_system: target_system,
-        account_identity: account_identity,
-        terminate_sessions: terminate_sessions,
+        sealed_data: sealed_data,
         schedule: schedule,
         rotate_on_access_end: rotate_on_access_end,
         next_rotation_at: initial_next,
@@ -806,11 +802,15 @@ rule CreateRotationConfig {
     )
     @guidance
         -- Whether this config rotates automatically or by hand follows target_system.method
-        -- (no per-credential mode). Session termination is rejected up front for a target
-        -- that cannot honour it, so the access connector never sees a "requested but unsupported"
-        -- case. Incremental adoption (Goal 5): configs are created one at a time, per cipher;
-        -- registering a target system and creating its first config is the whole onboarding
-        -- path, with no estate-wide migration step.
+        -- (no per-credential mode). sealed_data is RotationConfigSealedV1 (account identity,
+        -- terminate_sessions), sealed client-side under the organization key before the
+        -- server ever sees it -- the server cannot read it and so no longer rejects
+        -- terminate_sessions against a target that can't honour it up front; the admin
+        -- client validates against the unsealed target capability instead (see
+        -- UpdateTargetSystem / pam-rotation-sealed-config-plan.md). Incremental adoption
+        -- (Goal 5): configs are created one at a time, per cipher; registering a target
+        -- system and creating its first config is the whole onboarding path, with no
+        -- estate-wide migration step.
 }
 
 rule AuditRotationConfigCreated {
@@ -824,31 +824,30 @@ rule AuditRotationConfigCreated {
 }
 
 rule UpdateRotationConfig {
-    when: UpdateRotationConfig(actor, rotation_config, account_identity, terminate_sessions, schedule, rotate_on_access_end)
-    requires: not terminate_sessions or (rotation_config.target_system.method = automatic and rotation_config.target_system.supports_session_termination)
-    requires: not rotation_config.has_active_job
+    when: UpdateRotationConfig(actor, rotation_config, sealed_data, schedule, rotate_on_access_end)
+    requires: not rotation_config.has_active_job or sealed_data = rotation_config.sealed_data
     let next = if schedule != null: NextScheduledTime(schedule, now)
                else: null
-    ensures: rotation_config.account_identity = account_identity
-    ensures: rotation_config.terminate_sessions = terminate_sessions
+    ensures: rotation_config.sealed_data = sealed_data
     ensures: rotation_config.schedule = schedule
     ensures: rotation_config.rotate_on_access_end = rotate_on_access_end
     ensures: rotation_config.next_rotation_at = next
     ensures: RotationAudited(rotation_config: rotation_config, outcome: config_updated, actor: actor)
     @guidance
-        -- One request carries the config's whole updatable shape: the account identity and
-        -- termination opt-in that were UpdateRotationAccount, and the triggers that were
-        -- UpdateRotationSettings. Editing the triggers still recomputes the next scheduled
-        -- time immediately (recompute-on-edit); clearing the schedule (null) leaves the
-        -- credential with no scheduled rotation, while on-demand and access-event triggers
-        -- still work. Same termination guard as CreateRotationConfig, so the access connector still
-        -- never sees a "requested but unsupported" case. Corrects a target-side account
-        -- identity (a typo'd UPN, a renamed SQL login) that was otherwise permanent.
-        -- Merging the two tightened one thing: the in-flight guard that protected the
-        -- account identity now covers the whole request, so the triggers can no longer be
-        -- edited while a job is claimed. The claim snapshot already carried the old
-        -- identity, and a partial edit mid-attempt would make the audit trail ambiguous
-        -- about which account was rotated.
+        -- Writes the whole updatable shape in one operation and one audit event: the sealed
+        -- account identity and termination opt-in (RotationConfigSealedV1, a fresh content
+        -- key per re-seal -- same mechanic as TargetSystem's ReSealTargetSystem), and the
+        -- triggers (schedule + access-event opt-in), recomputed-on-edit.
+        --
+        -- A changed blob is refused while a job is active: the claim snapshot already
+        -- carried the old sealed blob, and re-sealing mid-attempt would make the audit trail
+        -- ambiguous about which account was rotated. Resending the stored blob unchanged is
+        -- not a re-seal, so the triggers stay editable with an active job -- changing when
+        -- the credential next rotates does not touch the account identity a claimed job's
+        -- snapshot already carries. Clearing the schedule (null) leaves the credential with
+        -- no scheduled rotation, while on-demand and access-event triggers still work. The
+        -- server can no longer guard terminate_sessions against the target's capability
+        -- (both are now sealed) -- see CreateRotationConfig.
 }
 
 rule PauseRotation {
@@ -1163,11 +1162,9 @@ rule ClaimRotation {
         attempt_id: RotationAttempt{job: job, status: executing}.id,
         target_system_id: cfg.target_system.id,
         target_system_name: cfg.target_system.name,
-        kind: cfg.target_system.kind,
-        password_policy: cfg.target_system.password_policy,
+        target_system_sealed_data: cfg.target_system.sealed_data,
         cipher: cfg.cipher,
-        account_identity: cfg.account_identity,
-        terminate_sessions: cfg.terminate_sessions,
+        rotation_config_sealed_data: cfg.sealed_data,
         execute_by: job.execute_by
     )
     ensures: RotationAudited(rotation_config: cfg, outcome: dispatched, source: job.source)
@@ -1620,9 +1617,10 @@ rule RecordManualRotation {
 -- carry it (no rule chains from any):
 --
 -- RotationAudited is emitted on every configuration and rotation event — a configuration
--- created (config_created), its updatable shape edited -- account identity, termination
--- opt-in and triggers (config_updated), paused/resumed (paused, resumed),
--- auto-paused after repeated failures (auto_paused, §6.8), deleted (config_deleted), a job
+-- created (config_created), its sealed account identity / termination opt-in and
+-- schedule / access-end opt-in written (config_updated),
+-- paused/resumed (paused, resumed), auto-paused after repeated failures (auto_paused,
+-- §6.8), deleted (config_deleted), a job
 -- offered (offered), a claim (the attempt, dispatched), its success (succeeded), a failed
 -- attempt that will be retried (attempt_failed), final failure (failed), a released claim
 -- after an access connector drop (released), timeout (timed_out), a refused cipher write
@@ -1641,9 +1639,9 @@ rule RecordManualRotation {
 -- AdministrationAudited is emitted on every administrative operation on the fleet and
 -- targets — an access connector registered (connector_registered), revoked (connector_revoked), its
 -- credential reissued in place (connector_credential_reissued), assigned to / unassigned from
--- a target (connector_assigned, connector_unassigned), and a target system registered / disabled /
--- enabled / updated / deleted (target_registered, target_disabled, target_enabled,
--- target_system_updated, target_deleted). Connector connectivity edges
+-- a target (connector_assigned, connector_unassigned), and a target system registered /
+-- updated / disabled / enabled / deleted (target_registered, target_updated,
+-- target_disabled, target_enabled, target_deleted). Connector connectivity edges
 -- (ConnectorConnected/ConnectorDisconnected) are liveness observations, not operations, and are
 -- not audited directly; a drop's impact on in-flight work is audited via the released outcome.
 --
@@ -1675,6 +1673,15 @@ invariant AtMostOneActiveJobPerConfig {
     -- rotations of one credential and keeps a config's single in-flight job unambiguous.
     for rotation_config in RotationConfigs:
         rotation_config.active_jobs.count <= 1
+}
+
+invariant NoJobsForUnsealedTarget {
+    -- A target not yet sealed (pending_seal) has no pending-or-claimed job: every dispatch
+    -- path (OfferRotation, ClaimRotation) requires target_system.status = active, so
+    -- pending_seal is excluded the same way disabled already is. A config may still be
+    -- created against a pending_seal target; it just never runs until sealed.
+    for c in RotationConfigs where target_system.status = pending_seal:
+        c.active_jobs.count = 0
 }
 
 invariant ManualConfigNeverJobbed {
@@ -1715,9 +1722,8 @@ surface RotationAdministration {
 
     provides:
         RegisterConnector(name, client_id)
-        RegisterAutomaticTargetSystem(name, kind, password_policy, supports_session_termination)
-        RegisterManualTargetSystem(name)
-        CreateRotationConfig(cipher, target_system, account_identity, terminate_sessions, schedule, rotate_on_access_end)
+        RegisterTargetSystem(name, method)
+        CreateRotationConfig(cipher, target_system, sealed_data, schedule, rotate_on_access_end)
 }
 
 surface ConnectorRegistrationView {
@@ -1752,21 +1758,19 @@ surface TargetSystemView {
     exposes:
         target_system.name
         target_system.method
-        -- The integration kind, password policy and session-termination capability
-        -- (each present only for an automatic target).
-        target_system.kind
-        target_system.password_policy
-        target_system.supports_session_termination
         target_system.status
+        -- Opaque; present once sealed (status active or disabled). The admin client
+        -- unseals it locally to show the integration kind, the password policy and the
+        -- session-termination capability.
+        target_system.sealed_data
     provides:
+        -- Phase 2 of registration while pending_seal; re-seal (a fresh blob) while active
+        -- or disabled, which does not change status. Writes the name in the same call.
+        UpdateTargetSystem(target_system, name, sealed_data)
         DisableTargetSystem(target_system)
             when target_system.status = active
         EnableTargetSystem(target_system)
             when target_system.status = disabled
-        UpdateAutomaticTargetSystem(target_system, name, password_policy, supports_session_termination)
-            when target_system.method = automatic
-        UpdateManualTargetSystem(target_system, name)
-            when target_system.method = manual
         -- Permanently remove the target. Offered only once nothing is configured against it;
         -- disable is the reversible control.
         DeleteTargetSystem(target_system)
@@ -1784,8 +1788,9 @@ surface RotationConfigView {
         rotation_config.cipher
         rotation_config.target_system.name
         rotation_config.target_system.method
-        rotation_config.account_identity
-        rotation_config.terminate_sessions
+        -- Opaque; the admin client unseals it locally to show the account identity and the
+        -- termination opt-in.
+        rotation_config.sealed_data
         rotation_config.enabled
         -- The triggers, inlined onto the configuration.
         rotation_config.schedule
@@ -1806,10 +1811,11 @@ surface RotationConfigView {
         -- Record an out-of-band rotation for a credential on a manual target (Goal 3).
         RecordManualRotation(admin, rotation_config)
             when rotation_config.target_system.method = manual
-        -- Edit the whole updatable shape for this one credential: the account identity and
-        -- termination opt-in, and the schedule / triggers (recompute-on-edit).
-        UpdateRotationConfig(admin, rotation_config, account_identity, terminate_sessions, schedule, rotate_on_access_end)
-            when not rotation_config.has_active_job
+        -- Write the sealed account identity / termination opt-in and the schedule /
+        -- access-end opt-in (recompute-on-edit). With an active job only an unchanged
+        -- blob is accepted (the claim snapshot already carries it), so the triggers stay
+        -- editable.
+        UpdateRotationConfig(admin, rotation_config, sealed_data, schedule, rotate_on_access_end)
         -- Pause / resume without losing configuration (UX2).
         PauseRotation(admin, rotation_config)
             when rotation_config.enabled
@@ -1974,7 +1980,50 @@ surface ConnectorConnectivity {
 -- Resolved: the per-job retry budget counts only genuinely FAILED attempts. A connectivity
 -- drop (ReleaseJob) or a mid-attempt timeout (JobTimesOut) marks the in-flight attempt
 -- abandoned, which does not count, so losing connectivity is never charged to the budget.
-open question "account_identity integrity (server-tamper resistance): account_identity is stored server-side in plaintext on RotationConfig and carried verbatim to the access connector on the claim (RotationClaimed), where it selects which target-system account the access connector rotates and terminates sessions for. A compromised or malicious Bitwarden server could substitute a different account_identity on the claim, pointing the access connector's privileged target-system operations at an account the admin never chose. Encrypting (or authenticating) account_identity when the admin enters and saves it -- client-side under the organization key at CreateRotationConfig time, exactly as vault ciphers are, so the server stores only ciphertext it can neither read nor forge -- would let the access connector decrypt/verify it on the claim and detect substitution. This extends the zero-knowledge boundary (access-connector.allium / ServerZeroKnowledge and the org-key delivery) from the password to the account identity, and like the access connector's Read blast radius question is closed at the crypto layer; it depends on the admin's client holding the org key at config-save time. Deferred."
+-- Resolved: account_identity integrity (server-tamper resistance). account_identity (now
+-- sealed inside RotationConfig.sealed_data) and the target's kind / password policy /
+-- session-termination capability (TargetSystem.sealed_data) are sealed client-side into
+-- DataEnvelope blobs (TargetSystemSealedV1, RotationConfigSealedV1) whose content keys are
+-- wrapped by the organization key, before the server ever sees them. The server stores and
+-- forwards both blobs opaquely -- it can no longer read, forge or substitute what they
+-- contain. The access connector holds the org key, unseals both on claim, checks they agree
+-- with each other and with the claim (matching target/cipher ids -- a cut-and-paste check)
+-- and refuses the job before touching the target if anything is off
+-- (access-connector.allium / SealedDataRejected). This extends the zero-knowledge boundary
+-- from the password to kind, the policy, the capability and the account identity; the
+-- server can no longer choose WHAT is rotated or HOW, only WHETHER and WHEN (see the
+-- accepted limits below). Full design: pam-rotation-sealed-config-plan.md.
+--
+-- Accepted limits of the sealed-config design (pam-rotation-sealed-config-plan.md, "What
+-- this does not protect"), kept here as deliberate, documented trade-offs rather than
+-- reopened as design questions:
+--   * Deleted/paused configs and disabled targets are server-side state the connector
+--     cannot audit against: the server keeps the last-sealed blob and can keep issuing
+--     jobs for a config an admin believes removed, or rotate on whatever timing/frequency
+--     it likes (schedule, enabled and rotate_on_access_end all stay plaintext).
+--   * A skipped access-end rotation (the server simply never issues the job) silently
+--     disables a security control; the connector has no way to detect a signal it was
+--     never sent. Not detectable here; needs admin-side auditing.
+--   * Which cipher a rotated password ends up readable from is bounded by server-enforced
+--     collection access, same as for all org data -- inherent to the org model, not
+--     specific to rotation.
+--   * Any confirmed org member holds the organization key and can seal a valid blob;
+--     combined with server co-operation this restores full control over what is rotated
+--     (short of the connector's password-strength floor). The admin UI sealing the blobs
+--     is itself web-vault code the same server delivers -- a general Bitwarden caveat, not
+--     specific to rotation.
+--   * A discarded cipher write (the server accepts it and throws it away) still leaves a
+--     lockout, narrower in scope than today (limited to sealed accounts) but not
+--     eliminated.
+--   * Job status, last_rotation_at, the audit log and failure reasons remain whatever the
+--     server reports; metadata the server sees (which ciphers are PAM-managed, target
+--     names, methods, timing, failure codes) is unchanged by sealing.
+--   * A corrupted blob, or a target stuck pending_seal, is a visible admin-UI break
+--     ("setup incomplete" / "integrity check failed"), not a silent one; no server-side
+--     sweep is needed.
+open question "Sealed-blob rollback / revocation: a hostile server can replay an older valid target or rotation-config blob for the same target/config (a previous account_identity, a weaker-but-above-floor policy, terminate_sessions flipped back on), and old and new blobs can be mixed across the two sealed types. There is no freshness check, so this also covers a deleted/paused config's last blob being kept and re-served. A fix needs connector-side revision tracking (persistent connector state), which is deferred; the connector's password-strength floor caps only the policy half of this. See pam-rotation-sealed-config-plan.md, gaps 1-2."
+open question "Admin-key-pinned blobs: every confirmed org member holds the organization key and can seal a valid blob, so a compromised member plus server co-operation restores full control over what is rotated (short of the strength floor). Signing blobs with an admin-held key pinned in the connector at registration would close this, at the cost of a key-pinning and rotation story of its own. Deferred; see pam-rotation-sealed-config-plan.md, gap 6."
+open question "Local password escrow: a discarded cipher write under this design still leaves a sealed target with a password nobody in Bitwarden knows (a lockout), just narrower in scope than today. Optional local escrow of recent passwords under the organization key, on the connector host, would recover from this but adds a secret-storage surface of its own. Deferred; see pam-rotation-sealed-config-plan.md, gap 8."
 open question "Lease-bound least-privilege access connector auth: today the access connector authenticates with a broad client-credentials session (access-connector.allium / ConnectorSession) whose standing authorization to write vault ciphers is broader than an SM machine account's; individual operations are scoped only after the fact by the claimed RotationJob (AcceptCipherUpdate / JobBoundWrite) and by ApiScopedReads, but the credential itself carries broad authority whenever a session is live. Hardening: carry a lease-id on the RotationJob (from the upstream access grant -- e.g. a PAM lease; see RotateOnAccessEnd / AccessEventReporting) and have the server grant the access connector only the strictly-needed endpoints (read/write of the one cipher, PAM operations for that account) when it presents a lease-id that is currently due for rotation AND matches the cipher it wants to operate on. This turns the access connector's standing authority into a per-lease capability, so a stolen access connector credential with no live, due lease grants nothing -- defence in depth beyond EligibleClaimsOnly, JobBoundWrite and ApiScopedReads. Open: whether this generalises to scheduled and on-demand jobs (which have no upstream lease and would need a server-minted equivalent) or applies only to access-end jobs. Deferred."
 -- Resolved: §6.8 failure policy is now specified here. RotationFailed remains the seam
 -- (FailJob / JobTimesOut emit it); AlertOnRotationFailed raises the pure-sink
@@ -2057,5 +2106,5 @@ open question "Access-end during an active job is silently dropped: RotateOnAcce
 --     boundary on session loss (access-connector.allium / NoTargetActionPastSessionLoss). So a
 --     partitioned access connector has finished or aborted before its lease elapses and the job
 --     re-opens. The cipher write is fenced (JobBoundWrite); this fences the TARGET SYSTEM too.
-open question "Method switching: can an admin move a target system between automatic and manual after creation (and supply/clear its kind, password policy and session-termination capability), and what becomes of its configurations' schedules and any active jobs? (ManualConfigNeverJobbed assumes a target's method is fixed at creation.)"
+open question "Method switching: can an admin move a target system between automatic and manual after creation (and re-seal its kind, password policy and session-termination capability to match), and what becomes of its configurations' schedules and any active jobs? (ManualConfigNeverJobbed assumes a target's method is fixed at creation.)"
 open question "Secrets Manager support (Phase 1 non-goal): a future configuration would point at an SM secret rather than an access connector/Cipher. Confirm the offer, claim, recovery, scheduling and audit machinery here carries an SM rotation unchanged, and decide whether to generalise the cipher seam or add a parallel SM configuration."

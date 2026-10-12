@@ -49,6 +49,7 @@ public class AccessAuditEventKindNamesTests
         "rotationReportRejected",
         "manualRotationDue",
         "manualRotationRecorded",
+        "rotationConfigUpdated",
         "accessConnectorRegistered",
         "accessConnectorRevoked",
         "accessConnectorDisabled",
@@ -62,6 +63,7 @@ public class AccessAuditEventKindNamesTests
         "targetSystemRenamed",
         "targetSystemPolicyUpdated",
         "targetSystemDeleted",
+        "targetSystemUpdated",
     ];
 
     [Fact]

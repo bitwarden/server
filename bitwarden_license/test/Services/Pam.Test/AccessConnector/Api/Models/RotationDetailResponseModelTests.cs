@@ -56,7 +56,7 @@ public class RotationDetailResponseModelTests
             TargetSystemId = Guid.NewGuid(),
             TargetSystemName = "prod-mssql",
             TargetSystemMethod = PamTargetSystemMethod.Automatic,
-            AccountIdentity = "svc-account",
+            SealedData = "sealed-blob",
             CreationDate = _created,
             RevisionDate = _created,
         };
@@ -66,7 +66,7 @@ public class RotationDetailResponseModelTests
 
         Assert.Equal(config.Id, json.GetProperty("Id").GetGuid());
         Assert.Equal(config.TargetSystemName, json.GetProperty("TargetSystemName").GetString());
-        Assert.Equal(config.AccountIdentity, json.GetProperty("AccountIdentity").GetString());
+        Assert.Equal(config.SealedData, json.GetProperty("SealedData").GetString());
         AssertJobShape(json);
     }
 

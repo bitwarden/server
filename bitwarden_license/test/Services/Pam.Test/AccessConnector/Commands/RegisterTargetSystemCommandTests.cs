@@ -18,43 +18,19 @@ public class RegisterTargetSystemCommandTests
 {
     private static readonly DateTime _now = new(2026, 7, 6, 12, 0, 0, DateTimeKind.Utc);
 
-    private static readonly PamPasswordPolicy _policy = new() { MinLength = 12, MaxLength = 64 };
-
     [Theory, BitAutoData]
     public async Task RegisterAsync_NameMissing_ThrowsBadRequest(Guid organizationId, Guid actingUserId)
     {
         var sutProvider = Setup();
 
         await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RegisterAsync(
-            organizationId, actingUserId, " ", PamTargetSystemMethod.Manual, null, null, null));
+            organizationId, actingUserId, " ", PamTargetSystemMethod.Manual));
 
         await sutProvider.GetDependency<IPamTargetSystemRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
     }
 
     [Theory, BitAutoData]
-    public async Task RegisterAsync_AutomaticMissingKind_ThrowsBadRequest(Guid organizationId, Guid actingUserId, string name)
-    {
-        var sutProvider = Setup();
-
-        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RegisterAsync(
-            organizationId, actingUserId, name, PamTargetSystemMethod.Automatic, null, _policy, true));
-
-        await sutProvider.GetDependency<IPamTargetSystemRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
-    }
-
-    [Theory, BitAutoData]
-    public async Task RegisterAsync_ManualWithKindSet_ThrowsBadRequest(Guid organizationId, Guid actingUserId, string name)
-    {
-        var sutProvider = Setup();
-
-        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RegisterAsync(
-            organizationId, actingUserId, name, PamTargetSystemMethod.Manual, PamTargetSystemKind.Entra, null, null));
-
-        await sutProvider.GetDependency<IPamTargetSystemRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
-    }
-
-    [Theory, BitAutoData]
-    public async Task RegisterAsync_AutomaticHappyPath_CreatesTargetWithSerializedPolicy(
+    public async Task RegisterAsync_HappyPath_CreatesTargetPendingSealWithNoSealedData(
         Guid organizationId, Guid actingUserId, string name)
     {
         var sutProvider = Setup();
@@ -62,31 +38,18 @@ public class RegisterTargetSystemCommandTests
             .Returns(call => Task.FromResult(call.Arg<PamTargetSystem>()));
 
         var result = await sutProvider.Sut.RegisterAsync(
-            organizationId, actingUserId, name, PamTargetSystemMethod.Automatic, PamTargetSystemKind.Mssql, _policy, true);
+            organizationId, actingUserId, name, PamTargetSystemMethod.Automatic);
 
         Assert.Equal(PamTargetSystemMethod.Automatic, result.Method);
-        Assert.Equal(PamTargetSystemKind.Mssql, result.Kind);
-        Assert.True(result.SupportsSessionTermination);
-        Assert.Equal(PamTargetSystemStatus.Active, result.Status);
-        Assert.Equal(PamPasswordPolicy.Serialize(_policy), result.PasswordPolicy);
+        Assert.Equal(PamTargetSystemStatus.PendingSeal, result.Status);
+        Assert.Null(result.SealedData);
         await sutProvider.GetDependency<IPamTargetSystemRepository>().Received(1).CreateAsync(Arg.Is<PamTargetSystem>(t =>
-            t.OrganizationId == organizationId && t.Name == name && t.CreationDate == _now && t.RevisionDate == _now));
+            t.OrganizationId == organizationId && t.Name == name && t.CreationDate == _now && t.RevisionDate == _now
+            && t.Status == PamTargetSystemStatus.PendingSeal && t.SealedData == null));
     }
 
     [Theory, BitAutoData]
-    public async Task RegisterAsync_ManualWithSessionTerminationSet_ThrowsBadRequest(
-        Guid organizationId, Guid actingUserId, string name)
-    {
-        var sutProvider = Setup();
-
-        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RegisterAsync(
-            organizationId, actingUserId, name, PamTargetSystemMethod.Manual, null, _policy, false));
-
-        await sutProvider.GetDependency<IPamTargetSystemRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
-    }
-
-    [Theory, BitAutoData]
-    public async Task RegisterAsync_ManualWithPolicy_CreatesTargetWithSerializedPolicy(
+    public async Task RegisterAsync_ManualMethod_CreatesTargetPendingSeal(
         Guid organizationId, Guid actingUserId, string name)
     {
         var sutProvider = Setup();
@@ -94,29 +57,10 @@ public class RegisterTargetSystemCommandTests
             .Returns(call => Task.FromResult(call.Arg<PamTargetSystem>()));
 
         var result = await sutProvider.Sut.RegisterAsync(
-            organizationId, actingUserId, name, PamTargetSystemMethod.Manual, null, _policy, null);
+            organizationId, actingUserId, name, PamTargetSystemMethod.Manual);
 
         Assert.Equal(PamTargetSystemMethod.Manual, result.Method);
-        Assert.Null(result.Kind);
-        Assert.Null(result.SupportsSessionTermination);
-        Assert.Equal(PamPasswordPolicy.Serialize(_policy), result.PasswordPolicy);
-    }
-
-    [Theory, BitAutoData]
-    public async Task RegisterAsync_ManualWithoutPolicy_CreatesTargetWithNoPolicy(
-        Guid organizationId, Guid actingUserId, string name)
-    {
-        var sutProvider = Setup();
-        sutProvider.GetDependency<IPamTargetSystemRepository>().CreateAsync(Arg.Any<PamTargetSystem>())
-            .Returns(call => Task.FromResult(call.Arg<PamTargetSystem>()));
-
-        var result = await sutProvider.Sut.RegisterAsync(
-            organizationId, actingUserId, name, PamTargetSystemMethod.Manual, null, null, null);
-
-        Assert.Equal(PamTargetSystemMethod.Manual, result.Method);
-        Assert.Null(result.Kind);
-        Assert.Null(result.SupportsSessionTermination);
-        Assert.Null(result.PasswordPolicy);
+        Assert.Equal(PamTargetSystemStatus.PendingSeal, result.Status);
     }
 
     [Theory, BitAutoData]
@@ -132,7 +76,7 @@ public class RegisterTargetSystemCommandTests
                 return Task.FromResult(target);
             });
 
-        await sutProvider.Sut.RegisterAsync(organizationId, actingUserId, name, PamTargetSystemMethod.Manual, null, null, null);
+        await sutProvider.Sut.RegisterAsync(organizationId, actingUserId, name, PamTargetSystemMethod.Manual);
 
         var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>

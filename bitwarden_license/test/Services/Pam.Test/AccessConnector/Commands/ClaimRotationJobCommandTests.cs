@@ -36,9 +36,9 @@ public class ClaimRotationJobCommandTests
             Source = PamRotationSource.Scheduled,
             TargetSystemId = Guid.NewGuid(),
             TargetSystemName = "Prod SQL",
+            TargetSystemSealedData = "target-sealed-blob",
             CipherId = Guid.NewGuid(),
-            AccountIdentity = "svc-account",
-            TerminateSessions = true,
+            RotationConfigSealedData = "config-sealed-blob",
             ExecuteBy = _now + _releaseDelay,
         };
         sutProvider.GetDependency<IPamRotationJobRepository>()
