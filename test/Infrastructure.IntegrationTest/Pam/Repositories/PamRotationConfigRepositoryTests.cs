@@ -33,8 +33,7 @@ public class PamRotationConfigRepositoryTests
             OrganizationId = organization.Id,
             CipherId = cipher.Id,
             TargetSystemId = target.Id,
-            AccountIdentity = "svc-rotation-account",
-            TerminateSessions = true,
+            SealedData = "sealed-rotation-config-blob",
             ScheduleCron = "0 0/15 * * * ?",
             RotateOnAccessEnd = true,
             NextRotationAt = now.AddMinutes(15),
@@ -48,8 +47,7 @@ public class PamRotationConfigRepositoryTests
         Assert.Equal(organization.Id, persisted!.OrganizationId);
         Assert.Equal(cipher.Id, persisted.CipherId);
         Assert.Equal(target.Id, persisted.TargetSystemId);
-        Assert.Equal("svc-rotation-account", persisted.AccountIdentity);
-        Assert.True(persisted.TerminateSessions);
+        Assert.Equal("sealed-rotation-config-blob", persisted.SealedData);
         Assert.Equal("0 0/15 * * * ?", persisted.ScheduleCron);
         Assert.True(persisted.RotateOnAccessEnd);
         Assert.Equal(now.AddMinutes(15), persisted.NextRotationAt.Value, LaxDateTimeComparer.Default);
@@ -100,6 +98,8 @@ public class PamRotationConfigRepositoryTests
         var activeTarget = await CreateAutomaticTargetAsync(pamTargetSystemRepository, organization.Id, now);
         var disabledTarget = await CreateAutomaticTargetAsync(pamTargetSystemRepository, organization.Id, now,
             status: PamTargetSystemStatus.Disabled);
+        var pendingSealTarget = await CreateAutomaticTargetAsync(pamTargetSystemRepository, organization.Id, now,
+            status: PamTargetSystemStatus.PendingSeal);
         var manualTarget = await pamTargetSystemRepository.CreateAsync(new PamTargetSystem
         {
             OrganizationId = organization.Id,
@@ -118,6 +118,9 @@ public class PamRotationConfigRepositoryTests
                 enabled: false, nextRotationAt: now.AddMinutes(-1)));
         await pamRotationConfigRepository.CreateAsync(
             BuildConfig(organization.Id, (await CreateCipherAsync(cipherRepository, organization.Id)).Id, disabledTarget.Id, now,
+                nextRotationAt: now.AddMinutes(-1)));
+        await pamRotationConfigRepository.CreateAsync(
+            BuildConfig(organization.Id, (await CreateCipherAsync(cipherRepository, organization.Id)).Id, pendingSealTarget.Id, now,
                 nextRotationAt: now.AddMinutes(-1)));
         await pamRotationConfigRepository.CreateAsync(
             BuildConfig(organization.Id, (await CreateCipherAsync(cipherRepository, organization.Id)).Id, manualTarget.Id, now,
@@ -153,36 +156,9 @@ public class PamRotationConfigRepositoryTests
         var cipher = await CreateCipherAsync(cipherRepository, organization.Id);
         await pamRotationConfigRepository.CreateAsync(BuildConfig(organization.Id, cipher.Id, target.Id, now));
 
-        // Any config counts, even one without TerminateSessions.
+        // Any config counts, whatever its sealed data.
         Assert.True(await pamRotationConfigRepository.AnyByTargetSystemAsync(target.Id));
         Assert.False(await pamRotationConfigRepository.AnyByTargetSystemAsync(otherTarget.Id));
-    }
-
-    [DatabaseTheory, DatabaseData]
-    public async Task AnyByTargetSystemWithTerminateSessionsAsync_ReflectsConfigsOnTarget(
-        IOrganizationRepository organizationRepository,
-        IPamTargetSystemRepository pamTargetSystemRepository,
-        ICipherRepository cipherRepository,
-        IPamRotationConfigRepository pamRotationConfigRepository)
-    {
-        var organization = await organizationRepository.CreateTestOrganizationAsync();
-        var now = DateTime.UtcNow;
-        var target = await CreateAutomaticTargetAsync(pamTargetSystemRepository, organization.Id, now,
-            supportsSessionTermination: true);
-        var otherTarget = await CreateAutomaticTargetAsync(pamTargetSystemRepository, organization.Id, now,
-            supportsSessionTermination: true);
-
-        Assert.False(await pamRotationConfigRepository.AnyByTargetSystemWithTerminateSessionsAsync(target.Id));
-
-        var cipher = await CreateCipherAsync(cipherRepository, organization.Id);
-        await pamRotationConfigRepository.CreateAsync(
-            BuildConfig(organization.Id, cipher.Id, target.Id, now, terminateSessions: true));
-        var otherCipher = await CreateCipherAsync(cipherRepository, organization.Id);
-        await pamRotationConfigRepository.CreateAsync(
-            BuildConfig(organization.Id, otherCipher.Id, otherTarget.Id, now, terminateSessions: false));
-
-        Assert.True(await pamRotationConfigRepository.AnyByTargetSystemWithTerminateSessionsAsync(target.Id));
-        Assert.False(await pamRotationConfigRepository.AnyByTargetSystemWithTerminateSessionsAsync(otherTarget.Id));
     }
 
     [DatabaseTheory, DatabaseData]
@@ -277,14 +253,13 @@ public class PamRotationConfigRepositoryTests
 
     private static async Task<PamTargetSystem> CreateAutomaticTargetAsync(
         IPamTargetSystemRepository pamTargetSystemRepository, Guid organizationId, DateTime now,
-        PamTargetSystemStatus status = PamTargetSystemStatus.Active, bool? supportsSessionTermination = null)
+        PamTargetSystemStatus status = PamTargetSystemStatus.Active)
         => await pamTargetSystemRepository.CreateAsync(new PamTargetSystem
         {
             OrganizationId = organizationId,
             Name = $"target-{Guid.NewGuid()}",
             Method = PamTargetSystemMethod.Automatic,
-            Kind = PamTargetSystemKind.Mssql,
-            SupportsSessionTermination = supportsSessionTermination,
+            SealedData = status == PamTargetSystemStatus.PendingSeal ? null : "sealed-blob",
             Status = status,
             CreationDate = now,
             RevisionDate = now,
@@ -332,13 +307,12 @@ public class PamRotationConfigRepositoryTests
         });
 
     private static PamRotationConfig BuildConfig(Guid organizationId, Guid cipherId, Guid targetSystemId, DateTime now,
-        bool enabled = true, bool terminateSessions = false, DateTime? nextRotationAt = null) => new()
+        bool enabled = true, DateTime? nextRotationAt = null) => new()
         {
             OrganizationId = organizationId,
             CipherId = cipherId,
             TargetSystemId = targetSystemId,
-            AccountIdentity = "svc-account",
-            TerminateSessions = terminateSessions,
+            SealedData = "sealed-blob",
             RotateOnAccessEnd = false,
             NextRotationAt = nextRotationAt,
             Enabled = enabled,

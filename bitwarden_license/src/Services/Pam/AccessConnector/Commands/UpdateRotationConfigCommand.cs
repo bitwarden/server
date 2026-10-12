@@ -5,35 +5,44 @@ using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.AccessConnector.Commands.Interfaces;
 using Bit.Services.Pam.Services;
+using Microsoft.Extensions.Options;
 
 namespace Bit.Services.Pam.AccessConnector.Commands;
 
-/// <inheritdoc cref="IUpdateRotationAccountCommand" />
-public class UpdateRotationAccountCommand : IUpdateRotationAccountCommand
+/// <inheritdoc cref="IUpdateRotationConfigCommand" />
+public class UpdateRotationConfigCommand : IUpdateRotationConfigCommand
 {
     private readonly IPamRotationConfigRepository _configRepository;
-    private readonly IPamTargetSystemRepository _targetSystemRepository;
+    private readonly IRotationScheduleCalculator _scheduleCalculator;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
+    private readonly IOptions<PamRotationOptions> _options;
     private readonly TimeProvider _timeProvider;
 
-    public UpdateRotationAccountCommand(
+    public UpdateRotationConfigCommand(
         IPamRotationConfigRepository configRepository,
-        IPamTargetSystemRepository targetSystemRepository,
+        IRotationScheduleCalculator scheduleCalculator,
         IAccessAuditEventEmitter accessAuditEventEmitter,
+        IOptions<PamRotationOptions> options,
         TimeProvider timeProvider)
     {
         _configRepository = configRepository;
-        _targetSystemRepository = targetSystemRepository;
+        _scheduleCalculator = scheduleCalculator;
         _accessAuditEventEmitter = accessAuditEventEmitter;
+        _options = options;
         _timeProvider = timeProvider;
     }
 
     public async Task<PamRotationConfig> UpdateAsync(
-        Guid organizationId, Guid actingUserId, Guid configId, string accountIdentity, bool terminateSessions)
+        Guid organizationId,
+        Guid actingUserId,
+        Guid configId,
+        string sealedData,
+        string? scheduleCron,
+        bool rotateOnAccessEnd)
     {
-        if (string.IsNullOrWhiteSpace(accountIdentity))
+        if (string.IsNullOrWhiteSpace(sealedData))
         {
-            throw new BadRequestException("Account identity is required.");
+            throw new BadRequestException("Sealed data is required.");
         }
 
         var details = await _configRepository.GetDetailsByIdAsync(configId);
@@ -42,29 +51,18 @@ public class UpdateRotationAccountCommand : IUpdateRotationAccountCommand
             throw new NotFoundException();
         }
 
-        if (details.HasActiveJob)
+        if (details.HasActiveJob && sealedData != details.SealedData)
         {
             throw new BadRequestException("This rotation config has an active job.");
         }
 
-        var target = await _targetSystemRepository.GetByIdAsync(details.TargetSystemId);
-        if (target is null)
-        {
-            throw new NotFoundException();
-        }
-
-        if (terminateSessions &&
-            !(details.TargetSystemMethod == PamTargetSystemMethod.Automatic && target.SupportsSessionTermination == true))
-        {
-            throw new BadRequestException(
-                "Session termination requires an automatic target system that supports it.");
-        }
+        _scheduleCalculator.ValidateSchedule(scheduleCron, _options.Value.MinScheduleInterval);
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         var audit = new AccessAuditEventData
         {
-            Kind = AccessAuditEventKind.RotationAccountUpdated,
+            Kind = AccessAuditEventKind.RotationConfigUpdated,
             OccurredDate = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
@@ -83,11 +81,10 @@ public class UpdateRotationAccountCommand : IUpdateRotationAccountCommand
             OrganizationId = details.OrganizationId,
             CipherId = details.CipherId,
             TargetSystemId = details.TargetSystemId,
-            AccountIdentity = accountIdentity,
-            TerminateSessions = terminateSessions,
-            ScheduleCron = details.ScheduleCron,
-            RotateOnAccessEnd = details.RotateOnAccessEnd,
-            NextRotationAt = details.NextRotationAt,
+            SealedData = sealedData,
+            ScheduleCron = scheduleCron,
+            RotateOnAccessEnd = rotateOnAccessEnd,
+            NextRotationAt = _scheduleCalculator.GetNextOccurrence(scheduleCron, now),
             Enabled = details.Enabled,
             LastRotationAt = details.LastRotationAt,
             CreationDate = details.CreationDate,

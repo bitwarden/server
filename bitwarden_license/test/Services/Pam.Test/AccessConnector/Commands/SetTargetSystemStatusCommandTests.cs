@@ -69,6 +69,32 @@ public class SetTargetSystemStatusCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task SetStatusAsync_PendingSeal_EnableThrowsBadRequest(Guid actingUserId, PamTargetSystem target)
+    {
+        var sutProvider = Setup();
+        target.Status = PamTargetSystemStatus.PendingSeal;
+        sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(target.Id).Returns(target);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SetStatusAsync(target.OrganizationId, actingUserId, target.Id, true));
+
+        await sutProvider.GetDependency<IPamTargetSystemRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SetStatusAsync_PendingSeal_DisableThrowsBadRequest(Guid actingUserId, PamTargetSystem target)
+    {
+        var sutProvider = Setup();
+        target.Status = PamTargetSystemStatus.PendingSeal;
+        sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(target.Id).Returns(target);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SetStatusAsync(target.OrganizationId, actingUserId, target.Id, false));
+
+        await sutProvider.GetDependency<IPamTargetSystemRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+    }
+
+    [Theory, BitAutoData]
     public async Task SetStatusAsync_Disable_UpdatesStatusAndEmitsDisabledAudit(Guid actingUserId, PamTargetSystem target)
     {
         var sutProvider = Setup();

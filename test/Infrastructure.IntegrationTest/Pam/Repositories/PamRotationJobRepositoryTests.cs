@@ -150,11 +150,9 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(PamRotationSource.Scheduled, winner.Source);
         Assert.Equal(fixture.Target.Id, winner.TargetSystemId);
         Assert.Equal(fixture.Target.Name, winner.TargetSystemName);
-        Assert.Equal(PamTargetSystemKind.Mssql, winner.Kind);
-        Assert.Equal(fixture.Target.PasswordPolicy, winner.PasswordPolicy);
+        Assert.Equal(fixture.Target.SealedData, winner.TargetSystemSealedData);
         Assert.Equal(fixture.Cipher.Id, winner.CipherId);
-        Assert.Equal(fixture.Config.AccountIdentity, winner.AccountIdentity);
-        Assert.Equal(fixture.Config.TerminateSessions, winner.TerminateSessions);
+        Assert.Equal(fixture.Config.SealedData, winner.RotationConfigSealedData);
         Assert.Equal(claimNow.Add(_releaseDelay), winner.ExecuteBy!.Value, LaxDateTimeComparer.Default);
 
         var job = await pamRotationJobRepository.GetByIdAsync(fixture.Job.Id);
@@ -296,6 +294,38 @@ public class PamRotationJobRepositoryTests
         var details = Assert.Single(
             await pamRotationJobRepository.GetManyByConfigIdAsync(fixture.Config.Id, fixture.Now));
         Assert.Empty(details.Attempts);
+    }
+
+    // A job can only have been offered while the target was Active, but the claim path must still refuse it
+    // once the target drops to PendingSeal.
+    [DatabaseTheory, DatabaseData]
+    public async Task ClaimAsync_PendingSealTarget_NotClaimable(
+        IOrganizationRepository organizationRepository,
+        IPamTargetSystemRepository pamTargetSystemRepository,
+        IApiKeyRepository apiKeyRepository,
+        IPamAccessConnectorRepository pamAccessConnectorRepository,
+        ICipherRepository cipherRepository,
+        IPamRotationConfigRepository pamRotationConfigRepository,
+        IPamRotationJobRepository pamRotationJobRepository)
+    {
+        var fixture = await SeedClaimableJobAsync(organizationRepository, pamTargetSystemRepository, apiKeyRepository,
+            pamAccessConnectorRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository);
+
+        fixture.Target.Status = PamTargetSystemStatus.PendingSeal;
+        await pamTargetSystemRepository.ReplaceAsync(fixture.Target);
+
+        Assert.Equal(PamRotationClaimOutcome.NotClaimable,
+            (await pamRotationJobRepository.ClaimAsync(
+                fixture.Job.Id, fixture.AccessConnector.Id, fixture.Now, _releaseDelay))
+            .Outcome);
+        Assert.DoesNotContain(
+            await pamRotationJobRepository.GetManyClaimableByAccessConnectorIdAsync(
+                fixture.AccessConnector.Id, fixture.Now),
+            j => j.Id == fixture.Job.Id);
+
+        var job = await pamRotationJobRepository.GetByIdAsync(fixture.Job.Id);
+        Assert.Equal(PamRotationJobAction.None, job!.Action);
+        Assert.Null(job.ClaimedByAccessConnectorId);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -1173,9 +1203,7 @@ public class PamRotationJobRepositoryTests
             OrganizationId = organizationId,
             Name = $"target-{Guid.NewGuid()}",
             Method = PamTargetSystemMethod.Automatic,
-            Kind = PamTargetSystemKind.Mssql,
-            PasswordPolicy = """{"minLength":16,"maxLength":32}""",
-            SupportsSessionTermination = true,
+            SealedData = """{"formatVersion":1,"wrappedCek":"...","envelope":"..."}""",
             Status = PamTargetSystemStatus.Active,
             CreationDate = now,
             RevisionDate = now,
@@ -1228,8 +1256,7 @@ public class PamRotationJobRepositoryTests
             OrganizationId = organizationId,
             CipherId = cipherId,
             TargetSystemId = targetSystemId,
-            AccountIdentity = "svc-account",
-            TerminateSessions = true,
+            SealedData = "sealed-blob",
             RotateOnAccessEnd = false,
             Enabled = enabled,
             CreationDate = now,

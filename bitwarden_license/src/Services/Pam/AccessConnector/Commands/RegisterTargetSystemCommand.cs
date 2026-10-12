@@ -29,37 +29,11 @@ public class RegisterTargetSystemCommand : IRegisterTargetSystemCommand
         Guid organizationId,
         Guid actingUserId,
         string name,
-        PamTargetSystemMethod method,
-        PamTargetSystemKind? kind,
-        PamPasswordPolicy? passwordPolicy,
-        bool? supportsSessionTermination)
+        PamTargetSystemMethod method)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
             throw new BadRequestException("Name is required.");
-        }
-
-        string? passwordPolicyJson;
-        if (method == PamTargetSystemMethod.Automatic)
-        {
-            if (kind is null || passwordPolicy is null || supportsSessionTermination is null)
-            {
-                throw new BadRequestException(
-                    "Kind, password policy, and session-termination capability are required for an automatic target system.");
-            }
-
-            passwordPolicyJson = PamPasswordPolicy.Serialize(passwordPolicy);
-        }
-        else
-        {
-            if (kind is not null || supportsSessionTermination is not null)
-            {
-                throw new BadRequestException(
-                    "Kind and session-termination capability must not be set for a manual target system.");
-            }
-
-            kind = null;
-            passwordPolicyJson = passwordPolicy is null ? null : PamPasswordPolicy.Serialize(passwordPolicy);
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
@@ -68,10 +42,8 @@ public class RegisterTargetSystemCommand : IRegisterTargetSystemCommand
             OrganizationId = organizationId,
             Name = name,
             Method = method,
-            Kind = kind,
-            PasswordPolicy = passwordPolicyJson,
-            SupportsSessionTermination = method == PamTargetSystemMethod.Automatic ? supportsSessionTermination : null,
-            Status = PamTargetSystemStatus.Active,
+            SealedData = null,
+            Status = PamTargetSystemStatus.PendingSeal,
             CreationDate = now,
             RevisionDate = now,
         };

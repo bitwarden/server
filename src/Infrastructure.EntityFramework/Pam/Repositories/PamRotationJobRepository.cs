@@ -152,11 +152,9 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
                 x.Job.Source,
                 TargetSystemId = t.Id,
                 TargetSystemName = t.Name,
-                t.Kind,
-                t.PasswordPolicy,
+                t.SealedData,
                 x.Config.CipherId,
-                x.Config.AccountIdentity,
-                x.Config.TerminateSessions,
+                RotationConfigSealedData = x.Config.SealedData,
             })
             .AsNoTracking()
             .FirstAsync();
@@ -171,11 +169,9 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
             Source = snapshot.Source,
             TargetSystemId = snapshot.TargetSystemId,
             TargetSystemName = snapshot.TargetSystemName,
-            Kind = snapshot.Kind,
-            PasswordPolicy = snapshot.PasswordPolicy,
+            TargetSystemSealedData = snapshot.SealedData,
             CipherId = snapshot.CipherId,
-            AccountIdentity = snapshot.AccountIdentity,
-            TerminateSessions = snapshot.TerminateSessions,
+            RotationConfigSealedData = snapshot.RotationConfigSealedData,
             ExecuteBy = now + releaseDelay,
         };
     }

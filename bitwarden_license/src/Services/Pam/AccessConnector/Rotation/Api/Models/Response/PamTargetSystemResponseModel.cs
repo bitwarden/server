@@ -1,7 +1,6 @@
 ﻿using Bit.HttpExtensions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
-using Bit.Pam.Models;
 using Bit.Services.Pam.Api.Models.Response;
 
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
@@ -18,11 +17,8 @@ public class PamTargetSystemResponseModel : ResponseModel
         OrganizationId = targetSystem.OrganizationId;
         Name = targetSystem.Name;
         Method = targetSystem.Method;
-        Kind = targetSystem.Kind;
-        var policy = PamPasswordPolicy.Parse(targetSystem.PasswordPolicy);
-        PasswordPolicy = policy is null ? null : new PamPasswordPolicyResponseModel(policy);
-        SupportsSessionTermination = targetSystem.SupportsSessionTermination;
         Status = targetSystem.Status;
+        SealedData = targetSystem.SealedData;
         CreationDate = targetSystem.CreationDate.AsUtc();
         RevisionDate = targetSystem.RevisionDate.AsUtc();
     }

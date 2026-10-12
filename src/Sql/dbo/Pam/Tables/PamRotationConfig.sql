@@ -1,12 +1,9 @@
 -- One rotation policy per cipher (OneConfigPerCipher).
--- PasswordPolicy isn't duplicated here; it lives on the shared target system.
 CREATE TABLE [dbo].[PamRotationConfig] (
     [Id]                    UNIQUEIDENTIFIER    NOT NULL,
     [OrganizationId]        UNIQUEIDENTIFIER    NOT NULL,
     [CipherId]              UNIQUEIDENTIFIER    NOT NULL,
     [TargetSystemId]        UNIQUEIDENTIFIER    NOT NULL,
-    [AccountIdentity]       NVARCHAR(500)       NOT NULL,
-    [TerminateSessions]     BIT                 NOT NULL,
     [ScheduleCron]          NVARCHAR(100)       NULL,
     [RotateOnAccessEnd]     BIT                 NOT NULL,
     [NextRotationAt]        DATETIME2(7)        NULL,
@@ -14,6 +11,7 @@ CREATE TABLE [dbo].[PamRotationConfig] (
     [LastRotationAt]        DATETIME2(7)        NULL,
     [CreationDate]          DATETIME2(7)        NOT NULL,
     [RevisionDate]          DATETIME2(7)        NOT NULL,
+    [SealedData]            NVARCHAR(MAX)       NOT NULL,
     CONSTRAINT [PK_PamRotationConfig] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_PamRotationConfig_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE,
     -- No cascade; configs must be detached or deleted via PamRotationConfig_DeleteWithJobs first.

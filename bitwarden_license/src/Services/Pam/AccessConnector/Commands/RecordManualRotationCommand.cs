@@ -61,8 +61,7 @@ public class RecordManualRotationCommand : IRecordManualRotationCommand
             OrganizationId = details.OrganizationId,
             CipherId = details.CipherId,
             TargetSystemId = details.TargetSystemId,
-            AccountIdentity = details.AccountIdentity,
-            TerminateSessions = details.TerminateSessions,
+            SealedData = details.SealedData,
             ScheduleCron = details.ScheduleCron,
             RotateOnAccessEnd = details.RotateOnAccessEnd,
             // Clears awaiting_manual_rotation: the obligation just discharged.

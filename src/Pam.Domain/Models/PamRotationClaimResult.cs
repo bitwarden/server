@@ -16,14 +16,14 @@ public class PamRotationClaimResult
     public PamRotationSource? Source { get; init; }
     public Guid? TargetSystemId { get; init; }
     public string? TargetSystemName { get; init; }
-    public PamTargetSystemKind? Kind { get; init; }
 
-    /// <summary>A serialized <see cref="PamPasswordPolicy"/>.</summary>
-    public string? PasswordPolicy { get; init; }
+    /// <summary>The target system's sealed blob.</summary>
+    public string? TargetSystemSealedData { get; init; }
 
     public Guid? CipherId { get; init; }
-    public string? AccountIdentity { get; init; }
-    public bool? TerminateSessions { get; init; }
+
+    /// <summary>The rotation config's sealed blob.</summary>
+    public string? RotationConfigSealedData { get; init; }
 
     /// <summary><c>ClaimedAt + ReleaseDelay</c>; the access connector should finish before then.</summary>
     public DateTime? ExecuteBy { get; init; }

@@ -50,6 +50,21 @@ public class PamRotationRulesTests
         Assert.False(PamRotationRules.IsClaimable(Job(), new PamRotationConfig(), PamTargetSystemStatus.Disabled,
             _now));
 
+    [Fact]
+    public void IsClaimable_PendingSealTarget_HoldsThePendingJob() =>
+        Assert.False(PamRotationRules.IsClaimable(Job(), new PamRotationConfig(), PamTargetSystemStatus.PendingSeal,
+            _now));
+
+    [Fact]
+    public void CanOffer_PendingSealTarget_IsNotOfferable() =>
+        Assert.False(PamRotationRules.CanOffer(
+            new PamRotationConfig { Enabled = true }, PamTargetSystemMethod.Automatic, PamTargetSystemStatus.PendingSeal));
+
+    [Fact]
+    public void CanOffer_ActiveAutomaticEnabledTarget_IsOfferable() =>
+        Assert.True(PamRotationRules.CanOffer(
+            new PamRotationConfig { Enabled = true }, PamTargetSystemMethod.Automatic, PamTargetSystemStatus.Active));
+
     [Theory]
     [InlineData(PamRotationJobAction.Claimed)]
     [InlineData(PamRotationJobAction.Succeeded)]

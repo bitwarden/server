@@ -2877,11 +2877,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("AccountIdentity")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)");
-
                     b.Property<Guid>("CipherId")
                         .HasColumnType("char(36)");
 
@@ -2910,11 +2905,13 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
 
+                    b.Property<string>("SealedData")
+                        .IsRequired()
+                        .HasMaxLength(10000)
+                        .HasColumnType("varchar(10000)");
+
                     b.Property<Guid>("TargetSystemId")
                         .HasColumnType("char(36)");
-
-                    b.Property<bool>("TerminateSessions")
-                        .HasColumnType("tinyint(1)");
 
                     b.HasKey("Id");
 
@@ -2991,9 +2988,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<byte?>("Kind")
-                        .HasColumnType("tinyint unsigned");
-
                     b.Property<byte>("Method")
                         .HasColumnType("tinyint unsigned");
 
@@ -3005,18 +2999,15 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("PasswordPolicy")
-                        .HasMaxLength(2000)
-                        .HasColumnType("varchar(2000)");
-
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("SealedData")
+                        .HasMaxLength(10000)
+                        .HasColumnType("varchar(10000)");
+
                     b.Property<byte>("Status")
                         .HasColumnType("tinyint unsigned");
-
-                    b.Property<bool?>("SupportsSessionTermination")
-                        .HasColumnType("tinyint(1)");
 
                     b.HasKey("Id");
 

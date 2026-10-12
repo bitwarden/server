@@ -18,20 +18,11 @@ public class PamTargetSystem : ITableObject<Guid>
 
     public PamTargetSystemMethod Method { get; set; }
 
-    public PamTargetSystemKind? Kind { get; set; }
-
     /// <summary>
-    /// A serialized <see cref="Models.PamPasswordPolicy"/>. Required on an automatic target, optional on a
-    /// <see cref="PamTargetSystemMethod.Manual"/> one.
+    /// Sealed by the admin client under the org key; the server never reads it. Null while PendingSeal.
     /// </summary>
-    [MaxLength(2000)]
-    public string? PasswordPolicy { get; set; }
-
-    /// <summary>
-    /// Whether the target can terminate an account's sessions after a rotation; null on a manual target. Must be
-    /// true for a config to set <see cref="PamRotationConfig.TerminateSessions"/>.
-    /// </summary>
-    public bool? SupportsSessionTermination { get; set; }
+    [MaxLength(10000)]
+    public string? SealedData { get; set; }
 
     public PamTargetSystemStatus Status { get; set; }
 
