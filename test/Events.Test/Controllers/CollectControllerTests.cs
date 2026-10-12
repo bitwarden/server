@@ -190,6 +190,38 @@ public class CollectControllerTests
 
     [Theory]
     [AutoData]
+    public async Task Post_CipherClientHttpAuthReleased_WithValidCipher_LogsCipherEvent(Guid userId, Guid cipherId, CipherDetails cipherDetails)
+    {
+        _currentContext.UserId.Returns(userId);
+        cipherDetails.Id = cipherId;
+        _cipherRepository.GetByIdAsync(cipherId, userId).Returns(cipherDetails);
+        var eventDate = DateTime.UtcNow;
+        var events = new List<EventModel>
+        {
+            new EventModel
+            {
+                Type = EventType.Cipher_ClientHttpAuthReleased,
+                CipherId = cipherId,
+                Date = eventDate
+            }
+        };
+
+        var result = await _sut.Post(events);
+
+        Assert.IsType<OkResult>(result);
+        await _cipherRepository.Received(1).GetByIdAsync(cipherId, userId);
+        await _eventService.Received(1).LogCipherEventsAsync(
+            Arg.Is<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>(
+                tuples => tuples.Count() == 1 &&
+                         tuples.First().Item1 == cipherDetails &&
+                         tuples.First().Item2 == EventType.Cipher_ClientHttpAuthReleased &&
+                         tuples.First().Item3 == eventDate
+            )
+        );
+    }
+
+    [Theory]
+    [AutoData]
     public async Task Post_CipherClientCopiedPassword_WithValidCipher_LogsCipherEvent(Guid userId, Guid cipherId, CipherDetails cipherDetails)
     {
         _currentContext.UserId.Returns(userId);
