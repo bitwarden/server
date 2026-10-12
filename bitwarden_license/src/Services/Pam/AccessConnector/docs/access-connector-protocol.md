@@ -123,12 +123,16 @@ are created in one transaction, so a claimed job always has exactly one in-fligh
 moment it is claimed.
 
 A successful claim returns the whole work snapshot, so the access connector needs no further round
-trip to start: the attempt id, the target system's name and connector kind, the password policy to
-generate against, the vault item id, the account identity to rotate, whether to terminate existing
-sessions, and `executeBy`.
+trip to start: the attempt id, the target system's name, the vault item id, two sealed blobs
+(`targetSystemSealedData` and `rotationConfigSealedData`), and `executeBy`.
 
-`accountIdentity` is opaque to the server. It is stored and handed back verbatim and never parsed —
-only the access connector interprets it.
+Both sealed blobs are opaque to the server — it stores and hands them back verbatim and never parses
+them. The admin client seals them under the org key; only the access connector, which holds the org
+key, can unseal them. Unsealed, they carry every security-relevant field the connector needs: the
+target's kind, password policy and session-termination capability, and the account identity to
+rotate and whether to terminate sessions. The connector checks the sealed IDs against the claim's
+plaintext `targetSystemId` and `cipherId` before trusting anything else in the blobs, and refuses the
+job if either blob is missing, undecryptable, or disagrees.
 
 `executeBy` is the claim's lease deadline, `ReleaseDelay` after the claim. Passing it does not by
 itself lose the job: release also requires the access connector's heartbeat to have gone stale. See

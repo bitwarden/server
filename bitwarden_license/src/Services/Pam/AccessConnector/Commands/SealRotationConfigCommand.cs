@@ -8,32 +8,29 @@ using Bit.Services.Pam.Services;
 
 namespace Bit.Services.Pam.AccessConnector.Commands;
 
-/// <inheritdoc cref="IUpdateRotationAccountCommand" />
-public class UpdateRotationAccountCommand : IUpdateRotationAccountCommand
+/// <inheritdoc cref="ISealRotationConfigCommand" />
+public class SealRotationConfigCommand : ISealRotationConfigCommand
 {
     private readonly IPamRotationConfigRepository _configRepository;
-    private readonly IPamTargetSystemRepository _targetSystemRepository;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
-    public UpdateRotationAccountCommand(
+    public SealRotationConfigCommand(
         IPamRotationConfigRepository configRepository,
-        IPamTargetSystemRepository targetSystemRepository,
         IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
         _configRepository = configRepository;
-        _targetSystemRepository = targetSystemRepository;
         _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
 
-    public async Task<PamRotationConfig> UpdateAsync(
-        Guid organizationId, Guid actingUserId, Guid configId, string accountIdentity, bool terminateSessions)
+    public async Task<PamRotationConfig> SealAsync(
+        Guid organizationId, Guid actingUserId, Guid configId, string sealedData)
     {
-        if (string.IsNullOrWhiteSpace(accountIdentity))
+        if (string.IsNullOrWhiteSpace(sealedData))
         {
-            throw new BadRequestException("Account identity is required.");
+            throw new BadRequestException("Sealed data is required.");
         }
 
         var details = await _configRepository.GetDetailsByIdAsync(configId);
@@ -45,19 +42,6 @@ public class UpdateRotationAccountCommand : IUpdateRotationAccountCommand
         if (details.HasActiveJob)
         {
             throw new BadRequestException("This rotation config has an active job.");
-        }
-
-        var target = await _targetSystemRepository.GetByIdAsync(details.TargetSystemId);
-        if (target is null)
-        {
-            throw new NotFoundException();
-        }
-
-        if (terminateSessions &&
-            !(details.TargetSystemMethod == PamTargetSystemMethod.Automatic && target.SupportsSessionTermination == true))
-        {
-            throw new BadRequestException(
-                "Session termination requires an automatic target system that supports it.");
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
@@ -83,8 +67,7 @@ public class UpdateRotationAccountCommand : IUpdateRotationAccountCommand
             OrganizationId = details.OrganizationId,
             CipherId = details.CipherId,
             TargetSystemId = details.TargetSystemId,
-            AccountIdentity = accountIdentity,
-            TerminateSessions = terminateSessions,
+            SealedData = sealedData,
             ScheduleCron = details.ScheduleCron,
             RotateOnAccessEnd = details.RotateOnAccessEnd,
             NextRotationAt = details.NextRotationAt,

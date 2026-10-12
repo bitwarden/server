@@ -8,16 +8,14 @@ namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Request;
 /// </summary>
 public class UpdateRotationConfigRequestModel
 {
-    /// <summary>The account this config rotates on the target system, opaque to the server.</summary>
-    [Required]
-    [StringLength(500)]
-    public string AccountIdentity { get; set; } = null!;
-
     /// <summary>
-    /// When true, the access connector terminates the account's live sessions after each rotation. Requires an
-    /// automatic target that supports it.
+    /// The config's sealed blob (spec <c>RotationConfigSealedV1</c>), opaque to the server: the account identity to
+    /// rotate and whether to terminate sessions, sealed under the org key. Replaces any previously stored blob
+    /// wholesale.
     /// </summary>
-    public bool TerminateSessions { get; set; }
+    [Required]
+    [StringLength(10000)]
+    public string SealedData { get; set; } = null!;
 
     /// <summary>A Quartz 6-field cron expression evaluated in UTC. Null clears the schedule.</summary>
     [StringLength(100)]

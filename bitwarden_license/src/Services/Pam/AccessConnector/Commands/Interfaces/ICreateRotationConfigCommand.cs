@@ -5,17 +5,16 @@ namespace Bit.Services.Pam.AccessConnector.Commands.Interfaces;
 public interface ICreateRotationConfigCommand
 {
     /// <summary>
-    /// Creates a rotation config for a cipher on an <see cref="Bit.Pam.Enums.PamTargetSystemStatus.Active"/> target
-    /// (invariant <c>OneConfigPerCipher</c>). <paramref name="terminateSessions"/> requires an automatic target that
-    /// supports it.
+    /// Creates a rotation config for a cipher (invariant <c>OneConfigPerCipher</c>). Allowed against a
+    /// <see cref="Bit.Pam.Enums.PamTargetSystemStatus.PendingSeal"/> target; refused against a
+    /// <see cref="Bit.Pam.Enums.PamTargetSystemStatus.Disabled"/> one.
     /// </summary>
     Task<PamRotationConfig> CreateAsync(
         Guid organizationId,
         Guid actingUserId,
         Guid cipherId,
         Guid targetSystemId,
-        string accountIdentity,
-        bool terminateSessions,
+        string sealedData,
         string? scheduleCron,
         bool rotateOnAccessEnd);
 }

@@ -22,12 +22,6 @@ public interface IPamRotationConfigRepository : IRepository<PamRotationConfig, G
     Task<bool> AnyByTargetSystemAsync(Guid targetSystemId);
 
     /// <summary>
-    /// Whether any config on the target system sets <see cref="PamRotationConfig.TerminateSessions"/>, which blocks
-    /// the target from withdrawing session-termination support.
-    /// </summary>
-    Task<bool> AnyByTargetSystemWithTerminateSessionsAsync(Guid targetSystemId);
-
-    /// <summary>
     /// Deletes the config's attempts, jobs, and then the config in one transaction. Returns false without deleting
     /// when the re-check under lock finds an active job.
     /// </summary>

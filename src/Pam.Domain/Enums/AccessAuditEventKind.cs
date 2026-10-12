@@ -95,7 +95,7 @@ public enum AccessAuditEventKind : byte
 
     TargetSystemRenamed = 77,
 
-    /// <summary>A target system's password policy or session-termination capability was updated.</summary>
+    /// <summary>A target system's sealed blob was stored or replaced.</summary>
     TargetSystemPolicyUpdated = 78,
 
     AccessConnectorDisabled = 79,

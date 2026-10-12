@@ -1,7 +1,6 @@
 ﻿using Bit.HttpExtensions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
-using Bit.Pam.Models;
 using Bit.Services.Pam.Api.Models.Response;
 
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
@@ -18,11 +17,8 @@ public class PamTargetSystemResponseModel : ResponseModel
         OrganizationId = targetSystem.OrganizationId;
         Name = targetSystem.Name;
         Method = targetSystem.Method;
-        Kind = targetSystem.Kind;
-        var policy = PamPasswordPolicy.Parse(targetSystem.PasswordPolicy);
-        PasswordPolicy = policy is null ? null : new PamPasswordPolicyResponseModel(policy);
-        SupportsSessionTermination = targetSystem.SupportsSessionTermination;
         Status = targetSystem.Status;
+        SealedData = targetSystem.SealedData;
         CreationDate = targetSystem.CreationDate.AsUtc();
         RevisionDate = targetSystem.RevisionDate.AsUtc();
     }
@@ -33,26 +29,15 @@ public class PamTargetSystemResponseModel : ResponseModel
 
     public string Name { get; set; } = null!;
 
-    /// <summary>Decides which of the fields below carry a value.</summary>
     public PamTargetSystemMethod Method { get; set; }
-
-    /// <summary>The integration an automatic target is rotated through. Null on a manual target.</summary>
-    public PamTargetSystemKind? Kind { get; set; }
-
-    /// <summary>
-    /// The constraints the access connector must satisfy. On a manual target it is advisory, and null when none was
-    /// set.
-    /// </summary>
-    public PamPasswordPolicyResponseModel? PasswordPolicy { get; set; }
-
-    /// <summary>
-    /// Whether the integration can terminate live sessions after a rotation; configs on this target can request
-    /// termination only when true. Null on a manual target.
-    /// </summary>
-    public bool? SupportsSessionTermination { get; set; }
 
     /// <summary>Whether the target is offerable for rotation and accepts new rotation configs.</summary>
     public PamTargetSystemStatus Status { get; set; }
+
+    /// <summary>
+    /// The target system's sealed blob, opaque to the server. Null while <see cref="PamTargetSystemStatus.PendingSeal"/>.
+    /// </summary>
+    public string? SealedData { get; set; }
 
     public DateTime CreationDate { get; set; }
 

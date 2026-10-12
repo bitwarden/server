@@ -29,9 +29,7 @@ public class PamTargetSystemRepositoryTests
             OrganizationId = organization.Id,
             Name = "prod-mssql",
             Method = PamTargetSystemMethod.Automatic,
-            Kind = PamTargetSystemKind.Mssql,
-            PasswordPolicy = """{"minLength":16,"maxLength":32,"includeUppercase":true,"includeDigits":true}""",
-            SupportsSessionTermination = true,
+            SealedData = """{"formatVersion":1,"wrappedCek":"...","envelope":"..."}""",
             Status = PamTargetSystemStatus.Active,
             CreationDate = now,
             RevisionDate = now,
@@ -43,13 +41,11 @@ public class PamTargetSystemRepositoryTests
         Assert.Equal(organization.Id, persisted!.OrganizationId);
         Assert.Equal("prod-mssql", persisted.Name);
         Assert.Equal(PamTargetSystemMethod.Automatic, persisted.Method);
-        Assert.Equal(PamTargetSystemKind.Mssql, persisted.Kind);
-        Assert.Contains("minLength", persisted.PasswordPolicy);
-        Assert.True(persisted.SupportsSessionTermination);
+        Assert.Contains("formatVersion", persisted.SealedData);
         Assert.Equal(PamTargetSystemStatus.Active, persisted.Status);
     }
 
-    // A manual target, so the replace has to keep Kind and PasswordPolicy null.
+    // A target registered but not yet sealed, so the replace has to keep SealedData null.
     [DatabaseTheory, DatabaseData]
     public async Task ReplaceAsync_UpdatesFields(
         IOrganizationRepository organizationRepository,
@@ -63,12 +59,11 @@ public class PamTargetSystemRepositoryTests
             OrganizationId = organization.Id,
             Name = "manual-vault",
             Method = PamTargetSystemMethod.Manual,
-            Status = PamTargetSystemStatus.Active,
+            Status = PamTargetSystemStatus.PendingSeal,
             CreationDate = now,
             RevisionDate = now,
         });
-        Assert.Null(target.Kind);
-        Assert.Null(target.PasswordPolicy);
+        Assert.Null(target.SealedData);
 
         target.Name = "manual-vault-renamed";
         target.Status = PamTargetSystemStatus.Disabled;
@@ -80,8 +75,7 @@ public class PamTargetSystemRepositoryTests
         Assert.Equal("manual-vault-renamed", persisted!.Name);
         Assert.Equal(PamTargetSystemStatus.Disabled, persisted.Status);
         Assert.Equal(now.AddMinutes(5), persisted.RevisionDate, LaxDateTimeComparer.Default);
-        Assert.Null(persisted.Kind);
-        Assert.Null(persisted.PasswordPolicy);
+        Assert.Null(persisted.SealedData);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -135,8 +129,7 @@ public class PamTargetSystemRepositoryTests
             OrganizationId = organization.Id,
             CipherId = cipher.Id,
             TargetSystemId = target.Id,
-            AccountIdentity = "svc-account",
-            TerminateSessions = false,
+            SealedData = "sealed-blob",
             RotateOnAccessEnd = false,
             Enabled = true,
             CreationDate = now,
@@ -197,7 +190,6 @@ public class PamTargetSystemRepositoryTests
         OrganizationId = organizationId,
         Name = name,
         Method = PamTargetSystemMethod.Automatic,
-        Kind = PamTargetSystemKind.Entra,
         Status = PamTargetSystemStatus.Active,
         CreationDate = now,
         RevisionDate = now,

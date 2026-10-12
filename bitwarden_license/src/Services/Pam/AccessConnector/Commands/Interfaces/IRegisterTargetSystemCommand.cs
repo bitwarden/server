@@ -1,22 +1,18 @@
 ﻿using Bit.Pam.Entities;
 using Bit.Pam.Enums;
-using Bit.Pam.Models;
 
 namespace Bit.Services.Pam.AccessConnector.Commands.Interfaces;
 
 public interface IRegisterTargetSystemCommand
 {
     /// <summary>
-    /// Registers a target system (spec <c>RegisterAutomaticTargetSystem</c> / <c>RegisterManualTargetSystem</c>). An
-    /// automatic target requires <paramref name="kind"/>, <paramref name="passwordPolicy"/> and
-    /// <paramref name="supportsSessionTermination"/>; a manual target takes at most a policy, as operator guidance.
+    /// Registers a target system's first phase (spec <c>RegisterTargetSystem</c>): name and method only. The row is
+    /// created <see cref="PamTargetSystemStatus.PendingSeal"/>; the client's second call seals the security-relevant
+    /// fields via a <c>PUT</c>, which is the only transition out of that status.
     /// </summary>
     Task<PamTargetSystem> RegisterAsync(
         Guid organizationId,
         Guid actingUserId,
         string name,
-        PamTargetSystemMethod method,
-        PamTargetSystemKind? kind,
-        PamPasswordPolicy? passwordPolicy,
-        bool? supportsSessionTermination);
+        PamTargetSystemMethod method);
 }

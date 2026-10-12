@@ -4,11 +4,11 @@ using Bit.Pam.Enums;
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Request;
 
 /// <summary>
-/// Registers a target system (spec <c>RegisterAutomaticTargetSystem</c> / <c>RegisterManualTargetSystem</c>). An
-/// automatic target carries <see cref="Kind"/>, <see cref="PasswordPolicy"/> and
-/// <see cref="SupportsSessionTermination"/>; a manual one at most a <see cref="PasswordPolicy"/>.
+/// Registers a target system's first phase (spec <c>RegisterTargetSystem</c>). The row is created
+/// <see cref="PamTargetSystemStatus.PendingSeal"/>; the client follows up with a <c>PUT</c> carrying the sealed blob,
+/// which is the only transition out of that status.
 /// </summary>
-public class RegisterTargetSystemRequestModel : IValidatableObject
+public class RegisterTargetSystemRequestModel
 {
     [Required]
     [StringLength(200)]
@@ -21,63 +21,4 @@ public class RegisterTargetSystemRequestModel : IValidatableObject
     [Required]
     [EnumDataType(typeof(PamTargetSystemMethod))]
     public PamTargetSystemMethod? Method { get; set; }
-
-    /// <summary>The integration an automatic target is rotated through.</summary>
-    [EnumDataType(typeof(PamTargetSystemKind))]
-    public PamTargetSystemKind? Kind { get; set; }
-
-    /// <summary>Required for an automatic target; unenforced operator guidance on a manual one.</summary>
-    public PamPasswordPolicyRequestModel? PasswordPolicy { get; set; }
-
-    /// <summary>
-    /// Whether the integration can terminate live sessions after a rotation; configs on this target can request
-    /// termination only when true.
-    /// </summary>
-    public bool? SupportsSessionTermination { get; set; }
-
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-    {
-        if (Method is null)
-        {
-            // [Required] reports the omission; falling through would also blame fields under the manual rules.
-            yield break;
-        }
-
-        if (Method == PamTargetSystemMethod.Automatic)
-        {
-            if (Kind is null)
-            {
-                yield return new ValidationResult(
-                    "Kind is required for an automatic target system.", [nameof(Kind)]);
-            }
-
-            if (PasswordPolicy is null)
-            {
-                yield return new ValidationResult(
-                    "PasswordPolicy is required for an automatic target system.", [nameof(PasswordPolicy)]);
-            }
-
-            if (SupportsSessionTermination is null)
-            {
-                yield return new ValidationResult(
-                    "SupportsSessionTermination is required for an automatic target system.",
-                    [nameof(SupportsSessionTermination)]);
-            }
-        }
-        else
-        {
-            if (Kind is not null)
-            {
-                yield return new ValidationResult(
-                    "Kind must not be set for a manual target system.", [nameof(Kind)]);
-            }
-
-            if (SupportsSessionTermination is not null)
-            {
-                yield return new ValidationResult(
-                    "SupportsSessionTermination must not be set for a manual target system.",
-                    [nameof(SupportsSessionTermination)]);
-            }
-        }
-    }
 }

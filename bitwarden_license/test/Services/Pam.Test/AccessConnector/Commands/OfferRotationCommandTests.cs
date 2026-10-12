@@ -115,6 +115,26 @@ public class OfferRotationCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task OfferAsync_TargetPendingSeal_ReturnsConfigNotOfferable_NoCreateGuardedCallNoAudit(
+        PamRotationConfig config, PamTargetSystem target, PamRotationSource source)
+    {
+        var sutProvider = Setup();
+        config.Enabled = true;
+        target.Method = PamTargetSystemMethod.Automatic;
+        target.Status = PamTargetSystemStatus.PendingSeal;
+        SetupConfig(sutProvider, config);
+        SetupTarget(sutProvider, config, target);
+
+        var outcome = await sutProvider.Sut.OfferAsync(config.Id, source);
+
+        Assert.Equal(PamRotationJobCreateOutcome.ConfigNotOfferable, outcome);
+        await sutProvider.GetDependency<IPamRotationJobRepository>().DidNotReceiveWithAnyArgs()
+            .CreateGuardedAsync(default!);
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs()
+            .EmitAsync(default!);
+    }
+
+    [Theory, BitAutoData]
     public async Task OfferAsync_Created_EmitsRotationOfferedAuditWithSource(
         PamRotationConfig config, PamTargetSystem target, PamRotationSource source)
     {

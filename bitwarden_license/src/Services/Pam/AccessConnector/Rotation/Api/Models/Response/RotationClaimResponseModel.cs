@@ -6,7 +6,8 @@ namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 
 /// <summary>
 /// The work snapshot a won claim returns (spec <c>ClaimRotation</c>), with everything needed to execute the rotation.
-/// A lost or ineligible claim gets an error response instead, so every field is populated.
+/// A lost or ineligible claim gets an error response instead, so every field is populated. The two sealed blobs carry
+/// every security-relevant field; the server never parses them.
 /// </summary>
 public class RotationClaimResponseModel
 {
@@ -19,12 +20,9 @@ public class RotationClaimResponseModel
         Source = result.Source!.Value;
         TargetSystemId = result.TargetSystemId!.Value;
         TargetSystemName = result.TargetSystemName!;
-        Kind = result.Kind;
-        var policy = PamPasswordPolicy.Parse(result.PasswordPolicy);
-        PasswordPolicy = policy is null ? null : new PamPasswordPolicyResponseModel(policy);
+        TargetSystemSealedData = result.TargetSystemSealedData!;
         CipherId = result.CipherId!.Value;
-        AccountIdentity = result.AccountIdentity!;
-        TerminateSessions = result.TerminateSessions!.Value;
+        RotationConfigSealedData = result.RotationConfigSealedData!;
         ExecuteBy = result.ExecuteBy!.Value.AsUtc();
     }
 
@@ -39,18 +37,13 @@ public class RotationClaimResponseModel
 
     public string TargetSystemName { get; set; } = null!;
 
-    /// <summary>The integration the target is rotated through.</summary>
-    public PamTargetSystemKind? Kind { get; set; }
-
-    public PamPasswordPolicyResponseModel? PasswordPolicy { get; set; }
+    /// <summary>The target system's sealed blob, opaque to the server.</summary>
+    public string TargetSystemSealedData { get; set; } = null!;
 
     public Guid CipherId { get; set; }
 
-    /// <summary>The account to rotate on the target system, opaque to the server.</summary>
-    public string AccountIdentity { get; set; } = null!;
-
-    /// <summary>When true, the access connector terminates the account's live sessions after rotating.</summary>
-    public bool TerminateSessions { get; set; }
+    /// <summary>The rotation config's sealed blob, opaque to the server.</summary>
+    public string RotationConfigSealedData { get; set; } = null!;
 
     /// <summary>
     /// The claim's lease deadline. Past it, the release sweep may reclaim the job if the access connector's heartbeat

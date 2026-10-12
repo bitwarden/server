@@ -32,6 +32,12 @@ public class SetTargetSystemStatusCommand : ISetTargetSystemStatusCommand
             throw new NotFoundException();
         }
 
+        if (target.Status == PamTargetSystemStatus.PendingSeal)
+        {
+            throw new BadRequestException(
+                "This target system has not been sealed yet and cannot be enabled or disabled.");
+        }
+
         var desired = enable ? PamTargetSystemStatus.Active : PamTargetSystemStatus.Disabled;
         if (target.Status == desired)
         {

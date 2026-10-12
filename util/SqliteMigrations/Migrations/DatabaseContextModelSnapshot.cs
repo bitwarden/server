@@ -2866,11 +2866,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("AccountIdentity")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT");
-
                     b.Property<Guid>("CipherId")
                         .HasColumnType("TEXT");
 
@@ -2899,11 +2894,13 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("TargetSystemId")
+                    b.Property<string>("SealedData")
+                        .IsRequired()
+                        .HasMaxLength(10000)
                         .HasColumnType("TEXT");
 
-                    b.Property<bool>("TerminateSessions")
-                        .HasColumnType("INTEGER");
+                    b.Property<Guid>("TargetSystemId")
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -2980,9 +2977,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<byte?>("Kind")
-                        .HasColumnType("INTEGER");
-
                     b.Property<byte>("Method")
                         .HasColumnType("INTEGER");
 
@@ -2994,17 +2988,14 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("PasswordPolicy")
-                        .HasMaxLength(2000)
-                        .HasColumnType("TEXT");
-
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<byte>("Status")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("SealedData")
+                        .HasMaxLength(10000)
+                        .HasColumnType("TEXT");
 
-                    b.Property<bool?>("SupportsSessionTermination")
+                    b.Property<byte>("Status")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");

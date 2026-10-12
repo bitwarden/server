@@ -20,8 +20,7 @@ public class PamRotationConfigResponseModel : ResponseModel
         TargetSystemId = config.TargetSystemId;
         TargetSystemName = config.TargetSystemName;
         TargetSystemMethod = config.TargetSystemMethod;
-        AccountIdentity = config.AccountIdentity;
-        TerminateSessions = config.TerminateSessions;
+        SealedData = config.SealedData;
         ScheduleCron = config.ScheduleCron;
         RotateOnAccessEnd = config.RotateOnAccessEnd;
         NextRotationAt = config.NextRotationAt.AsUtc();
@@ -46,11 +45,8 @@ public class PamRotationConfigResponseModel : ResponseModel
     /// <summary>Whether a due rotation yields a job for an access connector or an operator obligation.</summary>
     public PamTargetSystemMethod TargetSystemMethod { get; set; }
 
-    /// <summary>The account this config rotates on the target system, opaque to the server.</summary>
-    public string AccountIdentity { get; set; } = null!;
-
-    /// <summary>When true, the access connector terminates the account's live sessions after each rotation.</summary>
-    public bool TerminateSessions { get; set; }
+    /// <summary>The config's sealed blob, opaque to the server.</summary>
+    public string SealedData { get; set; } = null!;
 
     /// <summary>A Quartz 6-field cron expression evaluated in UTC. Null means no scheduled rotation.</summary>
     public string? ScheduleCron { get; set; }

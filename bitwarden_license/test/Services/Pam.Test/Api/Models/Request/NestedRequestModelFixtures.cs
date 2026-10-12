@@ -23,3 +23,28 @@ public class CyclicRequestModel
 
     public CyclicRequestModel? Other { get; set; }
 }
+
+public class ParentWithNestedRequestModel
+{
+    public string Name { get; set; } = null!;
+
+    public NestedRangeRequestModel? Nested { get; set; }
+}
+
+public class NestedRangeRequestModel : IValidatableObject
+{
+    [Range(1, 128)]
+    public int MinLength { get; set; }
+
+    [Range(1, 128)]
+    public int MaxLength { get; set; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (MinLength > MaxLength)
+        {
+            yield return new ValidationResult(
+                "MinLength must not be greater than MaxLength.", [nameof(MinLength), nameof(MaxLength)]);
+        }
+    }
+}

@@ -2883,11 +2883,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("AccountIdentity")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
                     b.Property<Guid>("CipherId")
                         .HasColumnType("uuid");
 
@@ -2916,11 +2911,13 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("SealedData")
+                        .IsRequired()
+                        .HasMaxLength(10000)
+                        .HasColumnType("character varying(10000)");
+
                     b.Property<Guid>("TargetSystemId")
                         .HasColumnType("uuid");
-
-                    b.Property<bool>("TerminateSessions")
-                        .HasColumnType("boolean");
 
                     b.HasKey("Id");
 
@@ -2997,9 +2994,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<byte?>("Kind")
-                        .HasColumnType("smallint");
-
                     b.Property<byte>("Method")
                         .HasColumnType("smallint");
 
@@ -3011,18 +3005,15 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("PasswordPolicy")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("SealedData")
+                        .HasMaxLength(10000)
+                        .HasColumnType("character varying(10000)");
+
                     b.Property<byte>("Status")
                         .HasColumnType("smallint");
-
-                    b.Property<bool?>("SupportsSessionTermination")
-                        .HasColumnType("boolean");
 
                     b.HasKey("Id");
 

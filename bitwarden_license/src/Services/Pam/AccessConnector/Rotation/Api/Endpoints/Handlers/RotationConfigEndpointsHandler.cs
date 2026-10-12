@@ -21,7 +21,7 @@ public class RotationConfigEndpointsHandler(
     IGetRotationConfigDetailsQuery getRotationConfigDetailsQuery,
     ICreateRotationConfigCommand createRotationConfigCommand,
     IUpdateRotationSettingsCommand updateRotationSettingsCommand,
-    IUpdateRotationAccountCommand updateRotationAccountCommand,
+    ISealRotationConfigCommand sealRotationConfigCommand,
     IPauseRotationCommand pauseRotationCommand,
     IResumeRotationCommand resumeRotationCommand,
     ITriggerRotationCommand triggerRotationCommand,
@@ -49,19 +49,17 @@ public class RotationConfigEndpointsHandler(
             currentContext.UserId!.Value,
             model.CipherId,
             model.TargetSystemId,
-            model.AccountIdentity,
-            model.TerminateSessions,
+            model.SealedData,
             model.ScheduleCron,
             model.RotateOnAccessEnd);
         return await GetDetailAsync(orgId, created.Id);
     }
 
-    /// <remarks>Fans out to the account and settings commands, account first since its guards are stricter.</remarks>
+    /// <remarks>Fans out to the seal and settings commands, seal first since its guards are stricter.</remarks>
     public async Task<PamRotationConfigDetailResponseModel> Put(
         Guid orgId, Guid id, UpdateRotationConfigRequestModel model)
     {
-        await updateRotationAccountCommand.UpdateAsync(
-            orgId, currentContext.UserId!.Value, id, model.AccountIdentity, model.TerminateSessions);
+        await sealRotationConfigCommand.SealAsync(orgId, currentContext.UserId!.Value, id, model.SealedData);
         var updated = await updateRotationSettingsCommand.UpdateAsync(
             orgId, currentContext.UserId!.Value, id, model.ScheduleCron, model.RotateOnAccessEnd);
         return await GetDetailAsync(orgId, updated.Id);

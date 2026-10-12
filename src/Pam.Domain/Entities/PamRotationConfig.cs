@@ -10,20 +10,16 @@ public class PamRotationConfig : ITableObject<Guid>
     public Guid Id { get; set; }
     public Guid OrganizationId { get; set; }
 
-    public Guid CipherId { get; set; }
+    public Guid CipherId { get; set; } // Also sealed into the blob, as proof the admin configured it.
 
-    public Guid TargetSystemId { get; set; }
-
-    /// <summary>
-    /// The target-system account to rotate. Opaque to the server; only the access connector interprets it.
-    /// </summary>
-    [MaxLength(500)]
-    public string AccountIdentity { get; set; } = null!;
+    public Guid TargetSystemId { get; set; } // Also sealed into the blob, as proof the admin configured it.
 
     /// <summary>
-    /// Only valid on an automatic target that reports <see cref="PamTargetSystem.SupportsSessionTermination"/>.
+    /// An opaque blob the admin client seals under the org key (spec <c>RotationConfigSealedV1</c>): the account
+    /// identity to rotate and whether to terminate sessions. The server never parses it.
     /// </summary>
-    public bool TerminateSessions { get; set; }
+    [MaxLength(10000)]
+    public string SealedData { get; set; } = null!;
 
     /// <summary>A Quartz 6-field cron expression; null means no scheduled rotation.</summary>
     [MaxLength(100)]

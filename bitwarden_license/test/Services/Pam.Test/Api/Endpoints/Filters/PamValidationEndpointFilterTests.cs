@@ -104,7 +104,6 @@ public class PamValidationEndpointFilterTests
     [Fact]
     public async Task InvokeAsync_TargetSystemRegistrationWithoutMethod_ReportsOnlyTheOmittedMethod()
     {
-        // The caller chose no method, so the automatic shape rules on Kind and PasswordPolicy must not fire.
         var context = CreateContext(new RegisterTargetSystemRequestModel { Name = "db-prod" });
 
         var result = await new PamValidationEndpointFilter().InvokeAsync(context, NotCalled());
@@ -117,28 +116,21 @@ public class PamValidationEndpointFilterTests
     }
 
     [Fact]
-    public async Task InvokeAsync_TargetSystemRegistrationWithOutOfRangeKind_Returns400()
+    public async Task InvokeAsync_TargetSystemRegistrationWithOutOfRangeMethod_Returns400()
     {
-        // Kind is optional, but an undefined member would be stored as the integration the connector rotates through.
+        // Without [EnumDataType] an undefined member deserializes and validates, reaching RegisterAsync as a method
+        // nothing can dispatch on.
         var context = CreateContext(new RegisterTargetSystemRequestModel
         {
             Name = "db-prod",
-            Method = PamTargetSystemMethod.Automatic,
-            Kind = (PamTargetSystemKind)99,
-            PasswordPolicy = new PamPasswordPolicyRequestModel
-            {
-                MinLength = 16,
-                MaxLength = 32,
-                IncludeLowercase = true,
-            },
-            SupportsSessionTermination = false,
+            Method = (PamTargetSystemMethod)99,
         });
 
         var result = await new PamValidationEndpointFilter().InvokeAsync(context, NotCalled());
 
         var jsonResult = Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
         Assert.Equal(StatusCodes.Status400BadRequest, jsonResult.StatusCode);
-        Assert.Contains(nameof(RegisterTargetSystemRequestModel.Kind), jsonResult.Value!.ValidationErrors!.Keys);
+        Assert.Contains(nameof(RegisterTargetSystemRequestModel.Method), jsonResult.Value!.ValidationErrors!.Keys);
     }
 
     [Fact]
@@ -178,37 +170,27 @@ public class PamValidationEndpointFilterTests
     [Fact]
     public async Task InvokeAsync_NestedRequestModelViolatesARangeAttribute_Returns400()
     {
-        // PamPasswordPolicyRequestModel is only reached nested, and TryValidateObject does not recurse.
-        var context = CreateContext(new UpdateTargetSystemRequestModel
+        // NestedRangeRequestModel is only reached nested, and TryValidateObject does not recurse.
+        var context = CreateContext(new ParentWithNestedRequestModel
         {
             Name = "Corp SQL",
-            PasswordPolicy = new PamPasswordPolicyRequestModel
-            {
-                MinLength = 0,
-                MaxLength = 0,
-                IncludeLowercase = true,
-            },
+            Nested = new NestedRangeRequestModel { MinLength = 0, MaxLength = 0 },
         });
 
         var result = await new PamValidationEndpointFilter().InvokeAsync(context, NotCalled());
 
         var jsonResult = Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
         Assert.Equal(StatusCodes.Status400BadRequest, jsonResult.StatusCode);
-        Assert.Contains(nameof(PamPasswordPolicyRequestModel.MinLength), jsonResult.Value!.ValidationErrors!.Keys);
+        Assert.Contains(nameof(NestedRangeRequestModel.MinLength), jsonResult.Value!.ValidationErrors!.Keys);
     }
 
     [Fact]
     public async Task InvokeAsync_NestedRequestModelViolatesItsValidatableObjectRule_Returns400()
     {
-        var context = CreateContext(new UpdateTargetSystemRequestModel
+        var context = CreateContext(new ParentWithNestedRequestModel
         {
             Name = "Corp SQL",
-            PasswordPolicy = new PamPasswordPolicyRequestModel
-            {
-                MinLength = 32,
-                MaxLength = 16,
-                IncludeLowercase = true,
-            },
+            Nested = new NestedRangeRequestModel { MinLength = 32, MaxLength = 16 },
         });
 
         var result = await new PamValidationEndpointFilter().InvokeAsync(context, NotCalled());
@@ -217,24 +199,17 @@ public class PamValidationEndpointFilterTests
         Assert.Equal(StatusCodes.Status400BadRequest, jsonResult.StatusCode);
         Assert.Contains(
             "MinLength must not be greater than MaxLength.",
-            jsonResult.Value!.ValidationErrors![nameof(PamPasswordPolicyRequestModel.MinLength)]);
+            jsonResult.Value!.ValidationErrors![nameof(NestedRangeRequestModel.MinLength)]);
     }
 
     [Fact]
     public async Task InvokeAsync_ValidNestedRequestModel_CallsNext()
     {
         var nextCalled = false;
-        var context = CreateContext(new UpdateTargetSystemRequestModel
+        var context = CreateContext(new ParentWithNestedRequestModel
         {
             Name = "Corp SQL",
-            PasswordPolicy = new PamPasswordPolicyRequestModel
-            {
-                MinLength = 16,
-                MaxLength = 32,
-                IncludeUppercase = true,
-                IncludeLowercase = true,
-                IncludeDigits = true,
-            },
+            Nested = new NestedRangeRequestModel { MinLength = 16, MaxLength = 32 },
         });
         EndpointFilterDelegate next = _ =>
         {

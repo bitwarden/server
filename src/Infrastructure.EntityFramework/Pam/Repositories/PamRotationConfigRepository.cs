@@ -74,14 +74,6 @@ public class PamRotationConfigRepository : Repository<CoreEntity, EfModel, Guid>
         return await dbContext.PamRotationConfigs.AnyAsync(c => c.TargetSystemId == targetSystemId);
     }
 
-    public async Task<bool> AnyByTargetSystemWithTerminateSessionsAsync(Guid targetSystemId)
-    {
-        using var scope = ServiceScopeFactory.CreateScope();
-        var dbContext = GetDatabaseContext(scope);
-        return await dbContext.PamRotationConfigs
-            .AnyAsync(c => c.TargetSystemId == targetSystemId && c.TerminateSessions);
-    }
-
     public async Task<bool> DeleteWithJobsAsync(Guid configId)
         => await SerializableRetry.RunAsync(() => DeleteGuardedAsync(configId));
 
@@ -133,8 +125,7 @@ public class PamRotationConfigRepository : Repository<CoreEntity, EfModel, Guid>
                 OrganizationId = c.OrganizationId,
                 CipherId = c.CipherId,
                 TargetSystemId = c.TargetSystemId,
-                AccountIdentity = c.AccountIdentity,
-                TerminateSessions = c.TerminateSessions,
+                SealedData = c.SealedData,
                 ScheduleCron = c.ScheduleCron,
                 RotateOnAccessEnd = c.RotateOnAccessEnd,
                 NextRotationAt = c.NextRotationAt,

@@ -53,11 +53,9 @@ BEGIN
             CAST(NULL AS TINYINT) AS [Source],
             CAST(NULL AS UNIQUEIDENTIFIER) AS [TargetSystemId],
             CAST(NULL AS NVARCHAR(200)) AS [TargetSystemName],
-            CAST(NULL AS TINYINT) AS [Kind],
-            CAST(NULL AS NVARCHAR(2000)) AS [PasswordPolicy],
+            CAST(NULL AS NVARCHAR(MAX)) AS [TargetSystemSealedData],
             CAST(NULL AS UNIQUEIDENTIFIER) AS [CipherId],
-            CAST(NULL AS NVARCHAR(500)) AS [AccountIdentity],
-            CAST(NULL AS BIT) AS [TerminateSessions],
+            CAST(NULL AS NVARCHAR(MAX)) AS [RotationConfigSealedData],
             CAST(NULL AS DATETIME2(7)) AS [ExecuteBy]
         RETURN
     END
@@ -77,7 +75,8 @@ BEGIN
 
     COMMIT TRANSACTION
 
-    -- ExecuteBy is this claim's lease end (ClaimedAt + ReleaseDelay).
+    -- ExecuteBy is this claim's lease end (ClaimedAt + ReleaseDelay). The two sealed blobs carry everything the
+    -- access connector needs to verify and execute the rotation; the server never parses them.
     SELECT
         1 AS [Outcome], -- Claimed
         @AttemptId AS [AttemptId],
@@ -85,11 +84,9 @@ BEGIN
         J.[Source],
         T.[Id] AS [TargetSystemId],
         T.[Name] AS [TargetSystemName],
-        T.[Kind],
-        T.[PasswordPolicy],
+        T.[SealedData] AS [TargetSystemSealedData],
         C.[CipherId],
-        C.[AccountIdentity],
-        C.[TerminateSessions],
+        C.[SealedData] AS [RotationConfigSealedData],
         DATEADD(SECOND, @ReleaseDelaySeconds, @Now) AS [ExecuteBy]
     FROM [dbo].[PamRotationJob] J
     INNER JOIN [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]

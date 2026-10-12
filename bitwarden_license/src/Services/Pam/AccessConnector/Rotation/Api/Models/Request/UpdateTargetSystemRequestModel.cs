@@ -3,9 +3,9 @@
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Request;
 
 /// <summary>
-/// The updatable shape of a target system (spec <c>UpdateAutomaticTargetSystem</c> /
-/// <c>UpdateManualTargetSystem</c>). Method and kind are fixed at registration, so the handler checks this shape
-/// against the stored method.
+/// The updatable shape of a target system (spec <c>SealTargetSystem</c>). <see cref="SealedData"/> replaces any
+/// previously stored blob wholesale and, on a <c>PendingSeal</c> target, moves it to <c>Active</c> — the only
+/// transition out of that status. A <c>Disabled</c> target stays disabled.
 /// </summary>
 public class UpdateTargetSystemRequestModel
 {
@@ -14,14 +14,10 @@ public class UpdateTargetSystemRequestModel
     public string Name { get; set; } = null!;
 
     /// <summary>
-    /// Replaces the stored policy wholesale. Required for an automatic target; omitting it on a manual target keeps
-    /// the stored policy.
+    /// The target system's sealed blob (spec <c>TargetSystemSealedV1</c>), opaque to the server: kind, password
+    /// policy and session-termination capability, sealed under the org key.
     /// </summary>
-    public PamPasswordPolicyRequestModel? PasswordPolicy { get; set; }
-
-    /// <summary>
-    /// Whether the integration can terminate live sessions after a rotation; configs on this target can request
-    /// termination only when true. Required for an automatic target.
-    /// </summary>
-    public bool? SupportsSessionTermination { get; set; }
+    [Required]
+    [StringLength(10000)]
+    public string SealedData { get; set; } = null!;
 }

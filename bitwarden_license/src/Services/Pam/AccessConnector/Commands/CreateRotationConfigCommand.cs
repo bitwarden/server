@@ -44,14 +44,13 @@ public class CreateRotationConfigCommand : ICreateRotationConfigCommand
         Guid actingUserId,
         Guid cipherId,
         Guid targetSystemId,
-        string accountIdentity,
-        bool terminateSessions,
+        string sealedData,
         string? scheduleCron,
         bool rotateOnAccessEnd)
     {
-        if (string.IsNullOrWhiteSpace(accountIdentity))
+        if (string.IsNullOrWhiteSpace(sealedData))
         {
-            throw new BadRequestException("Account identity is required.");
+            throw new BadRequestException("Sealed data is required.");
         }
 
         var target = await _targetSystemRepository.GetByIdAsync(targetSystemId);
@@ -60,9 +59,10 @@ public class CreateRotationConfigCommand : ICreateRotationConfigCommand
             throw new NotFoundException();
         }
 
-        if (target.Status != PamTargetSystemStatus.Active)
+        // A PendingSeal target is allowed: the config simply does not run until the target is sealed.
+        if (target.Status == PamTargetSystemStatus.Disabled)
         {
-            throw new BadRequestException("The target system is not active.");
+            throw new BadRequestException("The target system is disabled.");
         }
 
         // An unscoped lookup, since this is an admin operation rather than a per-user access check.
@@ -77,13 +77,6 @@ public class CreateRotationConfigCommand : ICreateRotationConfigCommand
             throw new BadRequestException("This cipher already has a rotation config.");
         }
 
-        if (terminateSessions &&
-            !(target.Method == PamTargetSystemMethod.Automatic && target.SupportsSessionTermination == true))
-        {
-            throw new BadRequestException(
-                "Session termination requires an automatic target system that supports it.");
-        }
-
         _scheduleCalculator.ValidateSchedule(scheduleCron, _options.Value.MinScheduleInterval);
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
@@ -92,8 +85,7 @@ public class CreateRotationConfigCommand : ICreateRotationConfigCommand
             OrganizationId = organizationId,
             CipherId = cipherId,
             TargetSystemId = targetSystemId,
-            AccountIdentity = accountIdentity,
-            TerminateSessions = terminateSessions,
+            SealedData = sealedData,
             ScheduleCron = scheduleCron,
             RotateOnAccessEnd = rotateOnAccessEnd,
             NextRotationAt = _scheduleCalculator.GetNextOccurrence(scheduleCron, now),

@@ -3,9 +3,7 @@ CREATE PROCEDURE [dbo].[PamTargetSystem_Update]
     @OrganizationId UNIQUEIDENTIFIER,
     @Name NVARCHAR(200),
     @Method TINYINT,
-    @Kind TINYINT = NULL,
-    @PasswordPolicy NVARCHAR(2000) = NULL,
-    @SupportsSessionTermination BIT = NULL,
+    @SealedData NVARCHAR(MAX) = NULL,
     @Status TINYINT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
@@ -19,9 +17,7 @@ BEGIN
         [OrganizationId] = @OrganizationId,
         [Name] = @Name,
         [Method] = @Method,
-        [Kind] = @Kind,
-        [PasswordPolicy] = @PasswordPolicy,
-        [SupportsSessionTermination] = @SupportsSessionTermination,
+        [SealedData] = @SealedData,
         [Status] = @Status,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate

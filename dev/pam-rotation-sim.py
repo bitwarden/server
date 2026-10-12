@@ -5,11 +5,19 @@ Drives the admin HTTP surface as the admin console would, on seeded data in vaul
 leaves a claimable job for a real access connector to execute and report on:
 
   ADMIN (owner bearer, client_credentials on the seeded user's ApiKey)
-    1. register an automatic target system   POST  organizations/{org}/access-connectors/rotation/target-systems
+    1. register a target system (phase 1)      POST  organizations/{org}/access-connectors/rotation/target-systems
+       seal it (phase 2)                        PUT   organizations/{org}/access-connectors/rotation/target-systems/{id}
        (or reuse one via --target-id)
     2. assign the connector to that target     POST  organizations/{org}/access-connectors/{id}/assignments
     3. create a rotation config for a cipher   POST  organizations/{org}/access-connectors/rotation/configs
     4. trigger an on-demand rotation           POST  organizations/{org}/access-connectors/rotation/configs/{id}/rotate
+
+The server never parses `sealedData` — it is an opaque blob the admin client seals under the org
+key. This script has no org key, so it sends a placeholder string instead of a real seal. That is
+enough to exercise the admin/dispatch side and leave a claimable job, but a real access connector
+will refuse the job at claim-verification time (it cannot unseal a fake blob). For an end-to-end
+run against a real connector, seal the target and config from the admin client instead of this
+script.
 
 By default it creates a fresh target and config on a fresh cipher, so repeated runs avoid the
 on-demand cooldown and the active-job guard.
@@ -87,13 +95,17 @@ def step(n, msg):
     print(f"\n[{n}] {msg}")
 
 
+def fake_sealed_data(note):
+    """A placeholder in the real sealed-blob shape ({formatVersion, wrappedCek, envelope}); not a real seal — this
+    script has no org key. A real access connector will refuse to unseal it."""
+    return json.dumps({"formatVersion": 1, "wrappedCek": "fake", "envelope": f"fake-dev-sim:{note}"})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--org-id", required=True)
     ap.add_argument("--admin-email", required=True)
     ap.add_argument("--connector-id", required=True, help="access connector id to assign to the target")
-    ap.add_argument("--kind", default="entra", choices=["entra", "mssql", "customscript"],
-                    help="automatic connector kind for a newly registered target (default: entra)")
     ap.add_argument("--target-id", help="reuse an existing target system instead of registering one")
     ap.add_argument("--cipher-id", help="org cipher to rotate; auto-selected if omitted")
     ap.add_argument("--account-identity", default="svc-rotation@redwood.example")
@@ -128,18 +140,18 @@ def main():
         target_id = args.target_id
         print(f"\n[1] reusing target system {target_id}")
     else:
-        kind_val = {"entra": 0, "mssql": 1, "customscript": 2}[args.kind]
-        step(1, f"register automatic target system (kind={args.kind})")
+        step(1, "register target system (phase 1: name + method, status=pending_seal)")
         _, target = http("POST", f"{api}/organizations/{org}/access-connectors/rotation/target-systems", admin, {
-            "name": f"sim-{args.kind}-{cipher_id[:8]}",
-            "method": 0,                # Automatic
-            "kind": kind_val,
-            "passwordPolicy": {"minLength": 16, "maxLength": 32,
-                               "includeUppercase": True, "includeLowercase": True,
-                               "includeDigits": True, "includeSymbols": True},
-            "supportsSessionTermination": False})
+            "name": f"sim-{cipher_id[:8]}",
+            "method": 0})                # Automatic
         target_id = target["id"]
-        print(f"    targetSystemId = {target_id}")
+        print(f"    targetSystemId = {target_id} (pendingSeal)")
+
+        step("1b", "seal target system (phase 2: moves pending_seal -> active)")
+        http("PUT", f"{api}/organizations/{org}/access-connectors/rotation/target-systems/{target_id}", admin, {
+            "name": f"sim-{cipher_id[:8]}",
+            "sealedData": fake_sealed_data(f"target:{target_id}")})
+        print("    sealed (204)")
 
     step(2, "assign access connector to target")
     status, _ = http("POST", f"{api}/organizations/{org}/access-connectors/{args.connector_id}/assignments",
@@ -149,7 +161,7 @@ def main():
     step(3, "create rotation config")
     _, config = http("POST", f"{api}/organizations/{org}/access-connectors/rotation/configs", admin, {
         "cipherId": cipher_id, "targetSystemId": target_id,
-        "accountIdentity": args.account_identity, "terminateSessions": False,
+        "sealedData": fake_sealed_data(f"config:{cipher_id}:{args.account_identity}"),
         "scheduleCron": None, "rotateOnAccessEnd": False})
     config_id = config["config"]["id"]   # POST returns the detail view: { "config": {...}, "jobs": [...] }
     print(f"    configId = {config_id}")
