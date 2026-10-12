@@ -35,8 +35,8 @@ using NSubstitute.ReturnsExtensions;
 using OneOf.Types;
 using Stripe;
 using Xunit;
-using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 using static Bit.Core.Billing.Constants.StripeConstants;
+using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 
 namespace Bit.Api.Test.Billing.Controllers;
 
