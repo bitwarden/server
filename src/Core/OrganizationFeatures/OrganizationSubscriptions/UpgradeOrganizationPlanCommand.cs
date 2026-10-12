@@ -41,7 +41,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationService _organizationService;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IOrganizationBillingService _organizationBillingService;
     private readonly IPricingClient _pricingClient;
     private readonly IUpgradeOrganizationPlanVNextCommand _upgradeOrganizationPlanVNextCommand;
@@ -59,7 +59,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         IServiceAccountRepository serviceAccountRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationService organizationService,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         IOrganizationBillingService organizationBillingService,
         IPricingClient pricingClient,
         IUpgradeOrganizationPlanVNextCommand upgradeOrganizationPlanVNextCommand,
