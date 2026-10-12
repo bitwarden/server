@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Pam.Services;
 using Bit.Services.Pam.Services;
 using Bit.Services.Pam.Utilities;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -11,8 +12,9 @@ namespace Bit.Services.Pam.Test.Utilities;
 /// </summary>
 public class ServiceCollectionExtensionsTests
 {
+    // An empty configuration root leaves PamRotationOptions at its default, which is all these need.
     private static IServiceCollection PamServices() =>
-        new ServiceCollection().AddPamServices();
+        new ServiceCollection().AddPamServices(new ConfigurationBuilder().Build());
 
     [Fact]
     public void AddPamServices_RegistersEveryPamOwnedDependency()
