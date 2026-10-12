@@ -93,6 +93,9 @@ public static class Saml2OptionsExtensions
             return false;
         }
 
+        // Check and notify before signature verification. A signature failure should not fail notification on an unapproved
+        // key transport algorithm. Any request, including a forged, unsigned, or improperly-constructed one 
+        // that satisfies the notification criteria, should notify.
         NotifyWhenRsa15Deprecated(envelope, scheme, context);
 
         if (options.SPOptions.WantAssertionsSigned)
