@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 
@@ -106,4 +107,18 @@ public record ConfirmOnlyOneFreeOrganizationAdminAllowed()
 {
     public string PropertyName => "organizationId";
     public string Type => "only_one_free_organization_admin_allowed";
+}
+
+public record ConfirmOtherOrganizationDoesNotAllowOtherMembership(string Email)
+    : OtherOrganizationDoesNotAllowOtherMembership(Email), IValidationError
+{
+    public string PropertyName => "organizationId";
+    public string Type => "other_organization_does_not_allow_other_membership";
+}
+
+public record ConfirmUserCannotBelongToAnotherOrganization(string Email)
+    : UserCannotBelongToAnotherOrganization(Email), IValidationError
+{
+    public string PropertyName => "organizationId";
+    public string Type => "user_cannot_belong_to_another_organization";
 }

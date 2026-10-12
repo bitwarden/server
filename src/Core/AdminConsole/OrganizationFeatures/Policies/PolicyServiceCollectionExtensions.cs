@@ -17,6 +17,7 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyRequirementQuery, PolicyRequirementQuery>();
         services.AddScoped<IPolicyQuery, PolicyQuery>();
         services.AddScoped<IPreAccessEnforcerQuery, PreAccessEnforcerQuery>();
+        services.AddScoped<IJoinOrganizationPolicyValidationService, JoinOrganizationPolicyValidationService>();
         services.AddScoped<IPolicyEventHandlerFactory, PolicyEventHandlerHandlerFactory>();
 
         services.AddScoped<IAutomaticUserConfirmationPolicyEnforcementHandler, AutomaticUserConfirmationPolicyEnforcementHandler>();
