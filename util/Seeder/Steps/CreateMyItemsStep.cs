@@ -17,20 +17,10 @@ namespace Bit.Seeder.Steps;
 /// (<see cref="CollectionType.DefaultUserCollection"/>) collection per confirmed User or Custom member, plus the
 /// personal items each member has already moved into it.
 /// </summary>
-/// <remarks>
-/// <para>Mirrors what the server and clients produce:</para>
-/// <list type="bullet">
-/// <item><description>Collections match <c>Collection_CreateDefaultCollections</c>: Type 1, no ExternalId or
-/// DefaultUserCollectionEmail, created when the policy was enabled, one <c>CollectionUser</c> grant to the owner
-/// with Manage and no group grants. Every collection shares a single org-key ciphertext of the name, because the
-/// client encrypts the name once in the policy request. Owners and Admins get none: the policy exempts them.</description></item>
-/// <item><description>Migrated items are org ciphers encrypted with the org key (what <c>PUT /ciphers/share</c> leaves
-/// behind), created before the policy date, revised after it, in exactly one collection — the owner's My Items.
-/// With <see cref="SeedPresetMyItems.DeletedRate"/>, some are also trashed after they migrated.</description></item>
-/// </list>
-/// </remarks>
+/// <remarks>Mirrors what the server and clients produce; see <c>Seeds/docs/access-shape.md</c>, "What <c>myItems</c>
+/// writes".</remarks>
 internal sealed class CreateMyItemsStep(
-    SeedPresetMyItems shape,
+    SeedPresetMyItems myItems,
     DateTime policyEnabledDate,
     int seed,
     Distribution<CipherType>? typeDist = null) : IStep
@@ -49,7 +39,7 @@ internal sealed class CreateMyItemsStep(
         var progress = context.GetProgress();
         var random = new Random(seed + 2);
 
-        var encryptedName = RustSdkService.EncryptString(shape.Name ?? "My Items", orgKey);
+        var encryptedName = RustSdkService.EncryptString(myItems.Name ?? "My Items", orgKey);
         var collections = new List<Collection>(members.Count);
         var collectionUsers = new List<CollectionUser>(members.Count);
 
@@ -71,7 +61,7 @@ internal sealed class CreateMyItemsStep(
         var itemCounts = ComputeItemCounts(members.Count, random);
 
         // Trashed items come on top of the active ones, so the active My Items tail keeps its calibrated shape
-        var deletedRate = shape.DeletedRate ?? 0;
+        var deletedRate = myItems.DeletedRate ?? 0;
         var trashCounts = itemCounts.Select(n => n > 0 && deletedRate > 0 ? (int)(n * deletedRate + random.NextDouble()) : 0).ToArray();
         for (var u = 0; u < itemCounts.Length; u++)
         {
@@ -151,16 +141,16 @@ internal sealed class CreateMyItemsStep(
     private int[] ComputeItemCounts(int memberCount, Random random)
     {
         var counts = new int[memberCount];
-        var nonEmpty = (int)Math.Round(memberCount * (shape.NonEmptyRate ?? 0));
-        var largest = shape.Largest ?? [];
+        var nonEmpty = (int)Math.Round(memberCount * (myItems.NonEmptyRate ?? 0));
+        var largest = myItems.Largest ?? [];
         if (nonEmpty == 0)
         {
             return counts;
         }
 
         var drawCount = Math.Max(nonEmpty - largest.Count, 0);
-        var drawn = shape.Sizes is { Count: > 0 }
-            ? new SizeHistogram(shape.Sizes.Select(b => (b.Min, b.Max, b.Weight))).Draw(drawCount, random)
+        var drawn = myItems.Sizes is { Count: > 0 }
+            ? new SizeHistogram(myItems.Sizes.Select(b => (b.Min, b.Max, b.Weight))).Draw(drawCount, random)
             : Enumerable.Repeat(1, drawCount).ToArray();
 
         var chosen = Enumerable.Range(0, memberCount).ToArray();

@@ -293,7 +293,7 @@ public static class RecipeBuilderExtensions
     /// </summary>
     internal static RecipeBuilder AddMyItems(
         this RecipeBuilder builder,
-        SeedPresetMyItems shape,
+        SeedPresetMyItems myItems,
         DateTime policyEnabledDate,
         int seed,
         Distribution<CipherType>? typeDist = null)
@@ -303,7 +303,7 @@ public static class RecipeBuilderExtensions
             throw new InvalidOperationException("My Items requires a generator. Call WithGenerator() first.");
         }
 
-        builder.AddStep(_ => new CreateMyItemsStep(shape, policyEnabledDate, seed, typeDist));
+        builder.AddStep(_ => new CreateMyItemsStep(myItems, policyEnabledDate, seed, typeDist));
         return builder;
     }
 

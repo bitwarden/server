@@ -491,6 +491,7 @@
             "wideGroups": {
               "type": "object",
               "additionalProperties": false,
+              "required": ["count", "blockSize", "blockMaxItems", "minGrants", "maxGrants"],
               "description": "Tiny groups granted nested prefixes of one block of near-empty collections (admin-style wide reach with few items).",
               "properties": {
                 "count": {

@@ -36,6 +36,6 @@ internal sealed class CreatePoliciesStep(IReadOnlyList<(PolicyType Type, bool En
     private static string? DefaultData(PolicyType type) => type switch
     {
         PolicyType.OrganizationDataOwnership => """{"enableIndividualItemsTransfer":true}""",
-        _ => null,
+        _ => null, // intentional: no Data is the server default for every other policy type
     };
 }

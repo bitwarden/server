@@ -116,6 +116,10 @@ dotnet run -- preset --name scale.{name} --mangle
 - **`sm-migrated-cyberdyne`** is `xl-migrated-cyberdyne` at 1/10 of the members, groups, collections and items, for quick tests and shared environments. Team-sized shapes (small group and collection sizes, My Items per member) are kept, so each member reaches about as many items as in the XL org and member-item pairs scale with members: ~93k (13% from non-confirmed members). Seeds in seconds; also its own email domain.
 - **`md-migrated-cyberdyne`** (1/4) and **`lg-migrated-cyberdyne`** (1/2) scale `xl-migrated-cyberdyne` the same way, for environments where the XL org is too slow to seed or browse: ~254k and ~460k member-item pairs, about 9–10% from non-confirmed members. Groups per confirmed member P50/P90/P99 stay at 1/3/6.
 - **`xl-migrated-cyberdyne-premigration`** is the same org earlier in the migration: identical shared collections, groups and grants (same seed, so the same ~976k live pairs), but only ~23% of My Items collections are non-empty (~35k items) and ~24k personal items are still waiting in members' own vaults (`personalCiphers.shape: pendingMigration`: ~780 holders, 3 with over 1,000). Together with `xl-migrated-cyberdyne` and `-200k-myitems` it covers before, after and 4x growth of the migration.
+- **Cyberdyne presets are validated on SQL Server only.** Against a remote SQL Server (US DEV over VPN) they seed in
+  ~20 s (sm), ~30 s (md), ~45 s (lg) and 1.5–2 min (xl); locally sm takes ~12 s and the 200k presets ~1.5 min.
+  `preset=all` in the seeded-database workflow would also build them on PostgreSQL, MySQL and SQLite, which hasn't been
+  tried.
 
 For per-preset expected values and verification queries, see [verification.md](verification.md).
 

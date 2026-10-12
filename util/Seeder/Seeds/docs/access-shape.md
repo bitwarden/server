@@ -73,6 +73,9 @@ Sizes use histograms: `[{ "min", "max", "weight" }]`. Bucket counts are exact, a
 
 ## Calibrating against a target org
 
+The `cyberdyne` presets were calibrated this way against one large EU org for DBOPS-257 (snapshots 2026-10-07 and
+2026-10-11).
+
 Measure the target org's rows, not just its counts. The load metrics, in order:
 
 1. **Items fetched**: every org cipher, My Items and trash included.

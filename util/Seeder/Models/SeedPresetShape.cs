@@ -1,4 +1,6 @@
-﻿namespace Bit.Seeder.Models;
+﻿using System.Text.Json;
+
+namespace Bit.Seeder.Models;
 
 /// <summary>
 /// One histogram bucket: values in [Min, Max] make up <see cref="Weight"/> of the population.
@@ -152,18 +154,18 @@ internal record SeedPresetShapeGroupGrants
 /// </summary>
 internal record SeedPresetShapeWideGroups
 {
-    public int Count { get; init; }
+    public required int Count { get; init; }
 
     /// <summary>Collections in the shared block.</summary>
-    public int BlockSize { get; init; }
+    public required int BlockSize { get; init; }
 
     /// <summary>Only collections with at most this many items go into the block.</summary>
-    public int BlockMaxItems { get; init; }
+    public required int BlockMaxItems { get; init; }
 
     /// <summary>Grants per wide group are drawn log-uniformly from [MinGrants, MaxGrants] (capped at BlockSize).</summary>
-    public int MinGrants { get; init; }
+    public required int MinGrants { get; init; }
 
-    public int MaxGrants { get; init; }
+    public required int MaxGrants { get; init; }
 
     /// <summary>Wide groups are picked from regular groups with at most this many members.</summary>
     public int MaxMembers { get; init; } = 3;
@@ -225,7 +227,7 @@ internal record SeedPresetPolicies
     public List<string>? Disable { get; init; }
 
     /// <summary>Policy Data JSON per PolicyType name; overrides the built-in default.</summary>
-    public Dictionary<string, System.Text.Json.JsonElement>? Data { get; init; }
+    public Dictionary<string, JsonElement>? Data { get; init; }
 }
 
 internal record SeedPresetStatusMix

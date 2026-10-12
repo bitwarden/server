@@ -201,21 +201,11 @@ and username category at `index % total`. Don't derive the total from the genera
 without a cipher count, and a zero total once put every generated preset login in the last password bucket
 (24 distinct "very strong" passwords).
 
-**Login extras are calibrated to prod.** `CipherComposer.PasskeysPer100Logins` (1) and `PasswordHistoryPer100Logins` (6)
-come from an EU prod measurement on 2026-10-11 (passkeys on 0.2-1.2% of logins, password history on 5-7% of items; login
-`Data` averages 1.4-1.5 KB). The previous 20% / 40% made generated logins ~1.7x larger than prod. `ItemKeysPer100` (55)
-encrypts that share of generated items, of every type, with their own key wrapped by the org or user key (`Cipher.Key`, ~180 B),
-matching the target org (fleet: 33%). Seed time is unchanged within noise. The other login rates follow the same target
-org: a URI on 32% of logins (`UriPer100Logins`; fleet 86%), 2+ URIs on 1%, notes on 37% (fleet 8%), custom fields on 6%,
-TOTP on 2%. Note lengths have a long tail so `DATALENGTH(Data)` p95/p99 land near prod (2.9 KB / 6.1 KB). The site pool grows
-with the vault at `AppsPer100Logins` (24, the large-org median of applications per password in `OrganizationReport`), so
-Access Intelligence sees more than the 314 company domains: later passes use `{name}-{n}.example`. Stored login `Data`
-omits the legacy top-level `Uri`, as the API does. Every URI carries `uriChecksum` (base64 SHA-256 of the URI, set in
-`LoginCipherSeeder`): the SDK silently drops URIs without a valid checksum from items that have their own key, which hid
-every keyed login from Access Intelligence. `UniquePasswordsPer100Logins` (80) gives that share of logins a password of
-their strength tier generated for the item (`UniquePasswordGenerator`); the rest draw from the shared pools. Breach checks
-run once per distinct password, so pool-only vaults understated them. 80% is an assumption: prod reuse can't be counted
-because passwords are encrypted per item. Re-measure before changing any of these.
+**Login rates are calibrated to prod.** The `*Per100` constants in `CipherComposer` (URIs, notes, fields, TOTP, passkeys,
+password history, item keys, sites, unique passwords) apply to every preset that generates logins. They come from the
+DBOPS-257 measurement of a large EU org; values and sources are in [Data/README.md](Data/README.md#calibrated-login-rates).
+Re-measure before changing them. Every URI must carry `uriChecksum` (set in `LoginCipherSeeder`): the SDK silently drops
+URIs without a valid checksum from items that have their own key.
 
 ## Fixture Contract Sync
 
