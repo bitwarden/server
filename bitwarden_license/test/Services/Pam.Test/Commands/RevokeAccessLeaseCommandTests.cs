@@ -33,7 +33,6 @@ public class RevokeAccessLeaseCommandTests
     {
         var sutProvider = Setup();
         lease.Action = AccessLeaseAction.None;
-        // userId is neither the lease holder (lease.RequesterId is a different AutoFixture Guid) nor a manager.
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByIdAsync(lease.Id).Returns(lease);
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .CanManageCollectionAsync(userId, lease.CollectionId).Returns(false);
@@ -63,6 +62,12 @@ public class RevokeAccessLeaseCommandTests
                 d.Verdict == AccessDecisionVerdict.Deny &&
                 d.Comment == "done with it"),
             _now);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
+            .NotifyCollectionApproversAsync(lease.CollectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(lease.RequesterId);
+        await sutProvider.GetDependency<ILeaseRevokedMailNotifier>().Received(1)
+            .NotifyLeaseEndedAsync(lease, AccessLeaseAction.Cancelled);
     }
 
     [Theory, BitAutoData]
@@ -115,7 +120,7 @@ public class RevokeAccessLeaseCommandTests
 
         await sutProvider.Sut.RevokeAsync(userId, lease.Id, "policy change");
 
-        // An operator (manager, not the holder) ended it → settles to Revoked.
+        // A manager who is not the holder ends it as Revoked.
         await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1).RevokeAsync(
             lease,
             AccessLeaseAction.Revoked,
@@ -126,6 +131,12 @@ public class RevokeAccessLeaseCommandTests
                 d.Verdict == AccessDecisionVerdict.Deny &&
                 d.Comment == "policy change"),
             _now);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
+            .NotifyCollectionApproversAsync(lease.CollectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(lease.RequesterId);
+        await sutProvider.GetDependency<ILeaseRevokedMailNotifier>().Received(1)
+            .NotifyLeaseEndedAsync(lease, AccessLeaseAction.Revoked);
     }
 
     [Theory, BitAutoData]
@@ -142,6 +153,8 @@ public class RevokeAccessLeaseCommandTests
 
         await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
             .RevokeAsync(default!, default, default!, default);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
     }
 
     [Theory, BitAutoData]

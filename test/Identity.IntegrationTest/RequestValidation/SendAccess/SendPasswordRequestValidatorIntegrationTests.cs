@@ -1,9 +1,9 @@
 ﻿using Bit.Core.KeyManagement.Sends;
-using Bit.Core.Services;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
 using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 using Bit.IntegrationTestCommon.Factories;
+using Bitwarden.Server.Sdk.Features;
 using Duende.IdentityModel;
 using NSubstitute;
 using Xunit;
