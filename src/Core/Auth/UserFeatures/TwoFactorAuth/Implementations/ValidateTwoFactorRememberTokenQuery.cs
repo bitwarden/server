@@ -41,7 +41,7 @@ public class ValidateTwoFactorRememberTokenQuery(
         }
 
         // A remember token stands in for a second factor, so it cannot be honored by an account that
-        // has none, whether configured by the user or enforced by their organization. Ordered ahead
+        // has no 2FA configured, whether by the user or enforced by their organization. Ordered ahead
         // of the row read because a user with no enabled providers resolves without a database call.
         if (organization?.TwoFactorIsEnabled() != true &&
             !await twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))

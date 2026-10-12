@@ -156,10 +156,6 @@ public class ValidateTwoFactorRememberTokenQueryTests
         Assert.True(await sutProvider.Sut.ValidateAsync(user, organization, _deviceIdentifier, _token));
     }
 
-    /// <summary>
-    /// An organization that does not enforce two-factor gives a user with none of their own no second
-    /// factor to stand in for.
-    /// </summary>
     [Theory, BitAutoData]
     public async Task ValidateAsync_OrgDoesNotEnforceTwoFactor_NoPersonalTwoFactor_ReturnsFalse(
         User user, Organization organization, Guid deviceId)
