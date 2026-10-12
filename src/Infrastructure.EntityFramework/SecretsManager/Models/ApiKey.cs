@@ -2,12 +2,14 @@
 #nullable disable
 
 using AutoMapper;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 
 namespace Bit.Infrastructure.EntityFramework.SecretsManager.Models;
 
 public class ApiKey : Core.SecretsManager.Entities.ApiKey
 {
     public virtual ServiceAccount ServiceAccount { get; set; }
+    public virtual Organization Organization { get; set; }
 }
 
 public class ApiKeyMapperProfile : Profile

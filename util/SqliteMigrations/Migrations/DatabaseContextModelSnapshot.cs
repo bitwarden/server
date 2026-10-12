@@ -3126,7 +3126,6 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("EncryptedPayload")
-                        .IsRequired()
                         .HasMaxLength(4000)
                         .HasColumnType("TEXT");
 
@@ -3134,12 +3133,14 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Key")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("OrganizationId")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")
@@ -3156,10 +3157,16 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasKey("Id")
                         .HasAnnotation("SqlServer:Clustered", true);
 
+                    b.HasIndex("OrganizationId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
                     b.HasIndex("ServiceAccountId")
                         .HasAnnotation("SqlServer:Clustered", false);
 
-                    b.ToTable("ApiKey", (string)null);
+                    b.ToTable("ApiKey", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ApiKey_SingleOwner", "\"ServiceAccountId\" IS NULL OR \"OrganizationId\" IS NULL");
+                        });
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Project", b =>
@@ -4326,9 +4333,15 @@ namespace Bit.SqliteMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ApiKey", b =>
                 {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId");
+
                     b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", "ServiceAccount")
                         .WithMany("ApiKeys")
                         .HasForeignKey("ServiceAccountId");
+
+                    b.Navigation("Organization");
 
                     b.Navigation("ServiceAccount");
                 });

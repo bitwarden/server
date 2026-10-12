@@ -21,7 +21,9 @@ public class CreateAccessTokenCommand : ICreateAccessTokenCommand
 
     public async Task<ApiKeyClientSecretDetails> CreateAsync(ApiKey apiKey)
     {
-        if (apiKey.ServiceAccountId == null)
+        if (apiKey.ServiceAccountId == null
+            || string.IsNullOrEmpty(apiKey.EncryptedPayload)
+            || string.IsNullOrEmpty(apiKey.Key))
         {
             throw new BadRequestException();
         }

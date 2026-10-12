@@ -10,6 +10,7 @@ public class ApiKey : ITableObject<Guid>
 {
     public Guid Id { get; set; }
     public Guid? ServiceAccountId { get; set; }
+    public Guid? OrganizationId { get; set; }
     [MaxLength(200)]
     public required string Name { get; set; }
     [MaxLength(128)]
@@ -17,9 +18,9 @@ public class ApiKey : ITableObject<Guid>
     [MaxLength(4000)]
     public required string Scope { get; set; }
     [MaxLength(4000)]
-    public required string EncryptedPayload { get; set; }
+    public string? EncryptedPayload { get; set; }
     // Key for decrypting `EncryptedPayload`. Encrypted using the organization key.
-    public required string Key { get; set; }
+    public string? Key { get; set; }
     public DateTime? ExpireAt { get; set; }
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
