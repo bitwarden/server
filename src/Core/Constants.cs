@@ -312,6 +312,11 @@ public static partial class FeatureFlagKeys
     /// </summary>
     public const string PamDisableSqlAuditLogging = "pm-42480-disable-pam-sql-audit-logging";
 
+    /// <summary>
+    /// Kill switch for the partial-cipher write guard. Turning it on lets partial-shaped cipher writes through again.
+    /// </summary>
+    public const string PamDisablePartialCipherWriteGuard = "pam-317-disable-partial-cipher-write-guard";
+
     /* VFO */
     public const string VFO1Foundation = "vfo1-foundation";
 
