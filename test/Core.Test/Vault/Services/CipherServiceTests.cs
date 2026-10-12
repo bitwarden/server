@@ -2955,6 +2955,36 @@ public class CipherServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task SaveDetailsAsync_PartialShapedWrite_RefusedBeforeTheLeaseGateAndNotPersisted(
+        SutProvider<CipherService> sutProvider, CipherDetails cipher)
+    {
+        // The guard's 400 explains the refusal; the gate's 404 would not.
+        cipher.OrganizationId = null;
+        RefusesMutation(sutProvider);
+        sutProvider.GetDependency<IPartialCipherWriteGuard>()
+            .EnsureNotPartialShapedAsync(cipher)
+            .ThrowsAsync(new BadRequestException("partial-shaped"));
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SaveDetailsAsync(cipher, cipher.UserId!.Value, null));
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .DidNotReceiveWithAnyArgs().ReplaceAsync(default(CipherDetails)!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_SkipPermissionCheck_StillConsultsThePartialGuard(
+        SutProvider<CipherService> sutProvider, Cipher cipher)
+    {
+        // Admin saves skip the lease gate, not the partial-shape check.
+        cipher.OrganizationId = null;
+
+        await sutProvider.Sut.SaveAsync(cipher, cipher.UserId!.Value, null, skipPermissionCheck: true);
+
+        await sutProvider.GetDependency<IPartialCipherWriteGuard>().Received(1).EnsureNotPartialShapedAsync(cipher);
+    }
+
+    [Theory, BitAutoData]
     public async Task DeleteAsync_GatedCipher_ThrowsAndDoesNotDelete(
         SutProvider<CipherService> sutProvider, CipherDetails cipher, Guid deletingUserId)
     {
