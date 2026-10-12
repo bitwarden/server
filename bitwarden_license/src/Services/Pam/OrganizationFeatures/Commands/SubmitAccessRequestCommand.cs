@@ -15,9 +15,6 @@ namespace Bit.Services.Pam.OrganizationFeatures.Commands;
 
 public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
 {
-    /// <summary>
-    /// The global maximum lease duration; see <see cref="LeaseDurationBounds"/>.
-    /// </summary>
     public const int MaxDurationSeconds = LeaseDurationBounds.GlobalMaxSeconds;
 
     private readonly ICipherRepository _cipherRepository;
@@ -26,6 +23,9 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
     private readonly ICurrentContext _currentContext;
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IAccessRequestRepository _accessRequestRepository;
+    private readonly IApproverInboxNotifier _approverInboxNotifier;
+    private readonly IApproverMailNotifier _approverMailNotifier;
+    private readonly IRequesterNotifier _requesterNotifier;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
@@ -36,6 +36,9 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         ICurrentContext currentContext,
         IAccessLeaseRepository accessLeaseRepository,
         IAccessRequestRepository accessRequestRepository,
+        IApproverInboxNotifier approverInboxNotifier,
+        IApproverMailNotifier approverMailNotifier,
+        IRequesterNotifier requesterNotifier,
         IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
@@ -45,6 +48,9 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         _currentContext = currentContext;
         _accessLeaseRepository = accessLeaseRepository;
         _accessRequestRepository = accessRequestRepository;
+        _approverInboxNotifier = approverInboxNotifier;
+        _approverMailNotifier = approverMailNotifier;
+        _requesterNotifier = requesterNotifier;
         _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
@@ -108,7 +114,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
             throw new BadRequestException("A positive duration is required.");
         }
 
-        // Activation mints exactly this window, so the cap is enforced here.
+        // Activation does not re-check the cap, so it is enforced here.
         var maxDurationSeconds = LeaseDurationBounds.EffectiveMax(governingRule.MaxLeaseDurationSeconds);
         if (durationSeconds > maxDurationSeconds)
         {
@@ -176,6 +182,8 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
         await _accessAuditEventEmitter.EmitAsync(approvalAudit with { Phase = AccessAuditEventPhase.Outcome });
+
+        await _requesterNotifier.NotifyRequesterAsync(userId);
 
         return AccessRequestResult.Automatic(request, decision);
     }
@@ -249,6 +257,10 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
 
         await _accessAuditEventEmitter.EmitAsync(
             audit with { Phase = AccessAuditEventPhase.Outcome, AccessRequestId = created.Id });
+
+        await _approverInboxNotifier.NotifyCollectionApproversAsync(created.CollectionId);
+        await _approverMailNotifier.NotifyPendingRequestAsync(created);
+        await _requesterNotifier.NotifyRequesterAsync(userId);
 
         return AccessRequestResult.Human(created);
     }
