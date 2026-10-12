@@ -10,45 +10,29 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Auth.UserFeatures.UserMasterPassword;
 
-public class SetInitialMasterPasswordCommandV1 : ISetInitialMasterPasswordCommandV1
+public class SetInitialMasterPasswordCommandV1(
+    ILogger<SetInitialMasterPasswordCommandV1> logger,
+    IdentityErrorDescriber identityErrorDescriber,
+    IUserService userService,
+    IUserRepository userRepository,
+    IEventService eventService,
+    IAcceptOrgUserCommand acceptOrgUserCommand,
+    IOrganizationUserRepository organizationUserRepository,
+    IOrganizationRepository organizationRepository) : ISetInitialMasterPasswordCommandV1
 {
-    private readonly ILogger<SetInitialMasterPasswordCommandV1> _logger;
-    private readonly IdentityErrorDescriber _identityErrorDescriber;
-    private readonly IUserService _userService;
-    private readonly IUserRepository _userRepository;
-    private readonly IEventService _eventService;
-    private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IOrganizationRepository _organizationRepository;
-
-
-    public SetInitialMasterPasswordCommandV1(
-        ILogger<SetInitialMasterPasswordCommandV1> logger,
-        IdentityErrorDescriber identityErrorDescriber,
-        IUserService userService,
-        IUserRepository userRepository,
-        IEventService eventService,
-        IAcceptOrgUserCommand acceptOrgUserCommand,
-        IOrganizationUserRepository organizationUserRepository,
-        IOrganizationRepository organizationRepository)
-    {
-        _logger = logger;
-        _identityErrorDescriber = identityErrorDescriber;
-        _userService = userService;
-        _userRepository = userRepository;
-        _eventService = eventService;
-        _acceptOrgUserCommand = acceptOrgUserCommand;
-        _organizationUserRepository = organizationUserRepository;
-        _organizationRepository = organizationRepository;
-    }
+    private readonly ILogger<SetInitialMasterPasswordCommandV1> _logger = logger;
+    private readonly IdentityErrorDescriber _identityErrorDescriber = identityErrorDescriber;
+    private readonly IUserService _userService = userService;
+    private readonly IUserRepository _userRepository = userRepository;
+    private readonly IEventService _eventService = eventService;
+    private readonly IOrganizationUserRepository _organizationUserRepository = organizationUserRepository;
+    private readonly IAcceptOrgUserCommand _acceptOrgUserCommand = acceptOrgUserCommand;
+    private readonly IOrganizationRepository _organizationRepository = organizationRepository;
 
     public async Task<IdentityResult> SetInitialMasterPasswordAsync(User user, string masterPassword, string key,
-        string orgSsoIdentifier)
+        string orgSsoIdentifier, bool acceptOrganizationInvite = true)
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+        ArgumentNullException.ThrowIfNull(user);
 
         if (!string.IsNullOrWhiteSpace(user.MasterPassword))
         {
@@ -68,36 +52,26 @@ public class SetInitialMasterPasswordCommandV1 : ISetInitialMasterPasswordComman
         await _userRepository.ReplaceAsync(user);
         await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
 
-
         if (string.IsNullOrWhiteSpace(orgSsoIdentifier))
         {
             throw new BadRequestException("Organization SSO Identifier required.");
         }
 
-        var org = await _organizationRepository.GetByIdentifierAsync(orgSsoIdentifier);
+        var org = await _organizationRepository.GetByIdentifierAsync(orgSsoIdentifier)
+            ?? throw new BadRequestException("Organization invalid.");
 
-        if (org == null)
-        {
-            throw new BadRequestException("Organization invalid.");
-        }
-
-        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, user.Id);
-
-        if (orgUser == null)
-        {
-            throw new BadRequestException("User not found within organization.");
-        }
+        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, user.Id)
+            ?? throw new BadRequestException("User not found within organization.");
 
         // TDE users who go from a user without admin acct recovery permission to having it will be
         // required to set a MP for the first time and we don't want to re-execute the accept logic
         // as they are already confirmed.
         // TLDR: only accept post SSO user if they are invited
-        if (orgUser.Status == OrganizationUserStatusType.Invited)
+        if (acceptOrganizationInvite && orgUser.Status == OrganizationUserStatusType.Invited)
         {
             await _acceptOrgUserCommand.AcceptOrgUserAsync(orgUser, user, _userService);
         }
 
         return IdentityResult.Success;
     }
-
 }
