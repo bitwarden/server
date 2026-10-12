@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Entities;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
@@ -9,38 +10,26 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 /// <summary>
 /// See <see cref="IGetOrganizationInviteValidator"/>.
 /// </summary>
-public class GetOrganizationInviteValidator(
-    IInviteLinkEligibilityValidator inviteLinkEligibilityValidator,
-    IAcceptInviteLinkMembershipStatusValidator acceptInviteLinkMembershipStatusValidator,
-    IConfirmInviteLinkMembershipStatusValidator confirmInviteLinkMembershipStatusValidator)
-    : IGetOrganizationInviteValidator
+public class GetOrganizationInviteValidator : IGetOrganizationInviteValidator
 {
     public Task<ValidationResult<OrganizationInviteLinkValidationRequest>> ValidateAsync(
         OrganizationInviteLinkValidationRequest request)
     {
-        var user = request.User;
-        var existingOrganizationUser = request.ExistingOrganizationUser;
-
-        var eligibilityResult = inviteLinkEligibilityValidator.Validate(new InviteLinkEligibilityValidationRequest
+        var eligibilityError = InviteLinkRules.ValidateEligibility(
+            request.InviteLink, request.Code, request.Organization, request.User);
+        if (eligibilityError is not null)
         {
-            InviteLink = request.InviteLink,
-            Code = request.Code,
-            Organization = request.Organization,
-            User = user,
-        });
-        if (eligibilityResult.IsError)
-        {
-            return Task.FromResult(Invalid(request, eligibilityResult.AsError));
+            return Task.FromResult(Invalid(request, eligibilityError));
         }
 
         // The eligibility check guarantees both exist.
         var validLink = request.InviteLink!;
         var validOrganization = request.Organization!;
 
-        var membershipStatusResult = ValidateMembershipStatus(validLink, validOrganization, existingOrganizationUser);
-        if (membershipStatusResult.IsError)
+        var membershipStatusError = ValidateMembershipStatus(validLink, validOrganization, request.ExistingOrganizationUser);
+        if (membershipStatusError is not null)
         {
-            return Task.FromResult(Invalid(request, membershipStatusResult.AsError));
+            return Task.FromResult(Invalid(request, membershipStatusError));
         }
 
         return Task.FromResult(Valid(request));
@@ -49,20 +38,9 @@ public class GetOrganizationInviteValidator(
     /// <summary>
     /// The existing membership must allow the step the link leads to: confirming, or accepting.
     /// </summary>
-    private ValidationResult<InviteLinkMembershipStatusValidationRequest> ValidateMembershipStatus(
-        OrganizationInviteLink inviteLink, Organization organization, OrganizationUser? existingOrganizationUser)
-    {
-        var request = new InviteLinkMembershipStatusValidationRequest
-        {
-            Organization = organization,
-            ExistingOrganizationUser = existingOrganizationUser,
-        };
-
-        if (inviteLink.SupportsConfirmation)
-        {
-            return confirmInviteLinkMembershipStatusValidator.Validate(request);
-        }
-
-        return acceptInviteLinkMembershipStatusValidator.Validate(request);
-    }
+    private static Error? ValidateMembershipStatus(
+        OrganizationInviteLink inviteLink, Organization organization, OrganizationUser? existingOrganizationUser) =>
+        inviteLink.SupportsConfirmation
+            ? InviteLinkRules.ValidateConfirmMembershipStatus(organization, existingOrganizationUser)
+            : InviteLinkRules.ValidateAcceptMembershipStatus(organization, existingOrganizationUser);
 }
