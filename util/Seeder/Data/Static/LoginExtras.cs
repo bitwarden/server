@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using System.Text;
+﻿using System.Text;
 using Bit.Seeder.Models;
 
 namespace Bit.Seeder.Data.Static;
@@ -11,7 +10,7 @@ internal static class LoginExtras
 {
     private static readonly string[] _noteLines =
     [
-        "Shared account owned by the {0} team. Ask before changing the password.",
+        "Shared account owned by the {team} team. Ask before changing the password.",
         "Renewal is handled by procurement; contract number is in the vendor folder.",
         "MFA device is the team phone kept in the IT cabinet.",
         "Use the SSO button first; this local login is the break-glass fallback.",
@@ -19,7 +18,7 @@ internal static class LoginExtras
         "Support contact: vendor portal, priority 2. Account manager changes yearly.",
         "Do not use for production changes without a ticket.",
         "Recovery codes were printed and stored with the facilities safe.",
-        "Read-only reporting user. Requests for write access go through the {0} lead.",
+        "Read-only reporting user. Requests for write access go through the {team} lead.",
         "Billing alerts go to the shared mailbox, not to individuals.",
         "Legacy integration still points here; migration is tracked in the backlog.",
         "Security questions are set to random values stored in the custom fields."
@@ -45,7 +44,7 @@ internal static class LoginExtras
         var text = new StringBuilder(targetLength + 120);
         for (var line = 0; text.Length < targetLength; line++)
         {
-            text.AppendFormat(CultureInfo.InvariantCulture, _noteLines[(index + line) % _noteLines.Length], team).Append('\n');
+            text.Append(_noteLines[(index + line) % _noteLines.Length].Replace("{team}", team)).Append('\n');
         }
         return text.ToString().TrimEnd();
     }

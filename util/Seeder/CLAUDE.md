@@ -98,7 +98,7 @@ Steps accept an optional `DensityProfile` that controls relationship patterns be
 
 ## Access Shape
 
-A preset with an `accessShape` block (the `scale.xl-migrated-*` presets) replaces the density group, collection and
+A preset with an `accessShape` block (the `scale.*-migrated-*` presets) replaces the density group, collection and
 cipher-assignment algorithms with `CreateShapedGroupsStep` and `CreateShapedCollectionsStep`; `myItems` and `policies`
 add `CreateMyItemsStep` and `CreatePoliciesStep`. Rules `PresetValidator` enforces:
 

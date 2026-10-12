@@ -35,12 +35,9 @@ internal static class LoginCipherSeeder
     /// </summary>
     internal static void AddUriChecksums(LoginViewDto? login)
     {
-        foreach (var uri in login?.Uris ?? [])
+        foreach (var uri in (login?.Uris ?? []).Where(u => u.Uri is not null && u.UriChecksum is null))
         {
-            if (uri.Uri is not null && uri.UriChecksum is null)
-            {
-                uri.UriChecksum = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(uri.Uri)));
-            }
+            uri.UriChecksum = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(uri.Uri!)));
         }
     }
 
