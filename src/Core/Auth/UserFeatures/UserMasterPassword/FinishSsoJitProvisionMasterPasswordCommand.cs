@@ -9,36 +9,28 @@ using Bit.Core.Services;
 
 namespace Bit.Core.Auth.UserFeatures.UserMasterPassword;
 
-public class FinishSsoJitProvisionMasterPasswordCommand : IFinishSsoJitProvisionMasterPasswordCommand
+public class FinishSsoJitProvisionMasterPasswordCommand(
+    IUserRepository userRepository,
+    IUserService userService,
+    IMasterPasswordService masterPasswordService,
+    IOrganizationUserRepository organizationUserRepository,
+    IOrganizationRepository organizationRepository,
+    IEventService eventService,
+    IAcceptOrgUserCommand acceptOrgUserCommand) : IFinishSsoJitProvisionMasterPasswordCommand
 {
-    private readonly IUserService _userService;
-    private readonly IUserRepository _userRepository;
-    private readonly IMasterPasswordService _masterPasswordService;
-    private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IOrganizationRepository _organizationRepository;
-    private readonly IEventService _eventService;
+    private readonly IUserRepository _userRepository = userRepository;
+    private readonly IUserService _userService = userService;
+    private readonly IMasterPasswordService _masterPasswordService = masterPasswordService;
+    private readonly IOrganizationUserRepository _organizationUserRepository = organizationUserRepository;
+    private readonly IOrganizationRepository _organizationRepository = organizationRepository;
+    private readonly IEventService _eventService = eventService;
+    private readonly IAcceptOrgUserCommand _acceptOrgUserCommand = acceptOrgUserCommand;
 
-    public FinishSsoJitProvisionMasterPasswordCommand(
-        IUserService userService,
-        IUserRepository userRepository,
-        IMasterPasswordService masterPasswordService,
-        IAcceptOrgUserCommand acceptOrgUserCommand,
-        IOrganizationUserRepository organizationUserRepository,
-        IOrganizationRepository organizationRepository,
-        IEventService eventService)
-    {
-        _userService = userService;
-        _userRepository = userRepository;
-        _masterPasswordService = masterPasswordService;
-        _acceptOrgUserCommand = acceptOrgUserCommand;
-        _organizationUserRepository = organizationUserRepository;
-        _organizationRepository = organizationRepository;
-        _eventService = eventService;
-    }
-
-    public async Task FinishProvisionAsync(User user,
-        SetInitialMasterPasswordDataModel masterPasswordDataModel)
+    /// <inheritdoc/>
+    public async Task FinishProvisionAsync(
+        User user,
+        SetInitialMasterPasswordDataModel masterPasswordDataModel,
+        bool acceptOrganizationInvite = true)
     {
         if (user.Key != null)
         {
@@ -50,17 +42,11 @@ public class FinishSsoJitProvisionMasterPasswordCommand : IFinishSsoJitProvision
             throw new BadRequestException("Account keys are required.");
         }
 
-        var org = await _organizationRepository.GetByIdentifierAsync(masterPasswordDataModel.OrgSsoIdentifier);
-        if (org == null)
-        {
-            throw new BadRequestException("Organization SSO identifier is invalid.");
-        }
+        var org = await _organizationRepository.GetByIdentifierAsync(masterPasswordDataModel.OrgSsoIdentifier)
+            ?? throw new BadRequestException("Organization SSO identifier is invalid.");
 
-        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, user.Id);
-        if (orgUser == null)
-        {
-            throw new BadRequestException("User not found within organization.");
-        }
+        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, user.Id)
+            ?? throw new BadRequestException("User not found within organization.");
 
         var updateUserDataTasks = new List<UpdateUserData>
         {
@@ -80,6 +66,9 @@ public class FinishSsoJitProvisionMasterPasswordCommand : IFinishSsoJitProvision
 
         await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
 
-        await _acceptOrgUserCommand.AcceptOrgUserAsync(orgUser, user, _userService);
+        if (acceptOrganizationInvite)
+        {
+            await _acceptOrgUserCommand.AcceptOrgUserAsync(orgUser, user, _userService);
+        }
     }
 }
