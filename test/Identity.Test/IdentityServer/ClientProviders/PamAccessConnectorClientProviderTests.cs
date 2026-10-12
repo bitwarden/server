@@ -123,7 +123,7 @@ public class PamAccessConnectorClientProviderTests
         Assert.True(client.RequireClientSecret);
         Assert.Single(client.ClientSecrets);
         var scope = Assert.Single(client.AllowedScopes);
-        Assert.Equal(ApiScopes.ApiPamRotation, scope);
+        Assert.Equal(ApiScopes.ApiPamCredentialRotation, scope);
         Assert.Equal(GrantTypes.ClientCredentials, client.AllowedGrantTypes);
         Assert.Equal(TimeSpan.FromMinutes(15).TotalSeconds, client.AccessTokenLifetime);
         Assert.Null(client.ClientClaimsPrefix);
@@ -156,7 +156,7 @@ public class PamAccessConnectorClientProviderTests
         ServiceAccountId = null,
         Name = "access-connector-credential",
         ClientSecretHash = "hashed-secret",
-        Scope = $"[\"{ApiScopes.ApiPamRotation}\"]",
+        Scope = $"[\"{ApiScopes.ApiPamCredentialRotation}\"]",
         EncryptedPayload = "encrypted-payload",
         Key = "2.key|data|mac",
         ExpireAt = expireAt,
