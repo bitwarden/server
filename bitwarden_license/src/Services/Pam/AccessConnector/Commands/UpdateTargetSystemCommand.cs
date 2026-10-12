@@ -7,14 +7,14 @@ using Bit.Services.Pam.Services;
 
 namespace Bit.Services.Pam.AccessConnector.Commands;
 
-/// <inheritdoc cref="IRenameTargetSystemCommand" />
-public class RenameTargetSystemCommand : IRenameTargetSystemCommand
+/// <inheritdoc cref="IUpdateTargetSystemCommand" />
+public class UpdateTargetSystemCommand : IUpdateTargetSystemCommand
 {
     private readonly IPamTargetSystemRepository _targetSystemRepository;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
-    public RenameTargetSystemCommand(
+    public UpdateTargetSystemCommand(
         IPamTargetSystemRepository targetSystemRepository,
         IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
@@ -24,11 +24,17 @@ public class RenameTargetSystemCommand : IRenameTargetSystemCommand
         _timeProvider = timeProvider;
     }
 
-    public async Task RenameAsync(Guid organizationId, Guid actingUserId, Guid targetSystemId, string name)
+    public async Task UpdateAsync(
+        Guid organizationId, Guid actingUserId, Guid targetSystemId, string name, string sealedData)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
             throw new BadRequestException("Name is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(sealedData))
+        {
+            throw new BadRequestException("Sealed data is required.");
         }
 
         var target = await _targetSystemRepository.GetByIdAsync(targetSystemId);
@@ -38,20 +44,24 @@ public class RenameTargetSystemCommand : IRenameTargetSystemCommand
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-
         var audit = new AccessAuditEventData
         {
-            Kind = AccessAuditEventKind.TargetSystemRenamed,
+            Kind = AccessAuditEventKind.TargetSystemUpdated,
             OccurredDate = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
             TargetSystemId = target.Id,
             TargetSystemName = name,
-            Detail = $"Renamed from '{target.Name}'.",
+            Detail = target.Name != name ? $"Renamed from '{target.Name}'." : null,
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
         target.Name = name;
+        target.SealedData = sealedData;
+        if (target.Status == PamTargetSystemStatus.PendingSeal)
+        {
+            target.Status = PamTargetSystemStatus.Active;
+        }
         target.RevisionDate = now;
         await _targetSystemRepository.ReplaceAsync(target);
 

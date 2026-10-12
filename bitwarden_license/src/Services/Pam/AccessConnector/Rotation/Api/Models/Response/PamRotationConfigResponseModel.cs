@@ -20,8 +20,7 @@ public class PamRotationConfigResponseModel : ResponseModel
         TargetSystemId = config.TargetSystemId;
         TargetSystemName = config.TargetSystemName;
         TargetSystemMethod = config.TargetSystemMethod;
-        AccountIdentity = config.AccountIdentity;
-        TerminateSessions = config.TerminateSessions;
+        SealedData = config.SealedData;
         ScheduleCron = config.ScheduleCron;
         RotateOnAccessEnd = config.RotateOnAccessEnd;
         NextRotationAt = config.NextRotationAt.AsUtc();
