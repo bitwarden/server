@@ -133,18 +133,18 @@ public static class Saml2OptionsExtensions
     {
         try
         {
-            if (!Saml2EncryptedAssertionInspector.UsesRsa15KeyTransport(envelope) ||
-                !Guid.TryParse(scheme, out var organizationId))
-            {
-                return;
-            }
-
             // This is checked again later inside the command which handles the notification.
             // A value of 0 means "no email is sent," not "send any number of emails without regard
             // for a cooldown." This stands in for a feature flag, and 
             // ensures notification also works for self-hosted instances.
             var globalSettings = context.RequestServices.GetRequiredService<IGlobalSettings>();
             if (globalSettings.Sso.Rsa15DeprecationEmailCooldownInDays <= 0)
+            {
+                return;
+            }
+
+            if (!Saml2EncryptedAssertionInspector.UsesRsa15KeyTransport(envelope) ||
+                !Guid.TryParse(scheme, out var organizationId))
             {
                 return;
             }
