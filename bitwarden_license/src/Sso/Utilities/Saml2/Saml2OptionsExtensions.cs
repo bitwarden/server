@@ -136,9 +136,12 @@ public static class Saml2OptionsExtensions
                 return;
             }
 
+            // This is checked again later inside the command which handles the notification.
+            // A value of 0 means "no email is sent," not "send any number of emails without regard
+            // for a cooldown." This stands in for a feature flag, and 
+            // ensures notification also works for self-hosted instances.
             var globalSettings = context.RequestServices.GetRequiredService<IGlobalSettings>();
-            var featureService = context.RequestServices.GetRequiredService<IFeatureService>();
-            if (!globalSettings.SelfHosted && !featureService.IsEnabled(FeatureFlagKeys.PM43819_Rsa15DeprecationEmail))
+            if (globalSettings.Sso.Rsa15DeprecationEmailCooldownInDays <= 0)
             {
                 return;
             }

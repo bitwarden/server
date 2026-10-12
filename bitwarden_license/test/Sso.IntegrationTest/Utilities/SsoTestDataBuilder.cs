@@ -66,7 +66,7 @@ public class SsoTestDataBuilder
     private bool _mockSendOrganizationInvitesCommand = false;
     private X509Certificate2? _samlSigningCertificate;
     private bool? _wantAssertionsSignedFlagEnabled;
-    private bool? _rsa15DeprecationEmailFlagEnabled;
+    private int _rsa15DeprecationEmailCooldownInDays = 7;
     private bool _mockMailer = false;
     private IMailDeliveryService? _mailDeliveryService;
 
@@ -181,12 +181,12 @@ public class SsoTestDataBuilder
     }
 
     /// <summary>
-    /// Enables the <see cref="FeatureFlagKeys.PM43819_Rsa15DeprecationEmail"/> feature flag for the test.
-    /// A cloud host sends the RSA 1.5 deprecation email only when this flag is on.
+    /// Sets the minimum number of days between RSA 1.5 deprecation emails to one organization.
+    /// A value of 0 or less turns the email off.
     /// </summary>
-    public SsoTestDataBuilder WithRsa15DeprecationEmailFlag(bool enabled = true)
+    public SsoTestDataBuilder WithRsa15DeprecationEmailCooldownInDays(int days)
     {
-        _rsa15DeprecationEmailFlagEnabled = enabled;
+        _rsa15DeprecationEmailCooldownInDays = days;
         return this;
     }
 
@@ -300,7 +300,7 @@ public class SsoTestDataBuilder
         factory.SubstituteService<IGlobalSettings>(globalSettings =>
         {
             globalSettings.SelfHosted.Returns(_isSelfHosted);
-            globalSettings.Sso.Rsa15DeprecationEmailCooldownInDays = 14;
+            globalSettings.Sso.Rsa15DeprecationEmailCooldownInDays = _rsa15DeprecationEmailCooldownInDays;
         });
 
         // 1.b Replace SamlEnvironment with a version that has a test SP signing certificate, if the test requests it
@@ -360,15 +360,13 @@ public class SsoTestDataBuilder
             });
         }
 
-        // 1.f Configure IFeatureService to reflect the feature flags the test requests. An unset flag is off.
-        if (_wantAssertionsSignedFlagEnabled.HasValue || _rsa15DeprecationEmailFlagEnabled.HasValue)
+        // 1.f Configure IFeatureService to reflect the feature flag the test requests. An unset flag is off.
+        if (_wantAssertionsSignedFlagEnabled.HasValue)
         {
             factory.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(svc =>
             {
                 svc.IsEnabled(FeatureFlagKeys.PM42982_WantAssertionsSigned)
                     .Returns(_wantAssertionsSignedFlagEnabled ?? false);
-                svc.IsEnabled(FeatureFlagKeys.PM43819_Rsa15DeprecationEmail)
-                    .Returns(_rsa15DeprecationEmailFlagEnabled ?? false);
             });
         }
 

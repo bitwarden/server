@@ -51,7 +51,7 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
         var userEmail = NewEmail("subject");
         using var arrangement = await ArrangeAsync(
             Saml2AcsPostHarness.BuildEncryptedAssertion(Rsa15) + Saml2AcsPostHarness.BuildSubjectAssertion(userEmail),
-            configure: MockedMailerWithFlagOn);
+            configure: b => b.WithMockedMailer());
         var (samlOptions, organizationId, context, factory) = arrangement;
 
         var ownerEmail = NewEmail("owner");
@@ -95,7 +95,7 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
     {
         // Arrange
         using var arrangement = await ArrangeAsync(
-            Saml2AcsPostHarness.BuildEncryptedAssertion(Rsa15), configure: MockedMailerWithFlagOn);
+            Saml2AcsPostHarness.BuildEncryptedAssertion(Rsa15), configure: b => b.WithMockedMailer());
         var (samlOptions, organizationId, context, factory) = arrangement;
         await SeedOrganizationUserAsync(
             factory, organizationId, OrganizationUserType.Owner, OrganizationUserStatusType.Confirmed, NewEmail("owner"));
@@ -120,7 +120,7 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
     {
         // Arrange
         using var arrangement = await ArrangeAsync(
-            Saml2AcsPostHarness.BuildEncryptedAssertion(Rsa15), configure: MockedMailerWithFlagOn);
+            Saml2AcsPostHarness.BuildEncryptedAssertion(Rsa15), configure: b => b.WithMockedMailer());
         var (samlOptions, organizationId, context, factory) = arrangement;
         await SeedOrganizationUserAsync(
             factory, organizationId, OrganizationUserType.Owner, OrganizationUserStatusType.Confirmed, NewEmail("owner"));
@@ -144,7 +144,7 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
     {
         // Arrange
         using var arrangement = await ArrangeAsync(
-            Saml2AcsPostHarness.BuildEncryptedAssertion(RsaOaepMgf1p), configure: MockedMailerWithFlagOn);
+            Saml2AcsPostHarness.BuildEncryptedAssertion(RsaOaepMgf1p), configure: b => b.WithMockedMailer());
         var (samlOptions, organizationId, context, factory) = arrangement;
         await SeedOrganizationUserAsync(
             factory, organizationId, OrganizationUserType.Owner, OrganizationUserStatusType.Confirmed, NewEmail("owner"));
@@ -166,7 +166,7 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
         // Arrange
         using var arrangement = await ArrangeAsync(
             "<saml:Assertion ID=\"_assertion\"><saml:Issuer>idp</saml:Issuer></saml:Assertion>",
-            configure: MockedMailerWithFlagOn);
+            configure: b => b.WithMockedMailer());
         var (samlOptions, organizationId, context, factory) = arrangement;
         await SeedOrganizationUserAsync(
             factory, organizationId, OrganizationUserType.Owner, OrganizationUserStatusType.Confirmed, NewEmail("owner"));
@@ -191,7 +191,7 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
         using var arrangement = await ArrangeAsync(
             Saml2AcsPostHarness.BuildEncryptedAssertion(Rsa15),
             issuer: "https://not-the-configured-idp.example.com",
-            configure: MockedMailerWithFlagOn);
+            configure: b => b.WithMockedMailer());
         var (samlOptions, organizationId, context, factory) = arrangement;
         await SeedOrganizationUserAsync(
             factory, organizationId, OrganizationUserType.Owner, OrganizationUserStatusType.Confirmed, NewEmail("owner"));
@@ -205,15 +205,15 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
     }
 
     /// <summary>
-    /// Posts an RSA 1.5 assertion to a cloud host with the feature flag off. It proves that the host sends no email.
+    /// Posts an RSA 1.5 assertion with an email send cooldown of 0 days. It proves that the host sends no email.
     /// </summary>
     [Fact]
-    public async Task CouldHandleAsync_CloudWithFlagOff_DoesNotSendEmail()
+    public async Task CouldHandleAsync_CooldownZero_DoesNotSendEmail()
     {
         // Arrange
         using var arrangement = await ArrangeAsync(
             Saml2AcsPostHarness.BuildEncryptedAssertion(Rsa15),
-            configure: b => b.WithMockedMailer().WithRsa15DeprecationEmailFlag(false));
+            configure: b => b.WithMockedMailer().WithRsa15DeprecationEmailCooldownInDays(0));
         var (samlOptions, organizationId, context, factory) = arrangement;
         await SeedOrganizationUserAsync(
             factory, organizationId, OrganizationUserType.Owner, OrganizationUserStatusType.Confirmed, NewEmail("owner"));
@@ -227,16 +227,15 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
     }
 
     /// <summary>
-    /// Posts an RSA 1.5 assertion to a self-hosted host with the feature flag off. It proves that
-    /// the host sends the email.
+    /// Posts an RSA 1.5 assertion to a self-hosted host. It proves that the host sends the email.
     /// </summary>
     [Fact]
-    public async Task CouldHandleAsync_SelfHostedWithFlagOff_SendsEmail()
+    public async Task CouldHandleAsync_SelfHosted_SendsEmail()
     {
         // Arrange
         using var arrangement = await ArrangeAsync(
             Saml2AcsPostHarness.BuildEncryptedAssertion(Rsa15),
-            configure: b => b.WithMockedMailer().WithRsa15DeprecationEmailFlag(false).AsSelfHosted());
+            configure: b => b.WithMockedMailer().AsSelfHosted());
         var (samlOptions, organizationId, context, factory) = arrangement;
         await SeedOrganizationUserAsync(
             factory, organizationId, OrganizationUserType.Owner, OrganizationUserStatusType.Confirmed, NewEmail("owner"));
@@ -258,7 +257,7 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
     {
         // Arrange
         using var arrangement = await ArrangeAsync(
-            Saml2AcsPostHarness.BuildEncryptedAssertion(Rsa15), configure: MockedMailerWithFlagOn);
+            Saml2AcsPostHarness.BuildEncryptedAssertion(Rsa15), configure: b => b.WithMockedMailer());
         var (samlOptions, organizationId, context, factory) = arrangement;
         await SeedOrganizationUserAsync(
             factory, organizationId, OrganizationUserType.Owner, OrganizationUserStatusType.Confirmed, NewEmail("owner"));
@@ -282,7 +281,7 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
     {
         // Arrange
         using var arrangement = await ArrangeAsync(
-            Saml2AcsPostHarness.BuildEncryptedAssertion(Rsa15), configure: MockedMailerWithFlagOn);
+            Saml2AcsPostHarness.BuildEncryptedAssertion(Rsa15), configure: b => b.WithMockedMailer());
         var (samlOptions, organizationId, context, factory) = arrangement;
         await SeedOrganizationUserAsync(
             factory, organizationId, OrganizationUserType.Owner, OrganizationUserStatusType.Confirmed, NewEmail("owner"));
@@ -343,7 +342,7 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
             new MailKitSmtpMailDeliveryService(globalSettings, NullLogger<MailKitSmtpMailDeliveryService>.Instance));
         using var arrangement = await ArrangeAsync(
             Saml2AcsPostHarness.BuildEncryptedAssertion(Rsa15),
-            configure: b => b.WithRsa15DeprecationEmailFlag().WithMailDeliveryService(deliveryService));
+            configure: b => b.WithMailDeliveryService(deliveryService));
         var (samlOptions, organizationId, context, factory) = arrangement;
 
         var ownerEmail = NewEmail("owner");
@@ -363,9 +362,6 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
             new[] { adminEmail, ownerEmail }.Order(StringComparer.OrdinalIgnoreCase),
             message.ToEmails.Order(StringComparer.OrdinalIgnoreCase));
     }
-
-    private static SsoTestDataBuilder MockedMailerWithFlagOn(SsoTestDataBuilder builder) =>
-        builder.WithMockedMailer().WithRsa15DeprecationEmailFlag();
 
     private static string NewEmail(string label) => $"{label}_{Guid.NewGuid()}@test.com";
 

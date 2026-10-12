@@ -271,24 +271,28 @@ public class Saml2OptionsExtensionsTests
         Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
     }
 
-    [Fact]
-    public async Task CouldHandleAsync_Rsa15CloudWithFlagOn_QueuesNoticeForTheSchemeOrganization()
+    [Theory]
+    [InlineData(7)]
+    [InlineData(1)]
+    public async Task CouldHandleAsync_Rsa15WithPositiveCooldown_QueuesNoticeForTheSchemeOrganization(int cooldownInDays)
     {
         var options = BuildOptions(wantAssertionsSigned: false);
         var testContext = BuildPostContext(
-            BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)), rsa15EmailFlagEnabled: true);
+            BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)), rsa15EmailCooldownInDays: cooldownInDays);
 
         Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
 
         testContext.Notifier.Received(1).TryQueue(OrganizationId);
     }
 
-    [Fact]
-    public async Task CouldHandleAsync_Rsa15CloudWithFlagOff_DoesNotQueueNotice()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task CouldHandleAsync_Rsa15WithCooldownZeroOrLess_DoesNotQueueNotice(int cooldownInDays)
     {
         var options = BuildOptions(wantAssertionsSigned: false);
         var testContext = BuildPostContext(
-            BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)), rsa15EmailFlagEnabled: false);
+            BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)), rsa15EmailCooldownInDays: cooldownInDays);
 
         Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
 
@@ -296,23 +300,11 @@ public class Saml2OptionsExtensionsTests
     }
 
     [Fact]
-    public async Task CouldHandleAsync_Rsa15SelfHostedWithFlagOff_QueuesNotice()
-    {
-        var options = BuildOptions(wantAssertionsSigned: false);
-        var testContext = BuildPostContext(
-            BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)), selfHosted: true, rsa15EmailFlagEnabled: false);
-
-        Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
-
-        testContext.Notifier.Received(1).TryQueue(OrganizationId);
-    }
-
-    [Fact]
     public async Task CouldHandleAsync_OaepAssertion_DoesNotQueueNotice()
     {
         var options = BuildOptions(wantAssertionsSigned: false);
         var testContext = BuildPostContext(
-            BuildResponseXml(BuildEncryptedAssertion(RsaOaep)), rsa15EmailFlagEnabled: true);
+            BuildResponseXml(BuildEncryptedAssertion(RsaOaep)));
 
         Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
 
@@ -324,8 +316,7 @@ public class Saml2OptionsExtensionsTests
     {
         var options = BuildOptions(wantAssertionsSigned: false);
         var testContext = BuildPostContext(
-            BuildResponseXml("<saml:Assertion ID=\"_assertion\"><saml:Issuer>idp</saml:Issuer></saml:Assertion>"),
-            rsa15EmailFlagEnabled: true);
+            BuildResponseXml("<saml:Assertion ID=\"_assertion\"><saml:Issuer>idp</saml:Issuer></saml:Assertion>"));
 
         Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
 
@@ -340,7 +331,7 @@ public class Saml2OptionsExtensionsTests
         // The scheme argument alone is not a Guid, and the query scheme does not match it, so the body is parsed.
         var options = BuildOptions(wantAssertionsSigned: false);
         var testContext = BuildPostContext(
-            BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)), rsa15EmailFlagEnabled: true);
+            BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)));
 
         Assert.True(await options.CouldHandleAsync("test-scheme", testContext.Context));
 
@@ -352,7 +343,7 @@ public class Saml2OptionsExtensionsTests
     {
         var options = BuildOptions(wantAssertionsSigned: false);
         var testContext = BuildPostContext(
-            BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)), rsa15EmailFlagEnabled: true);
+            BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)));
         testContext.Notifier.When(n => n.TryQueue(Arg.Any<Guid>()))
             .Do(_ => throw new InvalidOperationException("notifier failure"));
 
@@ -374,7 +365,7 @@ public class Saml2OptionsExtensionsTests
             unsignedAssertion.OuterXml, decryptionCertificate, EncryptedXml.XmlEncRSA15Url);
 
         var testContext = BuildPostContext(
-            BuildResponseXml(encryptedAssertionXml), featureFlagEnabled: true, rsa15EmailFlagEnabled: true);
+            BuildResponseXml(encryptedAssertionXml), featureFlagEnabled: true);
 
         var exception = await Assert.ThrowsAsync<Exception>(
             () => options.CouldHandleAsync(Scheme, testContext.Context));
@@ -462,9 +453,9 @@ public class Saml2OptionsExtensionsTests
 
     // CouldHandleAsync resolves the PM42982_WantAssertionsSigned feature flag (when WantAssertionsSigned is true)
     // from the request services.
-    // It also resolves the global settings, the PM43819_Rsa15DeprecationEmail feature flag, and the RSA 1.5 notifier.
+    // It also resolves the global settings (for the RSA 1.5 email cooldown) and the RSA 1.5 notifier.
     private static PostTestContext BuildPostContext(string responseXml, bool featureFlagEnabled = true,
-        bool selfHosted = false, bool rsa15EmailFlagEnabled = false)
+        int rsa15EmailCooldownInDays = 7)
     {
         var context = BuildRawPostContext(responseXml);
 
@@ -472,11 +463,10 @@ public class Saml2OptionsExtensionsTests
 
         var featureService = Substitute.For<IFeatureService>();
         featureService.IsEnabled(FeatureFlagKeys.PM42982_WantAssertionsSigned).Returns(featureFlagEnabled);
-        featureService.IsEnabled(FeatureFlagKeys.PM43819_Rsa15DeprecationEmail).Returns(rsa15EmailFlagEnabled);
         services.AddSingleton(featureService);
 
         var globalSettings = Substitute.For<IGlobalSettings>();
-        globalSettings.SelfHosted.Returns(selfHosted);
+        globalSettings.Sso.Rsa15DeprecationEmailCooldownInDays.Returns(rsa15EmailCooldownInDays);
         services.AddSingleton(globalSettings);
 
         var notifier = Substitute.For<ISaml2Rsa15DeprecationNotifier>();
