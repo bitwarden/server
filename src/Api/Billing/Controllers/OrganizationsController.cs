@@ -77,9 +77,13 @@ public class OrganizationsController(
 
         var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
+        int? occupiedPamSeats = organization.UsePam
+            ? await organizationUserRepository.GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id)
+            : null;
+
         if (string.IsNullOrEmpty(organization.GatewaySubscriptionId))
         {
-            return new OrganizationSubscriptionResponseModel(organization, plan);
+            return new OrganizationSubscriptionResponseModel(organization, plan, occupiedPamSeats);
         }
 
         var subscriptionInfo = await paymentService.GetSubscriptionAsync(organization);
@@ -97,7 +101,7 @@ public class OrganizationsController(
             : await getPendingAnnualUpgradeQuery.Run(organization);
 
         return new OrganizationSubscriptionResponseModel(
-            organization, subscriptionInfo, plan, hideSensitiveData, pendingAnnualUpgrade);
+            organization, subscriptionInfo, plan, hideSensitiveData, pendingAnnualUpgrade, occupiedPamSeats);
     }
 
     [HttpGet("{id:guid}/license")]
