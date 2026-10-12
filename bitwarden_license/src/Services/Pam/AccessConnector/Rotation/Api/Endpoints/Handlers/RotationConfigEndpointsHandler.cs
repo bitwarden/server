@@ -20,8 +20,7 @@ public class RotationConfigEndpointsHandler(
     IPamRotationConfigRepository configRepository,
     IGetRotationConfigDetailsQuery getRotationConfigDetailsQuery,
     ICreateRotationConfigCommand createRotationConfigCommand,
-    IUpdateRotationSettingsCommand updateRotationSettingsCommand,
-    ISealRotationConfigCommand sealRotationConfigCommand,
+    IUpdateRotationConfigCommand updateRotationConfigCommand,
     IPauseRotationCommand pauseRotationCommand,
     IResumeRotationCommand resumeRotationCommand,
     ITriggerRotationCommand triggerRotationCommand,
@@ -55,13 +54,11 @@ public class RotationConfigEndpointsHandler(
         return await GetDetailAsync(orgId, created.Id);
     }
 
-    /// <remarks>Fans out to the seal and settings commands, seal first since its guards are stricter.</remarks>
     public async Task<PamRotationConfigDetailResponseModel> Put(
         Guid orgId, Guid id, UpdateRotationConfigRequestModel model)
     {
-        await sealRotationConfigCommand.SealAsync(orgId, currentContext.UserId!.Value, id, model.SealedData);
-        var updated = await updateRotationSettingsCommand.UpdateAsync(
-            orgId, currentContext.UserId!.Value, id, model.ScheduleCron, model.RotateOnAccessEnd);
+        var updated = await updateRotationConfigCommand.UpdateAsync(
+            orgId, currentContext.UserId!.Value, id, model.SealedData, model.ScheduleCron, model.RotateOnAccessEnd);
         return await GetDetailAsync(orgId, updated.Id);
     }
 

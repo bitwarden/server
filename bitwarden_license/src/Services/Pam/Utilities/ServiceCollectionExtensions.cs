@@ -114,12 +114,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUnassignAccessConnectorFromTargetCommand, UnassignAccessConnectorFromTargetCommand>();
         services.AddScoped<IRegisterTargetSystemCommand, RegisterTargetSystemCommand>();
         services.AddScoped<ISetTargetSystemStatusCommand, SetTargetSystemStatusCommand>();
-        services.AddScoped<IRenameTargetSystemCommand, RenameTargetSystemCommand>();
-        services.AddScoped<ISealTargetSystemCommand, SealTargetSystemCommand>();
+        services.AddScoped<IUpdateTargetSystemCommand, UpdateTargetSystemCommand>();
         services.AddScoped<IDeleteTargetSystemCommand, DeleteTargetSystemCommand>();
         services.AddScoped<ICreateRotationConfigCommand, CreateRotationConfigCommand>();
-        services.AddScoped<IUpdateRotationSettingsCommand, UpdateRotationSettingsCommand>();
-        services.AddScoped<ISealRotationConfigCommand, SealRotationConfigCommand>();
+        services.AddScoped<IUpdateRotationConfigCommand, UpdateRotationConfigCommand>();
         services.AddScoped<IPauseRotationCommand, PauseRotationCommand>();
         services.AddScoped<IResumeRotationCommand, ResumeRotationCommand>();
         services.AddScoped<IDeleteRotationConfigCommand, DeleteRotationConfigCommand>();

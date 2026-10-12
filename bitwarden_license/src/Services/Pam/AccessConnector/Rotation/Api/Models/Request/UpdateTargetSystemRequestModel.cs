@@ -2,7 +2,7 @@
 
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Request;
 
-/// <summary>The updatable shape of a target system (spec <c>SealTargetSystem</c>).</summary>
+/// <summary>The updatable shape of a target system (spec <c>UpdateTargetSystem</c>).</summary>
 public class UpdateTargetSystemRequestModel
 {
     [Required]

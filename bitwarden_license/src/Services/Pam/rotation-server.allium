@@ -182,7 +182,7 @@ enum FailureSyncState { target_unchanged | target_updated | indeterminate }
 -- distinct from ConnectorRegistration's (enrolled|revoked) so untyped trigger-param inference
 -- stays unambiguous.
 --
--- Registration is two-phase (RegisterTargetSystem then SealTargetSystem) because the sealed
+-- Registration is two-phase (RegisterTargetSystem then UpdateTargetSystem) because the sealed
 -- blob must bind the target's own server-assigned id (TargetSystemSealedV1.target_system_id,
 -- checked by the access connector against the claim -- see pam-rotation-sealed-config-plan.md).
 -- TargetSystemsClient::create hides both calls behind one admin-client method.
@@ -202,10 +202,10 @@ entity TargetSystem {
     -- pending_seal. See pam-rotation-sealed-config-plan.md.
     sealed_data: String when status = active | disabled
     -- pending_seal   : registered (name, method) but not yet sealed -- not rotatable, not
-    --                  offered, not enable/disable-able. SealTargetSystem is the only exit.
+    --                  offered, not enable/disable-able. UpdateTargetSystem is the only exit.
     -- active/disabled: enable/disable the whole target; a disabled system stops new
     --                  rotations being offered for all of its credentials (jobs already
-    --                  claimed are unaffected). Re-sealing (SealTargetSystem) does not
+    --                  claimed are unaffected). Re-sealing (UpdateTargetSystem) does not
     --                  change status: a disabled target stays disabled when re-sealed.
     status: active | disabled | pending_seal
 
@@ -643,7 +643,7 @@ rule RegisterTargetSystem {
         -- Phase 1 of two-phase registration (TargetSystemsClient::create hides both calls
         -- behind one admin-client method). The server no longer collects kind, a password
         -- policy or a session-termination capability at registration -- those are sealed
-        -- client-side (TargetSystemSealedV1) and supplied by SealTargetSystem, phase 2.
+        -- client-side (TargetSystemSealedV1) and supplied by UpdateTargetSystem, phase 2.
         -- The row starts pending_seal: not rotatable, not offered, not enable/disable-able
         -- (see TargetSystem.status) until sealed. If phase 2 fails the admin UI offers
         -- finish (seal again) or delete; there is no server-side sweep of abandoned
@@ -652,11 +652,12 @@ rule RegisterTargetSystem {
 }
 
 rule CompleteTargetSystemSeal {
-    when: SealTargetSystem(target_system, sealed_data)
+    when: UpdateTargetSystem(target_system, name, sealed_data)
     requires: target_system.status = pending_seal
+    ensures: target_system.name = name
     ensures: target_system.sealed_data = sealed_data
     ensures: target_system.status = active
-    ensures: AdministrationAudited(operation: target_sealed, target_system: target_system)
+    ensures: AdministrationAudited(operation: target_updated, target_system: target_system)
     @guidance
         -- Phase 2 of two-phase registration, and the only transition out of pending_seal
         -- (TargetSystem.status). The admin's client seals TargetSystemSealedV1 (the target's
@@ -666,17 +667,32 @@ rule CompleteTargetSystemSeal {
 }
 
 rule ReSealTargetSystem {
-    when: SealTargetSystem(target_system, sealed_data)
+    when: UpdateTargetSystem(target_system, name, sealed_data)
     requires: target_system.status in {active, disabled}
+    ensures: target_system.name = name
     ensures: target_system.sealed_data = sealed_data
-    ensures: AdministrationAudited(operation: target_sealed, target_system: target_system)
+    ensures: AdministrationAudited(operation: target_updated, target_system: target_system)
     @guidance
         -- Re-seal: replaces the opaque blob with a freshly-sealed one (a fresh content key
-        -- per pam-rotation-sealed-config-plan.md) without touching status -- a disabled
-        -- target stays disabled when re-sealed. The whole updatable shape that used to be
-        -- UpdateAutomaticTargetSystem's kind/policy/termination-capability params now goes
-        -- through this one re-seal, since the server cannot read or partially update
-        -- opaque contents.
+        -- per pam-rotation-sealed-config-plan.md) and writes the name, without touching
+        -- status -- a disabled target stays disabled when re-sealed. The name is the only
+        -- server-visible mutable field left, and display-only: the target's id -- which
+        -- keys the access connector's local credential resolution (access-connector.allium /
+        -- CredentialResolver) -- never changes. Kind, the password policy and the
+        -- session-termination capability are sealed and opaque, so the whole updatable
+        -- shape is written in one operation and one audit event; the server cannot read or
+        -- partially update opaque contents.
+        --
+        -- Withdrawing the session-termination capability while a configuration relies on it
+        -- was previously guarded here (the server could read supports_session_termination).
+        -- That guard is gone: the server can no longer see the capability or
+        -- terminate_sessions to compare them. The check moves to the admin client (config
+        -- create/update unseals the target to validate) and the access connector (claim
+        -- check 7: terminate = config.terminate_sessions && target.supports_session_termination,
+        -- computed from the unsealed blobs -- see pam-rotation-sealed-config-plan.md).
+        -- The integration kind is deliberately NOT editable via re-seal either in practice:
+        -- existing account identities are interpreted by the kind, so changing it
+        -- invalidates them (see the method-switching open question).
 }
 
 rule DisableTargetSystem {
@@ -701,7 +717,7 @@ rule EnableTargetSystem {
     requires: target_system.status = disabled
     ensures: target_system.status = active
     ensures: AdministrationAudited(operation: target_enabled, target_system: target_system)
-    -- Requires disabled, so a pending_seal target is rejected here too -- SealTargetSystem
+    -- Requires disabled, so a pending_seal target is rejected here too -- UpdateTargetSystem
     -- is the only exit from pending_seal.
     -- Catch-up on re-enable, mirroring ResumeRotation, for each automatic-method config on
     -- this target. Schedule catch-up SKIPS missed windows (recompute from now); a deferred
@@ -732,31 +748,6 @@ rule EnableTargetSystem {
         -- fresh OfferRotation(source: access_end) for a config that is enabled and free of an
         -- active job, and pending_access_end is cleared. Together with the ResumeRotation
         -- discharge this is the full catch-up: schedules skip, events are preserved.
-}
-
-rule RenameTargetSystem {
-    when: RenameTargetSystem(target_system, name)
-    ensures: target_system.name = name
-    ensures: AdministrationAudited(operation: target_renamed, target_system: target_system)
-    @guidance
-        -- The only server-visible mutable field left, for either method: kind, the password
-        -- policy and the session-termination capability are sealed (ReSealTargetSystem) and
-        -- opaque to the server, so there is nothing left here to split by method the way
-        -- RegisterTargetSystem no longer needs to either. The name has no operational
-        -- effect: the target's id -- which keys the access connector's local credential resolution
-        -- (access-connector.allium / CredentialResolver) -- never changes. Display-only, so it
-        -- is its own rule rather than folded into SealTargetSystem.
-        --
-        -- Withdrawing the session-termination capability while a configuration relies on it
-        -- was previously guarded here (the server could read supports_session_termination).
-        -- That guard is gone: the server can no longer see the capability or
-        -- terminate_sessions to compare them. The check moves to the admin client (config
-        -- create/update unseals the target to validate) and the access connector (claim
-        -- check 7: terminate = config.terminate_sessions && target.supports_session_termination,
-        -- computed from the unsealed blobs -- see pam-rotation-sealed-config-plan.md).
-        -- The integration kind is deliberately NOT editable via re-seal either in practice:
-        -- existing account identities are interpreted by the kind, so changing it
-        -- invalidates them (see the method-switching open question).
 }
 
 rule DeleteTargetSystem {
@@ -816,7 +807,7 @@ rule CreateRotationConfig {
         -- server ever sees it -- the server cannot read it and so no longer rejects
         -- terminate_sessions against a target that can't honour it up front; the admin
         -- client validates against the unsealed target capability instead (see
-        -- SealTargetSystem / pam-rotation-sealed-config-plan.md). Incremental adoption
+        -- UpdateTargetSystem / pam-rotation-sealed-config-plan.md). Incremental adoption
         -- (Goal 5): configs are created one at a time, per cipher; registering a target
         -- system and creating its first config is the whole onboarding path, with no
         -- estate-wide migration step.
@@ -832,37 +823,31 @@ rule AuditRotationConfigCreated {
         -- checker's creation-status crediting.
 }
 
-rule SealRotationConfig {
-    when: SealRotationConfig(actor, rotation_config, sealed_data)
-    requires: not rotation_config.has_active_job
-    ensures: rotation_config.sealed_data = sealed_data
-    ensures: RotationAudited(rotation_config: rotation_config, outcome: account_updated, actor: actor)
-    @guidance
-        -- Re-seals the account identity and termination opt-in (RotationConfigSealedV1,
-        -- a fresh content key per re-seal -- same mechanic as TargetSystem's
-        -- ReSealTargetSystem), replacing the stored blob wholesale. Un-merged from the
-        -- schedule/trigger edit (UpdateRotationSettings) because sealing is the part the
-        -- in-flight guard protects: the claim snapshot already carried the old sealed
-        -- blob, and re-sealing mid-attempt would make the audit trail ambiguous about
-        -- which account was rotated. The server can no longer guard terminate_sessions
-        -- against the target's capability (both are now sealed) -- see CreateRotationConfig.
-}
-
-rule UpdateRotationSettings {
-    when: UpdateRotationSettings(actor, rotation_config, schedule, rotate_on_access_end)
+rule UpdateRotationConfig {
+    when: UpdateRotationConfig(actor, rotation_config, sealed_data, schedule, rotate_on_access_end)
+    requires: not rotation_config.has_active_job or sealed_data = rotation_config.sealed_data
     let next = if schedule != null: NextScheduledTime(schedule, now)
                else: null
+    ensures: rotation_config.sealed_data = sealed_data
     ensures: rotation_config.schedule = schedule
     ensures: rotation_config.rotate_on_access_end = rotate_on_access_end
     ensures: rotation_config.next_rotation_at = next
-    ensures: RotationAudited(rotation_config: rotation_config, outcome: settings_updated, actor: actor)
+    ensures: RotationAudited(rotation_config: rotation_config, outcome: config_updated, actor: actor)
     @guidance
-        -- The triggers (schedule + access-event opt-in), recomputed-on-edit. Unlike
-        -- SealRotationConfig this is NOT blocked by an active job: changing when the
-        -- credential next rotates does not touch the account identity a claimed job's
-        -- snapshot already carries, so there is no audit-ambiguity risk to guard
-        -- against. Clearing the schedule (null) leaves the credential with no scheduled
-        -- rotation, while on-demand and access-event triggers still work.
+        -- Writes the whole updatable shape in one operation and one audit event: the sealed
+        -- account identity and termination opt-in (RotationConfigSealedV1, a fresh content
+        -- key per re-seal -- same mechanic as TargetSystem's ReSealTargetSystem), and the
+        -- triggers (schedule + access-event opt-in), recomputed-on-edit.
+        --
+        -- A changed blob is refused while a job is active: the claim snapshot already
+        -- carried the old sealed blob, and re-sealing mid-attempt would make the audit trail
+        -- ambiguous about which account was rotated. Resending the stored blob unchanged is
+        -- not a re-seal, so the triggers stay editable with an active job -- changing when
+        -- the credential next rotates does not touch the account identity a claimed job's
+        -- snapshot already carries. Clearing the schedule (null) leaves the credential with
+        -- no scheduled rotation, while on-demand and access-event triggers still work. The
+        -- server can no longer guard terminate_sessions against the target's capability
+        -- (both are now sealed) -- see CreateRotationConfig.
 }
 
 rule PauseRotation {
@@ -1632,8 +1617,8 @@ rule RecordManualRotation {
 -- carry it (no rule chains from any):
 --
 -- RotationAudited is emitted on every configuration and rotation event — a configuration
--- created (config_created), its sealed account identity / termination opt-in re-sealed
--- (account_updated), its schedule / access-end opt-in edited (settings_updated),
+-- created (config_created), its sealed account identity / termination opt-in and
+-- schedule / access-end opt-in written (config_updated),
 -- paused/resumed (paused, resumed), auto-paused after repeated failures (auto_paused,
 -- §6.8), deleted (config_deleted), a job
 -- offered (offered), a claim (the attempt, dispatched), its success (succeeded), a failed
@@ -1647,16 +1632,16 @@ rule RecordManualRotation {
 -- and auto_paused; `reason` is the access connector's failure_reason on an attempt_failed or failed
 -- outcome, or a server-side reason on a timed_out outcome; `sync_state` (FailureSyncState)
 -- rides on attempt_failed and failed outcomes so the log records whether a failure left the
--- stored cipher stale; `actor` is the acting admin on a manual_recorded, account_updated,
--- settings_updated, config_deleted, paused or resumed outcome. Each is absent where it does
+-- stored cipher stale; `actor` is the acting admin on a manual_recorded, config_updated,
+-- config_deleted, paused or resumed outcome. Each is absent where it does
 -- not apply.
 --
 -- AdministrationAudited is emitted on every administrative operation on the fleet and
 -- targets — an access connector registered (connector_registered), revoked (connector_revoked), its
 -- credential reissued in place (connector_credential_reissued), assigned to / unassigned from
 -- a target (connector_assigned, connector_unassigned), and a target system registered /
--- sealed / renamed / disabled / enabled / deleted (target_registered, target_sealed,
--- target_renamed, target_disabled, target_enabled, target_deleted). Connector connectivity edges
+-- updated / disabled / enabled / deleted (target_registered, target_updated,
+-- target_disabled, target_enabled, target_deleted). Connector connectivity edges
 -- (ConnectorConnected/ConnectorDisconnected) are liveness observations, not operations, and are
 -- not audited directly; a drop's impact on in-flight work is audited via the released outcome.
 --
@@ -1780,9 +1765,8 @@ surface TargetSystemView {
         target_system.sealed_data
     provides:
         -- Phase 2 of registration while pending_seal; re-seal (a fresh blob) while active
-        -- or disabled, which does not change status.
-        SealTargetSystem(target_system, sealed_data)
-        RenameTargetSystem(target_system, name)
+        -- or disabled, which does not change status. Writes the name in the same call.
+        UpdateTargetSystem(target_system, name, sealed_data)
         DisableTargetSystem(target_system)
             when target_system.status = active
         EnableTargetSystem(target_system)
@@ -1827,13 +1811,11 @@ surface RotationConfigView {
         -- Record an out-of-band rotation for a credential on a manual target (Goal 3).
         RecordManualRotation(admin, rotation_config)
             when rotation_config.target_system.method = manual
-        -- Re-seal the account identity / termination opt-in. Refused while a job is
-        -- claimed (the claim snapshot already carries the old blob).
-        SealRotationConfig(admin, rotation_config, sealed_data)
-            when not rotation_config.has_active_job
-        -- Edit the schedule / access-end opt-in (recompute-on-edit). Allowed even with
-        -- an active job: it does not touch the sealed account identity.
-        UpdateRotationSettings(admin, rotation_config, schedule, rotate_on_access_end)
+        -- Write the sealed account identity / termination opt-in and the schedule /
+        -- access-end opt-in (recompute-on-edit). With an active job only an unchanged
+        -- blob is accepted (the claim snapshot already carries it), so the triggers stay
+        -- editable.
+        UpdateRotationConfig(admin, rotation_config, sealed_data, schedule, rotate_on_access_end)
         -- Pause / resume without losing configuration (UX2).
         PauseRotation(admin, rotation_config)
             when rotation_config.enabled
@@ -2055,7 +2037,7 @@ open question "Lease-bound least-privilege access connector auth: today the acce
 -- ending the loop; recovery is the existing admin ResumeRotation, and a success or recorded
 -- manual rotation resets consecutive_failures. Alert DELIVERY (email, in-product) is out of
 -- scope (Excludes).
-open question "Collection-wide settings (deferred): applying one set of rotation triggers across every managed credential in a collection at once. Deferred to keep Phase 1 per-credential -- the per-credential UpdateRotationSettings path stands in. Revisit with the collection-membership resolution it needs."
+open question "Collection-wide settings (deferred): applying one set of rotation triggers across every managed credential in a collection at once. Deferred to keep Phase 1 per-credential -- the per-credential UpdateRotationConfig path stands in. Revisit with the collection-membership resolution it needs."
 open question "Non-cron cadences: Schedule carries a cron expression for exact timing. Do interval-style presets (e.g. 'every 90 days') need a separate representation, or are all supported presets expressible as cron?"
 open question "Rotation throttling: many credentials on one target coming due together could hammer that target or connector. Not modelled here (no fleet-scale deployment assumed); if needed, throttle in the access connector/connector rather than the server scheduler."
 -- Resolved: unroutable-job escalation is folded into §6.8. JobTimesOut distinguishes an
@@ -2089,7 +2071,7 @@ open question "Rotation throttling: many credentials on one target coming due to
 -- guards against the no-state-change temporal re-fire livelock and is reset when a fresh
 -- obligation is raised or the obligation is cleared. Delivery is out of scope (Excludes).
 open question "Access-event emitter binding: which upstream systems wire into AccessGrantEnded (PAM leases, AAP grants, ...)? The signal-shape question is resolved — it carries only the cipher, which uniquely resolves the configuration to rotate (OneConfigPerCipher), so no account_identity is needed — but the concrete set of emitters and how they register against AccessEventReporting is still open."
-open question "On-demand and access-triggered jobs record a source but not the triggering admin (account_updated, settings_updated, paused, resumed and manual_recorded carry an actor; the job-derived outcomes do not). Should the audit attribute the on-demand actor end to end?"
+open question "On-demand and access-triggered jobs record a source but not the triggering admin (config_updated, paused, resumed and manual_recorded carry an actor; the job-derived outcomes do not). Should the audit attribute the on-demand actor end to end?"
 open question "Cipher-level 'last rotated' display: should the vault UI show a last-rotated timestamp on the cipher itself, derived by querying the audit log for rotation events (the audit log being the authoritative record that a rotation happened), rather than a field the rotation machinery maintains? RotationConfig.last_rotation_at exists server-side; this question is about surfacing rotation history on the cipher."
 -- Resolved: disabled-target catch-up and dropped access-end triggers. Principle: EVENT
 -- triggers must never be lost; SCHEDULES may skip missed windows (ResumeRotation's policy).

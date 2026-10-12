@@ -16,8 +16,7 @@ public class TargetSystemEndpointsHandler(
     IPamTargetSystemRepository targetSystemRepository,
     IRegisterTargetSystemCommand registerTargetSystemCommand,
     ISetTargetSystemStatusCommand setTargetSystemStatusCommand,
-    IRenameTargetSystemCommand renameTargetSystemCommand,
-    ISealTargetSystemCommand sealTargetSystemCommand,
+    IUpdateTargetSystemCommand updateTargetSystemCommand,
     IDeleteTargetSystemCommand deleteTargetSystemCommand)
 {
     public async Task<ListResponseModel<PamTargetSystemResponseModel>> GetAll(Guid orgId)
@@ -49,8 +48,8 @@ public class TargetSystemEndpointsHandler(
 
     public async Task Put(Guid orgId, Guid id, UpdateTargetSystemRequestModel model)
     {
-        await sealTargetSystemCommand.SealAsync(orgId, currentContext.UserId!.Value, id, model.SealedData);
-        await renameTargetSystemCommand.RenameAsync(orgId, currentContext.UserId!.Value, id, model.Name);
+        await updateTargetSystemCommand.UpdateAsync(
+            orgId, currentContext.UserId!.Value, id, model.Name, model.SealedData);
     }
 
     public async Task Delete(Guid orgId, Guid id)
