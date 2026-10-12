@@ -397,13 +397,14 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
             Scope = "[\"api.secrets\"]",
         });
 
-        var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        using var content = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "grant_type", "client_credentials" },
             { "client_id", $"apikey.{apiKey.Id}" },
             { "client_secret", clientSecret },
             { "scope", "api.secrets" },
-        }));
+        });
+        var context = await _factory.Server.PostAsync("/connect/token", content);
 
         Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
 
