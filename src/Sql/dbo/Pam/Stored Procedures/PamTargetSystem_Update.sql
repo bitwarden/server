@@ -3,7 +3,7 @@ CREATE PROCEDURE [dbo].[PamTargetSystem_Update]
     @OrganizationId UNIQUEIDENTIFIER,
     @Name NVARCHAR(200),
     @Method TINYINT,
-    @SealedData NVARCHAR(MAX) = NULL,
+    @SealedData NVARCHAR(MAX),
     @Status TINYINT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
