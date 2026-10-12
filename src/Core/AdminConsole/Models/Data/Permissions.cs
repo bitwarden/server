@@ -36,6 +36,6 @@ public class Permissions
         (ManageResetPassword, Claims.CustomPermissions.ManageResetPassword),
         (ManageScim, Claims.CustomPermissions.ManageScim),
         (ManageAccessRules, Claims.CustomPermissions.ManageAccessRules),
-        (ManageRotation, Claims.CustomPermissions.ManageRotation),
+        (ManageRotation, Claims.CustomPermissions.ManageCredentialRotation),
     };
 }
