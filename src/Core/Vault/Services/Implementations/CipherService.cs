@@ -44,6 +44,7 @@ public class CipherService : ICipherService
     private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IPricingClient _pricingClient;
     private readonly ICipherLeaseGate _cipherLeaseGate;
+    private readonly IPartialCipherWriteGuard _partialCipherWriteGuard;
 
     public CipherService(
         ICipherRepository cipherRepository,
@@ -63,7 +64,8 @@ public class CipherService : ICipherService
         IPolicyRequirementQuery policyRequirementQuery,
         IOrganizationAbilityCacheService organizationAbilityCacheService,
         IPricingClient pricingClient,
-        ICipherLeaseGate cipherLeaseGate)
+        ICipherLeaseGate cipherLeaseGate,
+        IPartialCipherWriteGuard partialCipherWriteGuard)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -83,6 +85,7 @@ public class CipherService : ICipherService
         _organizationAbilityCacheService = organizationAbilityCacheService;
         _pricingClient = pricingClient;
         _cipherLeaseGate = cipherLeaseGate;
+        _partialCipherWriteGuard = partialCipherWriteGuard;
     }
 
     public async Task SaveAsync(Cipher cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
@@ -92,6 +95,9 @@ public class CipherService : ICipherService
         {
             throw new BadRequestException("You do not have permissions to edit this.");
         }
+
+        // Not under skipPermissionCheck: admin saves skip the lease gate but can still hold a partial.
+        await _partialCipherWriteGuard.EnsureNotPartialShapedAsync(cipher);
 
         // Editing an existing leasing-gated cipher requires a valid active lease; new ciphers are never gated.
         if (!skipPermissionCheck && cipher.Id != default(Guid))
@@ -138,6 +144,9 @@ public class CipherService : ICipherService
         {
             throw new BadRequestException("You do not have permissions to edit this.");
         }
+
+        // Not under skipPermissionCheck: admin saves skip the lease gate but can still hold a partial.
+        await _partialCipherWriteGuard.EnsureNotPartialShapedAsync(cipher);
 
         // Editing an existing leasing-gated cipher requires a valid active lease; new ciphers are never gated.
         if (!skipPermissionCheck && cipher.Id != default(Guid))
