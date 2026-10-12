@@ -10,7 +10,7 @@ public static class ApiScopes
     public const string ApiOrganization = "api.organization";
     public const string ApiPush = "api.push";
     public const string ApiSecrets = "api.secrets";
-    public const string ApiPamRotation = "api.pam.rotation";
+    public const string ApiPamCredentialRotation = "api.pam.rotation";
     public const string Internal = "internal";
     public const string ApiSendAccess = "api.send.access";
 
@@ -25,7 +25,7 @@ public static class ApiScopes
             new(ApiInstallation, "API Installation Access"),
             new(Internal, "Internal Access"),
             new(ApiSecrets, "Secrets Manager Access"),
-            new(ApiPamRotation, "AccessConnector Password Rotation"),
+            new(ApiPamCredentialRotation, "AccessConnector Credential Rotation"),
             new(ApiSendAccess, "API Send Access"),
         };
     }

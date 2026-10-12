@@ -42,7 +42,7 @@ public static class Claims
         public const string ManageResetPassword = "manageresetpassword";
         public const string ManageScim = "managescim";
         public const string ManageAccessRules = "manageaccessrules";
-        public const string ManageRotation = "managerotation";
+        public const string ManageCredentialRotation = "managecredentialrotation";
     }
 
     /// <summary>

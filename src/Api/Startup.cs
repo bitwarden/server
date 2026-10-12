@@ -152,7 +152,7 @@ public class Startup
             config.AddPolicy(Policies.AccessConnector, policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiPamRotation);
+                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiPamCredentialRotation);
                 policy.RequireClaim(Claims.Type, IdentityClientType.AccessConnector.ToString());
             });
             config.AddPolicy(Policies.Send, configurePolicy: policy =>
