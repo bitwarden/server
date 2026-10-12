@@ -26,9 +26,9 @@ public class SendItemMetadata
     /// <summary>
     /// The date the vault item being shared was created
     /// </summary>
-    public DateTime CreationDate { get; set; }
+    public DateTime? CreationDate { get; set; }
     /// <summary>
     /// The date the vault item being shared was last updated
     /// </summary>
-    public DateTime RevisionDate { get; set; }
+    public DateTime? RevisionDate { get; set; }
 }

@@ -33,8 +33,8 @@ public class SendItemMetadataModel
             FolderName = FolderName,
             CollectionNames = CollectionNames,
             OrganizationName = OrganizationName,
-            CreationDate = CreationDate.GetValueOrDefault(),
-            RevisionDate = RevisionDate.GetValueOrDefault()
+            CreationDate = CreationDate,
+            RevisionDate = RevisionDate
         };
     }
 }
