@@ -2,11 +2,11 @@
 #nullable disable
 
 using Bit.Core;
+using Bit.Core.AdminConsole.OrganizationFeatures.ScopedOrganizationApiKeys.Interfaces;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.SecretsManager.Repositories;
 using Duende.IdentityModel;
 using Duende.IdentityServer.Models;
 
@@ -16,19 +16,19 @@ internal class OrganizationClientProvider : IClientProvider
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
-    private readonly IApiKeyRepository _apiKeyRepository;
+    private readonly IGetScopedOrganizationApiKeyClientQuery _getScopedOrganizationApiKeyClientQuery;
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public OrganizationClientProvider(
         IOrganizationRepository organizationRepository,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
-        IApiKeyRepository apiKeyRepository,
+        IGetScopedOrganizationApiKeyClientQuery getScopedOrganizationApiKeyClientQuery,
         Bitwarden.Server.Sdk.Features.IFeatureService featureService
     )
     {
         _organizationRepository = organizationRepository;
         _organizationApiKeyRepository = organizationApiKeyRepository;
-        _apiKeyRepository = apiKeyRepository;
+        _getScopedOrganizationApiKeyClientQuery = getScopedOrganizationApiKeyClientQuery;
         _featureService = featureService;
     }
 
@@ -88,33 +88,24 @@ internal class OrganizationClientProvider : IClientProvider
             return null;
         }
 
-        var key = await _apiKeyRepository.GetByIdAsync(keyId);
-        if (key == null ||
-            key.ServiceAccountId != null ||
-            key.OrganizationId != organizationId ||
-            key.ExpireAt <= DateTime.UtcNow)
-        {
-            return null;
-        }
-
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
-        if (organization == null || !organization.Enabled || !organization.UseApi)
+        var key = await _getScopedOrganizationApiKeyClientQuery.GetAsync(organizationId, keyId);
+        if (key == null)
         {
             return null;
         }
 
         return new Client
         {
-            ClientId = $"organization.{organization.Id}.{key.Id}",
+            ClientId = $"organization.{key.OrganizationId}.{key.KeyId}",
             RequireClientSecret = true,
             // Duende checks secret expiration on every request, including for cached clients.
             ClientSecrets = [new Secret(key.ClientSecretHash, key.ExpireAt)],
-            AllowedScopes = (key.GetScopes() ?? []).Intersect(ApiScopes.OrganizationApiKeyScopes).ToList(),
+            AllowedScopes = key.AllowedScopes.ToList(),
             AllowedGrantTypes = GrantTypes.ClientCredentials,
             AccessTokenLifetime = 3600 * 1,
             Claims =
             [
-                new(JwtClaimTypes.Subject, organization.Id.ToString()),
+                new(JwtClaimTypes.Subject, key.OrganizationId.ToString()),
                 new(Claims.Type, IdentityClientType.Organization.ToString())
             ],
         };
