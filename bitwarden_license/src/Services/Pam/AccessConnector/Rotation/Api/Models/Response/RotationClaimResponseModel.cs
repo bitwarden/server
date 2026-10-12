@@ -1,4 +1,6 @@
 ﻿using Bit.Pam.Enums;
+using Bit.Pam.Models;
+using Bit.Services.Pam.Api.Models.Response;
 
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 
@@ -8,6 +10,21 @@ namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 /// </summary>
 public class RotationClaimResponseModel
 {
+    public RotationClaimResponseModel(PamRotationClaimResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        AttemptId = result.AttemptId!.Value;
+        JobId = result.JobId!.Value;
+        Source = result.Source!.Value;
+        TargetSystemId = result.TargetSystemId!.Value;
+        TargetSystemName = result.TargetSystemName!;
+        TargetSystemSealedData = result.TargetSystemSealedData!;
+        CipherId = result.CipherId!.Value;
+        RotationConfigSealedData = result.RotationConfigSealedData!;
+        ExecuteBy = result.ExecuteBy!.Value.AsUtc();
+    }
+
     /// <summary>The attempt this claim opened, which the outcome is reported against.</summary>
     public Guid AttemptId { get; set; }
 

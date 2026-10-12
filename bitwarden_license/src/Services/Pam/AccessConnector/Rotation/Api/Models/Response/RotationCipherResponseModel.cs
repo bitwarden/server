@@ -1,4 +1,6 @@
-﻿using Bit.Core.Vault.Enums;
+﻿using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Enums;
+using Bit.Services.Pam.Api.Models.Response;
 
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 
@@ -8,6 +10,18 @@ namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 /// </summary>
 public class RotationCipherResponseModel
 {
+    public RotationCipherResponseModel(Cipher cipher)
+    {
+        ArgumentNullException.ThrowIfNull(cipher);
+
+        CipherId = cipher.Id;
+        OrganizationId = cipher.OrganizationId!.Value;
+        Type = cipher.Type;
+        Data = cipher.Data;
+        Key = cipher.Key;
+        RevisionDate = cipher.RevisionDate.AsUtc();
+    }
+
     public Guid CipherId { get; set; }
 
     public Guid OrganizationId { get; set; }
