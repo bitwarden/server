@@ -1,6 +1,7 @@
-﻿using System.Text.Json;
-using Bit.Core.Context;
+﻿using System.Security.Claims;
+using System.Text.Json;
 using Bit.Core.Exceptions;
+using Bit.Core.Services;
 using Bit.Pam.Entities;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
@@ -23,6 +24,7 @@ namespace Bit.Services.Pam.Test.Api.Endpoints.Handlers;
 [SutProviderCustomize]
 public class AccessRuleEndpointsHandlerTests
 {
+    private static readonly ClaimsPrincipal _user = new();
     [Theory, BitAutoData]
     public async Task GetAll_ReturnsTheOrganizationsRules(
         Guid organizationId,
@@ -86,12 +88,12 @@ public class AccessRuleEndpointsHandlerTests
         SutProvider<AccessRuleEndpointsHandler> sutProvider)
     {
         var model = RequestModel();
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(_user).Returns(userId);
         sutProvider.GetDependency<ICreateAccessRuleCommand>()
             .CreateAsync(Arg.Any<AccessRule>(), Arg.Any<IEnumerable<Guid>>())
             .Returns(created);
 
-        await sutProvider.Sut.Post(organizationId, model);
+        await sutProvider.Sut.Post(_user, organizationId, model);
 
         await sutProvider.GetDependency<ICreateAccessRuleCommand>().Received(1)
             .CreateAsync(
@@ -108,12 +110,12 @@ public class AccessRuleEndpointsHandlerTests
         SutProvider<AccessRuleEndpointsHandler> sutProvider)
     {
         var model = RequestModel();
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(_user).Returns(userId);
         sutProvider.GetDependency<IUpdateAccessRuleCommand>()
             .UpdateAsync(organizationId, id, Arg.Any<AccessRule>(), Arg.Any<IEnumerable<Guid>>())
             .Returns(updated);
 
-        await sutProvider.Sut.Put(organizationId, id, model);
+        await sutProvider.Sut.Put(_user, organizationId, id, model);
 
         await sutProvider.GetDependency<IUpdateAccessRuleCommand>().Received(1)
             .UpdateAsync(
@@ -127,13 +129,15 @@ public class AccessRuleEndpointsHandlerTests
     /// The route's organization is what scopes the delete — the command rejects an ID belonging to any other.
     /// </summary>
     [Theory, BitAutoData]
-    public async Task Delete_DeletesWithinTheRouteOrganization(
-        Guid organizationId, Guid id, SutProvider<AccessRuleEndpointsHandler> sutProvider)
+    public async Task Delete_DeletesWithinTheRouteOrganization_StampedWithTheCallingUser(
+        Guid organizationId, Guid id, Guid userId, SutProvider<AccessRuleEndpointsHandler> sutProvider)
     {
-        await sutProvider.Sut.Delete(organizationId, id);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(_user).Returns(userId);
+
+        await sutProvider.Sut.Delete(_user, organizationId, id);
 
         await sutProvider.GetDependency<IDeleteAccessRuleCommand>().Received(1)
-            .DeleteAsync(organizationId, id);
+            .DeleteAsync(organizationId, id, userId);
     }
 
     private static AccessRuleRequestModel RequestModel() => new()

@@ -34,7 +34,7 @@ public class EventsController : Controller
     private readonly IProjectRepository _projectRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly ILogger<EventsController> _logger;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
 
     public EventsController(IUserService userService,
@@ -47,7 +47,7 @@ public class EventsController : Controller
         IProjectRepository projectRepository,
         IServiceAccountRepository serviceAccountRepository,
         ILogger<EventsController> logger,
-        IFeatureService featureService)
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
         _userService = userService;
         _cipherRepository = cipherRepository;

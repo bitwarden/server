@@ -20,7 +20,7 @@ public class SavePolicyCommand(
     TimeProvider timeProvider,
     IPolicyEventHandlerFactory policyEventHandlerFactory,
     IPushNotificationService pushNotificationService,
-    IFeatureService featureService)
+    Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     : ISavePolicyCommand
 {
 

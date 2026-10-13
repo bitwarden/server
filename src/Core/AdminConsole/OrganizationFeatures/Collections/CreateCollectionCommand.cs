@@ -18,14 +18,14 @@ public class CreateCollectionCommand : ICreateCollectionCommand
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ICollectionRepository _collectionRepository;
     private readonly ICollectionAccessValidator _collectionAccessValidator;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public CreateCollectionCommand(
         IEventService eventService,
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
         ICollectionAccessValidator collectionAccessValidator,
-        IFeatureService featureService)
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
         _eventService = eventService;
         _organizationRepository = organizationRepository;
