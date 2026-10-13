@@ -51,10 +51,6 @@ public class BulkCollectionAdminDetailsQuery : IQuery<CollectionAdminDetails>
                                       new { CollectionId = (Guid?)null, gu.OrganizationUserId } into gu_g
                                   from gu in gu_g.DefaultIfEmpty()
 
-                                  join g in dbContext.Groups
-                                      on gu.GroupId equals g.Id into g_g
-                                  from g in g_g.DefaultIfEmpty()
-
                                   join cg in dbContext.CollectionGroups
                                       on new { CollectionId = c.Id, gu.GroupId } equals
                                       new { cg.CollectionId, cg.GroupId } into cg_g
@@ -63,8 +59,6 @@ public class BulkCollectionAdminDetailsQuery : IQuery<CollectionAdminDetails>
 
         // Subqueries to determine if a collection is managed by a user or group.
         var activeUserManageRights = from cu in dbContext.CollectionUsers
-                                     join ou in dbContext.OrganizationUsers
-                                         on cu.OrganizationUserId equals ou.Id
                                      where cu.Manage
                                      select cu.CollectionId;
 

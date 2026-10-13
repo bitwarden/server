@@ -38,7 +38,6 @@ BEGIN
                 NOT EXISTS (
                     SELECT 1
                     FROM [dbo].[CollectionUser] CU2
-                    INNER JOIN [dbo].[OrganizationUser] OU2 ON CU2.[OrganizationUserId] = OU2.[Id]
                     WHERE
                         CU2.[CollectionId] = C.[Id] AND
                         CU2.[Manage] = 1
@@ -70,8 +69,6 @@ BEGIN
         [dbo].[CollectionUser] CU ON CU.[CollectionId] = C.[Id] AND CU.[OrganizationUserId] = OU.[Id]
     LEFT JOIN
         [dbo].[GroupUser] GU ON CU.[CollectionId] IS NULL AND GU.[OrganizationUserId] = OU.[Id]
-    LEFT JOIN
-        [dbo].[Group] G ON G.[Id] = GU.[GroupId]
     LEFT JOIN
         [dbo].[CollectionGroup] CG ON CG.[CollectionId] = C.[Id] AND CG.[GroupId] = GU.[GroupId]
     LEFT JOIN

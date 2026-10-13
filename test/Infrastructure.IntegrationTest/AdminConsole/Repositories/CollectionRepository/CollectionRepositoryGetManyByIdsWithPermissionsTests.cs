@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Xunit;
@@ -34,15 +35,26 @@ public class CollectionRepositoryGetManyByIdsWithPermissionsTests
         var notAssigned = new Collection { Name = "NotAssigned", OrganizationId = organization.Id };
         await collectionRepository.CreateAsync(notAssigned, groups: [], users: []);
 
+        var defaultCollection = new Collection
+        {
+            Name = "Default",
+            OrganizationId = organization.Id,
+            Type = CollectionType.DefaultUserCollection,
+            DefaultUserCollectionEmail = user.Email
+        };
+        await collectionRepository.CreateAsync(defaultCollection, groups: [], users: []);
+
         // Act
         var results = await collectionRepository.GetManyByIdsWithPermissionsAsync(
-            [managedDirectly.Id, managedViaGroup.Id, notAssigned.Id], user.Id, includeAccessRelationships: false);
+            [managedDirectly.Id, managedViaGroup.Id, notAssigned.Id, defaultCollection.Id], user.Id,
+            includeAccessRelationships: false);
 
         // Assert
-        Assert.Equal(3, results.Count);
+        Assert.Equal(4, results.Count);
 
         var direct = Single(results, managedDirectly.Id);
         Assert.Equal(organization.Id, direct.OrganizationId);
+        Assert.Equal(CollectionType.SharedCollection, direct.Type);
         Assert.True(direct.Assigned);
         Assert.True(direct.Manage);
         Assert.False(direct.Unmanaged);
@@ -56,6 +68,8 @@ public class CollectionRepositoryGetManyByIdsWithPermissionsTests
         Assert.False(unassigned.Assigned);
         Assert.False(unassigned.Manage);
         Assert.True(unassigned.Unmanaged);
+
+        Assert.Equal(CollectionType.DefaultUserCollection, Single(results, defaultCollection.Id).Type);
     }
 
     [DatabaseTheory, DatabaseData]
