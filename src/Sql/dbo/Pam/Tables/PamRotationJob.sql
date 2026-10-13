@@ -12,8 +12,8 @@ CREATE TABLE [dbo].[PamRotationJob] (
     [NextClaimableAt]               DATETIME2(7)        NOT NULL,
     [ExpiresAt]                     DATETIME2(7)        NOT NULL,
     CONSTRAINT [PK_PamRotationJob] PRIMARY KEY CLUSTERED ([Id] ASC),
-    -- No cascade; PamRotationConfig_DeleteWithJobs deletes jobs/attempts explicitly in one transaction.
-    CONSTRAINT [FK_PamRotationJob_RotationConfig] FOREIGN KEY ([RotationConfigId]) REFERENCES [dbo].[PamRotationConfig] ([Id]) ON DELETE NO ACTION
+    -- Cascades, since a job has no OrganizationId and the Organization delete only reaches it through the config.
+    CONSTRAINT [FK_PamRotationJob_RotationConfig] FOREIGN KEY ([RotationConfigId]) REFERENCES [dbo].[PamRotationConfig] ([Id]) ON DELETE CASCADE
 );
 GO
 

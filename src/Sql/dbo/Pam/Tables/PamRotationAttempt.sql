@@ -13,7 +13,7 @@ CREATE TABLE [dbo].[PamRotationAttempt] (
     [CreationDate]                  DATETIME2(7)        NOT NULL,
     [ResolvedDate]                  DATETIME2(7)        NULL,
     CONSTRAINT [PK_PamRotationAttempt] PRIMARY KEY CLUSTERED ([Id] ASC),
-    CONSTRAINT [FK_PamRotationAttempt_RotationJob] FOREIGN KEY ([JobId]) REFERENCES [dbo].[PamRotationJob] ([Id])
+    CONSTRAINT [FK_PamRotationAttempt_RotationJob] FOREIGN KEY ([JobId]) REFERENCES [dbo].[PamRotationJob] ([Id]) ON DELETE CASCADE
 );
 GO
 

@@ -39,8 +39,18 @@ BEGIN
         RETURN
     END
 
+    DECLARE @CipherRevisionDate DATETIME2(7) = (SELECT [RevisionDate] FROM [dbo].[Cipher] WHERE [Id] = @CipherId)
+
+    -- The config has no FK to Cipher, so the cipher may have been hard-deleted.
+    IF @CipherRevisionDate IS NULL
+    BEGIN
+        ROLLBACK TRANSACTION
+        SELECT 0 -- Rejected
+        RETURN
+    END
+
     -- Drifted LastKnownRevisionDate means a concurrent edit; rejected, matching CipherService's tolerance.
-    IF ABS(DATEDIFF_BIG(MILLISECOND, (SELECT [RevisionDate] FROM [dbo].[Cipher] WHERE [Id] = @CipherId), @LastKnownRevisionDate)) > 1000
+    IF ABS(DATEDIFF_BIG(MILLISECOND, @CipherRevisionDate, @LastKnownRevisionDate)) > 1000
     BEGIN
         ROLLBACK TRANSACTION
         SELECT -1 -- RevisionMismatch

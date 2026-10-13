@@ -257,8 +257,9 @@ public class DatabaseContext : DbContext
             .IsDescending(false, true, true);
         eAccessAuditEvent.HasIndex(p => p.CorrelationId);
 
-        // PAM rotation mirrors the MSSQL keys, indexes and delete behavior. Only Organization and the timeout journal
-        // cascade; everything else is NO ACTION, so attached rotation work blocks removal.
+        // PAM rotation mirrors the MSSQL keys, indexes and delete behavior. Organization cascades to configs, and a
+        // config's jobs, attempts and timeout journal cascade with it. Everything else is NO ACTION, so a target system
+        // or access connector with attached work blocks removal.
         ePamTargetSystem.Property(p => p.Id).ValueGeneratedNever();
         ePamTargetSystem.HasIndex(p => p.OrganizationId);
         ePamTargetSystem
@@ -326,7 +327,7 @@ public class DatabaseContext : DbContext
             .HasOne<PamRotationConfig>()
             .WithMany()
             .HasForeignKey(j => j.RotationConfigId)
-            .OnDelete(DeleteBehavior.NoAction);
+            .OnDelete(DeleteBehavior.Cascade);
 
         ePamRotationAttempt.Property(p => p.Id).ValueGeneratedNever();
         ePamRotationAttempt.HasIndex(p => new { p.JobId, p.Action });
@@ -335,7 +336,7 @@ public class DatabaseContext : DbContext
             .HasOne<PamRotationJob>()
             .WithMany()
             .HasForeignKey(a => a.JobId)
-            .OnDelete(DeleteBehavior.NoAction);
+            .OnDelete(DeleteBehavior.Cascade);
 
         ePamRotationJobTimeoutSweep.HasKey(p => p.RotationJobId);
         ePamRotationJobTimeoutSweep.Property(p => p.RotationJobId).ValueGeneratedNever();

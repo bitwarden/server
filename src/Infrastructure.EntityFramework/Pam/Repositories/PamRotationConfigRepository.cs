@@ -98,19 +98,7 @@ public class PamRotationConfigRepository : Repository<CoreEntity, EfModel, Guid>
             return false;
         }
 
-        // Attempts reference jobs and jobs reference the config, both NO ACTION, so children go first. The timeout
-        // journal cascades from the jobs on its own.
-        var jobIds = await dbContext.PamRotationJobs
-            .Where(j => j.RotationConfigId == configId)
-            .Select(j => j.Id)
-            .ToListAsync();
-
-        if (jobIds.Count > 0)
-        {
-            await dbContext.PamRotationAttempts.Where(a => jobIds.Contains(a.JobId)).ExecuteDeleteAsync();
-            await dbContext.PamRotationJobs.Where(j => jobIds.Contains(j.Id)).ExecuteDeleteAsync();
-        }
-
+        // The config's jobs, their attempts and the timeout journal go with it through the FK cascade.
         await dbContext.PamRotationConfigs.Where(c => c.Id == configId).ExecuteDeleteAsync();
 
         await transaction.CommitAsync();

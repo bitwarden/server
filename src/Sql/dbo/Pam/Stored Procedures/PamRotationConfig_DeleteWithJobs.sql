@@ -3,8 +3,7 @@ CREATE PROCEDURE [dbo].[PamRotationConfig_DeleteWithJobs]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- Cascade: hard-deletes attempts, then jobs, then config, since both FKs are NO ACTION. The timeout journal
-    -- cascades from the jobs on its own.
+    -- Hard-deletes the config; its jobs, their attempts and the timeout journal go with it through the FK cascade.
     SET XACT_ABORT ON
 
     BEGIN TRANSACTION
@@ -27,14 +26,6 @@ BEGIN
         SELECT 0 -- ActiveJobExists
         RETURN
     END
-
-    DELETE A
-    FROM [dbo].[PamRotationAttempt] A
-    INNER JOIN [dbo].[PamRotationJob] J ON J.[Id] = A.[JobId]
-    WHERE J.[RotationConfigId] = @Id
-
-    DELETE FROM [dbo].[PamRotationJob]
-    WHERE [RotationConfigId] = @Id
 
     DELETE FROM [dbo].[PamRotationConfig]
     WHERE [Id] = @Id

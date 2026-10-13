@@ -4202,7 +4202,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationJob", null)
                         .WithMany()
                         .HasForeignKey("JobId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
@@ -4228,7 +4228,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationConfig", null)
                         .WithMany()
                         .HasForeignKey("RotationConfigId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 

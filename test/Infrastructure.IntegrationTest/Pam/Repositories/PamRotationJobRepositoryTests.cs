@@ -418,6 +418,31 @@ public class PamRotationJobRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
+    public async Task AcceptCipherWriteAsync_CipherHardDeleted_Rejected(
+        IOrganizationRepository organizationRepository,
+        IPamTargetSystemRepository pamTargetSystemRepository,
+        IApiKeyRepository apiKeyRepository,
+        IPamAccessConnectorRepository pamAccessConnectorRepository,
+        ICipherRepository cipherRepository,
+        IPamRotationConfigRepository pamRotationConfigRepository,
+        IPamRotationJobRepository pamRotationJobRepository)
+    {
+        var fixture = await SeedClaimableJobAsync(organizationRepository, pamTargetSystemRepository, apiKeyRepository,
+            pamAccessConnectorRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository);
+        var claim = await pamRotationJobRepository.ClaimAsync(
+            fixture.Job.Id, fixture.AccessConnector.Id, fixture.Now, _releaseDelay);
+        await cipherRepository.DeleteAsync(fixture.Cipher);
+
+        var outcome = await pamRotationJobRepository.AcceptCipherWriteAsync(
+            claim.AttemptId!.Value, fixture.AccessConnector.Id, "{\"rotatedSecret\":true}", fixture.Cipher.RevisionDate,
+            fixture.Now.AddMinutes(1));
+
+        Assert.Equal(PamRotationCipherWriteOutcome.Rejected, outcome);
+        var attempt = await pamRotationJobRepository.GetAttemptByIdAsync(claim.AttemptId.Value);
+        Assert.False(attempt!.CipherUpdated);
+    }
+
+    [DatabaseTheory, DatabaseData]
     public async Task AcceptCipherWriteAsync_StaleLastKnownRevisionDate_RevisionMismatch(
         IOrganizationRepository organizationRepository,
         IPamTargetSystemRepository pamTargetSystemRepository,

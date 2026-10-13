@@ -159,7 +159,7 @@ BEGIN
         [NextClaimableAt]               DATETIME2(7)        NOT NULL,
         [ExpiresAt]                     DATETIME2(7)        NOT NULL,
         CONSTRAINT [PK_PamRotationJob] PRIMARY KEY CLUSTERED ([Id] ASC),
-        CONSTRAINT [FK_PamRotationJob_RotationConfig] FOREIGN KEY ([RotationConfigId]) REFERENCES [dbo].[PamRotationConfig] ([Id]) ON DELETE NO ACTION
+        CONSTRAINT [FK_PamRotationJob_RotationConfig] FOREIGN KEY ([RotationConfigId]) REFERENCES [dbo].[PamRotationConfig] ([Id]) ON DELETE CASCADE
     );
 END
 GO
@@ -199,7 +199,7 @@ BEGIN
         [CreationDate]                  DATETIME2(7)        NOT NULL,
         [ResolvedDate]                  DATETIME2(7)        NULL,
         CONSTRAINT [PK_PamRotationAttempt] PRIMARY KEY CLUSTERED ([Id] ASC),
-        CONSTRAINT [FK_PamRotationAttempt_RotationJob] FOREIGN KEY ([JobId]) REFERENCES [dbo].[PamRotationJob] ([Id])
+        CONSTRAINT [FK_PamRotationAttempt_RotationJob] FOREIGN KEY ([JobId]) REFERENCES [dbo].[PamRotationJob] ([Id]) ON DELETE CASCADE
     );
 END
 GO
@@ -529,8 +529,18 @@ BEGIN
         RETURN
     END
 
+    DECLARE @CipherRevisionDate DATETIME2(7) = (SELECT [RevisionDate] FROM [dbo].[Cipher] WHERE [Id] = @CipherId)
+
+    -- The config has no FK to Cipher, so the cipher may have been hard-deleted.
+    IF @CipherRevisionDate IS NULL
+    BEGIN
+        ROLLBACK TRANSACTION
+        SELECT 0 -- Rejected
+        RETURN
+    END
+
     -- Drifted LastKnownRevisionDate means a concurrent edit; rejected, matching CipherService's tolerance.
-    IF ABS(DATEDIFF_BIG(MILLISECOND, (SELECT [RevisionDate] FROM [dbo].[Cipher] WHERE [Id] = @CipherId), @LastKnownRevisionDate)) > 1000
+    IF ABS(DATEDIFF_BIG(MILLISECOND, @CipherRevisionDate, @LastKnownRevisionDate)) > 1000
     BEGIN
         ROLLBACK TRANSACTION
         SELECT -1 -- RevisionMismatch
@@ -769,8 +779,7 @@ CREATE OR ALTER PROCEDURE [dbo].[PamRotationConfig_DeleteWithJobs]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- Cascade: hard-deletes attempts, then jobs, then config, since both FKs are NO ACTION. The timeout journal
-    -- cascades from the jobs on its own.
+    -- Hard-deletes the config; its jobs, their attempts and the timeout journal go with it through the FK cascade.
     SET XACT_ABORT ON
 
     BEGIN TRANSACTION
@@ -793,14 +802,6 @@ BEGIN
         SELECT 0 -- ActiveJobExists
         RETURN
     END
-
-    DELETE A
-    FROM [dbo].[PamRotationAttempt] A
-    INNER JOIN [dbo].[PamRotationJob] J ON J.[Id] = A.[JobId]
-    WHERE J.[RotationConfigId] = @Id
-
-    DELETE FROM [dbo].[PamRotationJob]
-    WHERE [RotationConfigId] = @Id
 
     DELETE FROM [dbo].[PamRotationConfig]
     WHERE [Id] = @Id

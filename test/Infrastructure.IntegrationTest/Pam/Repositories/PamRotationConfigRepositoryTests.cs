@@ -202,6 +202,38 @@ public class PamRotationConfigRepositoryTests
         Assert.Null(await pamRotationJobRepository.GetAttemptByIdAsync(claim.AttemptId!.Value));
     }
 
+    [DatabaseTheory, DatabaseData]
+    public async Task OrganizationDeleteAsync_WithClaimedJob_CascadesConfigJobAndAttempt(
+        IOrganizationRepository organizationRepository,
+        IPamTargetSystemRepository pamTargetSystemRepository,
+        IApiKeyRepository apiKeyRepository,
+        IPamAccessConnectorRepository pamAccessConnectorRepository,
+        ICipherRepository cipherRepository,
+        IPamRotationConfigRepository pamRotationConfigRepository,
+        IPamRotationJobRepository pamRotationJobRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+        var target = await CreateAutomaticTargetAsync(pamTargetSystemRepository, organization.Id, now);
+        var accessConnector = await CreateEnrolledAccessConnectorAsync(
+            apiKeyRepository, pamAccessConnectorRepository, organization.Id);
+        await AssignAsync(pamAccessConnectorRepository, accessConnector.Id, target.Id, organization.Id, now);
+        var cipher = await CreateCipherAsync(cipherRepository, organization.Id);
+        var config = await pamRotationConfigRepository.CreateAsync(BuildConfig(organization.Id, cipher.Id, target.Id, now));
+        var job = BuildPendingJob(config.Id, now);
+        Assert.Equal(PamRotationJobCreateOutcome.Created, await pamRotationJobRepository.CreateGuardedAsync(job));
+        var claim = await pamRotationJobRepository.ClaimAsync(
+            job.Id, accessConnector.Id, now, TimeSpan.FromMinutes(15));
+        Assert.Equal(PamRotationClaimOutcome.Claimed, claim.Outcome);
+
+        await organizationRepository.DeleteAsync(organization);
+
+        Assert.Null(await organizationRepository.GetByIdAsync(organization.Id));
+        Assert.Null(await pamRotationConfigRepository.GetByIdAsync(config.Id));
+        Assert.Null(await pamRotationJobRepository.GetByIdAsync(job.Id));
+        Assert.Null(await pamRotationJobRepository.GetAttemptByIdAsync(claim.AttemptId!.Value));
+    }
+
     // HasActiveJob is computed, so it clears once the job resolves or the sweep records its timeout.
     [DatabaseTheory, DatabaseData]
     public async Task GetDetailsByIdAsync_ProjectsTargetFieldsAndHasActiveJob(
