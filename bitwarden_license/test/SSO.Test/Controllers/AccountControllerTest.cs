@@ -169,6 +169,50 @@ public class AccountControllerTest
         Assert.Equal("CouldNotFindOrganizationUser", ex.Message);
     }
 
+    [Theory]
+    [BitAutoData("not-a-guid")]
+    [BitAutoData("")]
+    public async Task ExternalCallback_SchemeIsNotOrganizationId_ThrowsSsoProviderIsNotAnOrgId(
+        string scheme,
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        var authResult = BuildSuccessfulExternalAuth(Guid.NewGuid(), "ext-user", "user@example.com");
+        authResult.Properties!.Items["scheme"] = scheme;
+
+        // Act + Assert
+        await AssertExternalCallbackThrowsSsoProviderIsNotAnOrgIdAsync(sutProvider, authResult);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_NoScheme_ThrowsSsoProviderIsNotAnOrgId(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        var authResult = BuildSuccessfulExternalAuth(Guid.NewGuid(), "ext-user", "user@example.com");
+        authResult.Properties!.Items.Remove("scheme");
+
+        // Act + Assert
+        await AssertExternalCallbackThrowsSsoProviderIsNotAnOrgIdAsync(sutProvider, authResult);
+    }
+
+    private static async Task AssertExternalCallbackThrowsSsoProviderIsNotAnOrgIdAsync(
+        SutProvider<AccountController> sutProvider,
+        AuthenticateResult authResult)
+    {
+        var authService = SetupHttpContextWithAuth(sutProvider, authResult);
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>(), Arg.Any<object?[]>())
+            .Returns(ci => (string)ci[0]!);
+
+        var ex = await Assert.ThrowsAsync<Exception>(() => sutProvider.Sut.ExternalCallback());
+
+        Assert.Equal("SSOProviderIsNotAnOrgId", ex.Message);
+        await sutProvider.GetDependency<ISsoConfigRepository>()
+            .DidNotReceiveWithAnyArgs().GetByOrganizationIdAsync(default);
+        await authService.DidNotReceiveWithAnyArgs().SignInAsync(default!, default, default!, default);
+    }
+
     [Theory, BitAutoData]
     public async Task ExternalCallback_ExistingUser_OrgUserInvited_AllowsLogin(
         SutProvider<AccountController> sutProvider)
@@ -214,7 +258,7 @@ public class AccountControllerTest
         await authService.Received().SignInAsync(
             Arg.Any<HttpContext>(),
             Arg.Any<string?>(),
-            Arg.Any<ClaimsPrincipal>(),
+            Arg.Is<ClaimsPrincipal>(p => p.FindFirstValue(JwtClaimTypes.IdentityProvider) == orgId.ToString()),
             Arg.Any<AuthenticationProperties>());
 
         await authService.Received().SignOutAsync(
@@ -423,7 +467,7 @@ public class AccountControllerTest
         await authService.Received().SignInAsync(
             Arg.Any<HttpContext>(),
             Arg.Any<string?>(),
-            Arg.Any<ClaimsPrincipal>(),
+            Arg.Is<ClaimsPrincipal>(p => p.FindFirstValue(JwtClaimTypes.IdentityProvider) == orgId.ToString()),
             Arg.Any<AuthenticationProperties>());
 
         await authService.Received().SignOutAsync(
@@ -669,7 +713,7 @@ public class AccountControllerTest
         // Act
         var task = (Task<(User user, Organization organization, OrganizationUser orgUser)>)method.Invoke(sutProvider.Sut, new object[]
         {
-            orgId.ToString(),
+            orgId,
             providerUserId,
             claims,
             null!,
@@ -733,7 +777,7 @@ public class AccountControllerTest
         // Act + Assert
         var task = (Task<(User user, Organization organization, OrganizationUser orgUser)>)method.Invoke(sutProvider.Sut, new object[]
         {
-            orgId.ToString(),
+            orgId,
             providerUserId,
             claims,
             null!,
@@ -790,7 +834,7 @@ public class AccountControllerTest
         // Act + Assert
         var task = (Task<(User user, Organization organization, OrganizationUser orgUser)>)method.Invoke(sutProvider.Sut, new object[]
         {
-            orgId.ToString(),
+            orgId,
             providerUserId,
             claims,
             null!,

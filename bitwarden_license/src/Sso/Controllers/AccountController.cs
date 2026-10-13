@@ -281,7 +281,7 @@ public class AccountController : Controller
 
         // See if the user has logged in with this SSO provider before and has already been provisioned.
         // This is signified by the user existing in the User table and the SSOUser table for the SSO provider they're using.
-        var (possibleSsoLinkedUser, provider, providerUserId, claims, ssoConfigData) = await FindUserFromExternalProviderAsync(result);
+        var (possibleSsoLinkedUser, organizationId, providerUserId, claims, ssoConfigData) = await FindUserFromExternalProviderAsync(result);
 
         // We will look these up as required (lazy resolution) to avoid multiple DB hits.
         Organization? organization = null;
@@ -302,7 +302,7 @@ public class AccountController : Controller
             {
                 var (resolvedUser, foundOrganization, foundOrCreatedOrgUser) =
                     await CreateUserAndOrgUserConditionallyAsync(
-                        provider,
+                        organizationId,
                         providerUserId,
                         claims,
                         userIdentifier,
@@ -382,7 +382,7 @@ public class AccountController : Controller
         User resolvedSsoLinkedUser = possibleSsoLinkedUser
                                               ?? throw new Exception(_i18nService.T("UserShouldBeFound"));
 
-        await PreventOrgUserLoginIfStatusInvalidAsync(organization, provider, orgUser, resolvedSsoLinkedUser);
+        await PreventOrgUserLoginIfStatusInvalidAsync(organization, organizationId, orgUser, resolvedSsoLinkedUser);
 
         // This allows us to collect any additional claims or properties
         // for the specific protocols used and store them in the local auth cookie.
@@ -400,7 +400,7 @@ public class AccountController : Controller
             new IdentityServerUser(resolvedSsoLinkedUser.Id.ToString())
             {
                 DisplayName = resolvedSsoLinkedUser.Email,
-                IdentityProvider = provider,
+                IdentityProvider = organizationId.ToString(),
                 AdditionalClaims = additionalLocalClaims.ToArray()
             }, localSignInProps);
 
@@ -474,7 +474,7 @@ public class AccountController : Controller
     /// </summary>
     private async Task<(
         User? possibleSsoUser,
-        string provider,
+        Guid organizationId,
         string providerUserId,
         IEnumerable<Claim> claims,
         SsoConfigurationData config
@@ -482,10 +482,14 @@ public class AccountController : Controller
     {
         // FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
-        var provider = result.Properties.Items["scheme"];
-        //Todo: Validate provider is a valid GUID with TryParse instead. When this is invalid it throws an exception
-        var orgId = new Guid(provider);
-        var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgId);
+        // Each organization's SSO scheme is named for its organization id.
+        if (!result.Properties.Items.TryGetValue("scheme", out var scheme) ||
+            !Guid.TryParse(scheme, out var organizationId))
+        {
+            throw new Exception(_i18nService.T("SSOProviderIsNotAnOrgId", scheme));
+        }
+
+        var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organizationId);
         if (ssoConfig == null || !ssoConfig.Enabled)
         {
             throw new Exception(_i18nService.T("OrganizationOrSsoConfigNotFound"));
@@ -534,9 +538,9 @@ public class AccountController : Controller
         // find external user
         var providerUserId = userIdClaim.Value;
 
-        var possibleSsoUser = await _userRepository.GetBySsoUserAsync(providerUserId, orgId);
+        var possibleSsoUser = await _userRepository.GetBySsoUserAsync(providerUserId, organizationId);
 
-        return (possibleSsoUser, provider, providerUserId, claims, ssoConfigData);
+        return (possibleSsoUser, organizationId, providerUserId, claims, ssoConfigData);
     }
 
     /// <summary>
@@ -551,7 +555,7 @@ public class AccountController : Controller
     /// 3. Creating a new User for an existing OrganizationUser (created by invitation), then establishing an SsoUser link
     ///     - User is signing in with a pending invitation.
     /// </summary>
-    /// <param name="provider">The external identity provider.</param>
+    /// <param name="organizationId">The organization whose SSO configuration the user signed in through.</param>
     /// <param name="providerUserId">The external identity provider's user identifier.</param>
     /// <param name="claims">The claims from the external IdP.</param>
     /// <param name="userIdentifier">The user identifier used for manual SSO linking.</param>
@@ -559,7 +563,7 @@ public class AccountController : Controller
     /// <returns>Guaranteed to return the user to sign in as well as the found organization and org user.</returns>
     /// <exception cref="Exception">An exception if the user cannot be provisioned as requested.</exception>
     private async Task<(User resolvedUser, Organization foundOrganization, OrganizationUser foundOrgUser)> CreateUserAndOrgUserConditionallyAsync(
-            string provider,
+            Guid organizationId,
             string providerUserId,
             IEnumerable<Claim> claims,
             string userIdentifier,
@@ -586,7 +590,7 @@ public class AccountController : Controller
         }
 
         // Find the org (we error if we can't find an org because no org is not valid)
-        var organization = await GetOrganizationByProviderAsync(provider);
+        var organization = await GetOrganizationByIdAsync(organizationId);
 
         // Try to find an org user (null org user possible and valid here)
         var possibleOrgUser = await GetOrganizationUserByUserAndOrgIdOrEmailAsync(possibleExistingUser, organization.Id, email);
@@ -868,20 +872,20 @@ public class AccountController : Controller
     /// Validates an organization user is allowed to log in via SSO and blocks invalid statuses.
     /// Lazily resolves the organization and organization user if not provided.
     /// </summary>
-    /// <param name="organization">The target organization; if null, resolved from provider.</param>
-    /// <param name="provider">The SSO scheme provider value (organization id as a GUID string).</param>
+    /// <param name="organization">The target organization; if null, resolved from <paramref name="organizationId"/>.</param>
+    /// <param name="organizationId">The organization whose SSO configuration the user signed in through.</param>
     /// <param name="orgUser">The organization-user record; if null, looked up by user/org or user email for invited users.</param>
     /// <param name="user">The user attempting to sign in (existing or newly provisioned).</param>
-    /// <exception cref="Exception">Thrown if the organization cannot be resolved from provider;
+    /// <exception cref="Exception">Thrown if the organization cannot be found;
     /// the organization user cannot be found; or the organization user status is not allowed.</exception>
     private async Task PreventOrgUserLoginIfStatusInvalidAsync(
         Organization? organization,
-        string provider,
+        Guid organizationId,
         OrganizationUser? orgUser,
         User user)
     {
         // Lazily get organization if not already known
-        organization ??= await GetOrganizationByProviderAsync(provider);
+        organization ??= await GetOrganizationByIdAsync(organizationId);
 
         // Lazily get the org user if not already known
         orgUser ??= await GetOrganizationUserByUserAndOrgIdOrEmailAsync(
@@ -941,19 +945,11 @@ public class AccountController : Controller
     }
 
     /// <summary>
-    /// Tries to get the organization by the provider which is org id for us as we use the scheme
-    /// to identify organizations - not identity providers.
+    /// Gets the organization by id.
     /// </summary>
-    /// <param name="provider">Org id string from SSO scheme property</param>
-    /// <exception cref="Exception">Errors if the provider string is not a valid org id guid or if the org cannot be found by the id.</exception>
-    private async Task<Organization> GetOrganizationByProviderAsync(string provider)
+    /// <exception cref="Exception">Errors if the organization cannot be found by the id.</exception>
+    private async Task<Organization> GetOrganizationByIdAsync(Guid organizationId)
     {
-        if (!Guid.TryParse(provider, out var organizationId))
-        {
-            // TODO: support non-org (server-wide) SSO in the future?
-            throw new Exception(_i18nService.T("SSOProviderIsNotAnOrgId", provider));
-        }
-
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
 
         if (organization == null)

@@ -698,10 +698,8 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     * NOTE: This test uses the substitute pattern instead of SsoTestDataBuilder because:
     * - Organization.Id is of type Guid and cannot be set to a non-GUID value
     * - The auth mock scheme must be a non-GUID string to trigger this error path
-    * - This cannot be tested since ln 438 in AccountController.FindUserFromExternalProviderAsync throws a different exception
-    *   before reaching the organization lookup exception.
     */
-    [Fact(Skip = "This test cannot be executed because the organization ID must be a GUID. See note in test summary.")]
+    [Fact]
     public async Task ExternalCallback_WithInvalidProviderGuid_ReturnsError()
     {
         // Arrange
@@ -729,7 +727,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
 
         // Assert - Should fail because provider is not a valid organization GUID
         var stringResponse = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Organization not found from identifier.", stringResponse);
+        Assert.Contains($"SSO provider, {invalidScheme} is not an organization id", stringResponse);
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
     }
 

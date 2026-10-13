@@ -229,6 +229,12 @@ public class SsoController : Controller
     private async Task<(User user, string provider, string providerUserId, IEnumerable<Claim> claims)>
         FindUserFromExternalProviderAsync(AuthenticateResult result)
     {
+        if (!result.Properties.Items.TryGetValue("scheme", out var provider) ||
+            provider != AuthenticationSchemes.BitwardenIdentitySsoAuthenticationScheme)
+        {
+            throw new Exception("External authentication error");
+        }
+
         var externalUser = result.Principal;
 
         // Try to determine the unique id of the external user (issued by the provider)
@@ -242,9 +248,13 @@ public class SsoController : Controller
         var claims = externalUser.Claims.ToList();
         claims.Remove(userIdClaim);
 
-        var provider = result.Properties.Items["scheme"];
         var providerUserId = userIdClaim.Value;
-        var user = await _userRepository.GetByIdAsync(new Guid(providerUserId));
+        if (!Guid.TryParse(providerUserId, out var userId))
+        {
+            throw new Exception("Unknown userid");
+        }
+
+        var user = await _userRepository.GetByIdAsync(userId);
 
         return (user, provider, providerUserId, claims);
     }
