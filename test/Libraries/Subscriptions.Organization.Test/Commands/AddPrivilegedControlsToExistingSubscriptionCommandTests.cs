@@ -1,30 +1,32 @@
 ﻿using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Subscriptions.Organization.Commands;
-using Bit.Subscriptions.Organization.Models;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Stripe;
 using Xunit;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
 
 namespace Bit.Subscriptions.Organization.Test.Commands;
 
-public class AddPrivilegedControlsCommandTests
+public class AddPrivilegedControlsToExistingSubscriptionCommandTests
 {
     private const int _seatMinimum = 10;
 
-    private readonly FakePrivilegedControlsSeatChangeSetFactory _seatChangeSetFactory = new();
+    private readonly IPrivilegedControlsSeatChangeSetFactory _seatChangeSetFactory =
+        Substitute.For<IPrivilegedControlsSeatChangeSetFactory>();
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand =
         Substitute.For<IUpdateOrganizationSubscriptionCommand>();
     private readonly IOrganizationService _organizationService = Substitute.For<IOrganizationService>();
-    private readonly AddPrivilegedControlsCommand _sut;
+    private readonly AddPrivilegedControlsToExistingSubscriptionCommand _sut;
 
-    public AddPrivilegedControlsCommandTests() =>
-        _sut = new AddPrivilegedControlsCommand(
+    public AddPrivilegedControlsToExistingSubscriptionCommandTests() =>
+        _sut = new AddPrivilegedControlsToExistingSubscriptionCommand(
             _seatChangeSetFactory, _updateOrganizationSubscriptionCommand, _organizationService);
 
     [Fact]
@@ -35,9 +37,7 @@ public class AddPrivilegedControlsCommandTests
 
         await _sut.Run(organization, 15, 20);
 
-        var call = Assert.Single(_seatChangeSetFactory.Calls);
-        Assert.Same(organization, call.Organization);
-        Assert.Equal(15, call.Seats);
+        await _seatChangeSetFactory.Received(1).CreateAsync(organization, 15);
     }
 
     [Fact]
@@ -128,7 +128,7 @@ public class AddPrivilegedControlsCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, 15, null));
 
         Assert.Equal("Your organization already has Privileged Controls.", exception.Message);
-        Assert.Empty(_seatChangeSetFactory.Calls);
+        await _seatChangeSetFactory.DidNotReceive().CreateAsync(Arg.Any<OrganizationEntity>(), Arg.Any<int>());
     }
 
     [Fact]
@@ -147,14 +147,15 @@ public class AddPrivilegedControlsCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, 15, 14));
 
         Assert.Equal("Cannot set max seat autoscaling below the Privileged Controls seat count.", exception.Message);
-        Assert.Empty(_seatChangeSetFactory.Calls);
+        await _seatChangeSetFactory.DidNotReceive().CreateAsync(Arg.Any<OrganizationEntity>(), Arg.Any<int>());
     }
 
     [Fact]
     public async Task Run_SeatChangeStepRejectsTheRequest_ThrowsBadRequestWithItsMessage()
     {
         var organization = CreateOrganization();
-        _seatChangeSetFactory.Result = new BadRequest("Privileged Controls requires at least 10 seats.");
+        _seatChangeSetFactory.CreateAsync(organization, 9)
+            .ThrowsAsync(new BadRequestException("Privileged Controls requires at least 10 seats."));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, 9, null));
 
@@ -165,7 +166,7 @@ public class AddPrivilegedControlsCommandTests
     public async Task Run_SeatChangeStepRejectsTheRequest_ChangesAndSavesNothing()
     {
         var organization = CreateOrganization();
-        _seatChangeSetFactory.Result = new BadRequest("Too few seats.");
+        _seatChangeSetFactory.CreateAsync(organization, 9).ThrowsAsync(new BadRequestException("Too few seats."));
 
         await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, 9, null));
 
@@ -173,17 +174,6 @@ public class AddPrivilegedControlsCommandTests
             .Run(Arg.Any<OrganizationEntity>(), Arg.Any<OrganizationSubscriptionChangeSet>(), Arg.Any<Subscription?>());
         await _organizationService.DidNotReceive()
             .ReplaceAndUpdateCacheAsync(Arg.Any<OrganizationEntity>(), Arg.Any<Bit.Core.Enums.EventType?>());
-    }
-
-    [Fact]
-    public async Task Run_SeatChangeStepReturnsConflict_ThrowsConflict()
-    {
-        var organization = CreateOrganization();
-        _seatChangeSetFactory.Result = new Conflict("Try again later.");
-
-        var exception = await Assert.ThrowsAsync<ConflictException>(() => _sut.Run(organization, 15, null));
-
-        Assert.Equal("Try again later.", exception.Message);
     }
 
     [Fact]
@@ -240,7 +230,7 @@ public class AddPrivilegedControlsCommandTests
                 ChargeImmediately = true
             },
             minimum);
-        _seatChangeSetFactory.Result = seatChange;
+        _seatChangeSetFactory.CreateAsync(Arg.Any<OrganizationEntity>(), Arg.Any<int>()).Returns(seatChange);
         _updateOrganizationSubscriptionCommand
             .Run(Arg.Any<OrganizationEntity>(), seatChange.ChangeSet, Arg.Any<Subscription?>())
             .Returns(new Subscription());
@@ -260,18 +250,4 @@ public class AddPrivilegedControlsCommandTests
             PamSeatMinimum = pamSeatMinimum,
             UsePam = usePam
         };
-
-    // The factory interface is internal, so NSubstitute can't proxy it without InternalsVisibleTo for Castle.
-    private sealed class FakePrivilegedControlsSeatChangeSetFactory : IPrivilegedControlsSeatChangeSetFactory
-    {
-        public BillingCommandResult<PrivilegedControlsSeatChange>? Result { get; set; }
-        public List<(OrganizationEntity Organization, int Seats)> Calls { get; } = [];
-
-        public Task<BillingCommandResult<PrivilegedControlsSeatChange>> CreateAsync(
-            OrganizationEntity organization, int seats)
-        {
-            Calls.Add((organization, seats));
-            return Task.FromResult(Result ?? throw new InvalidOperationException("No result was configured."));
-        }
-    }
 }

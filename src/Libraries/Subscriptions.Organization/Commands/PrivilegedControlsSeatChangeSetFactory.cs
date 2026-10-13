@@ -1,40 +1,17 @@
-﻿using Bit.Core.Billing.Commands;
-using Bit.Core.Billing.Organizations.Commands;
+﻿using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Subscriptions.Organization.Models;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
 
 namespace Bit.Subscriptions.Organization.Commands;
-
-/// <summary>
-/// Validates a requested Privileged Controls seat count against the organization's minimum and the
-/// seats in use, then builds the change set that applies it. Every Privileged Controls seat change
-/// goes through this type, and a request it rejects returns a bad request result.
-/// </summary>
-internal interface IPrivilegedControlsSeatChangeSetFactory
-{
-    /// <summary>
-    /// Builds the change set that moves the organization to <paramref name="seats"/> Privileged Controls
-    /// seats. Does not call Stripe or save anything: the caller applies the change set through
-    /// <see cref="IUpdateOrganizationSubscriptionCommand"/> and saves
-    /// <see cref="OrganizationEntity.PamSeats"/>.
-    /// </summary>
-    /// <param name="organization">The organization whose seats are changing.</param>
-    /// <param name="seats">The total number of Privileged Controls seats being requested.</param>
-    /// <returns>
-    /// The change set and the seat minimum it was validated against on success, or a <see cref="BadRequest"/>
-    /// when the request violates a seat rule.
-    /// </returns>
-    Task<BillingCommandResult<PrivilegedControlsSeatChange>> CreateAsync(OrganizationEntity organization, int seats);
-}
 
 internal sealed class PrivilegedControlsSeatChangeSetFactory(
     IOrganizationUserRepository organizationUserRepository,
     IPricingClient pricingClient) : IPrivilegedControlsSeatChangeSetFactory
 {
-    public async Task<BillingCommandResult<PrivilegedControlsSeatChange>> CreateAsync(
+    public async Task<PrivilegedControlsSeatChange> CreateAsync(
         OrganizationEntity organization,
         int seats)
     {
@@ -42,12 +19,12 @@ internal sealed class PrivilegedControlsSeatChangeSetFactory(
 
         if (!plan.SupportsPrivilegedControls)
         {
-            return new BadRequest("Organization's plan does not support Privileged Controls.");
+            throw new BadRequestException("Organization's plan does not support Privileged Controls.");
         }
 
         if (seats < 1)
         {
-            return new BadRequest("At least one Privileged Controls seat is required.");
+            throw new BadRequestException("At least one Privileged Controls seat is required.");
         }
 
         var minimum = organization.PamSeatMinimum ?? plan.PrivilegedControls.DefaultSeatMinimum;
@@ -58,28 +35,31 @@ internal sealed class PrivilegedControlsSeatChangeSetFactory(
         // No seats saved, or none left, means there is no seat line item on the subscription to update.
         if (currentSeats < 1)
         {
-            return seats < minimum
-                ? BelowMinimum(minimum)
-                : new PrivilegedControlsSeatChange(builder.AddPrivilegedControlsSeats(seats).Build(), minimum);
+            if (seats < minimum)
+            {
+                throw BelowMinimum(minimum);
+            }
+
+            return new PrivilegedControlsSeatChange(builder.AddPrivilegedControlsSeats(seats).Build(), minimum);
         }
 
         if (seats == currentSeats)
         {
-            return new BadRequest($"Your organization already has {currentSeats} Privileged Controls seats.");
+            throw new BadRequestException($"Your organization already has {currentSeats} Privileged Controls seats.");
         }
 
         if (seats < currentSeats)
         {
             if (seats < minimum)
             {
-                return BelowMinimum(minimum);
+                throw BelowMinimum(minimum);
             }
 
             var occupiedSeats = await organizationUserRepository.GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id);
 
             if (occupiedSeats > seats)
             {
-                return new BadRequest(
+                throw new BadRequestException(
                     $"{occupiedSeats} users are currently occupying Privileged Controls seats. " +
                     "You cannot decrease your subscription below your current occupied seat count.");
             }
@@ -88,6 +68,6 @@ internal sealed class PrivilegedControlsSeatChangeSetFactory(
         return new PrivilegedControlsSeatChange(builder.UpdatePrivilegedControlsSeats(seats).Build(), minimum);
     }
 
-    private static BadRequest BelowMinimum(int minimum) =>
+    private static BadRequestException BelowMinimum(int minimum) =>
         new($"Privileged Controls requires at least {minimum} seats.");
 }

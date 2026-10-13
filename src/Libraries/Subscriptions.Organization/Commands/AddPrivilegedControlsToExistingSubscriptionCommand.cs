@@ -1,12 +1,13 @@
 ﻿using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
 
 namespace Bit.Subscriptions.Organization.Commands;
 
-internal interface IAddPrivilegedControlsCommand
+internal interface IAddPrivilegedControlsToExistingSubscriptionCommand
 {
     /// <summary>
     /// Handles an organization's first Privileged Controls purchase: buys the initial seats, sets the autoscale
@@ -21,10 +22,10 @@ internal interface IAddPrivilegedControlsCommand
     Task Run(OrganizationEntity organization, int seats, int? maxAutoscaleSeats);
 }
 
-internal sealed class AddPrivilegedControlsCommand(
+internal sealed class AddPrivilegedControlsToExistingSubscriptionCommand(
     IPrivilegedControlsSeatChangeSetFactory seatChangeSetFactory,
     IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
-    IOrganizationService organizationService) : IAddPrivilegedControlsCommand
+    IOrganizationService organizationService) : IAddPrivilegedControlsToExistingSubscriptionCommand
 {
     public async Task Run(OrganizationEntity organization, int seats, int? maxAutoscaleSeats)
     {
@@ -38,7 +39,7 @@ internal sealed class AddPrivilegedControlsCommand(
             throw new BadRequestException("Cannot set max seat autoscaling below the Privileged Controls seat count.");
         }
 
-        var seatChange = Unwrap(await seatChangeSetFactory.CreateAsync(organization, seats));
+        var seatChange = await seatChangeSetFactory.CreateAsync(organization, seats);
         Unwrap(await updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet));
 
         organization.PamSeats = seats;
@@ -48,9 +49,8 @@ internal sealed class AddPrivilegedControlsCommand(
         await organizationService.ReplaceAndUpdateCacheAsync(organization);
     }
 
-    // The seat change step and the subscription update still report failures as a BillingCommandResult. The
-    // endpoint exception filter has no case for BillingException, so surface each failure as the exception that
-    // maps to its HTTP status.
+    // The subscription update still reports failures as a BillingCommandResult. The endpoint exception filter
+    // has no case for BillingException, so surface each failure as the exception that maps to its HTTP status.
     private static T Unwrap<T>(BillingCommandResult<T> result) => result.Match(
         value => value,
         badRequest => throw new BadRequestException(badRequest.Response),

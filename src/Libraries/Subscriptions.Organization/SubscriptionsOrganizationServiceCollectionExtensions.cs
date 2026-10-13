@@ -1,4 +1,5 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
+using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Invoicing;
 using Bit.Subscriptions.Organization.Commands;
 using Bit.Subscriptions.Organization.Handlers;
@@ -24,7 +25,7 @@ public static class SubscriptionsOrganizationServiceCollectionExtensions
         services.TryAddScoped<PreviewOrganizationPlanChangeHandler>();
         services.TryAddScoped<IPreviewOrganizationPlanChangeCommand, PreviewOrganizationPlanChangeCommand>();
         services.TryAddScoped<IPrivilegedControlsSeatChangeSetFactory, PrivilegedControlsSeatChangeSetFactory>();
-        services.TryAddScoped<IAddPrivilegedControlsCommand, AddPrivilegedControlsCommand>();
+        services.TryAddScoped<IAddPrivilegedControlsToExistingSubscriptionCommand, AddPrivilegedControlsToExistingSubscriptionCommand>();
         services.TryAddEnumerable(
             ServiceDescriptor.Scoped<IAuthorizationHandler, StandaloneOrganizationOwnerRequirementHandler>());
         return services;

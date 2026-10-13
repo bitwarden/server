@@ -12,9 +12,13 @@ See [LIBRARY.md](../LIBRARY.md) for the shape all libraries under `src/Libraries
 (`GetOrganizationSubscriptionPreviewHandler`, `PreviewOrganizationPlanChangeHandler`, `PreviewOrganizationSubscriptionPurchaseHandler`), each depending
 only on `IOrganizationRepository` (or `IUserService` for purchases) and the query or command it runs; the plan-change command
 (`IPreviewOrganizationPlanChangeCommand`), the first Privileged Controls purchase command
-(`IAddPrivilegedControlsCommand`), and the purchase query (`IPreviewOrganizationSubscriptionPurchaseQuery`); the `StandaloneOrganizationOwnerRequirementHandler`
+(`IAddPrivilegedControlsToExistingSubscriptionCommand`), and the purchase query (`IPreviewOrganizationSubscriptionPurchaseQuery`); the `StandaloneOrganizationOwnerRequirementHandler`
 authorization handler; and the `Bit.Invoicing` library they depend on. One handler class per endpoint
 avoids a shared handler that accumulates a dependency per route.
+
+It also registers the implementation of `IPrivilegedControlsSeatChangeSetFactory`. The interface lives in
+`Core` so Admin Console operations, which `Core` cannot reference this library to reach, can inject it; the
+implementation stays internal here.
 
 `MapOrganizationSubscriptionEndpoints()` attaches the group's cross-cutting chain and maps its
 endpoints to an empty group; the host owns the route prefix and mounts it at

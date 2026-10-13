@@ -1,5 +1,7 @@
 ﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Subscriptions.Organization.Commands;
 using NSubstitute;
@@ -23,13 +25,14 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
     }
 
     [Fact]
-    public async Task CreateAsync_FirstPurchaseBelowMinimum_ReturnsBadRequest()
+    public async Task CreateAsync_FirstPurchaseBelowMinimum_ThrowsBadRequest()
     {
         var organization = CreateOrganization();
 
-        var result = await _factory.CreateAsync(organization, _planDefaultMinimum - 1);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => _factory.CreateAsync(organization, _planDefaultMinimum - 1));
 
-        Assert.Equal("Privileged Controls requires at least 10 seats.", result.AsT1.Response);
+        Assert.Equal("Privileged Controls requires at least 10 seats.", exception.Message);
     }
 
     [Fact]
@@ -39,18 +42,19 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
 
         var result = await _factory.CreateAsync(organization, _planDefaultMinimum);
 
-        var item = Assert.Single(result.AsT0.ChangeSet.Changes).AsT0;
+        var item = Assert.Single(result.ChangeSet.Changes).AsT0;
         Assert.Equal(_planDefaultMinimum, item.Quantity);
     }
 
     [Fact]
-    public async Task CreateAsync_ZeroSavedSeatsBelowMinimum_ReturnsBadRequest()
+    public async Task CreateAsync_ZeroSavedSeatsBelowMinimum_ThrowsBadRequest()
     {
         var organization = CreateOrganization(pamSeats: 0);
 
-        var result = await _factory.CreateAsync(organization, _planDefaultMinimum - 1);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => _factory.CreateAsync(organization, _planDefaultMinimum - 1));
 
-        Assert.Equal("Privileged Controls requires at least 10 seats.", result.AsT1.Response);
+        Assert.Equal("Privileged Controls requires at least 10 seats.", exception.Message);
     }
 
     [Fact]
@@ -60,32 +64,33 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
 
         var result = await _factory.CreateAsync(organization, _planDefaultMinimum);
 
-        var item = Assert.Single(result.AsT0.ChangeSet.Changes).AsT0;
+        var item = Assert.Single(result.ChangeSet.Changes).AsT0;
         Assert.Equal(_planDefaultMinimum, item.Quantity);
     }
 
     [Fact]
-    public async Task CreateAsync_ReductionBelowMinimum_ReturnsBadRequest()
+    public async Task CreateAsync_ReductionBelowMinimum_ThrowsBadRequest()
     {
         var organization = CreateOrganization(pamSeats: 15);
 
-        var result = await _factory.CreateAsync(organization, _planDefaultMinimum - 1);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => _factory.CreateAsync(organization, _planDefaultMinimum - 1));
 
-        Assert.Equal("Privileged Controls requires at least 10 seats.", result.AsT1.Response);
+        Assert.Equal("Privileged Controls requires at least 10 seats.", exception.Message);
     }
 
     [Fact]
-    public async Task CreateAsync_ReductionBelowSeatsInUse_ReturnsBadRequest()
+    public async Task CreateAsync_ReductionBelowSeatsInUse_ThrowsBadRequest()
     {
         var organization = CreateOrganization(pamSeats: 20);
         _organizationUserRepository.GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id).Returns(14);
 
-        var result = await _factory.CreateAsync(organization, 12);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _factory.CreateAsync(organization, 12));
 
         Assert.Equal(
             "14 users are currently occupying Privileged Controls seats. " +
             "You cannot decrease your subscription below your current occupied seat count.",
-            result.AsT1.Response);
+            exception.Message);
     }
 
     [Fact]
@@ -96,7 +101,7 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
 
         var result = await _factory.CreateAsync(organization, 12);
 
-        var item = Assert.Single(result.AsT0.ChangeSet.Changes).AsT3;
+        var item = Assert.Single(result.ChangeSet.Changes).AsT3;
         Assert.Equal(12, item.Quantity);
     }
 
@@ -107,7 +112,7 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
 
         var result = await _factory.CreateAsync(organization, 30);
 
-        var item = Assert.Single(result.AsT0.ChangeSet.Changes).AsT3;
+        var item = Assert.Single(result.ChangeSet.Changes).AsT3;
         Assert.Equal(30, item.Quantity);
     }
 
@@ -118,7 +123,7 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
 
         var result = await _factory.CreateAsync(organization, 5);
 
-        Assert.True(result.Success);
+        Assert.Equal(5, Assert.Single(result.ChangeSet.Changes).AsT3.Quantity);
     }
 
     [Fact]
@@ -133,13 +138,13 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
     }
 
     [Fact]
-    public async Task CreateAsync_SameSeatCount_ReturnsBadRequest()
+    public async Task CreateAsync_SameSeatCount_ThrowsBadRequest()
     {
         var organization = CreateOrganization(pamSeats: 12);
 
-        var result = await _factory.CreateAsync(organization, 12);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _factory.CreateAsync(organization, 12));
 
-        Assert.Equal("Your organization already has 12 Privileged Controls seats.", result.AsT1.Response);
+        Assert.Equal("Your organization already has 12 Privileged Controls seats.", exception.Message);
     }
 
     [Fact]
@@ -149,7 +154,7 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
 
         var result = await _factory.CreateAsync(organization, 6);
 
-        Assert.True(result.Success);
+        Assert.Equal(6, Assert.Single(result.ChangeSet.Changes).AsT0.Quantity);
     }
 
     [Fact]
@@ -159,7 +164,7 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
 
         var result = await _factory.CreateAsync(organization, 6);
 
-        Assert.Equal(6, result.AsT0.SeatMinimum);
+        Assert.Equal(6, result.SeatMinimum);
     }
 
     [Fact]
@@ -169,7 +174,7 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
 
         var result = await _factory.CreateAsync(organization, _planDefaultMinimum);
 
-        Assert.Equal(_planDefaultMinimum, result.AsT0.SeatMinimum);
+        Assert.Equal(_planDefaultMinimum, result.SeatMinimum);
     }
 
     [Fact]
@@ -179,7 +184,7 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
 
         var result = await _factory.CreateAsync(organization, 30);
 
-        Assert.Equal(6, result.AsT0.SeatMinimum);
+        Assert.Equal(6, result.SeatMinimum);
     }
 
     [Fact]
@@ -187,9 +192,9 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
     {
         var organization = CreateOrganization(pamSeatMinimum: 6);
 
-        var result = await _factory.CreateAsync(organization, 5);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _factory.CreateAsync(organization, 5));
 
-        Assert.Equal("Privileged Controls requires at least 6 seats.", result.AsT1.Response);
+        Assert.Equal("Privileged Controls requires at least 6 seats.", exception.Message);
     }
 
     [Fact]
@@ -197,31 +202,30 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
     {
         var organization = CreateOrganization(pamSeatMinimum: null);
 
-        var result = await _factory.CreateAsync(organization, _planDefaultMinimum - 1);
-
-        Assert.False(result.Success);
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => _factory.CreateAsync(organization, _planDefaultMinimum - 1));
     }
 
     [Fact]
-    public async Task CreateAsync_PlanWithoutPrivilegedControls_ReturnsBadRequest()
+    public async Task CreateAsync_PlanWithoutPrivilegedControls_ThrowsBadRequest()
     {
         var organization = CreateOrganization(PlanType.TeamsAnnually);
 
-        var result = await _factory.CreateAsync(organization, 10);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _factory.CreateAsync(organization, 10));
 
-        Assert.Equal("Organization's plan does not support Privileged Controls.", result.AsT1.Response);
+        Assert.Equal("Organization's plan does not support Privileged Controls.", exception.Message);
     }
 
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public async Task CreateAsync_FewerThanOneSeat_ReturnsBadRequest(int seats)
+    public async Task CreateAsync_FewerThanOneSeat_ThrowsBadRequest(int seats)
     {
         var organization = CreateOrganization(pamSeats: 12);
 
-        var result = await _factory.CreateAsync(organization, seats);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _factory.CreateAsync(organization, seats));
 
-        Assert.Equal("At least one Privileged Controls seat is required.", result.AsT1.Response);
+        Assert.Equal("At least one Privileged Controls seat is required.", exception.Message);
     }
 
     [Fact]
@@ -232,7 +236,7 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
 
         var result = await _factory.CreateAsync(organization, 30);
 
-        Assert.True(result.Success);
+        Assert.Equal(30, Assert.Single(result.ChangeSet.Changes).AsT3.Quantity);
     }
 
     private OrganizationEntity CreateOrganization(
