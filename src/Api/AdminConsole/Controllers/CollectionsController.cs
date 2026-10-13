@@ -293,8 +293,8 @@ public class CollectionsController : Controller
         }
 
         var collectionIds = collections.Select(collection => collection.Id).ToList();
-        var authorizedForUserAccess = await _collectionAuthorizationService.AuthorizeModifyUserAccessManyAsync(orgId, collectionIds);
-        var authorizedForGroupAccess = await _collectionAuthorizationService.AuthorizeModifyGroupAccessManyAsync(orgId, collectionIds);
+        var authorizedForUserAccess = await _collectionAuthorizationService.AuthorizeModifyUserAccessAsync(orgId, collectionIds);
+        var authorizedForGroupAccess = await _collectionAuthorizationService.AuthorizeModifyGroupAccessAsync(orgId, collectionIds);
 
         return collectionIds.All(id => authorizedForUserAccess.Contains(id) && authorizedForGroupAccess.Contains(id));
     }

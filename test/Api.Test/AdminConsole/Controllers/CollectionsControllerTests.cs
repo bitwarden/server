@@ -721,10 +721,10 @@ public class CollectionsControllerTests
 
         ArrangeBulkCollectionAccess(sutProvider, actingUser, collections, model, newAuthorizationEnabled: true);
         sutProvider.GetDependency<ICollectionAuthorizationService>()
-            .AuthorizeModifyUserAccessManyAsync(organization.Id, Arg.Any<IReadOnlyCollection<Guid>>())
+            .AuthorizeModifyUserAccessAsync(organization.Id, Arg.Any<IReadOnlyCollection<Guid>>())
             .Returns(allCollectionIds);
         sutProvider.GetDependency<ICollectionAuthorizationService>()
-            .AuthorizeModifyGroupAccessManyAsync(organization.Id, Arg.Any<IReadOnlyCollection<Guid>>())
+            .AuthorizeModifyGroupAccessAsync(organization.Id, Arg.Any<IReadOnlyCollection<Guid>>())
             .Returns(allCollectionIds);
 
         await sutProvider.Sut.PostBulkCollectionAccess(organization.Id, model);
@@ -751,10 +751,10 @@ public class CollectionsControllerTests
 
         ArrangeBulkCollectionAccess(sutProvider, actingUser, collections, model, newAuthorizationEnabled: true);
         sutProvider.GetDependency<ICollectionAuthorizationService>()
-            .AuthorizeModifyUserAccessManyAsync(organization.Id, Arg.Any<IReadOnlyCollection<Guid>>())
+            .AuthorizeModifyUserAccessAsync(organization.Id, Arg.Any<IReadOnlyCollection<Guid>>())
             .Returns(authorizedForUserAccess);
         sutProvider.GetDependency<ICollectionAuthorizationService>()
-            .AuthorizeModifyGroupAccessManyAsync(organization.Id, Arg.Any<IReadOnlyCollection<Guid>>())
+            .AuthorizeModifyGroupAccessAsync(organization.Id, Arg.Any<IReadOnlyCollection<Guid>>())
             .Returns(allCollectionIds);
 
         await Assert.ThrowsAsync<NotFoundException>(
@@ -775,10 +775,10 @@ public class CollectionsControllerTests
 
         ArrangeBulkCollectionAccess(sutProvider, actingUser, collections, model, newAuthorizationEnabled: true);
         sutProvider.GetDependency<ICollectionAuthorizationService>()
-            .AuthorizeModifyUserAccessManyAsync(organization.Id, Arg.Any<IReadOnlyCollection<Guid>>())
+            .AuthorizeModifyUserAccessAsync(organization.Id, Arg.Any<IReadOnlyCollection<Guid>>())
             .Returns(allCollectionIds);
         sutProvider.GetDependency<ICollectionAuthorizationService>()
-            .AuthorizeModifyGroupAccessManyAsync(organization.Id, Arg.Any<IReadOnlyCollection<Guid>>())
+            .AuthorizeModifyGroupAccessAsync(organization.Id, Arg.Any<IReadOnlyCollection<Guid>>())
             .Returns(authorizedForGroupAccess);
 
         await Assert.ThrowsAsync<NotFoundException>(
@@ -799,9 +799,9 @@ public class CollectionsControllerTests
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.PostBulkCollectionAccess(organization.Id, model));
         await sutProvider.GetDependency<ICollectionAuthorizationService>().DidNotReceiveWithAnyArgs()
-            .AuthorizeModifyUserAccessManyAsync(default, default);
+            .AuthorizeModifyUserAccessAsync(default, default);
         await sutProvider.GetDependency<ICollectionAuthorizationService>().DidNotReceiveWithAnyArgs()
-            .AuthorizeModifyGroupAccessManyAsync(default, default);
+            .AuthorizeModifyGroupAccessAsync(default, default);
         await sutProvider.GetDependency<IBulkAddCollectionAccessCommand>().DidNotReceiveWithAnyArgs()
             .AddAccessAsync(default, default, default);
     }
