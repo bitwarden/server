@@ -39,7 +39,8 @@ public class NoopMailService : IMailService
         ProductTierType productTier,
         IEnumerable<ProductType> products,
         int trailLength,
-        bool paymentOptional = false)
+        bool paymentOptional = false,
+        int? pamSeatMinimum = null)
     {
         return Task.FromResult(0);
     }
@@ -324,7 +325,7 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendTrustedDeviceAdminApprovalEmailAsync(string email, DateTime utcNow, string ip, string deviceTypeAndIdentifier)
+    public Task SendTrustedDeviceAdminApprovalEmailAsync(string email, DateTime utcNow, string ip, string deviceTypeDisplayName)
     {
         return Task.FromResult(0);
     }
@@ -342,7 +343,7 @@ public class NoopMailService : IMailService
     }
     public Task SendRequestSMAccessToAdminEmailAsync(IEnumerable<string> adminEmails, string organizationName, string userRequestingAccess, string emailContent) => throw new NotImplementedException();
 
-    public Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email, string offerAcceptanceDate,
+    public Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email,
         string organizationId,
         string organizationName)
     {

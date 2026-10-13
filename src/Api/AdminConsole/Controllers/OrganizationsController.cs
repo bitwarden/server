@@ -2,7 +2,6 @@
 #nullable disable
 
 using System.Text.Json;
-using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response;
@@ -12,7 +11,6 @@ using Bit.Api.Auth.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Response.Organizations;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
-using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
@@ -38,6 +36,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
+using Bit.OrganizationAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -243,13 +242,6 @@ public class OrganizationsController : Controller
         return TypedResults.Ok(new OrganizationResponseModel(updatedOrganization, plan));
     }
 
-    [HttpPost("{id}")]
-    [Obsolete("This endpoint is deprecated. Use PUT method instead")]
-    public async Task<IResult> PostPut(Guid id, [FromBody] OrganizationUpdateRequestModel model)
-    {
-        return await Put(id, model);
-    }
-
     [HttpPost("{id}/storage")]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<PaymentResponseModel> PostStorage(string id, [FromBody] StorageRequestModel model)
@@ -329,13 +321,6 @@ public class OrganizationsController : Controller
         }
 
         await _organizationDeleteCommand.DeleteAsync(organization);
-    }
-
-    [HttpPost("{id}/delete")]
-    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
-    public async Task PostDelete(string id, [FromBody] SecretVerificationRequestModel model)
-    {
-        await Delete(id, model);
     }
 
     [HttpPost("{id}/delete-recover-token")]
@@ -486,9 +471,8 @@ public class OrganizationsController : Controller
     }
 
     [HttpGet("{orgId}/private-key")]
-    [RequireFeature(FeatureFlagKeys.GenerateInviteLink)]
     [Authorize<ManageUsersRequirement>]
-    public async Task<OrganizationPrivateKeyResponseModel> GetPrivateKey(Guid orgId)
+    public async Task<OrganizationPrivateKeyResponseModel> GetPrivateKey([FromRoute] Guid orgId)
     {
         var org = await _organizationRepository.GetByIdAsync(orgId);
         if (org == null)

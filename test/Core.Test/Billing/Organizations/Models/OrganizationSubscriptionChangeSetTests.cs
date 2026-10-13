@@ -108,6 +108,54 @@ public class OrganizationSubscriptionChangeSetBuilderTests
     }
 
     [Fact]
+    public void AddPrivilegedControlsSeats_AddsPrivilegedControlsSeatItem()
+    {
+        var plan = GetPlan(PlanType.EnterpriseAnnually);
+        var changeSet = OrganizationSubscriptionChangeSet.Builder(plan)
+            .AddPrivilegedControlsSeats(12)
+            .Build();
+
+        var change = Assert.Single(changeSet.Changes);
+        var item = change.AsT0;
+        Assert.Equal(plan.PrivilegedControls.StripeSeatPlanId, item.PriceId);
+        Assert.Equal(12, item.Quantity);
+    }
+
+    [Fact]
+    public void AddPrivilegedControlsSeats_SetsChargeImmediately()
+    {
+        var changeSet = OrganizationSubscriptionChangeSet.Builder(GetPlan(PlanType.EnterpriseAnnually))
+            .AddPrivilegedControlsSeats(12)
+            .Build();
+
+        Assert.True(changeSet.ChargeImmediately);
+    }
+
+    [Fact]
+    public void UpdatePrivilegedControlsSeats_UpdatesPrivilegedControlsSeatItem()
+    {
+        var plan = GetPlan(PlanType.EnterpriseAnnually);
+        var changeSet = OrganizationSubscriptionChangeSet.Builder(plan)
+            .UpdatePrivilegedControlsSeats(15)
+            .Build();
+
+        var change = Assert.Single(changeSet.Changes);
+        var item = change.AsT3;
+        Assert.Equal(plan.PrivilegedControls.StripeSeatPlanId, item.PriceId);
+        Assert.Equal(15, item.Quantity);
+    }
+
+    [Fact]
+    public void UpdatePrivilegedControlsSeats_DoesNotSetChargeImmediately()
+    {
+        var changeSet = OrganizationSubscriptionChangeSet.Builder(GetPlan(PlanType.EnterpriseAnnually))
+            .UpdatePrivilegedControlsSeats(15)
+            .Build();
+
+        Assert.False(changeSet.ChargeImmediately);
+    }
+
+    [Fact]
     public void EstablishSponsorship_SetsChargeImmediately()
     {
         var plan = GetPlan(PlanType.FamiliesAnnually);

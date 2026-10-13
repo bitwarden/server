@@ -128,6 +128,23 @@ public class RustSdkService
     }
 
     /// <summary>
+    /// Derives the Secrets Manager access-token key from the 16-byte token encryption key, using the
+    /// SDK's <c>derive_shareable_key</c> (HMAC-SHA256 with key "bitwarden-accesstoken" then HKDF-Expand
+    /// SHA256 to 64 bytes with info "sm-access-token"). Returns the base64-encoded 64-byte enc||mac key.
+    /// </summary>
+    public static unsafe string DeriveAccessTokenKey(string encryptionKeyBase64)
+    {
+        var encryptionKeyBytes = StringToRustString(encryptionKeyBase64);
+
+        fixed (byte* encryptionKeyPtr = encryptionKeyBytes)
+        {
+            var resultPtr = NativeMethods.derive_access_token_key(encryptionKeyPtr);
+
+            return ParseResponse(resultPtr);
+        }
+    }
+
+    /// <summary>
     /// Wraps a symmetric key with another symmetric key, returning an EncString in format
     /// "2.{iv}|{data}|{mac}" whose plaintext is the raw key bytes (so it unwraps back into a
     /// symmetric key). Use this for keys a client unwraps via <c>unwrap_symmetric_key</c> — e.g. a

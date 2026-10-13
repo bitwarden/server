@@ -149,6 +149,12 @@ public class Startup
                     (c.Value.Contains(ApiScopes.Api) || c.Value.Contains(ApiScopes.ApiSecrets))
                 ));
             });
+            config.AddPolicy(Policies.AccessConnector, policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiPamCredentialRotation);
+                policy.RequireClaim(Claims.Type, IdentityClientType.AccessConnector.ToString());
+            });
             config.AddPolicy(Policies.Send, configurePolicy: policy =>
             {
                 policy.RequireAuthenticatedUser();
@@ -235,16 +241,9 @@ public class Startup
         Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
         services.AddHostedService<Jobs.JobsHostedService>();
 
-        if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
-            CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
-        {
-            services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
-        }
-
         // Add Event Integrations services
         services.AddEventIntegrationsCommandsQueries(globalSettings);
         services.AddSlackService(globalSettings);
-        services.AddTeamsService(globalSettings);
     }
 
     public void Configure(
@@ -415,9 +414,11 @@ public class Startup
 
     private static void MapSubscriptionEndpoints(IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapGroup("/account/billing/subscription/premium")
+        endpoints.MapGroup("/account/billing/subscription")
             .MapUserSubscriptionEndpoints();
         endpoints.MapGroup("/organizations/{organizationId:guid}/billing/subscription")
             .MapOrganizationSubscriptionEndpoints();
+        endpoints.MapGroup("/organizations/billing/subscription")
+            .MapOrganizationSubscriptionPurchaseEndpoints();
     }
 }

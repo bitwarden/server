@@ -16,20 +16,20 @@ public class UpdateGroupCommand : IUpdateGroupCommand
     private readonly IEventService _eventService;
     private readonly IGroupRepository _groupRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly ICollectionRepository _collectionRepository;
+    private readonly IGroupCollectionAccessValidator _groupCollectionAccessValidator;
     private readonly TimeProvider _timeProvider;
 
     public UpdateGroupCommand(
         IEventService eventService,
         IGroupRepository groupRepository,
         IOrganizationUserRepository organizationUserRepository,
-        ICollectionRepository collectionRepository,
+        IGroupCollectionAccessValidator groupCollectionAccessValidator,
         TimeProvider timeProvider)
     {
         _eventService = eventService;
         _groupRepository = groupRepository;
         _organizationUserRepository = organizationUserRepository;
-        _collectionRepository = collectionRepository;
+        _groupCollectionAccessValidator = groupCollectionAccessValidator;
         _timeProvider = timeProvider;
     }
 
@@ -132,7 +132,11 @@ public class UpdateGroupCommand : IUpdateGroupCommand
 
         if (collectionAccess?.Any() == true)
         {
-            await ValidateCollectionAccessAsync(originalGroup, collectionAccess);
+            var error = await _groupCollectionAccessValidator.ValidateAsync(originalGroup.OrganizationId, collectionAccess);
+            if (error is not null)
+            {
+                throw error.ToException();
+            }
         }
 
         if (memberAccess?.Any() == true)
@@ -144,33 +148,6 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         if (invalidAssociations?.Any() ?? false)
         {
             throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
-        }
-    }
-
-    private async Task ValidateCollectionAccessAsync(Group originalGroup,
-        ICollection<CollectionAccessSelection> collectionAccess)
-    {
-        var collections = await _collectionRepository
-            .GetManyByManyIdsAsync(collectionAccess.Select(c => c.Id));
-        var collectionIds = collections.Select(c => c.Id);
-
-        var missingCollection = collectionAccess
-            .FirstOrDefault(cas => !collectionIds.Contains(cas.Id));
-        if (missingCollection != default)
-        {
-            throw new NotFoundException();
-        }
-
-        var invalidCollection = collections.FirstOrDefault(c => c.OrganizationId != originalGroup.OrganizationId);
-        if (invalidCollection != default)
-        {
-            // Use generic error message to avoid enumeration
-            throw new NotFoundException();
-        }
-
-        if (collections.Any(c => c.Type == CollectionType.DefaultUserCollection))
-        {
-            throw new BadRequestException("You cannot modify group access for collections with the type as DefaultUserCollection.");
         }
     }
 

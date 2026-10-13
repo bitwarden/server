@@ -62,7 +62,7 @@ if (mjmlFiles.length === 0) {
 let successCount = 0;
 let errorCount = 0;
 
-mjmlFiles.forEach((filePath) => {
+async function compileFile(filePath) {
   try {
     const mjmlContent = fs.readFileSync(filePath, "utf8");
     const fileName = path.basename(filePath, ".mjml");
@@ -71,11 +71,17 @@ mjmlFiles.forEach((filePath) => {
     console.log(`\n[BUILD] Compiling: ${relativePath}`);
 
     // Compile MJML to HTML
-    const result = mjml2html(mjmlContent, {
+    const result = await mjml2html(mjmlContent, {
       minify: config.minify,
       validationLevel: config.validationLevel,
       filePath: filePath, // Important: tells MJML where the file is for resolving includes
       mjmlConfigPath: __dirname, // Point to the directory with .mjmlconfig
+      // mjml 5 ignores mj-include by default and only allows includes that
+      // resolve inside the template's own directory. Templates pull shared
+      // partials from ../../components, so re-enable includes and widen the
+      // allowed root to this package.
+      ignoreIncludes: false,
+      includePath: __dirname,
     });
 
     // Check for errors
@@ -118,13 +124,21 @@ mjmlFiles.forEach((filePath) => {
     console.error(`        ${error.message}`);
     errorCount++;
   }
-});
-
-console.log(`\n[SUMMARY] Compilation complete!`);
-console.log(`          Success: ${successCount}`);
-console.log(`          Failed:  ${errorCount}`);
-console.log(`          Output:  ${config.outputDir}`);
-
-if (errorCount > 0) {
-  process.exit(1);
 }
+
+// mjml 5 compiles asynchronously, so files are awaited one at a time to keep
+// each file's build log contiguous.
+(async () => {
+  for (const filePath of mjmlFiles) {
+    await compileFile(filePath);
+  }
+
+  console.log(`\n[SUMMARY] Compilation complete!`);
+  console.log(`          Success: ${successCount}`);
+  console.log(`          Failed:  ${errorCount}`);
+  console.log(`          Output:  ${config.outputDir}`);
+
+  if (errorCount > 0) {
+    process.exit(1);
+  }
+})();

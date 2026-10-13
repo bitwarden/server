@@ -1923,4 +1923,73 @@ public class OrganizationUserRepositoryTests
         Assert.NotNull(updated);
         Assert.Equal(_v2UpgradeToken, updated.V2UpgradeToken);
     }
+
+    [Theory, DatabaseData]
+    public async Task DeleteManyAsync_WithSsoUser_SsoUserIsDeleted(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ISsoUserRepository ssoUserRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var organizationUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+
+        await ssoUserRepository.CreateAsync(new SsoUser
+        {
+            UserId = user.Id,
+            OrganizationId = organization.Id,
+            ExternalId = "external-id",
+        });
+
+        // Act
+        await organizationUserRepository.DeleteManyAsync(new[] { organizationUser.Id });
+
+        // Assert
+        var deletedOrganizationUser = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.Null(deletedOrganizationUser);
+
+        var deletedSsoUser = await ssoUserRepository.GetByUserIdOrganizationIdAsync(organization.Id, user.Id);
+        Assert.Null(deletedSsoUser);
+    }
+
+    [Theory, DatabaseData]
+    public async Task DeleteManyAsync_WithSsoUserInAnotherOrganization_OnlyDeletesRemovedOrganizationsSsoUser(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ISsoUserRepository ssoUserRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        var organizationA = await organizationRepository.CreateTestOrganizationAsync();
+        var organizationB = await organizationRepository.CreateTestOrganizationAsync();
+
+        var organizationUserA = await organizationUserRepository.CreateTestOrganizationUserAsync(organizationA, user);
+        await organizationUserRepository.CreateTestOrganizationUserAsync(organizationB, user);
+
+        await ssoUserRepository.CreateAsync(new SsoUser
+        {
+            UserId = user.Id,
+            OrganizationId = organizationA.Id,
+            ExternalId = "external-id-a",
+        });
+        await ssoUserRepository.CreateAsync(new SsoUser
+        {
+            UserId = user.Id,
+            OrganizationId = organizationB.Id,
+            ExternalId = "external-id-b",
+        });
+
+        // Act
+        await organizationUserRepository.DeleteManyAsync(new[] { organizationUserA.Id });
+
+        // Assert - only the SSO user tied to the removed organization is deleted
+        var deletedSsoUser = await ssoUserRepository.GetByUserIdOrganizationIdAsync(organizationA.Id, user.Id);
+        Assert.Null(deletedSsoUser);
+
+        var remainingSsoUser = await ssoUserRepository.GetByUserIdOrganizationIdAsync(organizationB.Id, user.Id);
+        Assert.NotNull(remainingSsoUser);
+    }
 }

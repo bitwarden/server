@@ -105,7 +105,8 @@ public class HandlebarsMailService : IMailService
         ProductTierType productTier,
         IEnumerable<ProductType> products,
         int trialLength,
-        bool paymentOptional = false)
+        bool paymentOptional = false,
+        int? pamSeatMinimum = null)
     {
         var message = CreateDefaultMessage("Verify your email", email);
         var model = new TrialInitiationVerifyEmail
@@ -118,7 +119,8 @@ public class HandlebarsMailService : IMailService
             ProductTier = productTier,
             Product = products,
             TrialLength = trialLength,
-            PaymentOptional = paymentOptional
+            PaymentOptional = paymentOptional,
+            PamSeatMinimum = pamSeatMinimum
         };
         await AddMessageContentAsync(message, "Billing.TrialInitiationVerifyEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
@@ -315,11 +317,12 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendOrganizationMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails)
     {
-        var message = CreateDefaultMessage($"{organization.DisplayName()} Seat Limit Reached", ownerEmails);
+        var message = CreateDefaultMessage($"{organization.DisplayName()} seat limit reached", ownerEmails);
         var model = new OrganizationSeatsMaxReachedViewModel
         {
             MaxSeatCount = maxSeatCount,
-            VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id)
+            VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id),
+            OrganizationName = CoreHelpers.PreventEmailAutoLinking(organization.DisplayName())
         };
 
         await AddMessageContentAsync(message, "OrganizationSeatsMaxReached", model);
@@ -669,11 +672,11 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendLicenseExpiredAsync(IEnumerable<string> emails, string? organizationName = null)
     {
-        var message = CreateDefaultMessage("License Expired", emails);
+        var message = CreateDefaultMessage("License expired", emails);
         var model = new LicenseExpiredViewModel();
         if (organizationName != null)
         {
-            model.OrganizationName = CoreHelpers.SanitizeForEmail(organizationName);
+            model.OrganizationName = CoreHelpers.PreventEmailAutoLinking(organizationName);
         }
         await AddMessageContentAsync(message, "LicenseExpired", model);
         message.Category = "LicenseExpired";
@@ -1397,8 +1400,8 @@ public class HandlebarsMailService : IMailService
         var model = new ProviderUpdatePaymentMethodViewModel
         {
             OrganizationId = organizationId.ToString(),
-            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName),
-            ProviderName = CoreHelpers.SanitizeForEmail(providerName),
+            OrganizationName = CoreHelpers.PreventEmailAutoLinking(organizationName),
+            ProviderName = CoreHelpers.PreventEmailAutoLinking(providerName),
             SiteName = _globalSettings.SiteName,
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash
         };
@@ -1433,7 +1436,7 @@ public class HandlebarsMailService : IMailService
             message.Category = "FamiliesForEnterpriseOffer";
             var model = new FamiliesForEnterpriseOfferViewModel
             {
-                SponsorOrgName = sponsorOrgName,
+                SponsorOrgName = CoreHelpers.PreventEmailAutoLinking(sponsorOrgName),
                 SponsoredEmail = WebUtility.UrlEncode(invite.Email),
                 ExistingAccount = invite.ExistingAccount,
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
@@ -1477,7 +1480,7 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email, DateTime expirationDate)
     {
-        var message = CreateDefaultMessage("Your Families Sponsorship was Removed", email);
+        var message = CreateDefaultMessage("Your Sponsored Families Plan will be ending", email);
         var model = new FamiliesForEnterpriseSponsorshipRevertingViewModel
         {
             ExpirationDate = expirationDate,
@@ -1518,11 +1521,12 @@ public class HandlebarsMailService : IMailService
     public async Task SendSecretsManagerMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount,
         IEnumerable<string> ownerEmails)
     {
-        var message = CreateDefaultMessage($"{organization.DisplayName()} Secrets Manager Seat Limit Reached", ownerEmails);
+        var message = CreateDefaultMessage($"{organization.DisplayName()} Secrets Manager seat limit reached", ownerEmails);
         var model = new OrganizationSeatsMaxReachedViewModel
         {
             MaxSeatCount = maxSeatCount,
-            VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id)
+            VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id),
+            OrganizationName = CoreHelpers.PreventEmailAutoLinking(organization.DisplayName())
         };
 
         await AddMessageContentAsync(message, "OrganizationSmSeatsMaxReached", model);
@@ -1533,11 +1537,12 @@ public class HandlebarsMailService : IMailService
     public async Task SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(Organization organization, int maxSeatCount,
         IEnumerable<string> ownerEmails)
     {
-        var message = CreateDefaultMessage($"{organization.DisplayName()} Secrets Manager Machine Accounts Limit Reached", ownerEmails);
+        var message = CreateDefaultMessage($"{organization.DisplayName()} Secrets Manager machine accounts limit reached", ownerEmails);
         var model = new OrganizationServiceAccountsMaxReachedViewModel
         {
             MaxServiceAccountsCount = maxSeatCount,
-            VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id)
+            VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id),
+            OrganizationName = CoreHelpers.PreventEmailAutoLinking(organization.DisplayName())
         };
 
         await AddMessageContentAsync(message, "OrganizationSmServiceAccountsMaxReached", model);
@@ -1546,7 +1551,7 @@ public class HandlebarsMailService : IMailService
     }
 
     public async Task SendTrustedDeviceAdminApprovalEmailAsync(string email, DateTime utcNow, string ip,
-        string deviceTypeAndIdentifier)
+        string deviceTypeDisplayName)
     {
         var message = CreateDefaultMessage("Login request approved", email);
         var model = new TrustedDeviceAdminApprovalViewModel
@@ -1555,7 +1560,7 @@ public class HandlebarsMailService : IMailService
             TheTime = utcNow.ToShortTimeString(),
             TimeZone = _utcTimeZoneDisplay,
             IpAddress = ip,
-            DeviceType = deviceTypeAndIdentifier,
+            DeviceType = deviceTypeDisplayName,
         };
         await AddMessageContentAsync(message, "Auth.TrustedDeviceAdminApproval", model);
         message.Category = "TrustedDeviceAdminApproval";
@@ -1586,15 +1591,14 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email, string offerAcceptanceDate, string organizationId,
+    public async Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email, string organizationId,
         string organizationName)
     {
-        var message = CreateDefaultMessage("Removal of Free Bitwarden Families plan", email);
+        var message = CreateDefaultMessage("Your Sponsored Families Plan has been removed", email);
         var model = new FamiliesForEnterpriseRemoveOfferViewModel
         {
             SponsoredOrganizationId = organizationId,
-            SponsoringOrgName = CoreHelpers.SanitizeForEmail(organizationName),
-            OfferAcceptanceDate = offerAcceptanceDate,
+            SponsoringOrgName = CoreHelpers.PreventEmailAutoLinking(organizationName),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash
         };
         await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseRemovedFromFamilyUser", model);

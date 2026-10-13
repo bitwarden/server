@@ -145,6 +145,19 @@ var mail = new WelcomeEmail
 };
 ```
 
+#### Reply-To
+
+Set `ReplyToAddress` on mail that invites a reply. Omitted when null.
+
+```csharp
+var mail = new PriceChangeEmail
+{
+    ToEmails = [email],
+    ReplyToAddress = globalSettings.Mail.SupportReplyToEmail,
+    View = new PriceChangeEmailView { /* ... */ }
+};
+```
+
 #### Bypass Suppression List
 
 For critical emails like account recovery or email OTP, you can bypass the suppression list:

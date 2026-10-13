@@ -59,7 +59,7 @@ public class UpdatePremiumStorageCommand(
         var premiumPlans = await pricingClient.ListPremiumPlans();
         var subscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, new SubscriptionGetOptions
         {
-            Expand = ["customer", "customer.discount.source.coupon", "test_clock"]
+            Expand = ["customer", "customer.discount.source.coupon", "discounts.source.coupon", "test_clock"]
         });
 
         // Find the password manager subscription item (seat, not storage) and match it to a plan
@@ -163,6 +163,8 @@ public class UpdatePremiumStorageCommand(
                 "{Command}: Active subscription schedule ({ScheduleId}) found for subscription ({SubscriptionId}), updating schedule phases",
                 CommandName, activeSchedule.Id, subscription.Id);
 
+            DiscountExtensions.RequireScheduleDiscountExpansions(subscription, _logger);
+
             var phase1 = activeSchedule.Phases[0];
             var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
 
@@ -170,6 +172,12 @@ public class UpdatePremiumStorageCommand(
             // for all active phases. If storage prices ever differ between phases, this would
             // need plan-aware price resolution (e.g. matching Phase 2's seat price to a plan).
             var storagePriceId = premiumPlan.Storage.StripePriceId;
+
+            List<SubscriptionSchedulePhaseDiscountOptions>? DiscountsForPhase(SubscriptionSchedulePhase phase) =>
+                phase.StartDate > now
+                    ? DiscountExtensions.BuildPhaseLevelDiscounts(
+                        subscription, [], preservedCouponIds: phase.Discounts?.Select(d => d.CouponId))
+                    : DiscountExtensions.BuildCurrentPhaseDiscounts(subscription);
 
             var phases = new List<SubscriptionSchedulePhaseOptions>();
 
@@ -182,8 +190,7 @@ public class UpdatePremiumStorageCommand(
                     StartDate = phase1.StartDate,
                     EndDate = phase1.EndDate,
                     Items = BuildPhaseItemsWithStorage(phase1.Items, storagePriceId, additionalStorageGb),
-                    Discounts = phase1.Discounts?.Select(d =>
-                        new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),
+                    Discounts = DiscountsForPhase(phase1),
                     Metadata = phase1.Metadata,
                     ProrationBehavior = phase1.ProrationBehavior
                 });
@@ -195,8 +202,6 @@ public class UpdatePremiumStorageCommand(
                     CommandName, phase1.EndDate);
             }
 
-            var phase1Ended = phase1.EndDate <= now;
-
             if (activeSchedule.Phases.Count >= 2)
             {
                 var phase2 = activeSchedule.Phases[1];
@@ -205,13 +210,7 @@ public class UpdatePremiumStorageCommand(
                     StartDate = phase2.StartDate,
                     EndDate = phase2.EndDate,
                     Items = BuildPhaseItemsWithStorage(phase2.Items, storagePriceId, additionalStorageGb),
-                    // Phase 2 active (Phase 1 ended): its consumed one-time discount must not be re-applied
-                    // — suppress. Future Phase 2: carry the customer discount so a storage change doesn't
-                    // strand the coupon the schedule-creation path put there.
-                    Discounts = phase1Ended
-                        ? []
-                        : (subscription.Customer?.Discount).MergeDiscountCouponIds(
-                            phase2.Discounts?.Select(d => d.CouponId)).ToPhaseDiscountOptions(),
+                    Discounts = DiscountsForPhase(phase2),
                     Metadata = phase2.Metadata,
                     ProrationBehavior = phase2.ProrationBehavior
                 });
@@ -278,7 +277,13 @@ public class UpdatePremiumStorageCommand(
     {
         var items = phaseItems
             .Where(i => i.PriceId != storagePriceId)
-            .Select(i => new SubscriptionSchedulePhaseItemOptions { Price = i.PriceId, Quantity = i.Quantity })
+            .Select(i => new SubscriptionSchedulePhaseItemOptions
+            {
+                Price = i.PriceId,
+                Quantity = i.Quantity,
+                Discounts = DiscountExtensions.BuildPhaseItemLevelDiscounts(
+                    i.Discounts?.Select(d => d.CouponId) ?? [])
+            })
             .ToList();
 
         if (additionalStorageGb > 0)

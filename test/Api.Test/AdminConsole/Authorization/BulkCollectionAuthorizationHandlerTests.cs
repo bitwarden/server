@@ -892,6 +892,90 @@ public class BulkCollectionAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanUpdateUserAccess_WithDefaultUserCollection_ManageUsersAndAllowAdminAccess_Failure(
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider, ICollection<Collection> collections,
+        CurrentContextOrganization organization, Guid actingUserId)
+    {
+        organization.Type = OrganizationUserType.Custom;
+        organization.Permissions = new Permissions
+        {
+            ManageUsers = true
+        };
+
+        collections.First().Type = CollectionType.DefaultUserCollection;
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(organization.Id)
+            .Returns(new OrganizationAbility { AllowAdminAccessToAllCollectionItems = true });
+
+        var context = new AuthorizationHandlerContext(
+            [BulkCollectionOperations.ModifyUserAccess],
+            new ClaimsPrincipal(),
+            collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CanUpdateUserAccess_WithDefaultUserCollection_WhenAdminOrOwner_Failure(
+        OrganizationUserType userType,
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider, ICollection<Collection> collections,
+        CurrentContextOrganization organization, Guid actingUserId)
+    {
+        organization.Type = userType;
+        organization.Permissions = new Permissions();
+
+        collections.First().Type = CollectionType.DefaultUserCollection;
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(organization.Id)
+            .Returns(new OrganizationAbility { AllowAdminAccessToAllCollectionItems = true });
+
+        var context = new AuthorizationHandlerContext(
+            [BulkCollectionOperations.ModifyUserAccess],
+            new ClaimsPrincipal(),
+            collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanUpdateGroupAccess_WithDefaultUserCollection_ManageGroupsAndAllowAdminAccess_Failure(
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider, ICollection<Collection> collections,
+        CurrentContextOrganization organization, Guid actingUserId)
+    {
+        organization.Type = OrganizationUserType.Custom;
+        organization.Permissions = new Permissions
+        {
+            ManageGroups = true
+        };
+
+        collections.First().Type = CollectionType.DefaultUserCollection;
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(organization.Id)
+            .Returns(new OrganizationAbility { AllowAdminAccessToAllCollectionItems = true });
+
+        var context = new AuthorizationHandlerContext(
+            [BulkCollectionOperations.ModifyGroupAccess],
+            new ClaimsPrincipal(),
+            collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
     public async Task CanDeleteAsync_WithDeleteAnyCollectionPermission_Success(
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,

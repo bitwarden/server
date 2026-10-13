@@ -23,7 +23,7 @@ public class GenerateSelfHostUserLicenseStepTests
         var context = NewContext(new SeederSettings());
         context.Owner = NewPremiumOwner();
 
-        await new GenerateSelfHostUserLicenseStep(licensing, signer, NullLogger<GenerateSelfHostUserLicenseStep>.Instance).ExecuteAsync(context);
+        await new GenerateSelfHostUserLicenseStep(() => licensing, signer, NullLogger<GenerateSelfHostUserLicenseStep>.Instance).ExecuteAsync(context);
 
         var written = Assert.Single(licensing.WrittenLicenses);
         Assert.True(written.Premium);
@@ -37,7 +37,7 @@ public class GenerateSelfHostUserLicenseStepTests
         var signer = new StubSeederLicenseSigner(_ => Task.FromResult(LicenseSigningResult.Signed("signed.jwt.token")));
         var context = NewContext(new SeederSettings());
 
-        await new GenerateSelfHostUserLicenseStep(licensing, signer, NullLogger<GenerateSelfHostUserLicenseStep>.Instance).ExecuteAsync(context);
+        await new GenerateSelfHostUserLicenseStep(() => licensing, signer, NullLogger<GenerateSelfHostUserLicenseStep>.Instance).ExecuteAsync(context);
 
         Assert.Empty(licensing.WrittenLicenses);
     }
@@ -50,7 +50,7 @@ public class GenerateSelfHostUserLicenseStepTests
         var context = NewContext(new SeederSettings());
         context.Owner = new User { Id = Guid.NewGuid(), Email = "free.user@example.com", Premium = false };
 
-        await new GenerateSelfHostUserLicenseStep(licensing, signer, NullLogger<GenerateSelfHostUserLicenseStep>.Instance).ExecuteAsync(context);
+        await new GenerateSelfHostUserLicenseStep(() => licensing, signer, NullLogger<GenerateSelfHostUserLicenseStep>.Instance).ExecuteAsync(context);
 
         Assert.Empty(licensing.WrittenLicenses);
     }

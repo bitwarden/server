@@ -74,7 +74,29 @@ public class AzureQueueHostedService : IHostedService, IDisposable
                     {
                         try
                         {
-                            var decodedMessage = message.DecodeMessageText();
+                            // CoreHelpers.DecodeMessageText inlined, so that a successful decode can
+                            // be reported: nothing writes base64 to this queue any more, and the
+                            // decode exists only to tolerate a sender that predates that. The warning
+                            // is how we find out whether any still does, so the tolerance can be
+                            // dropped on evidence rather than on the assumption that it is unused.
+                            var decodedMessage = message.MessageText;
+                            if (!string.IsNullOrWhiteSpace(decodedMessage))
+                            {
+                                try
+                                {
+                                    decodedMessage = CoreHelpers.Base64DecodeString(decodedMessage);
+                                    _logger.LogWarning(
+                                        "Dequeued a base64-encoded message: {MessageId}. Decoding it is legacy tolerance, not something a current sender needs.",
+                                        message.MessageId);
+                                }
+                                catch
+                                {
+                                    // Not base64, so it is the plain text a current sender writes.
+                                    // Catching everything is what CoreHelpers.DecodeMessageText does,
+                                    // and this is only meant to inline it, not to change it.
+                                }
+                            }
+
                             if (!string.IsNullOrWhiteSpace(decodedMessage))
                             {
                                 await _hubHelpers.SendNotificationToHubAsync(decodedMessage, cancellationToken);

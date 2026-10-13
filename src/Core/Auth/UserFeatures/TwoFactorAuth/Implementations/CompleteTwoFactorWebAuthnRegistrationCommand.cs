@@ -56,8 +56,17 @@ public class CompleteTwoFactorWebAuthnRegistrationCommand : ICompleteTwoFactorWe
         // account uses the same 2FA key.
         IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(true);
 
-        var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
-        if (success.Result == null)
+        RegisteredPublicKeyCredential success;
+        try
+        {
+            success = await _fido2.MakeNewCredentialAsync(new MakeNewCredentialParams
+            {
+                AttestationResponse = attestationResponse,
+                OriginalOptions = options,
+                IsCredentialIdUniqueToUserCallback = callback
+            });
+        }
+        catch (Fido2VerificationException)
         {
             throw new BadRequestException("WebAuthn credential creation failed.");
         }
@@ -66,13 +75,13 @@ public class CompleteTwoFactorWebAuthnRegistrationCommand : ICompleteTwoFactorWe
         provider.MetaData[keyId] = new TwoFactorProvider.WebAuthnData
         {
             Name = name,
-            Descriptor = new PublicKeyCredentialDescriptor(success.Result.CredentialId),
-            PublicKey = success.Result.PublicKey,
-            UserHandle = success.Result.User.Id,
-            SignatureCounter = success.Result.Counter,
-            CredType = success.Result.CredType,
+            Descriptor = new PublicKeyCredentialDescriptor(success.Id),
+            PublicKey = success.PublicKey,
+            UserHandle = success.User.Id,
+            SignatureCounter = success.SignCount,
+            CredType = success.AttestationFormat,
             RegDate = DateTime.Now,
-            AaGuid = success.Result.Aaguid
+            AaGuid = success.AaGuid
         };
 
         var providers = user.GetTwoFactorProviders();

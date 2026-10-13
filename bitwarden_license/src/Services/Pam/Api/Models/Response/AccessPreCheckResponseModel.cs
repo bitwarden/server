@@ -1,5 +1,6 @@
 ﻿using Bit.HttpExtensions;
 using Bit.Services.Pam.Enums;
+using Bit.Services.Pam.Models;
 
 namespace Bit.Services.Pam.Api.Models.Response;
 
@@ -14,6 +15,23 @@ public class AccessPreCheckResponseModel : ResponseModel
     {
     }
 
+    /// <param name="cipherId">The cipher the pre-check was run for.</param>
+    /// <param name="result">The resolved approval outcome.</param>
+    public AccessPreCheckResponseModel(Guid cipherId, AccessPreCheckResult result)
+        : base("accessPreCheck")
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        CipherId = cipherId;
+        ApprovalMode = result.ApprovalMode;
+        HasActiveLease = result.HasActiveLease;
+        DefaultDurationSeconds = result.DefaultDurationSeconds;
+        MaxDurationSeconds = result.MaxDurationSeconds;
+        CanStartLease = result.CanStartLease;
+        // Dapper hands back Kind.Unspecified, which would serialize as local time.
+        SlotFreesAt = result.SlotFreesAt.AsUtc();
+    }
+
     public Guid CipherId { get; set; }
 
     /// <summary>
@@ -26,4 +44,28 @@ public class AccessPreCheckResponseModel : ResponseModel
     /// True when the caller already holds an active lease: reveal the credential, no request needed.
     /// </summary>
     public bool HasActiveLease { get; set; }
+
+    /// <summary>
+    /// The duration, in seconds, the request form should pre-select: the governing rule's default, or the global
+    /// default, clamped to <see cref="MaxDurationSeconds"/>.
+    /// </summary>
+    public int DefaultDurationSeconds { get; set; }
+
+    /// <summary>
+    /// The longest duration (automatic path) or window span (human path), in seconds, that a request for this cipher
+    /// may ask for: the governing rule's cap narrowed by the global ceiling. Submit enforces the same limit.
+    /// </summary>
+    public int MaxDurationSeconds { get; set; }
+
+    /// <summary>
+    /// Whether access could be started right now. False only when the per-cipher single-active-lease constraint
+    /// binds for this caller and another member holds the slot. A hint, re-checked at start; an absent value means
+    /// true.
+    /// </summary>
+    public bool CanStartLease { get; set; } = true;
+
+    /// <summary>
+    /// When the lease holding the slot ends. Null when <see cref="CanStartLease"/> is true.
+    /// </summary>
+    public DateTime? SlotFreesAt { get; set; }
 }

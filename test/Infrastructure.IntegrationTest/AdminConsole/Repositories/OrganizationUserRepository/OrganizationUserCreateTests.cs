@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -70,6 +71,56 @@ public class OrganizationUserCreateTests
         await AssertOrgUserAndCollectionRevisionDate(
             organizationUserRepository, collectionRepository,
             orgUser, collection.Id, orgUser.RevisionDate);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task CreateManyAsync_WithCollectionAndGroupFromAnotherOrganization_DoesNotCreateThatAccess(
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository,
+        IGroupRepository groupRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var otherOrganization = await organizationRepository.CreateTestOrganizationAsync(identifier: "other");
+        var ownCollection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var otherCollection = await collectionRepository.CreateTestCollectionAsync(otherOrganization);
+        var otherGroup = await groupRepository.CreateTestGroupAsync(otherOrganization);
+
+        var orgUser = new OrganizationUser
+        {
+            Id = CoreHelpers.GenerateComb(),
+            OrganizationId = organization.Id,
+            UserId = null,
+            Email = $"invite-{Guid.NewGuid()}@example.com",
+            Status = OrganizationUserStatusType.Invited,
+            Type = OrganizationUserType.User,
+            CreationDate = DateTime.UtcNow,
+            RevisionDate = DateTime.UtcNow.AddMinutes(10),
+        };
+
+        await organizationUserRepository.CreateManyAsync([
+            new CreateOrganizationUser
+            {
+                OrganizationUser = orgUser,
+                Collections =
+                [
+                    new CollectionAccessSelection { Id = ownCollection.Id, Manage = true },
+                    new CollectionAccessSelection { Id = otherCollection.Id, Manage = true }
+                ],
+                Groups = [otherGroup.Id],
+            }
+        ]);
+
+        var (_, actualCollections) = await organizationUserRepository.GetByIdWithCollectionsAsync(orgUser.Id);
+        var collectionAccess = Assert.Single(actualCollections);
+        Assert.Equal(ownCollection.Id, collectionAccess.Id);
+
+        var (actualOtherCollection, otherCollectionAccess) = await collectionRepository.GetByIdWithAccessAsync(otherCollection.Id);
+        Assert.Empty(otherCollectionAccess.Users);
+        Assert.NotNull(actualOtherCollection);
+        Assert.Equal(otherCollection.RevisionDate, actualOtherCollection.RevisionDate, TimeSpan.FromSeconds(1));
+
+        Assert.Empty(await groupRepository.GetManyIdsByUserIdAsync(orgUser.Id));
     }
 
     private static async Task AssertOrgUserAndCollectionRevisionDate(

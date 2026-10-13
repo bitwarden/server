@@ -64,6 +64,7 @@ BEGIN
                      [AccessPam] BIT '$.AccessPam'
                      ) OUI
 
+    -- Only groups in the user's organization may be attached
     INSERT INTO [dbo].[GroupUser]
     (
         [OrganizationUserId],
@@ -78,7 +79,12 @@ BEGIN
                 [OrganizationUserId] UNIQUEIDENTIFIER '$.OrganizationUserId',
                 [GroupId] UNIQUEIDENTIFIER '$.GroupId'
             ) OUG
+    INNER JOIN
+        [dbo].[OrganizationUser] OU ON OU.[Id] = OUG.[OrganizationUserId]
+    INNER JOIN
+        [dbo].[Group] G ON G.[Id] = OUG.[GroupId] AND G.[OrganizationId] = OU.[OrganizationId]
 
+    -- Only collections in the user's organization may be attached; this also scopes the RevisionDate bump below
     SELECT
         OUC.[CollectionId],
         OUC.[OrganizationUserId],
@@ -95,6 +101,10 @@ BEGIN
                 [HidePasswords] BIT '$.HidePasswords',
                 [Manage] BIT '$.Manage'
             ) OUC
+    INNER JOIN
+        [dbo].[OrganizationUser] OU ON OU.[Id] = OUC.[OrganizationUserId]
+    INNER JOIN
+        [dbo].[Collection] C ON C.[Id] = OUC.[CollectionId] AND C.[OrganizationId] = OU.[OrganizationId]
 
     INSERT INTO [dbo].[CollectionUser]
     (

@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.Collections.Interfaces;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -12,21 +11,18 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Collections;
 public class BulkAddCollectionAccessCommand : IBulkAddCollectionAccessCommand
 {
     private readonly ICollectionRepository _collectionRepository;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IGroupRepository _groupRepository;
+    private readonly ICollectionAccessValidator _collectionAccessValidator;
     private readonly IEventService _eventService;
     private readonly TimeProvider _timeProvider;
 
     public BulkAddCollectionAccessCommand(
         ICollectionRepository collectionRepository,
-        IOrganizationUserRepository organizationUserRepository,
-        IGroupRepository groupRepository,
+        ICollectionAccessValidator collectionAccessValidator,
         IEventService eventService,
         TimeProvider timeProvider)
     {
         _collectionRepository = collectionRepository;
-        _organizationUserRepository = organizationUserRepository;
-        _groupRepository = groupRepository;
+        _collectionAccessValidator = collectionAccessValidator;
         _eventService = eventService;
         _timeProvider = timeProvider;
     }
@@ -70,38 +66,11 @@ public class BulkAddCollectionAccessCommand : IBulkAddCollectionAccessCommand
             throw new BadRequestException("All collections must belong to the same organization.");
         }
 
-        var collectionUserIds = usersAccess?.Select(u => u.Id).Distinct().ToList();
-
-        if (collectionUserIds is { Count: > 0 })
+        var accessValidation = await _collectionAccessValidator.ValidateAsync(
+            new CollectionAccessValidationRequest(orgId, groupsAccess?.ToList(), usersAccess?.ToList()));
+        if (accessValidation.IsError)
         {
-            var users = await _organizationUserRepository.GetManyAsync(collectionUserIds);
-
-            if (users.Count != collectionUserIds.Count)
-            {
-                throw new BadRequestException("One or more users do not exist.");
-            }
-
-            if (users.Any(u => u.OrganizationId != orgId))
-            {
-                throw new BadRequestException("One or more users do not belong to the same organization as the collection being assigned.");
-            }
-        }
-
-        var collectionGroupIds = groupsAccess?.Select(g => g.Id).Distinct().ToList();
-
-        if (collectionGroupIds is { Count: > 0 })
-        {
-            var groups = await _groupRepository.GetManyByManyIds(collectionGroupIds);
-
-            if (groups.Count != collectionGroupIds.Count)
-            {
-                throw new BadRequestException("One or more groups do not exist.");
-            }
-
-            if (groups.Any(g => g.OrganizationId != orgId))
-            {
-                throw new BadRequestException("One or more groups do not belong to the same organization as the collection being assigned.");
-            }
+            throw new BadRequestException(accessValidation.AsError.Message);
         }
     }
 }

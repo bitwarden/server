@@ -9,7 +9,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
+using Bitwarden.Server.Sdk.Features;
 using NSubstitute;
 using Xunit;
 
@@ -32,9 +32,6 @@ public class OrganizationUsersControllerGetInviteTests : IClassFixture<ApiApplic
         _factory = factory;
         _factory.SubstituteService<IFeatureService>(featureService =>
         {
-            featureService
-                .IsEnabled(FeatureFlagKeys.GenerateInviteLink)
-                .Returns(true);
             featureService
                 .IsEnabled(FeatureFlagKeys.InviteLinkAutoConfirm)
                 .Returns(true);

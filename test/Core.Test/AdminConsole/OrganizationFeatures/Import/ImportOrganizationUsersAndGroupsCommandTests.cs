@@ -207,7 +207,7 @@ public class ImportOrganizationUsersAndGroupsCommandTests
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
-    public async Task ImportAsync_InviteUsersAfterProvisioningDisabled_WithFeatureFlag_StagesNewUsers(
+    public async Task ImportAsync_InviteUsersAfterProvisioningDisabled_StagesNewUsers(
             SutProvider<ImportOrganizationUsersAndGroupsCommand> sutProvider,
             Organization org,
             List<OrganizationUserUserDetails> existingUsers,
@@ -230,10 +230,6 @@ public class ImportOrganizationUsersAndGroupsCommandTests
                 Status = OrganizationUserStatusType.Staged
             });
         }
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM34423StagedStatus)
-            .Returns(true);
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id).Returns(existingUsers);
@@ -259,7 +255,7 @@ public class ImportOrganizationUsersAndGroupsCommandTests
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
-    public async Task ImportAsync_InviteUsersAfterProvisioningDisabled_WithoutFeatureFlag_InvitesNewUsers(
+    public async Task ImportAsync_InviteUsersAfterProvisioningEnabled_InvitesNewUsers(
             SutProvider<ImportOrganizationUsersAndGroupsCommand> sutProvider,
             Organization org,
             List<OrganizationUserUserDetails> existingUsers,
@@ -276,50 +272,6 @@ public class ImportOrganizationUsersAndGroupsCommandTests
             u.Email += "@bitwardentest.com";
             orgUsers.Add(new OrganizationUser { Email = u.Email, ExternalId = u.ExternalId });
         }
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM34423StagedStatus)
-            .Returns(false);
-
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id).Returns(existingUsers);
-        sutProvider.GetDependency<IStripePaymentService>().HasSecretsManagerStandalone(org).Returns(true);
-        sutProvider.GetDependency<IOrganizationService>().InviteUsersAsync(org.Id, Guid.Empty, EventSystemUser.PublicApi,
-                Arg.Any<IEnumerable<(OrganizationUserInvite, string)>>())
-            .Returns(orgUsers);
-
-        await sutProvider.Sut.ImportAsync(org.Id, newGroups, importedUsers, new List<string>(), false, false);
-
-        // The feature flag is off, so the existing invite flow runs unchanged
-        await sutProvider.GetDependency<IOrganizationService>().Received(1)
-            .InviteUsersAsync(org.Id, Guid.Empty, EventSystemUser.PublicApi,
-                Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(invites => invites.Count() == importedUsers.Count));
-        await sutProvider.GetDependency<ICreateStagedOrganizationUsersCommand>().DidNotReceiveWithAnyArgs()
-            .RunAsync(default);
-    }
-
-    [Theory, PaidOrganizationCustomize, BitAutoData]
-    public async Task ImportAsync_InviteUsersAfterProvisioningEnabled_WithFeatureFlag_InvitesNewUsers(
-            SutProvider<ImportOrganizationUsersAndGroupsCommand> sutProvider,
-            Organization org,
-            List<OrganizationUserUserDetails> existingUsers,
-            List<ImportedOrganizationUser> importedUsers,
-            List<ImportedGroup> newGroups)
-    {
-        SetupOrganizationConfigForImport(sutProvider, org, existingUsers, importedUsers);
-
-        var orgUsers = new List<OrganizationUser>();
-
-        // fix mocked email format, mock OrganizationUsers.
-        foreach (var u in importedUsers)
-        {
-            u.Email += "@bitwardentest.com";
-            orgUsers.Add(new OrganizationUser { Email = u.Email, ExternalId = u.ExternalId });
-        }
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM34423StagedStatus)
-            .Returns(true);
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id).Returns(existingUsers);

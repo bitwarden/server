@@ -367,7 +367,7 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         var secrets = new List<Secret>();
         for (var i = 0; i < numberToCreate; i++)
         {
-            var secret = await _secretRepository.CreateAsync(new Secret
+            var secret = await _secretRepository.CreateWithInitialVersionAsync(new Secret
             {
                 OrganizationId = organizationId,
                 Key = _mockEncryptedString,

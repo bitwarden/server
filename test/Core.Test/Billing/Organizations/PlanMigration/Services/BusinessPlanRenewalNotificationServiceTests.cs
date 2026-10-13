@@ -109,6 +109,34 @@ public class BusinessPlanRenewalNotificationServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task SendRenewalEmailAsync_SetsReplyToAddressFromConfiguredSupportMailbox(
+        SutProvider<BusinessPlanRenewalNotificationService> sutProvider,
+        Organization organization,
+        OrganizationPlanMigrationCohort cohort)
+    {
+        cohort.MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent;
+        cohort.ProactiveDiscountCouponCode = "";
+        sutProvider.GetDependency<Core.Settings.GlobalSettings>().Mail.SupportReplyToEmail =
+            "support@bitwarden.com";
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(new Enterprise2020Plan(isAnnual: true));
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(new EnterprisePlan(isAnnual: true));
+        sutProvider.GetDependency<IStripeAdapter>()
+            .ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        var result = await sutProvider.Sut.SendRenewalEmailAsync(
+            organization, SubscriptionWithPeriodEnd(new DateTime(2026, 9, 1)), cohort);
+
+        Assert.True(result);
+        await sutProvider.GetDependency<IMailer>().Received(1).SendEmail(
+            Arg.Is<BusinessPlanRenewal2020MigrationMail>(mail =>
+                mail.ReplyToAddress == "support@bitwarden.com"));
+    }
+
+    [Theory, BitAutoData]
     public async Task SendRenewalEmailAsync_WhenValid_SendsEmailWithPlanDerivedQuote_ReturnsTrue(
         SutProvider<BusinessPlanRenewalNotificationService> sutProvider,
         Organization organization,

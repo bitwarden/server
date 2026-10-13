@@ -38,7 +38,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
         IUserRepository userRepository,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IUpdateInstallationCommand updateInstallationCommand,
@@ -104,7 +104,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             || clientId.StartsWith("organization")
             || clientId.StartsWith("installation")
             || clientId.StartsWith("internal")
-            || context.Result.ValidatedRequest.Client.AllowedScopes.Contains(ApiScopes.ApiSecrets))
+            || context.Result.ValidatedRequest.Client.AllowedScopes.Contains(ApiScopes.ApiSecrets)
+            || context.Result.ValidatedRequest.Client.AllowedScopes.Contains(ApiScopes.ApiPamCredentialRotation))
         {
             if (context.Result.ValidatedRequest.Client.Properties.TryGetValue("encryptedPayload", out var payload) &&
                 !string.IsNullOrWhiteSpace(payload))
