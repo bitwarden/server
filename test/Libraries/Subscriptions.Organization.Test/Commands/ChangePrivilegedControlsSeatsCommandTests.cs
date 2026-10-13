@@ -5,8 +5,8 @@ using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Subscriptions.Organization.Commands;
+using Bitwarden.Server.Sdk.Environment;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Stripe;
@@ -25,18 +25,18 @@ public class ChangePrivilegedControlsSeatsCommandTests
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand =
         Substitute.For<IUpdateOrganizationSubscriptionCommand>();
     private readonly IOrganizationService _organizationService = Substitute.For<IOrganizationService>();
-    private readonly IGlobalSettings _globalSettings = Substitute.For<IGlobalSettings>();
+    private readonly IBitwardenEnvironment _environment = Substitute.For<IBitwardenEnvironment>();
     private readonly ChangePrivilegedControlsSeatsCommand _sut;
 
     public ChangePrivilegedControlsSeatsCommandTests() =>
         _sut = new ChangePrivilegedControlsSeatsCommand(
-            _seatChangeSetFactory, _updateOrganizationSubscriptionCommand, _organizationService, _globalSettings);
+            _seatChangeSetFactory, _updateOrganizationSubscriptionCommand, _organizationService, _environment);
 
     [Fact]
     public async Task Run_SelfHosted_ThrowsBadRequest()
     {
         var organization = CreateOrganization();
-        _globalSettings.SelfHosted.Returns(true);
+        _environment.SelfHosted.Returns(true);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, 15, null));
 

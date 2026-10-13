@@ -2,7 +2,7 @@
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
-using Bit.Core.Settings;
+using Bitwarden.Server.Sdk.Environment;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
 
 namespace Bit.Subscriptions.Organization.Commands;
@@ -26,11 +26,11 @@ internal sealed class ChangePrivilegedControlsSeatsCommand(
     IPrivilegedControlsSeatChangeSetFactory seatChangeSetFactory,
     IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
     IOrganizationService organizationService,
-    IGlobalSettings globalSettings) : IChangePrivilegedControlsSeatsCommand
+    IBitwardenEnvironment environment) : IChangePrivilegedControlsSeatsCommand
 {
     public async Task Run(OrganizationEntity organization, int seats, int? maxAutoscaleSeats)
     {
-        if (globalSettings.SelfHosted)
+        if (environment.SelfHosted)
         {
             throw new BadRequestException("Cannot update subscription on a self-hosted instance.");
         }
