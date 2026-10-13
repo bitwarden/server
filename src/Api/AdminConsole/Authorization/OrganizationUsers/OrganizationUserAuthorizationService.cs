@@ -18,9 +18,9 @@ public class OrganizationUserAuthorizationService(
         IReadOnlyCollection<Guid> currentCollectionIds)
     {
         var authorizedPostedCollectionIds =
-            await collectionAuthorizationService.AuthorizeModifyUserAccessManyAsync(organizationId, postedCollectionIds);
+            await collectionAuthorizationService.AuthorizeModifyUserAccessAsync(organizationId, postedCollectionIds);
         var authorizedCurrentCollectionIds =
-            await collectionAuthorizationService.AuthorizeModifyUserAccessManyAsync(organizationId, currentCollectionIds);
+            await collectionAuthorizationService.AuthorizeModifyUserAccessAsync(organizationId, currentCollectionIds);
 
         var isEditingOwnMembership = await IsEditingOwnMembershipAsync(organizationId, organizationUserId);
 
