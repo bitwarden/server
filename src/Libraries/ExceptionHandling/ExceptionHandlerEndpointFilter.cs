@@ -42,6 +42,7 @@ internal sealed class ExceptionHandlerEndpointFilter : IEndpointFilter
         var message = "An error has occurred.";
         int statusCode;
         ErrorResponseModel? validationModel = null;
+        var unhandled = false;
 
         switch (exception)
         {
@@ -79,11 +80,14 @@ internal sealed class ExceptionHandlerEndpointFilter : IEndpointFilter
                 _logger.LogError(0, exception, "Unhandled exception");
                 message = "An unhandled server error has occurred.";
                 statusCode = StatusCodes.Status500InternalServerError;
+                unhandled = true;
                 break;
         }
 
         var errorModel = validationModel ?? new ErrorResponseModel(message);
-        if (_environment.IsDevelopment())
+
+        // Development diagnostics go on unhandled exceptions only, never on a modelled response.
+        if (unhandled && _environment.IsDevelopment())
         {
             errorModel.ExceptionMessage = exception.Message;
             errorModel.ExceptionStackTrace = exception.StackTrace;

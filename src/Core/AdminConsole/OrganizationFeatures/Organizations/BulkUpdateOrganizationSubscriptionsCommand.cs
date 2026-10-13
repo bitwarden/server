@@ -3,7 +3,7 @@ using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.Extensions.Logging;
 using OrganizationSubscriptionUpdate = Bit.Core.AdminConsole.Models.Data.Organizations.OrganizationSubscriptionUpdate;
 

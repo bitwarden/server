@@ -23,6 +23,12 @@ public class EmergencyAccessInviteRequestModel
     public int WaitTimeDays { get; set; }
 }
 
+public class EmergencyAccessAcceptRequestModel
+{
+    [Required]
+    public string Token { get; set; }
+}
+
 public class EmergencyAccessUpdateRequestModel
 {
     [Required]

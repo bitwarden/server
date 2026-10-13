@@ -43,6 +43,9 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     private static readonly string _masterPasswordHash = "master_password_hash";
     private static readonly string _newMasterPasswordHash = "new_master_password_hash";
 
+    // const so it can be a default parameter value on PostResendNewDeviceOtpAsync.
+    private const string _resendDeviceIdentifier = "resend-device-identifier";
+
     private static readonly KdfRequestModel _defaultKdfRequest =
         new() { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600_000 };
 
@@ -52,7 +55,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     private readonly IUserRepository _userRepository;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IMailService _mailService;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ISsoConfigRepository _ssoConfigRepository;
@@ -68,7 +71,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     {
         _factory = factory;
         _factory.SubstituteService<IPushNotificationService>(_ => { });
-        _factory.SubstituteService<IFeatureService>(_ => { });
+        _factory.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(_ => { });
         _factory.SubstituteService<IStripeSyncService>(_ => { });
         _factory.SubstituteService<IMailService>(_ => { });
         _factory.SubstituteService<ITwoFactorEmailService>(_ => { });
@@ -77,7 +80,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         _userRepository = _factory.GetService<IUserRepository>();
         _pushNotificationService = _factory.GetService<IPushNotificationService>();
         _mailService = _factory.GetService<IMailService>();
-        _featureService = _factory.GetService<IFeatureService>();
+        _featureService = _factory.GetService<Bitwarden.Server.Sdk.Features.IFeatureService>();
         _passwordHasher = _factory.GetService<IPasswordHasher<User>>();
         _organizationRepository = _factory.GetService<IOrganizationRepository>();
         _ssoConfigRepository = _factory.GetService<ISsoConfigRepository>();
@@ -152,58 +155,11 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     [Theory]
     [BitAutoData(KdfType.PBKDF2_SHA256, 600001, null, null)]
     [BitAutoData(KdfType.Argon2id, 4, 65, 5)]
-    public async Task PostKdf_ValidRequestLogoutOnKdfChangeFeatureFlagOff_SuccessLogout(KdfType kdf,
+    public async Task PostKdf_ValidRequest_SuccessSyncAndLogoutWithReason(KdfType kdf,
         int kdfIterations, int? kdfMemory, int? kdfParallelism)
     {
         var userBeforeKdfChange = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(userBeforeKdfChange);
-
-        _featureService.IsEnabled(FeatureFlagKeys.NoLogoutOnKdfChange).Returns(false);
-
-        await _loginHelper.LoginAsync(_ownerEmail);
-
-        var kdfRequest = new KdfRequestModel
-        {
-            KdfType = kdf,
-            Iterations = kdfIterations,
-            Memory = kdfMemory,
-            Parallelism = kdfParallelism,
-        };
-
-        var response = await PostKdfWithKdfRequestAsync(kdfRequest);
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        // Validate that the user fields were updated correctly
-        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
-        Assert.NotNull(user);
-        Assert.Equal(kdfRequest.KdfType, user.Kdf);
-        Assert.Equal(kdfRequest.Iterations, user.KdfIterations);
-        Assert.Equal(kdfRequest.Memory, user.KdfMemory);
-        Assert.Equal(kdfRequest.Parallelism, user.KdfParallelism);
-        Assert.Equal(_masterKeyWrappedUserKey, user.Key);
-        Assert.NotNull(user.LastKdfChangeDate);
-        Assert.True(user.LastKdfChangeDate > DateTime.UtcNow.AddMinutes(-1));
-        Assert.True(user.RevisionDate > DateTime.UtcNow.AddMinutes(-1));
-        Assert.True(user.AccountRevisionDate > DateTime.UtcNow.AddMinutes(-1));
-        Assert.NotEqual(userBeforeKdfChange.SecurityStamp, user.SecurityStamp);
-        Assert.Equal(PasswordVerificationResult.Success,
-            _passwordHasher.VerifyHashedPassword(user, user.MasterPassword!, _newMasterPasswordHash));
-
-        // Validate push notification
-        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
-    }
-
-    [Theory]
-    [BitAutoData(KdfType.PBKDF2_SHA256, 600001, null, null)]
-    [BitAutoData(KdfType.Argon2id, 4, 65, 5)]
-    public async Task PostKdf_ValidRequestLogoutOnKdfChangeFeatureFlagOn_SuccessSyncAndLogoutWithReason(KdfType kdf,
-        int kdfIterations, int? kdfMemory, int? kdfParallelism)
-    {
-        var userBeforeKdfChange = await _userRepository.GetByEmailAsync(_ownerEmail);
-        Assert.NotNull(userBeforeKdfChange);
-
-        _featureService.IsEnabled(FeatureFlagKeys.NoLogoutOnKdfChange).Returns(true);
 
         await _loginHelper.LoginAsync(_ownerEmail);
 
@@ -1001,6 +957,10 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Null(updatedUser.KdfMemory);
         Assert.Null(updatedUser.KdfParallelism);
 
+        // MasterPasswordSalt column must never be null/empty after a successful set-password.
+        // Legacy V1 path falls back to the email-derived V1 salt.
+        Assert.Equal(userEmail, updatedUser.MasterPasswordSalt);
+
         // Verify timestamps are updated
         Assert.Equal(DateTime.UtcNow, updatedUser.RevisionDate, TimeSpan.FromMinutes(1));
         Assert.Equal(DateTime.UtcNow, updatedUser.AccountRevisionDate, TimeSpan.FromMinutes(1));
@@ -1022,10 +982,270 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(OrganizationUserStatusType.Accepted, orgUser.Status);
     }
 
+    // Modern client + V1 encryption: request carries MPAD + MPUD + legacy Keys (no AccountKeys),
+    // V2 MP JIT flag OFF → request routes to the V1 command. KDF/Key/Salt come from MPUD, keypair
+    // from legacy Keys.
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_V1_WithMpadMpud_MasterPasswordDecryption_Success(string organizationSsoIdentifier)
+    {
+        // Arrange - Create organization and user
+        var ownerEmail = $"owner-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(ownerEmail);
+
+        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
+            ownerEmail: ownerEmail,
+            name: "Test Org V1 modern");
+        organization.UseSso = true;
+        organization.Identifier = organizationSsoIdentifier;
+        await _organizationRepository.ReplaceAsync(organization);
+
+        await _ssoConfigRepository.CreateAsync(new SsoConfig
+        {
+            OrganizationId = organization.Id,
+            Enabled = true,
+            Data = JsonSerializer.Serialize(new SsoConfigurationData
+            {
+                MemberDecryptionType = MemberDecryptionType.MasterPassword,
+            }, JsonHelpers.CamelCase),
+        });
+
+        // Create user with password initially, so we can login
+        var userEmail = $"user-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(userEmail);
+
+        // Add user to organization
+        var user = await _userRepository.GetByEmailAsync(userEmail);
+        Assert.NotNull(user);
+        await OrganizationTestHelpers.CreateUserAsync(_factory, organization.Id, userEmail,
+            OrganizationUserType.User, userStatusType: OrganizationUserStatusType.Invited);
+
+        // Login as the user
+        await _loginHelper.LoginAsync(userEmail);
+
+        // Remove the master password and keys to simulate newly registered SSO user
+        user.MasterPassword = null;
+        user.Key = null;
+        user.PrivateKey = null;
+        user.PublicKey = null;
+        await _userRepository.ReplaceAsync(user);
+
+        // Modern V1 MP JIT request shape: MPAD + MPUD + legacy Keys, no AccountKeys.
+        // V2 MP JIT flag is left OFF (default mock behavior), so this routes to the V1 command.
+        // Salt must equal the email during Stage 1 (PM-27044) — ValidateSaltUnchangedForUser rejects
+        // divergent salts until clients consume the explicit salt from prelogin (Stage 3 / PM-28143).
+        var request = new
+        {
+            masterPasswordAuthentication = new
+            {
+                kdf = new
+                {
+                    kdfType = (int)KdfType.PBKDF2_SHA256,
+                    iterations = 600000
+                },
+                masterPasswordAuthenticationHash = _newMasterPasswordHash,
+                salt = userEmail
+            },
+            masterPasswordUnlock = new
+            {
+                kdf = new
+                {
+                    kdfType = (int)KdfType.PBKDF2_SHA256,
+                    iterations = 600000
+                },
+                masterKeyWrappedUserKey = _masterKeyWrappedUserKey,
+                salt = userEmail
+            },
+            keys = new
+            {
+                publicKey = "modern-v1-publicKey",
+                encryptedPrivateKey = "modern-v1-encryptedPrivateKey"
+            },
+            masterPasswordHint = "modern-v1-integration-test-hint",
+            orgIdentifier = organization.Identifier
+        };
+
+        var jsonRequest = JsonSerializer.Serialize(request, JsonHelpers.CamelCase);
+
+        // Act
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/set-password");
+        message.Content = new StringContent(jsonRequest, System.Text.Encoding.UTF8, "application/json");
+        var response = await _client.SendAsync(message);
+
+        // Assert
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync();
+            Assert.Fail($"Expected success but got {response.StatusCode}. Error: {errorContent}");
+        }
+
+        // Verify user in database
+        var updatedUser = await _userRepository.GetByEmailAsync(userEmail);
+        Assert.NotNull(updatedUser);
+        Assert.Equal("modern-v1-integration-test-hint", updatedUser.MasterPasswordHint);
+
+        // Verify the master password is hashed and stored
+        Assert.NotNull(updatedUser.MasterPassword);
+        var verificationResult = _passwordHasher.VerifyHashedPassword(updatedUser, updatedUser.MasterPassword, _newMasterPasswordHash);
+        Assert.Equal(PasswordVerificationResult.Success, verificationResult);
+
+        // Verify KDF settings — ToUser reads from MPUD on the modern shape
+        Assert.Equal(KdfType.PBKDF2_SHA256, updatedUser.Kdf);
+        Assert.Equal(600_000, updatedUser.KdfIterations);
+        Assert.Null(updatedUser.KdfMemory);
+        Assert.Null(updatedUser.KdfParallelism);
+
+        // MasterPasswordSalt column must never be null/empty after a successful set-password.
+        // Modern V1 MP JIT path persists the MPUD-provided salt.
+        var expectedSalt = request.masterPasswordUnlock.salt;
+        Assert.Equal(expectedSalt, updatedUser.MasterPasswordSalt);
+
+        // Verify timestamps are updated
+        Assert.Equal(DateTime.UtcNow, updatedUser.RevisionDate, TimeSpan.FromMinutes(1));
+        Assert.Equal(DateTime.UtcNow, updatedUser.AccountRevisionDate, TimeSpan.FromMinutes(1));
+
+        // user.Key from MPUD; keypair from legacy Keys
+        Assert.Equal(_masterKeyWrappedUserKey, updatedUser.Key);
+        Assert.Equal("modern-v1-publicKey", updatedUser.PublicKey);
+        Assert.Equal("modern-v1-encryptedPrivateKey", updatedUser.PrivateKey);
+
+        // V2-only fields must NOT be set on the V1 path
+        Assert.Null(updatedUser.SignedPublicKey);
+
+        // Verify User_ChangedPassword event was logged
+        var events = await _eventRepository.GetManyByUserAsync(updatedUser.Id, DateTime.UtcNow.AddMinutes(-5), DateTime.UtcNow.AddMinutes(1), new PageOptions { PageSize = 100 });
+        Assert.NotNull(events);
+        Assert.Contains(events.Data, e => e.Type == EventType.User_ChangedPassword && e.UserId == updatedUser.Id);
+
+        // Verify user was accepted into the organization
+        var orgUsers = await _organizationUserRepository.GetManyByUserAsync(updatedUser.Id);
+        var orgUser = orgUsers.FirstOrDefault(ou => ou.OrganizationId == organization.Id);
+        Assert.NotNull(orgUser);
+        Assert.Equal(OrganizationUserStatusType.Accepted, orgUser.Status);
+    }
+
+    // V1 TDE user (no V2 cryptographic state) sets their initial password via the TDE command.
+    // Modern TDE request shape: MPAD + MPUD + no keys. The V2RegistrationTDEJIT flag governs SSO+TDE
+    // account creation, not set-password — so this routes to _tdeSetPasswordCommand regardless of
+    // any flag state. The command sets the master password without mutating the existing keypair.
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_TDE_V1User_Success(string organizationSsoIdentifier)
+    {
+        // Arrange - Create organization with TDE
+        var ownerEmail = $"owner-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(ownerEmail);
+
+        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
+            ownerEmail: ownerEmail,
+            name: "Test Org TDE V1 modern");
+        organization.UseSso = true;
+        organization.Identifier = organizationSsoIdentifier;
+        await _organizationRepository.ReplaceAsync(organization);
+
+        // Configure SSO for TDE (TrustedDeviceEncryption)
+        await _ssoConfigRepository.CreateAsync(new SsoConfig
+        {
+            OrganizationId = organization.Id,
+            Enabled = true,
+            Data = JsonSerializer.Serialize(new SsoConfigurationData
+            {
+                MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
+            }, JsonHelpers.CamelCase),
+        });
+
+        // Create user with password initially, so we can login
+        var userEmail = $"user-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(userEmail);
+
+        var user = await _userRepository.GetByEmailAsync(userEmail);
+        Assert.NotNull(user);
+
+        // Add user to organization and confirm them (TDE users are confirmed, not invited)
+        await OrganizationTestHelpers.CreateUserAsync(_factory, organization.Id, userEmail,
+            OrganizationUserType.User, userStatusType: OrganizationUserStatusType.Confirmed);
+
+        // Login as the user
+        await _loginHelper.LoginAsync(userEmail);
+
+        // Set up TDE user without master password but with an existing keypair (no V2 state — this is
+        // the pre-V2-TDE-flag world). The TDE command must leave PublicKey/PrivateKey intact.
+        user.MasterPassword = null;
+        user.Key = null;
+        user.PublicKey = "tde-v1-publicKey";
+        user.PrivateKey = _mockEncryptedType7String;
+        await _userRepository.ReplaceAsync(user);
+
+        // Modern TDE request shape: MPAD + MPUD, no AccountKeys (and no Keys).
+        // Routes to the TDE command (no feature-flag gate; V2RegistrationTDEJIT is for SSO+TDE registration).
+        var jsonRequest = CreateV2SetPasswordRequestJson(
+            userEmail,
+            organization.Identifier,
+            "modern-v1-tde-test-hint",
+            includeAccountKeys: false);
+
+        // Act
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/set-password");
+        message.Content = new StringContent(jsonRequest, System.Text.Encoding.UTF8, "application/json");
+        var response = await _client.SendAsync(message);
+
+        // Assert
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync();
+            Assert.Fail($"Expected success but got {response.StatusCode}. Error: {errorContent}");
+        }
+
+        // Verify user in database
+        var updatedUser = await _userRepository.GetByEmailAsync(userEmail);
+        Assert.NotNull(updatedUser);
+        Assert.Equal("modern-v1-tde-test-hint", updatedUser.MasterPasswordHint);
+
+        // Verify the master password is hashed and stored
+        Assert.NotNull(updatedUser.MasterPassword);
+        var verificationResult = _passwordHasher.VerifyHashedPassword(updatedUser, updatedUser.MasterPassword, _newMasterPasswordHash);
+        Assert.Equal(PasswordVerificationResult.Success, verificationResult);
+
+        // Verify KDF settings persisted from MPUD
+        Assert.Equal(KdfType.PBKDF2_SHA256, updatedUser.Kdf);
+        Assert.Equal(600_000, updatedUser.KdfIterations);
+        Assert.Null(updatedUser.KdfMemory);
+        Assert.Null(updatedUser.KdfParallelism);
+
+        // MasterPasswordSalt column must never be null/empty after a successful set-password.
+        // TDE command persists the MPUD-provided salt (CreateV2SetPasswordRequestJson sets salt = userEmail).
+        Assert.Equal(userEmail, updatedUser.MasterPasswordSalt);
+
+        // Verify timestamps are updated
+        Assert.Equal(DateTime.UtcNow, updatedUser.RevisionDate, TimeSpan.FromMinutes(1));
+        Assert.Equal(DateTime.UtcNow, updatedUser.AccountRevisionDate, TimeSpan.FromMinutes(1));
+
+        // user.Key from MPUD; existing keypair preserved (TDE command does not mutate PublicKey/PrivateKey)
+        Assert.Equal(_masterKeyWrappedUserKey, updatedUser.Key);
+        Assert.Equal("tde-v1-publicKey", updatedUser.PublicKey);
+        Assert.Equal(_mockEncryptedType7String, updatedUser.PrivateKey);
+
+        // V2 cryptographic state must NOT be set (TDE command doesn't touch it; this is a V1 TDE user)
+        Assert.Null(updatedUser.SignedPublicKey);
+
+        // Verify User_ChangedPassword event was logged
+        var events = await _eventRepository.GetManyByUserAsync(updatedUser.Id, DateTime.UtcNow.AddMinutes(-5), DateTime.UtcNow.AddMinutes(1), new PageOptions { PageSize = 100 });
+        Assert.NotNull(events);
+        Assert.Contains(events.Data, e => e.Type == EventType.User_ChangedPassword && e.UserId == updatedUser.Id);
+
+        // Verify user remains confirmed in the organization
+        var orgUsers = await _organizationUserRepository.GetManyByUserAsync(updatedUser.Id);
+        var orgUser = orgUsers.FirstOrDefault(ou => ou.OrganizationId == organization.Id);
+        Assert.NotNull(orgUser);
+        Assert.Equal(OrganizationUserStatusType.Confirmed, orgUser.Status);
+    }
+
     [Theory]
     [BitAutoData]
     public async Task PostSetPasswordAsync_V2_MasterPasswordDecryption_Success(string organizationSsoIdentifier)
     {
+        _featureService.IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration).Returns(true);
+
         // Arrange - Create organization and user
         var ownerEmail = $"owner-{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(ownerEmail);
@@ -1101,6 +1321,10 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(600_000, updatedUser.KdfIterations);
         Assert.Null(updatedUser.KdfMemory);
         Assert.Null(updatedUser.KdfParallelism);
+
+        // MasterPasswordSalt column must never be null/empty after a successful set-password.
+        // V2 MP JIT path persists the MPUD-provided salt (the helper sends userEmail as the salt value).
+        Assert.Equal(userEmail, updatedUser.MasterPasswordSalt);
 
         // Verify timestamps are updated
         Assert.Equal(DateTime.UtcNow, updatedUser.RevisionDate, TimeSpan.FromMinutes(1));
@@ -1241,6 +1465,10 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Null(updatedUser.KdfMemory);
         Assert.Null(updatedUser.KdfParallelism);
 
+        // MasterPasswordSalt column must never be null/empty after a successful set-password.
+        // V2 TDE path persists the MPUD-provided salt (the helper sends userEmail as the salt value).
+        Assert.Equal(userEmail, updatedUser.MasterPasswordSalt);
+
         // Verify timestamps are updated
         Assert.Equal(DateTime.UtcNow, updatedUser.RevisionDate, TimeSpan.FromMinutes(1));
         Assert.Equal(DateTime.UtcNow, updatedUser.AccountRevisionDate, TimeSpan.FromMinutes(1));
@@ -1379,7 +1607,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     // which rotates the master password and wrapped user key as part of the email change. They
     // share the legacy-shaped PostEmailAsync helper at the end of this block.
     //
-    // The class-scoped IFeatureService substitute leaks Returns(...) values across tests in this
+    // The class-scoped Bitwarden.Server.Sdk.Features.IFeatureService substitute leaks Returns(...) values across tests in this
     // class, so every test sets the flag explicitly rather than relying on a default.
     //
     // TODO: PM-39120 - On flag cleanup, delete this entire block (all four _SelfServiceFlagOff_
@@ -1530,6 +1758,9 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         return await _client.SendAsync(message);
     }
 
+    // Salt is set to userEmail because during Stage 1 (PM-27044) the server requires
+    // salt == email. SetInitialPasswordData.ValidateDataForUser rejects divergent salts
+    // until Stage 3 (PM-28143).
     private static string CreateV2SetPasswordRequestJson(
         string userEmail,
         string orgIdentifier,
@@ -1985,7 +2216,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     }
 
     [Fact]
-    public async Task PostResendNewDeviceOtp_ValidEmailAndSecret_OkAndSendsEmail()
+    public async Task PostResendNewDeviceOtp_ValidEmailAndSecret_OkAndSendsEmailForRequestingDevice()
     {
         var user = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(user);
@@ -1994,7 +2225,8 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         await _twoFactorEmailService.Received(1)
-            .SendNewDeviceVerificationEmailAsync(Arg.Is<User>(u => u.Id == user.Id));
+            .SendNewDeviceVerificationEmailAsync(
+                Arg.Is<User>(u => u.Id == user.Id), _resendDeviceIdentifier);
     }
 
     [Fact]
@@ -2008,7 +2240,8 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         // Silent 200 to avoid account enumeration via response shape.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         await _twoFactorEmailService.DidNotReceive()
-            .SendNewDeviceVerificationEmailAsync(Arg.Is<User>(u => u.Id == user.Id));
+            .SendNewDeviceVerificationEmailAsync(
+                Arg.Is<User>(u => u.Id == user.Id), Arg.Any<string>());
     }
 
     [Fact]
@@ -2022,9 +2255,30 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
-    private async Task<HttpResponseMessage> PostResendNewDeviceOtpAsync(string email, string masterPasswordHash)
+    [Fact]
+    public async Task PostResendNewDeviceOtp_NoDeviceIdentifier_SilentlySucceedsWithoutSendingEmail()
+    {
+        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(user);
+
+        // The code is scoped to the requesting device, so it cannot be issued without one.
+        var response = await PostResendNewDeviceOtpAsync(
+            _ownerEmail, _masterPasswordHash, deviceIdentifier: null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await _twoFactorEmailService.DidNotReceive()
+            .SendNewDeviceVerificationEmailAsync(
+                Arg.Is<User>(u => u.Id == user.Id), Arg.Any<string>());
+    }
+
+    private async Task<HttpResponseMessage> PostResendNewDeviceOtpAsync(
+        string email, string masterPasswordHash, string? deviceIdentifier = _resendDeviceIdentifier)
     {
         using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/resend-new-device-otp");
+        if (deviceIdentifier != null)
+        {
+            message.Headers.Add("Device-Identifier", deviceIdentifier);
+        }
         message.Content = JsonContent.Create(new UnauthenticatedSecretVerificationRequestModel
         {
             Email = email,

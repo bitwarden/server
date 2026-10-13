@@ -1,5 +1,8 @@
 ﻿using Bit.HttpExtensions;
+using Bit.Pam.Entities;
+using Bit.Pam.Models;
 using Bit.Services.Pam.Enums;
+using Bit.Services.Pam.Models;
 
 namespace Bit.Services.Pam.Api.Models.Response;
 
@@ -11,6 +14,15 @@ public class AccessRequestResultResponseModel : ResponseModel
     public AccessRequestResultResponseModel()
         : base("accessRequestResult")
     {
+    }
+
+    public AccessRequestResultResponseModel(AccessRequestResult result, DateTime now)
+        : base("accessRequestResult")
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        ApprovalMode = result.ApprovalMode;
+        Request = new AccessRequestDetailsResponseModel(ToDetails(result.Request, result.Decision, now));
     }
 
     /// <summary>
@@ -29,4 +41,27 @@ public class AccessRequestResultResponseModel : ResponseModel
     /// single automatic decision.
     /// </summary>
     public AccessRequestDetailsResponseModel Request { get; set; } = null!;
+
+    /// <summary>
+    /// Projects the just-created request onto the response. Join-only fields (requester name/email) are null and
+    /// no lease exists yet.
+    /// </summary>
+    private static AccessRequestDetails ToDetails(AccessRequest request, AccessDecision? decision, DateTime now)
+    {
+        // Submit refuses end <= now, so this is Pending or Approved.
+        var details = AccessRequestDetails.From(request, now);
+        details.Decisions = decision is null
+            ? []
+            : [
+                new AccessRequestDecision
+                {
+                    DeciderKind = decision.DeciderKind,
+                    ApproverId = decision.ApproverId,
+                    Comment = decision.Comment,
+                    Verdict = decision.Verdict,
+                    DecidedAt = decision.CreationDate,
+                },
+            ];
+        return details;
+    }
 }

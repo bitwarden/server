@@ -13,8 +13,7 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
     internal InvoicePreview Build(Invoice invoice, PlanTierType planTier, PlanCadenceType cadence)
     {
         var lineItemsByReference = new Dictionary<string, InvoicePreviewItem>();
-        var passwordManagerProrations = new List<InvoiceLineItem>();
-        var secretsManagerProrations = new List<InvoiceLineItem>();
+        var prorationLines = new List<(string Reference, InvoiceLineItem Line)>();
         var discounts = DiscountMapper.Partition(invoice, logger);
 
         foreach (var line in invoice.Lines?.Data ?? [])
@@ -28,15 +27,7 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
 
             if (line.Parent?.SubscriptionItemDetails?.Proration == true)
             {
-                switch (PurchasableReferences.ProductOf(reference))
-                {
-                    case ProductType.PasswordManager:
-                        passwordManagerProrations.Add(line);
-                        break;
-                    case ProductType.SecretsManager:
-                        secretsManagerProrations.Add(line);
-                        break;
-                }
+                prorationLines.Add((reference, line));
                 continue;
             }
 
@@ -56,15 +47,36 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
         return new InvoicePreview
         {
             PlanTier = planTier,
-            Cadence = cadence,
-            PasswordManager = BuildPasswordManagerItems(lineItemsByReference, ProrationMapper.Summarize(passwordManagerProrations)),
-            SecretsManager = BuildSecretsManagerItems(lineItemsByReference, ProrationMapper.Summarize(secretsManagerProrations)),
+            Cadence = CadenceFromInvoice(invoice) ?? cadence,
+            PasswordManager = BuildPasswordManagerItems(lineItemsByReference,
+                SummarizeProrations(prorationLines, ProductType.PasswordManager)),
+            SecretsManager = BuildSecretsManagerItems(lineItemsByReference,
+                SummarizeProrations(prorationLines, ProductType.SecretsManager)),
             Discounts = discounts.CartLevel.Length > 0 ? discounts.CartLevel : null,
             EstimatedTax = (invoice.TotalTaxes?.Sum(tax => tax.Amount) ?? 0) / 100m,
             Total = invoice.Total / 100m,
             AmountDue = invoice.AmountDue / 100m,
             StartingBalance = invoice.StartingBalance < 0 ? invoice.StartingBalance / 100m : null,
-            NextPaymentAttempt = null,
+            NextPaymentAttempt = invoice.NextPaymentAttempt ?? invoice.DueDate,
+        };
+    }
+
+    // The Password Manager seat's interval defines the plan cadence (add-ons can't override it); null when it's
+    // absent (an all-proration invoice), leaving the caller's plan cadence as the fallback.
+    private static PlanCadenceType? CadenceFromInvoice(Invoice invoice)
+    {
+        var seatInterval = invoice.Lines?.Data?
+            .Where(line => line.Parent?.SubscriptionItemDetails?.Proration != true)
+            .FirstOrDefault(line =>
+                line.Pricing?.PriceDetails?.Price?.Metadata?.GetValueOrDefault(StripeConstants.MetadataKeys.PurchasableReference)
+                    == StripeConstants.PurchasableReferences.PasswordManagerSeat)
+            ?.Pricing?.PriceDetails?.Price?.Recurring?.Interval;
+
+        return seatInterval switch
+        {
+            StripeConstants.Intervals.Year => PlanCadenceType.Annually,
+            StripeConstants.Intervals.Month => PlanCadenceType.Monthly,
+            _ => null
         };
     }
 
@@ -98,6 +110,13 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
             }
         }
 
+        // Password Manager seats are the projection's invariant; a missing line is a Stripe misconfiguration.
+        // The invoice path doesn't require them: a preview invoice can legitimately be all prorations.
+        if (!lineItemsByReference.ContainsKey(StripeConstants.PurchasableReferences.PasswordManagerSeat))
+        {
+            throw new InvalidOperationException("The preview resolved no Password Manager seats line.");
+        }
+
         return new InvoicePreview
         {
             PlanTier = planTier,
@@ -129,27 +148,38 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
         return reference;
     }
 
-    private static PasswordManagerInvoiceItems BuildPasswordManagerItems(
-        Dictionary<string, InvoicePreviewItem> lineItemsByReference, PurchasableProration? proration)
+    // One proration row per purchasable, so the client can tell which item each row offsets.
+    private static PurchasableProration[]? SummarizeProrations(
+        List<(string Reference, InvoiceLineItem Line)> prorationLines, ProductType product)
     {
-        // Password Manager seats are always present; a missing line is a Stripe misconfiguration, unlike Secrets Manager.
-        var seats = lineItemsByReference.GetValueOrDefault(StripeConstants.PurchasableReferences.PasswordManagerSeat)
-            ?? throw new InvalidOperationException("The preview resolved no Password Manager seats line.");
+        var rows = prorationLines
+            .Where(proration => PurchasableReferences.ProductOf(proration.Reference) == product)
+            .GroupBy(proration => proration.Reference)
+            .Select(group => ProrationMapper.Summarize(group.Key, group.Select(proration => proration.Line).ToList()))
+            .OfType<PurchasableProration>()
+            .ToArray();
+        return rows.Length > 0 ? rows : null;
+    }
+
+    private static PasswordManagerInvoiceItems BuildPasswordManagerItems(
+        Dictionary<string, InvoicePreviewItem> lineItemsByReference, PurchasableProration[]? prorations)
+    {
+        var seats = lineItemsByReference.GetValueOrDefault(StripeConstants.PurchasableReferences.PasswordManagerSeat);
         return new PasswordManagerInvoiceItems
         {
             Seats = seats,
             AdditionalStorage = lineItemsByReference.GetValueOrDefault(StripeConstants.PurchasableReferences.PasswordManagerStorage),
-            Prorations = proration is { } p ? [p] : null,
+            Prorations = prorations is { Length: > 0 } ? prorations : null,
         };
     }
 
     private static SecretsManagerInvoiceItems? BuildSecretsManagerItems(
-        Dictionary<string, InvoicePreviewItem> lineItemsByReference, PurchasableProration? proration)
+        Dictionary<string, InvoicePreviewItem> lineItemsByReference, PurchasableProration[]? prorations)
     {
         var seats = lineItemsByReference.GetValueOrDefault(StripeConstants.PurchasableReferences.SecretsManagerSeat);
         var serviceAccounts = lineItemsByReference.GetValueOrDefault(StripeConstants.PurchasableReferences.SecretsManagerServiceAccount);
         // Keep the section whenever any line or proration resolved, so no resolved line drops out of the total.
-        if (seats is null && serviceAccounts is null && proration is null)
+        if (seats is null && serviceAccounts is null && prorations is not { Length: > 0 })
         {
             return null;
         }
@@ -157,7 +187,7 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
         {
             Seats = seats,
             AdditionalServiceAccounts = serviceAccounts,
-            Prorations = proration is { } p ? [p] : null,
+            Prorations = prorations is { Length: > 0 } ? prorations : null,
         };
     }
 }

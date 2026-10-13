@@ -1,6 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Collections;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -13,6 +12,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
+using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Collections;
 
@@ -25,38 +25,17 @@ public class BulkAddCollectionAccessCommandTests
     public async Task AddAccessAsync_Success(
         Organization org,
         ICollection<Collection> collections,
-        ICollection<OrganizationUser> organizationUsers,
-        ICollection<Group> groups,
         IEnumerable<CollectionUser> collectionUsers,
         IEnumerable<CollectionGroup> collectionGroups)
     {
         var sutProvider = SetupSutProvider();
         SetCollectionsToSharedType(collections);
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyAsync(
-                Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionUsers.Select(u => u.OrganizationUserId)))
-            )
-            .Returns(organizationUsers);
-
-        sutProvider.GetDependency<IGroupRepository>()
-            .GetManyByManyIds(
-                Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionGroups.Select(u => u.GroupId)))
-            )
-            .Returns(groups);
-
         var userAccessSelections = ToAccessSelection(collectionUsers);
         var groupAccessSelections = ToAccessSelection(collectionGroups);
         await sutProvider.Sut.AddAccessAsync(collections,
             userAccessSelections,
             groupAccessSelections
-        );
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received().GetManyAsync(
-            Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(userAccessSelections.Select(u => u.Id)))
-        );
-        await sutProvider.GetDependency<IGroupRepository>().Received().GetManyByManyIds(
-            Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(groupAccessSelections.Select(g => g.Id)))
         );
 
         await sutProvider.GetDependency<ICollectionRepository>().Received().CreateOrUpdateAccessForManyAsync(
@@ -87,10 +66,7 @@ public class BulkAddCollectionAccessCommandTests
         Assert.Contains("No collections were provided.", exception.Message);
 
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByManyIdsAsync(default);
-        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs().GetManyAsync(default);
-        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().GetManyByManyIds(default);
     }
-
 
     [Theory, BitAutoData, CollectionCustomization]
     public async Task ValidateRequestAsync_NoCollection_Failure(SutProvider<BulkAddCollectionAccessCommand> sutProvider,
@@ -103,9 +79,6 @@ public class BulkAddCollectionAccessCommandTests
         ));
 
         Assert.Contains("No collections were provided.", exception.Message);
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs().GetManyAsync(default);
-        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().GetManyByManyIds(default);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
@@ -124,147 +97,6 @@ public class BulkAddCollectionAccessCommandTests
         ));
 
         Assert.Contains("All collections must belong to the same organization.", exception.Message);
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs().GetManyAsync(default);
-        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().GetManyByManyIds(default);
-    }
-
-    [Theory, BitAutoData, CollectionCustomization]
-    public async Task ValidateRequestAsync_MissingUser_Failure(SutProvider<BulkAddCollectionAccessCommand> sutProvider,
-        IList<Collection> collections,
-        IList<OrganizationUser> organizationUsers,
-        IEnumerable<CollectionUser> collectionUsers,
-        IEnumerable<CollectionGroup> collectionGroups)
-    {
-        SetCollectionsToSharedType(collections);
-
-        organizationUsers.RemoveAt(0);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyAsync(
-                Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionUsers.Select(u => u.OrganizationUserId)))
-            )
-            .Returns(organizationUsers);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddAccessAsync(collections,
-            ToAccessSelection(collectionUsers),
-            ToAccessSelection(collectionGroups)
-        ));
-
-        Assert.Contains("One or more users do not exist.", exception.Message);
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received().GetManyAsync(
-            Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionUsers.Select(u => u.OrganizationUserId)))
-        );
-        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().GetManyByManyIds(default);
-    }
-
-    [Theory, BitAutoData, CollectionCustomization]
-    public async Task ValidateRequestAsync_UserWrongOrg_Failure(SutProvider<BulkAddCollectionAccessCommand> sutProvider,
-        IList<Collection> collections,
-        IList<OrganizationUser> organizationUsers,
-        IEnumerable<CollectionUser> collectionUsers,
-        IEnumerable<CollectionGroup> collectionGroups)
-    {
-        SetCollectionsToSharedType(collections);
-
-        organizationUsers.First().OrganizationId = Guid.NewGuid();
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyAsync(
-                Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionUsers.Select(u => u.OrganizationUserId)))
-            )
-            .Returns(organizationUsers);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddAccessAsync(collections,
-            ToAccessSelection(collectionUsers),
-            ToAccessSelection(collectionGroups)
-        ));
-
-        Assert.Contains("One or more users do not belong to the same organization as the collection being assigned.", exception.Message);
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received().GetManyAsync(
-            Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionUsers.Select(u => u.OrganizationUserId)))
-        );
-        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().GetManyByManyIds(default);
-    }
-
-    [Theory, BitAutoData, CollectionCustomization]
-    public async Task ValidateRequestAsync_MissingGroup_Failure(SutProvider<BulkAddCollectionAccessCommand> sutProvider,
-        IList<Collection> collections,
-        IList<OrganizationUser> organizationUsers,
-        IList<Group> groups,
-        IEnumerable<CollectionUser> collectionUsers,
-        IEnumerable<CollectionGroup> collectionGroups)
-    {
-        SetCollectionsToSharedType(collections);
-
-        groups.RemoveAt(0);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyAsync(
-                Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionUsers.Select(u => u.OrganizationUserId)))
-            )
-            .Returns(organizationUsers);
-
-        sutProvider.GetDependency<IGroupRepository>()
-            .GetManyByManyIds(
-                Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionGroups.Select(u => u.GroupId)))
-            )
-            .Returns(groups);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddAccessAsync(collections,
-            ToAccessSelection(collectionUsers),
-            ToAccessSelection(collectionGroups)
-        ));
-
-        Assert.Contains("One or more groups do not exist.", exception.Message);
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received().GetManyAsync(
-            Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionUsers.Select(u => u.OrganizationUserId)))
-        );
-        await sutProvider.GetDependency<IGroupRepository>().Received().GetManyByManyIds(
-            Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionGroups.Select(u => u.GroupId)))
-        );
-    }
-
-    [Theory, BitAutoData, CollectionCustomization]
-    public async Task ValidateRequestAsync_GroupWrongOrg_Failure(SutProvider<BulkAddCollectionAccessCommand> sutProvider,
-        IList<Collection> collections,
-        IList<OrganizationUser> organizationUsers,
-        IList<Group> groups,
-        IEnumerable<CollectionUser> collectionUsers,
-        IEnumerable<CollectionGroup> collectionGroups)
-    {
-        SetCollectionsToSharedType(collections);
-
-        groups.First().OrganizationId = Guid.NewGuid();
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyAsync(
-                Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionUsers.Select(u => u.OrganizationUserId)))
-            )
-            .Returns(organizationUsers);
-
-        sutProvider.GetDependency<IGroupRepository>()
-            .GetManyByManyIds(
-                Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionGroups.Select(u => u.GroupId)))
-            )
-            .Returns(groups);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddAccessAsync(collections,
-            ToAccessSelection(collectionUsers),
-            ToAccessSelection(collectionGroups)
-        ));
-
-        Assert.Contains("One or more groups do not belong to the same organization as the collection being assigned.", exception.Message);
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received().GetManyAsync(
-            Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionUsers.Select(u => u.OrganizationUserId)))
-        );
-        await sutProvider.GetDependency<IGroupRepository>().Received().GetManyByManyIds(
-            Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionGroups.Select(u => u.GroupId)))
-        );
     }
 
     [Theory, BitAutoData, CollectionCustomization]
@@ -286,8 +118,32 @@ public class BulkAddCollectionAccessCommandTests
 
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().CreateOrUpdateAccessForManyAsync(default, default, default, default, default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCollectionEventsAsync(default);
-        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs().GetManyAsync(default);
-        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().GetManyByManyIds(default);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task ValidateRequestAsync_WithInvalidAccess_ThrowsBadRequest(
+        SutProvider<BulkAddCollectionAccessCommand> sutProvider,
+        IList<Collection> collections,
+        IEnumerable<CollectionUser> collectionUsers,
+        IEnumerable<CollectionGroup> collectionGroups)
+    {
+        SetCollectionsToSharedType(collections);
+        sutProvider.GetDependency<ICollectionAccessValidator>()
+            .ValidateAsync(Arg.Any<CollectionAccessValidationRequest>())
+            .Returns(callInfo => Invalid(
+                callInfo.Arg<CollectionAccessValidationRequest>(), new CollectionAccessInvalidError()));
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddAccessAsync(collections,
+            ToAccessSelection(collectionUsers),
+            ToAccessSelection(collectionGroups)
+        ));
+
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateOrUpdateAccessForManyAsync(default, default, default, default, default);
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogCollectionEventsAsync(default);
     }
 
     private static void SetCollectionsToSharedType(IEnumerable<Collection> collections)
@@ -325,6 +181,9 @@ public class BulkAddCollectionAccessCommandTests
             .WithFakeTimeProvider()
             .Create();
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_expectedRevisionDate);
+        sutProvider.GetDependency<ICollectionAccessValidator>()
+            .ValidateAsync(Arg.Any<CollectionAccessValidationRequest>())
+            .Returns(callInfo => Valid(callInfo.Arg<CollectionAccessValidationRequest>()));
         return sutProvider;
     }
 }

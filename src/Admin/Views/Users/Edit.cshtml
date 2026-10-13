@@ -1,6 +1,6 @@
 ﻿@using Bit.Admin.Enums;
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
-@inject Bit.Core.Services.IFeatureService FeatureService
+@inject Bitwarden.Server.Sdk.Features.IFeatureService FeatureService
 @inject Bit.Core.Settings.GlobalSettings GlobalSettings
 @inject IWebHostEnvironment HostingEnvironment
 @model UserEditModel
@@ -115,7 +115,7 @@
         </dt>
     </dl>
 }
-@if (canViewBillingInformation)
+@if (canViewBillingInformation && Model.BillingInfo != null && Model.BillingHistoryInfo != null)
 {
     <h2>Billing Information</h2>
     @await Html.PartialAsync("_BillingInformation",

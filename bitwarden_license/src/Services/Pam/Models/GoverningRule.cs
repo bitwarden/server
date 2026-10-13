@@ -33,4 +33,28 @@ public sealed record GoverningRule(
     /// <see cref="AllowsExtensions"/> is true.
     /// </summary>
     public int? MaxExtensionDurationSeconds { get; init; }
+
+    /// <summary>
+    /// The rule's default lease duration in seconds, or null for the global default. Read it through
+    /// <see cref="LeaseDurationBounds"/>.
+    /// </summary>
+    public int? DefaultLeaseDurationSeconds { get; init; }
+
+    /// <summary>
+    /// The rule's cap on a single lease in seconds, or null for the global cap alone. Read it through
+    /// <see cref="LeaseDurationBounds"/>.
+    /// </summary>
+    public int? MaxLeaseDurationSeconds { get; init; }
+
+    /// <summary>
+    /// The rule's conditions minus its human-approval gate.
+    /// </summary>
+    public IReadOnlyList<AccessCondition> AutomatedConditions =>
+        Conditions.Where(condition => condition is not HumanApprovalCondition).ToList();
+
+    /// <summary>
+    /// True if the stored conditions could not be parsed and <see cref="Conditions"/> holds the resolver's
+    /// fail-safe stand-in. A caller evaluating <see cref="AutomatedConditions"/> must refuse.
+    /// </summary>
+    public bool ConditionsUnreadable { get; init; }
 }

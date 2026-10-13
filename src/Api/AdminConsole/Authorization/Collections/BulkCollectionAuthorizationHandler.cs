@@ -7,8 +7,8 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Api.AdminConsole.Authorization.Collections;
@@ -212,6 +212,11 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 
     private async Task<bool> CanUpdateUserAccessAsync(ICollection<Collection> resources, CurrentContextOrganization? org)
     {
+        if (resources.Any(c => c.Type == CollectionType.DefaultUserCollection))
+        {
+            return false;
+        }
+
         if (await AllowAdminAccessToAllCollectionItems(org) && org?.Permissions.ManageUsers == true)
         {
             return true;
@@ -222,6 +227,11 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 
     private async Task<bool> CanUpdateGroupAccessAsync(ICollection<Collection> resources, CurrentContextOrganization? org)
     {
+        if (resources.Any(c => c.Type == CollectionType.DefaultUserCollection))
+        {
+            return false;
+        }
+
         if (await AllowAdminAccessToAllCollectionItems(org) && org?.Permissions.ManageGroups == true)
         {
             return true;

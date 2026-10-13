@@ -5,9 +5,9 @@ using Bit.Pam.Enums;
 namespace Bit.Pam.Entities;
 
 /// <summary>
-/// An active grant of access to a cipher, born from an approved <see cref="AccessRequest"/>. Only
-/// <see cref="AccessLeaseStatus.Active"/> leases inside their <see cref="NotBefore"/>/<see cref="NotAfter"/> window
-/// authorize access.
+/// A grant of access to a cipher, born from an approved <see cref="AccessRequest"/>. Only a lease with no early end
+/// recorded (<see cref="Action"/> <see cref="AccessLeaseAction.None"/>) inside its <see cref="NotBefore"/>/
+/// <see cref="NotAfter"/> window authorizes access.
 /// </summary>
 public class AccessLease : ITableObject<Guid>
 {
@@ -24,13 +24,16 @@ public class AccessLease : ITableObject<Guid>
     public Guid RequesterId { get; set; }
 
     /// <summary>
-    /// The lease's position in its lifecycle. Only an <see cref="AccessLeaseStatus.Active"/> lease within its window
-    /// authorizes access.
+    /// How the lease was ended <em>early</em>, and nothing else; a lease that lapses untouched carries
+    /// <see cref="AccessLeaseAction.None"/> forever. The wire's <see cref="AccessLeaseStatus"/> is derived from this
+    /// plus the clock via <see cref="AccessStatusDerivation.ComputeLeaseStatus"/>.
     /// </summary>
-    public AccessLeaseStatus Status { get; set; }
+    public AccessLeaseAction Action { get; set; }
 
     /// <summary>
-    /// The start of the granted access window, carried over from the approved <see cref="AccessRequest"/>.
+    /// The start of the granted access window, carried over from the approved <see cref="AccessRequest"/>. In the
+    /// past from the moment the row exists — activation rejects a future start and the mint procedure re-guards it —
+    /// so status derivation may ignore it (see <see cref="AccessStatusDerivation.ComputeLeaseStatus"/>).
     /// </summary>
     public DateTime NotBefore { get; set; }
 
@@ -40,14 +43,14 @@ public class AccessLease : ITableObject<Guid>
     public DateTime NotAfter { get; set; }
 
     /// <summary>
-    /// When the lease was ended early — set for both <see cref="AccessLeaseStatus.Revoked"/> (an operator ended it)
-    /// and <see cref="AccessLeaseStatus.Cancelled"/> (the holder ended their own). NULL otherwise.
+    /// When the lease was ended early, for <see cref="AccessLeaseAction.Revoked"/> or
+    /// <see cref="AccessLeaseAction.Cancelled"/>. NULL otherwise.
     /// </summary>
     public DateTime? RevokedDate { get; set; }
 
     /// <summary>
-    /// Who ended the lease early: the operator who revoked it, or the holder who cancelled their own. NULL unless
-    /// <see cref="Status"/> is <see cref="AccessLeaseStatus.Revoked"/> or <see cref="AccessLeaseStatus.Cancelled"/>.
+    /// Who ended the lease early: the operator who revoked it, or the holder who cancelled their own. NULL
+    /// outside <see cref="AccessLeaseAction.Revoked"/>/<see cref="AccessLeaseAction.Cancelled"/>.
     /// </summary>
     public Guid? RevokedBy { get; set; }
 
@@ -55,6 +58,13 @@ public class AccessLease : ITableObject<Guid>
     /// When the lease was minted, stamped in UTC at construction.
     /// </summary>
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Whether the lease authorizes access as of <paramref name="asOf"/>: no early end recorded and the window
+    /// still open. The single liveness question every write guard consults.
+    /// </summary>
+    public bool IsLive(DateTime asOf) =>
+        AccessStatusDerivation.ComputeLeaseStatus(Action, NotAfter, asOf) == AccessLeaseStatus.Active;
 
     public void SetNewId()
     {

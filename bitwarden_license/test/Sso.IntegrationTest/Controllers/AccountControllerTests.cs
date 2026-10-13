@@ -276,7 +276,6 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
                 user.UsesKeyConnector = true;
             })
             .WithStagedOrganizationUser()
-            .WithPM34423StagedStatusFlag()
             .WithMockedSendOrganizationInvitesCommand()
             .BuildAsync();
 
@@ -865,7 +864,6 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         var testData = await new SsoTestDataBuilder()
             .WithSsoConfig()
             .WithStagedOrganizationUser()
-            .WithPM34423StagedStatusFlag()
             .BuildAsync();
 
         // Capture the seeded row's RevisionDate so we can prove it was bumped by the promotion.
@@ -988,7 +986,6 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
                 org.Seats = 5;
             })
             .AsSelfHosted()
-            .WithPM34423StagedStatusFlag()
             .BuildAsync();
 
         var client = testData.Factory.CreateClient(new WebApplicationFactoryClientOptions
@@ -1022,7 +1019,6 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
                 org.Seats = 5;
                 org.MaxAutoscaleSeats = 5;
             })
-            .WithPM34423StagedStatusFlag()
             .BuildAsync();
 
         var client = testData.Factory.CreateClient(new WebApplicationFactoryClientOptions
@@ -1058,7 +1054,6 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
                 org.Seats = 5;
             })
             .WithAutoscaleSucceeds()
-            .WithPM34423StagedStatusFlag()
             .BuildAsync();
 
         var client = testData.Factory.CreateClient(new WebApplicationFactoryClientOptions
@@ -1087,53 +1082,6 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     }
 
     /*
-    * FALL-THROUGH PATH: Test to verify /Account/ExternalCallback does NOT promote a Staged
-    * OrganizationUser when the PM34423StagedStatus feature flag is off, even at seat cap.
-    * With the flag off, the Staged branch is skipped, no seat check runs for the promotion,
-    * and the request falls through to PreventOrgUserLoginIfStatusInvalidAsync which trips
-    * on the still-Staged status (the pre-existing pre-PM-42167 behavior).
-    *
-    * Locks in the flag-gated boundary: if the flag check is ever forgotten from the promotion
-    * condition, this test flips because the row gets promoted. If it is ever forgotten from
-    * an earlier gate that fires a seat check, this test flips because the error message
-    * becomes "No seats available" instead of the unknown-status message.
-    */
-    [Fact]
-    public async Task ExternalCallback_WithJitProvisioning_AgainstStagedOrgUser_WithFeatureFlagOff_AtSeatCap_FallsThroughToUnknownStatus()
-    {
-        // Arrange — Seats = 5 + MaxAutoscaleSeats = 5 so any accidental seat check would
-        // trip on "No seats available." Feature flag is explicitly off so the promotion
-        // branch is skipped.
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithStagedOrganizationUser()
-            .WithOrganization(org =>
-            {
-                org.Seats = 5;
-                org.MaxAutoscaleSeats = 5;
-            })
-            .WithPM34423StagedStatusFlag(enabled: false)
-            .BuildAsync();
-
-        var client = testData.Factory.CreateClient();
-
-        // Act
-        var response = await client.GetAsync("/Account/ExternalCallback");
-
-        // Assert — 500 with the unknown-status message (proves fall-through to the status
-        // filter throw, NOT the seat-check path — which would produce a 302 redirect).
-        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
-        var stringResponse = await response.Content.ReadAsStringAsync();
-        Assert.Contains("is in an unknown state", stringResponse);
-
-        // Assert — Staged row status is unchanged (promotion did not run).
-        var orgUserRepo = testData.Factory.Services.GetRequiredService<IOrganizationUserRepository>();
-        var refreshedOrgUser = await orgUserRepo.GetByIdAsync(testData.OrganizationUser!.Id);
-        Assert.NotNull(refreshedOrgUser);
-        Assert.Equal(OrganizationUserStatusType.Staged, refreshedOrgUser.Status);
-    }
-
-    /*
     * REGRESSION GUARD: Two-phase test verifying that when the seat check throws while
     * JIT-provisioning a BW User against a Staged OrganizationUser row, no BW User row
     * is persisted (Phase 1), and that after an admin adds seats the retry proceeds
@@ -1153,7 +1101,6 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
                 org.Seats = 5;
                 org.MaxAutoscaleSeats = 5;
             })
-            .WithPM34423StagedStatusFlag()
             .WithMockedSendOrganizationInvitesCommand()
             .BuildAsync();
 
@@ -1228,7 +1175,6 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
             .WithSsoConfig()
             .WithUser()
             .WithStagedOrganizationUser()
-            .WithPM34423StagedStatusFlag()
             .WithMockedSendOrganizationInvitesCommand()
             .BuildAsync();
 
@@ -1290,7 +1236,6 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
                 org.Seats = 5;
             })
             .AsSelfHosted()
-            .WithPM34423StagedStatusFlag()
             .WithMockedSendOrganizationInvitesCommand()
             .BuildAsync();
 
@@ -1333,7 +1278,6 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
                 org.Seats = 5;
                 org.MaxAutoscaleSeats = 5;
             })
-            .WithPM34423StagedStatusFlag()
             .WithMockedSendOrganizationInvitesCommand()
             .BuildAsync();
 
@@ -1374,7 +1318,6 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
             .WithSsoConfig()
             .WithUser()
             .WithStagedOrganizationUser()
-            .WithPM34423StagedStatusFlag()
             .WithMockedSendOrganizationInvitesCommand()
             .BuildAsync();
 

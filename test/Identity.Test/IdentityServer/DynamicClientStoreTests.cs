@@ -1,6 +1,7 @@
 ﻿using Bit.Identity.IdentityServer;
 using Duende.IdentityServer.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Xunit;
 
@@ -21,7 +22,7 @@ public class DynamicClientStoreTests
         _sutCreator = () => new DynamicClientStore(
             _services.BuildServiceProvider(),
             _apiKeyProvider,
-            new StaticClientStore(new Core.Settings.GlobalSettings())
+            new StaticClientStore(new Core.Settings.GlobalSettings(), NullLogger<StaticClientStore>.Instance)
         );
     }
 

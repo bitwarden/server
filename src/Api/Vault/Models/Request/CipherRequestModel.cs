@@ -97,6 +97,22 @@ public class CipherRequestModel : IValidatableObject
             yield return new ValidationResult(
                 "The Name field is required.", new[] { nameof(Name) });
         }
+
+        if (Attachments != null)
+        {
+            // The legacy map's values are file names that clients store encrypted. Attributes cannot be
+            // applied to a dictionary's value type, so validate them here to match Attachments2.
+            var encryptedString = new EncryptedStringAttribute();
+            var encryptedStringLength = new EncryptedStringLengthAttribute(1000);
+
+            foreach (var attachment in Attachments.Where(a =>
+                         !encryptedString.IsValid(a.Value) || !encryptedStringLength.IsValid(a.Value)))
+            {
+                yield return new ValidationResult(
+                    $"The attachment file name for {attachment.Key} is not a valid encrypted string.",
+                    new[] { nameof(Attachments) });
+            }
+        }
     }
 
     /// <summary>
@@ -222,8 +238,14 @@ public class CipherRequestModel : IValidatableObject
                 {
                     continue;
                 }
+                // The legacy map carries only a file name and cannot express a per-attachment key.
+                // Applying it to a keyed attachment would null out the only copy of that key and
+                // render the file permanently undecryptable, so leave modern attachments untouched.
+                if (attachment.Value.Key != null)
+                {
+                    continue;
+                }
                 attachment.Value.FileName = attachmentForKey;
-                attachment.Value.Key = null;
             }
         }
 

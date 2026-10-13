@@ -500,6 +500,11 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     public async Task Put_FillAssistPolicy_Success()
     {
         // Arrange
+        // FillAssist requires SingleOrg to be enabled first (IEnforceDependentPoliciesEvent).
+        await _client.PutAsync(
+            $"/organizations/{_organization.Id}/policies/{PolicyType.SingleOrg}",
+            JsonContent.Create(new SavePolicyRequest { Policy = new PolicyRequestModel { Enabled = true } }));
+
         var policyType = PolicyType.FillAssist;
         const string rulesUrl = "https://github.com/bitwarden/map-the-web/releases/latest/download";
         var request = new SavePolicyRequest

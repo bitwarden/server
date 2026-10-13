@@ -1,8 +1,11 @@
 ﻿namespace Bit.Invoicing.InvoicePreviews.Models;
 
-/// <summary>One product's proration lines collapsed into a single renderable credit row. All amounts are dollars.</summary>
+/// <summary>One purchasable's proration lines collapsed into a single renderable row. All amounts are dollars.</summary>
 public record PurchasableProration
 {
+    /// <summary>The purchasable_reference this proration offsets (e.g. pm-seat).</summary>
+    public required string Reference { get; init; }
+
     /// <summary>Absolute value of the negative line amounts.</summary>
     public required decimal Credit { get; init; }
 

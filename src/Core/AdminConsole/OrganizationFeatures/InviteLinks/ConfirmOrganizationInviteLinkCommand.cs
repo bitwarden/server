@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Billing.Services;
@@ -97,20 +98,31 @@ public class ConfirmOrganizationInviteLinkCommand(
     {
         if (existingOrganizationUser is not null)
         {
-            return await ConfirmExistingMembershipAsync(existingOrganizationUser, user, request.OrgUserKey);
+            return await ConfirmExistingMembershipAsync(organization, existingOrganizationUser, user, request.OrgUserKey);
         }
 
         return await CreateConfirmedMembershipAsync(organization, user, request.OrgUserKey);
     }
 
     /// <summary>
-    /// Confirms an existing membership (a pending email invitation or an accepted membership) by linking
-    /// it to the user, releasing the org key, and moving it straight to <see cref="OrganizationUserStatusType.Confirmed"/>.
-    /// Persisting via <c>ReplaceAsync</c> bumps the user's account revision date so their other devices sync.
+    /// Confirms an existing membership (a pending email invitation, a Staged provisioning row, or an accepted
+    /// membership) by linking it to the user, releasing the org key, and moving it straight to
+    /// <see cref="OrganizationUserStatusType.Confirmed"/>. A Staged row does not occupy a seat, so seats are
+    /// expanded first when needed. Persisting via <c>ReplaceAsync</c> bumps the user's account revision date
+    /// so their other devices sync.
     /// </summary>
     private async Task<CommandResult<OrganizationUser>> ConfirmExistingMembershipAsync(
-        OrganizationUser existingOrganizationUser, User user, string orgUserKey)
+        Organization organization, OrganizationUser existingOrganizationUser, User user, string orgUserKey)
     {
+        if (existingOrganizationUser.Status == OrganizationUserStatusType.Staged)
+        {
+            var seatReservationError = await ReserveSeatAsync(organization);
+            if (seatReservationError is not null)
+            {
+                return seatReservationError;
+            }
+        }
+
         existingOrganizationUser.Status = OrganizationUserStatusType.Confirmed;
         existingOrganizationUser.UserId = user.Id;
         existingOrganizationUser.Email = null;
@@ -129,12 +141,10 @@ public class ConfirmOrganizationInviteLinkCommand(
     private async Task<CommandResult<OrganizationUser>> CreateConfirmedMembershipAsync(
         Organization organization, User user, string orgUserKey)
     {
-        var occupiedSeatCount = (await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)).Total;
-
-        var seatExpansionError = await TryExpandSeatsAsync(organization, occupiedSeatCount);
-        if (seatExpansionError is not null)
+        var seatReservationError = await ReserveSeatAsync(organization);
+        if (seatReservationError is not null)
         {
-            return seatExpansionError;
+            return seatReservationError;
         }
 
         var accessSecretsManager = await stripePaymentService.HasSecretsManagerStandalone(organization);
@@ -155,8 +165,23 @@ public class ConfirmOrganizationInviteLinkCommand(
     }
 
     /// <summary>
-    /// Expands the organization's seats before the new membership is created. Only auto-adds when the
-    /// org is already at capacity.
+    /// Reserves capacity for one more seat-occupying member. Runs before the membership is written so that a
+    /// billing or persistence failure leaves no orphaned seat. The seat count is re-read here because it may
+    /// have changed since the validator ran.
+    /// </summary>
+    private async Task<Error?> ReserveSeatAsync(Organization organization)
+    {
+        var occupiedSeatCount = (await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)).Total;
+        if (!OrganizationSeatAvailability.HasAvailableSeats(organization, occupiedSeatCount))
+        {
+            return new ConfirmOrganizationHasNoAvailableSeats(organization.DisplayName());
+        }
+
+        return await TryExpandSeatsAsync(organization, occupiedSeatCount);
+    }
+
+    /// <summary>
+    /// Only auto-adds when the organization is already at capacity.
     /// </summary>
     private async Task<Error?> TryExpandSeatsAsync(Organization organization, int occupiedSeatCount)
     {

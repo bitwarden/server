@@ -48,11 +48,29 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     Task<ICollection<CollectionAdminDetails>> GetManySharedByOrganizationIdWithPermissionsAsync(Guid organizationId, Guid userId, bool includeAccessRelationships);
 
     /// <summary>
+    /// Returns all shared and default collections for an organization, including the caller's effective
+    /// permissions and full access relationships. Always includes access relationships.
+    /// Purpose-built for reporting surfaces that need complete member attribution.
+    /// This does not perform any authorization checks internally!
+    /// </summary>
+    Task<ICollection<CollectionAdminDetails>> GetManyOrganizationCollectionsWithPermissionsAsync(Guid organizationId, Guid userId);
+
+    /// <summary>
     /// Returns the collection by Id, including permission info for the specified user.
     /// This does not perform any authorization checks internally!
     /// Optionally, you can include access relationships for other Groups/Users and the collection.
     /// </summary>
     Task<CollectionAdminDetails?> GetByIdWithPermissionsAsync(Guid collectionId, Guid? userId, bool includeAccessRelationships);
+
+    /// <summary>
+    /// Batched version of <see cref="GetByIdWithPermissionsAsync"/>. Returns permission info for the specified
+    /// user for every requested collection, in one call. IDs that do not exist are left out of the result.
+    /// </summary>
+    /// <remarks>
+    /// Not a drop-in replacement: only a Confirmed member of an Enabled organization counts as Assigned or
+    /// Manage here, while <see cref="GetByIdWithPermissionsAsync"/> counts any OrganizationUser row.
+    /// </remarks>
+    Task<ICollection<CollectionAdminDetails>> GetManyByIdsWithPermissionsAsync(IEnumerable<Guid> collectionIds, Guid? userId, bool includeAccessRelationships);
 
     /// <remarks>
     /// Ignores <see cref="Collection.AccessRuleId"/>: a new collection is always created ungoverned, whatever the

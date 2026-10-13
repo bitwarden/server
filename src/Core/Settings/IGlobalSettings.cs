@@ -19,6 +19,7 @@ public interface IGlobalSettings
     int DeviceLastActivityCacheTtlHours { get; set; }
     bool DisableUserRegistration { get; set; }
     bool SuppressOnboardingInterstitials { get; set; }
+    bool EnableEmailVerification { get; set; }
     bool EnableNewDeviceVerification { get; set; }
     IInstallationSettings Installation { get; set; }
     IFileStorageSettings Attachment { get; set; }

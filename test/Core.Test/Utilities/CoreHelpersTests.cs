@@ -506,4 +506,16 @@ public class CoreHelpersTests
         Assert.DoesNotContain("&amp;", result);
         Assert.DoesNotContain("&quot;", result);
     }
+
+    [Theory]
+    [InlineData("Client.Org", "Client.\u200COrg")]
+    [InlineData("40167 Max.Seats", "40167 Max.\u200CSeats")]
+    [InlineData("admin@example.com", "admin@\u200Cexample.\u200Ccom")]
+    [InlineData("No Dots Here", "No Dots Here")]
+    public void PreventEmailAutoLinking_InsertsZeroWidthNonJoiner(string value, string expected)
+    {
+        // Mail clients auto-link anything that looks like a domain (e.g. "Client.Org"), so a
+        // zero-width non-joiner is inserted after "." and "@" while the visible text is unchanged.
+        Assert.Equal(expected, CoreHelpers.PreventEmailAutoLinking(value));
+    }
 }

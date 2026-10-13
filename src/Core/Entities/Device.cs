@@ -7,12 +7,18 @@ namespace Bit.Core.Entities;
 
 public class Device : ITableObject<Guid>
 {
+    /// <summary>
+    /// Storage limit of <see cref="Identifier"/>. Exposed so callers that accept a client-supplied
+    /// identifier can reject a value that could never be persisted, instead of failing later on write.
+    /// </summary>
+    public const int MaxIdentifierLength = 50;
+
     public Guid Id { get; set; }
     public Guid UserId { get; set; }
     [MaxLength(50)]
     public string Name { get; set; } = null!;
     public Enums.DeviceType Type { get; set; }
-    [MaxLength(50)]
+    [MaxLength(MaxIdentifierLength)]
     public string Identifier { get; set; } = null!;
     [MaxLength(255)]
     public string? PushToken { get; set; }

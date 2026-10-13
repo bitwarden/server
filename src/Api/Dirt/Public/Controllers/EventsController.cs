@@ -24,7 +24,7 @@ public class EventsController : Controller
     private readonly IProjectRepository _projectRepository;
     private readonly IUserService _userService;
     private readonly ILogger<EventsController> _logger;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public EventsController(
         IEventRepository eventRepository,
@@ -34,7 +34,7 @@ public class EventsController : Controller
         IProjectRepository projectRepository,
         IUserService userService,
         ILogger<EventsController> logger,
-        IFeatureService featureService)
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
         _eventRepository = eventRepository;
         _cipherRepository = cipherRepository;
@@ -51,7 +51,9 @@ public class EventsController : Controller
     /// </summary>
     /// <remarks>
     /// Returns a filtered list of your organization's event logs, paged by a continuation token.
-    /// If no filters are provided, it will return the last 30 days of event for the organization.
+    /// If no date filters are provided, it will return the last 30 days of events for the organization.
+    /// Providing only <c>start</c> returns events from then through the current time;
+    /// providing only <c>end</c> returns the 30 days before it. A range greater than 367 days is rejected.
     /// </remarks>
     [HttpGet]
     [ProducesResponseType(typeof(PagedListResponseModel<EventResponseModel>), (int)HttpStatusCode.OK)]

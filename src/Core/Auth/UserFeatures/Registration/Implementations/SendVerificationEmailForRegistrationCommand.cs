@@ -48,11 +48,6 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
     public async Task<string?> Run(string email, string? name, bool receiveMarketingEmails, string? fromMarketing,
         RegisterStartOpenOrgInviteRequestModel? openOrgInvite = null)
     {
-        if (_globalSettings.DisableUserRegistration)
-        {
-            throw new BadRequestException("Open registration has been disabled by the system administrator.");
-        }
-
         if (string.IsNullOrWhiteSpace(email))
         {
             throw new ArgumentNullException(nameof(email));
@@ -73,6 +68,13 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
                 throw new BadRequestException("Invalid or expired organization invite link.");
             }
             excludeOrganizationId = openOrgInvite.OrganizationId;
+        }
+
+        // DisableUserRegistration targets open self-registration. A validated open-org invite
+        // is the authorization for that path, so the toggle must not block it.
+        if (openOrgInvite is null && _globalSettings.DisableUserRegistration)
+        {
+            throw new BadRequestException("Open registration has been disabled by the system administrator.");
         }
 
         if (await _organizationDomainRepository.HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(

@@ -115,6 +115,11 @@ public class AmazonSesMailDeliveryService : IMailDeliveryService, IDisposable
                 .ToList();
         }
 
+        if (!string.IsNullOrWhiteSpace(message.ReplyToAddress))
+        {
+            request.ReplyToAddresses = [CoreHelpers.PunyEncode(message.ReplyToAddress)];
+        }
+
         if (!string.IsNullOrWhiteSpace(message.Category))
         {
             request.Tags.Add(new MessageTag { Name = "Category", Value = message.Category });

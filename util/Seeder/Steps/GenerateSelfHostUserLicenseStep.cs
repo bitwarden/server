@@ -10,7 +10,7 @@ namespace Bit.Seeder.Steps;
 /// Required for self-hosted instances, which validate premium status by reading this file on every login.
 /// </summary>
 internal sealed class GenerateSelfHostUserLicenseStep(
-    ILicensingService licenseService,
+    Func<ILicensingService> licenseServiceFactory,
     ISeederLicenseSigner licenseSigner,
     ILogger<GenerateSelfHostUserLicenseStep> logger) : IAsyncStep
 {
@@ -23,6 +23,6 @@ internal sealed class GenerateSelfHostUserLicenseStep(
         }
 
         // Outcome discarded: any warning is already logged.
-        _ = await SelfHostLicenseService.WriteLicenseAsync(licenseService, licenseSigner, user, logger);
+        _ = await SelfHostLicenseService.WriteLicenseAsync(licenseServiceFactory, licenseSigner, user, logger);
     }
 }

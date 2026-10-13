@@ -11,7 +11,7 @@ BEGIN
         [dbo].[AccessLease]
     WHERE
         [RequesterId] = @RequesterId
-        AND [Status] = 0 -- Active
+        AND [Action] = 0 -- None (no early end)
         AND [NotBefore] <= @Now
         AND [NotAfter] > @Now
     ORDER BY

@@ -23,6 +23,7 @@ using Bit.Core.Utilities;
 using Bit.Sso.Exceptions;
 using Bit.Sso.Models;
 using Bit.Sso.Utilities;
+using Bit.Sso.Utilities.Saml2;
 using Duende.IdentityModel;
 using Duende.IdentityServer;
 using Duende.IdentityServer.Services;
@@ -57,7 +58,6 @@ public class AccountController : Controller
     private readonly IDataProtectorTokenFactory<SsoTokenable> _dataProtector;
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly IRegisterUserCommand _registerUserCommand;
-    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
 
     public AccountController(
@@ -80,7 +80,6 @@ public class AccountController : Controller
         IDataProtectorTokenFactory<SsoTokenable> dataProtector,
         IOrganizationDomainRepository organizationDomainRepository,
         IRegisterUserCommand registerUserCommand,
-        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         ISendOrganizationInvitesCommand sendOrganizationInvitesCommand)
     {
         _schemeProvider = schemeProvider;
@@ -102,7 +101,6 @@ public class AccountController : Controller
         _dataProtector = dataProtector;
         _organizationDomainRepository = organizationDomainRepository;
         _registerUserCommand = registerUserCommand;
-        _featureService = featureService;
         _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
     }
 
@@ -510,9 +508,9 @@ public class AccountController : Controller
         //  for the user identifier.
         static bool nameIdIsNotTransient(Claim c) => c.Type == ClaimTypes.NameIdentifier
                                                      && (c.Properties == null
-                                                         || !c.Properties.TryGetValue(SamlPropertyKeys.ClaimFormat,
+                                                         || !c.Properties.TryGetValue(Saml2PropertyKeys.ClaimFormat,
                                                              out var claimFormat)
-                                                         || claimFormat != SamlNameIdFormats.Transient);
+                                                         || claimFormat != Saml2NameIdFormats.Transient);
 
         // Try to determine the unique id of the external user (issued by the provider)
         // the most common claim type for that are the sub claim and the NameIdentifier
@@ -646,8 +644,7 @@ public class AccountController : Controller
                     guaranteedExistingUser.Email);
             }
 
-            if (guaranteedOrgUser.Status == OrganizationUserStatusType.Staged
-                && _featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus))
+            if (guaranteedOrgUser.Status == OrganizationUserStatusType.Staged)
             {
                 await PromoteStagedOrgUserAndSendInviteAsync(guaranteedOrgUser, organization);
 
@@ -680,8 +677,7 @@ public class AccountController : Controller
         // new BW User row + fire its welcome email for an SSO login that
         // won't complete. Staged rows aren't seat-counted; a Staged→Invited promotion
         // consumes a seat and must gate here alongside the fresh-JIT case.
-        var willPromoteStagedOrgUser = possibleOrgUser?.Status == OrganizationUserStatusType.Staged
-                                && _featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus);
+        var willPromoteStagedOrgUser = possibleOrgUser?.Status == OrganizationUserStatusType.Staged;
 
         if (possibleOrgUser == null || willPromoteStagedOrgUser)
         {
@@ -759,8 +755,7 @@ public class AccountController : Controller
         else
         {
 
-            if (possibleOrgUser.Status == OrganizationUserStatusType.Staged
-                && _featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus))
+            if (possibleOrgUser.Status == OrganizationUserStatusType.Staged)
             {
                 // Seat availability was verified up-front before user creation so safe to consume this seat.
                 possibleOrgUser.Status = OrganizationUserStatusType.Invited;
@@ -1033,12 +1028,7 @@ public class AccountController : Controller
     private IActionResult InvalidJson(string errorMessageKey, Exception? ex = null)
     {
         Response.StatusCode = ex == null ? 400 : 500;
-        return Json(new ErrorResponseModel(_i18nService.T(errorMessageKey))
-        {
-            ExceptionMessage = ex?.Message,
-            ExceptionStackTrace = ex?.StackTrace,
-            InnerExceptionMessage = ex?.InnerException?.Message,
-        });
+        return Json(new ErrorResponseModel(_i18nService.T(errorMessageKey)));
     }
 
     private string? TryGetEmailAddressFromClaims(IEnumerable<Claim> claims, IEnumerable<string> additionalClaimTypes)
@@ -1047,14 +1037,14 @@ public class AccountController : Controller
 
         var email = filteredClaims.GetFirstMatch(additionalClaimTypes.ToArray()) ??
                     filteredClaims.GetFirstMatch(JwtClaimTypes.Email, ClaimTypes.Email,
-                        SamlClaimTypes.Email, "mail", "emailaddress");
+                        Saml2ClaimTypes.Email, "mail", "emailaddress");
         if (!string.IsNullOrWhiteSpace(email))
         {
             return email;
         }
 
         var username = filteredClaims.GetFirstMatch(JwtClaimTypes.PreferredUserName,
-            SamlClaimTypes.UserId, "uid");
+            Saml2ClaimTypes.UserId, "uid");
         if (!string.IsNullOrWhiteSpace(username))
         {
             return username;
@@ -1071,15 +1061,15 @@ public class AccountController : Controller
 
         var name = filteredClaims.GetFirstMatch(additionalClaimTypes.ToArray()) ??
                    filteredClaims.GetFirstMatch(JwtClaimTypes.Name, ClaimTypes.Name,
-                       SamlClaimTypes.DisplayName, SamlClaimTypes.CommonName, "displayname", "cn");
+                       Saml2ClaimTypes.DisplayName, Saml2ClaimTypes.CommonName, "displayname", "cn");
         if (!string.IsNullOrWhiteSpace(name))
         {
             return name;
         }
 
-        var givenName = filteredClaims.GetFirstMatch(SamlClaimTypes.GivenName, "givenname", "firstname",
+        var givenName = filteredClaims.GetFirstMatch(Saml2ClaimTypes.GivenName, "givenname", "firstname",
             "fn", "fname", "nickname");
-        var surname = filteredClaims.GetFirstMatch(SamlClaimTypes.Surname, "sn", "surname", "lastname");
+        var surname = filteredClaims.GetFirstMatch(Saml2ClaimTypes.Surname, "sn", "surname", "lastname");
         var nameParts = new[] { givenName, surname }.Where(p => !string.IsNullOrWhiteSpace(p));
         if (nameParts.Any())
         {

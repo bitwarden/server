@@ -479,20 +479,20 @@ public class CipherService : ICipherService
         await _pushService.PushSyncCiphersAsync(deletingUserId);
     }
 
-    public async Task<DeleteAttachmentResponseData> DeleteAttachmentAsync(Cipher cipher, string attachmentId, Guid deletingUserId,
+    public async Task<DeleteAttachmentResponseData> DeleteAttachmentAsync(CipherDetails cipherDetails, string attachmentId, Guid deletingUserId,
         bool orgAdmin = false)
     {
-        if (!orgAdmin && !(await UserCanEditAsync(cipher, deletingUserId)))
+        if (!orgAdmin && !await UserCanDeleteAsync(cipherDetails, deletingUserId))
         {
             throw new BadRequestException("You do not have permissions to delete this.");
         }
 
-        if (!cipher.ContainsAttachment(attachmentId))
+        if (!cipherDetails.ContainsAttachment(attachmentId))
         {
             throw new NotFoundException();
         }
 
-        return await DeleteAttachmentAsync(cipher, cipher.GetAttachments()[attachmentId], orgAdmin)
+        return await DeleteAttachmentAsync(cipherDetails, cipherDetails.GetAttachments()[attachmentId], orgAdmin)
             ?? throw new NotFoundException();
     }
 
@@ -505,17 +505,33 @@ public class CipherService : ICipherService
         }
 
 
-        await DeleteAttachmentsForOrganizationAsync(organizationId);
+        await DeleteAttachmentsForOrganizationAsync(organizationId, excludeDefaultUserCollectionCiphers: true);
 
         await _cipherRepository.DeleteByOrganizationIdAsync(organizationId);
 
         await _eventService.LogOrganizationEventAsync(org, EventType.Organization_PurgedVault);
     }
 
-    public async Task DeleteAttachmentsForOrganizationAsync(Guid organizationId)
+    public async Task DeleteAttachmentsForOrganizationAsync(Guid organizationId, bool excludeDefaultUserCollectionCiphers = false)
     {
-        var cipherIdsWithAttachments = (await _cipherRepository.GetManyByOrganizationIdAsync(organizationId))
-            .Where(c => c.GetAttachments()?.Count > 0).Select(c => c.Id);
+        var ciphers = await _cipherRepository.GetManyByOrganizationIdAsync(organizationId);
+
+        if (excludeDefaultUserCollectionCiphers)
+        {
+            var defaultCollectionIds = (await _collectionRepository.GetManyByOrganizationIdAsync(organizationId))
+                .Where(c => c.Type == CollectionType.DefaultUserCollection)
+                .Select(c => c.Id)
+                .ToHashSet();
+
+            var cipherIdsInDefaultCollection = (await _collectionCipherRepository.GetManyByOrganizationIdAsync(organizationId))
+                .Where(cc => defaultCollectionIds.Contains(cc.CollectionId))
+                .Select(cc => cc.CipherId)
+                .ToHashSet();
+
+            ciphers = ciphers.Where(c => !cipherIdsInDefaultCollection.Contains(c.Id)).ToList();
+        }
+
+        var cipherIdsWithAttachments = ciphers.Where(c => c.GetAttachments()?.Count > 0).Select(c => c.Id);
 
         foreach (var cipherId in cipherIdsWithAttachments)
         {
@@ -856,8 +872,35 @@ public class CipherService : ICipherService
         return restoringCiphers;
     }
 
-    public async Task ValidateBulkCollectionAssignmentAsync(IEnumerable<Guid> collectionIds, IEnumerable<Guid> cipherIds, Guid userId)
+    public async Task ValidateBulkCollectionAssignmentAsync(IEnumerable<Guid> collectionIds, IEnumerable<Guid> cipherIds, Guid userId, bool removeCollections = false)
     {
+        // A default ("My Items") collection is personal to its owner. Loaded at most once per request,
+        // and only when some default collection is actually implicated.
+        var ownedDefaultCollectionIds = (await _collectionRepository.GetManyByUserIdAsync(userId))
+                .Where(c => c.Type == CollectionType.DefaultUserCollection)
+                .Select(c => c.Id)
+                .ToHashSet();
+
+        var newCollectionIds = collectionIds.ToList();
+
+        // The target collection set is identical for every cipher, so resolve it once instead of
+        // re-querying it inside the per-cipher validation.
+        var targetDefaultCollectionIds = (await _collectionRepository.GetManyByManyIdsAsync(newCollectionIds))
+            .Where(c => c.Type == CollectionType.DefaultUserCollection)
+            .Select(c => c.Id)
+            .ToList();
+
+        var targetContainsDefault = targetDefaultCollectionIds.Count > 0;
+
+        // Removal only touches the collections named in the request. Block only when a member is
+        // removing a cipher from another member's default collection.
+        if (removeCollections
+            && targetContainsDefault
+            && targetDefaultCollectionIds.Any(id => !ownedDefaultCollectionIds.Contains(id)))
+        {
+            throw new NotFoundException();
+        }
+
         foreach (var cipherId in cipherIds)
         {
             var cipher = await _cipherRepository.GetByIdAsync(cipherId);
@@ -865,7 +908,27 @@ public class CipherService : ICipherService
             {
                 throw new NotFoundException();
             }
-            await ValidateChangeInCollectionsAsync(cipher, collectionIds, userId);
+
+            // Adding collections shares the cipher. A cipher that lives only in another member's default
+            // collection is personal to them and may not be shared; once it is also in a shared collection
+            // it is already shared and may be assigned to other collections.
+            if (!removeCollections && cipher.OrganizationId.HasValue)
+            {
+                var cipherCollections = await _collectionRepository.GetManyByManyIdsAsync(
+                    await _collectionCipherRepository.GetCollectionIdsByCipherIdAsync(cipher.Id));
+                var alreadyShared = cipherCollections.Any(c => c.Type != CollectionType.DefaultUserCollection);
+                var foreignDefaultCollectionIds = cipherCollections
+                    .Where(c => c.Type == CollectionType.DefaultUserCollection)
+                    .Select(c => c.Id)
+                    .ToList();
+
+                if (!alreadyShared && foreignDefaultCollectionIds.Any(id => !ownedDefaultCollectionIds.Contains(id)))
+                {
+                    throw new NotFoundException();
+                }
+            }
+
+            await ValidateChangeInCollectionsAsync(cipher, newCollectionIds, userId, targetContainsDefault);
         }
     }
 
@@ -928,7 +991,9 @@ public class CipherService : ICipherService
         cipher.RevisionDate = DateTime.UtcNow;
         if (orgAdmin)
         {
-            await _cipherRepository.ReplaceAsync(cipher);
+            // Cipher_Update accepts only Cipher's own properties, and Dapper builds its parameters
+            // from the runtime type, so clone to a plain Cipher rather than passing a descendant.
+            await _cipherRepository.ReplaceAsync(cipher.Clone());
         }
         else
         {
@@ -1090,10 +1155,12 @@ public class CipherService : ICipherService
         return requirement.IgnoreStorageLimitsOnMigration(organization.Id);
     }
 
-    // Validates that a cipher is not being added to a default collection when it is only currently only in shared collections
-    private async Task ValidateChangeInCollectionsAsync(Cipher updatedCipher, IEnumerable<Guid>? newCollectionIds, Guid userId)
+    // Validates collection changes for a cipher:
+    //  - A cipher cannot be added to a default collection when it is only currently in shared collections.
+    // <paramref name="newCollectionsContainDefault"/> lets a bulk caller resolve whether the (shared) target
+    // set contains a default collection once, instead of re-querying it for every cipher.
+    private async Task ValidateChangeInCollectionsAsync(Cipher updatedCipher, IEnumerable<Guid>? newCollectionIds, Guid userId, bool? newCollectionsContainDefault = null)
     {
-
         if (updatedCipher.Id == Guid.Empty || !updatedCipher.OrganizationId.HasValue)
         {
             return;
@@ -1123,10 +1190,10 @@ public class CipherService : ICipherService
             return;
         }
 
-        var newCollections = await _collectionRepository.GetManyByManyIdsAsync(newCollectionIds);
-        var newCollectionsContainDefault = newCollections.Any(c => c.Type == CollectionType.DefaultUserCollection);
+        newCollectionsContainDefault ??= (await _collectionRepository.GetManyByManyIdsAsync(newCollectionIds))
+            .Any(c => c.Type == CollectionType.DefaultUserCollection);
 
-        if (newCollectionsContainDefault)
+        if (newCollectionsContainDefault.Value)
         {
             // User is trying to add the default collection when the cipher is only in shared collections
             throw new BadRequestException("The cipher(s) cannot be assigned to a default collection when only assigned to non-default collections.");

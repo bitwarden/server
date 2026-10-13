@@ -38,6 +38,11 @@ public class OrganizationUserScene(
         public required OrganizationUserStatusType OrganizationUserStatusType { get; set; }
         public Permissions? Permissions { get; set; }
         public bool AccessSecretsManager { get; set; }
+
+        /// <summary>
+        /// Overrides the member's PAM license. Unset follows the organization's <c>UsePam</c>.
+        /// </summary>
+        public bool? AccessPam { get; set; }
     }
 
     public async Task<SceneResult<OrganizationUserSceneResult>> SeedAsync(Request request)
@@ -79,6 +84,10 @@ public class OrganizationUserScene(
         }
 
         organizationUser.AccessSecretsManager = request.AccessSecretsManager;
+        if (request.AccessPam is { } accessPam)
+        {
+            organizationUser.AccessPam = accessPam;
+        }
 
         await organizationUserRepository.CreateAsync(organizationUser);
 

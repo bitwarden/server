@@ -154,6 +154,44 @@ public class DiscountMapperTests
     }
 
     [Fact]
+    public void Partition_RepeatingCoupon_ExposesDurationInMonths()
+    {
+        var invoice = Deserialize("""
+        {
+          "id": "in_test",
+          "total": 0,
+          "total_discount_amounts": [
+            { "amount": 12790, "discount": { "id": "di_sm", "source": { "coupon": { "id": "cp_sm", "name": "SM Standalone", "percent_off": 100, "duration": "repeating", "duration_in_months": 12 } } } }
+          ],
+          "lines": { "data": [] }
+        }
+        """);
+
+        var result = DiscountMapper.Partition(invoice, new RecordingLogger<DiscountMapperTests>());
+
+        Assert.Equal(12L, Assert.Single(result.CartLevel).DurationInMonths);
+    }
+
+    [Fact]
+    public void Partition_NonRepeatingCoupon_HasNullDurationInMonths()
+    {
+        var invoice = Deserialize("""
+        {
+          "id": "in_test",
+          "total": 11982,
+          "total_discount_amounts": [
+            { "amount": 1279, "discount": { "id": "di_once", "source": { "coupon": { "id": "cp_once", "name": "WELCOME10", "percent_off": 10, "duration": "once" } } } }
+          ],
+          "lines": { "data": [] }
+        }
+        """);
+
+        var result = DiscountMapper.Partition(invoice, new RecordingLogger<DiscountMapperTests>());
+
+        Assert.Null(Assert.Single(result.CartLevel).DurationInMonths);
+    }
+
+    [Fact]
     public void Partition_CouponWithoutExpandedCoupon_LogsAndDrops()
     {
         // total_discount_amounts[].discount has no source.coupon -> can't resolve; must log and drop.
@@ -362,5 +400,71 @@ public class DiscountMapperTests
 
         Assert.Equal(12.79m, Assert.Single(result.CartLevel).Amount);
         Assert.Empty(result.ItemLevel);
+    }
+
+    [Fact]
+    public void Partition_CouponPinnedToItemWithoutAppliesTo_LandsOnItsLine()
+    {
+        // Dashboard-attached item discount: scope comes from subscription_item, not the coupon's applies_to.
+        var invoice = Deserialize("""
+        {
+          "id": "in_test",
+          "total": 11757,
+          "total_discount_amounts": [
+            { "amount": 225, "discount": { "id": "di_pin", "subscription_item": "si_pin", "source": { "coupon": { "id": "cp_pin", "name": "STORAGE15", "percent_off": 15 } } } }
+          ],
+          "lines": {
+            "data": [
+              {
+                "amount": 1500,
+                "pricing": { "price_details": { "price": { "id": "price_storage", "metadata": { "purchasable_reference": "pm-storage" } } } },
+                "discount_amounts": [ { "amount": 225, "discount": "di_pin" } ]
+              }
+            ]
+          }
+        }
+        """);
+
+        var result = DiscountMapper.Partition(invoice, new RecordingLogger<DiscountMapperTests>());
+
+        Assert.Empty(result.CartLevel);
+        Assert.Equal(2.25m, Assert.Single(result.ItemLevel["pm-storage"]).Amount);
+    }
+
+    [Fact]
+    public void Partition_MixedInvoice_PinnedCouponLandsOnLine_CartCouponStaysTopLevel()
+    {
+        var invoice = Deserialize("""
+        {
+          "id": "in_test",
+          "total": 241116,
+          "total_discount_amounts": [
+            { "amount": 74419, "discount": { "id": "di_cart", "source": { "coupon": { "id": "cp_cart", "name": "SUB25", "percent_off": 25 } } } },
+            { "amount": 225, "discount": { "id": "di_pin", "subscription_item": "si_pin", "source": { "coupon": { "id": "cp_pin", "name": "STORAGE15", "percent_off": 15 } } } }
+          ],
+          "lines": {
+            "data": [
+              {
+                "amount": 144000,
+                "pricing": { "price_details": { "price": { "id": "price_pm", "metadata": { "purchasable_reference": "pm-seat" } } } },
+                "discount_amounts": [ { "amount": 74419, "discount": "di_cart" } ]
+              },
+              {
+                "amount": 1500,
+                "pricing": { "price_details": { "price": { "id": "price_storage", "metadata": { "purchasable_reference": "pm-storage" } } } },
+                "discount_amounts": [ { "amount": 225, "discount": "di_pin" } ]
+              }
+            ]
+          }
+        }
+        """);
+
+        var result = DiscountMapper.Partition(invoice, new RecordingLogger<DiscountMapperTests>());
+
+        var cart = Assert.Single(result.CartLevel);
+        Assert.Equal(744.19m, cart.Amount);
+        Assert.Equal("SUB25", cart.Label);
+        Assert.Equal(2.25m, Assert.Single(result.ItemLevel["pm-storage"]).Amount);
+        Assert.False(result.ItemLevel.ContainsKey("pm-seat"));
     }
 }

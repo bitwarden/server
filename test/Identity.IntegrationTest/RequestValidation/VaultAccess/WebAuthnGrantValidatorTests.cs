@@ -7,6 +7,7 @@ using Bit.Core.Test.Auth.AutoFixture;
 using Bit.Core.Utilities;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Test.Common.Fakes;
 using Duende.IdentityModel;
 using Xunit;
 

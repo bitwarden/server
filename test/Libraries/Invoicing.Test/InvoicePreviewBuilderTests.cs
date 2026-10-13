@@ -229,7 +229,7 @@ public class InvoicePreviewBuilderTests
     }
 
     [Fact]
-    public void BuildFromInvoice_NoPasswordManagerSeats_Throws()
+    public void BuildFromInvoice_NoPasswordManagerSeats_BuildsWithoutSeats()
     {
         var invoice = Deserialize("""
         {
@@ -241,8 +241,86 @@ public class InvoicePreviewBuilderTests
         """);
 
         var builder = Builder(out _);
+        var preview = builder.Build(invoice, PlanTierType.Enterprise, PlanCadenceType.Annually);
 
-        Assert.Throws<InvalidOperationException>(() => builder.Build(invoice, PlanTierType.Enterprise, PlanCadenceType.Annually));
+        Assert.Null(preview.PasswordManager.Seats);
+        Assert.Null(preview.PasswordManager.Prorations);
+        Assert.NotNull(preview.SecretsManager!.Seats);
+    }
+
+    [Fact]
+    public void BuildFromInvoice_AllProrations_BuildsProrationsOnlyPasswordManagerSection()
+    {
+        var invoice = Deserialize("""
+        {
+          "id": "in_test", "total": 15058, "amount_due": 15058, "billing_reason": "upcoming",
+          "lines": { "data": [
+            { "amount": -3764, "quantity": 1, "parent": { "subscription_item_details": { "proration": true } },
+              "pricing": { "price_details": { "price": { "id": "price_pm_seat_old", "recurring": { "interval": "year" }, "metadata": { "purchasable_reference": "pm-seat" } } } } },
+            { "amount": 18822, "quantity": 1, "parent": { "subscription_item_details": { "proration": true } },
+              "pricing": { "price_details": { "price": { "id": "price_pm_seat_new", "recurring": { "interval": "year" }, "metadata": { "purchasable_reference": "pm-seat" } } } } }
+          ] }
+        }
+        """);
+
+        var builder = Builder(out _);
+        var preview = builder.Build(invoice, PlanTierType.Enterprise, PlanCadenceType.Annually);
+
+        Assert.Null(preview.PasswordManager.Seats);
+        var prorations = Assert.Single(preview.PasswordManager.Prorations!);
+        Assert.Equal("pm-seat", prorations.Reference);
+        Assert.Equal(150.58m, prorations.Total);
+        Assert.Equal(PlanCadenceType.Annually, preview.Cadence);
+    }
+
+    [Fact]
+    public void BuildFromInvoice_MixedProrations_GroupsOneRowPerReference()
+    {
+        var invoice = Deserialize("""
+        {
+          "id": "in_test", "total": 17658, "amount_due": 17658,
+          "lines": { "data": [
+            { "amount": 14400, "quantity": 3, "pricing": { "price_details": { "price": { "id": "price_pm_seat", "unit_amount_decimal": "4800", "metadata": { "purchasable_reference": "pm-seat" } } } } },
+            { "amount": 1500, "quantity": 5, "pricing": { "price_details": { "price": { "id": "price_pm_storage", "metadata": { "purchasable_reference": "pm-storage" } } } } },
+            { "amount": -902, "quantity": 1, "parent": { "subscription_item_details": { "proration": true } },
+              "pricing": { "price_details": { "price": { "id": "price_pm_seat", "metadata": { "purchasable_reference": "pm-seat" } } } } },
+            { "amount": 1352, "quantity": 1, "parent": { "subscription_item_details": { "proration": true } },
+              "pricing": { "price_details": { "price": { "id": "price_pm_seat", "metadata": { "purchasable_reference": "pm-seat" } } } } },
+            { "amount": 2000, "quantity": 1, "parent": { "subscription_item_details": { "proration": true } },
+              "pricing": { "price_details": { "price": { "id": "price_pm_storage", "metadata": { "purchasable_reference": "pm-storage" } } } } }
+          ] }
+        }
+        """);
+
+        var builder = Builder(out _);
+        var preview = builder.Build(invoice, PlanTierType.Teams, PlanCadenceType.Annually);
+
+        Assert.Equal(48m, preview.PasswordManager.Seats!.Cost);
+        Assert.Equal(2, preview.PasswordManager.Prorations!.Length);
+        var seatProration = preview.PasswordManager.Prorations!.Single(p => p.Reference == "pm-seat");
+        Assert.Equal(13.52m, seatProration.Charge);
+        Assert.Equal(9.02m, seatProration.Credit);
+        var storageProration = preview.PasswordManager.Prorations!.Single(p => p.Reference == "pm-storage");
+        Assert.Equal(20m, storageProration.Charge);
+    }
+
+    [Fact]
+    public void BuildFromInvoice_CarriesNextPaymentAttemptFromInvoice()
+    {
+        var invoice = Deserialize("""
+        {
+          "id": "in_test", "total": 12790, "amount_due": 12790,
+          "next_payment_attempt": 1893456000,
+          "lines": { "data": [
+            { "amount": 12790, "quantity": 5, "pricing": { "price_details": { "price": { "id": "price_pm_seat", "metadata": { "purchasable_reference": "pm-seat" } } } } }
+          ] }
+        }
+        """);
+
+        var builder = Builder(out _);
+        var preview = builder.Build(invoice, PlanTierType.Teams, PlanCadenceType.Monthly);
+
+        Assert.Equal(DateTimeOffset.FromUnixTimeSeconds(1893456000).UtcDateTime, preview.NextPaymentAttempt);
     }
 
     [Fact]
@@ -272,6 +350,79 @@ public class InvoicePreviewBuilderTests
         Assert.Equal(10m, discount.Value);
         Assert.Equal(12.79m, discount.Amount);
         Assert.Equal("SEATS10", discount.Label);
+    }
+
+    [Fact]
+    public void BuildFromInvoice_SeatBilledAnnually_TakesCadenceFromInvoice_NotCaller()
+    {
+        var invoice = Deserialize("""
+        {
+          "id": "in_test", "total": 12790, "amount_due": 12790,
+          "lines": { "data": [
+            { "amount": 12790, "quantity": 5, "pricing": { "price_details": { "price": { "id": "price_pm_seat", "recurring": { "interval": "year" }, "metadata": { "purchasable_reference": "pm-seat" } } } } }
+          ] }
+        }
+        """);
+
+        var builder = Builder(out _);
+        var preview = builder.Build(invoice, PlanTierType.Teams, PlanCadenceType.Monthly);
+
+        Assert.Equal(PlanCadenceType.Annually, preview.Cadence);
+    }
+
+    [Fact]
+    public void BuildFromInvoice_SeatBilledMonthly_TakesCadenceFromInvoice()
+    {
+        var invoice = Deserialize("""
+        {
+          "id": "in_test", "total": 2000, "amount_due": 2000,
+          "lines": { "data": [
+            { "amount": 2000, "quantity": 5, "pricing": { "price_details": { "price": { "id": "price_pm_seat", "recurring": { "interval": "month" }, "metadata": { "purchasable_reference": "pm-seat" } } } } }
+          ] }
+        }
+        """);
+
+        var builder = Builder(out _);
+        var preview = builder.Build(invoice, PlanTierType.Teams, PlanCadenceType.Annually);
+
+        Assert.Equal(PlanCadenceType.Monthly, preview.Cadence);
+    }
+
+    [Fact]
+    public void BuildFromInvoice_MixedIntervals_AnchorsOnSeat()
+    {
+        var invoice = Deserialize("""
+        {
+          "id": "in_test", "total": 13000, "amount_due": 13000,
+          "lines": { "data": [
+            { "amount": 500, "quantity": 1, "pricing": { "price_details": { "price": { "id": "price_pm_storage", "recurring": { "interval": "month" }, "metadata": { "purchasable_reference": "pm-storage" } } } } },
+            { "amount": 12500, "quantity": 5, "pricing": { "price_details": { "price": { "id": "price_pm_seat", "recurring": { "interval": "year" }, "metadata": { "purchasable_reference": "pm-seat" } } } } }
+          ] }
+        }
+        """);
+
+        var builder = Builder(out _);
+        var preview = builder.Build(invoice, PlanTierType.Teams, PlanCadenceType.Monthly);
+
+        Assert.Equal(PlanCadenceType.Annually, preview.Cadence);
+    }
+
+    [Fact]
+    public void BuildFromInvoice_SeatWithoutRecurring_FallsBackToCallerCadence()
+    {
+        var invoice = Deserialize("""
+        {
+          "id": "in_test", "total": 12790, "amount_due": 12790,
+          "lines": { "data": [
+            { "amount": 12790, "quantity": 5, "pricing": { "price_details": { "price": { "id": "price_pm_seat", "metadata": { "purchasable_reference": "pm-seat" } } } } }
+          ] }
+        }
+        """);
+
+        var builder = Builder(out _);
+        var preview = builder.Build(invoice, PlanTierType.Teams, PlanCadenceType.Monthly);
+
+        Assert.Equal(PlanCadenceType.Monthly, preview.Cadence);
     }
 
     [Fact]

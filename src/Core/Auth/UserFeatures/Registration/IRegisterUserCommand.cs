@@ -58,7 +58,9 @@ public interface IRegisterUserCommand
     /// with a domain claimed by that org. This path is separate from
     /// <see cref="RegisterUserViaEmailVerificationToken"/> because the open-org-invite flow will
     /// enforce additional org-membership-related obligations that don't apply to vanilla
-    /// email-verification registration.
+    /// email-verification registration. This path also deliberately bypasses the open-registration
+    /// check so that invited users can complete registration in environments where open enrollment
+    /// is disabled (e.g. fedramp). The validated open-org invite is the authorization for this path.
     /// </summary>
     /// <param name="user">The <see cref="User"/> to create</param>
     /// <param name="registerFinishData">Cryptographic data for finishing user registration</param>

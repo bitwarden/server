@@ -5,9 +5,8 @@
 /// Each operation is authorized independently.
 /// </summary>
 /// <remarks>
-/// A collection ID is left out of the result if the collection does not exist, or if it belongs to a different
-/// organization. No error is thrown in these cases. An empty request returns an empty result, so do not read an
-/// empty result as authorized.
+/// A collection ID is left out of the result if it does not exist or belongs to a different organization.
+/// No error is thrown. An empty request returns an empty result, so do not read that as authorized.
 /// </remarks>
 public interface ICollectionAuthorizationService
 {
@@ -17,6 +16,7 @@ public interface ICollectionAuthorizationService
     /// <param name="organizationId">The ID of the organization that owns the collection.</param>
     /// <param name="collectionId">The ID of the collection to update.</param>
     /// <returns>True if the caller can update the collection's metadata, false if not.</returns>
+    /// <remarks>Unlike the two access methods, this does not reject default user collections.</remarks>
     Task<bool> AuthorizeUpdateAsync(Guid organizationId, Guid collectionId);
 
     /// <summary>
@@ -25,7 +25,8 @@ public interface ICollectionAuthorizationService
     /// <param name="organizationId">The ID of the organization that owns the collections.</param>
     /// <param name="collectionIds">The IDs of the collections to check.</param>
     /// <returns>The subset of <paramref name="collectionIds"/> with user access that the caller can modify.</returns>
-    Task<IReadOnlySet<Guid>> AuthorizeModifyUserAccessManyAsync(Guid organizationId, IReadOnlyCollection<Guid> collectionIds);
+    /// <remarks>Default user collections are never returned.</remarks>
+    Task<IReadOnlySet<Guid>> AuthorizeModifyUserAccessAsync(Guid organizationId, IReadOnlyCollection<Guid> collectionIds);
 
     /// <summary>
     /// Determines which of the requested collections have group access that the caller can modify.
@@ -33,5 +34,6 @@ public interface ICollectionAuthorizationService
     /// <param name="organizationId">The ID of the organization that owns the collections.</param>
     /// <param name="collectionIds">The IDs of the collections to check.</param>
     /// <returns>The subset of <paramref name="collectionIds"/> with group access that the caller can modify.</returns>
-    Task<IReadOnlySet<Guid>> AuthorizeModifyGroupAccessManyAsync(Guid organizationId, IReadOnlyCollection<Guid> collectionIds);
+    /// <remarks>Default user collections are never returned.</remarks>
+    Task<IReadOnlySet<Guid>> AuthorizeModifyGroupAccessAsync(Guid organizationId, IReadOnlyCollection<Guid> collectionIds);
 }

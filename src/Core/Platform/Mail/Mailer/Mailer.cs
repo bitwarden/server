@@ -20,6 +20,7 @@ public class Mailer(IMailRenderer renderer, IMailDeliveryService mailDeliverySer
         var mailMessage = new MailMessage
         {
             ToEmails = message.ToEmails,
+            ReplyToAddress = message.ReplyToAddress,
             Subject = message.Subject,
             MetaData = metadata,
             HtmlContent = content.html,

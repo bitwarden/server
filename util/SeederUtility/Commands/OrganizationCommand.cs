@@ -36,6 +36,12 @@ public class OrganizationCommand
             ConsoleOutput.PrintCountRow("Collections", result.CollectionsCount);
             ConsoleOutput.PrintCountRow("Ciphers", result.CiphersCount);
 
+            if (args.StripeBilling)
+            {
+                ConsoleOutput.PrintRow("StripeCustomer", result.GatewayCustomerId);
+                ConsoleOutput.PrintRow("StripeSubscription", result.GatewaySubscriptionId);
+            }
+
             ConsoleOutput.PrintMangleMap(deps);
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)

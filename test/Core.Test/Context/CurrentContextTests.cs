@@ -257,6 +257,53 @@ public class CurrentContextTests
     }
 
     [Theory, BitAutoData]
+    public async Task SetContextAsync_AccessConnector_SetsAccessConnectorIds(
+        SutProvider<CurrentContext> sutProvider,
+        Guid accessConnectorId,
+        Guid organizationId)
+    {
+        // Arrange
+        var claims = new List<Claim>
+        {
+            new("sub", accessConnectorId.ToString()),
+            new(Claims.Type, IdentityClientType.AccessConnector.ToString()),
+            new(Claims.Organization, organizationId.ToString())
+        };
+        var user = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        // Act
+        await sutProvider.Sut.SetContextAsync(user);
+
+        // Assert
+        Assert.Equal(IdentityClientType.AccessConnector, sutProvider.Sut.IdentityClientType);
+        Assert.Equal(accessConnectorId, sutProvider.Sut.PamAccessConnectorId);
+        Assert.Equal(organizationId, sutProvider.Sut.PamAccessConnectorOrganizationId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SetContextAsync_AccessConnectorWithInvalidSubject_DoesNotSetAccessConnectorId(
+        SutProvider<CurrentContext> sutProvider,
+        Guid organizationId)
+    {
+        // Arrange
+        sutProvider.Sut.PamAccessConnectorId = null;
+        var claims = new List<Claim>
+        {
+            new("sub", "not-a-guid"),
+            new(Claims.Type, IdentityClientType.AccessConnector.ToString()),
+            new(Claims.Organization, organizationId.ToString())
+        };
+        var user = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        // Act
+        await sutProvider.Sut.SetContextAsync(user);
+
+        // Assert
+        Assert.Null(sutProvider.Sut.PamAccessConnectorId);
+        Assert.Equal(organizationId, sutProvider.Sut.PamAccessConnectorOrganizationId);
+    }
+
+    [Theory, BitAutoData]
     public async Task SetContextAsync_WithDeviceClaims_SetsDeviceInfo(
         SutProvider<CurrentContext> sutProvider,
         string deviceIdentifier)
@@ -356,6 +403,56 @@ public class CurrentContextTests
         // Assert
         Assert.Single(sutProvider.Sut.Organizations);
         Assert.True(sutProvider.Sut.Organizations.First().AccessSecretsManager);
+    }
+
+    [Theory]
+    [BitAutoData(Claims.OrganizationOwner)]
+    [BitAutoData(Claims.OrganizationAdmin)]
+    [BitAutoData(Claims.OrganizationUser)]
+    [BitAutoData(Claims.OrganizationCustom)]
+    public async Task SetContextAsync_PamAccess_SetsAccessPam(
+        string userOrgAssociation,
+        SutProvider<CurrentContext> sutProvider,
+        Guid orgId)
+    {
+        // Arrange
+        var claims = new List<Claim>
+        {
+            new(userOrgAssociation, orgId.ToString()),
+            new(Claims.PamAccess, orgId.ToString())
+        };
+        var user = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        // Act
+        await sutProvider.Sut.SetContextAsync(user);
+
+        // Assert
+        Assert.Single(sutProvider.Sut.Organizations);
+        Assert.True(sutProvider.Sut.Organizations.First().AccessPam);
+        Assert.True(sutProvider.Sut.AccessPam(orgId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SetContextAsync_PamAccessForAnotherOrganization_DoesNotSetAccessPam(
+        SutProvider<CurrentContext> sutProvider,
+        Guid orgId,
+        Guid otherOrgId)
+    {
+        // Arrange
+        var claims = new List<Claim>
+        {
+            new(Claims.OrganizationUser, orgId.ToString()),
+            new(Claims.PamAccess, otherOrgId.ToString())
+        };
+        var user = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        // Act
+        await sutProvider.Sut.SetContextAsync(user);
+
+        // Assert
+        Assert.Single(sutProvider.Sut.Organizations);
+        Assert.False(sutProvider.Sut.Organizations.First().AccessPam);
+        Assert.False(sutProvider.Sut.AccessPam(orgId));
     }
 
     #endregion
@@ -556,6 +653,62 @@ public class CurrentContextTests
 
         // Assert
         Assert.True(result);
+    }
+
+    #endregion
+
+    #region Privileged Access Manager Tests
+
+    [Theory, BitAutoData]
+    public void AccessPam_WithOrgAccess_ReturnsTrue(
+        SutProvider<CurrentContext> sutProvider,
+        Guid orgId)
+    {
+        // Arrange
+        sutProvider.Sut.Organizations = new List<CurrentContextOrganization>
+        {
+            new() { Id = orgId, AccessPam = true }
+        };
+
+        // Act
+        var result = sutProvider.Sut.AccessPam(orgId);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Theory, BitAutoData]
+    public void AccessPam_WithoutAccess_ReturnsFalse(
+        SutProvider<CurrentContext> sutProvider,
+        Guid orgId)
+    {
+        // Arrange
+        sutProvider.Sut.Organizations = new List<CurrentContextOrganization>
+        {
+            new() { Id = orgId, AccessPam = false }
+        };
+
+        // Act
+        var result = sutProvider.Sut.AccessPam(orgId);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Theory, BitAutoData]
+    public void AccessPam_WithServiceAccount_ReturnsFalse(
+        SutProvider<CurrentContext> sutProvider,
+        Guid orgId)
+    {
+        // Arrange
+        // PAM grants no machine-principal escape hatch, unlike Secrets Manager.
+        sutProvider.Sut.ServiceAccountOrganizationId = orgId;
+
+        // Act
+        var result = sutProvider.Sut.AccessPam(orgId);
+
+        // Assert
+        Assert.False(result);
     }
 
     #endregion
