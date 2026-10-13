@@ -35,7 +35,8 @@ internal sealed class ChangePrivilegedControlsSeatsCommand(
             throw new BadRequestException("Cannot update subscription on a self-hosted instance.");
         }
 
-        // Without Privileged Controls the seat change step would treat this as a first purchase and charge immediately.
+        // The organization needs the Privileged Controls entitlement and at least one seat. With no seats, the seat
+        // change step would treat this as a first purchase and charge immediately.
         if (!organization.UsePam || organization.PamSeats.GetValueOrDefault() < 1)
         {
             throw new BadRequestException("Your organization doesn't have Privileged Controls.");

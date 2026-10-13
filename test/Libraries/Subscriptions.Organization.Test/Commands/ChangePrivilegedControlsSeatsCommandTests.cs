@@ -63,6 +63,17 @@ public class ChangePrivilegedControlsSeatsCommandTests
         await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, 15, null));
     }
 
+    [Fact]
+    public async Task Run_PrivilegedControlsOffWithSeats_ThrowsBadRequest()
+    {
+        var organization = CreateOrganization(usePam: false, pamSeats: _currentSeats);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, 15, null));
+
+        Assert.Equal("Your organization doesn't have Privileged Controls.", exception.Message);
+        await _seatChangeSetFactory.DidNotReceive().CreateAsync(Arg.Any<OrganizationEntity>(), Arg.Any<int>());
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]
