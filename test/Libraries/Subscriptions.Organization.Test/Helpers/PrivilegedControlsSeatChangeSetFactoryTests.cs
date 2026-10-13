@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
