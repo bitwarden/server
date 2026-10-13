@@ -3,13 +3,13 @@ using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Subscriptions.Organization.Commands;
+using Bit.Subscriptions.Organization.Helpers;
 using NSubstitute;
 using Xunit;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
 using PlanFeatures = Bit.Core.Models.StaticStore.Plan;
 
-namespace Bit.Subscriptions.Organization.Test.Commands;
+namespace Bit.Subscriptions.Organization.Test.Helpers;
 
 public class PrivilegedControlsSeatChangeSetFactoryTests
 {

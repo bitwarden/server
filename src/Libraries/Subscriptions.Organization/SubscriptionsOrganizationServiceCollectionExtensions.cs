@@ -3,6 +3,7 @@ using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Invoicing;
 using Bit.Subscriptions.Organization.Commands;
 using Bit.Subscriptions.Organization.Handlers;
+using Bit.Subscriptions.Organization.Helpers;
 using Bit.Subscriptions.Organization.Queries;
 using Bit.Subscriptions.Organization.Requirements;
 using Microsoft.AspNetCore.Authorization;
