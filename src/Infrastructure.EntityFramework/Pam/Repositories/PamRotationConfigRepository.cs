@@ -77,6 +77,10 @@ public class PamRotationConfigRepository : Repository<CoreEntity, EfModel, Guid>
     public async Task<bool> DeleteWithJobsAsync(Guid configId)
         => await SerializableRetry.RunAsync(() => DeleteGuardedAsync(configId));
 
+    /// <summary>The FK cascade would take an active job with the config, so only DeleteWithJobsAsync deletes.</summary>
+    public override Task DeleteAsync(CoreEntity obj)
+        => throw new NotSupportedException($"Use {nameof(DeleteWithJobsAsync)}, which refuses while a job is active.");
+
     private async Task<bool> DeleteGuardedAsync(Guid configId)
     {
         using var scope = ServiceScopeFactory.CreateScope();

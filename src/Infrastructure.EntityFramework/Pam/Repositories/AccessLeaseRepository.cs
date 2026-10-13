@@ -313,7 +313,21 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         {
             dbContext.PamLeaseExpirySweeps.AddRange(due.Select(l =>
                 new EfLeaseExpirySweep { AccessLeaseId = l.Id, SweptDate = now }));
-            await dbContext.SaveChangesAsync();
+            try
+            {
+                await dbContext.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                // A concurrent sweep journaled some of these first. Report nothing; the next run picks up the rest.
+                var dueIds = due.Select(l => l.Id).ToList();
+                if (await dbContext.PamLeaseExpirySweeps.AnyAsync(s => dueIds.Contains(s.AccessLeaseId)))
+                {
+                    return [];
+                }
+
+                throw;
+            }
         }
 
         return due;

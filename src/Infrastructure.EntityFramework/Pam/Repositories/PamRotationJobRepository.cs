@@ -291,6 +291,11 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
 
     public async Task<PamRotationCipherWriteOutcome> AcceptCipherWriteAsync(Guid attemptId, Guid accessConnectorId,
         string cipherData, DateTime lastKnownRevisionDate, DateTime now)
+        => await SerializableRetry.RunAsync(() =>
+            AcceptCipherWriteInternalAsync(attemptId, accessConnectorId, cipherData, lastKnownRevisionDate, now));
+
+    private async Task<PamRotationCipherWriteOutcome> AcceptCipherWriteInternalAsync(Guid attemptId,
+        Guid accessConnectorId, string cipherData, DateTime lastKnownRevisionDate, DateTime now)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -354,6 +359,11 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
 
     public async Task<PamRotationAttemptResolveOutcome> MarkAttemptRotatedAsync(Guid attemptId, Guid accessConnectorId,
         PamSessionTerminationOutcome sessionTermination, DateTime now)
+        => await SerializableRetry.RunAsync(() =>
+            MarkAttemptRotatedInternalAsync(attemptId, accessConnectorId, sessionTermination, now));
+
+    private async Task<PamRotationAttemptResolveOutcome> MarkAttemptRotatedInternalAsync(Guid attemptId,
+        Guid accessConnectorId, PamSessionTerminationOutcome sessionTermination, DateTime now)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -401,6 +411,12 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
 
     public async Task<PamRotationFailureResult> MarkAttemptErroredAsync(Guid attemptId, Guid accessConnectorId,
         string? failureReason, PamRotationSyncState syncState, DateTime now, int maxAttempts, TimeSpan retryBaseDelay)
+        => await SerializableRetry.RunAsync(() => MarkAttemptErroredInternalAsync(attemptId, accessConnectorId,
+            failureReason, syncState, now, maxAttempts, retryBaseDelay));
+
+    private async Task<PamRotationFailureResult> MarkAttemptErroredInternalAsync(Guid attemptId,
+        Guid accessConnectorId, string? failureReason, PamRotationSyncState syncState, DateTime now, int maxAttempts,
+        TimeSpan retryBaseDelay)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -504,7 +520,20 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         var jobIds = due.Select(d => d.JobId).ToList();
         dbContext.PamRotationJobTimeoutSweeps.AddRange(jobIds.Select(id =>
             new EfTimeoutSweep { RotationJobId = id, SweptDate = now }));
-        await dbContext.SaveChangesAsync();
+        try
+        {
+            await dbContext.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            // A concurrent sweep journaled some of these first. Report nothing; the next run picks up the rest.
+            if (await dbContext.PamRotationJobTimeoutSweeps.AnyAsync(s => jobIds.Contains(s.RotationJobId)))
+            {
+                return [];
+            }
+
+            throw;
+        }
 
         var attemptCounts = await AttemptCountsAsync(dbContext, jobIds);
 
@@ -524,6 +553,10 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
 
     public async Task<IReadOnlyList<PamReleasedJob>> ReleaseExpiredLeasesAsync(DateTime now, TimeSpan offlineAfter,
         TimeSpan releaseDelay)
+        => await SerializableRetry.RunAsync(() => ReleaseExpiredLeasesInternalAsync(now, offlineAfter, releaseDelay));
+
+    private async Task<IReadOnlyList<PamReleasedJob>> ReleaseExpiredLeasesInternalAsync(DateTime now,
+        TimeSpan offlineAfter, TimeSpan releaseDelay)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -562,25 +595,32 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
             return [];
         }
 
+        // Only jobs whose update landed count as released, as with the procedure's OUTPUT.
+        var releasedJobIds = new List<Guid>();
         foreach (var job in released)
         {
             var nextClaimableAt = job.ClaimedAt!.Value + releaseDelay;
-            await dbContext.PamRotationJobs
+            var updated = await dbContext.PamRotationJobs
                 .Where(j => j.Id == job.JobId && j.Action == PamRotationJobAction.Claimed)
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(j => j.Action, PamRotationJobAction.None)
                     .SetProperty(j => j.NextClaimableAt, nextClaimableAt)
                     .SetProperty(j => j.ClaimedByAccessConnectorId, (Guid?)null)
                     .SetProperty(j => j.ClaimedAt, (DateTime?)null));
+            if (updated == 1)
+            {
+                releasedJobIds.Add(job.JobId);
+            }
         }
 
         // Records when the released claim's attempt ended; it derives as Abandoned, which the retry budget never
         // charges.
-        await RecordReleasedAttemptsAsync(dbContext, released.Select(r => r.JobId).ToList(), now);
+        await RecordReleasedAttemptsAsync(dbContext, releasedJobIds, now);
 
         await transaction.CommitAsync();
 
         return released
+            .Where(r => releasedJobIds.Contains(r.JobId))
             .Select(r => new PamReleasedJob
             {
                 JobId = r.JobId,

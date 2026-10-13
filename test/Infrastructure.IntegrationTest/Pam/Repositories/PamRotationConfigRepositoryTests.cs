@@ -87,6 +87,23 @@ public class PamRotationConfigRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
+    public async Task DeleteAsync_AnyConfig_ThrowsNotSupported(
+        IOrganizationRepository organizationRepository,
+        IPamTargetSystemRepository pamTargetSystemRepository,
+        ICipherRepository cipherRepository,
+        IPamRotationConfigRepository pamRotationConfigRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+        var target = await CreateAutomaticTargetAsync(pamTargetSystemRepository, organization.Id, now);
+        var cipher = await CreateCipherAsync(cipherRepository, organization.Id);
+        var config = await pamRotationConfigRepository.CreateAsync(BuildConfig(organization.Id, cipher.Id, target.Id, now));
+
+        await Assert.ThrowsAsync<NotSupportedException>(() => pamRotationConfigRepository.DeleteAsync(config));
+        Assert.NotNull(await pamRotationConfigRepository.GetByIdAsync(config.Id));
+    }
+
+    [DatabaseTheory, DatabaseData]
     public async Task GetManyDueAsync_ReturnsOnlyEnabledAutomaticActiveDueConfigs(
         IOrganizationRepository organizationRepository,
         IPamTargetSystemRepository pamTargetSystemRepository,

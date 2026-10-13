@@ -22,8 +22,8 @@ public interface IPamRotationConfigRepository : IRepository<PamRotationConfig, G
     Task<bool> AnyByTargetSystemAsync(Guid targetSystemId);
 
     /// <summary>
-    /// Deletes the config's attempts, jobs, and then the config in one transaction. Returns false without deleting
-    /// when the re-check under lock finds an active job.
+    /// Deletes the config together with its jobs and attempts. Returns false without deleting when the re-check under
+    /// lock finds an active job. The only supported delete; <c>DeleteAsync</c> throws.
     /// </summary>
     Task<bool> DeleteWithJobsAsync(Guid configId);
 }

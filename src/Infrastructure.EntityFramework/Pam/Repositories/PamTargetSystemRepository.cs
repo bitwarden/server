@@ -33,6 +33,9 @@ public class PamTargetSystemRepository : Repository<CoreEntity, EfModel, Guid>, 
     /// target refuses the delete, since it configures a credential rather than linking two rows.
     /// </remarks>
     public async Task<bool> DeleteWithAssignmentsAsync(Guid targetSystemId)
+        => await SerializableRetry.RunAsync(() => DeleteWithAssignmentsInternalAsync(targetSystemId));
+
+    private async Task<bool> DeleteWithAssignmentsInternalAsync(Guid targetSystemId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);

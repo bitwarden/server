@@ -86,4 +86,8 @@ public class PamRotationConfigRepository : Repository<PamRotationConfig, Guid>, 
 
         return outcome == 1;
     }
+
+    /// <summary>There is no PamRotationConfig_DeleteById; the active-job guard lives in DeleteWithJobsAsync.</summary>
+    public override Task DeleteAsync(PamRotationConfig obj)
+        => throw new NotSupportedException($"Use {nameof(DeleteWithJobsAsync)}, which refuses while a job is active.");
 }
