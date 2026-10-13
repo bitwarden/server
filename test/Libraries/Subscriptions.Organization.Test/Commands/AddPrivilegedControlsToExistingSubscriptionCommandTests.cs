@@ -6,6 +6,7 @@ using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Subscriptions.Organization.Commands;
+using Bitwarden.Server.Sdk.Environment;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Stripe;
@@ -23,11 +24,26 @@ public class AddPrivilegedControlsToExistingSubscriptionCommandTests
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand =
         Substitute.For<IUpdateOrganizationSubscriptionCommand>();
     private readonly IOrganizationService _organizationService = Substitute.For<IOrganizationService>();
+    private readonly IBitwardenEnvironment _environment = Substitute.For<IBitwardenEnvironment>();
     private readonly AddPrivilegedControlsToExistingSubscriptionCommand _sut;
 
     public AddPrivilegedControlsToExistingSubscriptionCommandTests() =>
         _sut = new AddPrivilegedControlsToExistingSubscriptionCommand(
-            _seatChangeSetFactory, _updateOrganizationSubscriptionCommand, _organizationService);
+            _seatChangeSetFactory, _updateOrganizationSubscriptionCommand, _organizationService, _environment);
+
+    [Fact]
+    public async Task Run_SelfHosted_ThrowsBadRequest()
+    {
+        var organization = CreateOrganization();
+        _environment.SelfHosted.Returns(true);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, 15, null));
+
+        Assert.Equal("Cannot update subscription on a self-hosted instance.", exception.Message);
+        await _seatChangeSetFactory.DidNotReceive().CreateAsync(Arg.Any<OrganizationEntity>(), Arg.Any<int>());
+        await _updateOrganizationSubscriptionCommand.DidNotReceive()
+            .Run(Arg.Any<OrganizationEntity>(), Arg.Any<OrganizationSubscriptionChangeSet>(), Arg.Any<Subscription?>());
+    }
 
     [Fact]
     public async Task Run_FirstPurchase_AsksTheSeatChangeStepForTheRequestedSeats()

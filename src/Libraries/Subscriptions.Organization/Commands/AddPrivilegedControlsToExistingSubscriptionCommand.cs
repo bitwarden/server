@@ -2,6 +2,7 @@
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
+using Bitwarden.Server.Sdk.Environment;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
 
 namespace Bit.Subscriptions.Organization.Commands;
@@ -24,10 +25,16 @@ internal interface IAddPrivilegedControlsToExistingSubscriptionCommand
 internal sealed class AddPrivilegedControlsToExistingSubscriptionCommand(
     IPrivilegedControlsSeatChangeSetFactory seatChangeSetFactory,
     IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
-    IOrganizationService organizationService) : IAddPrivilegedControlsToExistingSubscriptionCommand
+    IOrganizationService organizationService,
+    IBitwardenEnvironment environment) : IAddPrivilegedControlsToExistingSubscriptionCommand
 {
     public async Task Run(OrganizationEntity organization, int seats, int? maxAutoscaleSeats)
     {
+        if (environment.SelfHosted)
+        {
+            throw new BadRequestException("Cannot update subscription on a self-hosted instance.");
+        }
+
         if (organization.UsePam || organization.PamSeats.GetValueOrDefault() > 0)
         {
             throw new BadRequestException("Your organization already has Privileged Controls.");
