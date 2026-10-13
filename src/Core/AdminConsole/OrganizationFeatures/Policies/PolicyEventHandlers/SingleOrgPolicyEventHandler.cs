@@ -28,7 +28,7 @@ public class SingleOrgPolicyEventHandler : IPolicyValidationEvent, IOnPolicyPreU
     private readonly ICurrentContext _currentContext;
     private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
     private readonly IRevokeNonCompliantOrganizationUserCommand _revokeNonCompliantOrganizationUserCommand;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public SingleOrgPolicyEventHandler(
         IOrganizationUserRepository organizationUserRepository,
@@ -38,7 +38,7 @@ public class SingleOrgPolicyEventHandler : IPolicyValidationEvent, IOnPolicyPreU
         ICurrentContext currentContext,
         IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
         IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand,
-        IFeatureService featureService)
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
         _organizationUserRepository = organizationUserRepository;
         _mailService = mailService;

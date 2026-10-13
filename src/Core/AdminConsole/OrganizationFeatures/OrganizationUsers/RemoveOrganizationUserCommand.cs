@@ -23,7 +23,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
     private readonly ICurrentContext _currentContext;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
     private readonly IGetOrganizationUsersClaimedStatusQuery _getOrganizationUsersClaimedStatusQuery;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly TimeProvider _timeProvider;
 
     public const string UserNotFoundErrorMessage = "User not found.";
@@ -43,7 +43,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         ICurrentContext currentContext,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         TimeProvider timeProvider)
     {
         _deviceRepository = deviceRepository;

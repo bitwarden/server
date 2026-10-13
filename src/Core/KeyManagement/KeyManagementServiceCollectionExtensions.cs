@@ -34,6 +34,7 @@ public static class KeyManagementServiceCollectionExtensions
         services.AddScoped<ISetKeyConnectorKeyCommand, SetKeyConnectorKeyCommand>();
         services.AddScoped<IConvertUserToKeyConnectorCommand, ConvertUserToKeyConnectorCommand>();
         services.AddScoped<ISetUserKeyIdCommand, SetUserKeyIdCommand>();
+        services.AddScoped<IApplyOrganizationUserV2UpgradesCommand, ApplyOrganizationUserV2UpgradesCommand>();
     }
 
     private static void AddKeyManagementQueries(this IServiceCollection services)

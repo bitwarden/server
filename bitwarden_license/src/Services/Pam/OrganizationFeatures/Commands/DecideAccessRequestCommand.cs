@@ -13,15 +13,27 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
 {
     private readonly IAccessRequestRepository _accessRequestRepository;
     private readonly IApproverCollectionAccessQuery _approverCollectionAccessQuery;
+    private readonly IApproverInboxNotifier _approverInboxNotifier;
+    private readonly IRequesterNotifier _requesterNotifier;
+    private readonly IRequesterMailNotifier _requesterMailNotifier;
+    private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
     public DecideAccessRequestCommand(
         IAccessRequestRepository accessRequestRepository,
         IApproverCollectionAccessQuery approverCollectionAccessQuery,
+        IApproverInboxNotifier approverInboxNotifier,
+        IRequesterNotifier requesterNotifier,
+        IRequesterMailNotifier requesterMailNotifier,
+        IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
         _accessRequestRepository = accessRequestRepository;
         _approverCollectionAccessQuery = approverCollectionAccessQuery;
+        _approverInboxNotifier = approverInboxNotifier;
+        _requesterNotifier = requesterNotifier;
+        _requesterMailNotifier = requesterMailNotifier;
+        _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
 
@@ -80,11 +92,33 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
         };
         decision.SetNewId();
 
+        // Both phases carry the verdict's kind.
+        var auditKind = approved ? AccessAuditEventKind.RequestApproved : AccessAuditEventKind.RequestDenied;
+        var audit = new AccessAuditEventData
+        {
+            Kind = auditKind,
+            OccurredDate = now,
+            OrganizationId = request.OrganizationId,
+            ActorId = userId,
+            RequesterId = request.RequesterId,
+            CollectionId = request.CollectionId,
+            CipherId = request.CipherId,
+            AccessRequestId = request.Id,
+            Detail = decision.Comment,
+        };
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
+
         // Approval records the verdict only; the lease is minted separately when the requester activates it.
         if (!await _accessRequestRepository.ResolveWithDecisionAsync(request, decision, action, now))
         {
             throw new ConflictException("This request has already been resolved.");
         }
+
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
+
+        await _approverInboxNotifier.NotifyCollectionApproversAsync(request.CollectionId);
+        await _requesterNotifier.NotifyRequesterAsync(request.RequesterId);
+        await _requesterMailNotifier.NotifyDecisionAsync(request, approved);
 
         // Mirror what the repository stamped rather than re-reading.
         request.Action = action;

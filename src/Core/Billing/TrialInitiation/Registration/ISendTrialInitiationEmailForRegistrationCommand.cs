@@ -12,5 +12,6 @@ public interface ISendTrialInitiationEmailForRegistrationCommand
         ProductTierType productTier,
         IEnumerable<ProductType> products,
         int trialLength,
-        bool paymentOptional = false);
+        bool paymentOptional = false,
+        int? pamSeatMinimum = null);
 }
