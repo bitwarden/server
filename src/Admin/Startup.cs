@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using Stripe;
 using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Bit.Admin.Auth.Services;
 using Bit.Admin.Controllers;
 using Bit.Admin.Services;
 using Bit.Core.Billing.Extensions;
@@ -95,6 +96,8 @@ public class Startup
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
         services.AddScoped<IAccessControlService, AccessControlService>();
+        services.AddSingleton<IGroupClaimRoleMapper>(_ => new GroupClaimRoleMapper(adminSettings));
+        services.AddSingleton<ISsoSignInPrincipalBuilder, SsoSignInPrincipalBuilder>();
         services.AddDistributedCache(globalSettings);
         services.AddBillingOperations();
         services.AddHttpClient();

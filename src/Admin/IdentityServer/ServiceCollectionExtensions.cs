@@ -85,6 +85,15 @@ public static class ServiceCollectionExtensions
                 "AdminSettings:Oidc:EmailClaimType must not be null or empty when SSO is enabled.");
         }
 
+        // Fail-loud when the operator enables SSO but never set the group prefix. Without it
+        // the groups-to-roles mapper would match nothing and every SSO sign-in would be rejected
+        // as "no mapped group" - better to refuse to boot than to silently lock everyone out.
+        if (string.IsNullOrWhiteSpace(oidc.GroupPrefix))
+        {
+            throw new InvalidOperationException(
+                "AdminSettings:Oidc:GroupPrefix must not be null or empty when SSO is enabled.");
+        }
+
         services.AddAuthentication()
             .AddOpenIdConnect(AdminAuthenticationSchemes.UpstreamOidc, oidc.DisplayName, options =>
             {

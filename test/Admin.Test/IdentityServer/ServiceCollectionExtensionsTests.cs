@@ -24,6 +24,7 @@ public class ServiceCollectionExtensionsTests
                 Authority = "https://idp.example.com",
                 ClientId = "id",
                 ClientSecret = "secret",
+                GroupPrefix = "us-prd-cloud-adminportal-",
                 EmailClaimType = null,
             }
         };
@@ -32,6 +33,30 @@ public class ServiceCollectionExtensionsTests
             services.AddAdminUpstreamOidc(adminSettings));
 
         Assert.Contains("EmailClaimType", ex.Message);
+    }
+
+    [Fact]
+    public void AddAdminUpstreamOidc_ThrowsWhenGroupPrefixIsNull()
+    {
+        // GroupPrefix is the key the groups-to-roles mapper strips off every IdP group name.
+        // Without it, every SSO sign-in would be rejected as "no mapped group" - safer to
+        // fail boot loudly than let the operator discover it the first time anyone tries SSO.
+        var services = new ServiceCollection();
+        var adminSettings = new AdminSettings
+        {
+            Oidc = new AdminSettings.OidcSettings
+            {
+                Authority = "https://idp.example.com",
+                ClientId = "id",
+                ClientSecret = "secret",
+                GroupPrefix = null,
+            }
+        };
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            services.AddAdminUpstreamOidc(adminSettings));
+
+        Assert.Contains("GroupPrefix", ex.Message);
     }
 
     [Fact]
@@ -91,6 +116,7 @@ public class ServiceCollectionExtensionsTests
                 Authority = "https://idp.example.com",
                 ClientId = "id",
                 ClientSecret = "secret",
+                GroupPrefix = "us-prd-cloud-adminportal-",
             }
         });
 
