@@ -280,7 +280,7 @@ public class SendSalesAssistedTrialInvitationCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.HandleAsync(email, name, senderEmail, ProductTierType.Enterprise, products, 7));
 
-        Assert.Equal("A Secrets Manager trial already includes Password Manager; select Secrets Manager on its own.", exception.Message);
+        Assert.Equal("Select Secrets Manager on its own.", exception.Message);
         await sutProvider.GetDependency<IMailer>()
             .DidNotReceiveWithAnyArgs()
             .SendEmail(Arg.Any<SalesAssistedTrialInvitationEmail>());
