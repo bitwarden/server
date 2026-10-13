@@ -102,8 +102,11 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
     }
 
+    /*
+    * Test to verify /Account/ExternalCallback returns error when the organization has no SSO config.
+    */
     [Fact]
-    public async Task ExternalCallback_FindUserFromExternalProviderAsync_OrganizationOrSsoConfigNotFound_ReturnsError()
+    public async Task ExternalCallback_WithNoSsoConfig_ReturnsError()
     {
         // Arrange
         var testData = await new SsoTestDataBuilder()
@@ -114,7 +117,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
 
-        // Assert - Should fail because user has invalid status
+        // Assert - Should fail because the organization has no SSO config
         var stringResponse = await response.Content.ReadAsStringAsync();
         Assert.Contains("Organization not found or SSO configuration not enabled", stringResponse);
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);

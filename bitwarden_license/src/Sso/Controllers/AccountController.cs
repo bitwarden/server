@@ -279,9 +279,13 @@ public class AccountController : Controller
             throw new Exception(_i18nService.T("ExternalAuthenticationError"));
         }
 
+        var (organizationId, ssoConfigData) = await GetEnabledSsoConfigAsync(result.Properties);
+        EnsureExpectedAcrReturned(result.Principal, ssoConfigData);
+        var (providerUserId, claims) = GetProviderUserId(result.Principal, ssoConfigData);
+
         // See if the user has logged in with this SSO provider before and has already been provisioned.
         // This is signified by the user existing in the User table and the SSOUser table for the SSO provider they're using.
-        var (possibleSsoLinkedUser, organizationId, providerUserId, claims, ssoConfigData) = await FindUserFromExternalProviderAsync(result);
+        var possibleSsoLinkedUser = await _userRepository.GetBySsoUserAsync(providerUserId, organizationId);
 
         // We will look these up as required (lazy resolution) to avoid multiple DB hits.
         Organization? organization = null;
@@ -469,21 +473,15 @@ public class AccountController : Controller
 #nullable restore
 
     /// <summary>
-    /// Attempts to map the external identity to a Bitwarden user, through the SsoUser table, which holds the `externalId`.
-    /// The claims on the external identity are used to determine an `externalId`, and that is used to find the appropriate `SsoUser` and `User` records.
+    /// Gets the enabled SSO configuration of the organization that the external login was challenged for.
+    /// Each organization's SSO scheme is named for its organization id.
     /// </summary>
-    private async Task<(
-        User? possibleSsoUser,
-        Guid organizationId,
-        string providerUserId,
-        IEnumerable<Claim> claims,
-        SsoConfigurationData config
-    )> FindUserFromExternalProviderAsync(AuthenticateResult result)
+    /// <exception cref="Exception">Thrown if the scheme is not an organization id, or if the organization
+    /// has no enabled SSO configuration.</exception>
+    private async Task<(Guid organizationId, SsoConfigurationData ssoConfigData)> GetEnabledSsoConfigAsync(
+        AuthenticationProperties properties)
     {
-        // FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-        // Each organization's SSO scheme is named for its organization id.
-        if (!result.Properties.Items.TryGetValue("scheme", out var scheme) ||
+        if (!properties.Items.TryGetValue("scheme", out var scheme) ||
             !Guid.TryParse(scheme, out var organizationId))
         {
             throw new Exception(_i18nService.T("SSOProviderIsNotAnOrgId", scheme));
@@ -495,19 +493,38 @@ public class AccountController : Controller
             throw new Exception(_i18nService.T("OrganizationOrSsoConfigNotFound"));
         }
 
-        var ssoConfigData = ssoConfig.GetData();
-        var externalUser = result.Principal;
+        return (organizationId, ssoConfig.GetData());
+    }
 
-        // Validate acr claim against expectation before going further
-        if (!string.IsNullOrWhiteSpace(ssoConfigData.ExpectedReturnAcrValue))
+    /// <summary>
+    /// Ensures the external login returned the authentication context class reference (acr) that the
+    /// SSO configuration expects, when it expects one.
+    /// </summary>
+    /// <exception cref="Exception">Thrown if the expected acr is missing or different.</exception>
+    private void EnsureExpectedAcrReturned(ClaimsPrincipal externalUser, SsoConfigurationData ssoConfigData)
+    {
+        if (string.IsNullOrWhiteSpace(ssoConfigData.ExpectedReturnAcrValue))
         {
-            var acrClaim = externalUser.FindFirst(JwtClaimTypes.AuthenticationContextClassReference);
-            if (acrClaim?.Value != ssoConfigData.ExpectedReturnAcrValue)
-            {
-                throw new Exception(_i18nService.T("AcrMissingOrInvalid"));
-            }
+            return;
         }
 
+        var acrClaim = externalUser.FindFirst(JwtClaimTypes.AuthenticationContextClassReference);
+        if (acrClaim?.Value != ssoConfigData.ExpectedReturnAcrValue)
+        {
+            throw new Exception(_i18nService.T("AcrMissingOrInvalid"));
+        }
+    }
+
+    /// <summary>
+    /// Gets the external user's id, as issued by the identity provider, and the external user's other claims.
+    /// The id claim is left out of the other claims so it is not reused when provisioning the user.
+    /// </summary>
+    /// <exception cref="Exception">Thrown if no claim holds a usable user id.</exception>
+    private (string providerUserId, IEnumerable<Claim> otherClaims) GetProviderUserId(
+        ClaimsPrincipal externalUser, SsoConfigurationData ssoConfigData)
+    {
+        // FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
         // Ensure the NameIdentifier used is not a transient name ID, if so, we need a different attribute
         //  for the user identifier.
         static bool nameIdIsNotTransient(Claim c) => c.Type == ClaimTypes.NameIdentifier
@@ -531,16 +548,10 @@ public class AccountController : Controller
                           throw new Exception(_i18nService.T("UnknownUserId"));
 #nullable restore
 
-        // Remove the user id claim so we don't include it as an extra claim if/when we provision the user
-        var claims = externalUser.Claims.ToList();
-        claims.Remove(userIdClaim);
+        var otherClaims = externalUser.Claims.ToList();
+        otherClaims.Remove(userIdClaim);
 
-        // find external user
-        var providerUserId = userIdClaim.Value;
-
-        var possibleSsoUser = await _userRepository.GetBySsoUserAsync(providerUserId, organizationId);
-
-        return (possibleSsoUser, organizationId, providerUserId, claims, ssoConfigData);
+        return (userIdClaim.Value, otherClaims);
     }
 
     /// <summary>
