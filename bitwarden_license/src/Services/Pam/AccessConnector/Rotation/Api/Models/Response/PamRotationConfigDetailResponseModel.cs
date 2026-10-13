@@ -1,12 +1,6 @@
 ﻿namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 
-/// <summary>
-/// A rotation config's detail view: the list shape flattened onto the same object, plus the config's full job/attempt
-/// history. The managed-credential surface renders its header from the config fields and the history section from
-/// <see cref="Jobs"/>, so both arrive in one response -- the same shape
-/// <see cref="Bit.Services.Pam.AccessConnector.Api.Models.Response.PamAccessConnectorDetailResponseModel"/> returns for
-/// an access connector.
-/// </summary>
+/// <summary>A rotation config with its full job and attempt history.</summary>
 public class PamRotationConfigDetailResponseModel : PamRotationConfigResponseModel
 {
     public PamRotationConfigDetailResponseModel()
@@ -14,8 +8,6 @@ public class PamRotationConfigDetailResponseModel : PamRotationConfigResponseMod
     {
     }
 
-    /// <summary>
-    /// Every job recorded against the config, newest first, each carrying its own attempts (oldest first).
-    /// </summary>
+    /// <summary>Every job recorded against the config, newest first, each with its attempts oldest first.</summary>
     public IReadOnlyList<PamRotationJobResponseModel> Jobs { get; set; } = [];
 }

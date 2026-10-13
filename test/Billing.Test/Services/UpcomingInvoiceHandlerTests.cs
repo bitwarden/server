@@ -46,7 +46,7 @@ public class UpcomingInvoiceHandlerTests
     private readonly IUserRepository _userRepository;
     private readonly IValidateSponsorshipCommand _validateSponsorshipCommand;
     private readonly IMailer _mailer;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IBusinessPlanMigrationCoordinator _businessPlanMigrationCoordinator;
 
     private readonly UpcomingInvoiceHandler _sut;
@@ -71,7 +71,7 @@ public class UpcomingInvoiceHandlerTests
         _userRepository = Substitute.For<IUserRepository>();
         _validateSponsorshipCommand = Substitute.For<IValidateSponsorshipCommand>();
         _mailer = Substitute.For<IMailer>();
-        _featureService = Substitute.For<IFeatureService>();
+        _featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
         _businessPlanMigrationCoordinator = Substitute.For<IBusinessPlanMigrationCoordinator>();
 
         _sut = new UpcomingInvoiceHandler(
