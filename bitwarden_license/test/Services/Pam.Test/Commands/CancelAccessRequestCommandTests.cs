@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.OrganizationFeatures.Commands;
 using Bit.Services.Pam.Services;
@@ -34,7 +35,6 @@ public class CancelAccessRequestCommandTests
         var sutProvider = Setup();
         request.Action = AccessRequestAction.None;
         SetupRequest(sutProvider, request);
-        // userId is neither the requester nor a manager.
 
         // A request the caller can't act on is indistinguishable from a missing one, so ids can't be probed.
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CancelAsync(userId, request.Id, null));
@@ -57,6 +57,8 @@ public class CancelAccessRequestCommandTests
             () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id, null));
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelAsync(default, default);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
     }
 
     [Theory]
@@ -83,25 +85,28 @@ public class CancelAccessRequestCommandTests
     [Theory]
     [BitAutoData(AccessRequestAction.None)]
     [BitAutoData(AccessRequestAction.Approved)]
-    public async Task CancelAsync_RequesterNoLease_Cancels(AccessRequestAction action, AccessRequest request)
+    public async Task CancelAsync_RequesterNoLease_CancelsAndNotifies(AccessRequestAction action, AccessRequest request)
     {
         var sutProvider = Setup();
         request.Action = action;
         SetOpenWindow(request);
         SetupRequest(sutProvider, request);
-        // No lease produced.
 
         await sutProvider.Sut.CancelAsync(request.RequesterId, request.Id, null);
 
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).CancelAsync(request.Id, _now);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelWithDecisionAsync(default!, default!, default);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
+            .NotifyCollectionApproversAsync(request.CollectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(request.RequesterId);
     }
 
     [Theory]
     [BitAutoData(AccessRequestAction.None)]
     [BitAutoData(AccessRequestAction.Approved)]
-    public async Task CancelAsync_ManagerNoLease_DeniesWithDecision(
+    public async Task CancelAsync_ManagerNoLease_DeniesWithDecisionAndNotifies(
         AccessRequestAction action, Guid managerId, AccessRequest request)
     {
         var sutProvider = Setup();
@@ -124,6 +129,10 @@ public class CancelAccessRequestCommandTests
             _now);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelAsync(default, default);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
+            .NotifyCollectionApproversAsync(request.CollectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(request.RequesterId);
     }
 
     [Theory, BitAutoData]
@@ -139,7 +148,6 @@ public class CancelAccessRequestCommandTests
 
         var conflict = await Assert.ThrowsAsync<ConflictException>(
             () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id, null));
-        // A live lease is ended through revoke, so the caller is pointed there.
         Assert.Contains("revoke the lease instead", conflict.Message);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelAsync(default, default);
@@ -170,7 +178,7 @@ public class CancelAccessRequestCommandTests
     public async Task CancelAsync_ApprovedWithLapsedLease_ReportsAlreadyResolvedRatherThanPointingAtRevoke(
         AccessRequest request, AccessLease lease)
     {
-        // A lapsed lease has no early end recorded; the request is terminal history, not a candidate for Revoke.
+        // A lapsed lease is terminal history, not a candidate for revoke.
         var sutProvider = Setup();
         request.Action = AccessRequestAction.Approved;
         SetOpenWindow(request);
@@ -271,6 +279,7 @@ public class CancelAccessRequestCommandTests
             () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id, null));
 
         Assert.Equal("This request has already been resolved.", exception.Message);
+        await AssertNothingReportedAsync(sutProvider);
     }
 
     [Theory, BitAutoData]
@@ -289,6 +298,17 @@ public class CancelAccessRequestCommandTests
             () => sutProvider.Sut.CancelAsync(managerId, request.Id, "no longer needed"));
 
         Assert.Equal("This request has already been resolved.", exception.Message);
+        await AssertNothingReportedAsync(sutProvider);
+    }
+
+    private static async Task AssertNothingReportedAsync(SutProvider<CancelAccessRequestCommand> sutProvider)
+    {
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceive()
+            .EmitAsync(Arg.Is<AccessAuditEventData>(e => e.Phase == AccessAuditEventPhase.Outcome));
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
     }
 
     private static async Task AssertNoRetractionAsync(SutProvider<CancelAccessRequestCommand> sutProvider)

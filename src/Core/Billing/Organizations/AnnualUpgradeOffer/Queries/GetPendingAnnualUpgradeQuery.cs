@@ -41,7 +41,8 @@ public class GetPendingAnnualUpgradeQuery(
         {
             var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
                 stripeAdapter, logger, organization, ["test_clock", "schedule.phases.items.price"]);
-            if (subscription is null || subscription.Status != SubscriptionStatus.Active)
+            if (subscription is null ||
+                subscription.Status is not (SubscriptionStatus.Active or SubscriptionStatus.Trialing))
             {
                 return null;
             }
