@@ -2,6 +2,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using AspNetCoreRateLimit;
 using Bit.Core;
+using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
@@ -95,8 +96,8 @@ public class Startup
         services
             .AddDistributedIdentityServices()
             .AddAuthentication()
-            .AddCookie(AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
-            .AddOpenIdConnect("sso", "Single Sign On", options =>
+            .AddCookie(AuthenticationSchemes.BitwardenIdentityExternalCookieAuthenticationScheme)
+            .AddOpenIdConnect(AuthenticationSchemes.BitwardenIdentitySsoAuthenticationScheme, "Single Sign On", options =>
             {
                 options.Authority = globalSettings.BaseServiceUri.InternalSso;
                 options.RequireHttpsMetadata = !Environment.IsDevelopment() &&
@@ -105,7 +106,7 @@ public class Startup
                 options.ClientSecret = globalSettings.OidcIdentityClientKey;
                 options.ResponseMode = "form_post";
 
-                options.SignInScheme = AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme;
+                options.SignInScheme = AuthenticationSchemes.BitwardenIdentityExternalCookieAuthenticationScheme;
                 options.ResponseType = "code";
                 options.SaveTokens = false;
                 options.GetClaimsFromUserInfoEndpoint = true;

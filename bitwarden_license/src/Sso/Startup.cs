@@ -1,4 +1,5 @@
 ﻿using Bit.Core;
+using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
 using Bit.Core.SecretsManager.Repositories;
@@ -73,7 +74,7 @@ public class Startup
         // Authentication
         services.AddDistributedIdentityServices();
         services.AddAuthentication()
-            .AddCookie(AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+            .AddCookie(AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme);
         services.AddSsoServices(globalSettings);
 
         // IdentityServer

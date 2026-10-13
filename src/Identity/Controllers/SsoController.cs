@@ -2,6 +2,7 @@
 #nullable disable
 
 using System.Security.Claims;
+using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
@@ -117,7 +118,7 @@ public class SsoController : Controller
         }
         var organizationId = ssoConfig.OrganizationId.ToString();
 
-        var scheme = "sso";
+        var scheme = AuthenticationSchemes.BitwardenIdentitySsoAuthenticationScheme;
         var props = new AuthenticationProperties
         {
             RedirectUri = Url.Action(nameof(ExternalCallback)),
@@ -147,7 +148,7 @@ public class SsoController : Controller
     {
         // Read external identity from the temporary cookie
         var result = await HttpContext.AuthenticateAsync(
-            Core.AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+            AuthenticationSchemes.BitwardenIdentityExternalCookieAuthenticationScheme);
         if (result?.Succeeded != true)
         {
             throw new Exception("External authentication error");
@@ -188,7 +189,7 @@ public class SsoController : Controller
         }, localSignInProps);
 
         // Delete temporary cookie used during external authentication
-        await HttpContext.SignOutAsync(Core.AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+        await HttpContext.SignOutAsync(AuthenticationSchemes.BitwardenIdentityExternalCookieAuthenticationScheme);
 
         // Retrieve return URL
         var returnUrl = result.Properties.Items["return_url"] ?? "~/";

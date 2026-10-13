@@ -1,5 +1,5 @@
 ﻿using System.Security.Claims;
-using Bit.Core;
+using Bit.Core.Auth.IdentityServer;
 using Duende.IdentityModel;
 using Microsoft.AspNetCore.Authentication;
 
@@ -81,7 +81,7 @@ internal static class MockSuccessfulAuthResult
         var ticket = new AuthenticationTicket(
             principal,
             properties,
-            AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+            AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme);
 
         return AuthenticateResult.Success(ticket);
     }

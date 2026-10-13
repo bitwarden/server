@@ -31,7 +31,7 @@ using Duende.IdentityServer.Stores;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using AuthenticationSchemes = Bit.Core.AuthenticationSchemes;
+using AuthenticationSchemes = Bit.Core.Auth.IdentityServer.AuthenticationSchemes;
 using DIM = Duende.IdentityServer.Models;
 
 namespace Bit.Sso.Controllers;
@@ -272,7 +272,7 @@ public class AccountController : Controller
     {
         // Read external identity from the temporary cookie
         var result = await HttpContext.AuthenticateAsync(
-            AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+            AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme);
 
         if (!result.Succeeded)
         {
@@ -317,7 +317,7 @@ public class AccountController : Controller
                 // Clean up external auth cookie so retry attempts start fresh.
                 // Mirrors the success path's cleanup at the end of ExternalCallback.
                 await HttpContext.SignOutAsync(
-                    AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+                    AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme);
 
                 var redirectUrl = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
                     _globalSettings.BaseServiceUri.VaultWithHash,
@@ -335,7 +335,7 @@ public class AccountController : Controller
                 // its own match/no-match split (see SsoAuthnRequiresOrgMembershipException
                 // for the two scenarios that converge here).
                 await HttpContext.SignOutAsync(
-                    AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+                    AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme);
 
                 var redirectUrl = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
                     _globalSettings.BaseServiceUri.VaultWithHash,
@@ -352,7 +352,7 @@ public class AccountController : Controller
                 // StagedOrgUserInviteAcceptanceRequired so the client can prompt the user to
                 // check their email for the invite that was just sent by the Staged-user promotion.
                 await HttpContext.SignOutAsync(
-                    AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+                    AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme);
 
                 var redirectUrl = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
                     _globalSettings.BaseServiceUri.VaultWithHash,
@@ -368,7 +368,7 @@ public class AccountController : Controller
                 // Sign out the external auth cookie and redirect directly to the client's
                 // terminal error page.
                 await HttpContext.SignOutAsync(
-                    AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+                    AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme);
 
                 var redirectUrl = SsoRedirectUrlBuilder.BuildSsoLoginFailedRedirectUrl(
                     _globalSettings.BaseServiceUri.VaultWithHash,
@@ -405,7 +405,7 @@ public class AccountController : Controller
             }, localSignInProps);
 
         // Delete temporary cookie used during external authentication
-        await HttpContext.SignOutAsync(AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+        await HttpContext.SignOutAsync(AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme);
 
         // FIXME: Update this file to be null safe and then delete the line below
 #nullable disable

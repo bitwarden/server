@@ -17,7 +17,7 @@ using Duende.IdentityServer.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NSubstitute;
-using AuthenticationSchemes = Bit.Core.AuthenticationSchemes;
+using AuthenticationSchemes = Bit.Core.Auth.IdentityServer.AuthenticationSchemes;
 
 namespace Bit.Sso.IntegrationTest.Utilities;
 
@@ -243,7 +243,7 @@ public class SsoTestDataBuilder
             {
                 authService.AuthenticateAsync(
                         Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
+                        AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme)
                     .Returns(MockSuccessfulAuthResult.Build(
                         authOrganizationId,
                         providerUserId,
@@ -256,7 +256,7 @@ public class SsoTestDataBuilder
             {
                 authService.AuthenticateAsync(
                         Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
+                        AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme)
                     .Returns(AuthenticateResult.Fail("External authentication error"));
             }
         });

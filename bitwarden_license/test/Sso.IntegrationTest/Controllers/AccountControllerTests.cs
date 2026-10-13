@@ -17,7 +17,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using NSubstitute;
 using Xunit;
-using AuthenticationSchemes = Bit.Core.AuthenticationSchemes;
+using AuthenticationSchemes = Bit.Core.Auth.IdentityServer.AuthenticationSchemes;
 
 namespace Bit.Sso.IntegrationTest.Controllers;
 
@@ -622,7 +622,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
                 var authService = Substitute.For<IAuthenticationService>();
                 authService.AuthenticateAsync(
                         Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
+                        AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme)
                     .Returns(MockSuccessfulAuthResult.Build(organizationId, providerUserId, testEmail, testName, null, userIdentifier));
                 services.AddSingleton(authService);
             });
@@ -718,7 +718,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
                 var authService = Substitute.For<IAuthenticationService>();
                 authService.AuthenticateAsync(
                         Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
+                        AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme)
                     .Returns(MockSuccessfulAuthResult.Build(invalidScheme, providerUserId, testEmail, testName));
                 services.AddSingleton(authService);
             });
