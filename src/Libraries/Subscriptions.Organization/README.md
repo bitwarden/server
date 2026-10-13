@@ -145,6 +145,10 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | `IStripeAdapter` (`Bit.Core.Billing.Services`) | Reading the organization's subscription (and its customer's tax ids) for the plan-change preview |
 | `IPricingClient` (`Bit.Core.Billing.Pricing`), `Plan` (`Bit.Core.Models.StaticStore`) | Resolving the current and target plans' Stripe price ids and seat/flat shape |
 | `OrganizationSubscriptionChangeSet` (`Bit.Core.Billing.Organizations.Models`) | Composing the plan change the same way the real upgrade does, then translating it into preview line items |
+| `IUpdateOrganizationSubscriptionCommand` (`Bit.Core.Billing.Organizations.Commands`), `BillingCommandResult` (`Bit.Core.Billing.Commands`) | Charging the first Privileged Controls seats, and surfacing a failed update as the HTTP exception that matches it |
+| `IPrivilegedControlsSeatChangeSetFactory` (`Bit.Core.Billing.Organizations.Helpers`), `PrivilegedControlsSeatChange` (`Bit.Core.Billing.Organizations.Models`) | The factory contract Core owns so Admin Console can inject it; this library implements it |
+| `IOrganizationService` (`Bit.Core.Services`) | Saving the organization's Privileged Controls seats and flags after the first purchase |
+| `IOrganizationUserRepository` (`Bit.Core.Repositories`) | Counting the Privileged Controls seats in use before a seat decrease |
 | `ISubscriptionDiscountService`, `DiscountTierType` (`Bit.Core.Billing.Services`, `Bit.Core.Billing.Enums`) | Eligibility-checking Families purchase coupons |
 | `ITaxService` (`Bit.Core.Billing.Tax.Services`), `StripeConstants.TaxIdType` | Deriving the Stripe tax-id code (and the Spanish-NIF EU-VAT pairing) for `CustomerDetails.TaxIds` |
 | `SponsoredPlans`, `PlanSponsorshipType` (`Bit.Core.Billing.Models`, `Bit.Core.Enums`) | The Families-for-Enterprise sponsored price |
