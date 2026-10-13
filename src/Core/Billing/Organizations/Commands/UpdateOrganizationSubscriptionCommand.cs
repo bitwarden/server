@@ -425,6 +425,7 @@ public class UpdateOrganizationSubscriptionCommand(
         {
             StartDate = sourcePhase.StartDate,
             EndDate = sourcePhase.EndDate,
+            TrialEnd = sourcePhase.TrialEnd,
             Items = SchedulePhaseMapper.ApplyChangesToPhaseItems(sourcePhase.Items, changes, source, target),
             Discounts = isFuture
                 ? DiscountExtensions.BuildPhaseLevelDiscounts(

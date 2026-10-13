@@ -2,6 +2,7 @@
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
 using Bit.Core.Context;
@@ -28,7 +29,7 @@ namespace Bit.Identity.Test.IdentityServer;
 public class CustomTokenRequestValidatorTests
 {
     private readonly IUserService _userService;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IUpdateDeviceLastActivityCommand _updateDeviceLastActivityCommand;
     private readonly ICurrentContext _currentContext;
     private readonly FakeLogger<CustomTokenRequestValidator> _logger;
@@ -49,7 +50,7 @@ public class CustomTokenRequestValidatorTests
             Substitute.For<ILogger<UserManager<User>>>());
 
         _userService = Substitute.For<IUserService>();
-        _featureService = Substitute.For<IFeatureService>();
+        _featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
         _updateDeviceLastActivityCommand = Substitute.For<IUpdateDeviceLastActivityCommand>();
         _currentContext = Substitute.For<ICurrentContext>();
         _logger = new FakeLogger<CustomTokenRequestValidator>();
@@ -429,5 +430,36 @@ public class CustomTokenRequestValidatorTests
         await _updateDeviceLastActivityCommand
             .DidNotReceive()
             .UpdateByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<string>());
+    }
+
+    [Theory]
+    [InlineData("apikey", ApiScopes.ApiSecrets)]
+    [InlineData("access-connector", ApiScopes.ApiPamCredentialRotation)]
+    public async Task ValidateAsync_ClientCredentialsWithMachineScope_ReturnsEncryptedPayload(string clientIdPrefix,
+        string scope)
+    {
+        // Arrange
+        var validatedRequest = new ValidatedTokenRequest
+        {
+            GrantType = "client_credentials",
+            ClientId = $"{clientIdPrefix}.{Guid.NewGuid()}",
+            Client = new Client
+            {
+                AllowedScopes = new HashSet<string> { scope },
+                Properties = new Dictionary<string, string> { { "encryptedPayload", "encrypted-payload" } }
+            },
+            ClientClaims = []
+        };
+        var context = new CustomTokenRequestValidationContext
+        {
+            Result = new TokenRequestValidationResult(validatedRequest)
+        };
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert: user validation is skipped and the client's encrypted payload is returned
+        Assert.False(context.Result.IsError);
+        Assert.Equal("encrypted-payload", context.Result.CustomResponse["encrypted_payload"]);
     }
 }

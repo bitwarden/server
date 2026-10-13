@@ -9,7 +9,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.Billing.Subscriptions.Schedules;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using static Bit.Core.Billing.Constants.StripeConstants;

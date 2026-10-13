@@ -64,6 +64,67 @@ public class OrganizationRepositoryTests
     }
 
     [Theory, DatabaseData]
+    public async Task CreateAsync_WithoutPamSeatMinimum_PamSeatMinimumIsNull(
+        IOrganizationRepository organizationRepository)
+    {
+        var created = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org PAM Minimum Unset",
+            BillingEmail = "test@email.com",
+            Plan = "Test",
+            PrivateKey = "privatekey",
+        });
+
+        var read = await organizationRepository.GetByIdAsync(created.Id);
+
+        Assert.NotNull(read);
+        Assert.Null(read.PamSeatMinimum);
+    }
+
+    [Theory, DatabaseData]
+    public async Task CreateAsync_WithPamSeatMinimum_RoundTripsThroughReadPaths(
+        IOrganizationRepository organizationRepository)
+    {
+        var created = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org PAM Minimum",
+            BillingEmail = "test@email.com",
+            Plan = "Test",
+            PrivateKey = "privatekey",
+            PamSeatMinimum = 10,
+        });
+
+        var readById = await organizationRepository.GetByIdAsync(created.Id);
+        var readManyByIds = await organizationRepository.GetManyByIdsAsync([created.Id]);
+
+        Assert.NotNull(readById);
+        Assert.Equal(10, readById.PamSeatMinimum);
+        var readFromMany = Assert.Single(readManyByIds);
+        Assert.Equal(10, readFromMany.PamSeatMinimum);
+    }
+
+    [Theory, DatabaseData]
+    public async Task ReplaceAsync_WithPamSeatMinimum_PersistsValue(
+        IOrganizationRepository organizationRepository)
+    {
+        var created = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org PAM Minimum Replace",
+            BillingEmail = "test@email.com",
+            Plan = "Test",
+            PrivateKey = "privatekey",
+        });
+
+        created.PamSeatMinimum = 10;
+        await organizationRepository.ReplaceAsync(created);
+
+        var read = await organizationRepository.GetByIdAsync(created.Id);
+
+        Assert.NotNull(read);
+        Assert.Equal(10, read.PamSeatMinimum);
+    }
+
+    [Theory, DatabaseData]
     public async Task GetOccupiedSeatCountByOrganizationIdAsync_WithUsersAndSponsorships_ReturnsCorrectCounts(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,

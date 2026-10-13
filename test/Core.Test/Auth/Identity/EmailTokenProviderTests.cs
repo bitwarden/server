@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Entities;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
