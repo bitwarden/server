@@ -1,5 +1,4 @@
-﻿using Bit.Core.Billing.Commands;
-using Bit.Core.Billing.Organizations.Commands;
+﻿using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
@@ -40,7 +39,7 @@ internal sealed class AddPrivilegedControlsToExistingSubscriptionCommand(
         }
 
         var seatChange = await seatChangeSetFactory.CreateAsync(organization, seats);
-        Unwrap(await updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet));
+        (await updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet)).GetValueOrThrowHttpException();
 
         organization.PamSeats = seats;
         organization.MaxAutoscalePamSeats = maxAutoscaleSeats;
@@ -48,12 +47,4 @@ internal sealed class AddPrivilegedControlsToExistingSubscriptionCommand(
         organization.PamSeatMinimum = seatChange.SeatMinimum;
         await organizationService.ReplaceAndUpdateCacheAsync(organization);
     }
-
-    // The subscription update still reports failures as a BillingCommandResult. The endpoint exception filter
-    // has no case for BillingException, so surface each failure as the exception that maps to its HTTP status.
-    private static T Unwrap<T>(BillingCommandResult<T> result) => result.Match(
-        value => value,
-        badRequest => throw new BadRequestException(badRequest.Response),
-        conflict => throw new ConflictException(conflict.Response),
-        unhandled => throw unhandled.Exception ?? new InvalidOperationException(unhandled.Response));
 }
