@@ -3,12 +3,17 @@ using Bit.Admin.AdminConsole.Models;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
+using Stripe;
 
 namespace Admin.Test.AdminConsole.Controllers;
 
@@ -184,6 +189,41 @@ public class ProvidersControllerTests
         Assert.Equal("Edit", actualResult.ActionName);
         Assert.Null(actualResult.ControllerName);
         Assert.Equal(expectedProviderId, actualResult.RouteValues["Id"]);
+    }
+    #endregion
+
+    #region Edit (GET)
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_DeletedStripeCustomer_StillRendersPageWithWarning(
+        Provider provider,
+        SutProvider<ProvidersController> sutProvider)
+    {
+        // PM-40292: a deleted Stripe customer is returned as a stub (Deleted = true) with null
+        // Metadata. The page must still render, PayByInvoice must default to false rather than
+        // NRE'ing, and the admin must be warned so they can fix the Gateway Customer ID.
+        provider.Type = ProviderType.Msp;
+        provider.Status = ProviderStatusType.Billable;
+
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetCustomer(provider)
+            .Returns(new Customer { Deleted = true, Metadata = null });
+
+        sutProvider.Sut.TempData =
+            new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.Edit(provider.Id);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<ProviderEditModel>(view.Model);
+        Assert.False(model.PayByInvoice);
+        Assert.True(sutProvider.Sut.TempData.ContainsKey("Warning"));
+        Assert.Equal(
+            "Billing information could not be fully loaded. The Stripe customer may have been deleted. " +
+            "You can still edit the provider and set a valid Gateway Customer ID.",
+            (string)sutProvider.Sut.TempData["Warning"]);
     }
     #endregion
 }

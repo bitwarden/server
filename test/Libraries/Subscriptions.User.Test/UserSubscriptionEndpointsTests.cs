@@ -44,4 +44,80 @@ public class UserSubscriptionEndpointsTests
         Assert.NotNull(groupName);
         Assert.Equal("internal", groupName!.EndpointGroupName);
     }
+
+    [Fact]
+    public void MapUserSubscriptionEndpoints_MapsGetUpgradePreview()
+    {
+        var app = WebApplication.CreateBuilder().Build();
+
+        app.MapUserSubscriptionEndpoints();
+
+        var endpoint = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(dataSource => dataSource.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Single(e => e.RoutePattern.RawText!.Contains("upgrade/preview", StringComparison.Ordinal));
+
+        Assert.Equal(["GET"], endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()!.HttpMethods);
+        Assert.Equal("GetAccountSubscriptionUpgradePreview", endpoint.Metadata.GetMetadata<IEndpointNameMetadata>()!.EndpointName);
+
+        var authorize = endpoint.Metadata.GetMetadata<AuthorizeAttribute>();
+        Assert.NotNull(authorize);
+        Assert.Equal(Policies.Application, authorize!.Policy);
+        Assert.NotNull(endpoint.Metadata.GetMetadata<IFeatureMetadata>());
+        Assert.Contains("UserSubscriptions", endpoint.Metadata.GetMetadata<ITagsMetadata>()!.Tags);
+        Assert.Equal("internal", endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>()!.EndpointGroupName);
+    }
+
+    [Fact]
+    public void MapUserSubscriptionEndpoints_MapsGetSubscriptionPurchasePreview()
+    {
+        var endpoint = MapAndFindEndpoint("GetAccountSubscriptionPurchasePreview");
+
+        Assert.Equal(["GET"], endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()!.HttpMethods);
+        Assert.Equal("/purchase/preview", endpoint.RoutePattern.RawText);
+        AssertInheritsTheGroupChain(endpoint);
+    }
+
+    [Fact]
+    public void MapUserSubscriptionEndpoints_MapsThePreviewRoute()
+    {
+        var app = WebApplication.CreateBuilder().Build();
+
+        app.MapUserSubscriptionEndpoints();
+
+        var endpoint = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(dataSource => dataSource.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Single(e => e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == "GetAccountSubscriptionPreview");
+
+        Assert.Equal(["GET"], endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()!.HttpMethods);
+        Assert.Contains("preview", endpoint.RoutePattern.RawText, StringComparison.Ordinal);
+
+        var authorize = endpoint.Metadata.GetMetadata<AuthorizeAttribute>();
+        Assert.NotNull(authorize);
+        Assert.Equal(Policies.Application, authorize!.Policy);
+        Assert.NotNull(endpoint.Metadata.GetMetadata<IFeatureMetadata>());
+    }
+
+    private static RouteEndpoint MapAndFindEndpoint(string endpointName)
+    {
+        var app = WebApplication.CreateBuilder().Build();
+
+        app.MapUserSubscriptionEndpoints();
+
+        return ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(dataSource => dataSource.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Single(e => e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == endpointName);
+    }
+
+    private static void AssertInheritsTheGroupChain(RouteEndpoint endpoint)
+    {
+        var authorize = endpoint.Metadata.GetMetadata<AuthorizeAttribute>();
+        Assert.NotNull(authorize);
+        Assert.Equal(Policies.Application, authorize!.Policy);
+        Assert.NotNull(endpoint.Metadata.GetMetadata<IFeatureMetadata>());
+        Assert.Contains("UserSubscriptions", endpoint.Metadata.GetMetadata<ITagsMetadata>()!.Tags);
+        Assert.Equal("internal", endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>()!.EndpointGroupName);
+    }
 }

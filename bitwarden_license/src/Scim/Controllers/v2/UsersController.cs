@@ -49,7 +49,7 @@ public class UsersController : Controller
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> Get(Guid organizationId, Guid id)
+    public async Task<IActionResult> Get([FromRoute] Guid organizationId, Guid id)
     {
         var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(id);
         if (orgUser == null || orgUser.OrganizationId != organizationId)
@@ -61,7 +61,7 @@ public class UsersController : Controller
 
     [HttpGet("")]
     public async Task<IActionResult> Get(
-        Guid organizationId,
+        [FromRoute] Guid organizationId,
         [FromQuery] GetUsersQueryParamModel model)
     {
         var usersListQueryResult = await _getUsersListQuery.GetUsersListAsync(organizationId, model);
@@ -76,7 +76,7 @@ public class UsersController : Controller
     }
 
     [HttpPost("")]
-    public async Task<IActionResult> Post(Guid organizationId, [FromBody] ScimUserRequestModel model)
+    public async Task<IActionResult> Post([FromRoute] Guid organizationId, [FromBody] ScimUserRequestModel model)
     {
         var orgUser = await _postUserCommand.PostUserAsync(organizationId, model);
         var scimUserResponseModel = new ScimUserResponseModel(orgUser);
@@ -84,7 +84,7 @@ public class UsersController : Controller
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Put(Guid organizationId, Guid id, [FromBody] ScimUserRequestModel model)
+    public async Task<IActionResult> Put([FromRoute] Guid organizationId, Guid id, [FromBody] ScimUserRequestModel model)
     {
         var orgUser = await _organizationUserRepository.GetByIdAsync(id);
         if (orgUser == null || orgUser.OrganizationId != organizationId)
@@ -131,14 +131,14 @@ public class UsersController : Controller
     }
 
     [HttpPatch("{id}")]
-    public async Task<IActionResult> Patch(Guid organizationId, Guid id, [FromBody] ScimPatchModel model)
+    public async Task<IActionResult> Patch([FromRoute] Guid organizationId, Guid id, [FromBody] ScimPatchModel model)
     {
         await _patchUserCommand.PatchUserAsync(organizationId, id, model);
         return new NoContentResult();
     }
 
     [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(Guid organizationId, Guid id)
+    public async Task<IActionResult> Delete([FromRoute] Guid organizationId, Guid id)
     {
         await _removeOrganizationUserCommand.RemoveUserAsync(organizationId, id, EventSystemUser.SCIM);
         return new NoContentResult();

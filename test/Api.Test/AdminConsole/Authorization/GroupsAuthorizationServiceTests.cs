@@ -143,7 +143,7 @@ public class GroupsAuthorizationServiceTests
     private static void SetupGroupAccess(SutProvider<GroupsAuthorizationService> sutProvider, Guid organizationId,
         IReadOnlyCollection<Guid> requestedCollectionIds, HashSet<Guid> authorizedCollectionIds) =>
         sutProvider.GetDependency<ICollectionAuthorizationService>()
-            .AuthorizeModifyGroupAccessManyAsync(organizationId,
+            .AuthorizeModifyGroupAccessAsync(organizationId,
                 Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.SequenceEqual(requestedCollectionIds)))
             .Returns(authorizedCollectionIds);
 

@@ -43,6 +43,31 @@ public class CreateOrganizationDomainCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task CreateAsync_ShouldGenerateSecureTxtToken(OrganizationDomain orgDomain, SutProvider<CreateOrganizationDomainCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .GetClaimedDomainsByDomainNameAsync(orgDomain.DomainName)
+            .Returns(new List<OrganizationDomain>());
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .GetDomainByOrgIdAndDomainNameAsync(orgDomain.OrganizationId, orgDomain.DomainName)
+            .ReturnsNull();
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .CreateAsync(Arg.Any<OrganizationDomain>())
+            .Returns(callInfo => callInfo.Arg<OrganizationDomain>());
+
+        var first = await sutProvider.Sut.CreateAsync(orgDomain);
+        var firstToken = first.Txt;
+
+        var second = await sutProvider.Sut.CreateAsync(orgDomain);
+
+        Assert.StartsWith("bw=", firstToken);
+        var value = firstToken["bw=".Length..];
+        Assert.Equal(44, value.Length);
+        Assert.All(value, c => Assert.True(char.IsLetterOrDigit(c)));
+        Assert.NotEqual(firstToken, second.Txt);
+    }
+
+    [Theory, BitAutoData]
     public async Task CreateAsync_ShouldThrowConflictException_WhenDomainIsClaimed(OrganizationDomain orgDomain,
         SutProvider<CreateOrganizationDomainCommand> sutProvider)
     {

@@ -21,9 +21,9 @@ public class GroupsAuthorizationService(
         IReadOnlyCollection<Guid> postedUserIds)
     {
         var authorizedPostedCollectionIds =
-            await collectionAuthorizationService.AuthorizeModifyGroupAccessManyAsync(organizationId, postedCollectionIds);
+            await collectionAuthorizationService.AuthorizeModifyGroupAccessAsync(organizationId, postedCollectionIds);
         var authorizedCurrentCollectionIds =
-            await collectionAuthorizationService.AuthorizeModifyGroupAccessManyAsync(organizationId, currentCollectionIds);
+            await collectionAuthorizationService.AuthorizeModifyGroupAccessAsync(organizationId, currentCollectionIds);
 
         return new GroupsAuthorizationResult(
             await CanAddSelfToGroupAsync(organizationId, groupId, postedUserIds),

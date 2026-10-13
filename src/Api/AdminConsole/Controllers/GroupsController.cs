@@ -17,6 +17,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.OrganizationAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -72,7 +73,7 @@ public class GroupsController : Controller
 
     [HttpGet("{id}")]
     [Authorize<ManageGroupsRequirement>]
-    public async Task<GroupResponseModel> Get(Guid orgId, Guid id)
+    public async Task<GroupResponseModel> Get([FromRoute] Guid orgId, Guid id)
     {
         var group = await _groupRepository.GetByIdAsync(id);
         if (group == null || group.OrganizationId != orgId)
@@ -85,7 +86,7 @@ public class GroupsController : Controller
 
     [HttpGet("{id}/details")]
     [Authorize<ManageGroupsRequirement>]
-    public async Task<GroupDetailsResponseModel> GetDetails(Guid orgId, Guid id)
+    public async Task<GroupDetailsResponseModel> GetDetails([FromRoute] Guid orgId, Guid id)
     {
         var groupDetails = await _groupRepository.GetByIdWithCollectionsAsync(id);
         if (groupDetails?.Item1 == null || groupDetails.Item1.OrganizationId != orgId)
@@ -98,7 +99,7 @@ public class GroupsController : Controller
 
     [HttpGet("")]
     [Authorize<OrganizationCollectionManagementAccessRequirement>]
-    public async Task<ListResponseModel<GroupResponseModel>> GetOrganizationGroups(Guid orgId)
+    public async Task<ListResponseModel<GroupResponseModel>> GetOrganizationGroups([FromRoute] Guid orgId)
     {
         var groups = await _groupRepository.GetManyByOrganizationIdAsync(orgId);
         var responses = groups.Select(g => new GroupResponseModel(g));
@@ -107,7 +108,7 @@ public class GroupsController : Controller
 
     [HttpGet("details")]
     [Authorize<ManageUsersOrGroupsRequirement>]
-    public async Task<ListResponseModel<GroupDetailsResponseModel>> GetOrganizationGroupDetails(Guid orgId)
+    public async Task<ListResponseModel<GroupDetailsResponseModel>> GetOrganizationGroupDetails([FromRoute] Guid orgId)
     {
         var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgId);
         var responses = groups.Select(g => new GroupDetailsResponseModel(g.Item1, g.Item2));
@@ -116,7 +117,7 @@ public class GroupsController : Controller
 
     [HttpGet("{id}/users")]
     [Authorize<ManageGroupsRequirement>]
-    public async Task<IEnumerable<Guid>> GetUsers(Guid orgId, Guid id)
+    public async Task<IEnumerable<Guid>> GetUsers([FromRoute] Guid orgId, Guid id)
     {
         var group = await _groupRepository.GetByIdAsync(id);
         if (group == null || group.OrganizationId != orgId)
@@ -130,7 +131,7 @@ public class GroupsController : Controller
 
     [HttpPost("")]
     [Authorize<ManageGroupsRequirement>]
-    public async Task<GroupResponseModel> Post(Guid orgId, [FromBody] GroupRequestModel model)
+    public async Task<GroupResponseModel> Post([FromRoute] Guid orgId, [FromBody] GroupRequestModel model)
     {
         // Check the user has permission to grant access to the collections for the new group
         if (model.Collections?.Any() == true)
@@ -169,7 +170,7 @@ public class GroupsController : Controller
 
     [HttpPut("{id}")]
     [Authorize<ManageGroupsRequirement>]
-    public async Task<GroupResponseModel> Put(Guid orgId, Guid id, [FromBody] GroupRequestModel model)
+    public async Task<GroupResponseModel> Put([FromRoute] Guid orgId, Guid id, [FromBody] GroupRequestModel model)
     {
         var (group, currentAccess) = await _groupRepository.GetByIdWithCollectionsAsync(id);
         if (group == null || group.OrganizationId != orgId)
@@ -274,17 +275,9 @@ public class GroupsController : Controller
         return readonlyCollectionIds;
     }
 
-    [HttpPost("{id}")]
-    [Obsolete("This endpoint is deprecated. Use PUT method instead")]
-    [Authorize<ManageGroupsRequirement>]
-    public async Task<GroupResponseModel> PostPut(Guid orgId, Guid id, [FromBody] GroupRequestModel model)
-    {
-        return await Put(orgId, id, model);
-    }
-
     [HttpDelete("{id}")]
     [Authorize<ManageGroupsRequirement>]
-    public async Task Delete(Guid orgId, Guid id)
+    public async Task Delete([FromRoute] Guid orgId, Guid id)
     {
         var group = await _groupRepository.GetByIdAsync(id);
         if (group == null || group.OrganizationId != orgId)
@@ -295,17 +288,9 @@ public class GroupsController : Controller
         await _deleteGroupCommand.DeleteAsync(group);
     }
 
-    [HttpPost("{id}/delete")]
-    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
-    [Authorize<ManageGroupsRequirement>]
-    public async Task PostDelete(Guid orgId, Guid id)
-    {
-        await Delete(orgId, id);
-    }
-
     [HttpDelete("")]
     [Authorize<ManageGroupsRequirement>]
-    public async Task BulkDelete(Guid orgId, [FromBody] GroupBulkRequestModel model)
+    public async Task BulkDelete([FromRoute] Guid orgId, [FromBody] GroupBulkRequestModel model)
     {
         var groups = await _groupRepository.GetManyByManyIds(model.Ids);
 
@@ -320,17 +305,9 @@ public class GroupsController : Controller
         await _deleteGroupCommand.DeleteManyAsync(groups);
     }
 
-    [HttpPost("delete")]
-    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
-    [Authorize<ManageGroupsRequirement>]
-    public async Task PostBulkDelete(Guid orgId, [FromBody] GroupBulkRequestModel model)
-    {
-        await BulkDelete(orgId, model);
-    }
-
     [HttpDelete("{id}/user/{orgUserId}")]
     [Authorize<ManageGroupsRequirement>]
-    public async Task DeleteUser(Guid orgId, Guid id, Guid orgUserId)
+    public async Task DeleteUser([FromRoute] Guid orgId, Guid id, Guid orgUserId)
     {
         var group = await _groupRepository.GetByIdAsync(id);
         if (group == null || group.OrganizationId != orgId)
@@ -339,13 +316,5 @@ public class GroupsController : Controller
         }
 
         await _groupService.DeleteUserAsync(group, orgUserId);
-    }
-
-    [HttpPost("{id}/delete-user/{orgUserId}")]
-    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
-    [Authorize<ManageGroupsRequirement>]
-    public async Task PostDeleteUser(Guid orgId, Guid id, Guid orgUserId)
-    {
-        await DeleteUser(orgId, id, orgUserId);
     }
 }

@@ -3,6 +3,7 @@
 using System.Security.Cryptography;
 using AutoMapper;
 using Bit.Core;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Repositories;
@@ -195,7 +196,9 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var orgUserIds = dbContext.OrganizationUsers
-            .Where(ou => ou.OrganizationId == organizationId && ou.UserId != null)
+            .Where(ou => ou.OrganizationId == organizationId
+                && ou.UserId != null
+                && (ou.Status == OrganizationUserStatusType.Accepted || ou.Status == OrganizationUserStatusType.Confirmed))
             .Select(ou => ou.UserId);
         var orgUserSendIds = await dbContext.Sends
             .Where(s => s.UserId != null && orgUserIds.Contains(s.UserId))

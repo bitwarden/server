@@ -787,68 +787,23 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task AutomaticallyConfirmOrganizationUserAsync_UserIdNull_ReturnsUnauthorized(
-        Guid orgId,
+    public async Task AutomaticallyConfirmOrganizationUserAsync_Success_ReturnsNoContent(
+        Organization organization,
         Guid orgUserId,
         OrganizationUserConfirmRequestModel model,
         SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
-            .Returns((Guid?)null);
+        sutProvider.GetDependency<IBulkAutomaticallyConfirmOrganizationUsersCommand>()
+            .RunAsync(Arg.Is<BulkAutomaticallyConfirmOrganizationUsersRequest>(r =>
+                r.Organization == organization &&
+                r.UsersToConfirm.Count == 1 &&
+                r.UsersToConfirm[0].OrganizationUserId == orgUserId &&
+                r.UsersToConfirm[0].Key == model.Key))
+            .Returns(new List<BulkCommandResult> { new(orgUserId, new CommandResult(new None())) });
 
         // Act
-        var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(orgId, orgUserId, model);
-
-        // Assert
-        Assert.IsType<UnauthorizedHttpResult>(result);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task AutomaticallyConfirmOrganizationUserAsync_UserIdEmpty_ReturnsUnauthorized(
-        Guid orgId,
-        Guid orgUserId,
-        OrganizationUserConfirmRequestModel model,
-        SutProvider<OrganizationUsersController> sutProvider)
-    {
-        // Arrange
-        sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
-            .Returns(Guid.Empty);
-
-        // Act
-        var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(orgId, orgUserId, model);
-
-        // Assert
-        Assert.IsType<UnauthorizedHttpResult>(result);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task AutomaticallyConfirmOrganizationUserAsync_Success_ReturnsOk(
-        Guid orgId,
-        Guid orgUserId,
-        Guid userId,
-        OrganizationUserConfirmRequestModel model,
-        SutProvider<OrganizationUsersController> sutProvider)
-    {
-        // Arrange
-        sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
-            .Returns(userId);
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationOwner(orgId)
-            .Returns(true);
-
-        sutProvider.GetDependency<IAutomaticallyConfirmOrganizationUserCommand>()
-            .AutomaticallyConfirmOrganizationUserAsync(Arg.Any<AutomaticallyConfirmOrganizationUserRequest>())
-            .Returns(new CommandResult(new None()));
-
-        // Act
-        var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(orgId, orgUserId, model);
+        var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(organization, orgUserId, model);
 
         // Assert
         Assert.IsType<NoContent>(result);
@@ -857,28 +812,19 @@ public class OrganizationUsersControllerTests
     [Theory]
     [BitAutoData]
     public async Task AutomaticallyConfirmOrganizationUserAsync_NotFoundError_ReturnsNotFound(
-        Guid orgId,
+        Organization organization,
         Guid orgUserId,
-        Guid userId,
         OrganizationUserConfirmRequestModel model,
         SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
-            .Returns(userId);
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationOwner(orgId)
-            .Returns(false);
-
         var notFoundError = new OrganizationNotFound();
-        sutProvider.GetDependency<IAutomaticallyConfirmOrganizationUserCommand>()
-            .AutomaticallyConfirmOrganizationUserAsync(Arg.Any<AutomaticallyConfirmOrganizationUserRequest>())
-            .Returns(new CommandResult(notFoundError));
+        sutProvider.GetDependency<IBulkAutomaticallyConfirmOrganizationUsersCommand>()
+            .RunAsync(Arg.Any<BulkAutomaticallyConfirmOrganizationUsersRequest>())
+            .Returns(new List<BulkCommandResult> { new(orgUserId, new CommandResult(notFoundError)) });
 
         // Act
-        var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(orgId, orgUserId, model);
+        var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(organization, orgUserId, model);
 
         // Assert
         var notFoundResult = Assert.IsType<NotFound<ErrorResponseModel>>(result);
@@ -888,28 +834,19 @@ public class OrganizationUsersControllerTests
     [Theory]
     [BitAutoData]
     public async Task AutomaticallyConfirmOrganizationUserAsync_BadRequestError_ReturnsBadRequest(
-        Guid orgId,
+        Organization organization,
         Guid orgUserId,
-        Guid userId,
         OrganizationUserConfirmRequestModel model,
         SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
-            .Returns(userId);
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationOwner(orgId)
-            .Returns(true);
-
         var badRequestError = new UserIsNotAccepted();
-        sutProvider.GetDependency<IAutomaticallyConfirmOrganizationUserCommand>()
-            .AutomaticallyConfirmOrganizationUserAsync(Arg.Any<AutomaticallyConfirmOrganizationUserRequest>())
-            .Returns(new CommandResult(badRequestError));
+        sutProvider.GetDependency<IBulkAutomaticallyConfirmOrganizationUsersCommand>()
+            .RunAsync(Arg.Any<BulkAutomaticallyConfirmOrganizationUsersRequest>())
+            .Returns(new List<BulkCommandResult> { new(orgUserId, new CommandResult(badRequestError)) });
 
         // Act
-        var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(orgId, orgUserId, model);
+        var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(organization, orgUserId, model);
 
         // Assert
         var badRequestResult = Assert.IsType<BadRequest<ErrorResponseModel>>(result);
@@ -919,28 +856,19 @@ public class OrganizationUsersControllerTests
     [Theory]
     [BitAutoData]
     public async Task AutomaticallyConfirmOrganizationUserAsync_InternalError_ReturnsProblem(
-        Guid orgId,
+        Organization organization,
         Guid orgUserId,
-        Guid userId,
         OrganizationUserConfirmRequestModel model,
         SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
-            .Returns(userId);
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationOwner(orgId)
-            .Returns(true);
-
         var internalError = new FailedToWriteToEventLog();
-        sutProvider.GetDependency<IAutomaticallyConfirmOrganizationUserCommand>()
-            .AutomaticallyConfirmOrganizationUserAsync(Arg.Any<AutomaticallyConfirmOrganizationUserRequest>())
-            .Returns(new CommandResult(internalError));
+        sutProvider.GetDependency<IBulkAutomaticallyConfirmOrganizationUsersCommand>()
+            .RunAsync(Arg.Any<BulkAutomaticallyConfirmOrganizationUsersRequest>())
+            .Returns(new List<BulkCommandResult> { new(orgUserId, new CommandResult(internalError)) });
 
         // Act
-        var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(orgId, orgUserId, model);
+        var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(organization, orgUserId, model);
 
         // Assert
         var problemResult = Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
@@ -1044,11 +972,11 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Put_WhenFeatureFlagEnabled_RoutesToV2AndReturnsNoContentOnSuccess(
+    public async Task Put_ReturnsNoContentOnSuccess(
         Organization organization, OrganizationUserUpdateRequestModel model, Guid userId,
         OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: true);
+        PutSetup(sutProvider, organization, organizationUser, userId);
 
         sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
             .UpdateUserAsync(Arg.Any<V2_UpdateUserCommand.UpdateOrganizationUserRequest>())
@@ -1060,18 +988,15 @@ public class OrganizationUsersControllerTests
         await sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
             .Received(1)
             .UpdateUserAsync(Arg.Any<V2_UpdateUserCommand.UpdateOrganizationUserRequest>());
-        await sutProvider.GetDependency<IUpdateOrganizationUserCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .UpdateUserAsync(default, default, default, default, default);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task Put_WhenFeatureFlagEnabled_PassesRequestedEmailToV2Request(
+    public async Task Put_PassesRequestedEmailToRequest(
         Organization organization, OrganizationUserUpdateRequestModel model, Guid userId,
         OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: true);
+        PutSetup(sutProvider, organization, organizationUser, userId);
         model.Email = "new@claimed.example.com";
 
         V2_UpdateUserCommand.UpdateOrganizationUserRequest captured = null;
@@ -1088,11 +1013,11 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Put_WhenFeatureFlagEnabledAndCommandFails_MapsErrorToStatus(
+    public async Task Put_WhenCommandFails_MapsErrorToStatus(
         Organization organization, OrganizationUserUpdateRequestModel model, Guid userId,
         OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: true);
+        PutSetup(sutProvider, organization, organizationUser, userId);
 
         sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
             .UpdateUserAsync(Arg.Any<V2_UpdateUserCommand.UpdateOrganizationUserRequest>())
@@ -1105,32 +1030,12 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Put_WhenFeatureFlagDisabled_RoutesToV1(
-        Organization organization, OrganizationUserUpdateRequestModel model, Guid userId,
-        OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
-    {
-        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: false);
-
-        var result = await sutProvider.Sut.Put(organization, organizationUser.Id, model);
-
-        Assert.IsType<Ok>(result);
-        await sutProvider.GetDependency<IUpdateOrganizationUserCommand>()
-            .Received(1)
-            .UpdateUserAsync(Arg.Any<OrganizationUser>(), Arg.Any<OrganizationUserType>(), userId,
-                Arg.Any<List<CollectionAccessSelection>>(), Arg.Any<IEnumerable<Guid>>(), model.DefaultUserCollectionName);
-        await sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .UpdateUserAsync(default);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task Put_WhenFeatureFlagEnabled_ExcludesDefaultCollectionsFromPreservedAccess(
+    public async Task Put_ExcludesDefaultCollectionsFromPreservedAccess(
         Organization organization, OrganizationUserUpdateRequestModel model, Guid userId,
         OrganizationUser organizationUser, Guid sharedCollectionId, Guid defaultCollectionId,
         SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: true);
+        PutSetup(sutProvider, organization, organizationUser, userId);
 
         // The client posts no collections; the user currently has access to a shared and a default collection.
         model.Collections = [];
@@ -1172,7 +1077,7 @@ public class OrganizationUsersControllerTests
     }
 
     private static void PutSetup(SutProvider<OrganizationUsersController> sutProvider, Organization organization,
-        OrganizationUser organizationUser, Guid userId, bool changeMemberEmailNoMpEnabled)
+        OrganizationUser organizationUser, Guid userId)
     {
         organizationUser.OrganizationId = organization.Id;
         organization.AllowAdminAccessToAllCollectionItems = true;
@@ -1187,8 +1092,6 @@ public class OrganizationUsersControllerTests
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<object>(), Arg.Any<IEnumerable<IAuthorizationRequirement>>())
             .Returns(AuthorizationResult.Success());
-        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>().IsEnabled(Bit.Core.FeatureFlagKeys.ChangeMemberEmailNoMp)
-            .Returns(changeMemberEmailNoMpEnabled);
     }
 
     [Theory]
@@ -1197,7 +1100,7 @@ public class OrganizationUsersControllerTests
         OrganizationUser organizationUser, Guid userId, OrganizationUserUpdateRequestModel model,
         SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: false);
+        PutSetup(sutProvider, organization, organizationUser, userId);
         organization.AllowAdminAccessToAllCollectionItems = false;
         organizationUser.UserId = userId;
 
@@ -1213,7 +1116,7 @@ public class OrganizationUsersControllerTests
         OrganizationUser organizationUser, Guid userId, OrganizationUserUpdateRequestModel model,
         SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: true);
+        PutSetup(sutProvider, organization, organizationUser, userId);
         organization.AllowAdminAccessToAllCollectionItems = false;
         organizationUser.UserId = userId;
         model.Collections = [];
@@ -1234,7 +1137,7 @@ public class OrganizationUsersControllerTests
         OrganizationUser organizationUser, Guid userId, OrganizationUserUpdateRequestModel model,
         Collection postedCollection, SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: true);
+        PutSetup(sutProvider, organization, organizationUser, userId);
         sutProvider.GetDependency<ICollectionRepository>().GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new List<Collection> { postedCollection });
         sutProvider.GetDependency<IAuthorizationService>()
@@ -1252,7 +1155,7 @@ public class OrganizationUsersControllerTests
         Organization organization, OrganizationUser organizationUser, Guid userId,
         OrganizationUserUpdateRequestModel model, SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: true);
+        PutSetup(sutProvider, organization, organizationUser, userId);
         EnableNewAuthorization(sutProvider);
         ArrangeAuthorizationResult(sutProvider, organization, organizationUser, model,
             new OrganizationUserAuthorizationResult(CanAddSelfToCollection: false, CanEditOwnGroups: true, new HashSet<Guid>(), new HashSet<Guid>()));
@@ -1269,7 +1172,7 @@ public class OrganizationUsersControllerTests
         Organization organization, OrganizationUser organizationUser, Guid userId, Guid unauthorizedCollectionId,
         OrganizationUserUpdateRequestModel model, SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: true);
+        PutSetup(sutProvider, organization, organizationUser, userId);
         EnableNewAuthorization(sutProvider);
         ArrangeAuthorizationResult(sutProvider, organization, organizationUser, model,
             new OrganizationUserAuthorizationResult(CanAddSelfToCollection: true, CanEditOwnGroups: true, new HashSet<Guid> { unauthorizedCollectionId },
@@ -1285,7 +1188,7 @@ public class OrganizationUsersControllerTests
         OrganizationUser organizationUser, Guid userId, OrganizationUserUpdateRequestModel model,
         SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: true);
+        PutSetup(sutProvider, organization, organizationUser, userId);
         EnableNewAuthorization(sutProvider);
         ArrangeAuthorizationResult(sutProvider, organization, organizationUser, model,
             new OrganizationUserAuthorizationResult(CanAddSelfToCollection: true, CanEditOwnGroups: false, new HashSet<Guid>(), new HashSet<Guid>()));
@@ -1306,7 +1209,7 @@ public class OrganizationUsersControllerTests
         Organization organization, OrganizationUser organizationUser, Guid userId, Guid readonlyCollectionId,
         OrganizationUserUpdateRequestModel model, SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: true);
+        PutSetup(sutProvider, organization, organizationUser, userId);
         var currentAccess = new List<CollectionAccessSelection> { new() { Id = readonlyCollectionId, Manage = true } };
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdWithCollectionsAsync(organizationUser.Id)
@@ -1347,7 +1250,7 @@ public class OrganizationUsersControllerTests
         OrganizationUserUpdateRequestModel model, Guid postedCollectionId, Guid removedCollectionId,
         Guid readonlyCollectionId, Guid defaultCollectionId, SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, userId, changeMemberEmailNoMpEnabled: true);
+        PutSetup(sutProvider, organization, organizationUser, userId);
         model.Collections =
         [
             new SelectionReadOnlyRequestModel { Id = postedCollectionId },

@@ -5,6 +5,7 @@ using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
@@ -222,6 +223,11 @@ public class UserService : UserManager<User>, IUserService
 
     public override async Task<IdentityResult> DeleteAsync(User user)
     {
+        if (await IsClaimedByAnyOrganizationAsync(user.Id))
+        {
+            throw new BadRequestException(new CannotDeleteClaimedAccountError().Message);
+        }
+
         // Check if user is the only owner of any organizations.
         var onlyOwnerCount = await _organizationUserRepository.GetCountByOnlyOwnerAsync(user.Id);
         if (onlyOwnerCount > 0)

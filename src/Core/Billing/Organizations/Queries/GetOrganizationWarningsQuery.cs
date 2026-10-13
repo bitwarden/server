@@ -12,7 +12,7 @@ using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
-using Bit.Core.Services;
+using Bitwarden.Server.Sdk.Features;
 using Stripe;
 using Stripe.Tax;
 
@@ -102,7 +102,12 @@ public class GetOrganizationWarningsQuery(
 
         var remainingTrialDays = (int)Math.Ceiling((subscription.TrialEnd.Value - now).TotalDays);
 
-        return new FreeTrialWarning { RemainingTrialDays = remainingTrialDays };
+        var isSalesAssisted = subscription.Metadata.TryGetValue(
+                                  StripeConstants.MetadataKeys.TrialInitiationPath,
+                                  out var trialInitiationPath) &&
+                              trialInitiationPath == StripeConstants.TrialInitiationPaths.SalesAssisted;
+
+        return new FreeTrialWarning { RemainingTrialDays = remainingTrialDays, IsSalesAssisted = isSalesAssisted };
     }
 
     private async Task<InactiveSubscriptionWarning?> GetInactiveSubscriptionWarningAsync(

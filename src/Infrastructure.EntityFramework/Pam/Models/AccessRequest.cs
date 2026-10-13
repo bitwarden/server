@@ -16,6 +16,8 @@ public class AccessRequestMapperProfile : Profile
     public AccessRequestMapperProfile()
     {
         CreateMap<Bit.Pam.Entities.AccessRequest, AccessRequest>().ReverseMap();
-        CreateMap<AccessRequest, Bit.Pam.Models.AccessRequestDetails>();
+        // Status is derived against the read clock after mapping, so the stored action never leaves the repository.
+        CreateMap<AccessRequest, Bit.Pam.Models.AccessRequestDetails>()
+            .ForMember(d => d.Status, opt => opt.Ignore());
     }
 }

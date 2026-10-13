@@ -18,16 +18,19 @@ public class TwoFactorEmailService : ITwoFactorEmailService
     private readonly ICurrentContext _currentContext;
     private readonly UserManager<User> _userManager;
     private readonly IMailService _mailService;
+    private readonly INewDeviceVerificationOtpStore _newDeviceVerificationOtpStore;
 
     public TwoFactorEmailService(
         ICurrentContext currentContext,
         IMailService mailService,
-        UserManager<User> userManager
+        UserManager<User> userManager,
+        INewDeviceVerificationOtpStore newDeviceVerificationOtpStore
     )
     {
         _currentContext = currentContext;
         _userManager = userManager;
         _mailService = mailService;
+        _newDeviceVerificationOtpStore = newDeviceVerificationOtpStore;
     }
 
     /// <summary>
@@ -50,23 +53,38 @@ public class TwoFactorEmailService : ITwoFactorEmailService
         await VerifyAndSendTwoFactorEmailAsync(user, TwoFactorEmailPurpose.Setup);
     }
 
-    /// <summary>
-    /// Sends a new device verification email to the user with an OTP token
-    /// </summary>
-    /// <param name="user">The user to whom the email should be sent</param>
-    /// <exception cref="ArgumentNullException">Thrown if the user is not provided</exception>
-    public async Task SendNewDeviceVerificationEmailAsync(User user)
+    /// <inheritdoc />
+    public async Task SendNewDeviceVerificationEmailAsync(User user, string deviceIdentifier)
     {
         ArgumentNullException.ThrowIfNull(user);
+        ArgumentException.ThrowIfNullOrWhiteSpace(deviceIdentifier);
 
-        var token = await _userManager.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
-            "otp:" + user.Email);
+        var code = await _newDeviceVerificationOtpStore.IssueAsync(user, deviceIdentifier);
 
         var deviceType = _currentContext.DeviceType?.GetType().GetMember(_currentContext.DeviceType?.ToString())
             .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName() ?? "Unknown Browser";
 
         await _mailService.SendTwoFactorEmailAsync(
-            user.Email, user.Email, token, _currentContext.IpAddress, deviceType, TwoFactorEmailPurpose.NewDeviceVerification);
+            user.Email, user.Email, code, _currentContext.IpAddress, deviceType, TwoFactorEmailPurpose.NewDeviceVerification);
+    }
+
+    // TODO: PM-43465 - Delete this method once every supported client version sends the Device-Identifier
+    // header on the new device verification resend request.
+    /// <inheritdoc />
+    public async Task<string> GetPendingNewDeviceVerificationDeviceIdentifierAsync(User user)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        return await _newDeviceVerificationOtpStore.GetPendingDeviceIdentifierAsync(user);
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> VerifyNewDeviceVerificationOtpAsync(User user, string deviceIdentifier, string otp)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentException.ThrowIfNullOrWhiteSpace(deviceIdentifier);
+
+        return await _newDeviceVerificationOtpStore.ValidateAndConsumeAsync(user, deviceIdentifier, otp);
     }
 
     /// <summary>

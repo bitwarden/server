@@ -49,6 +49,7 @@ public class DatabaseContext : DbContext
     public DbSet<AccessRequest> AccessRequests { get; set; }
     public DbSet<AccessLease> AccessLeases { get; set; }
     public DbSet<AccessDecision> AccessDecisions { get; set; }
+    public DbSet<AccessAuditEvent> AccessAuditEvents { get; set; }
     public DbSet<Device> Devices { get; set; }
     public DbSet<EmergencyAccess> EmergencyAccesses { get; set; }
     public DbSet<Event> Events { get; set; }
@@ -118,6 +119,7 @@ public class DatabaseContext : DbContext
         var eAccessRequest = builder.Entity<AccessRequest>();
         var eAccessLease = builder.Entity<AccessLease>();
         var eAccessDecision = builder.Entity<AccessDecision>();
+        var eAccessAuditEvent = builder.Entity<AccessAuditEvent>();
         var eEmergencyAccess = builder.Entity<EmergencyAccess>();
         var eFolder = builder.Entity<Folder>();
         var eGroup = builder.Entity<Group>();
@@ -182,9 +184,14 @@ public class DatabaseContext : DbContext
         // already cascades directly to both tables, and a second cascading path through the other table would create
         // multiple cascade paths, which SQL Server rejects.
         eAccessRequest.Property(p => p.Id).ValueGeneratedNever();
-        eAccessRequest.HasIndex(p => new { p.RequesterId, p.CipherId, p.Status });
-        eAccessRequest.HasIndex(p => new { p.OrganizationId, p.Status });
-        eAccessRequest.HasIndex(p => new { p.CollectionId, p.Status });
+        eAccessRequest.HasIndex(p => new { p.RequesterId, p.CipherId, p.Action });
+        eAccessRequest.HasIndex(p => new { p.OrganizationId, p.Action });
+        // (CollectionId, Action, NotAfter) mirrors the pending-inbox filter, since lapsed unanswered rows pile up at
+        // Action = 0 and NotAfter must be a key column to seek them out. The CreationDate indexes carry the history
+        // reads, whose action/clock OR can't seek; the retention bound is the only predicate left to bound them.
+        eAccessRequest.HasIndex(p => new { p.CollectionId, p.Action, p.NotAfter });
+        eAccessRequest.HasIndex(p => new { p.CollectionId, p.CreationDate });
+        eAccessRequest.HasIndex(p => new { p.RequesterId, p.CreationDate });
         eAccessRequest.HasIndex(p => p.ExtensionOfLeaseId);
         eAccessRequest.HasIndex(p => p.RuleId);
         eAccessRequest
@@ -199,10 +206,10 @@ public class DatabaseContext : DbContext
             .OnDelete(DeleteBehavior.Restrict);
 
         eAccessLease.Property(p => p.Id).ValueGeneratedNever();
-        eAccessLease.HasIndex(p => new { p.RequesterId, p.CipherId, p.Status });
-        eAccessLease.HasIndex(p => new { p.NotAfter, p.Status });
-        eAccessLease.HasIndex(p => new { p.CollectionId, p.Status });
-        eAccessLease.HasIndex(p => new { p.CipherId, p.Status });
+        eAccessLease.HasIndex(p => new { p.RequesterId, p.CipherId, p.Action });
+        eAccessLease.HasIndex(p => new { p.NotAfter, p.Action });
+        eAccessLease.HasIndex(p => new { p.CollectionId, p.Action });
+        eAccessLease.HasIndex(p => new { p.CipherId, p.Action, p.NotAfter }).IsDescending(false, false, true);
         eAccessLease.HasIndex(p => p.AccessRequestId).IsUnique();
         eAccessLease
             .HasOne<AccessRequest>()
@@ -217,6 +224,14 @@ public class DatabaseContext : DbContext
             .WithMany()
             .HasForeignKey(d => d.AccessRequestId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Mirrors the MSSQL schema, which carries the rationale: the subject ids are deliberately not foreign keys,
+        // and the first index is keyed (OrganizationId, OccurredDate, Id). MSSQL also covers both reads with INCLUDE
+        // columns, which has no EF equivalent to mirror here.
+        eAccessAuditEvent.Property(p => p.Id).ValueGeneratedNever();
+        eAccessAuditEvent.HasIndex(p => new { p.OrganizationId, p.OccurredDate, p.Id })
+            .IsDescending(false, true, true);
+        eAccessAuditEvent.HasIndex(p => p.CorrelationId);
 
         eOrganizationMemberBaseDetail.HasNoKey();
 
@@ -244,6 +259,7 @@ public class DatabaseContext : DbContext
         eAccessRequest.ToTable(nameof(AccessRequest));
         eAccessLease.ToTable(nameof(AccessLease));
         eAccessDecision.ToTable(nameof(AccessDecision));
+        eAccessAuditEvent.ToTable(nameof(AccessAuditEvent));
         eEmergencyAccess.ToTable(nameof(EmergencyAccess));
         eFolder.ToTable(nameof(Folder));
         eGroup.ToTable(nameof(Group));

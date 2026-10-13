@@ -1,0 +1,30 @@
+﻿using Bit.HttpExtensions;
+
+namespace Bit.Services.Pam.Api.Models.Response;
+
+/// <summary>
+/// Where an access rule fails to gate: the collections letting the ciphers it governs through
+/// without a lease.
+/// </summary>
+public class RuleBypassableCiphersResponseModel : ResponseModel
+{
+    public RuleBypassableCiphersResponseModel(Guid ruleId, IEnumerable<Guid> ungatedCollectionIds)
+        : base("ruleBypassableCiphers")
+    {
+        ArgumentNullException.ThrowIfNull(ungatedCollectionIds);
+
+        RuleId = ruleId;
+        UngatedCollectionIds = ungatedCollectionIds.ToList();
+    }
+
+    /// <summary>
+    /// The rule these collections were assessed against.
+    /// </summary>
+    public Guid RuleId { get; }
+
+    /// <summary>
+    /// The collections through which this rule's ciphers are reachable without a lease. Empty means the rule
+    /// protects everything it governs.
+    /// </summary>
+    public IEnumerable<Guid> UngatedCollectionIds { get; }
+}

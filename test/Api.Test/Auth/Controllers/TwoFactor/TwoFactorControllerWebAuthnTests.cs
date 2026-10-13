@@ -314,7 +314,13 @@ public class TwoFactorControllerWebAuthnTests
         SetupGetUserByPrincipalAsync(sutProvider, user);
         SetupUserVerificationTokenFactoryToUnprotectInto(
             sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.WebAuthn));
-        var options = new Fido2NetLib.CredentialCreateOptions();
+        var options = new Fido2NetLib.CredentialCreateOptions
+        {
+            Challenge = [1, 2, 3],
+            Rp = new Fido2NetLib.PublicKeyCredentialRpEntity("example.com", "example.com", ""),
+            User = new Fido2NetLib.Fido2User { Id = user.Id.ToByteArray(), Name = user.Email, DisplayName = user.Name },
+            PubKeyCredParams = []
+        };
         sutProvider.GetDependency<IStartTwoFactorWebAuthnRegistrationCommand>()
             .StartTwoFactorWebAuthnRegistrationAsync(user)
             .Returns(options);

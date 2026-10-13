@@ -12,6 +12,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -1713,6 +1714,51 @@ public class CipherServiceTests
 
     [Theory]
     [BitAutoData]
+    public async Task PurgeAsync_SkipsAttachmentDeletionForCiphersInADefaultUserCollection(
+        Organization org, Cipher defaultCollectionCipher, Cipher regularCipher, Collection defaultCollection,
+        SutProvider<CipherService> sutProvider)
+    {
+        defaultCollection.Type = CollectionType.DefaultUserCollection;
+
+        var attachments = JsonSerializer.Serialize(
+            new Dictionary<string, CipherAttachment.MetaData> { { "attachment1", new CipherAttachment.MetaData() } });
+        foreach (var cipher in new[] { defaultCollectionCipher, regularCipher })
+        {
+            cipher.OrganizationId = org.Id;
+            cipher.Attachments = attachments;
+        }
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(org.Id)
+            .Returns(org);
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByOrganizationIdAsync(org.Id)
+            .Returns(new List<Cipher> { defaultCollectionCipher, regularCipher });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(org.Id)
+            .Returns(new List<Collection> { defaultCollection });
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetManyByOrganizationIdAsync(org.Id)
+            .Returns(new List<CollectionCipher>
+            {
+                new() { CipherId = defaultCollectionCipher.Id, CollectionId = defaultCollection.Id },
+            });
+
+        await sutProvider.Sut.PurgeAsync(org.Id);
+
+        await sutProvider.GetDependency<IAttachmentStorageService>()
+            .DidNotReceive()
+            .DeleteAttachmentsForCipherAsync(defaultCollectionCipher.Id);
+        await sutProvider.GetDependency<IAttachmentStorageService>()
+            .Received(1)
+            .DeleteAttachmentsForCipherAsync(regularCipher.Id);
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .DeleteByOrganizationIdAsync(org.Id);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task SoftDeleteAsync_WithPersonalCipherOwner_SoftDeletesCipher(
         Guid deletingUserId, CipherDetails cipherDetails, SutProvider<CipherService> sutProvider)
     {
@@ -2494,5 +2540,339 @@ public class CipherServiceTests
                 .DidNotReceive()
                 .DeleteAttachmentsForCipherAsync(cipher.Id);
         }
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAttachmentsForOrganizationAsync_ExcludeDefaultUserCollectionCiphers_SkipsCiphersInADefaultCollection(
+        SutProvider<CipherService> sutProvider,
+        Guid organizationId,
+        Collection defaultCollection,
+        Collection sharedCollection,
+        Cipher defaultOnlyCipher,
+        Cipher mixedMembershipCipher,
+        Cipher sharedOnlyCipher)
+    {
+        defaultCollection.Type = CollectionType.DefaultUserCollection;
+        sharedCollection.Type = CollectionType.SharedCollection;
+
+        var attachments = JsonSerializer.Serialize(
+            new Dictionary<string, CipherAttachment.MetaData> { { "attachment1", new CipherAttachment.MetaData() } });
+        foreach (var cipher in new[] { defaultOnlyCipher, mixedMembershipCipher, sharedOnlyCipher })
+        {
+            cipher.Attachments = attachments;
+        }
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<Cipher> { defaultOnlyCipher, mixedMembershipCipher, sharedOnlyCipher });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<Collection> { defaultCollection, sharedCollection });
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<CollectionCipher>
+            {
+                new() { CipherId = defaultOnlyCipher.Id, CollectionId = defaultCollection.Id },
+                new() { CipherId = mixedMembershipCipher.Id, CollectionId = defaultCollection.Id },
+                new() { CipherId = mixedMembershipCipher.Id, CollectionId = sharedCollection.Id },
+                new() { CipherId = sharedOnlyCipher.Id, CollectionId = sharedCollection.Id },
+            });
+
+        await sutProvider.Sut.DeleteAttachmentsForOrganizationAsync(organizationId, excludeDefaultUserCollectionCiphers: true);
+
+        await sutProvider.GetDependency<IAttachmentStorageService>()
+            .DidNotReceive()
+            .DeleteAttachmentsForCipherAsync(defaultOnlyCipher.Id);
+        await sutProvider.GetDependency<IAttachmentStorageService>()
+            .DidNotReceive()
+            .DeleteAttachmentsForCipherAsync(mixedMembershipCipher.Id);
+        await sutProvider.GetDependency<IAttachmentStorageService>()
+            .Received(1)
+            .DeleteAttachmentsForCipherAsync(sharedOnlyCipher.Id);
+    }
+
+    [Theory]
+    [OrganizationCipherCustomize]
+    [BitAutoData]
+    public async Task DeleteAttachmentAsync_WithLimitItemDeletionEnabled_WithEditPermissionOnly_ThrowsBadRequest(
+        Guid deletingUserId, CipherDetails cipherDetails, User user, SutProvider<CipherService> sutProvider)
+    {
+        cipherDetails.OrganizationId = Guid.NewGuid();
+        cipherDetails.Edit = true;
+        cipherDetails.Manage = false;
+        const string attachmentId = "attachment-id";
+        cipherDetails.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            { attachmentId, new CipherAttachment.MetaData { AttachmentId = attachmentId } }
+        });
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(deletingUserId)
+            .Returns(user);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value)
+            .Returns(new OrganizationAbility
+            {
+                Id = cipherDetails.OrganizationId.Value,
+                LimitItemDeletion = true
+            });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.DeleteAttachmentAsync(cipherDetails, attachmentId, deletingUserId));
+
+        Assert.Contains("do not have permissions", exception.Message);
+        await sutProvider.GetDependency<ICipherRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAttachmentAsync(default, default);
+        await sutProvider.GetDependency<IAttachmentStorageService>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAttachmentAsync(default, default);
+    }
+
+    [Theory]
+    [OrganizationCipherCustomize]
+    [BitAutoData]
+    public async Task DeleteAttachmentAsync_WithLimitItemDeletionEnabled_WithManagePermission_DeletesAttachment(
+        Guid deletingUserId, CipherDetails cipherDetails, User user, SutProvider<CipherService> sutProvider)
+    {
+        cipherDetails.OrganizationId = Guid.NewGuid();
+        cipherDetails.Edit = false;
+        cipherDetails.Manage = true;
+        const string attachmentId = "attachment-id";
+        cipherDetails.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            { attachmentId, new CipherAttachment.MetaData { AttachmentId = attachmentId } }
+        });
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(deletingUserId)
+            .Returns(user);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value)
+            .Returns(new OrganizationAbility
+            {
+                Id = cipherDetails.OrganizationId.Value,
+                LimitItemDeletion = true
+            });
+
+        await sutProvider.Sut.DeleteAttachmentAsync(cipherDetails, attachmentId, deletingUserId);
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .DeleteAttachmentAsync(cipherDetails.Id, attachmentId);
+    }
+
+    [Theory]
+    [OrganizationCipherCustomize]
+    [BitAutoData]
+    public async Task DeleteAttachmentAsync_WithLimitItemDeletionDisabled_WithEditPermission_DeletesAttachment(
+        Guid deletingUserId, CipherDetails cipherDetails, User user, SutProvider<CipherService> sutProvider)
+    {
+        cipherDetails.OrganizationId = Guid.NewGuid();
+        cipherDetails.Edit = true;
+        cipherDetails.Manage = false;
+        const string attachmentId = "attachment-id";
+        cipherDetails.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            { attachmentId, new CipherAttachment.MetaData { AttachmentId = attachmentId } }
+        });
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(deletingUserId)
+            .Returns(user);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value)
+            .Returns(new OrganizationAbility
+            {
+                Id = cipherDetails.OrganizationId.Value,
+                LimitItemDeletion = false
+            });
+
+        await sutProvider.Sut.DeleteAttachmentAsync(cipherDetails, attachmentId, deletingUserId);
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .DeleteAttachmentAsync(cipherDetails.Id, attachmentId);
+    }
+
+    [Theory]
+    [OrganizationCipherCustomize]
+    [BitAutoData]
+    public async Task DeleteAttachmentAsync_WithLimitItemDeletionEnabled_AsOrgAdmin_DeletesAttachment(
+        Guid deletingUserId, CipherDetails cipherDetails, SutProvider<CipherService> sutProvider)
+    {
+        cipherDetails.OrganizationId = Guid.NewGuid();
+        cipherDetails.Edit = false;
+        cipherDetails.Manage = false;
+        const string attachmentId = "attachment-id";
+        cipherDetails.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            { attachmentId, new CipherAttachment.MetaData { AttachmentId = attachmentId } }
+        });
+
+        await sutProvider.Sut.DeleteAttachmentAsync(cipherDetails, attachmentId, deletingUserId, orgAdmin: true);
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .DeleteAttachmentAsync(cipherDetails.Id, attachmentId);
+    }
+
+    [Theory]
+    [OrganizationCipherCustomize]
+    [BitAutoData]
+    public async Task DeleteAttachmentAsync_AsOrgAdmin_ReplacesWithPlainCipher_PreservingArchives(
+        Guid deletingUserId, CipherDetails cipherDetails, SutProvider<CipherService> sutProvider)
+    {
+        cipherDetails.OrganizationId = Guid.NewGuid();
+        cipherDetails.Archives = "{\"archived\":true}";
+        const string attachmentId = "attachment-id";
+        cipherDetails.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            { attachmentId, new CipherAttachment.MetaData { AttachmentId = attachmentId } }
+        });
+
+        await sutProvider.Sut.DeleteAttachmentAsync(cipherDetails, attachmentId, deletingUserId, orgAdmin: true);
+
+        // Cipher_Update only accepts Cipher's own properties and Dapper builds its parameters from
+        // the runtime type, so the org admin path must not hand a CipherDetails to this overload.
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<Cipher>(c => c.GetType() == typeof(Cipher) && c.Archives == cipherDetails.Archives));
+        await sutProvider.GetDependency<ICipherRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(Arg.Any<CipherDetails>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateBulkCollectionAssignmentAsync_CipherInAnotherUsersDefaultCollection_ThrowsNotFound(
+        SutProvider<CipherService> sutProvider,
+        Guid userId,
+        Cipher cipher,
+        Collection defaultCollection,
+        List<Guid> targetCollectionIds)
+    {
+        cipher.OrganizationId = Guid.NewGuid();
+        defaultCollection.Type = CollectionType.DefaultUserCollection;
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipher.Id)
+            .Returns(cipher);
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetCollectionIdsByCipherIdAsync(cipher.Id)
+            .Returns(new List<Guid> { defaultCollection.Id });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection> { defaultCollection });
+        // The acting user owns no default collections.
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByUserIdAsync(userId)
+            .Returns(new List<CollectionDetails>());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.ValidateBulkCollectionAssignmentAsync(targetCollectionIds, new[] { cipher.Id }, userId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateBulkCollectionAssignmentAsync_CipherInOwnDefaultCollection_DoesNotThrow(
+        SutProvider<CipherService> sutProvider,
+        Guid userId,
+        Cipher cipher,
+        Collection defaultCollection,
+        List<Guid> targetCollectionIds)
+    {
+        cipher.OrganizationId = Guid.NewGuid();
+        defaultCollection.Type = CollectionType.DefaultUserCollection;
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipher.Id)
+            .Returns(cipher);
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetCollectionIdsByCipherIdAsync(cipher.Id)
+            .Returns(new List<Guid> { defaultCollection.Id });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection> { defaultCollection });
+        // The acting user owns the default collection the cipher lives in.
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByUserIdAsync(userId)
+            .Returns(new List<CollectionDetails>
+            {
+                new() { Id = defaultCollection.Id, Type = CollectionType.DefaultUserCollection }
+            });
+
+        await sutProvider.Sut.ValidateBulkCollectionAssignmentAsync(targetCollectionIds, new[] { cipher.Id }, userId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateBulkCollectionAssignmentAsync_AddingCipherAlreadyInSharedCollection_DoesNotThrow(
+        SutProvider<CipherService> sutProvider,
+        Guid userId,
+        Cipher cipher,
+        Collection foreignDefaultCollection,
+        Collection sharedCollection,
+        List<Guid> targetCollectionIds)
+    {
+        cipher.OrganizationId = Guid.NewGuid();
+        foreignDefaultCollection.Type = CollectionType.DefaultUserCollection;
+        sharedCollection.Type = CollectionType.SharedCollection;
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipher.Id)
+            .Returns(cipher);
+        // The cipher already lives in a shared collection alongside another member's default collection.
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetCollectionIdsByCipherIdAsync(cipher.Id)
+            .Returns(new List<Guid> { foreignDefaultCollection.Id, sharedCollection.Id });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection> { foreignDefaultCollection, sharedCollection });
+
+        await sutProvider.Sut.ValidateBulkCollectionAssignmentAsync(targetCollectionIds, new[] { cipher.Id }, userId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateBulkCollectionAssignmentAsync_RemovingAnotherUsersDefaultCollection_ThrowsNotFound(
+        SutProvider<CipherService> sutProvider,
+        Guid userId,
+        Cipher cipher,
+        Collection defaultCollection)
+    {
+        defaultCollection.Type = CollectionType.DefaultUserCollection;
+        var targetCollectionIds = new[] { defaultCollection.Id };
+
+        // The requested (removed) collection is another member's default collection.
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection> { defaultCollection });
+        // The acting user owns no default collections.
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByUserIdAsync(userId)
+            .Returns(new List<CollectionDetails>());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.ValidateBulkCollectionAssignmentAsync(targetCollectionIds, new[] { cipher.Id }, userId, removeCollections: true));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateBulkCollectionAssignmentAsync_RemovingSharedCollection_DoesNotThrow(
+        SutProvider<CipherService> sutProvider,
+        Guid userId,
+        Cipher cipher,
+        Collection sharedCollection)
+    {
+        cipher.OrganizationId = Guid.NewGuid();
+        sharedCollection.Type = CollectionType.SharedCollection;
+        var targetCollectionIds = new[] { sharedCollection.Id };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipher.Id)
+            .Returns(cipher);
+        // The requested (removed) collection is shared, not a default collection, so removal is allowed
+        // even though the cipher may also live in another member's default collection.
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection> { sharedCollection });
+
+        await sutProvider.Sut.ValidateBulkCollectionAssignmentAsync(targetCollectionIds, new[] { cipher.Id }, userId, removeCollections: true);
     }
 }

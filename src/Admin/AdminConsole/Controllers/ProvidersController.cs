@@ -449,13 +449,21 @@ public class ProvidersController : Controller
         }
 
         var providerPlans = await _providerPlanRepository.GetByProviderId(id);
-        var payByInvoice = ((await _subscriberService.GetCustomer(provider))?.ApprovedToPayByInvoice() ?? false);
+        var customer = await _subscriberService.GetCustomer(provider);
+        if (customer is { Deleted: true })
+        {
+            TempData["Warning"] =
+                "Billing information could not be fully loaded. The Stripe customer may have been deleted. " +
+                "You can still edit the provider and set a valid Gateway Customer ID.";
+        }
+        var payByInvoice = customer?.ApprovedToPayByInvoice() ?? false;
 
         return new ProviderEditModel(
             provider, users, providerOrganizations,
             providerPlans.ToList(), payByInvoice, GetGatewayCustomerUrl(provider), GetGatewaySubscriptionUrl(provider));
     }
 
+    [HttpPost]
     [RequirePermission(Permission.Provider_ResendEmailInvite)]
     public async Task<IActionResult> ResendInvite(Guid ownerId, Guid providerId)
     {
@@ -498,6 +506,7 @@ public class ProvidersController : Controller
     }
 
     [HttpPost]
+    [RequirePermission(Permission.Provider_Edit)]
     public async Task<IActionResult> AddExistingOrganization(Guid id, OrganizationUnassignedToProviderSearchViewModel model)
     {
         var organizationIds = model.Items.Where(o => o.Selected).Select(o => o.Id).ToArray();
@@ -510,6 +519,7 @@ public class ProvidersController : Controller
     }
 
     [HttpGet]
+    [RequirePermission(Permission.Provider_Edit)]
     public async Task<IActionResult> CreateOrganization(Guid providerId)
     {
         var provider = await _providerRepository.GetByIdAsync(providerId);
@@ -524,6 +534,7 @@ public class ProvidersController : Controller
     }
 
     [HttpPost]
+    [RequirePermission(Permission.Provider_Edit)]
     public async Task<IActionResult> CreateOrganization(Guid providerId, OrganizationEditModel model)
     {
         var provider = await _providerRepository.GetByIdAsync(providerId);

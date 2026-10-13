@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.V
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Payments;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities.Errors;
 using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
@@ -57,8 +58,11 @@ public class InviteUsersPasswordManagerValidator(
 
         if (subscriptionUpdate.MaxSeatsExceeded)
         {
-            return new Invalid<PasswordManagerSubscriptionUpdate>(
-                new PasswordManagerSeatLimitHasBeenReachedError(subscriptionUpdate));
+            Error<PasswordManagerSubscriptionUpdate> seatLimitError = subscriptionUpdate.CanManageBilling
+                ? new PasswordManagerSeatLimitHasBeenReachedError(subscriptionUpdate)
+                : new PasswordManagerSeatLimitHasBeenReachedNoBillingAccessError(subscriptionUpdate);
+
+            return new Invalid<PasswordManagerSubscriptionUpdate>(seatLimitError);
         }
 
         if (subscriptionUpdate.PasswordManagerPlan.HasAdditionalSeatsOption is false)
@@ -99,7 +103,7 @@ public class InviteUsersPasswordManagerValidator(
 
         if (provider is not null)
         {
-            var providerValidationResult = InvitingUserOrganizationProviderValidator.Validate(new InviteOrganizationProvider(provider));
+            var providerValidationResult = InvitingUserOrganizationProviderValidator.Validate(new InviteOrganizationProvider(provider, request.Seats));
 
             if (providerValidationResult is Invalid<InviteOrganizationProvider> invalidProviderValidation)
             {

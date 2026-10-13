@@ -9,7 +9,8 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements
 /// It provides sensible defaults to help teams to implement their own Policy Requirements.
 /// </summary>
 /// <typeparam name="T"></typeparam>
-public abstract class BasePolicyRequirementFactory<T> : IPolicyRequirementFactory<T> where T : IPolicyRequirement
+public abstract class BasePolicyRequirementFactory<T> : IPolicyRequirementFactory<T>, IPreAccessPolicyRequirementFactory
+    where T : IPolicyRequirement
 {
     /// <summary>
     /// User roles that are exempt from policy enforcement.
@@ -38,6 +39,11 @@ public abstract class BasePolicyRequirementFactory<T> : IPolicyRequirementFactor
         => !policyDetails.HasRole(ExemptRoles) &&
             !policyDetails.HasStatus(ExemptStatuses) &&
             (!policyDetails.IsProvider || !ExemptProviders);
+
+    /// <inheritdoc />
+    public bool EnforcePreAccess(OrganizationUserType proposedRole, bool isProvider)
+        => !ExemptRoles.Contains(proposedRole) &&
+            (!isProvider || !ExemptProviders);
 
     /// <inheritdoc />
     public abstract T Create(IEnumerable<PolicyDetails> policyDetails);

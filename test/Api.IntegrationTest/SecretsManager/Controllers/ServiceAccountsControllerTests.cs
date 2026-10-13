@@ -955,7 +955,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
                 OrganizationId = organizationId
             });
 
-        var secret = await _secretRepository.CreateAsync(new Secret
+        var secret = await _secretRepository.CreateWithInitialVersionAsync(new Secret
         {
             Key = _mockEncryptedString,
             Value = _mockEncryptedString,
@@ -963,7 +963,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
             Projects = [project]
         });
 
-        var secretNoProject = await _secretRepository.CreateAsync(new Secret
+        var secretNoProject = await _secretRepository.CreateWithInitialVersionAsync(new Secret
         {
             Key = _mockEncryptedString,
             Value = _mockEncryptedString,

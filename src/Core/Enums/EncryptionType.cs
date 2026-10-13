@@ -6,9 +6,8 @@ public enum EncryptionType : byte
 {
     // symmetric
     AesCbc256_B64 = 0,
-    AesCbc128_HmacSha256_B64 = 1,
     AesCbc256_HmacSha256_B64 = 2,
-    XChaCha20Poly1305_B64 = 7,
+    CoseEncrypt0B64 = 7,
 
     // asymmetric
     [Obsolete("PM-29656 - Should probably be removed as it is not known to exist in the real world")]

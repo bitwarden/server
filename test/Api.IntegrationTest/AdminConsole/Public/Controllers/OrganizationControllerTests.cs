@@ -2,13 +2,10 @@
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Public.Controllers;
@@ -26,8 +23,6 @@ public class OrganizationControllerTests : IClassFixture<ApiApplicationFactory>,
     public OrganizationControllerTests(ApiApplicationFactory factory)
     {
         _factory = factory;
-        // The substitution must be registered before the host is built; each test sets the flag values it needs
-        _factory.SubstituteService<IFeatureService>(_ => { });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
@@ -55,10 +50,6 @@ public class OrganizationControllerTests : IClassFixture<ApiApplicationFactory>,
     [Fact]
     public async Task Import_InviteUsersAfterProvisioningDisabled_CreatesStagedUsers()
     {
-        _factory.GetService<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM34423StagedStatus)
-            .Returns(true);
-
         var email1 = $"integration-test{Guid.NewGuid()}@bitwarden.com";
         var email2 = $"integration-test{Guid.NewGuid()}@bitwarden.com";
         var request = new OrganizationImportRequestModel
@@ -94,10 +85,6 @@ public class OrganizationControllerTests : IClassFixture<ApiApplicationFactory>,
     [Fact]
     public async Task Import_InviteUsersAfterProvisioningOmitted_InvitesUsers()
     {
-        _factory.GetService<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM34423StagedStatus)
-            .Returns(true);
-
         var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
 
         // Omit inviteUsersAfterProvisioning entirely - a missing value must default to the invite flow

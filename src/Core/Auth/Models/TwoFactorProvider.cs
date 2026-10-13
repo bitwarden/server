@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Bit.Core.Auth.Enums;
+using Fido2NetLib;
 using Fido2NetLib.Objects;
 
 namespace Bit.Core.Auth.Models;
@@ -14,6 +15,18 @@ public class TwoFactorProvider
 
     public class WebAuthnData
     {
+        /// <remarks>
+        /// WebAuthn keys are persisted through <c>JsonHelpers.LegacySerialize</c>. Newtonsoft.Json
+        /// ignores System.Text.Json's <c>[JsonConverter(typeof(Base64UrlConverter))]</c> —
+        /// so <c>PublicKeyCredentialDescriptor.Id</c> is written as standard Base64. Fido2 v4
+        /// tightened <c>Base64UrlConverter</c> to reject some standard Base64 characters ('+' and '/').
+        /// Relaxed decoding accepts Base64Url, so it widens what is allowed.
+        /// </remarks>
+        static WebAuthnData()
+        {
+            Base64UrlConverter.EnableRelaxedDecoding = true;
+        }
+
         public WebAuthnData() { }
 
         public WebAuthnData(dynamic o)
