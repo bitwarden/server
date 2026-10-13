@@ -98,8 +98,9 @@ public class OrganizationSponsorshipsControllerTests : IClassFixture<ApiApplicat
         await _loginHelper.LoginAsync(attackerEmail);
 
         // Act
-        var response = await _client.SendAsync(new HttpRequestMessage(
-            new HttpMethod(method), $"organization/sponsorship/{_organization.Id}{suffix}"));
+        using var message = new HttpRequestMessage(
+            new HttpMethod(method), $"organization/sponsorship/{_organization.Id}{suffix}");
+        var response = await _client.SendAsync(message);
 
         // Assert
         Assert.True(
