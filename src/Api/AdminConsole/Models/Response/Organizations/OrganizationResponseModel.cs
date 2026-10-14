@@ -146,7 +146,8 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
     public OrganizationSubscriptionResponseModel(
         Organization organization,
         Plan plan,
-        int? occupiedPamSeats = null) : base(organization, plan, "organizationSubscription")
+        int? occupiedPamSeats = null,
+        bool? isOnPamSalesInitiatedTrial = null) : base(organization, plan, "organizationSubscription")
     {
         Expiration = organization.ExpirationDate;
         StorageName = organization.Storage.HasValue ?
@@ -155,10 +156,7 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
             Math.Round(organization.Storage.Value / 1073741824D, 2) : 0; // 1 GB
         ExemptFromBillingAutomation = organization.ExemptFromBillingAutomation;
         OccupiedPamSeats = occupiedPamSeats;
-        if (plan != null)
-        {
-            IsOnPamSalesInitiatedTrial = plan.SupportsPrivilegedControls && organization.UsePam;
-        }
+        IsOnPamSalesInitiatedTrial = isOnPamSalesInitiatedTrial;
     }
 
     public OrganizationSubscriptionResponseModel(
@@ -167,17 +165,14 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
         Plan plan,
         bool hideSensitiveData,
         PendingAnnualUpgrade pendingAnnualUpgrade = null,
-        int? occupiedPamSeats = null) : this(organization, plan, occupiedPamSeats)
+        int? occupiedPamSeats = null,
+        bool? isOnPamSalesInitiatedTrial = null) : this(organization, plan, occupiedPamSeats, isOnPamSalesInitiatedTrial)
     {
         Subscription = subscription.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
         PendingAnnualUpgrade = pendingAnnualUpgrade != null
             ? new PendingAnnualUpgradeResponseModel(pendingAnnualUpgrade)
             : null;
         SmServiceAccountsGrace = subscription.Subscription?.ServiceAccountGrace;
-        if (subscription.Subscription?.HasPrivilegedControlsSeats == true)
-        {
-            IsOnPamSalesInitiatedTrial = false;
-        }
         UpcomingInvoice = subscription.UpcomingInvoice != null ? new BillingSubscriptionUpcomingInvoice(subscription.UpcomingInvoice) : null;
         CustomerDiscount = subscription.CustomerDiscount != null ? new BillingCustomerDiscount(subscription.CustomerDiscount) : null;
         Expiration = DateTime.UtcNow.AddYears(1); // Not used, so just give it a value.
