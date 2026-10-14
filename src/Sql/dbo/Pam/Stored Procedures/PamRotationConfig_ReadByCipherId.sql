@@ -5,7 +5,10 @@ BEGIN
     SET NOCOUNT ON
 
     -- OneConfigPerCipher: at most one row can ever match.
-    SELECT *
-    FROM [dbo].[PamRotationConfig]
-    WHERE [CipherId] = @CipherId
+    SELECT
+        *
+    FROM
+        [dbo].[PamRotationConfigView]
+    WHERE
+        [CipherId] = @CipherId
 END

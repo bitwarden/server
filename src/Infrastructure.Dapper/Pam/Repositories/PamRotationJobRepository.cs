@@ -55,7 +55,7 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
         await using var connection = new SqlConnection(ConnectionString);
         // The procedure always returns one row, with columns matching PamRotationClaimResult.
         return await connection.QuerySingleAsync<PamRotationClaimResult>(
-            "[dbo].[PamRotationJob_Claim]",
+            "[dbo].[PamRotationJob_UpdateClaim]",
             new
             {
                 JobId = jobId,
@@ -141,7 +141,7 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
     {
         await using var connection = new SqlConnection(ConnectionString);
         var result = await connection.ExecuteScalarAsync<int>(
-            "[dbo].[PamRotationAttempt_AcceptCipherWrite]",
+            "[dbo].[PamRotationAttempt_UpdateCipherData]",
             new
             {
                 AttemptId = attemptId,
@@ -160,7 +160,7 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
     {
         await using var connection = new SqlConnection(ConnectionString);
         var result = await connection.ExecuteScalarAsync<int>(
-            "[dbo].[PamRotationAttempt_MarkRotated]",
+            "[dbo].[PamRotationAttempt_UpdateRotated]",
             new
             {
                 AttemptId = attemptId,
@@ -179,7 +179,7 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
         await using var connection = new SqlConnection(ConnectionString);
         // The Rejected row returns NULL for ErroredAttemptCount, which PamRotationFailureResult cannot hold.
         var row = await connection.QuerySingleAsync<MarkErroredRow>(
-            "[dbo].[PamRotationAttempt_MarkErrored]",
+            "[dbo].[PamRotationAttempt_UpdateErrored]",
             new
             {
                 AttemptId = attemptId,
@@ -204,7 +204,7 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
     {
         await using var connection = new SqlConnection(ConnectionString);
         var results = await connection.QueryAsync<PamTimedOutJob>(
-            "[dbo].[PamRotationJob_TimeoutDue]",
+            "[dbo].[PamRotationJobTimeoutSweep_CreateManyDue]",
             new { Now = now },
             commandType: CommandType.StoredProcedure);
 
@@ -216,7 +216,7 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
     {
         await using var connection = new SqlConnection(ConnectionString);
         var results = await connection.QueryAsync<PamReleasedJob>(
-            "[dbo].[PamRotationJob_ReleaseExpiredLeases]",
+            "[dbo].[PamRotationJob_UpdateManyReleaseExpiredLeases]",
             new
             {
                 Now = now,

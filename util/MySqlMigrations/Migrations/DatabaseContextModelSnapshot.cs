@@ -2755,7 +2755,7 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<DateTime?>("LastHeartbeatAt")
+                    b.Property<DateTime?>("LastHeartbeatDate")
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("Name")
@@ -2880,10 +2880,10 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("Enabled")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<DateTime?>("LastRotationAt")
+                    b.Property<DateTime?>("LastRotationDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<DateTime?>("NextRotationAt")
+                    b.Property<DateTime?>("NextRotationDate")
                         .HasColumnType("datetime(6)");
 
                     b.Property<Guid>("OrganizationId")
@@ -2912,7 +2912,7 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasIndex("CipherId")
                         .IsUnique();
 
-                    b.HasIndex("NextRotationAt");
+                    b.HasIndex("NextRotationDate");
 
                     b.HasIndex("OrganizationId");
 
@@ -2929,19 +2929,19 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<byte>("Action")
                         .HasColumnType("tinyint unsigned");
 
-                    b.Property<DateTime?>("ClaimedAt")
-                        .HasColumnType("datetime(6)");
-
                     b.Property<Guid?>("ClaimedByAccessConnectorId")
                         .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("ClaimedDate")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<DateTime>("ExpiresAt")
+                    b.Property<DateTime>("ExpirationDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<DateTime>("NextClaimableAt")
+                    b.Property<DateTime>("NextClaimableDate")
                         .HasColumnType("datetime(6)");
 
                     b.Property<Guid>("RotationConfigId")
@@ -2952,7 +2952,7 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Action", "ExpiresAt");
+                    b.HasIndex("Action", "ExpirationDate");
 
                     b.HasIndex("ClaimedByAccessConnectorId", "Action");
 

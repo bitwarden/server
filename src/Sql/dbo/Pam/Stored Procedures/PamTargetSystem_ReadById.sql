@@ -4,7 +4,10 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT *
-    FROM [dbo].[PamTargetSystem]
-    WHERE [Id] = @Id
+    SELECT
+        *
+    FROM
+        [dbo].[PamTargetSystemView]
+    WHERE
+        [Id] = @Id
 END

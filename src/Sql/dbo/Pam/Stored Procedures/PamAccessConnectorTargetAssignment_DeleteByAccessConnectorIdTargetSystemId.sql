@@ -5,6 +5,10 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    DELETE FROM [dbo].[PamAccessConnectorTargetAssignment]
-    WHERE [AccessConnectorId] = @AccessConnectorId AND [TargetSystemId] = @TargetSystemId
+    DELETE
+    FROM
+        [dbo].[PamAccessConnectorTargetAssignment]
+    WHERE
+        [AccessConnectorId] = @AccessConnectorId
+        AND [TargetSystemId] = @TargetSystemId
 END

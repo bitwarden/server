@@ -19,7 +19,7 @@ public class PamRotationJob : ITableObject<Guid>
 
     /// <summary>
     /// Who holds the job, or how it ended; <see cref="PamRotationStatusDerivation.ComputeJobStatus"/> derives the
-    /// status from it against <see cref="ExpiresAt"/>. Doubles as the concurrency token for the guarded UPDATEs.
+    /// status from it against <see cref="ExpirationDate"/>. Doubles as the concurrency token for the guarded UPDATEs.
     /// </summary>
     public PamRotationJobAction Action { get; set; }
 
@@ -29,18 +29,18 @@ public class PamRotationJob : ITableObject<Guid>
 
     /// <summary>When the current claim was taken, and so its attempt's <see cref="PamRotationAttempt.CreationDate"/>.
     /// Null unless <see cref="Action"/> is <see cref="PamRotationJobAction.Claimed"/>.</summary>
-    public DateTime? ClaimedAt { get; set; }
+    public DateTime? ClaimedDate { get; set; }
 
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
 
     /// <summary>Pushed out by a retry's exponential backoff or by a release.</summary>
-    public DateTime NextClaimableAt { get; set; }
+    public DateTime NextClaimableDate { get; set; }
 
     /// <summary>
     /// <c>CreationDate + JobTtl</c>, persisted at creation. From this point on an unresolved job derives as
     /// <see cref="PamRotationJobStatus.TimedOut"/>; the sweep records the timeout once (spec <c>JobTimesOut</c>).
     /// </summary>
-    public DateTime ExpiresAt { get; set; }
+    public DateTime ExpirationDate { get; set; }
 
     public void SetNewId()
     {

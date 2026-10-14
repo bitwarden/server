@@ -18,7 +18,7 @@ public interface IPamAccessConnectorRepository : IRepository<PamAccessConnector,
     Task<PamAccessConnectorDetails?> GetDetailsByApiKeyIdAsync(Guid apiKeyId);
 
     /// <summary>
-    /// Bumps <see cref="PamAccessConnector.LastHeartbeatAt"/> only when it is null or older than
+    /// Bumps <see cref="PamAccessConnector.LastHeartbeatDate"/> only when it is null or older than
     /// <paramref name="minInterval"/>, so a polling access connector does not write on every request.
     /// </summary>
     Task UpdateHeartbeatAsync(Guid accessConnectorId, DateTime now, TimeSpan minInterval);

@@ -36,7 +36,7 @@ public class PamRotationConfigRepositoryTests
             SealedData = "sealed-rotation-config-blob",
             ScheduleCron = "0 0/15 * * * ?",
             RotateOnAccessEnd = true,
-            NextRotationAt = now.AddMinutes(15),
+            NextRotationDate = now.AddMinutes(15),
             Enabled = true,
             CreationDate = now,
             RevisionDate = now,
@@ -50,9 +50,9 @@ public class PamRotationConfigRepositoryTests
         Assert.Equal("sealed-rotation-config-blob", persisted.SealedData);
         Assert.Equal("0 0/15 * * * ?", persisted.ScheduleCron);
         Assert.True(persisted.RotateOnAccessEnd);
-        Assert.Equal(now.AddMinutes(15), persisted.NextRotationAt.Value, LaxDateTimeComparer.Default);
+        Assert.Equal(now.AddMinutes(15), persisted.NextRotationDate.Value, LaxDateTimeComparer.Default);
         Assert.True(persisted.Enabled);
-        Assert.Null(persisted.LastRotationAt);
+        Assert.Null(persisted.LastRotationDate);
 
         var byCipher = await pamRotationConfigRepository.GetByCipherIdAsync(cipher.Id);
         Assert.NotNull(byCipher);
@@ -129,25 +129,25 @@ public class PamRotationConfigRepositoryTests
 
         var due = await pamRotationConfigRepository.CreateAsync(
             BuildConfig(organization.Id, (await CreateCipherAsync(cipherRepository, organization.Id)).Id, activeTarget.Id, now,
-                nextRotationAt: now.AddMinutes(-1)));
+                nextRotationDate: now.AddMinutes(-1)));
         await pamRotationConfigRepository.CreateAsync(
             BuildConfig(organization.Id, (await CreateCipherAsync(cipherRepository, organization.Id)).Id, activeTarget.Id, now,
-                enabled: false, nextRotationAt: now.AddMinutes(-1)));
+                enabled: false, nextRotationDate: now.AddMinutes(-1)));
         await pamRotationConfigRepository.CreateAsync(
             BuildConfig(organization.Id, (await CreateCipherAsync(cipherRepository, organization.Id)).Id, disabledTarget.Id, now,
-                nextRotationAt: now.AddMinutes(-1)));
+                nextRotationDate: now.AddMinutes(-1)));
         await pamRotationConfigRepository.CreateAsync(
             BuildConfig(organization.Id, (await CreateCipherAsync(cipherRepository, organization.Id)).Id, pendingSealTarget.Id, now,
-                nextRotationAt: now.AddMinutes(-1)));
+                nextRotationDate: now.AddMinutes(-1)));
         await pamRotationConfigRepository.CreateAsync(
             BuildConfig(organization.Id, (await CreateCipherAsync(cipherRepository, organization.Id)).Id, manualTarget.Id, now,
-                nextRotationAt: now.AddMinutes(-1)));
+                nextRotationDate: now.AddMinutes(-1)));
         await pamRotationConfigRepository.CreateAsync(
             BuildConfig(organization.Id, (await CreateCipherAsync(cipherRepository, organization.Id)).Id, activeTarget.Id, now,
-                nextRotationAt: now.AddHours(1)));
+                nextRotationDate: now.AddHours(1)));
         await pamRotationConfigRepository.CreateAsync(
             BuildConfig(organization.Id, (await CreateCipherAsync(cipherRepository, organization.Id)).Id, activeTarget.Id, now,
-                nextRotationAt: null));
+                nextRotationDate: null));
 
         // The sweep is global, so scope the assertion to this test's own rows.
         var dueConfigs = await pamRotationConfigRepository.GetManyDueAsync(now);
@@ -356,14 +356,14 @@ public class PamRotationConfigRepositoryTests
         });
 
     private static PamRotationConfig BuildConfig(Guid organizationId, Guid cipherId, Guid targetSystemId, DateTime now,
-        bool enabled = true, DateTime? nextRotationAt = null) => new()
+        bool enabled = true, DateTime? nextRotationDate = null) => new()
         {
             OrganizationId = organizationId,
             CipherId = cipherId,
             TargetSystemId = targetSystemId,
             SealedData = "sealed-blob",
             RotateOnAccessEnd = false,
-            NextRotationAt = nextRotationAt,
+            NextRotationDate = nextRotationDate,
             Enabled = enabled,
             CreationDate = now,
             RevisionDate = now,
@@ -376,7 +376,7 @@ public class PamRotationConfigRepositoryTests
         Source = PamRotationSource.Scheduled,
         Action = PamRotationJobAction.None,
         CreationDate = now,
-        NextClaimableAt = now,
-        ExpiresAt = now.AddHours(1),
+        NextClaimableDate = now,
+        ExpirationDate = now.AddHours(1),
     };
 }

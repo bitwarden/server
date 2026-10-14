@@ -2761,7 +2761,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("LastHeartbeatAt")
+                    b.Property<DateTime?>("LastHeartbeatDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Name")
@@ -2886,10 +2886,10 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("Enabled")
                         .HasColumnType("boolean");
 
-                    b.Property<DateTime?>("LastRotationAt")
+                    b.Property<DateTime?>("LastRotationDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("NextRotationAt")
+                    b.Property<DateTime?>("NextRotationDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("OrganizationId")
@@ -2918,7 +2918,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasIndex("CipherId")
                         .IsUnique();
 
-                    b.HasIndex("NextRotationAt");
+                    b.HasIndex("NextRotationDate");
 
                     b.HasIndex("OrganizationId");
 
@@ -2935,19 +2935,19 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<byte>("Action")
                         .HasColumnType("smallint");
 
-                    b.Property<DateTime?>("ClaimedAt")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<Guid?>("ClaimedByAccessConnectorId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ClaimedDate")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime>("ExpiresAt")
+                    b.Property<DateTime>("ExpirationDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime>("NextClaimableAt")
+                    b.Property<DateTime>("NextClaimableDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("RotationConfigId")
@@ -2958,7 +2958,7 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Action", "ExpiresAt");
+                    b.HasIndex("Action", "ExpirationDate");
 
                     b.HasIndex("ClaimedByAccessConnectorId", "Action");
 

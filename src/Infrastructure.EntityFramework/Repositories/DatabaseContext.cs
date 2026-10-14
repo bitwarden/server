@@ -305,7 +305,7 @@ public class DatabaseContext : DbContext
         ePamRotationConfig.Property(p => p.Id).ValueGeneratedNever();
         // OneConfigPerCipher.
         ePamRotationConfig.HasIndex(p => p.CipherId).IsUnique();
-        ePamRotationConfig.HasIndex(p => p.NextRotationAt);
+        ePamRotationConfig.HasIndex(p => p.NextRotationDate);
         ePamRotationConfig.HasIndex(p => p.OrganizationId);
         ePamRotationConfig.HasIndex(p => p.TargetSystemId);
         ePamRotationConfig
@@ -321,7 +321,7 @@ public class DatabaseContext : DbContext
 
         ePamRotationJob.Property(p => p.Id).ValueGeneratedNever();
         ePamRotationJob.HasIndex(p => new { p.RotationConfigId, p.Action });
-        ePamRotationJob.HasIndex(p => new { p.Action, p.ExpiresAt });
+        ePamRotationJob.HasIndex(p => new { p.Action, p.ExpirationDate });
         ePamRotationJob.HasIndex(p => new { p.ClaimedByAccessConnectorId, p.Action });
         ePamRotationJob
             .HasOne<PamRotationConfig>()

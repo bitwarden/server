@@ -7,12 +7,12 @@ BEGIN
     CREATE TABLE [dbo].[PamTargetSystem] (
         [Id]                            UNIQUEIDENTIFIER    NOT NULL,
         [OrganizationId]                UNIQUEIDENTIFIER    NOT NULL,
-        [Name]                          NVARCHAR(200)        NOT NULL,
-        [Method]                        TINYINT              NOT NULL,
-        [Status]                        TINYINT              NOT NULL,
-        [CreationDate]                  DATETIME2(7)         NOT NULL,
-        [RevisionDate]                  DATETIME2(7)         NOT NULL,
-        [SealedData]                    NVARCHAR(MAX)        NULL,
+        [Name]                          NVARCHAR(200)       NOT NULL,
+        [Method]                        TINYINT             NOT NULL,
+        [Status]                        TINYINT             NOT NULL,
+        [CreationDate]                  DATETIME2(7)        NOT NULL,
+        [RevisionDate]                  DATETIME2(7)        NOT NULL,
+        [SealedData]                    NVARCHAR(MAX)       NULL,
         CONSTRAINT [PK_PamTargetSystem] PRIMARY KEY CLUSTERED ([Id] ASC),
         CONSTRAINT [FK_PamTargetSystem_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE
     );
@@ -34,7 +34,7 @@ BEGIN
         [Name]              NVARCHAR(200)       NOT NULL,
         [ApiKeyId]          UNIQUEIDENTIFIER    NOT NULL,
         [Status]            TINYINT             NOT NULL,
-        [LastHeartbeatAt]   DATETIME2(7)        NULL,
+        [LastHeartbeatDate] DATETIME2(7)        NULL,
         [CreationDate]      DATETIME2(7)        NOT NULL,
         [RevisionDate]      DATETIME2(7)        NOT NULL,
         CONSTRAINT [PK_PamAccessConnector] PRIMARY KEY CLUSTERED ([Id] ASC),
@@ -104,9 +104,9 @@ BEGIN
         [TargetSystemId]        UNIQUEIDENTIFIER    NOT NULL,
         [ScheduleCron]          NVARCHAR(100)       NULL,
         [RotateOnAccessEnd]     BIT                 NOT NULL,
-        [NextRotationAt]        DATETIME2(7)        NULL,
+        [NextRotationDate]      DATETIME2(7)        NULL,
         [Enabled]               BIT                 NOT NULL,
-        [LastRotationAt]        DATETIME2(7)        NULL,
+        [LastRotationDate]      DATETIME2(7)        NULL,
         [CreationDate]          DATETIME2(7)        NOT NULL,
         [RevisionDate]          DATETIME2(7)        NOT NULL,
         [SealedData]            NVARCHAR(MAX)       NOT NULL,
@@ -124,11 +124,11 @@ BEGIN
 END
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_PamRotationConfig_NextRotationAt' AND object_id = OBJECT_ID('[dbo].[PamRotationConfig]'))
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_PamRotationConfig_NextRotationDate' AND object_id = OBJECT_ID('[dbo].[PamRotationConfig]'))
 BEGIN
-    CREATE NONCLUSTERED INDEX [IX_PamRotationConfig_NextRotationAt]
-        ON [dbo].[PamRotationConfig] ([NextRotationAt] ASC)
-        WHERE [Enabled] = 1 AND [NextRotationAt] IS NOT NULL;
+    CREATE NONCLUSTERED INDEX [IX_PamRotationConfig_NextRotationDate]
+        ON [dbo].[PamRotationConfig] ([NextRotationDate] ASC)
+        WHERE [Enabled] = 1 AND [NextRotationDate] IS NOT NULL;
 END
 GO
 
@@ -154,10 +154,10 @@ BEGIN
         [Source]                        TINYINT             NOT NULL,
         [Action]                        TINYINT             NOT NULL,
         [ClaimedByAccessConnectorId]    UNIQUEIDENTIFIER    NULL,
-        [ClaimedAt]                     DATETIME2(7)        NULL,
+        [ClaimedDate]                   DATETIME2(7)        NULL,
         [CreationDate]                  DATETIME2(7)        NOT NULL,
-        [NextClaimableAt]               DATETIME2(7)        NOT NULL,
-        [ExpiresAt]                     DATETIME2(7)        NOT NULL,
+        [NextClaimableDate]             DATETIME2(7)        NOT NULL,
+        [ExpirationDate]                DATETIME2(7)        NOT NULL,
         CONSTRAINT [PK_PamRotationJob] PRIMARY KEY CLUSTERED ([Id] ASC),
         CONSTRAINT [FK_PamRotationJob_RotationConfig] FOREIGN KEY ([RotationConfigId]) REFERENCES [dbo].[PamRotationConfig] ([Id]) ON DELETE CASCADE
     );
@@ -171,10 +171,10 @@ BEGIN
 END
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_PamRotationJob_Action_ExpiresAt' AND object_id = OBJECT_ID('[dbo].[PamRotationJob]'))
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_PamRotationJob_Action_ExpirationDate' AND object_id = OBJECT_ID('[dbo].[PamRotationJob]'))
 BEGIN
-    CREATE NONCLUSTERED INDEX [IX_PamRotationJob_Action_ExpiresAt]
-        ON [dbo].[PamRotationJob] ([Action] ASC, [ExpiresAt] ASC);
+    CREATE NONCLUSTERED INDEX [IX_PamRotationJob_Action_ExpirationDate]
+        ON [dbo].[PamRotationJob] ([Action] ASC, [ExpirationDate] ASC);
 END
 GO
 
@@ -222,7 +222,7 @@ IF OBJECT_ID('[dbo].[PamLeaseExpirySweep]') IS NULL
 BEGIN
     CREATE TABLE [dbo].[PamLeaseExpirySweep] (
         [AccessLeaseId] UNIQUEIDENTIFIER    NOT NULL,
-        [SweptDate]     DATETIME2 (7)       NOT NULL,
+        [SweptDate]     DATETIME2(7)        NOT NULL,
         CONSTRAINT [PK_PamLeaseExpirySweep] PRIMARY KEY CLUSTERED ([AccessLeaseId] ASC),
         CONSTRAINT [FK_PamLeaseExpirySweep_AccessLease] FOREIGN KEY ([AccessLeaseId]) REFERENCES [dbo].[AccessLease] ([Id]) ON DELETE CASCADE
     );
@@ -240,21 +240,139 @@ BEGIN
 END
 GO
 
+-- Token-issuance lookup: carries the org's Enabled/UsePam flags, so a lapsed org can't mint a token.
+CREATE OR ALTER VIEW [dbo].[PamAccessConnectorDetailsView]
+AS
+SELECT
+    AC.[Id],
+    AC.[OrganizationId],
+    AC.[Name],
+    AC.[ApiKeyId],
+    AC.[Status],
+    AC.[LastHeartbeatDate],
+    AC.[CreationDate],
+    AC.[RevisionDate],
+    O.[Enabled] AS [OrganizationEnabled],
+    O.[UsePam] AS [OrganizationUsePam]
+FROM
+    [dbo].[PamAccessConnector] AC
+INNER JOIN
+    [dbo].[Organization] O ON O.[Id] = AC.[OrganizationId]
+GO
+
+CREATE OR ALTER VIEW [dbo].[PamAccessConnectorTargetAssignmentView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[PamAccessConnectorTargetAssignment]
+GO
+
+CREATE OR ALTER VIEW [dbo].[PamAccessConnectorView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[PamAccessConnector]
+GO
+
+CREATE OR ALTER VIEW [dbo].[PamRotationAttemptView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[PamRotationAttempt]
+GO
+
+-- Denormalizes the target's name/method and computes HasActiveJob, so list and header reads take one round trip.
+-- A timed-out job stays active until the timeout sweep records it.
+CREATE OR ALTER VIEW [dbo].[PamRotationConfigDetailsView]
+AS
+SELECT
+    C.[Id],
+    C.[OrganizationId],
+    C.[CipherId],
+    C.[TargetSystemId],
+    C.[ScheduleCron],
+    C.[RotateOnAccessEnd],
+    C.[NextRotationDate],
+    C.[Enabled],
+    C.[LastRotationDate],
+    C.[CreationDate],
+    C.[RevisionDate],
+    C.[SealedData],
+    T.[Name] AS [TargetSystemName],
+    T.[Method] AS [TargetSystemMethod],
+    CASE
+        WHEN EXISTS (
+            SELECT
+                1
+            FROM
+                [dbo].[PamRotationJob] J
+            WHERE
+                J.[RotationConfigId] = C.[Id]
+                AND J.[Action] IN (0,1) -- None, Claimed
+                AND NOT EXISTS (
+                    SELECT
+                        1
+                    FROM
+                        [dbo].[PamRotationJobTimeoutSweep] S
+                    WHERE
+                        S.[RotationJobId] = J.[Id]
+                )
+        ) THEN 1
+        ELSE 0
+    END AS [HasActiveJob]
+FROM
+    [dbo].[PamRotationConfig] C
+INNER JOIN
+    [dbo].[PamTargetSystem] T ON T.[Id] = C.[TargetSystemId]
+GO
+
+CREATE OR ALTER VIEW [dbo].[PamRotationConfigView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[PamRotationConfig]
+GO
+
+CREATE OR ALTER VIEW [dbo].[PamRotationJobTimeoutSweepView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[PamRotationJobTimeoutSweep]
+GO
+
+CREATE OR ALTER VIEW [dbo].[PamRotationJobView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[PamRotationJob]
+GO
+
+CREATE OR ALTER VIEW [dbo].[PamTargetSystemView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[PamTargetSystem]
+GO
+
 CREATE OR ALTER PROCEDURE [dbo].[PamAccessConnectorDetails_ReadByApiKeyId]
     @ApiKeyId UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Token-issuance lookup: includes the org's Enabled/UsePam flags.
-    -- A lapsed org can't mint a token this way.
     SELECT
-        D.*,
-        O.[Enabled] AS [OrganizationEnabled],
-        O.[UsePam] AS [OrganizationUsePam]
-    FROM [dbo].[PamAccessConnector] D
-    INNER JOIN [dbo].[Organization] O ON O.[Id] = D.[OrganizationId]
-    WHERE D.[ApiKeyId] = @ApiKeyId
+        *
+    FROM
+        [dbo].[PamAccessConnectorDetailsView]
+    WHERE
+        [ApiKeyId] = @ApiKeyId
 END
 GO
 
@@ -296,21 +414,12 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    DELETE FROM [dbo].[PamAccessConnectorTargetAssignment]
-    WHERE [AccessConnectorId] = @AccessConnectorId AND [TargetSystemId] = @TargetSystemId
-END
-GO
-
-CREATE OR ALTER PROCEDURE [dbo].[PamAccessConnectorTargetAssignment_ExistsByAccessConnectorIdTargetSystemId]
-    @AccessConnectorId UNIQUEIDENTIFIER,
-    @TargetSystemId UNIQUEIDENTIFIER
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    SELECT 1
-    FROM [dbo].[PamAccessConnectorTargetAssignment]
-    WHERE [AccessConnectorId] = @AccessConnectorId AND [TargetSystemId] = @TargetSystemId
+    DELETE
+    FROM
+        [dbo].[PamAccessConnectorTargetAssignment]
+    WHERE
+        [AccessConnectorId] = @AccessConnectorId
+        AND [TargetSystemId] = @TargetSystemId
 END
 GO
 
@@ -320,9 +429,12 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT *
-    FROM [dbo].[PamAccessConnectorTargetAssignment]
-    WHERE [AccessConnectorId] = @AccessConnectorId
+    SELECT
+        *
+    FROM
+        [dbo].[PamAccessConnectorTargetAssignmentView]
+    WHERE
+        [AccessConnectorId] = @AccessConnectorId
 END
 GO
 
@@ -332,9 +444,30 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT *
-    FROM [dbo].[PamAccessConnectorTargetAssignment]
-    WHERE [OrganizationId] = @OrganizationId
+    SELECT
+        *
+    FROM
+        [dbo].[PamAccessConnectorTargetAssignmentView]
+    WHERE
+        [OrganizationId] = @OrganizationId
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[PamAccessConnectorTargetAssignment_ReadCountByAccessConnectorIdTargetSystemId]
+    @AccessConnectorId UNIQUEIDENTIFIER,
+    @TargetSystemId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    -- OneAssignmentPerConnectorTarget: the count is 0 or 1.
+    SELECT
+        COUNT(1)
+    FROM
+        [dbo].[PamAccessConnectorTargetAssignmentView]
+    WHERE
+        [AccessConnectorId] = @AccessConnectorId
+        AND [TargetSystemId] = @TargetSystemId
 END
 GO
 
@@ -344,7 +477,7 @@ CREATE OR ALTER PROCEDURE [dbo].[PamAccessConnector_Create]
     @Name NVARCHAR(200),
     @ApiKeyId UNIQUEIDENTIFIER,
     @Status TINYINT,
-    @LastHeartbeatAt DATETIME2(7) = NULL,
+    @LastHeartbeatDate DATETIME2(7) = NULL,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -358,7 +491,7 @@ BEGIN
         [Name],
         [ApiKeyId],
         [Status],
-        [LastHeartbeatAt],
+        [LastHeartbeatDate],
         [CreationDate],
         [RevisionDate]
     )
@@ -369,7 +502,7 @@ BEGIN
         @Name,
         @ApiKeyId,
         @Status,
-        @LastHeartbeatAt,
+        @LastHeartbeatDate,
         @CreationDate,
         @RevisionDate
     )
@@ -377,53 +510,80 @@ END
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[PamAccessConnector_DeleteById]
-    @Id UNIQUEIDENTIFIER
+    @Id UNIQUEIDENTIFIER,
+    @Now DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
     -- Cascade in one transaction: NO ACTION FKs mean assignments, then access connector, then credential.
     SET XACT_ABORT ON
 
-    DECLARE @Now DATETIME2(7) = GETUTCDATE()
     DECLARE @ApiKeyId UNIQUEIDENTIFIER
 
-    BEGIN TRANSACTION
+    BEGIN TRY
+        BEGIN TRANSACTION
 
-    SELECT @ApiKeyId = [ApiKeyId]
-    FROM [dbo].[PamAccessConnector]
-    WHERE [Id] = @Id
+        SELECT
+            @ApiKeyId = [ApiKeyId]
+        FROM
+            [dbo].[PamAccessConnector]
+        WHERE
+            [Id] = @Id
 
-    -- No FK ties PamRotationJob to PamAccessConnector, so this releases the access connector's live claims
-    -- directly. Their attempts derive as Abandoned; only the end is recorded. A timed-out claim is left as it was.
-    UPDATE AT
-    SET AT.[ResolvedDate] = @Now
-    FROM [dbo].[PamRotationAttempt] AT
-    INNER JOIN [dbo].[PamRotationJob] J ON J.[Id] = AT.[JobId]
-    WHERE AT.[Action] = 0 -- None
-        AND AT.[ResolvedDate] IS NULL
-        AND J.[ClaimedByAccessConnectorId] = @Id
-        AND J.[Action] = 1 -- Claimed
-        AND J.[ExpiresAt] > @Now
+        -- No FK ties PamRotationJob to PamAccessConnector, so this releases the access connector's live claims
+        -- directly. Their attempts derive as Abandoned; only the end is recorded. A timed-out claim is left as it was.
+        UPDATE
+            AT
+        SET
+            AT.[ResolvedDate] = @Now
+        FROM
+            [dbo].[PamRotationAttempt] AT
+        INNER JOIN
+            [dbo].[PamRotationJob] J ON J.[Id] = AT.[JobId]
+        WHERE
+            AT.[Action] = 0 -- None
+            AND AT.[ResolvedDate] IS NULL
+            AND J.[ClaimedByAccessConnectorId] = @Id
+            AND J.[Action] = 1 -- Claimed
+            AND J.[ExpirationDate] > @Now
 
-    UPDATE [dbo].[PamRotationJob]
-    SET [Action] = 0, -- None
-        [ClaimedByAccessConnectorId] = NULL,
-        [ClaimedAt] = NULL,
-        [NextClaimableAt] = @Now
-    WHERE [ClaimedByAccessConnectorId] = @Id
-        AND [Action] = 1 -- Claimed
-        AND [ExpiresAt] > @Now
+        UPDATE
+            [dbo].[PamRotationJob]
+        SET
+            [Action] = 0, -- None
+            [ClaimedByAccessConnectorId] = NULL,
+            [ClaimedDate] = NULL,
+            [NextClaimableDate] = @Now
+        WHERE
+            [ClaimedByAccessConnectorId] = @Id
+            AND [Action] = 1 -- Claimed
+            AND [ExpirationDate] > @Now
 
-    DELETE FROM [dbo].[PamAccessConnectorTargetAssignment]
-    WHERE [AccessConnectorId] = @Id
+        DELETE
+        FROM
+            [dbo].[PamAccessConnectorTargetAssignment]
+        WHERE
+            [AccessConnectorId] = @Id
 
-    DELETE FROM [dbo].[PamAccessConnector]
-    WHERE [Id] = @Id
+        DELETE
+        FROM
+            [dbo].[PamAccessConnector]
+        WHERE
+            [Id] = @Id
 
-    DELETE FROM [dbo].[ApiKey]
-    WHERE [Id] = @ApiKeyId
+        DELETE
+        FROM
+            [dbo].[ApiKey]
+        WHERE
+            [Id] = @ApiKeyId
 
-    COMMIT TRANSACTION
+        COMMIT TRANSACTION
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
 END
 GO
 
@@ -433,9 +593,12 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT *
-    FROM [dbo].[PamAccessConnector]
-    WHERE [Id] = @Id
+    SELECT
+        *
+    FROM
+        [dbo].[PamAccessConnectorView]
+    WHERE
+        [Id] = @Id
 END
 GO
 
@@ -445,9 +608,12 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT *
-    FROM [dbo].[PamAccessConnector]
-    WHERE [OrganizationId] = @OrganizationId
+    SELECT
+        *
+    FROM
+        [dbo].[PamAccessConnectorView]
+    WHERE
+        [OrganizationId] = @OrganizationId
 END
 GO
 
@@ -460,7 +626,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- ApiKeyId and OrganizationId never change, and LastHeartbeatAt has its own conditional bump.
+    -- ApiKeyId and OrganizationId never change, and LastHeartbeatDate has its own conditional bump.
     UPDATE
         [dbo].[PamAccessConnector]
     SET
@@ -479,16 +645,89 @@ CREATE OR ALTER PROCEDURE [dbo].[PamAccessConnector_UpdateHeartbeat]
 AS
 BEGIN
     SET NOCOUNT ON
+
     -- Conditional bump: WHERE guard no-ops most calls, updating only after @MinIntervalSeconds.
     -- Called only by the access connector's own requests, never by a sweep.
-    UPDATE [dbo].[PamAccessConnector]
-    SET [LastHeartbeatAt] = @Now
-    WHERE [Id] = @Id
-        AND ([LastHeartbeatAt] IS NULL OR [LastHeartbeatAt] < DATEADD(SECOND, -@MinIntervalSeconds, @Now))
+    UPDATE
+        [dbo].[PamAccessConnector]
+    SET
+        [LastHeartbeatDate] = @Now
+    WHERE
+        [Id] = @Id
+        AND (
+            [LastHeartbeatDate] IS NULL
+            OR [LastHeartbeatDate] < DATEADD(SECOND, -@MinIntervalSeconds, @Now)
+        )
 END
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[PamRotationAttempt_AcceptCipherWrite]
+CREATE OR ALTER PROCEDURE [dbo].[PamLeaseExpirySweep_CreateManyDue]
+    @Now DATETIME2(7)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    -- Expiry is derived, not stored; PamLeaseExpirySweep's INSERT decides which run owns a lease.
+    -- UPDLOCK/HOLDLOCK serializes concurrent sweeps; a loser re-checks after commit and skips it.
+    DECLARE @Due TABLE ([AccessLeaseId] UNIQUEIDENTIFIER NOT NULL PRIMARY KEY)
+
+    INSERT INTO [dbo].[PamLeaseExpirySweep]
+    (
+        [AccessLeaseId],
+        [SweptDate]
+    )
+    OUTPUT
+        inserted.[AccessLeaseId]
+    INTO @Due
+    SELECT
+        AL.[Id],
+        @Now
+    FROM
+        [dbo].[AccessLease] AL
+    WHERE
+        AL.[Action] = 0 -- None: no early end recorded, so the closed window is a natural expiry
+        AND AL.[NotAfter] <= @Now
+        AND NOT EXISTS (
+            SELECT
+                1
+            FROM
+                [dbo].[PamLeaseExpirySweep] S WITH (UPDLOCK, HOLDLOCK)
+            WHERE
+                S.[AccessLeaseId] = AL.[Id]
+        )
+
+    -- No join needed; the caller audits/triggers off the lease row itself.
+    SELECT
+        AL.[Id],
+        AL.[OrganizationId],
+        AL.[CollectionId],
+        AL.[CipherId],
+        AL.[RequesterId],
+        AL.[NotBefore],
+        AL.[NotAfter]
+    FROM
+        [dbo].[AccessLease] AL
+    INNER JOIN
+        @Due D ON D.[AccessLeaseId] = AL.[Id]
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[PamRotationAttempt_ReadById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[PamRotationAttemptView]
+    WHERE
+        [Id] = @Id
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[PamRotationAttempt_UpdateCipherData]
     @AttemptId UNIQUEIDENTIFIER,
     @AccessConnectorId UNIQUEIDENTIFIER,
     @CipherData NVARCHAR(MAX),
@@ -500,72 +739,95 @@ BEGIN
     -- WITH (UPDLOCK) closes the check-then-act window before the cipher write.
     SET XACT_ABORT ON
 
-    BEGIN TRANSACTION
-
     DECLARE @CipherId UNIQUEIDENTIFIER
     DECLARE @OrganizationId UNIQUEIDENTIFIER
     DECLARE @VerifiedJobId UNIQUEIDENTIFIER
+    DECLARE @CipherRevisionDate DATETIME2(7)
 
-    SELECT
-        @CipherId = C.[CipherId],
-        @OrganizationId = C.[OrganizationId],
-        @VerifiedJobId = J.[Id]
-    FROM [dbo].[PamRotationAttempt] AT
-    INNER JOIN [dbo].[PamRotationJob] J WITH (UPDLOCK) ON J.[Id] = AT.[JobId]
-    INNER JOIN [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]
-    WHERE AT.[Id] = @AttemptId
-        AND AT.[Action] = 0 -- None
-        AND AT.[ClaimedByAccessConnectorId] = @AccessConnectorId
-        AND J.[Action] = 1 -- Claimed
-        AND J.[ExpiresAt] > @Now
-        AND J.[ClaimedByAccessConnectorId] = @AccessConnectorId
-        AND J.[ClaimedAt] = AT.[CreationDate]
+    BEGIN TRY
+        BEGIN TRANSACTION
 
-    IF @VerifiedJobId IS NULL
-    BEGIN
-        -- Unknown attempt, wrong claimant, or an already-resolved job/attempt; caller audits as write_rejected.
-        ROLLBACK TRANSACTION
-        SELECT 0 -- Rejected
-        RETURN
-    END
+        SELECT
+            @CipherId = C.[CipherId],
+            @OrganizationId = C.[OrganizationId],
+            @VerifiedJobId = J.[Id]
+        FROM
+            [dbo].[PamRotationAttempt] AT
+        INNER JOIN
+            [dbo].[PamRotationJob] J WITH (UPDLOCK) ON J.[Id] = AT.[JobId]
+        INNER JOIN
+            [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]
+        WHERE
+            AT.[Id] = @AttemptId
+            AND AT.[Action] = 0 -- None
+            AND AT.[ClaimedByAccessConnectorId] = @AccessConnectorId
+            AND J.[Action] = 1 -- Claimed
+            AND J.[ExpirationDate] > @Now
+            AND J.[ClaimedByAccessConnectorId] = @AccessConnectorId
+            AND J.[ClaimedDate] = AT.[CreationDate]
 
-    DECLARE @CipherRevisionDate DATETIME2(7) = (SELECT [RevisionDate] FROM [dbo].[Cipher] WHERE [Id] = @CipherId)
+        IF @VerifiedJobId IS NULL
+        BEGIN
+            -- Unknown attempt, wrong claimant, or an already-resolved job/attempt; caller audits as write_rejected.
+            ROLLBACK TRANSACTION
+            SELECT 0 -- Rejected
+            RETURN
+        END
 
-    -- The config has no FK to Cipher, so the cipher may have been hard-deleted.
-    IF @CipherRevisionDate IS NULL
-    BEGIN
-        ROLLBACK TRANSACTION
-        SELECT 0 -- Rejected
-        RETURN
-    END
+        SELECT
+            @CipherRevisionDate = [RevisionDate]
+        FROM
+            [dbo].[Cipher]
+        WHERE
+            [Id] = @CipherId
 
-    -- Drifted LastKnownRevisionDate means a concurrent edit; rejected, matching CipherService's tolerance.
-    IF ABS(DATEDIFF_BIG(MILLISECOND, @CipherRevisionDate, @LastKnownRevisionDate)) > 1000
-    BEGIN
-        ROLLBACK TRANSACTION
-        SELECT -1 -- RevisionMismatch
-        RETURN
-    END
+        -- The config has no FK to Cipher, so the cipher may have been hard-deleted.
+        IF @CipherRevisionDate IS NULL
+        BEGIN
+            ROLLBACK TRANSACTION
+            SELECT 0 -- Rejected
+            RETURN
+        END
 
-    UPDATE [dbo].[Cipher]
-    SET [Data] = @CipherData,
-        [RevisionDate] = @Now
-    WHERE [Id] = @CipherId
+        -- Drifted LastKnownRevisionDate means a concurrent edit; rejected, matching CipherService's tolerance.
+        IF ABS(DATEDIFF_BIG(MILLISECOND, @CipherRevisionDate, @LastKnownRevisionDate)) > 1000
+        BEGIN
+            ROLLBACK TRANSACTION
+            SELECT -1 -- RevisionMismatch
+            RETURN
+        END
 
-    UPDATE [dbo].[PamRotationAttempt]
-    SET [CipherUpdated] = 1
-    WHERE [Id] = @AttemptId
+        UPDATE
+            [dbo].[Cipher]
+        SET
+            [Data] = @CipherData,
+            [RevisionDate] = @Now
+        WHERE
+            [Id] = @CipherId
 
-    -- Other writers of dbo.Cipher bump here too, so clients do not keep a stale password.
-    EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @CipherId, @OrganizationId
+        UPDATE
+            [dbo].[PamRotationAttempt]
+        SET
+            [CipherUpdated] = 1
+        WHERE
+            [Id] = @AttemptId
 
-    COMMIT TRANSACTION
+        -- Other writers of dbo.Cipher bump here too, so clients do not keep a stale password.
+        EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @CipherId, @OrganizationId
 
-    SELECT 1 -- Accepted
+        COMMIT TRANSACTION
+
+        SELECT 1 -- Accepted
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
 END
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[PamRotationAttempt_MarkErrored]
+CREATE OR ALTER PROCEDURE [dbo].[PamRotationAttempt_UpdateErrored]
     @AttemptId UNIQUEIDENTIFIER,
     @AccessConnectorId UNIQUEIDENTIFIER,
     @FailureReason NVARCHAR(500) = NULL,
@@ -576,76 +838,111 @@ CREATE OR ALTER PROCEDURE [dbo].[PamRotationAttempt_MarkErrored]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- @FailureReason is pre-bounded by the caller's zero-knowledge contract; guard failure takes RejectStaleFailureReport.
+    -- @FailureReason is pre-bounded by the caller's zero-knowledge contract; guard failure takes
+    -- RejectStaleFailureReport.
     SET XACT_ABORT ON
 
-    BEGIN TRANSACTION
-
     DECLARE @JobId UNIQUEIDENTIFIER
-
-    -- Executing is derived: unreported, on an unexpired claim, and created by the claim the job still records.
-    SELECT @JobId = J.[Id]
-    FROM [dbo].[PamRotationAttempt] AT
-    INNER JOIN [dbo].[PamRotationJob] J WITH (UPDLOCK) ON J.[Id] = AT.[JobId]
-    WHERE AT.[Id] = @AttemptId
-        AND AT.[Action] = 0 -- None
-        AND AT.[ClaimedByAccessConnectorId] = @AccessConnectorId
-        AND J.[Action] = 1 -- Claimed
-        AND J.[ExpiresAt] > @Now
-        AND J.[ClaimedByAccessConnectorId] = @AccessConnectorId
-        AND J.[ClaimedAt] = AT.[CreationDate]
-
-    IF @JobId IS NULL
-    BEGIN
-        ROLLBACK TRANSACTION
-        SELECT 0 AS [Outcome], NULL AS [JobStatus], NULL AS [ErroredAttemptCount] -- Rejected
-        RETURN
-    END
-
-    UPDATE [dbo].[PamRotationAttempt]
-    SET [Action] = 2, -- Errored
-        [FailureReason] = @FailureReason,
-        [SyncState] = @SyncState,
-        [ResolvedDate] = @Now
-    WHERE [Id] = @AttemptId
-
-    -- Only Errored attempts count toward the retry budget; Abandoned (released/timed-out) tries never do.
     DECLARE @ErroredCount INT
-
-    SELECT @ErroredCount = COUNT(*)
-    FROM [dbo].[PamRotationAttempt]
-    WHERE [JobId] = @JobId AND [Action] = 2 -- Errored
-
     -- The status the job derives as right after this write; the guard saw it unexpired.
     DECLARE @JobStatus TINYINT
 
-    IF @ErroredCount < @MaxAttempts
-    BEGIN
-        SET @JobStatus = 0 -- Pending
-        UPDATE [dbo].[PamRotationJob]
-        SET [Action] = 0, -- None
-            [ClaimedByAccessConnectorId] = NULL,
-            [ClaimedAt] = NULL,
-            [NextClaimableAt] = DATEADD(SECOND, CAST(@RetryBaseDelaySeconds * POWER(2, @ErroredCount - 1) AS INT), @Now)
-        WHERE [Id] = @JobId
-    END
-    ELSE
-    BEGIN
-        SET @JobStatus = 3 -- Failed
-        UPDATE [dbo].[PamRotationJob]
-        SET [Action] = 3, -- Failed
-            [ClaimedByAccessConnectorId] = NULL,
-            [ClaimedAt] = NULL
-        WHERE [Id] = @JobId
-    END
+    BEGIN TRY
+        BEGIN TRANSACTION
 
-    COMMIT TRANSACTION
+        -- Executing is derived: unreported, on an unexpired claim, and created by the claim the job still records.
+        SELECT
+            @JobId = J.[Id]
+        FROM
+            [dbo].[PamRotationAttempt] AT
+        INNER JOIN
+            [dbo].[PamRotationJob] J WITH (UPDLOCK) ON J.[Id] = AT.[JobId]
+        WHERE
+            AT.[Id] = @AttemptId
+            AND AT.[Action] = 0 -- None
+            AND AT.[ClaimedByAccessConnectorId] = @AccessConnectorId
+            AND J.[Action] = 1 -- Claimed
+            AND J.[ExpirationDate] > @Now
+            AND J.[ClaimedByAccessConnectorId] = @AccessConnectorId
+            AND J.[ClaimedDate] = AT.[CreationDate]
 
-    SELECT 1 AS [Outcome], @JobStatus AS [JobStatus], @ErroredCount AS [ErroredAttemptCount] -- Resolved
+        IF @JobId IS NULL
+        BEGIN
+            ROLLBACK TRANSACTION
+            SELECT
+                0 AS [Outcome], -- Rejected
+                NULL AS [JobStatus],
+                NULL AS [ErroredAttemptCount]
+            RETURN
+        END
+
+        UPDATE
+            [dbo].[PamRotationAttempt]
+        SET
+            [Action] = 2, -- Errored
+            [FailureReason] = @FailureReason,
+            [SyncState] = @SyncState,
+            [ResolvedDate] = @Now
+        WHERE
+            [Id] = @AttemptId
+
+        -- Only Errored attempts count toward the retry budget; Abandoned (released/timed-out) tries never do.
+        SELECT
+            @ErroredCount = COUNT(*)
+        FROM
+            [dbo].[PamRotationAttempt]
+        WHERE
+            [JobId] = @JobId
+            AND [Action] = 2 -- Errored
+
+        IF @ErroredCount < @MaxAttempts
+        BEGIN
+            SET @JobStatus = 0 -- Pending
+
+            UPDATE
+                [dbo].[PamRotationJob]
+            SET
+                [Action] = 0, -- None
+                [ClaimedByAccessConnectorId] = NULL,
+                [ClaimedDate] = NULL,
+                [NextClaimableDate] = DATEADD(
+                    SECOND,
+                    CAST(@RetryBaseDelaySeconds * POWER(2, @ErroredCount - 1) AS INT),
+                    @Now
+                )
+            WHERE
+                [Id] = @JobId
+        END
+        ELSE
+        BEGIN
+            SET @JobStatus = 3 -- Failed
+
+            UPDATE
+                [dbo].[PamRotationJob]
+            SET
+                [Action] = 3, -- Failed
+                [ClaimedByAccessConnectorId] = NULL,
+                [ClaimedDate] = NULL
+            WHERE
+                [Id] = @JobId
+        END
+
+        COMMIT TRANSACTION
+
+        SELECT
+            1 AS [Outcome], -- Resolved
+            @JobStatus AS [JobStatus],
+            @ErroredCount AS [ErroredAttemptCount]
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
 END
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[PamRotationAttempt_MarkRotated]
+CREATE OR ALTER PROCEDURE [dbo].[PamRotationAttempt_UpdateRotated]
     @AttemptId UNIQUEIDENTIFIER,
     @AccessConnectorId UNIQUEIDENTIFIER,
     @SessionTermination TINYINT,
@@ -656,71 +953,63 @@ BEGIN
     -- CipherUpdated = 1 backstops VerifiedBeforeSuccess; guard failure takes RejectStaleSuccess.
     SET XACT_ABORT ON
 
-    BEGIN TRANSACTION
-
     DECLARE @JobId UNIQUEIDENTIFIER
 
-    -- Executing is derived: unreported, on an unexpired claim, and created by the claim the job still records.
-    SELECT @JobId = J.[Id]
-    FROM [dbo].[PamRotationAttempt] AT
-    INNER JOIN [dbo].[PamRotationJob] J WITH (UPDLOCK) ON J.[Id] = AT.[JobId]
-    WHERE AT.[Id] = @AttemptId
-        AND AT.[Action] = 0 -- None
-        AND AT.[ClaimedByAccessConnectorId] = @AccessConnectorId
-        AND AT.[CipherUpdated] = 1
-        AND J.[Action] = 1 -- Claimed
-        AND J.[ExpiresAt] > @Now
-        AND J.[ClaimedByAccessConnectorId] = @AccessConnectorId
-        AND J.[ClaimedAt] = AT.[CreationDate]
+    BEGIN TRY
+        BEGIN TRANSACTION
 
-    IF @JobId IS NULL
-    BEGIN
-        ROLLBACK TRANSACTION
-        SELECT 0 -- Rejected
-        RETURN
-    END
+        -- Executing is derived: unreported, on an unexpired claim, and created by the claim the job still records.
+        SELECT
+            @JobId = J.[Id]
+        FROM
+            [dbo].[PamRotationAttempt] AT
+        INNER JOIN
+            [dbo].[PamRotationJob] J WITH (UPDLOCK) ON J.[Id] = AT.[JobId]
+        WHERE
+            AT.[Id] = @AttemptId
+            AND AT.[Action] = 0 -- None
+            AND AT.[ClaimedByAccessConnectorId] = @AccessConnectorId
+            AND AT.[CipherUpdated] = 1
+            AND J.[Action] = 1 -- Claimed
+            AND J.[ExpirationDate] > @Now
+            AND J.[ClaimedByAccessConnectorId] = @AccessConnectorId
+            AND J.[ClaimedDate] = AT.[CreationDate]
 
-    UPDATE [dbo].[PamRotationAttempt]
-    SET [Action] = 1, -- Rotated
-        [SessionTermination] = @SessionTermination,
-        [ResolvedDate] = @Now
-    WHERE [Id] = @AttemptId
+        IF @JobId IS NULL
+        BEGIN
+            ROLLBACK TRANSACTION
+            SELECT 0 -- Rejected
+            RETURN
+        END
 
-    -- Written with the attempt, so a Rotated attempt always has a Succeeded job: success wins by construction.
-    UPDATE [dbo].[PamRotationJob]
-    SET [Action] = 2, -- Succeeded
-        [ClaimedByAccessConnectorId] = NULL,
-        [ClaimedAt] = NULL
-    WHERE [Id] = @JobId
+        UPDATE
+            [dbo].[PamRotationAttempt]
+        SET
+            [Action] = 1, -- Rotated
+            [SessionTermination] = @SessionTermination,
+            [ResolvedDate] = @Now
+        WHERE
+            [Id] = @AttemptId
 
-    COMMIT TRANSACTION
+        -- Written with the attempt, so a Rotated attempt always has a Succeeded job: success wins by construction.
+        UPDATE
+            [dbo].[PamRotationJob]
+        SET
+            [Action] = 2, -- Succeeded
+            [ClaimedByAccessConnectorId] = NULL,
+            [ClaimedDate] = NULL
+        WHERE
+            [Id] = @JobId
 
-    SELECT 1 -- Resolved
-END
-GO
+        COMMIT TRANSACTION
 
-CREATE OR ALTER PROCEDURE [dbo].[PamRotationAttempt_ReadById]
-    @Id UNIQUEIDENTIFIER
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    SELECT *
-    FROM [dbo].[PamRotationAttempt]
-    WHERE [Id] = @Id
-END
-GO
-
-CREATE OR ALTER PROCEDURE [dbo].[PamRotationConfig_AnyByTargetSystem]
-    @TargetSystemId UNIQUEIDENTIFIER
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    -- DeleteTargetSystemCommand's guard; the delete itself re-checks under lock separately.
-    SELECT 1
-    FROM [dbo].[PamRotationConfig]
-    WHERE [TargetSystemId] = @TargetSystemId
+        SELECT 1 -- Resolved
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
 END
 GO
 
@@ -732,9 +1021,9 @@ CREATE OR ALTER PROCEDURE [dbo].[PamRotationConfig_Create]
     @SealedData NVARCHAR(MAX),
     @ScheduleCron NVARCHAR(100) = NULL,
     @RotateOnAccessEnd BIT,
-    @NextRotationAt DATETIME2(7) = NULL,
+    @NextRotationDate DATETIME2(7) = NULL,
     @Enabled BIT,
-    @LastRotationAt DATETIME2(7) = NULL,
+    @LastRotationDate DATETIME2(7) = NULL,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -750,9 +1039,9 @@ BEGIN
         [SealedData],
         [ScheduleCron],
         [RotateOnAccessEnd],
-        [NextRotationAt],
+        [NextRotationDate],
         [Enabled],
-        [LastRotationAt],
+        [LastRotationDate],
         [CreationDate],
         [RevisionDate]
     )
@@ -765,9 +1054,9 @@ BEGIN
         @SealedData,
         @ScheduleCron,
         @RotateOnAccessEnd,
-        @NextRotationAt,
+        @NextRotationDate,
         @Enabled,
-        @LastRotationAt,
+        @LastRotationDate,
         @CreationDate,
         @RevisionDate
     )
@@ -782,33 +1071,49 @@ BEGIN
     -- Hard-deletes the config; its jobs, their attempts and the timeout journal go with it through the FK cascade.
     SET XACT_ABORT ON
 
-    BEGIN TRANSACTION
+    BEGIN TRY
+        BEGIN TRANSACTION
 
-    -- Re-checks under PamRotationJob_Create's range lock so a mid-window claim can't be hard-deleted, nor a timeout
-    -- the sweep has yet to record.
-    IF EXISTS (
-        SELECT 1
-        FROM [dbo].[PamRotationJob] J WITH (UPDLOCK, HOLDLOCK)
-        WHERE J.[RotationConfigId] = @Id
-            AND J.[Action] IN (0, 1) -- None, Claimed
-            AND NOT EXISTS (
-                SELECT 1
-                FROM [dbo].[PamRotationJobTimeoutSweep] S
-                WHERE S.[RotationJobId] = J.[Id]
-            )
-    )
-    BEGIN
-        ROLLBACK TRANSACTION
-        SELECT 0 -- ActiveJobExists
-        RETURN
-    END
+        -- Re-checks under PamRotationJob_Create's range lock so a mid-window claim can't be hard-deleted, nor a
+        -- timeout the sweep has yet to record.
+        IF EXISTS (
+            SELECT
+                1
+            FROM
+                [dbo].[PamRotationJob] J WITH (UPDLOCK, HOLDLOCK)
+            WHERE
+                J.[RotationConfigId] = @Id
+                AND J.[Action] IN (0,1) -- None, Claimed
+                AND NOT EXISTS (
+                    SELECT
+                        1
+                    FROM
+                        [dbo].[PamRotationJobTimeoutSweep] S
+                    WHERE
+                        S.[RotationJobId] = J.[Id]
+                )
+        )
+        BEGIN
+            ROLLBACK TRANSACTION
+            SELECT 0 -- ActiveJobExists
+            RETURN
+        END
 
-    DELETE FROM [dbo].[PamRotationConfig]
-    WHERE [Id] = @Id
+        DELETE
+        FROM
+            [dbo].[PamRotationConfig]
+        WHERE
+            [Id] = @Id
 
-    COMMIT TRANSACTION
+        COMMIT TRANSACTION
 
-    SELECT 1 -- Deleted
+        SELECT 1 -- Deleted
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
 END
 GO
 
@@ -819,9 +1124,12 @@ BEGIN
     SET NOCOUNT ON
 
     -- OneConfigPerCipher: at most one row can ever match.
-    SELECT *
-    FROM [dbo].[PamRotationConfig]
-    WHERE [CipherId] = @CipherId
+    SELECT
+        *
+    FROM
+        [dbo].[PamRotationConfigView]
+    WHERE
+        [CipherId] = @CipherId
 END
 GO
 
@@ -831,9 +1139,28 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT *
-    FROM [dbo].[PamRotationConfig]
-    WHERE [Id] = @Id
+    SELECT
+        *
+    FROM
+        [dbo].[PamRotationConfigView]
+    WHERE
+        [Id] = @Id
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[PamRotationConfig_ReadCountByTargetSystemId]
+    @TargetSystemId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    -- DeleteTargetSystemCommand's guard; the delete itself re-checks under lock separately.
+    SELECT
+        COUNT(1)
+    FROM
+        [dbo].[PamRotationConfigView]
+    WHERE
+        [TargetSystemId] = @TargetSystemId
 END
 GO
 
@@ -843,26 +1170,12 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Header projection: denormalizes target name/method, computes HasActiveJob to avoid a second round trip.
-    -- A timed-out job stays active until the timeout sweep records it.
     SELECT
-        C.*,
-        T.[Name] AS [TargetSystemName],
-        T.[Method] AS [TargetSystemMethod],
-        CASE WHEN EXISTS (
-            SELECT 1
-            FROM [dbo].[PamRotationJob] J
-            WHERE J.[RotationConfigId] = C.[Id]
-                AND J.[Action] IN (0, 1) -- None, Claimed
-                AND NOT EXISTS (
-                    SELECT 1
-                    FROM [dbo].[PamRotationJobTimeoutSweep] S
-                    WHERE S.[RotationJobId] = J.[Id]
-                )
-        ) THEN 1 ELSE 0 END AS [HasActiveJob]
-    FROM [dbo].[PamRotationConfig] C
-    INNER JOIN [dbo].[PamTargetSystem] T ON T.[Id] = C.[TargetSystemId]
-    WHERE C.[Id] = @Id
+        *
+    FROM
+        [dbo].[PamRotationConfigDetailsView]
+    WHERE
+        [Id] = @Id
 END
 GO
 
@@ -872,26 +1185,12 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Schedule-list view: denormalizes target name/method, computes HasActiveJob to avoid an N+1/round trip.
-    -- A timed-out job stays active until the timeout sweep records it.
     SELECT
-        C.*,
-        T.[Name] AS [TargetSystemName],
-        T.[Method] AS [TargetSystemMethod],
-        CASE WHEN EXISTS (
-            SELECT 1
-            FROM [dbo].[PamRotationJob] J
-            WHERE J.[RotationConfigId] = C.[Id]
-                AND J.[Action] IN (0, 1) -- None, Claimed
-                AND NOT EXISTS (
-                    SELECT 1
-                    FROM [dbo].[PamRotationJobTimeoutSweep] S
-                    WHERE S.[RotationJobId] = J.[Id]
-                )
-        ) THEN 1 ELSE 0 END AS [HasActiveJob]
-    FROM [dbo].[PamRotationConfig] C
-    INNER JOIN [dbo].[PamTargetSystem] T ON T.[Id] = C.[TargetSystemId]
-    WHERE C.[OrganizationId] = @OrganizationId
+        *
+    FROM
+        [dbo].[PamRotationConfigDetailsView]
+    WHERE
+        [OrganizationId] = @OrganizationId
 END
 GO
 
@@ -902,25 +1201,35 @@ BEGIN
     SET NOCOUNT ON
 
     -- The sweep's due phase; feeds OfferRotationCommand, one call per row.
-    -- Matches [IX_PamRotationConfig_NextRotationAt] for a range seek, not a scan.
-    SELECT C.*
-    FROM [dbo].[PamRotationConfig] C
-    INNER JOIN [dbo].[PamTargetSystem] T ON T.[Id] = C.[TargetSystemId]
-    WHERE C.[Enabled] = 1
-        AND C.[NextRotationAt] IS NOT NULL
-        AND C.[NextRotationAt] <= @Now
+    -- Matches [IX_PamRotationConfig_NextRotationDate] for a range seek, not a scan.
+    SELECT
+        C.*
+    FROM
+        [dbo].[PamRotationConfigView] C
+    INNER JOIN
+        [dbo].[PamTargetSystemView] T ON T.[Id] = C.[TargetSystemId]
+    WHERE
+        C.[Enabled] = 1
+        AND C.[NextRotationDate] IS NOT NULL
+        AND C.[NextRotationDate] <= @Now
         AND T.[Method] = 0 -- Automatic
         AND T.[Status] = 0 -- Active
         -- Until the timeout sweep records a timed-out job it still blocks, so its reschedule is never raced.
         AND NOT EXISTS (
-            SELECT 1
-            FROM [dbo].[PamRotationJob] J
-            WHERE J.[RotationConfigId] = C.[Id]
-                AND J.[Action] IN (0, 1) -- None, Claimed
+            SELECT
+                1
+            FROM
+                [dbo].[PamRotationJobView] J
+            WHERE
+                J.[RotationConfigId] = C.[Id]
+                AND J.[Action] IN (0,1) -- None, Claimed
                 AND NOT EXISTS (
-                    SELECT 1
-                    FROM [dbo].[PamRotationJobTimeoutSweep] S
-                    WHERE S.[RotationJobId] = J.[Id]
+                    SELECT
+                        1
+                    FROM
+                        [dbo].[PamRotationJobTimeoutSweepView] S
+                    WHERE
+                        S.[RotationJobId] = J.[Id]
                 )
         )
 END
@@ -934,9 +1243,9 @@ CREATE OR ALTER PROCEDURE [dbo].[PamRotationConfig_Update]
     @SealedData NVARCHAR(MAX),
     @ScheduleCron NVARCHAR(100) = NULL,
     @RotateOnAccessEnd BIT,
-    @NextRotationAt DATETIME2(7) = NULL,
+    @NextRotationDate DATETIME2(7) = NULL,
     @Enabled BIT,
-    @LastRotationAt DATETIME2(7) = NULL,
+    @LastRotationDate DATETIME2(7) = NULL,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -952,9 +1261,9 @@ BEGIN
         [SealedData] = @SealedData,
         [ScheduleCron] = @ScheduleCron,
         [RotateOnAccessEnd] = @RotateOnAccessEnd,
-        [NextRotationAt] = @NextRotationAt,
+        [NextRotationDate] = @NextRotationDate,
         [Enabled] = @Enabled,
-        [LastRotationAt] = @LastRotationAt,
+        [LastRotationDate] = @LastRotationDate,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate
     WHERE
@@ -962,99 +1271,64 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[PamRotationJob_Claim]
-    @JobId UNIQUEIDENTIFIER,
-    @AttemptId UNIQUEIDENTIFIER,
-    @AccessConnectorId UNIQUEIDENTIFIER,
-    @Now DATETIME2(7),
-    @ReleaseDelaySeconds INT
+CREATE OR ALTER PROCEDURE [dbo].[PamRotationJobTimeoutSweep_CreateManyDue]
+    @Now DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
-    -- First-claim-wins: the UPDATE's WHERE Action = 0 takes the row lock, serializing concurrent claims.
-    SET XACT_ABORT ON
 
-    BEGIN TRANSACTION
+    -- A timeout is derived; the PamRotationJobTimeoutSweep INSERT decides which run owns a job, and UPDLOCK/HOLDLOCK
+    -- makes a losing sweep skip it. A Rotated attempt always has a Succeeded job, so success wins without checking
+    -- attempts.
+    DECLARE @Due TABLE ([RotationJobId] UNIQUEIDENTIFIER NOT NULL PRIMARY KEY)
 
-    UPDATE J
-    SET J.[Action] = 1, -- Claimed
-        J.[ClaimedByAccessConnectorId] = @AccessConnectorId,
-        J.[ClaimedAt] = @Now
-    FROM [dbo].[PamRotationJob] J
-    INNER JOIN [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]
-    INNER JOIN [dbo].[PamTargetSystem] T ON T.[Id] = C.[TargetSystemId]
-    INNER JOIN [dbo].[PamAccessConnectorTargetAssignment] A ON A.[AccessConnectorId] = @AccessConnectorId AND A.[TargetSystemId] = C.[TargetSystemId]
-    -- Re-checks Enabled and the org match, which the caller's token already checked.
-    INNER JOIN [dbo].[PamAccessConnector] D ON D.[Id] = @AccessConnectorId AND D.[OrganizationId] = C.[OrganizationId] AND D.[Status] = 0 -- Enabled
-    WHERE J.[Id] = @JobId
-        AND J.[Action] = 0 -- None
-        AND J.[ExpiresAt] > @Now
-        AND J.[NextClaimableAt] <= @Now
-        AND C.[Enabled] = 1
-        AND T.[Status] = 0 -- Active
-
-    IF @@ROWCOUNT = 0
-    BEGIN
-        -- Unknown job or one outside this access connector's assignment share NotEligible; no existence oracle.
-        DECLARE @Outcome INT = CASE
-            WHEN NOT EXISTS (
-                SELECT 1
-                FROM [dbo].[PamRotationJob] J2
-                INNER JOIN [dbo].[PamRotationConfig] C2 ON C2.[Id] = J2.[RotationConfigId]
-                INNER JOIN [dbo].[PamAccessConnectorTargetAssignment] A2 ON A2.[AccessConnectorId] = @AccessConnectorId AND A2.[TargetSystemId] = C2.[TargetSystemId]
-                INNER JOIN [dbo].[PamAccessConnector] D2 ON D2.[Id] = @AccessConnectorId AND D2.[OrganizationId] = C2.[OrganizationId] AND D2.[Status] = 0 -- Enabled
-                WHERE J2.[Id] = @JobId
-            ) THEN -1 -- NotEligible: unknown, outside the assignment or org, or the access connector is disabled
-            ELSE 0 -- NotClaimable: eligible, but not Pending, in backoff, or its config or target is disabled
-        END
-
-        ROLLBACK TRANSACTION
-
-        SELECT
-            @Outcome AS [Outcome],
-            CAST(NULL AS UNIQUEIDENTIFIER) AS [AttemptId],
-            CAST(NULL AS UNIQUEIDENTIFIER) AS [JobId],
-            CAST(NULL AS TINYINT) AS [Source],
-            CAST(NULL AS UNIQUEIDENTIFIER) AS [TargetSystemId],
-            CAST(NULL AS NVARCHAR(200)) AS [TargetSystemName],
-            CAST(NULL AS NVARCHAR(MAX)) AS [TargetSystemSealedData],
-            CAST(NULL AS UNIQUEIDENTIFIER) AS [CipherId],
-            CAST(NULL AS NVARCHAR(MAX)) AS [RotationConfigSealedData],
-            CAST(NULL AS DATETIME2(7)) AS [ExecuteBy]
-        RETURN
-    END
-
-    -- AtMostOneInFlightAttemptPerJob: the attempt is created in the same transaction as the claim.
-    -- Its CreationDate equals the job's ClaimedAt, which is how the claim's own attempt is recognised later.
-    INSERT INTO [dbo].[PamRotationAttempt]
+    INSERT INTO [dbo].[PamRotationJobTimeoutSweep]
     (
-        [Id], [JobId], [ClaimedByAccessConnectorId], [CipherUpdated], [Action], [FailureReason], [SyncState],
-        [SessionTermination], [CreationDate], [ResolvedDate]
+        [RotationJobId],
+        [SweptDate]
     )
-    VALUES
-    (
-        @AttemptId, @JobId, @AccessConnectorId, 0, 0 /* None */, NULL, NULL,
-        NULL, @Now, NULL
-    )
-
-    COMMIT TRANSACTION
-
-    -- ExecuteBy is this claim's lease end (ClaimedAt + ReleaseDelay).
+    OUTPUT
+        inserted.[RotationJobId]
+    INTO @Due
     SELECT
-        1 AS [Outcome], -- Claimed
-        @AttemptId AS [AttemptId],
+        J.[Id],
+        @Now
+    FROM
+        [dbo].[PamRotationJob] J
+    WHERE
+        J.[Action] IN (0,1) -- None, Claimed: unresolved, so the passed deadline is a timeout
+        AND J.[ExpirationDate] <= @Now
+        AND NOT EXISTS (
+            SELECT
+                1
+            FROM
+                [dbo].[PamRotationJobTimeoutSweep] S WITH (UPDLOCK, HOLDLOCK)
+            WHERE
+                S.[RotationJobId] = J.[Id]
+        )
+
+    -- One row per timed-out job; AttemptCount tells unroutable (never claimed) from stuck (claimed).
+    SELECT
         J.[Id] AS [JobId],
-        J.[Source],
-        T.[Id] AS [TargetSystemId],
-        T.[Name] AS [TargetSystemName],
-        T.[SealedData] AS [TargetSystemSealedData],
+        C.[Id] AS [RotationConfigId],
+        C.[OrganizationId],
         C.[CipherId],
-        C.[SealedData] AS [RotationConfigSealedData],
-        DATEADD(SECOND, @ReleaseDelaySeconds, @Now) AS [ExecuteBy]
-    FROM [dbo].[PamRotationJob] J
-    INNER JOIN [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]
-    INNER JOIN [dbo].[PamTargetSystem] T ON T.[Id] = C.[TargetSystemId]
-    WHERE J.[Id] = @JobId
+        J.[Source],
+        J.[ClaimedByAccessConnectorId],
+        (
+            SELECT
+                COUNT(*)
+            FROM
+                [dbo].[PamRotationAttempt] AT
+            WHERE
+                AT.[JobId] = J.[Id]
+        ) AS [AttemptCount]
+    FROM
+        @Due D
+    INNER JOIN
+        [dbo].[PamRotationJob] J ON J.[Id] = D.[RotationJobId]
+    INNER JOIN
+        [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]
 END
 GO
 
@@ -1064,10 +1338,10 @@ CREATE OR ALTER PROCEDURE [dbo].[PamRotationJob_Create]
     @Source TINYINT,
     @Action TINYINT,
     @ClaimedByAccessConnectorId UNIQUEIDENTIFIER = NULL,
-    @ClaimedAt DATETIME2(7) = NULL,
+    @ClaimedDate DATETIME2(7) = NULL,
     @CreationDate DATETIME2(7),
-    @NextClaimableAt DATETIME2(7),
-    @ExpiresAt DATETIME2(7)
+    @NextClaimableDate DATETIME2(7),
+    @ExpirationDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -1075,58 +1349,89 @@ BEGIN
     -- Holds the range lock until the INSERT commits.
     SET XACT_ABORT ON
 
-    BEGIN TRANSACTION
+    BEGIN TRY
+        BEGIN TRANSACTION
 
-    -- Re-checked so a config/target disabled between read and write can't mint a job.
-    -- Outcome -1 (ConfigNotOfferable) is distinct from 0 (ActiveJobExists).
-    IF NOT EXISTS (
-        SELECT 1
-        FROM [dbo].[PamRotationConfig] C WITH (UPDLOCK, HOLDLOCK)
-        INNER JOIN [dbo].[PamTargetSystem] T ON T.[Id] = C.[TargetSystemId]
-        WHERE C.[Id] = @RotationConfigId
-            AND C.[Enabled] = 1
-            AND T.[Method] = 0 -- Automatic
-            AND T.[Status] = 0 -- Active
-    )
-    BEGIN
-        ROLLBACK TRANSACTION
-        SELECT -1 -- ConfigNotOfferable
-        RETURN
-    END
+        -- Re-checked so a config/target disabled between read and write can't mint a job.
+        -- Outcome -1 (ConfigNotOfferable) is distinct from 0 (ActiveJobExists).
+        IF NOT EXISTS (
+            SELECT
+                1
+            FROM
+                [dbo].[PamRotationConfig] C WITH (UPDLOCK, HOLDLOCK)
+            INNER JOIN
+                [dbo].[PamTargetSystem] T ON T.[Id] = C.[TargetSystemId]
+            WHERE
+                C.[Id] = @RotationConfigId
+                AND C.[Enabled] = 1
+                AND T.[Method] = 0 -- Automatic
+                AND T.[Status] = 0 -- Active
+        )
+        BEGIN
+            ROLLBACK TRANSACTION
+            SELECT -1 -- ConfigNotOfferable
+            RETURN
+        END
 
-    -- AtMostOneActiveJobPerConfig: range lock holds for the transaction, blocking concurrent creation.
-    -- A timed-out job holds its config until the timeout sweep records it, so the sweep's reschedule lands first.
-    IF EXISTS (
-        SELECT 1
-        FROM [dbo].[PamRotationJob] J WITH (UPDLOCK, HOLDLOCK)
-        WHERE J.[RotationConfigId] = @RotationConfigId
-            AND J.[Action] IN (0, 1) -- None, Claimed
-            AND NOT EXISTS (
-                SELECT 1
-                FROM [dbo].[PamRotationJobTimeoutSweep] S
-                WHERE S.[RotationJobId] = J.[Id]
-            )
-    )
-    BEGIN
-        ROLLBACK TRANSACTION
-        SELECT 0 -- ActiveJobExists
-        RETURN
-    END
+        -- AtMostOneActiveJobPerConfig: range lock holds for the transaction, blocking concurrent creation.
+        -- A timed-out job holds its config until the timeout sweep records it, so the sweep's reschedule lands first.
+        IF EXISTS (
+            SELECT
+                1
+            FROM
+                [dbo].[PamRotationJob] J WITH (UPDLOCK, HOLDLOCK)
+            WHERE
+                J.[RotationConfigId] = @RotationConfigId
+                AND J.[Action] IN (0,1) -- None, Claimed
+                AND NOT EXISTS (
+                    SELECT
+                        1
+                    FROM
+                        [dbo].[PamRotationJobTimeoutSweep] S
+                    WHERE
+                        S.[RotationJobId] = J.[Id]
+                )
+        )
+        BEGIN
+            ROLLBACK TRANSACTION
+            SELECT 0 -- ActiveJobExists
+            RETURN
+        END
 
-    INSERT INTO [dbo].[PamRotationJob]
-    (
-        [Id], [RotationConfigId], [Source], [Action], [ClaimedByAccessConnectorId], [ClaimedAt],
-        [CreationDate], [NextClaimableAt], [ExpiresAt]
-    )
-    VALUES
-    (
-        @Id, @RotationConfigId, @Source, @Action, @ClaimedByAccessConnectorId, @ClaimedAt,
-        @CreationDate, @NextClaimableAt, @ExpiresAt
-    )
+        INSERT INTO [dbo].[PamRotationJob]
+        (
+            [Id],
+            [RotationConfigId],
+            [Source],
+            [Action],
+            [ClaimedByAccessConnectorId],
+            [ClaimedDate],
+            [CreationDate],
+            [NextClaimableDate],
+            [ExpirationDate]
+        )
+        VALUES
+        (
+            @Id,
+            @RotationConfigId,
+            @Source,
+            @Action,
+            @ClaimedByAccessConnectorId,
+            @ClaimedDate,
+            @CreationDate,
+            @NextClaimableDate,
+            @ExpirationDate
+        )
 
-    COMMIT TRANSACTION
+        COMMIT TRANSACTION
 
-    SELECT 1 -- Created
+        SELECT 1 -- Created
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
 END
 GO
 
@@ -1136,9 +1441,12 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT *
-    FROM [dbo].[PamRotationJob]
-    WHERE [Id] = @Id
+    SELECT
+        *
+    FROM
+        [dbo].[PamRotationJobView]
+    WHERE
+        [Id] = @Id
 END
 GO
 
@@ -1149,16 +1457,26 @@ BEGIN
     SET NOCOUNT ON
 
     -- Two result sets let the caller zip jobs to attempts, grouped by JobId.
-    SELECT *
-    FROM [dbo].[PamRotationJob]
-    WHERE [RotationConfigId] = @RotationConfigId
-    ORDER BY [CreationDate] DESC
+    SELECT
+        *
+    FROM
+        [dbo].[PamRotationJobView]
+    WHERE
+        [RotationConfigId] = @RotationConfigId
+    ORDER BY
+        [CreationDate] DESC
 
-    SELECT A.*
-    FROM [dbo].[PamRotationAttempt] A
-    INNER JOIN [dbo].[PamRotationJob] J ON J.[Id] = A.[JobId]
-    WHERE J.[RotationConfigId] = @RotationConfigId
-    ORDER BY A.[JobId], A.[CreationDate] ASC
+    SELECT
+        A.*
+    FROM
+        [dbo].[PamRotationAttemptView] A
+    INNER JOIN
+        [dbo].[PamRotationJobView] J ON J.[Id] = A.[JobId]
+    WHERE
+        J.[RotationConfigId] = @RotationConfigId
+    ORDER BY
+        A.[JobId],
+        A.[CreationDate] ASC
 END
 GO
 
@@ -1169,16 +1487,28 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- The access connector poll; re-derives PamRotationJob_Claim's eligibility so the poll list matches what's claimable.
-    SELECT J.*, C.[TargetSystemId]
-    FROM [dbo].[PamRotationJob] J
-    INNER JOIN [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]
-    INNER JOIN [dbo].[PamTargetSystem] T ON T.[Id] = C.[TargetSystemId]
-    INNER JOIN [dbo].[PamAccessConnectorTargetAssignment] A ON A.[AccessConnectorId] = @AccessConnectorId AND A.[TargetSystemId] = C.[TargetSystemId]
-    INNER JOIN [dbo].[PamAccessConnector] D ON D.[Id] = @AccessConnectorId AND D.[OrganizationId] = C.[OrganizationId] AND D.[Status] = 0 -- Enabled
-    WHERE J.[Action] = 0 -- None
-        AND J.[ExpiresAt] > @Now
-        AND J.[NextClaimableAt] <= @Now
+    -- The access connector poll; re-derives PamRotationJob_UpdateClaim's eligibility so the poll list matches what's
+    -- claimable.
+    SELECT
+        J.*,
+        C.[TargetSystemId]
+    FROM
+        [dbo].[PamRotationJobView] J
+    INNER JOIN
+        [dbo].[PamRotationConfigView] C ON C.[Id] = J.[RotationConfigId]
+    INNER JOIN
+        [dbo].[PamTargetSystemView] T ON T.[Id] = C.[TargetSystemId]
+    INNER JOIN
+        [dbo].[PamAccessConnectorTargetAssignmentView] A ON A.[AccessConnectorId] = @AccessConnectorId
+            AND A.[TargetSystemId] = C.[TargetSystemId]
+    INNER JOIN
+        [dbo].[PamAccessConnectorView] AC ON AC.[Id] = @AccessConnectorId
+            AND AC.[OrganizationId] = C.[OrganizationId]
+            AND AC.[Status] = 0 -- Enabled
+    WHERE
+        J.[Action] = 0 -- None
+        AND J.[ExpirationDate] > @Now
+        AND J.[NextClaimableDate] <= @Now
         AND C.[Enabled] = 1
         AND T.[Status] = 0 -- Active
 END
@@ -1192,32 +1522,194 @@ BEGIN
     SET NOCOUNT ON
 
     -- Two result sets (jobs, attempts); membership is by the attempt's ClaimedByAccessConnectorId.
-    SELECT TOP (@Limit) J.*
-    INTO #Jobs
-    FROM [dbo].[PamRotationJob] J
-    WHERE EXISTS (
-        SELECT 1
-        FROM [dbo].[PamRotationAttempt] A
-        WHERE A.[JobId] = J.[Id]
-            AND A.[ClaimedByAccessConnectorId] = @AccessConnectorId
-    )
-    ORDER BY J.[CreationDate] DESC
+    SELECT TOP (@Limit)
+        J.*
+    INTO
+        #Jobs
+    FROM
+        [dbo].[PamRotationJobView] J
+    WHERE
+        EXISTS (
+            SELECT
+                1
+            FROM
+                [dbo].[PamRotationAttemptView] A
+            WHERE
+                A.[JobId] = J.[Id]
+                AND A.[ClaimedByAccessConnectorId] = @AccessConnectorId
+        )
+    ORDER BY
+        J.[CreationDate] DESC
 
-    SELECT *
-    FROM #Jobs
-    ORDER BY [CreationDate] DESC
+    SELECT
+        *
+    FROM
+        #Jobs
+    ORDER BY
+        [CreationDate] DESC
 
-    SELECT A.*
-    FROM [dbo].[PamRotationAttempt] A
-    INNER JOIN #Jobs J ON J.[Id] = A.[JobId]
-    WHERE A.[ClaimedByAccessConnectorId] = @AccessConnectorId
-    ORDER BY A.[JobId], A.[CreationDate] ASC
+    SELECT
+        A.*
+    FROM
+        [dbo].[PamRotationAttemptView] A
+    INNER JOIN
+        #Jobs J ON J.[Id] = A.[JobId]
+    WHERE
+        A.[ClaimedByAccessConnectorId] = @AccessConnectorId
+    ORDER BY
+        A.[JobId],
+        A.[CreationDate] ASC
 
     DROP TABLE #Jobs
 END
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[PamRotationJob_ReleaseExpiredLeases]
+CREATE OR ALTER PROCEDURE [dbo].[PamRotationJob_UpdateClaim]
+    @JobId UNIQUEIDENTIFIER,
+    @AttemptId UNIQUEIDENTIFIER,
+    @AccessConnectorId UNIQUEIDENTIFIER,
+    @Now DATETIME2(7),
+    @ReleaseDelaySeconds INT
+AS
+BEGIN
+    SET NOCOUNT ON
+    -- First-claim-wins: the UPDATE's WHERE Action = 0 takes the row lock, serializing concurrent claims.
+    SET XACT_ABORT ON
+
+    DECLARE @Outcome INT
+
+    BEGIN TRY
+        BEGIN TRANSACTION
+
+        UPDATE
+            J
+        SET
+            J.[Action] = 1, -- Claimed
+            J.[ClaimedByAccessConnectorId] = @AccessConnectorId,
+            J.[ClaimedDate] = @Now
+        FROM
+            [dbo].[PamRotationJob] J
+        INNER JOIN
+            [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]
+        INNER JOIN
+            [dbo].[PamTargetSystem] T ON T.[Id] = C.[TargetSystemId]
+        INNER JOIN
+            [dbo].[PamAccessConnectorTargetAssignment] A ON A.[AccessConnectorId] = @AccessConnectorId
+                AND A.[TargetSystemId] = C.[TargetSystemId]
+        -- Re-checks Enabled and the org match, which the caller's token already checked.
+        INNER JOIN
+            [dbo].[PamAccessConnector] AC ON AC.[Id] = @AccessConnectorId
+                AND AC.[OrganizationId] = C.[OrganizationId]
+                AND AC.[Status] = 0 -- Enabled
+        WHERE
+            J.[Id] = @JobId
+            AND J.[Action] = 0 -- None
+            AND J.[ExpirationDate] > @Now
+            AND J.[NextClaimableDate] <= @Now
+            AND C.[Enabled] = 1
+            AND T.[Status] = 0 -- Active
+
+        IF @@ROWCOUNT = 0
+        BEGIN
+            -- Unknown job or one outside this access connector's assignment share NotEligible; no existence oracle.
+            SET @Outcome = CASE
+                WHEN NOT EXISTS (
+                    SELECT
+                        1
+                    FROM
+                        [dbo].[PamRotationJob] J2
+                    INNER JOIN
+                        [dbo].[PamRotationConfig] C2 ON C2.[Id] = J2.[RotationConfigId]
+                    INNER JOIN
+                        [dbo].[PamAccessConnectorTargetAssignment] A2 ON A2.[AccessConnectorId] = @AccessConnectorId
+                            AND A2.[TargetSystemId] = C2.[TargetSystemId]
+                    INNER JOIN
+                        [dbo].[PamAccessConnector] AC2 ON AC2.[Id] = @AccessConnectorId
+                            AND AC2.[OrganizationId] = C2.[OrganizationId]
+                            AND AC2.[Status] = 0 -- Enabled
+                    WHERE
+                        J2.[Id] = @JobId
+                ) THEN -1 -- NotEligible: unknown, outside the assignment or org, or the access connector is disabled
+                ELSE 0 -- NotClaimable: eligible, but not Pending, in backoff, or its config or target is disabled
+            END
+
+            ROLLBACK TRANSACTION
+
+            SELECT
+                @Outcome AS [Outcome],
+                CAST(NULL AS UNIQUEIDENTIFIER) AS [AttemptId],
+                CAST(NULL AS UNIQUEIDENTIFIER) AS [JobId],
+                CAST(NULL AS TINYINT) AS [Source],
+                CAST(NULL AS UNIQUEIDENTIFIER) AS [TargetSystemId],
+                CAST(NULL AS NVARCHAR(200)) AS [TargetSystemName],
+                CAST(NULL AS NVARCHAR(MAX)) AS [TargetSystemSealedData],
+                CAST(NULL AS UNIQUEIDENTIFIER) AS [CipherId],
+                CAST(NULL AS NVARCHAR(MAX)) AS [RotationConfigSealedData],
+                CAST(NULL AS DATETIME2(7)) AS [ExecuteBy]
+            RETURN
+        END
+
+        -- AtMostOneInFlightAttemptPerJob: the attempt is created in the same transaction as the claim.
+        -- Its CreationDate equals the job's ClaimedDate, which is how the claim's own attempt is recognised later.
+        INSERT INTO [dbo].[PamRotationAttempt]
+        (
+            [Id],
+            [JobId],
+            [ClaimedByAccessConnectorId],
+            [CipherUpdated],
+            [Action],
+            [FailureReason],
+            [SyncState],
+            [SessionTermination],
+            [CreationDate],
+            [ResolvedDate]
+        )
+        VALUES
+        (
+            @AttemptId,
+            @JobId,
+            @AccessConnectorId,
+            0,
+            0, -- None
+            NULL,
+            NULL,
+            NULL,
+            @Now,
+            NULL
+        )
+
+        COMMIT TRANSACTION
+
+        -- ExecuteBy is this claim's lease end (ClaimedDate + ReleaseDelay).
+        SELECT
+            1 AS [Outcome], -- Claimed
+            @AttemptId AS [AttemptId],
+            J.[Id] AS [JobId],
+            J.[Source],
+            T.[Id] AS [TargetSystemId],
+            T.[Name] AS [TargetSystemName],
+            T.[SealedData] AS [TargetSystemSealedData],
+            C.[CipherId],
+            C.[SealedData] AS [RotationConfigSealedData],
+            DATEADD(SECOND, @ReleaseDelaySeconds, @Now) AS [ExecuteBy]
+        FROM
+            [dbo].[PamRotationJob] J
+        INNER JOIN
+            [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]
+        INNER JOIN
+            [dbo].[PamTargetSystem] T ON T.[Id] = C.[TargetSystemId]
+        WHERE
+            J.[Id] = @JobId
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[PamRotationJob_UpdateManyReleaseExpiredLeases]
     @Now DATETIME2(7),
     @OfflineAfterSeconds INT,
     @ReleaseDelaySeconds INT
@@ -1228,87 +1720,73 @@ BEGIN
     -- with a Succeeded job, so success wins without checking attempts.
     SET XACT_ABORT ON
 
-    BEGIN TRANSACTION
-
-    DECLARE @Affected TABLE (
+    DECLARE @Affected TABLE
+    (
         [JobId] UNIQUEIDENTIFIER NOT NULL,
         [PreviousClaimedByAccessConnectorId] UNIQUEIDENTIFIER NULL
     )
 
-    UPDATE J
-    SET J.[Action] = 0, -- None
-        -- Uses the pre-clear ClaimedAt, still visible here, so re-claim time equals ExecuteBy.
-        J.[NextClaimableAt] = DATEADD(SECOND, @ReleaseDelaySeconds, J.[ClaimedAt]),
-        J.[ClaimedByAccessConnectorId] = NULL,
-        J.[ClaimedAt] = NULL
-    OUTPUT deleted.[Id], deleted.[ClaimedByAccessConnectorId] INTO @Affected ([JobId], [PreviousClaimedByAccessConnectorId])
-    FROM [dbo].[PamRotationJob] J
-    INNER JOIN [dbo].[PamAccessConnector] D ON D.[Id] = J.[ClaimedByAccessConnectorId]
-    WHERE J.[Action] = 1 -- Claimed
-        AND J.[ExpiresAt] > @Now -- a timed-out claim is the timeout sweep's, not a release
-        AND DATEADD(SECOND, @ReleaseDelaySeconds, J.[ClaimedAt]) <= @Now
-        AND (D.[LastHeartbeatAt] IS NULL OR D.[LastHeartbeatAt] < DATEADD(SECOND, -@OfflineAfterSeconds, @Now))
+    BEGIN TRY
+        BEGIN TRANSACTION
 
-    -- Records when the released claim's attempt ended; it derives as Abandoned, which the retry budget never charges.
-    UPDATE [dbo].[PamRotationAttempt]
-    SET [ResolvedDate] = @Now
-    WHERE [JobId] IN (SELECT [JobId] FROM @Affected)
-        AND [Action] = 0 -- None
-        AND [ResolvedDate] IS NULL
+        UPDATE
+            J
+        SET
+            J.[Action] = 0, -- None
+            -- Uses the pre-clear ClaimedDate, still visible here, so re-claim time equals ExecuteBy.
+            J.[NextClaimableDate] = DATEADD(SECOND, @ReleaseDelaySeconds, J.[ClaimedDate]),
+            J.[ClaimedByAccessConnectorId] = NULL,
+            J.[ClaimedDate] = NULL
+        OUTPUT
+            deleted.[Id],
+            deleted.[ClaimedByAccessConnectorId]
+        INTO @Affected ([JobId], [PreviousClaimedByAccessConnectorId])
+        FROM
+            [dbo].[PamRotationJob] J
+        INNER JOIN
+            [dbo].[PamAccessConnector] AC ON AC.[Id] = J.[ClaimedByAccessConnectorId]
+        WHERE
+            J.[Action] = 1 -- Claimed
+            AND J.[ExpirationDate] > @Now -- a timed-out claim is the timeout sweep's, not a release
+            AND DATEADD(SECOND, @ReleaseDelaySeconds, J.[ClaimedDate]) <= @Now
+            AND (
+                AC.[LastHeartbeatDate] IS NULL
+                OR AC.[LastHeartbeatDate] < DATEADD(SECOND, -@OfflineAfterSeconds, @Now)
+            )
 
-    -- One row per released job; ClaimedByAccessConnectorId is the pre-clear claimant, always non-null.
-    SELECT
-        AF.[JobId],
-        C.[Id] AS [RotationConfigId],
-        C.[OrganizationId],
-        C.[CipherId],
-        J.[Source],
-        AF.[PreviousClaimedByAccessConnectorId] AS [ClaimedByAccessConnectorId]
-    FROM @Affected AF
-    INNER JOIN [dbo].[PamRotationJob] J ON J.[Id] = AF.[JobId]
-    INNER JOIN [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]
+        -- Records when the released claim's attempt ended; it derives as Abandoned, which the retry budget never
+        -- charges.
+        UPDATE
+            [dbo].[PamRotationAttempt]
+        SET
+            [ResolvedDate] = @Now
+        WHERE
+            [JobId] IN (SELECT [JobId] FROM @Affected)
+            AND [Action] = 0 -- None
+            AND [ResolvedDate] IS NULL
 
-    COMMIT TRANSACTION
-END
-GO
+        -- One row per released job; ClaimedByAccessConnectorId is the pre-clear claimant, always non-null.
+        SELECT
+            AF.[JobId],
+            C.[Id] AS [RotationConfigId],
+            C.[OrganizationId],
+            C.[CipherId],
+            J.[Source],
+            AF.[PreviousClaimedByAccessConnectorId] AS [ClaimedByAccessConnectorId]
+        FROM
+            @Affected AF
+        INNER JOIN
+            [dbo].[PamRotationJob] J ON J.[Id] = AF.[JobId]
+        INNER JOIN
+            [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]
 
-CREATE OR ALTER PROCEDURE [dbo].[PamRotationJob_TimeoutDue]
-    @Now DATETIME2(7)
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    -- A timeout is derived; the PamRotationJobTimeoutSweep INSERT decides which run owns a job, and UPDLOCK/HOLDLOCK
-    -- makes a losing sweep skip it. A Rotated attempt always has a Succeeded job, so success wins without checking
-    -- attempts.
-    DECLARE @Due TABLE ([RotationJobId] UNIQUEIDENTIFIER NOT NULL PRIMARY KEY);
-
-    INSERT INTO [dbo].[PamRotationJobTimeoutSweep] ([RotationJobId], [SweptDate])
-    OUTPUT inserted.[RotationJobId] INTO @Due
-    SELECT
-        J.[Id],
-        @Now
-    FROM [dbo].[PamRotationJob] J
-    WHERE J.[Action] IN (0, 1) -- None, Claimed: unresolved, so the passed deadline is a timeout
-        AND J.[ExpiresAt] <= @Now
-        AND NOT EXISTS (
-            SELECT 1
-            FROM [dbo].[PamRotationJobTimeoutSweep] S WITH (UPDLOCK, HOLDLOCK)
-            WHERE S.[RotationJobId] = J.[Id]
-        )
-
-    -- One row per timed-out job; AttemptCount tells unroutable (never claimed) from stuck (claimed).
-    SELECT
-        J.[Id] AS [JobId],
-        C.[Id] AS [RotationConfigId],
-        C.[OrganizationId],
-        C.[CipherId],
-        J.[Source],
-        J.[ClaimedByAccessConnectorId],
-        (SELECT COUNT(*) FROM [dbo].[PamRotationAttempt] AT WHERE AT.[JobId] = J.[Id]) AS [AttemptCount]
-    FROM @Due D
-    INNER JOIN [dbo].[PamRotationJob] J ON J.[Id] = D.[RotationJobId]
-    INNER JOIN [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]
+        COMMIT TRANSACTION
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
 END
 GO
 
@@ -1357,8 +1835,11 @@ BEGIN
     SET NOCOUNT ON
 
     -- No cascade; a referenced target is blocked by its NO ACTION FKs.
-    DELETE FROM [dbo].[PamTargetSystem]
-    WHERE [Id] = @Id
+    DELETE
+    FROM
+        [dbo].[PamTargetSystem]
+    WHERE
+        [Id] = @Id
 END
 GO
 
@@ -1370,29 +1851,45 @@ BEGIN
     -- Cascade deletes assignments with the target; a rotation config instead blocks the delete.
     SET XACT_ABORT ON
 
-    BEGIN TRANSACTION
+    BEGIN TRY
+        BEGIN TRANSACTION
 
-    -- Re-checks under a range lock, since the caller's guard read was outside this transaction.
-    IF EXISTS (
-        SELECT 1
-        FROM [dbo].[PamRotationConfig] WITH (UPDLOCK, HOLDLOCK)
-        WHERE [TargetSystemId] = @Id
-    )
-    BEGIN
-        ROLLBACK TRANSACTION
-        SELECT 0 -- RotationConfigExists
-        RETURN
-    END
+        -- Re-checks under a range lock, since the caller's guard read was outside this transaction.
+        IF EXISTS (
+            SELECT
+                1
+            FROM
+                [dbo].[PamRotationConfig] WITH (UPDLOCK, HOLDLOCK)
+            WHERE
+                [TargetSystemId] = @Id
+        )
+        BEGIN
+            ROLLBACK TRANSACTION
+            SELECT 0 -- RotationConfigExists
+            RETURN
+        END
 
-    DELETE FROM [dbo].[PamAccessConnectorTargetAssignment]
-    WHERE [TargetSystemId] = @Id
+        DELETE
+        FROM
+            [dbo].[PamAccessConnectorTargetAssignment]
+        WHERE
+            [TargetSystemId] = @Id
 
-    DELETE FROM [dbo].[PamTargetSystem]
-    WHERE [Id] = @Id
+        DELETE
+        FROM
+            [dbo].[PamTargetSystem]
+        WHERE
+            [Id] = @Id
 
-    COMMIT TRANSACTION
+        COMMIT TRANSACTION
 
-    SELECT 1 -- Deleted
+        SELECT 1 -- Deleted
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
 END
 GO
 
@@ -1402,9 +1899,12 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT *
-    FROM [dbo].[PamTargetSystem]
-    WHERE [Id] = @Id
+    SELECT
+        *
+    FROM
+        [dbo].[PamTargetSystemView]
+    WHERE
+        [Id] = @Id
 END
 GO
 
@@ -1414,9 +1914,12 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT *
-    FROM [dbo].[PamTargetSystem]
-    WHERE [OrganizationId] = @OrganizationId
+    SELECT
+        *
+    FROM
+        [dbo].[PamTargetSystemView]
+    WHERE
+        [OrganizationId] = @OrganizationId
 END
 GO
 
@@ -1445,44 +1948,6 @@ BEGIN
         [RevisionDate] = @RevisionDate
     WHERE
         [Id] = @Id
-END
-GO
-
-CREATE OR ALTER PROCEDURE [dbo].[AccessLease_ExpireDue]
-    @Now DATETIME2(7)
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    -- Expiry is derived, not stored; PamLeaseExpirySweep's INSERT decides which run owns a lease.
-    -- UPDLOCK/HOLDLOCK serializes concurrent sweeps; a loser re-checks after commit and skips it.
-    DECLARE @Due TABLE ([AccessLeaseId] UNIQUEIDENTIFIER NOT NULL PRIMARY KEY);
-
-    INSERT INTO [dbo].[PamLeaseExpirySweep] ([AccessLeaseId], [SweptDate])
-    OUTPUT inserted.[AccessLeaseId] INTO @Due
-    SELECT
-        AL.[Id],
-        @Now
-    FROM [dbo].[AccessLease] AL
-    WHERE AL.[Action] = 0 -- None: no early end recorded, so the closed window is a natural expiry
-        AND AL.[NotAfter] <= @Now
-        AND NOT EXISTS (
-            SELECT 1
-            FROM [dbo].[PamLeaseExpirySweep] S WITH (UPDLOCK, HOLDLOCK)
-            WHERE S.[AccessLeaseId] = AL.[Id]
-        )
-
-    -- No join needed; the caller audits/triggers off the lease row itself.
-    SELECT
-        AL.[Id],
-        AL.[OrganizationId],
-        AL.[CollectionId],
-        AL.[CipherId],
-        AL.[RequesterId],
-        AL.[NotBefore],
-        AL.[NotAfter]
-    FROM [dbo].[AccessLease] AL
-    INNER JOIN @Due D ON D.[AccessLeaseId] = AL.[Id]
 END
 GO
 

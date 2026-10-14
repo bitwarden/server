@@ -51,8 +51,8 @@ public class PamRotationConfigRepository : Repository<CoreEntity, EfModel, Guid>
         var configs = await dbContext.PamRotationConfigs
             .Join(dbContext.PamTargetSystems, c => c.TargetSystemId, t => t.Id, (c, t) => new { Config = c, Target = t })
             .Where(x => x.Config.Enabled
-                && x.Config.NextRotationAt != null
-                && x.Config.NextRotationAt <= now
+                && x.Config.NextRotationDate != null
+                && x.Config.NextRotationDate <= now
                 && x.Target.Method == PamTargetSystemMethod.Automatic
                 && x.Target.Status == PamTargetSystemStatus.Active
                 // OfferRotation is the single creation point; a config already carrying work is not offered again.
@@ -120,9 +120,9 @@ public class PamRotationConfigRepository : Repository<CoreEntity, EfModel, Guid>
                 SealedData = c.SealedData,
                 ScheduleCron = c.ScheduleCron,
                 RotateOnAccessEnd = c.RotateOnAccessEnd,
-                NextRotationAt = c.NextRotationAt,
+                NextRotationDate = c.NextRotationDate,
                 Enabled = c.Enabled,
-                LastRotationAt = c.LastRotationAt,
+                LastRotationDate = c.LastRotationDate,
                 CreationDate = c.CreationDate,
                 RevisionDate = c.RevisionDate,
                 TargetSystemName = t.Name,

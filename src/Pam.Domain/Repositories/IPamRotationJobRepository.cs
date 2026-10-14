@@ -67,9 +67,9 @@ public interface IPamRotationJobRepository
         string? failureReason, PamRotationSyncState syncState, DateTime now, int maxAttempts, TimeSpan retryBaseDelay);
 
     /// <summary>
-    /// Records each unresolved job past <see cref="PamRotationJob.ExpiresAt"/> in the timeout journal once, and returns
-    /// them for audit. Nothing else is written, since TimedOut and Abandoned are derived; the journal row ends the
-    /// job's hold on its config.
+    /// Records each unresolved job past <see cref="PamRotationJob.ExpirationDate"/> in the timeout journal once, and
+    /// returns them for audit. Nothing else is written, since TimedOut and Abandoned are derived; the journal row ends
+    /// the job's hold on its config.
     /// </summary>
     Task<IReadOnlyList<PamTimedOutJob>> TimeoutDueAsync(DateTime now);
 

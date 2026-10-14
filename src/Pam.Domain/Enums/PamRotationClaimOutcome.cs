@@ -1,7 +1,7 @@
 ﻿namespace Bit.Pam.Enums;
 
 /// <summary>
-/// The result of the first-claim-wins <c>PamRotationJob_Claim</c>; each value is the code it returns.
+/// The result of the first-claim-wins <c>PamRotationJob_UpdateClaim</c>; each value is the code it returns.
 /// </summary>
 public enum PamRotationClaimOutcome
 {

@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace Bit.SqliteMigrations.Migrations;
+namespace Bit.MySqlMigrations.Migrations;
 
 /// <inheritdoc />
 public partial class AddPamRotation : Migration
@@ -14,14 +14,15 @@ public partial class AddPamRotation : Migration
             name: "PamAccessConnector",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                ApiKeyId = table.Column<Guid>(type: "TEXT", nullable: false),
-                Status = table.Column<byte>(type: "INTEGER", nullable: false),
-                LastHeartbeatAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                OrganizationId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                Name = table.Column<string>(type: "varchar(200)", maxLength: 200, nullable: false)
+                    .Annotation("MySql:CharSet", "utf8mb4"),
+                ApiKeyId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                Status = table.Column<byte>(type: "tinyint unsigned", nullable: false),
+                LastHeartbeatDate = table.Column<DateTime>(type: "datetime(6)", nullable: true),
+                CreationDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "datetime(6)", nullable: false)
             },
             constraints: table =>
             {
@@ -37,14 +38,15 @@ public partial class AddPamRotation : Migration
                     principalTable: "Organization",
                     principalColumn: "Id",
                     onDelete: ReferentialAction.Cascade);
-            });
+            })
+            .Annotation("MySql:CharSet", "utf8mb4");
 
         migrationBuilder.CreateTable(
             name: "PamLeaseExpirySweep",
             columns: table => new
             {
-                AccessLeaseId = table.Column<Guid>(type: "TEXT", nullable: false),
-                SweptDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                AccessLeaseId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                SweptDate = table.Column<DateTime>(type: "datetime(6)", nullable: false)
             },
             constraints: table =>
             {
@@ -55,20 +57,23 @@ public partial class AddPamRotation : Migration
                     principalTable: "AccessLease",
                     principalColumn: "Id",
                     onDelete: ReferentialAction.Cascade);
-            });
+            })
+            .Annotation("MySql:CharSet", "utf8mb4");
 
         migrationBuilder.CreateTable(
             name: "PamTargetSystem",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                Method = table.Column<byte>(type: "INTEGER", nullable: false),
-                SealedData = table.Column<string>(type: "TEXT", maxLength: 10000, nullable: true),
-                Status = table.Column<byte>(type: "INTEGER", nullable: false),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                OrganizationId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                Name = table.Column<string>(type: "varchar(200)", maxLength: 200, nullable: false)
+                    .Annotation("MySql:CharSet", "utf8mb4"),
+                Method = table.Column<byte>(type: "tinyint unsigned", nullable: false),
+                SealedData = table.Column<string>(type: "varchar(10000)", maxLength: 10000, nullable: true)
+                    .Annotation("MySql:CharSet", "utf8mb4"),
+                Status = table.Column<byte>(type: "tinyint unsigned", nullable: false),
+                CreationDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "datetime(6)", nullable: false)
             },
             constraints: table =>
             {
@@ -79,55 +84,59 @@ public partial class AddPamRotation : Migration
                     principalTable: "Organization",
                     principalColumn: "Id",
                     onDelete: ReferentialAction.Cascade);
-            });
+            })
+            .Annotation("MySql:CharSet", "utf8mb4");
 
         migrationBuilder.CreateTable(
             name: "PamAccessConnectorTargetAssignment",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                AccessConnectorId = table.Column<Guid>(type: "TEXT", nullable: false),
-                TargetSystemId = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                AccessConnectorId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                TargetSystemId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                OrganizationId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                CreationDate = table.Column<DateTime>(type: "datetime(6)", nullable: false)
             },
             constraints: table =>
             {
                 table.PrimaryKey("PK_PamAccessConnectorTargetAssignment", x => x.Id);
                 table.ForeignKey(
-                    name: "FK_PamAccessConnectorTargetAssignment_Organization_OrganizationId",
+                    name: "FK_PamAccessConnectorTargetAssignment_Organization_Organization~",
                     column: x => x.OrganizationId,
                     principalTable: "Organization",
                     principalColumn: "Id",
                     onDelete: ReferentialAction.Cascade);
                 table.ForeignKey(
-                    name: "FK_PamAccessConnectorTargetAssignment_PamAccessConnector_AccessConnectorId",
+                    name: "FK_PamAccessConnectorTargetAssignment_PamAccessConnector_Access~",
                     column: x => x.AccessConnectorId,
                     principalTable: "PamAccessConnector",
                     principalColumn: "Id");
                 table.ForeignKey(
-                    name: "FK_PamAccessConnectorTargetAssignment_PamTargetSystem_TargetSystemId",
+                    name: "FK_PamAccessConnectorTargetAssignment_PamTargetSystem_TargetSys~",
                     column: x => x.TargetSystemId,
                     principalTable: "PamTargetSystem",
                     principalColumn: "Id");
-            });
+            })
+            .Annotation("MySql:CharSet", "utf8mb4");
 
         migrationBuilder.CreateTable(
             name: "PamRotationConfig",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                CipherId = table.Column<Guid>(type: "TEXT", nullable: false),
-                TargetSystemId = table.Column<Guid>(type: "TEXT", nullable: false),
-                SealedData = table.Column<string>(type: "TEXT", maxLength: 10000, nullable: false),
-                ScheduleCron = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
-                RotateOnAccessEnd = table.Column<bool>(type: "INTEGER", nullable: false),
-                NextRotationAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                Enabled = table.Column<bool>(type: "INTEGER", nullable: false),
-                LastRotationAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                OrganizationId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                CipherId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                TargetSystemId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                SealedData = table.Column<string>(type: "varchar(10000)", maxLength: 10000, nullable: false)
+                    .Annotation("MySql:CharSet", "utf8mb4"),
+                ScheduleCron = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: true)
+                    .Annotation("MySql:CharSet", "utf8mb4"),
+                RotateOnAccessEnd = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                NextRotationDate = table.Column<DateTime>(type: "datetime(6)", nullable: true),
+                Enabled = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                LastRotationDate = table.Column<DateTime>(type: "datetime(6)", nullable: true),
+                CreationDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "datetime(6)", nullable: false)
             },
             constraints: table =>
             {
@@ -143,21 +152,22 @@ public partial class AddPamRotation : Migration
                     column: x => x.TargetSystemId,
                     principalTable: "PamTargetSystem",
                     principalColumn: "Id");
-            });
+            })
+            .Annotation("MySql:CharSet", "utf8mb4");
 
         migrationBuilder.CreateTable(
             name: "PamRotationJob",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                RotationConfigId = table.Column<Guid>(type: "TEXT", nullable: false),
-                Source = table.Column<byte>(type: "INTEGER", nullable: false),
-                Action = table.Column<byte>(type: "INTEGER", nullable: false),
-                ClaimedByAccessConnectorId = table.Column<Guid>(type: "TEXT", nullable: true),
-                ClaimedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                NextClaimableAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                ExpiresAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                RotationConfigId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                Source = table.Column<byte>(type: "tinyint unsigned", nullable: false),
+                Action = table.Column<byte>(type: "tinyint unsigned", nullable: false),
+                ClaimedByAccessConnectorId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                ClaimedDate = table.Column<DateTime>(type: "datetime(6)", nullable: true),
+                CreationDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                NextClaimableDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                ExpirationDate = table.Column<DateTime>(type: "datetime(6)", nullable: false)
             },
             constraints: table =>
             {
@@ -168,22 +178,24 @@ public partial class AddPamRotation : Migration
                     principalTable: "PamRotationConfig",
                     principalColumn: "Id",
                     onDelete: ReferentialAction.Cascade);
-            });
+            })
+            .Annotation("MySql:CharSet", "utf8mb4");
 
         migrationBuilder.CreateTable(
             name: "PamRotationAttempt",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                JobId = table.Column<Guid>(type: "TEXT", nullable: false),
-                ClaimedByAccessConnectorId = table.Column<Guid>(type: "TEXT", nullable: false),
-                CipherUpdated = table.Column<bool>(type: "INTEGER", nullable: false),
-                Action = table.Column<byte>(type: "INTEGER", nullable: false),
-                FailureReason = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                SyncState = table.Column<byte>(type: "INTEGER", nullable: true),
-                SessionTermination = table.Column<byte>(type: "INTEGER", nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                ResolvedDate = table.Column<DateTime>(type: "TEXT", nullable: true)
+                Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                JobId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                ClaimedByAccessConnectorId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                CipherUpdated = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                Action = table.Column<byte>(type: "tinyint unsigned", nullable: false),
+                FailureReason = table.Column<string>(type: "varchar(500)", maxLength: 500, nullable: true)
+                    .Annotation("MySql:CharSet", "utf8mb4"),
+                SyncState = table.Column<byte>(type: "tinyint unsigned", nullable: true),
+                SessionTermination = table.Column<byte>(type: "tinyint unsigned", nullable: true),
+                CreationDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                ResolvedDate = table.Column<DateTime>(type: "datetime(6)", nullable: true)
             },
             constraints: table =>
             {
@@ -194,14 +206,15 @@ public partial class AddPamRotation : Migration
                     principalTable: "PamRotationJob",
                     principalColumn: "Id",
                     onDelete: ReferentialAction.Cascade);
-            });
+            })
+            .Annotation("MySql:CharSet", "utf8mb4");
 
         migrationBuilder.CreateTable(
             name: "PamRotationJobTimeoutSweep",
             columns: table => new
             {
-                RotationJobId = table.Column<Guid>(type: "TEXT", nullable: false),
-                SweptDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                RotationJobId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                SweptDate = table.Column<DateTime>(type: "datetime(6)", nullable: false)
             },
             constraints: table =>
             {
@@ -212,7 +225,8 @@ public partial class AddPamRotation : Migration
                     principalTable: "PamRotationJob",
                     principalColumn: "Id",
                     onDelete: ReferentialAction.Cascade);
-            });
+            })
+            .Annotation("MySql:CharSet", "utf8mb4");
 
         migrationBuilder.CreateIndex(
             name: "IX_PamAccessConnector_ApiKeyId",
@@ -226,7 +240,7 @@ public partial class AddPamRotation : Migration
             column: "OrganizationId");
 
         migrationBuilder.CreateIndex(
-            name: "IX_PamAccessConnectorTargetAssignment_AccessConnectorId_TargetSystemId",
+            name: "IX_PamAccessConnectorTargetAssignment_AccessConnectorId_TargetS~",
             table: "PamAccessConnectorTargetAssignment",
             columns: new[] { "AccessConnectorId", "TargetSystemId" },
             unique: true);
@@ -258,9 +272,9 @@ public partial class AddPamRotation : Migration
             unique: true);
 
         migrationBuilder.CreateIndex(
-            name: "IX_PamRotationConfig_NextRotationAt",
+            name: "IX_PamRotationConfig_NextRotationDate",
             table: "PamRotationConfig",
-            column: "NextRotationAt");
+            column: "NextRotationDate");
 
         migrationBuilder.CreateIndex(
             name: "IX_PamRotationConfig_OrganizationId",
@@ -273,9 +287,9 @@ public partial class AddPamRotation : Migration
             column: "TargetSystemId");
 
         migrationBuilder.CreateIndex(
-            name: "IX_PamRotationJob_Action_ExpiresAt",
+            name: "IX_PamRotationJob_Action_ExpirationDate",
             table: "PamRotationJob",
-            columns: new[] { "Action", "ExpiresAt" });
+            columns: new[] { "Action", "ExpirationDate" });
 
         migrationBuilder.CreateIndex(
             name: "IX_PamRotationJob_ClaimedByAccessConnectorId_Action",

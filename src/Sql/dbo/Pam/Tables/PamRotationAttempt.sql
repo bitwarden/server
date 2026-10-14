@@ -17,7 +17,7 @@ CREATE TABLE [dbo].[PamRotationAttempt] (
 );
 GO
 
--- Backs PamRotationJob_ReadManyByConfigId and PamRotationAttempt_MarkErrored's retry-budget count.
+-- Backs PamRotationJob_ReadManyByConfigId and PamRotationAttempt_UpdateErrored's retry-budget count.
 CREATE NONCLUSTERED INDEX [IX_PamRotationAttempt_JobId_Action]
     ON [dbo].[PamRotationAttempt] ([JobId] ASC, [Action] ASC);
 GO

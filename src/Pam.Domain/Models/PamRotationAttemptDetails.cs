@@ -38,7 +38,7 @@ public class PamRotationAttemptDetails : PamRotationAttempt
             // A timeout writes nothing, so an attempt it abandoned ended at its job's deadline.
             ResolvedDate = attempt.ResolvedDate
                 ?? (status == PamRotationAttemptStatus.Abandoned && jobStatus == PamRotationJobStatus.TimedOut
-                    ? job.ExpiresAt
+                    ? job.ExpirationDate
                     : null),
         };
     }

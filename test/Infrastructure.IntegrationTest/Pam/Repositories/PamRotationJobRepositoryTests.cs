@@ -75,7 +75,7 @@ public class PamRotationJobRepositoryTests
         var now = DateTime.UtcNow;
         var fixture = await SeedClaimableJobAsync(organizationRepository, pamTargetSystemRepository, apiKeyRepository,
             pamAccessConnectorRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository,
-            now: now.AddHours(-2), expiresAt: now.AddMinutes(-1));
+            now: now.AddHours(-2), expirationDate: now.AddMinutes(-1));
 
         Assert.Equal(PamRotationJobCreateOutcome.ActiveJobExists,
             await pamRotationJobRepository.CreateGuardedAsync(BuildPendingJob(fixture.Config.Id, now)));
@@ -101,8 +101,8 @@ public class PamRotationJobRepositoryTests
         var now = DateTime.UtcNow;
         var fixture = await SeedClaimableJobAsync(organizationRepository, pamTargetSystemRepository, apiKeyRepository,
             pamAccessConnectorRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository,
-            now: now.AddHours(-2), expiresAt: now.AddMinutes(-1));
-        fixture.Config.NextRotationAt = now.AddMinutes(-1);
+            now: now.AddHours(-2), expirationDate: now.AddMinutes(-1));
+        fixture.Config.NextRotationDate = now.AddMinutes(-1);
         await pamRotationConfigRepository.ReplaceAsync(fixture.Config);
 
         Assert.True((await pamRotationConfigRepository.GetDetailsByIdAsync(fixture.Config.Id))!.HasActiveJob);
@@ -158,9 +158,9 @@ public class PamRotationJobRepositoryTests
         var job = await pamRotationJobRepository.GetByIdAsync(fixture.Job.Id);
         Assert.Equal(PamRotationJobAction.Claimed, job!.Action);
         Assert.NotNull(job.ClaimedByAccessConnectorId);
-        Assert.Equal(claimNow, job.ClaimedAt.Value, LaxDateTimeComparer.Default);
+        Assert.Equal(claimNow, job.ClaimedDate.Value, LaxDateTimeComparer.Default);
         Assert.Equal(
-            job.ClaimedAt!.Value.Add(_releaseDelay), winner.ExecuteBy!.Value, LaxDateTimeComparer.Default);
+            job.ClaimedDate!.Value.Add(_releaseDelay), winner.ExecuteBy!.Value, LaxDateTimeComparer.Default);
 
         // AtMostOneInFlightAttemptPerJob
         var details = Assert.Single(
@@ -200,7 +200,7 @@ public class PamRotationJobRepositoryTests
         var job = await pamRotationJobRepository.GetByIdAsync(fixture.Job.Id);
         Assert.Equal(PamRotationJobAction.None, job!.Action);
         Assert.Null(job.ClaimedByAccessConnectorId);
-        Assert.Null(job.ClaimedAt);
+        Assert.Null(job.ClaimedDate);
         var details = Assert.Single(
             await pamRotationJobRepository.GetManyByConfigIdAsync(fixture.Config.Id, fixture.Now));
         Assert.Empty(details.Attempts);
@@ -235,7 +235,7 @@ public class PamRotationJobRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task ClaimAsync_BeforeNextClaimableAt_NotClaimable(
+    public async Task ClaimAsync_BeforeNextClaimableDate_NotClaimable(
         IOrganizationRepository organizationRepository,
         IPamTargetSystemRepository pamTargetSystemRepository,
         IApiKeyRepository apiKeyRepository,
@@ -246,7 +246,7 @@ public class PamRotationJobRepositoryTests
     {
         var fixture = await SeedClaimableJobAsync(organizationRepository, pamTargetSystemRepository, apiKeyRepository,
             pamAccessConnectorRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository,
-            nextClaimableAt: DateTime.UtcNow.AddHours(1));
+            nextClaimableDate: DateTime.UtcNow.AddHours(1));
 
         var result = await pamRotationJobRepository.ClaimAsync(
             fixture.Job.Id, fixture.AccessConnector.Id, fixture.Now, _releaseDelay);
@@ -341,7 +341,7 @@ public class PamRotationJobRepositoryTests
         var now = DateTime.UtcNow;
         var fixture = await SeedClaimableJobAsync(organizationRepository, pamTargetSystemRepository, apiKeyRepository,
             pamAccessConnectorRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository,
-            now: now.AddHours(-2), expiresAt: now.AddMinutes(-1));
+            now: now.AddHours(-2), expirationDate: now.AddMinutes(-1));
 
         var result = await pamRotationJobRepository.ClaimAsync(
             fixture.Job.Id, fixture.AccessConnector.Id, now, _releaseDelay);
@@ -586,7 +586,7 @@ public class PamRotationJobRepositoryTests
         var job = await pamRotationJobRepository.GetByIdAsync(fixture.Job.Id);
         Assert.Equal(PamRotationJobAction.Succeeded, job!.Action);
         Assert.Null(job.ClaimedByAccessConnectorId);
-        Assert.Null(job.ClaimedAt);
+        Assert.Null(job.ClaimedDate);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -603,7 +603,7 @@ public class PamRotationJobRepositoryTests
         var claimTime = now.AddHours(-2);
         var fixture = await SeedClaimableJobAsync(organizationRepository, pamTargetSystemRepository, apiKeyRepository,
             pamAccessConnectorRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository,
-            now: claimTime, expiresAt: now.AddMinutes(-1));
+            now: claimTime, expirationDate: now.AddMinutes(-1));
         var claim = await pamRotationJobRepository.ClaimAsync(
             fixture.Job.Id, fixture.AccessConnector.Id, claimTime, _releaseDelay);
         Assert.Equal(PamRotationCipherWriteOutcome.Accepted, await pamRotationJobRepository.AcceptCipherWriteAsync(
@@ -652,12 +652,12 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(PamRotationSyncState.TargetUnchanged, attempt.SyncState);
         Assert.Equal(errorNow, attempt.ResolvedDate.Value, LaxDateTimeComparer.Default);
 
-        // First backoff step: NextClaimableAt = now + retryBaseDelay * 2^(1-1).
+        // First backoff step: NextClaimableDate = now + retryBaseDelay * 2^(1-1).
         var job = await pamRotationJobRepository.GetByIdAsync(fixture.Job.Id);
         Assert.Equal(PamRotationJobAction.None, job!.Action);
         Assert.Null(job.ClaimedByAccessConnectorId);
-        Assert.Null(job.ClaimedAt);
-        Assert.Equal(errorNow.Add(retryBaseDelay), job.NextClaimableAt, LaxDateTimeComparer.Default);
+        Assert.Null(job.ClaimedDate);
+        Assert.Equal(errorNow.Add(retryBaseDelay), job.NextClaimableDate, LaxDateTimeComparer.Default);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -686,7 +686,7 @@ public class PamRotationJobRepositoryTests
         var job = await pamRotationJobRepository.GetByIdAsync(fixture.Job.Id);
         Assert.Equal(PamRotationJobAction.Failed, job!.Action);
         Assert.Null(job.ClaimedByAccessConnectorId);
-        Assert.Null(job.ClaimedAt);
+        Assert.Null(job.ClaimedDate);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -777,7 +777,7 @@ public class PamRotationJobRepositoryTests
         var now = DateTime.UtcNow;
         var fixture = await SeedClaimableJobAsync(organizationRepository, pamTargetSystemRepository, apiKeyRepository,
             pamAccessConnectorRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository,
-            now: now.AddHours(-2), expiresAt: now.AddMinutes(-1));
+            now: now.AddHours(-2), expirationDate: now.AddMinutes(-1));
 
         var timedOut = await pamRotationJobRepository.TimeoutDueAsync(now);
 
@@ -791,7 +791,7 @@ public class PamRotationJobRepositoryTests
         Assert.Null(row.ClaimedByAccessConnectorId);
         Assert.Equal(0, row.AttemptCount);
 
-        // Nothing is written to the job; the read derives TimedOut from ExpiresAt alone.
+        // Nothing is written to the job; the read derives TimedOut from ExpirationDate alone.
         var job = await pamRotationJobRepository.GetByIdAsync(fixture.Job.Id);
         Assert.Equal(PamRotationJobAction.None, job!.Action);
         var details = Assert.Single(await pamRotationJobRepository.GetManyByConfigIdAsync(fixture.Config.Id, now));
@@ -812,7 +812,7 @@ public class PamRotationJobRepositoryTests
         var now = DateTime.UtcNow;
         var fixture = await SeedClaimableJobAsync(organizationRepository, pamTargetSystemRepository, apiKeyRepository,
             pamAccessConnectorRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository,
-            now: now.AddHours(-2), expiresAt: now.AddMinutes(-1));
+            now: now.AddHours(-2), expirationDate: now.AddMinutes(-1));
         await pamRotationJobRepository.TimeoutDueAsync(now);
 
         var secondRun = await pamRotationJobRepository.TimeoutDueAsync(now.AddMinutes(1));
@@ -834,7 +834,7 @@ public class PamRotationJobRepositoryTests
         var claimTime = now.AddHours(-2);
         var fixture = await SeedClaimableJobAsync(organizationRepository, pamTargetSystemRepository, apiKeyRepository,
             pamAccessConnectorRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository,
-            now: claimTime, expiresAt: now.AddMinutes(-1));
+            now: claimTime, expirationDate: now.AddMinutes(-1));
         var claim = await pamRotationJobRepository.ClaimAsync(
             fixture.Job.Id, fixture.AccessConnector.Id, claimTime, _releaseDelay);
         Assert.Equal(PamRotationClaimOutcome.Claimed, claim.Outcome);
@@ -853,14 +853,14 @@ public class PamRotationJobRepositoryTests
         var details = Assert.Single(await pamRotationJobRepository.GetManyByConfigIdAsync(fixture.Config.Id, now));
         Assert.Equal(PamRotationJobStatus.TimedOut, details.Status);
         Assert.Null(details.ClaimedByAccessConnectorId);
-        Assert.Null(details.ClaimedAt);
+        Assert.Null(details.ClaimedDate);
         var attempt = Assert.Single(details.Attempts);
         Assert.Equal(claim.AttemptId!.Value, attempt.Id);
         Assert.Equal(PamRotationAttemptStatus.Abandoned, attempt.Status);
-        Assert.Equal(fixture.Job.ExpiresAt, attempt.ResolvedDate!.Value, LaxDateTimeComparer.Default);
+        Assert.Equal(fixture.Job.ExpirationDate, attempt.ResolvedDate!.Value, LaxDateTimeComparer.Default);
     }
 
-    // Success wins over an elapsed ExpiresAt.
+    // Success wins over an elapsed ExpirationDate.
     [DatabaseTheory, DatabaseData]
     public async Task TimeoutDueAsync_JobWithRotatedAttempt_NotTimedOut(
         IOrganizationRepository organizationRepository,
@@ -875,7 +875,7 @@ public class PamRotationJobRepositoryTests
         var claimTime = now.AddHours(-2);
         var fixture = await SeedClaimableJobAsync(organizationRepository, pamTargetSystemRepository, apiKeyRepository,
             pamAccessConnectorRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository,
-            now: claimTime, expiresAt: now.AddMinutes(-1));
+            now: claimTime, expirationDate: now.AddMinutes(-1));
         var claim = await pamRotationJobRepository.ClaimAsync(
             fixture.Job.Id, fixture.AccessConnector.Id, claimTime, _releaseDelay);
         Assert.Equal(PamRotationCipherWriteOutcome.Accepted, await pamRotationJobRepository.AcceptCipherWriteAsync(
@@ -911,7 +911,7 @@ public class PamRotationJobRepositoryTests
         var claim = await pamRotationJobRepository.ClaimAsync(
             fixture.Job.Id, fixture.AccessConnector.Id, claimTime, _releaseDelay);
         Assert.Equal(PamRotationClaimOutcome.Claimed, claim.Outcome);
-        // The access connector never heartbeats, so it is stale (LastHeartbeatAt null).
+        // The access connector never heartbeats, so it is stale (LastHeartbeatDate null).
 
         var released = await pamRotationJobRepository.ReleaseExpiredLeasesAsync(now, _offlineAfter, _releaseDelay);
 
@@ -925,9 +925,9 @@ public class PamRotationJobRepositoryTests
         var job = await pamRotationJobRepository.GetByIdAsync(fixture.Job.Id);
         Assert.Equal(PamRotationJobAction.None, job!.Action);
         Assert.Null(job.ClaimedByAccessConnectorId);
-        Assert.Null(job.ClaimedAt);
-        // Re-claimable exactly at the lease's end (pre-clear ClaimedAt + releaseDelay), not at the sweep's run time.
-        Assert.Equal(claimTime.Add(_releaseDelay), job.NextClaimableAt, LaxDateTimeComparer.Default);
+        Assert.Null(job.ClaimedDate);
+        // Re-claimable exactly at the lease's end (pre-clear ClaimedDate + releaseDelay), not at the sweep's run time.
+        Assert.Equal(claimTime.Add(_releaseDelay), job.NextClaimableDate, LaxDateTimeComparer.Default);
 
         // Abandoned is derived; the release records only when the attempt ended.
         var attempt = await pamRotationJobRepository.GetAttemptByIdAsync(claim.AttemptId!.Value);
@@ -1043,7 +1043,7 @@ public class PamRotationJobRepositoryTests
         var claimTime = now.AddHours(-2);
         var fixture = await SeedClaimableJobAsync(organizationRepository, pamTargetSystemRepository, apiKeyRepository,
             pamAccessConnectorRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository,
-            now: claimTime, expiresAt: now.AddMinutes(-1));
+            now: claimTime, expirationDate: now.AddMinutes(-1));
         Assert.Equal(PamRotationClaimOutcome.Claimed,
             (await pamRotationJobRepository.ClaimAsync(
                 fixture.Job.Id, fixture.AccessConnector.Id, claimTime, _releaseDelay))
@@ -1202,8 +1202,8 @@ public class PamRotationJobRepositoryTests
         IPamRotationConfigRepository pamRotationConfigRepository,
         IPamRotationJobRepository pamRotationJobRepository,
         DateTime? now = null,
-        DateTime? expiresAt = null,
-        DateTime? nextClaimableAt = null)
+        DateTime? expirationDate = null,
+        DateTime? nextClaimableDate = null)
     {
         var seedNow = now ?? DateTime.UtcNow;
         var organization = await organizationRepository.CreateTestOrganizationAsync();
@@ -1215,7 +1215,7 @@ public class PamRotationJobRepositoryTests
         var config = await pamRotationConfigRepository.CreateAsync(
             BuildConfig(organization.Id, cipher.Id, target.Id, seedNow));
 
-        var job = BuildPendingJob(config.Id, seedNow, expiresAt, nextClaimableAt);
+        var job = BuildPendingJob(config.Id, seedNow, expirationDate, nextClaimableDate);
         Assert.Equal(PamRotationJobCreateOutcome.Created, await pamRotationJobRepository.CreateGuardedAsync(job));
 
         return new ClaimableJobFixture(organization, target, accessConnector, cipher, config, job, seedNow);
@@ -1290,14 +1290,14 @@ public class PamRotationJobRepositoryTests
 
     // Defaults far into the future so a concurrent timeout-sweep test can't time this job out.
     private static PamRotationJob BuildPendingJob(
-        Guid configId, DateTime now, DateTime? expiresAt = null, DateTime? nextClaimableAt = null) => new()
+        Guid configId, DateTime now, DateTime? expirationDate = null, DateTime? nextClaimableDate = null) => new()
         {
             Id = CombGuid.Generate(),
             RotationConfigId = configId,
             Source = PamRotationSource.Scheduled,
             Action = PamRotationJobAction.None,
             CreationDate = now,
-            NextClaimableAt = nextClaimableAt ?? now,
-            ExpiresAt = expiresAt ?? DateTime.UtcNow.AddDays(1),
+            NextClaimableDate = nextClaimableDate ?? now,
+            ExpirationDate = expirationDate ?? DateTime.UtcNow.AddDays(1),
         };
 }

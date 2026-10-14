@@ -40,6 +40,16 @@ public class PamAccessConnectorRepository : Repository<PamAccessConnector, Guid>
             commandType: CommandType.StoredProcedure);
     }
 
+    /// <summary>The claim-release time comes from the app clock, as on the EF track.</summary>
+    public override async Task DeleteAsync(PamAccessConnector obj)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.ExecuteAsync(
+            $"[{Schema}].[PamAccessConnector_DeleteById]",
+            new { obj.Id, Now = DateTime.UtcNow },
+            commandType: CommandType.StoredProcedure);
+    }
+
     public async Task<ICollection<PamAccessConnector>> GetManyByOrganizationIdAsync(Guid organizationId)
     {
         await using var connection = new SqlConnection(ConnectionString);
@@ -109,11 +119,11 @@ public class PamAccessConnectorRepository : Repository<PamAccessConnector, Guid>
     public async Task<bool> AssignmentExistsAsync(Guid accessConnectorId, Guid targetSystemId)
     {
         await using var connection = new SqlConnection(ConnectionString);
-        var result = await connection.ExecuteScalarAsync<int?>(
-            $"[{Schema}].[PamAccessConnectorTargetAssignment_ExistsByAccessConnectorIdTargetSystemId]",
+        var count = await connection.ExecuteScalarAsync<int>(
+            $"[{Schema}].[PamAccessConnectorTargetAssignment_ReadCountByAccessConnectorIdTargetSystemId]",
             new { AccessConnectorId = accessConnectorId, TargetSystemId = targetSystemId },
             commandType: CommandType.StoredProcedure);
 
-        return result.HasValue;
+        return count > 0;
     }
 }

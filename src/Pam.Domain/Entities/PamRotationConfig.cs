@@ -28,11 +28,11 @@ public class PamRotationConfig : ITableObject<Guid>
     /// Once reached, an automatic target gets a job offered and a manual one awaits a human rotation. Null means
     /// nothing is due.
     /// </summary>
-    public DateTime? NextRotationAt { get; set; }
+    public DateTime? NextRotationDate { get; set; }
 
     public bool Enabled { get; set; } = true;
 
-    public DateTime? LastRotationAt { get; set; }
+    public DateTime? LastRotationDate { get; set; }
 
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;

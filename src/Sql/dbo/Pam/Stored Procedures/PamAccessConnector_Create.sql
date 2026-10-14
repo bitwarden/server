@@ -4,7 +4,7 @@ CREATE PROCEDURE [dbo].[PamAccessConnector_Create]
     @Name NVARCHAR(200),
     @ApiKeyId UNIQUEIDENTIFIER,
     @Status TINYINT,
-    @LastHeartbeatAt DATETIME2(7) = NULL,
+    @LastHeartbeatDate DATETIME2(7) = NULL,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -18,7 +18,7 @@ BEGIN
         [Name],
         [ApiKeyId],
         [Status],
-        [LastHeartbeatAt],
+        [LastHeartbeatDate],
         [CreationDate],
         [RevisionDate]
     )
@@ -29,7 +29,7 @@ BEGIN
         @Name,
         @ApiKeyId,
         @Status,
-        @LastHeartbeatAt,
+        @LastHeartbeatDate,
         @CreationDate,
         @RevisionDate
     )

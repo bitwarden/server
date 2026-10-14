@@ -68,12 +68,12 @@ public class PamRotationConfigRepository : Repository<PamRotationConfig, Guid>, 
     public async Task<bool> AnyByTargetSystemAsync(Guid targetSystemId)
     {
         await using var connection = new SqlConnection(ConnectionString);
-        var result = await connection.ExecuteScalarAsync<int?>(
-            $"[{Schema}].[PamRotationConfig_AnyByTargetSystem]",
+        var count = await connection.ExecuteScalarAsync<int>(
+            $"[{Schema}].[PamRotationConfig_ReadCountByTargetSystemId]",
             new { TargetSystemId = targetSystemId },
             commandType: CommandType.StoredProcedure);
 
-        return result.HasValue;
+        return count > 0;
     }
 
     public async Task<bool> DeleteWithJobsAsync(Guid configId)

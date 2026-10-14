@@ -19,7 +19,7 @@ public partial class AddPamRotation : Migration
                 Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                 ApiKeyId = table.Column<Guid>(type: "uuid", nullable: false),
                 Status = table.Column<byte>(type: "smallint", nullable: false),
-                LastHeartbeatAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                LastHeartbeatDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                 CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                 RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
@@ -123,9 +123,9 @@ public partial class AddPamRotation : Migration
                 SealedData = table.Column<string>(type: "character varying(10000)", maxLength: 10000, nullable: false),
                 ScheduleCron = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                 RotateOnAccessEnd = table.Column<bool>(type: "boolean", nullable: false),
-                NextRotationAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                NextRotationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                 Enabled = table.Column<bool>(type: "boolean", nullable: false),
-                LastRotationAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                LastRotationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                 CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                 RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
@@ -154,10 +154,10 @@ public partial class AddPamRotation : Migration
                 Source = table.Column<byte>(type: "smallint", nullable: false),
                 Action = table.Column<byte>(type: "smallint", nullable: false),
                 ClaimedByAccessConnectorId = table.Column<Guid>(type: "uuid", nullable: true),
-                ClaimedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                ClaimedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                 CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                NextClaimableAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                ExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                NextClaimableDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                ExpirationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
             constraints: table =>
             {
@@ -258,9 +258,9 @@ public partial class AddPamRotation : Migration
             unique: true);
 
         migrationBuilder.CreateIndex(
-            name: "IX_PamRotationConfig_NextRotationAt",
+            name: "IX_PamRotationConfig_NextRotationDate",
             table: "PamRotationConfig",
-            column: "NextRotationAt");
+            column: "NextRotationDate");
 
         migrationBuilder.CreateIndex(
             name: "IX_PamRotationConfig_OrganizationId",
@@ -273,9 +273,9 @@ public partial class AddPamRotation : Migration
             column: "TargetSystemId");
 
         migrationBuilder.CreateIndex(
-            name: "IX_PamRotationJob_Action_ExpiresAt",
+            name: "IX_PamRotationJob_Action_ExpirationDate",
             table: "PamRotationJob",
-            columns: new[] { "Action", "ExpiresAt" });
+            columns: new[] { "Action", "ExpirationDate" });
 
         migrationBuilder.CreateIndex(
             name: "IX_PamRotationJob_ClaimedByAccessConnectorId_Action",

@@ -25,6 +25,6 @@ public class PamRotationClaimResult
     /// <summary>The rotation config's sealed blob.</summary>
     public string? RotationConfigSealedData { get; init; }
 
-    /// <summary><c>ClaimedAt + ReleaseDelay</c>; the access connector should finish before then.</summary>
+    /// <summary><c>ClaimedDate + ReleaseDelay</c>; the access connector should finish before then.</summary>
     public DateTime? ExecuteBy { get; init; }
 }

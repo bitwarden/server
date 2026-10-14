@@ -17,6 +17,6 @@ public enum PamRotationJobStatus : byte
     /// <summary>The retry budget (<c>MaxAttempts</c>) is exhausted.</summary>
     Failed = 3,
 
-    /// <summary>Neither succeeded nor failed by <see cref="Entities.PamRotationJob.ExpiresAt"/>.</summary>
+    /// <summary>Neither succeeded nor failed by <see cref="Entities.PamRotationJob.ExpirationDate"/>.</summary>
     TimedOut = 4,
 }

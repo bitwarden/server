@@ -25,7 +25,7 @@ public class PamRotationStatusDerivationTests
     [InlineData(PamRotationJobAction.None)]
     [InlineData(PamRotationJobAction.Claimed)]
     public void ComputeJobStatus_UnresolvedPastDeadline_IsTimedOut(PamRotationJobAction action) =>
-        // No sweep has to land first: the read reports TimedOut as soon as ExpiresAt passes.
+        // No sweep has to land first: the read reports TimedOut as soon as ExpirationDate passes.
         Assert.Equal(PamRotationJobStatus.TimedOut,
             PamRotationStatusDerivation.ComputeJobStatus(action, _lapsed, _now));
 
@@ -33,7 +33,7 @@ public class PamRotationStatusDerivationTests
     [InlineData(PamRotationJobAction.None)]
     [InlineData(PamRotationJobAction.Claimed)]
     public void ComputeJobStatus_DeadlineIsInclusive_BoundaryInstantIsTimedOut(PamRotationJobAction action) =>
-        // Matches the timeout sweep's ExpiresAt <= @Now.
+        // Matches the timeout sweep's ExpirationDate <= @Now.
         Assert.Equal(PamRotationJobStatus.TimedOut,
             PamRotationStatusDerivation.ComputeJobStatus(action, _now, _now));
 

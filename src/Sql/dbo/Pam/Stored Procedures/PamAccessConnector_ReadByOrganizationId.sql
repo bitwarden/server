@@ -4,7 +4,10 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT *
-    FROM [dbo].[PamAccessConnector]
-    WHERE [OrganizationId] = @OrganizationId
+    SELECT
+        *
+    FROM
+        [dbo].[PamAccessConnectorView]
+    WHERE
+        [OrganizationId] = @OrganizationId
 END

@@ -37,7 +37,7 @@ public class PamAccessConnectorRepositoryTests
         Assert.Equal("prod-access-connector", persisted.Name);
         Assert.Equal(apiKey.Id, persisted.ApiKeyId);
         Assert.Equal(PamAccessConnectorStatus.Enabled, persisted.Status);
-        Assert.Null(persisted.LastHeartbeatAt);
+        Assert.Null(persisted.LastHeartbeatDate);
     }
 
     // Backs token issuance in PamAccessConnectorClientProvider.
@@ -102,23 +102,23 @@ public class PamAccessConnectorRepositoryTests
         var minInterval = TimeSpan.FromSeconds(15);
         var firstHeartbeat = DateTime.UtcNow;
 
-        // A null LastHeartbeatAt always bumps.
+        // A null LastHeartbeatDate always bumps.
         await pamAccessConnectorRepository.UpdateHeartbeatAsync(accessConnector.Id, firstHeartbeat, minInterval);
         var afterFirst = await pamAccessConnectorRepository.GetByIdAsync(accessConnector.Id);
-        Assert.NotNull(afterFirst!.LastHeartbeatAt);
-        var recordedFirst = afterFirst.LastHeartbeatAt!.Value;
+        Assert.NotNull(afterFirst!.LastHeartbeatDate);
+        var recordedFirst = afterFirst.LastHeartbeatDate!.Value;
 
         await pamAccessConnectorRepository.UpdateHeartbeatAsync(
             accessConnector.Id, firstHeartbeat.AddSeconds(5), minInterval);
         var afterSecond = await pamAccessConnectorRepository.GetByIdAsync(accessConnector.Id);
-        Assert.Equal(recordedFirst, afterSecond!.LastHeartbeatAt);
+        Assert.Equal(recordedFirst, afterSecond!.LastHeartbeatDate);
 
         // MinInterval is measured from the last recorded bump, not the ignored poll.
         var thirdHeartbeat = firstHeartbeat.AddSeconds(20);
         await pamAccessConnectorRepository.UpdateHeartbeatAsync(accessConnector.Id, thirdHeartbeat, minInterval);
         var afterThird = await pamAccessConnectorRepository.GetByIdAsync(accessConnector.Id);
-        Assert.Equal(thirdHeartbeat, afterThird!.LastHeartbeatAt.Value, LaxDateTimeComparer.Default);
-        Assert.NotEqual(recordedFirst, afterThird.LastHeartbeatAt);
+        Assert.Equal(thirdHeartbeat, afterThird!.LastHeartbeatDate.Value, LaxDateTimeComparer.Default);
+        Assert.NotEqual(recordedFirst, afterThird.LastHeartbeatDate);
     }
 
     [DatabaseTheory, DatabaseData]

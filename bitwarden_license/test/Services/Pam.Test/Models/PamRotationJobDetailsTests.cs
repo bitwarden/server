@@ -15,13 +15,13 @@ public class PamRotationJobDetailsTests
     [Fact]
     public void From_LiveClaim_SurfacesTheClaimAndItsAttemptExecutes()
     {
-        var job = ClaimedJob(_firstClaim, expiresAt: _now.AddHours(1));
+        var job = ClaimedJob(_firstClaim, expirationDate: _now.AddHours(1));
 
         var details = PamRotationJobDetails.From(job, [Attempt(job, _firstClaim)], _now);
 
         Assert.Equal(PamRotationJobStatus.Claimed, details.Status);
         Assert.Equal(_accessConnectorId, details.ClaimedByAccessConnectorId);
-        Assert.Equal(_firstClaim, details.ClaimedAt);
+        Assert.Equal(_firstClaim, details.ClaimedDate);
         var attempt = Assert.Single(details.Attempts);
         Assert.Equal(PamRotationAttemptStatus.Executing, attempt.Status);
         Assert.Null(attempt.ResolvedDate);
@@ -31,24 +31,24 @@ public class PamRotationJobDetailsTests
     public void From_ClaimPastTheDeadline_TimesOutAndAbandonsTheAttemptAtTheDeadline()
     {
         // No sweep has written anything: the stored claim is intact, but the read reports TimedOut.
-        var expiresAt = _now.AddMinutes(-5);
-        var job = ClaimedJob(_firstClaim, expiresAt);
+        var expirationDate = _now.AddMinutes(-5);
+        var job = ClaimedJob(_firstClaim, expirationDate);
 
         var details = PamRotationJobDetails.From(job, [Attempt(job, _firstClaim)], _now);
 
         Assert.Equal(PamRotationJobStatus.TimedOut, details.Status);
         // The wire promises claim fields only while Claimed.
         Assert.Null(details.ClaimedByAccessConnectorId);
-        Assert.Null(details.ClaimedAt);
+        Assert.Null(details.ClaimedDate);
         var attempt = Assert.Single(details.Attempts);
         Assert.Equal(PamRotationAttemptStatus.Abandoned, attempt.Status);
-        Assert.Equal(expiresAt, attempt.ResolvedDate);
+        Assert.Equal(expirationDate, attempt.ResolvedDate);
     }
 
     [Fact]
     public void From_ReleasedThenReclaimed_OnlyTheNewerAttemptExecutes()
     {
-        var job = ClaimedJob(_secondClaim, expiresAt: _now.AddHours(1));
+        var job = ClaimedJob(_secondClaim, expirationDate: _now.AddHours(1));
         var released = Attempt(job, _firstClaim);
         released.ResolvedDate = _secondClaim.AddMinutes(-1);
 
@@ -65,7 +65,7 @@ public class PamRotationJobDetailsTests
     {
         // The access connector detail read only carries that connector's attempt, so it is the newest one in the list
         // even though another access connector has re-claimed the job since.
-        var job = ClaimedJob(_secondClaim, expiresAt: _now.AddHours(1));
+        var job = ClaimedJob(_secondClaim, expirationDate: _now.AddHours(1));
         job.ClaimedByAccessConnectorId = Guid.NewGuid();
         var mine = Attempt(job, _firstClaim);
         mine.ResolvedDate = _secondClaim.AddMinutes(-1);
@@ -82,8 +82,8 @@ public class PamRotationJobDetailsTests
         {
             Id = Guid.NewGuid(),
             Action = PamRotationJobAction.None,
-            NextClaimableAt = _now.AddMinutes(1),
-            ExpiresAt = _now.AddHours(1),
+            NextClaimableDate = _now.AddMinutes(1),
+            ExpirationDate = _now.AddHours(1),
         };
         var errored = Attempt(job, _firstClaim);
         errored.Action = PamRotationAttemptAction.Errored;
@@ -97,23 +97,23 @@ public class PamRotationJobDetailsTests
         Assert.Equal(errored.ResolvedDate, attempt.ResolvedDate);
     }
 
-    private static PamRotationJob ClaimedJob(DateTime claimedAt, DateTime expiresAt) => new()
+    private static PamRotationJob ClaimedJob(DateTime claimedDate, DateTime expirationDate) => new()
     {
         Id = Guid.NewGuid(),
         Action = PamRotationJobAction.Claimed,
         ClaimedByAccessConnectorId = _accessConnectorId,
-        ClaimedAt = claimedAt,
+        ClaimedDate = claimedDate,
         CreationDate = _firstClaim.AddMinutes(-10),
-        NextClaimableAt = _firstClaim.AddMinutes(-10),
-        ExpiresAt = expiresAt,
+        NextClaimableDate = _firstClaim.AddMinutes(-10),
+        ExpirationDate = expirationDate,
     };
 
-    private static PamRotationAttempt Attempt(PamRotationJob job, DateTime claimedAt) => new()
+    private static PamRotationAttempt Attempt(PamRotationJob job, DateTime claimedDate) => new()
     {
         Id = Guid.NewGuid(),
         JobId = job.Id,
         ClaimedByAccessConnectorId = _accessConnectorId,
         Action = PamRotationAttemptAction.None,
-        CreationDate = claimedAt,
+        CreationDate = claimedDate,
     };
 }

@@ -1,7 +1,7 @@
 ﻿namespace Bit.Pam.Enums;
 
 /// <summary>
-/// The result of <c>PamRotationAttempt_AcceptCipherWrite</c>, which re-verifies the claim, the attempt, and the
+/// The result of <c>PamRotationAttempt_UpdateCipherData</c>, which re-verifies the claim, the attempt, and the
 /// cipher's revision date under one lock before writing the rotated secret. Each value is the code it returns.
 /// </summary>
 public enum PamRotationCipherWriteOutcome

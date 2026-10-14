@@ -7,7 +7,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- ApiKeyId and OrganizationId never change, and LastHeartbeatAt has its own conditional bump.
+    -- ApiKeyId and OrganizationId never change, and LastHeartbeatDate has its own conditional bump.
     UPDATE
         [dbo].[PamAccessConnector]
     SET

@@ -106,15 +106,15 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         var claimed = await EligibleJobs(dbContext, accessConnectorId)
             .Where(x => x.Job.Id == jobId
                 && x.Job.Action == PamRotationJobAction.None
-                && x.Job.ExpiresAt > now
-                && x.Job.NextClaimableAt <= now
+                && x.Job.ExpirationDate > now
+                && x.Job.NextClaimableDate <= now
                 && x.Config.Enabled
                 && x.Target.Status == PamTargetSystemStatus.Active)
             .Select(x => x.Job)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(j => j.Action, PamRotationJobAction.Claimed)
                 .SetProperty(j => j.ClaimedByAccessConnectorId, accessConnectorId)
-                .SetProperty(j => j.ClaimedAt, now));
+                .SetProperty(j => j.ClaimedDate, now));
 
         if (claimed == 0)
         {
@@ -130,7 +130,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         }
 
         // AtMostOneInFlightAttemptPerJob: inserted in the claim's own transaction, so a claimed job always has exactly
-        // one in-flight attempt. Its CreationDate equals the job's ClaimedAt, which is how the claim's attempt is
+        // one in-flight attempt. Its CreationDate equals the job's ClaimedDate, which is how the claim's attempt is
         // recognised later.
         var attempt = new EfAttempt
         {
@@ -187,8 +187,8 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         // agree.
         return await EligibleJobs(dbContext, accessConnectorId)
             .Where(x => x.Job.Action == PamRotationJobAction.None
-                && x.Job.ExpiresAt > now
-                && x.Job.NextClaimableAt <= now
+                && x.Job.ExpirationDate > now
+                && x.Job.NextClaimableDate <= now
                 && x.Config.Enabled
                 && x.Target.Status == PamTargetSystemStatus.Active)
             .Select(x => new PamClaimableJob
@@ -198,10 +198,10 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
                 Source = x.Job.Source,
                 Action = x.Job.Action,
                 ClaimedByAccessConnectorId = x.Job.ClaimedByAccessConnectorId,
-                ClaimedAt = x.Job.ClaimedAt,
+                ClaimedDate = x.Job.ClaimedDate,
                 CreationDate = x.Job.CreationDate,
-                NextClaimableAt = x.Job.NextClaimableAt,
-                ExpiresAt = x.Job.ExpiresAt,
+                NextClaimableDate = x.Job.NextClaimableDate,
+                ExpirationDate = x.Job.ExpirationDate,
                 TargetSystemId = x.Config.TargetSystemId,
             })
             .AsNoTracking()
@@ -309,9 +309,9 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
                 && a.ClaimedByAccessConnectorId == accessConnectorId)
             .Join(dbContext.PamRotationJobs, a => a.JobId, j => j.Id, (a, j) => new { Attempt = a, Job = j })
             .Where(x => x.Job.Action == PamRotationJobAction.Claimed
-                && x.Job.ExpiresAt > now
+                && x.Job.ExpirationDate > now
                 && x.Job.ClaimedByAccessConnectorId == accessConnectorId
-                && x.Job.ClaimedAt == x.Attempt.CreationDate)
+                && x.Job.ClaimedDate == x.Attempt.CreationDate)
             .Join(dbContext.PamRotationConfigs, x => x.Job.RotationConfigId, c => c.Id, (x, c) => new
             {
                 c.CipherId,
@@ -378,9 +378,9 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
                 && a.CipherUpdated)
             .Join(dbContext.PamRotationJobs, a => a.JobId, j => j.Id, (a, j) => new { Attempt = a, Job = j })
             .Where(x => x.Job.Action == PamRotationJobAction.Claimed
-                && x.Job.ExpiresAt > now
+                && x.Job.ExpirationDate > now
                 && x.Job.ClaimedByAccessConnectorId == accessConnectorId
-                && x.Job.ClaimedAt == x.Attempt.CreationDate)
+                && x.Job.ClaimedDate == x.Attempt.CreationDate)
             .Select(x => (Guid?)x.Job.Id)
             .FirstOrDefaultAsync();
 
@@ -403,7 +403,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(j => j.Action, PamRotationJobAction.Succeeded)
                 .SetProperty(j => j.ClaimedByAccessConnectorId, (Guid?)null)
-                .SetProperty(j => j.ClaimedAt, (DateTime?)null));
+                .SetProperty(j => j.ClaimedDate, (DateTime?)null));
 
         await transaction.CommitAsync();
         return PamRotationAttemptResolveOutcome.Resolved;
@@ -428,9 +428,9 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
                 && a.ClaimedByAccessConnectorId == accessConnectorId)
             .Join(dbContext.PamRotationJobs, a => a.JobId, j => j.Id, (a, j) => new { Attempt = a, Job = j })
             .Where(x => x.Job.Action == PamRotationJobAction.Claimed
-                && x.Job.ExpiresAt > now
+                && x.Job.ExpirationDate > now
                 && x.Job.ClaimedByAccessConnectorId == accessConnectorId
-                && x.Job.ClaimedAt == x.Attempt.CreationDate)
+                && x.Job.ClaimedDate == x.Attempt.CreationDate)
             .Select(x => (Guid?)x.Job.Id)
             .FirstOrDefaultAsync();
 
@@ -458,14 +458,14 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         {
             jobStatus = PamRotationJobStatus.Pending;
             var backoff = TimeSpan.FromSeconds(retryBaseDelay.TotalSeconds * Math.Pow(2, erroredCount - 1));
-            var nextClaimableAt = now + backoff;
+            var nextClaimableDate = now + backoff;
             await dbContext.PamRotationJobs
                 .Where(j => j.Id == jobId.Value)
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(j => j.Action, PamRotationJobAction.None)
                     .SetProperty(j => j.ClaimedByAccessConnectorId, (Guid?)null)
-                    .SetProperty(j => j.ClaimedAt, (DateTime?)null)
-                    .SetProperty(j => j.NextClaimableAt, nextClaimableAt));
+                    .SetProperty(j => j.ClaimedDate, (DateTime?)null)
+                    .SetProperty(j => j.NextClaimableDate, nextClaimableDate));
         }
         else
         {
@@ -475,7 +475,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(j => j.Action, PamRotationJobAction.Failed)
                     .SetProperty(j => j.ClaimedByAccessConnectorId, (Guid?)null)
-                    .SetProperty(j => j.ClaimedAt, (DateTime?)null));
+                    .SetProperty(j => j.ClaimedDate, (DateTime?)null));
         }
 
         await transaction.CommitAsync();
@@ -498,7 +498,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         // attempts.
         var due = await dbContext.PamRotationJobs
             .Where(j => (j.Action == PamRotationJobAction.None || j.Action == PamRotationJobAction.Claimed)
-                && j.ExpiresAt <= now
+                && j.ExpirationDate <= now
                 && !dbContext.PamRotationJobTimeoutSweeps.Any(s => s.RotationJobId == j.Id))
             .Join(dbContext.PamRotationConfigs, j => j.RotationConfigId, c => c.Id, (j, c) => new
             {
@@ -567,14 +567,15 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         // Needs an expired lease, not only a stale heartbeat, to preserve success-wins. A disabled access connector's
         // jobs still release. A timed-out claim is the timeout sweep's; a Rotated attempt always has a Succeeded job.
         var candidates = await dbContext.PamRotationJobs
-            .Where(j => j.Action == PamRotationJobAction.Claimed && j.ExpiresAt > now && j.ClaimedAt != null)
+            .Where(j => j.Action == PamRotationJobAction.Claimed && j.ExpirationDate > now && j.ClaimedDate != null)
             .Join(dbContext.PamAccessConnectors, j => j.ClaimedByAccessConnectorId, d => d.Id,
                 (j, d) => new { Job = j, AccessConnector = d })
-            .Where(x => x.AccessConnector.LastHeartbeatAt == null || x.AccessConnector.LastHeartbeatAt < staleBefore)
+            .Where(x => x.AccessConnector.LastHeartbeatDate == null
+                || x.AccessConnector.LastHeartbeatDate < staleBefore)
             .Join(dbContext.PamRotationConfigs, x => x.Job.RotationConfigId, c => c.Id, (x, c) => new
             {
                 JobId = x.Job.Id,
-                x.Job.ClaimedAt,
+                x.Job.ClaimedDate,
                 RotationConfigId = c.Id,
                 c.OrganizationId,
                 c.CipherId,
@@ -584,10 +585,10 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
             .AsNoTracking()
             .ToListAsync();
 
-        // Computed in memory from the pre-clear ClaimedAt, since MySQL's UPDATE assigns left to right and would
+        // Computed in memory from the pre-clear ClaimedDate, since MySQL's UPDATE assigns left to right and would
         // otherwise read the nulled column.
         var released = candidates
-            .Where(c => c.ClaimedAt!.Value + releaseDelay <= now)
+            .Where(c => c.ClaimedDate!.Value + releaseDelay <= now)
             .ToList();
         if (released.Count == 0)
         {
@@ -599,14 +600,14 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         var releasedJobIds = new List<Guid>();
         foreach (var job in released)
         {
-            var nextClaimableAt = job.ClaimedAt!.Value + releaseDelay;
+            var nextClaimableDate = job.ClaimedDate!.Value + releaseDelay;
             var updated = await dbContext.PamRotationJobs
                 .Where(j => j.Id == job.JobId && j.Action == PamRotationJobAction.Claimed)
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(j => j.Action, PamRotationJobAction.None)
-                    .SetProperty(j => j.NextClaimableAt, nextClaimableAt)
+                    .SetProperty(j => j.NextClaimableDate, nextClaimableDate)
                     .SetProperty(j => j.ClaimedByAccessConnectorId, (Guid?)null)
-                    .SetProperty(j => j.ClaimedAt, (DateTime?)null));
+                    .SetProperty(j => j.ClaimedDate, (DateTime?)null));
             if (updated == 1)
             {
                 releasedJobIds.Add(job.JobId);

@@ -45,7 +45,7 @@ public class PamAccessConnectorRepository : Repository<CoreEntity, EfModel, Guid
                 Name = d.Name,
                 ApiKeyId = d.ApiKeyId,
                 Status = d.Status,
-                LastHeartbeatAt = d.LastHeartbeatAt,
+                LastHeartbeatDate = d.LastHeartbeatDate,
                 CreationDate = d.CreationDate,
                 RevisionDate = d.RevisionDate,
                 OrganizationEnabled = o.Enabled,
@@ -57,7 +57,7 @@ public class PamAccessConnectorRepository : Repository<CoreEntity, EfModel, Guid
 
     /// <remarks>
     /// Writes only the columns PamAccessConnector_Update does: ApiKeyId and OrganizationId never move, and
-    /// LastHeartbeatAt has its own conditional bump so an edit cannot race the poll.
+    /// LastHeartbeatDate has its own conditional bump so an edit cannot race the poll.
     /// </remarks>
     public override async Task ReplaceAsync(CoreEntity obj)
     {
@@ -82,8 +82,8 @@ public class PamAccessConnectorRepository : Repository<CoreEntity, EfModel, Guid
         // value is stale.
         var staleBefore = now - minInterval;
         await dbContext.PamAccessConnectors
-            .Where(d => d.Id == accessConnectorId && (d.LastHeartbeatAt == null || d.LastHeartbeatAt < staleBefore))
-            .ExecuteUpdateAsync(setters => setters.SetProperty(d => d.LastHeartbeatAt, now));
+            .Where(d => d.Id == accessConnectorId && (d.LastHeartbeatDate == null || d.LastHeartbeatDate < staleBefore))
+            .ExecuteUpdateAsync(setters => setters.SetProperty(d => d.LastHeartbeatDate, now));
     }
 
     /// <remarks>
@@ -110,7 +110,7 @@ public class PamAccessConnectorRepository : Repository<CoreEntity, EfModel, Guid
         var claimedJobIds = await dbContext.PamRotationJobs
             .Where(j => j.ClaimedByAccessConnectorId == obj.Id
                 && j.Action == PamRotationJobAction.Claimed
-                && j.ExpiresAt > now)
+                && j.ExpirationDate > now)
             .Select(j => j.Id)
             .ToListAsync();
 
@@ -128,8 +128,8 @@ public class PamAccessConnectorRepository : Repository<CoreEntity, EfModel, Guid
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(j => j.Action, PamRotationJobAction.None)
                     .SetProperty(j => j.ClaimedByAccessConnectorId, (Guid?)null)
-                    .SetProperty(j => j.ClaimedAt, (DateTime?)null)
-                    .SetProperty(j => j.NextClaimableAt, now));
+                    .SetProperty(j => j.ClaimedDate, (DateTime?)null)
+                    .SetProperty(j => j.NextClaimableDate, now));
         }
 
         // The assignment -> access connector FK is NO ACTION, so assignments must go before the access connector row.

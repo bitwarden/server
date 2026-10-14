@@ -5,10 +5,17 @@ CREATE PROCEDURE [dbo].[PamAccessConnector_UpdateHeartbeat]
 AS
 BEGIN
     SET NOCOUNT ON
+
     -- Conditional bump: WHERE guard no-ops most calls, updating only after @MinIntervalSeconds.
     -- Called only by the access connector's own requests, never by a sweep.
-    UPDATE [dbo].[PamAccessConnector]
-    SET [LastHeartbeatAt] = @Now
-    WHERE [Id] = @Id
-        AND ([LastHeartbeatAt] IS NULL OR [LastHeartbeatAt] < DATEADD(SECOND, -@MinIntervalSeconds, @Now))
+    UPDATE
+        [dbo].[PamAccessConnector]
+    SET
+        [LastHeartbeatDate] = @Now
+    WHERE
+        [Id] = @Id
+        AND (
+            [LastHeartbeatDate] IS NULL
+            OR [LastHeartbeatDate] < DATEADD(SECOND, -@MinIntervalSeconds, @Now)
+        )
 END

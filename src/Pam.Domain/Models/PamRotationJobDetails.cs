@@ -24,7 +24,7 @@ public class PamRotationJobDetails : PamRotationJob
     public static PamRotationJobDetails From(PamRotationJob job, IReadOnlyList<PamRotationAttempt> attempts,
         DateTime now)
     {
-        var status = PamRotationStatusDerivation.ComputeJobStatus(job.Action, job.ExpiresAt, now);
+        var status = PamRotationStatusDerivation.ComputeJobStatus(job.Action, job.ExpirationDate, now);
         var claimed = status == PamRotationJobStatus.Claimed;
 
         return new PamRotationJobDetails
@@ -35,10 +35,10 @@ public class PamRotationJobDetails : PamRotationJob
             Action = job.Action,
             Status = status,
             ClaimedByAccessConnectorId = claimed ? job.ClaimedByAccessConnectorId : null,
-            ClaimedAt = claimed ? job.ClaimedAt : null,
+            ClaimedDate = claimed ? job.ClaimedDate : null,
             CreationDate = job.CreationDate,
-            NextClaimableAt = job.NextClaimableAt,
-            ExpiresAt = job.ExpiresAt,
+            NextClaimableDate = job.NextClaimableDate,
+            ExpirationDate = job.ExpirationDate,
             Attempts = attempts.Select(attempt => PamRotationAttemptDetails.From(attempt, job, status)).ToList(),
         };
     }

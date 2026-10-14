@@ -6,9 +6,9 @@ CREATE TABLE [dbo].[PamRotationConfig] (
     [TargetSystemId]        UNIQUEIDENTIFIER    NOT NULL,
     [ScheduleCron]          NVARCHAR(100)       NULL,
     [RotateOnAccessEnd]     BIT                 NOT NULL,
-    [NextRotationAt]        DATETIME2(7)        NULL,
+    [NextRotationDate]      DATETIME2(7)        NULL,
     [Enabled]               BIT                 NOT NULL,
-    [LastRotationAt]        DATETIME2(7)        NULL,
+    [LastRotationDate]      DATETIME2(7)        NULL,
     [CreationDate]          DATETIME2(7)        NOT NULL,
     [RevisionDate]          DATETIME2(7)        NOT NULL,
     [SealedData]            NVARCHAR(MAX)       NOT NULL,
@@ -25,9 +25,9 @@ CREATE UNIQUE NONCLUSTERED INDEX [IX_PamRotationConfig_CipherId]
 GO
 
 -- Backs the due-rotation sweep; the filter keeps paused and unscheduled configs out of the scan.
-CREATE NONCLUSTERED INDEX [IX_PamRotationConfig_NextRotationAt]
-    ON [dbo].[PamRotationConfig] ([NextRotationAt] ASC)
-    WHERE [Enabled] = 1 AND [NextRotationAt] IS NOT NULL;
+CREATE NONCLUSTERED INDEX [IX_PamRotationConfig_NextRotationDate]
+    ON [dbo].[PamRotationConfig] ([NextRotationDate] ASC)
+    WHERE [Enabled] = 1 AND [NextRotationDate] IS NOT NULL;
 GO
 
 -- Backs PamRotationConfig_ReadManyByOrganizationId and the Organization cascade delete.
@@ -35,7 +35,7 @@ CREATE NONCLUSTERED INDEX [IX_PamRotationConfig_OrganizationId]
     ON [dbo].[PamRotationConfig] ([OrganizationId] ASC);
 GO
 
--- Backs the access connector poll's join, AnyByTargetSystem checks, and DeleteWithAssignments' range lock.
+-- Backs the access connector poll's join, ReadCountByTargetSystemId checks, and DeleteWithAssignments' range lock.
 CREATE NONCLUSTERED INDEX [IX_PamRotationConfig_TargetSystemId]
     ON [dbo].[PamRotationConfig] ([TargetSystemId] ASC);
 GO

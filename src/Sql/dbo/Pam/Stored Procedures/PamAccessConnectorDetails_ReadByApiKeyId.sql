@@ -4,13 +4,10 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Token-issuance lookup: includes the org's Enabled/UsePam flags.
-    -- A lapsed org can't mint a token this way.
     SELECT
-        D.*,
-        O.[Enabled] AS [OrganizationEnabled],
-        O.[UsePam] AS [OrganizationUsePam]
-    FROM [dbo].[PamAccessConnector] D
-    INNER JOIN [dbo].[Organization] O ON O.[Id] = D.[OrganizationId]
-    WHERE D.[ApiKeyId] = @ApiKeyId
+        *
+    FROM
+        [dbo].[PamAccessConnectorDetailsView]
+    WHERE
+        [ApiKeyId] = @ApiKeyId
 END

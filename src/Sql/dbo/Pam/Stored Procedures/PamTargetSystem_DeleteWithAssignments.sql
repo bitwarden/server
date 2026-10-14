@@ -6,27 +6,43 @@ BEGIN
     -- Cascade deletes assignments with the target; a rotation config instead blocks the delete.
     SET XACT_ABORT ON
 
-    BEGIN TRANSACTION
+    BEGIN TRY
+        BEGIN TRANSACTION
 
-    -- Re-checks under a range lock, since the caller's guard read was outside this transaction.
-    IF EXISTS (
-        SELECT 1
-        FROM [dbo].[PamRotationConfig] WITH (UPDLOCK, HOLDLOCK)
-        WHERE [TargetSystemId] = @Id
-    )
-    BEGIN
-        ROLLBACK TRANSACTION
-        SELECT 0 -- RotationConfigExists
-        RETURN
-    END
+        -- Re-checks under a range lock, since the caller's guard read was outside this transaction.
+        IF EXISTS (
+            SELECT
+                1
+            FROM
+                [dbo].[PamRotationConfig] WITH (UPDLOCK, HOLDLOCK)
+            WHERE
+                [TargetSystemId] = @Id
+        )
+        BEGIN
+            ROLLBACK TRANSACTION
+            SELECT 0 -- RotationConfigExists
+            RETURN
+        END
 
-    DELETE FROM [dbo].[PamAccessConnectorTargetAssignment]
-    WHERE [TargetSystemId] = @Id
+        DELETE
+        FROM
+            [dbo].[PamAccessConnectorTargetAssignment]
+        WHERE
+            [TargetSystemId] = @Id
 
-    DELETE FROM [dbo].[PamTargetSystem]
-    WHERE [Id] = @Id
+        DELETE
+        FROM
+            [dbo].[PamTargetSystem]
+        WHERE
+            [Id] = @Id
 
-    COMMIT TRANSACTION
+        COMMIT TRANSACTION
 
-    SELECT 1 -- Deleted
+        SELECT 1 -- Deleted
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
 END

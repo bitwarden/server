@@ -7,7 +7,7 @@ namespace Bit.Pam.Entities;
 
 /// <summary>
 /// An on-prem access connector registered to an organization. Connectivity is derived from
-/// <see cref="LastHeartbeatAt"/>.
+/// <see cref="LastHeartbeatDate"/>.
 /// </summary>
 public class PamAccessConnector : ITableObject<Guid>
 {
@@ -26,7 +26,7 @@ public class PamAccessConnector : ITableObject<Guid>
     /// The last time the access connector polled or reported, bumped at most once per <c>HeartbeatMinInterval</c>.
     /// Null until its first request; sweeps never bump it.
     /// </summary>
-    public DateTime? LastHeartbeatAt { get; set; }
+    public DateTime? LastHeartbeatDate { get; set; }
 
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;

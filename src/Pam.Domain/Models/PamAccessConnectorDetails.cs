@@ -18,7 +18,7 @@ public class PamAccessConnectorDetails : PamAccessConnector
             Name = accessConnector.Name,
             ApiKeyId = accessConnector.ApiKeyId,
             Status = accessConnector.Status,
-            LastHeartbeatAt = accessConnector.LastHeartbeatAt,
+            LastHeartbeatDate = accessConnector.LastHeartbeatDate,
             CreationDate = accessConnector.CreationDate,
             RevisionDate = accessConnector.RevisionDate,
             OrganizationEnabled = organizationEnabled,

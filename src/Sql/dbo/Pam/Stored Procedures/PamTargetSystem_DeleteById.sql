@@ -5,6 +5,9 @@ BEGIN
     SET NOCOUNT ON
 
     -- No cascade; a referenced target is blocked by its NO ACTION FKs.
-    DELETE FROM [dbo].[PamTargetSystem]
-    WHERE [Id] = @Id
+    DELETE
+    FROM
+        [dbo].[PamTargetSystem]
+    WHERE
+        [Id] = @Id
 END

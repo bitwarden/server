@@ -10,7 +10,7 @@ namespace Bit.Pam;
 public static class PamRotationRules
 {
     public static bool IsConnected(PamAccessConnector accessConnector, DateTime now, TimeSpan offlineAfter) =>
-        accessConnector.LastHeartbeatAt is { } lastHeartbeatAt && lastHeartbeatAt >= now - offlineAfter;
+        accessConnector.LastHeartbeatDate is { } lastHeartbeatDate && lastHeartbeatDate >= now - offlineAfter;
 
     /// <summary>
     /// The active statuses. <c>AtMostOneActiveJobPerConfig</c> also counts a timed-out job until the sweep records it.
@@ -28,16 +28,16 @@ public static class PamRotationRules
     /// </summary>
     public static bool IsClaimable(
         PamRotationJob job, PamRotationConfig config, PamTargetSystemStatus targetStatus, DateTime now) =>
-        job.Action == PamRotationJobAction.None && now < job.ExpiresAt && job.NextClaimableAt <= now
+        job.Action == PamRotationJobAction.None && now < job.ExpirationDate && job.NextClaimableDate <= now
         && config.Enabled && targetStatus == PamTargetSystemStatus.Active;
 
     /// <summary>
     /// Whether <paramref name="attempt"/> was created by the claim <paramref name="job"/> records, whose
-    /// <see cref="PamRotationJob.ClaimedAt"/> equals the attempt's <see cref="PamRotationAttempt.CreationDate"/>. A
+    /// <see cref="PamRotationJob.ClaimedDate"/> equals the attempt's <see cref="PamRotationAttempt.CreationDate"/>. A
     /// claim that timed out still matches, so callers pair this with the job's derived status.
     /// </summary>
     public static bool IsCurrentAttempt(PamRotationJob job, PamRotationAttempt attempt) =>
-        attempt.JobId == job.Id && job.ClaimedAt == attempt.CreationDate
+        attempt.JobId == job.Id && job.ClaimedDate == attempt.CreationDate
         && job.ClaimedByAccessConnectorId == attempt.ClaimedByAccessConnectorId;
 
     /// <summary>
@@ -46,9 +46,9 @@ public static class PamRotationRules
     /// </summary>
     public static bool AwaitingManualRotation(PamRotationConfig config, PamTargetSystemMethod method, DateTime now) =>
         method == PamTargetSystemMethod.Manual && config.Enabled
-        && config.NextRotationAt is { } nextRotationAt && nextRotationAt <= now;
+        && config.NextRotationDate is { } nextRotationDate && nextRotationDate <= now;
 
     /// <summary>When the release sweep may reclaim the job from a stale access connector; null if unclaimed.</summary>
     public static DateTime? ExecuteBy(PamRotationJob job, TimeSpan releaseDelay) =>
-        job.ClaimedAt is { } claimedAt ? claimedAt + releaseDelay : null;
+        job.ClaimedDate is { } claimedDate ? claimedDate + releaseDelay : null;
 }

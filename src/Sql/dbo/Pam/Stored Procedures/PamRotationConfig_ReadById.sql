@@ -4,7 +4,10 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT *
-    FROM [dbo].[PamRotationConfig]
-    WHERE [Id] = @Id
+    SELECT
+        *
+    FROM
+        [dbo].[PamRotationConfigView]
+    WHERE
+        [Id] = @Id
 END

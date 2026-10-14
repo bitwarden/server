@@ -6,9 +6,9 @@ CREATE PROCEDURE [dbo].[PamRotationConfig_Create]
     @SealedData NVARCHAR(MAX),
     @ScheduleCron NVARCHAR(100) = NULL,
     @RotateOnAccessEnd BIT,
-    @NextRotationAt DATETIME2(7) = NULL,
+    @NextRotationDate DATETIME2(7) = NULL,
     @Enabled BIT,
-    @LastRotationAt DATETIME2(7) = NULL,
+    @LastRotationDate DATETIME2(7) = NULL,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -24,9 +24,9 @@ BEGIN
         [SealedData],
         [ScheduleCron],
         [RotateOnAccessEnd],
-        [NextRotationAt],
+        [NextRotationDate],
         [Enabled],
-        [LastRotationAt],
+        [LastRotationDate],
         [CreationDate],
         [RevisionDate]
     )
@@ -39,9 +39,9 @@ BEGIN
         @SealedData,
         @ScheduleCron,
         @RotateOnAccessEnd,
-        @NextRotationAt,
+        @NextRotationDate,
         @Enabled,
-        @LastRotationAt,
+        @LastRotationDate,
         @CreationDate,
         @RevisionDate
     )

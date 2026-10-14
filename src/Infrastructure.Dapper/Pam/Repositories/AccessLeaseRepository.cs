@@ -150,7 +150,7 @@ public class AccessLeaseRepository : Repository<AccessLease, Guid>, IAccessLease
     {
         await using var connection = new SqlConnection(ConnectionString);
         var results = await connection.QueryAsync<PamExpiredLease>(
-            $"[{Schema}].[AccessLease_ExpireDue]",
+            $"[{Schema}].[PamLeaseExpirySweep_CreateManyDue]",
             new { Now = now },
             commandType: CommandType.StoredProcedure);
 

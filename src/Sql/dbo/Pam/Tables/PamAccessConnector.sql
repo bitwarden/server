@@ -1,12 +1,12 @@
 -- Credential lives on the shared dbo.ApiKey store (ApiKeyId, unique), not duplicated here.
--- "Connected" is derived from LastHeartbeatAt; there's no separate state table.
+-- "Connected" is derived from LastHeartbeatDate; there's no separate state table.
 CREATE TABLE [dbo].[PamAccessConnector] (
     [Id]                UNIQUEIDENTIFIER    NOT NULL,
     [OrganizationId]    UNIQUEIDENTIFIER    NOT NULL,
     [Name]              NVARCHAR(200)       NOT NULL,
     [ApiKeyId]          UNIQUEIDENTIFIER    NOT NULL,
     [Status]            TINYINT             NOT NULL,
-    [LastHeartbeatAt]   DATETIME2(7)        NULL,
+    [LastHeartbeatDate] DATETIME2(7)        NULL,
     [CreationDate]      DATETIME2(7)        NOT NULL,
     [RevisionDate]      DATETIME2(7)        NOT NULL,
     CONSTRAINT [PK_PamAccessConnector] PRIMARY KEY CLUSTERED ([Id] ASC),

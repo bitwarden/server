@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20261013112217_AddPamRotation")]
+    [Migration("20261014104228_AddPamRotation")]
     partial class AddPamRotation
     {
         /// <inheritdoc />
@@ -2747,7 +2747,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("LastHeartbeatAt")
+                    b.Property<DateTime?>("LastHeartbeatDate")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
@@ -2872,10 +2872,10 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("Enabled")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime?>("LastRotationAt")
+                    b.Property<DateTime?>("LastRotationDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("NextRotationAt")
+                    b.Property<DateTime?>("NextRotationDate")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("OrganizationId")
@@ -2904,7 +2904,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasIndex("CipherId")
                         .IsUnique();
 
-                    b.HasIndex("NextRotationAt");
+                    b.HasIndex("NextRotationDate");
 
                     b.HasIndex("OrganizationId");
 
@@ -2921,19 +2921,19 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<byte>("Action")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime?>("ClaimedAt")
+                    b.Property<Guid?>("ClaimedByAccessConnectorId")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("ClaimedByAccessConnectorId")
+                    b.Property<DateTime?>("ClaimedDate")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("ExpiresAt")
+                    b.Property<DateTime>("ExpirationDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("NextClaimableAt")
+                    b.Property<DateTime>("NextClaimableDate")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("RotationConfigId")
@@ -2944,7 +2944,7 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Action", "ExpiresAt");
+                    b.HasIndex("Action", "ExpirationDate");
 
                     b.HasIndex("ClaimedByAccessConnectorId", "Action");
 

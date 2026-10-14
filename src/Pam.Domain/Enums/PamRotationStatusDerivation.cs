@@ -8,11 +8,12 @@ public static class PamRotationStatusDerivation
 {
     /// <summary>
     /// A job's status derived from its stored <see cref="PamRotationJobAction"/>. A recorded outcome beats the clock;
-    /// an unresolved job, claimed or not, is timed out from <paramref name="expiresAt"/> on.
+    /// an unresolved job, claimed or not, is timed out from <paramref name="expirationDate"/> on.
     /// </summary>
-    public static PamRotationJobStatus ComputeJobStatus(PamRotationJobAction action, DateTime expiresAt, DateTime now)
+    public static PamRotationJobStatus ComputeJobStatus(
+        PamRotationJobAction action, DateTime expirationDate, DateTime now)
     {
-        var timedOut = now >= expiresAt;
+        var timedOut = now >= expirationDate;
 
         return action switch
         {
