@@ -17,9 +17,6 @@ namespace Bit.Core.Test.Auth.IdentityServer;
 
 public class ConfigureOpenIdConnectDistributedOptionsTests
 {
-    private const string IdentityScheme = AuthenticationSchemes.IdentityExternalCookie;
-    private const string SsoScheme = AuthenticationSchemes.SsoExternalCookie;
-
     // One cache and one data protection key ring for every scheme, as the deployed apps share them.
     private readonly ConfigureOpenIdConnectDistributedOptions _sut = new(
         new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())),
@@ -27,8 +24,8 @@ public class ConfigureOpenIdConnectDistributedOptionsTests
         new IdentityServerOptions());
 
     [Theory]
-    [InlineData(IdentityScheme)]
-    [InlineData(SsoScheme)]
+    [InlineData(AuthenticationSchemes.IdentityExternalCookie)]
+    [InlineData(AuthenticationSchemes.SsoExternalCookie)]
     public void PostConfigure_ExternalCookieScheme_UsesSchemeNameAsCookieName(string scheme)
     {
         var options = Configure(scheme);
@@ -53,8 +50,8 @@ public class ConfigureOpenIdConnectDistributedOptionsTests
     }
 
     [Theory]
-    [InlineData(SsoScheme, IdentityScheme)]
-    [InlineData(IdentityScheme, SsoScheme)]
+    [InlineData(AuthenticationSchemes.SsoExternalCookie, AuthenticationSchemes.IdentityExternalCookie)]
+    [InlineData(AuthenticationSchemes.IdentityExternalCookie, AuthenticationSchemes.SsoExternalCookie)]
     public void TicketDataFormat_TicketFromOneScheme_DoesNotUnprotectWithOtherScheme(
         string writerScheme, string readerScheme)
     {

@@ -20,11 +20,6 @@ namespace Bit.Sso.IntegrationTest.Endpoints;
 /// </summary>
 public class ExternalCookieIsolationTests : IDisposable
 {
-    /// <summary>
-    /// The cookie scheme that the Sso app's external login handlers sign in to.
-    /// </summary>
-    private const string SsoExternalScheme = AuthenticationSchemes.SsoExternalCookie;
-
     private const string UserEmail = "external_cookie_isolation_user@email.com";
 
     private readonly DirectoryInfo _keyDirectory;
@@ -118,11 +113,11 @@ public class ExternalCookieIsolationTests : IDisposable
             },
         };
         var ssoCookie = await ExternalCookieTestHelpers.SignInCookieAsync(
-            _ssoFactory.Services, SsoExternalScheme, principal, properties);
+            _ssoFactory.Services, AuthenticationSchemes.SsoExternalCookie, principal, properties);
 
         // The Sso app reads back its own cookie
         var ssoResult = await ExternalCookieTestHelpers.AuthenticateCookieAsync(
-            _ssoFactory.Services, SsoExternalScheme, ssoCookie.Name, ssoCookie.Value);
+            _ssoFactory.Services, AuthenticationSchemes.SsoExternalCookie, ssoCookie.Name, ssoCookie.Value);
         Assert.True(ssoResult.Succeeded);
 
         // Both hosts share the distributed cache and the data protection key ring
