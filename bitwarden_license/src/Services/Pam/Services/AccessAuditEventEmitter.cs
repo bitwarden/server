@@ -113,6 +113,10 @@ public class AccessAuditEventEmitter : IAccessAuditEventEmitter
         AccessAuditEventKind.RuleCreated => EventType.Pam_AccessRule_Created,
         AccessAuditEventKind.RuleUpdated => EventType.Pam_AccessRule_Updated,
         AccessAuditEventKind.RuleDeleted => EventType.Pam_AccessRule_Deleted,
+        AccessAuditEventKind.RotationSucceeded => EventType.Pam_Rotation_Succeeded,
+        // A timed-out job counts as failed; the PAM store keeps the reason.
+        AccessAuditEventKind.RotationFailed or AccessAuditEventKind.RotationJobTimedOut =>
+            EventType.Pam_Rotation_Failed,
         _ => null,
     };
 }
