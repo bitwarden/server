@@ -4,7 +4,6 @@ using Bit.Admin.Utilities;
 using Bit.Core;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
