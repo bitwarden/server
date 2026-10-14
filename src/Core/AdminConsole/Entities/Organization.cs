@@ -560,11 +560,6 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     public void UpdateFromLicense(OrganizationLicense license, IFeatureService featureService) =>
         UpdateFromLicense(license);
 
-    /// <inheritdoc cref="UpdateFromLicense(OrganizationLicense, IFeatureService)"/>
-    [Obsolete("Use the Bitwarden.Server.Sdk.Features.IFeatureService overload instead", DiagnosticId = "BWA0002")]
-    public void UpdateFromLicense(OrganizationLicense license, Bit.Core.Services.IFeatureService featureService) =>
-        UpdateFromLicense(license);
-
     private void UpdateFromLicense(OrganizationLicense license)
     {
         // The following properties are intentionally excluded from being updated:
