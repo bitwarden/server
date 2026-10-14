@@ -1,6 +1,6 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+﻿using Bit.Core.AdminConsole.Context;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -14,23 +14,23 @@ public class UpdateOrganizationUserGroupsCommand : IUpdateOrganizationUserGroups
     private readonly IEventService _eventService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly TimeProvider _timeProvider;
-    private readonly ICurrentContext _currentContext;
+    private readonly IScopedOrganizationApiKeyContext _scopedOrganizationApiKeyContext;
 
     public UpdateOrganizationUserGroupsCommand(
         IEventService eventService,
         IOrganizationUserRepository organizationUserRepository,
         TimeProvider timeProvider,
-        ICurrentContext currentContext)
+        IScopedOrganizationApiKeyContext scopedOrganizationApiKeyContext)
     {
         _eventService = eventService;
         _organizationUserRepository = organizationUserRepository;
         _timeProvider = timeProvider;
-        _currentContext = currentContext;
+        _scopedOrganizationApiKeyContext = scopedOrganizationApiKeyContext;
     }
 
     public async Task UpdateUserGroupsAsync(OrganizationUser organizationUser, IEnumerable<Guid> groupIds)
     {
-        if (_currentContext.IsScopedOrganizationApiKey && organizationUser.Type != OrganizationUserType.User)
+        if (_scopedOrganizationApiKeyContext.IsScopedOrganizationApiKey && organizationUser.Type != OrganizationUserType.User)
         {
             throw new BadRequestException(new ScopedApiKeyCanOnlyManageUsers().Message);
         }

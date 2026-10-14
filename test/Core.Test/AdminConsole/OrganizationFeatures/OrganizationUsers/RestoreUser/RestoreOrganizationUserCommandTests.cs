@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Context;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
@@ -92,7 +93,7 @@ public class RestoreOrganizationUserCommandTests
     {
         organizationUser.Type = targetRole;
         RestoreUser_Setup(organization, null, organizationUser, sutProvider);
-        sutProvider.GetDependency<ICurrentContext>().IsScopedOrganizationApiKey.Returns(true);
+        sutProvider.GetDependency<IScopedOrganizationApiKeyContext>().IsScopedOrganizationApiKey.Returns(true);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, EventSystemUser.PublicApi));
@@ -110,7 +111,7 @@ public class RestoreOrganizationUserCommandTests
         SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
         RestoreUser_Setup(organization, null, organizationUser, sutProvider);
-        sutProvider.GetDependency<ICurrentContext>().IsScopedOrganizationApiKey.Returns(true);
+        sutProvider.GetDependency<IScopedOrganizationApiKeyContext>().IsScopedOrganizationApiKey.Returns(true);
 
         await sutProvider.Sut.RestoreUserAsync(organizationUser, EventSystemUser.PublicApi);
 

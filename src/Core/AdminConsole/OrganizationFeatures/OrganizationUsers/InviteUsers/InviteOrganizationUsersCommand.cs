@@ -2,6 +2,7 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Context;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Interfaces;
@@ -14,7 +15,6 @@ using Bit.Core.AdminConsole.Utilities.Commands;
 using Bit.Core.AdminConsole.Utilities.Errors;
 using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -41,7 +41,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     IGlobalSettings globalSettings,
     ICollectionRepository collectionRepository,
     IGroupRepository groupRepository,
-    ICurrentContext currentContext
+    IScopedOrganizationApiKeyContext scopedOrganizationApiKeyContext
     ) : IInviteOrganizationUsersCommand
 {
 
@@ -118,7 +118,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     private async Task<CommandResult<InviteOrganizationUsersResponse>> InviteOrganizationUsersAsync(InviteOrganizationUsersRequest request)
     {
-        if (currentContext.IsScopedOrganizationApiKey && request.Invites.Any(i => i.Type != OrganizationUserType.User))
+        if (scopedOrganizationApiKeyContext.IsScopedOrganizationApiKey && request.Invites.Any(i => i.Type != OrganizationUserType.User))
         {
             return new Failure<InviteOrganizationUsersResponse>(new ScopedApiKeyCanOnlyInviteUsersError(
                 new InviteOrganizationUsersResponse(request.Organization.Id)));

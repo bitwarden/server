@@ -1,20 +1,20 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
+﻿using Bit.Core.AdminConsole.Context;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2;
-using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Groups;
 
 public class ScopedApiKeyGroupMemberValidator(
-    ICurrentContext currentContext,
+    IScopedOrganizationApiKeyContext scopedOrganizationApiKeyContext,
     IGroupRepository groupRepository,
     IOrganizationUserRepository organizationUserRepository) : IScopedApiKeyGroupMemberValidator
 {
     public async Task<Error?> ValidateAsync(Guid organizationId, Guid? groupId, IEnumerable<Guid> memberIds)
     {
-        if (!currentContext.IsScopedOrganizationApiKey)
+        if (!scopedOrganizationApiKeyContext.IsScopedOrganizationApiKey)
         {
             return null;
         }

@@ -1,7 +1,7 @@
-﻿using Bit.Core.AdminConsole.Models.Data;
+﻿using Bit.Core.AdminConsole.Context;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -16,12 +16,12 @@ public class OrganizationUserValidationServiceTests
     private static readonly Guid _organizationId = Guid.NewGuid();
 
     private readonly IOrganizationUserRepository _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
-    private readonly ICurrentContext _currentContext = Substitute.For<ICurrentContext>();
+    private readonly IScopedOrganizationApiKeyContext _scopedOrganizationApiKeyContext = Substitute.For<IScopedOrganizationApiKeyContext>();
     private readonly OrganizationUserValidationService _sut;
 
     public OrganizationUserValidationServiceTests()
     {
-        _sut = new OrganizationUserValidationService(_organizationUserRepository, _currentContext);
+        _sut = new OrganizationUserValidationService(_organizationUserRepository, _scopedOrganizationApiKeyContext);
     }
 
     // NOTE: A null `performedBy` represents a non-member. Custom users are granted the ManageUsers permission by
@@ -240,7 +240,7 @@ public class OrganizationUserValidationServiceTests
     [Fact]
     public void CanManageRoleChange_ByActingUser_WhenScopedApiKeyKeepsUserAsUser_ReturnsNull()
     {
-        _currentContext.IsScopedOrganizationApiKey.Returns(true);
+        _scopedOrganizationApiKeyContext.IsScopedOrganizationApiKey.Returns(true);
 
         var result = _sut.CanManageRoleChange(new SystemUser(EventSystemUser.PublicApi),
             TargetUser(OrganizationUserType.User), NewRole(OrganizationUserType.User));
@@ -255,7 +255,7 @@ public class OrganizationUserValidationServiceTests
     public void CanManageRoleChange_ByActingUser_WhenScopedApiKeyTargetsElevatedMember_ReturnsScopedApiKeyCanOnlyManageUsers(
         OrganizationUserType targetRole)
     {
-        _currentContext.IsScopedOrganizationApiKey.Returns(true);
+        _scopedOrganizationApiKeyContext.IsScopedOrganizationApiKey.Returns(true);
 
         var result = _sut.CanManageRoleChange(new SystemUser(EventSystemUser.PublicApi),
             TargetUser(targetRole), NewRole(OrganizationUserType.User));
@@ -270,7 +270,7 @@ public class OrganizationUserValidationServiceTests
     public void CanManageRoleChange_ByActingUser_WhenScopedApiKeyGrantsElevatedRole_ReturnsScopedApiKeyCanOnlyManageUsers(
         OrganizationUserType newRole)
     {
-        _currentContext.IsScopedOrganizationApiKey.Returns(true);
+        _scopedOrganizationApiKeyContext.IsScopedOrganizationApiKey.Returns(true);
 
         var result = _sut.CanManageRoleChange(new SystemUser(EventSystemUser.PublicApi),
             TargetUser(OrganizationUserType.User), NewRole(newRole, new Permissions { ManageUsers = true }));
