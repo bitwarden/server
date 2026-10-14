@@ -96,8 +96,8 @@ public class Startup
         services
             .AddDistributedIdentityServices()
             .AddAuthentication()
-            .AddCookie(AuthenticationSchemes.BitwardenIdentityExternalCookieAuthenticationScheme)
-            .AddOpenIdConnect(AuthenticationSchemes.BitwardenIdentitySsoAuthenticationScheme, "Single Sign On", options =>
+            .AddCookie(AuthenticationSchemes.IdentityExternalCookie)
+            .AddOpenIdConnect(AuthenticationSchemes.IdentitySsoOidc, "Single Sign On", options =>
             {
                 options.Authority = globalSettings.BaseServiceUri.InternalSso;
                 options.RequireHttpsMetadata = !Environment.IsDevelopment() &&
@@ -106,7 +106,7 @@ public class Startup
                 options.ClientSecret = globalSettings.OidcIdentityClientKey;
                 options.ResponseMode = "form_post";
 
-                options.SignInScheme = AuthenticationSchemes.BitwardenIdentityExternalCookieAuthenticationScheme;
+                options.SignInScheme = AuthenticationSchemes.IdentityExternalCookie;
                 options.ResponseType = "code";
                 options.SaveTokens = false;
                 options.GetClaimsFromUserInfoEndpoint = true;

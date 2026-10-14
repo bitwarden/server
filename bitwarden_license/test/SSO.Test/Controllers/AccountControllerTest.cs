@@ -53,7 +53,7 @@ public class AccountControllerTest
         var resolvedAuthService = authService ?? Substitute.For<IAuthenticationService>();
         resolvedAuthService.AuthenticateAsync(
                 Arg.Any<HttpContext>(),
-                AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme)
+                AuthenticationSchemes.SsoExternalCookie)
             .Returns(authResult);
 
         var services = new ServiceCollection();
@@ -97,7 +97,7 @@ public class AccountControllerTest
                 ["user_identifier"] = string.Empty
             }
         };
-        var ticket = new AuthenticationTicket(principal, properties, AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme);
+        var ticket = new AuthenticationTicket(principal, properties, AuthenticationSchemes.SsoExternalCookie);
         return AuthenticateResult.Success(ticket);
     }
 
@@ -399,7 +399,7 @@ public class AccountControllerTest
         var ticket = new AuthenticationTicket(
             new ClaimsPrincipal(new ClaimsIdentity(claims, "External")),
             properties,
-            AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme);
+            AuthenticationSchemes.SsoExternalCookie);
         SetupHttpContextWithAuth(sutProvider, AuthenticateResult.Success(ticket));
     }
 
@@ -467,7 +467,7 @@ public class AccountControllerTest
 
         await authService.Received().SignOutAsync(
             Arg.Any<HttpContext>(),
-            AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme,
+            AuthenticationSchemes.SsoExternalCookie,
             Arg.Any<AuthenticationProperties>());
     }
 
@@ -534,7 +534,7 @@ public class AccountControllerTest
         // External auth cookie is cleared so retry attempts start fresh.
         await authService.Received(1).SignOutAsync(
             Arg.Any<HttpContext>(),
-            AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme,
+            AuthenticationSchemes.SsoExternalCookie,
             Arg.Any<AuthenticationProperties>());
 
         // Security invariant: no local auth session is established for an invited user.
@@ -676,7 +676,7 @@ public class AccountControllerTest
 
         await authService.Received().SignOutAsync(
             Arg.Any<HttpContext>(),
-            AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme,
+            AuthenticationSchemes.SsoExternalCookie,
             Arg.Any<AuthenticationProperties>());
     }
 

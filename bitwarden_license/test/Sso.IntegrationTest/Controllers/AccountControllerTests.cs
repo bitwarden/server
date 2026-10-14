@@ -625,7 +625,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
                 var authService = Substitute.For<IAuthenticationService>();
                 authService.AuthenticateAsync(
                         Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme)
+                        AuthenticationSchemes.SsoExternalCookie)
                     .Returns(MockSuccessfulAuthResult.Build(organizationId, providerUserId, testEmail, testName, null, userIdentifier));
                 services.AddSingleton(authService);
             });
@@ -719,7 +719,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
                 var authService = Substitute.For<IAuthenticationService>();
                 authService.AuthenticateAsync(
                         Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme)
+                        AuthenticationSchemes.SsoExternalCookie)
                     .Returns(MockSuccessfulAuthResult.Build(invalidScheme, providerUserId, testEmail, testName));
                 services.AddSingleton(authService);
             });

@@ -31,8 +31,8 @@ public class ConfigureOpenIdConnectDistributedOptions : IPostConfigureOptions<Co
     {
         options.CookieManager = new DistributedCacheCookieManager();
 
-        if (name != AuthenticationSchemes.BitwardenIdentityExternalCookieAuthenticationScheme &&
-            name != AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme)
+        if (name != AuthenticationSchemes.IdentityExternalCookie &&
+            name != AuthenticationSchemes.SsoExternalCookie)
         {
             // Ignore
             return;

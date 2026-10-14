@@ -23,7 +23,7 @@ public class ExternalCookieIsolationTests : IDisposable
     /// <summary>
     /// The cookie scheme that the Sso app's external login handlers sign in to.
     /// </summary>
-    private const string SsoExternalScheme = AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme;
+    private const string SsoExternalScheme = AuthenticationSchemes.SsoExternalCookie;
 
     private const string UserEmail = "external_cookie_isolation_user@email.com";
 

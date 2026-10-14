@@ -17,8 +17,8 @@ namespace Bit.Core.Test.Auth.IdentityServer;
 
 public class ConfigureOpenIdConnectDistributedOptionsTests
 {
-    private const string IdentityScheme = AuthenticationSchemes.BitwardenIdentityExternalCookieAuthenticationScheme;
-    private const string SsoScheme = AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme;
+    private const string IdentityScheme = AuthenticationSchemes.IdentityExternalCookie;
+    private const string SsoScheme = AuthenticationSchemes.SsoExternalCookie;
 
     // One cache and one data protection key ring for every scheme, as the deployed apps share them.
     private readonly ConfigureOpenIdConnectDistributedOptions _sut = new(

@@ -81,7 +81,7 @@ internal static class MockSuccessfulAuthResult
         var ticket = new AuthenticationTicket(
             principal,
             properties,
-            AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme);
+            AuthenticationSchemes.SsoExternalCookie);
 
         return AuthenticateResult.Success(ticket);
     }

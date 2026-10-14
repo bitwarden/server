@@ -118,7 +118,7 @@ public class SsoController : Controller
         }
         var organizationId = ssoConfig.OrganizationId.ToString();
 
-        var scheme = AuthenticationSchemes.BitwardenIdentitySsoAuthenticationScheme;
+        var scheme = AuthenticationSchemes.IdentitySsoOidc;
         var props = new AuthenticationProperties
         {
             RedirectUri = Url.Action(nameof(ExternalCallback)),
@@ -148,7 +148,7 @@ public class SsoController : Controller
     {
         // Read external identity from the temporary cookie
         var result = await HttpContext.AuthenticateAsync(
-            AuthenticationSchemes.BitwardenIdentityExternalCookieAuthenticationScheme);
+            AuthenticationSchemes.IdentityExternalCookie);
         if (result?.Succeeded != true)
         {
             throw new Exception("External authentication error");
@@ -189,7 +189,7 @@ public class SsoController : Controller
         }, localSignInProps);
 
         // Delete temporary cookie used during external authentication
-        await HttpContext.SignOutAsync(AuthenticationSchemes.BitwardenIdentityExternalCookieAuthenticationScheme);
+        await HttpContext.SignOutAsync(AuthenticationSchemes.IdentityExternalCookie);
 
         // Retrieve return URL
         var returnUrl = result.Properties.Items["return_url"] ?? "~/";
@@ -230,7 +230,7 @@ public class SsoController : Controller
         FindUserFromExternalProviderAsync(AuthenticateResult result)
     {
         if (!result.Properties.Items.TryGetValue("scheme", out var provider) ||
-            provider != AuthenticationSchemes.BitwardenIdentitySsoAuthenticationScheme)
+            provider != AuthenticationSchemes.IdentitySsoOidc)
         {
             throw new Exception("External authentication error");
         }

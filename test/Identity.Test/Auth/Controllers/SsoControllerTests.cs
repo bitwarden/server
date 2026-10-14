@@ -73,7 +73,7 @@ public class SsoControllerTests
         var user = new User { Id = Guid.NewGuid(), Email = "user@example.com" };
         _userRepository.GetByIdAsync(user.Id).Returns(user);
         SetExternalTicket(userIdClaimType, user.Id.ToString(),
-            AuthenticationSchemes.BitwardenIdentitySsoAuthenticationScheme);
+            AuthenticationSchemes.IdentitySsoOidc);
 
         // Act
         var result = await _sut.ExternalCallback();
@@ -88,7 +88,7 @@ public class SsoControllerTests
             Arg.Any<AuthenticationProperties>());
         await _authenticationService.Received(1).SignOutAsync(
             Arg.Any<HttpContext>(),
-            AuthenticationSchemes.BitwardenIdentityExternalCookieAuthenticationScheme,
+            AuthenticationSchemes.IdentityExternalCookie,
             Arg.Any<AuthenticationProperties>());
     }
 
@@ -117,7 +117,7 @@ public class SsoControllerTests
     {
         // Arrange
         SetExternalTicket(JwtClaimTypes.Subject, userId,
-            AuthenticationSchemes.BitwardenIdentitySsoAuthenticationScheme);
+            AuthenticationSchemes.IdentitySsoOidc);
 
         // Act
         var exception = await Assert.ThrowsAsync<Exception>(() => _sut.ExternalCallback());
@@ -144,9 +144,9 @@ public class SsoControllerTests
 
         _authenticationService.AuthenticateAsync(
                 Arg.Any<HttpContext>(),
-                AuthenticationSchemes.BitwardenIdentityExternalCookieAuthenticationScheme)
+                AuthenticationSchemes.IdentityExternalCookie)
             .Returns(AuthenticateResult.Success(new AuthenticationTicket(principal, properties,
-                AuthenticationSchemes.BitwardenIdentityExternalCookieAuthenticationScheme)));
+                AuthenticationSchemes.IdentityExternalCookie)));
     }
 
     private async Task AssertDidNotSignInAsync() =>

@@ -243,7 +243,7 @@ public class SsoTestDataBuilder
             {
                 authService.AuthenticateAsync(
                         Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme)
+                        AuthenticationSchemes.SsoExternalCookie)
                     .Returns(MockSuccessfulAuthResult.Build(
                         authOrganizationId,
                         providerUserId,
@@ -256,7 +256,7 @@ public class SsoTestDataBuilder
             {
                 authService.AuthenticateAsync(
                         Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenSsoExternalCookieAuthenticationScheme)
+                        AuthenticationSchemes.SsoExternalCookie)
                     .Returns(AuthenticateResult.Fail("External authentication error"));
             }
         });
