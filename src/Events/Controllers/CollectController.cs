@@ -100,6 +100,7 @@ public class CollectController : Controller
                 case EventType.Cipher_ClientToggledIbanVisible:
                 case EventType.Cipher_ClientCopiedNationalIdentificationNumber:
                 case EventType.Cipher_ClientToggledNationalIdentificationNumberVisible:
+                case EventType.Cipher_ClientHttpAuthReleased:
                 case EventType.Cipher_ClientViewed:
                     if (!eventModel.CipherId.HasValue)
                     {
