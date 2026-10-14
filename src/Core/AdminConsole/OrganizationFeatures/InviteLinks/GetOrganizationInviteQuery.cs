@@ -9,18 +9,18 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 
 /// <summary>
 /// Retrieves the opaque invite for an invite link. See
-/// <see cref="IGetOrganizationInviteCommand"/> for the behavior.
+/// <see cref="IGetOrganizationInviteQuery"/> for the behavior.
 /// </summary>
 /// <remarks>
-/// This command looks up the invite link, organization, and existing membership, and delegates eligibility to
+/// This query looks up the invite link, organization, and existing membership, and delegates eligibility to
 /// <see cref="IGetOrganizationInviteValidator"/>.
 /// </remarks>
-public class GetOrganizationInviteCommand(
+public class GetOrganizationInviteQuery(
     IGetOrganizationInviteValidator getOrganizationInviteValidator,
     IOrganizationInviteLinkRepository organizationInviteLinkRepository,
     IOrganizationRepository organizationRepository,
     IOrganizationUserRepository organizationUserRepository)
-    : IGetOrganizationInviteCommand
+    : IGetOrganizationInviteQuery
 {
     public async Task<CommandResult<string>> GetInviteAsync(GetOrganizationInviteRequest request) =>
         getOrganizationInviteValidator.Validate(await BuildValidationRequestAsync(request))

@@ -8,7 +8,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 /// <remarks>
 /// Eligibility is validated by <see cref="IGetOrganizationInviteValidator"/>.
 /// </remarks>
-public interface IGetOrganizationInviteCommand
+public interface IGetOrganizationInviteQuery
 {
     Task<CommandResult<string>> GetInviteAsync(GetOrganizationInviteRequest request);
 }

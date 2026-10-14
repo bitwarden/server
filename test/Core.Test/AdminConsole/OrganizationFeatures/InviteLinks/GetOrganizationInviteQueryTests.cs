@@ -14,12 +14,12 @@ using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpe
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.InviteLinks;
 
 [SutProviderCustomize]
-public class GetOrganizationInviteCommandTests
+public class GetOrganizationInviteQueryTests
 {
     [Theory, BitAutoData]
     public async Task GetInviteAsync_WhenValidationPasses_ReturnsInvite(
         Organization organization, OrganizationInviteLink inviteLink, User user,
-        SutProvider<GetOrganizationInviteCommand> sutProvider)
+        SutProvider<GetOrganizationInviteQuery> sutProvider)
     {
         // Arrange
         SetupHappyPath(organization, inviteLink, user, existingOrganizationUser: null, sutProvider);
@@ -35,7 +35,7 @@ public class GetOrganizationInviteCommandTests
     [Theory, BitAutoData]
     public async Task GetInviteAsync_WhenValidationFails_ReturnsError(
         Organization organization, OrganizationInviteLink inviteLink, User user,
-        SutProvider<GetOrganizationInviteCommand> sutProvider)
+        SutProvider<GetOrganizationInviteQuery> sutProvider)
     {
         // Arrange
         SetupHappyPath(organization, inviteLink, user, existingOrganizationUser: null, sutProvider);
@@ -54,7 +54,7 @@ public class GetOrganizationInviteCommandTests
     [Theory, BitAutoData]
     public async Task GetInviteAsync_PassesLookedUpLinkOrganizationAndMembershipToValidator(
         Organization organization, OrganizationInviteLink inviteLink, User user, OrganizationUser existingOrganizationUser,
-        SutProvider<GetOrganizationInviteCommand> sutProvider)
+        SutProvider<GetOrganizationInviteQuery> sutProvider)
     {
         // Arrange
         SetupHappyPath(organization, inviteLink, user, existingOrganizationUser, sutProvider);
@@ -76,7 +76,7 @@ public class GetOrganizationInviteCommandTests
     [Theory, BitAutoData]
     public async Task GetInviteAsync_WithEmailInvitation_PassesItAsExistingMembership(
         Organization organization, OrganizationInviteLink inviteLink, User user, OrganizationUser invitedOrganizationUser,
-        SutProvider<GetOrganizationInviteCommand> sutProvider)
+        SutProvider<GetOrganizationInviteQuery> sutProvider)
     {
         // Arrange
         SetupHappyPath(organization, inviteLink, user, existingOrganizationUser: null, sutProvider);
@@ -111,7 +111,7 @@ public class GetOrganizationInviteCommandTests
         OrganizationInviteLink inviteLink,
         User user,
         OrganizationUser? existingOrganizationUser,
-        SutProvider<GetOrganizationInviteCommand> sutProvider)
+        SutProvider<GetOrganizationInviteQuery> sutProvider)
     {
         inviteLink.OrganizationId = organization.Id;
         inviteLink.Code = Guid.NewGuid().ToString();

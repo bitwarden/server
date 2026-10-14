@@ -218,7 +218,7 @@ public static class OrganizationServiceCollectionExtensions
         services.TryAddScoped<IConfirmOrganizationInviteLinkValidator, ConfirmOrganizationInviteLinkValidator>();
         services.TryAddScoped<IConfirmOrganizationInviteLinkCommand, ConfirmOrganizationInviteLinkCommand>();
         services.TryAddScoped<IGetOrganizationInviteValidator, GetOrganizationInviteValidator>();
-        services.TryAddScoped<IGetOrganizationInviteCommand, GetOrganizationInviteCommand>();
+        services.TryAddScoped<IGetOrganizationInviteQuery, GetOrganizationInviteQuery>();
     }
 
     private static void AddOrganizationDomainCommandsQueries(this IServiceCollection services)
