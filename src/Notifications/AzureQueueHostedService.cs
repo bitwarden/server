@@ -82,11 +82,11 @@ public class AzureQueueHostedService : IHostedService, IDisposable
                                 // A JSON null will never become a notification, so retrying it is pointless.
                                 _logger.LogError("Dequeued message {MessageId} was null and will be deleted.",
                                     message.MessageId);
-                                await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt,
-                                    cancellationToken);
-                                continue;
                             }
-                            await _hubHelpers.SendNotificationToHubAsync(notification, cancellationToken);
+                            else
+                            {
+                                await _hubHelpers.SendNotificationToHubAsync(notification, cancellationToken);
+                            }
                             await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt,
                                 cancellationToken);
                         }
