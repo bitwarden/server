@@ -59,12 +59,14 @@
                                         }
                                         else
                                         {
-                                            <a class="btn btn-outline-secondary btn-sm"
-                                                data-id="@user.Id" asp-controller="Providers"
-                                                asp-action="ResendInvite" asp-route-ownerId="@user.UserId"
-                                                asp-route-providerId="@Model.Provider.Id">
-                                                Resend Setup Invite
-                                            </a>
+                                            <form asp-controller="Providers" asp-action="ResendInvite"
+                                                asp-route-ownerId="@user.UserId" asp-route-providerId="@Model.Provider.Id"
+                                                method="post" class="d-inline">
+                                                <button type="submit" class="btn btn-outline-secondary btn-sm"
+                                                    data-id="@user.Id">
+                                                    Resend Setup Invite
+                                                </button>
+                                            </form>
                                         }
                                     }
                                 </td>

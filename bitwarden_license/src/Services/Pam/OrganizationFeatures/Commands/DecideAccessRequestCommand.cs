@@ -13,17 +13,26 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
 {
     private readonly IAccessRequestRepository _accessRequestRepository;
     private readonly IApproverCollectionAccessQuery _approverCollectionAccessQuery;
+    private readonly IApproverInboxNotifier _approverInboxNotifier;
+    private readonly IRequesterNotifier _requesterNotifier;
+    private readonly IRequesterMailNotifier _requesterMailNotifier;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
     public DecideAccessRequestCommand(
         IAccessRequestRepository accessRequestRepository,
         IApproverCollectionAccessQuery approverCollectionAccessQuery,
+        IApproverInboxNotifier approverInboxNotifier,
+        IRequesterNotifier requesterNotifier,
+        IRequesterMailNotifier requesterMailNotifier,
         IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
         _accessRequestRepository = accessRequestRepository;
         _approverCollectionAccessQuery = approverCollectionAccessQuery;
+        _approverInboxNotifier = approverInboxNotifier;
+        _requesterNotifier = requesterNotifier;
+        _requesterMailNotifier = requesterMailNotifier;
         _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
@@ -106,6 +115,10 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
         }
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
+
+        await _approverInboxNotifier.NotifyCollectionApproversAsync(request.CollectionId);
+        await _requesterNotifier.NotifyRequesterAsync(request.RequesterId);
+        await _requesterMailNotifier.NotifyDecisionAsync(request, approved);
 
         // Mirror what the repository stamped rather than re-reading.
         request.Action = action;

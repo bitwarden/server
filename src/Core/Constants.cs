@@ -242,7 +242,6 @@ public static partial class FeatureFlagKeys
     public const string FlightRecorderTsLogging = "pm-30935-flight-recorder-ts-logging";
 
     /* Tools Team */
-    public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
     public const string SendControls = "pm-31885-send-controls";
     public const string SdkSendsApi = "pm-30110-sdk-sends-api";
     public const string SendEventLogging = "pm-36560-send-event-logging";
@@ -297,6 +296,7 @@ public static partial class FeatureFlagKeys
     public const string BrowserExtensionHealthReport = "pm-35928-premium-user-health-reports";
     public const string OrganizationEventCleanup = "pm-33527-organization-event-cleanup";
     public const string AccessIntelligencePerformanceAtScale = "pm-43231-access-intelligence-performance-at-scale";
+    public const string HealthReportExclusions = "pm-39196-health-report-exclusions";
 
     /* PAM */
     public const string Pam = "pm-37044-pam-v-0";
