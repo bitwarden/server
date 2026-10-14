@@ -1,11 +1,12 @@
 CREATE PROCEDURE [dbo].[PamRotationJob_ReadManyRecentByAccessConnectorId]
     @AccessConnectorId UNIQUEIDENTIFIER,
-    @Limit INT
+    @Limit INT,
+    @Since DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Two result sets (jobs, attempts); membership is by the attempt's ClaimedByAccessConnectorId.
+    -- Two result sets (jobs, attempts); membership is by an attempt of this access connector since @Since.
     SELECT TOP (@Limit)
         J.*
     INTO
@@ -21,6 +22,7 @@ BEGIN
             WHERE
                 A.[JobId] = J.[Id]
                 AND A.[ClaimedByAccessConnectorId] = @AccessConnectorId
+                AND A.[CreationDate] >= @Since
         )
     ORDER BY
         J.[CreationDate] DESC

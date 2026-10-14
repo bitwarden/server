@@ -146,12 +146,12 @@ public class AccessLeaseRepository : Repository<AccessLease, Guid>, IAccessLease
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task<IReadOnlyList<PamExpiredLease>> ExpireDueAsync(DateTime now)
+    public async Task<IReadOnlyList<PamExpiredLease>> ExpireDueAsync(DateTime now, DateTime since)
     {
         await using var connection = new SqlConnection(ConnectionString);
         var results = await connection.QueryAsync<PamExpiredLease>(
             $"[{Schema}].[PamLeaseExpirySweep_CreateManyDue]",
-            new { Now = now },
+            new { Now = now, Since = since },
             commandType: CommandType.StoredProcedure);
 
         return results.ToList();

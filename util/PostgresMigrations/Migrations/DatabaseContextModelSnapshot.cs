@@ -2865,7 +2865,8 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClaimedByAccessConnectorId", "JobId");
+                    b.HasIndex("ClaimedByAccessConnectorId", "CreationDate")
+                        .IsDescending(false, true);
 
                     b.HasIndex("JobId", "Action");
 

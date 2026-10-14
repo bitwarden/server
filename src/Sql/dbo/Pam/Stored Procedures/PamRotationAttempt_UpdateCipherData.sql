@@ -7,13 +7,13 @@ CREATE PROCEDURE [dbo].[PamRotationAttempt_UpdateCipherData]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- WITH (UPDLOCK) closes the check-then-act window before the cipher write.
+    -- The job's UPDLOCK holds the claim, and the revision check sits in the cipher UPDATE, so neither can change
+    -- between check and write.
     SET XACT_ABORT ON
 
     DECLARE @CipherId UNIQUEIDENTIFIER
     DECLARE @OrganizationId UNIQUEIDENTIFIER
     DECLARE @VerifiedJobId UNIQUEIDENTIFIER
-    DECLARE @CipherRevisionDate DATETIME2(7)
 
     BEGIN TRY
         BEGIN TRANSACTION
@@ -45,29 +45,8 @@ BEGIN
             RETURN
         END
 
-        SELECT
-            @CipherRevisionDate = [RevisionDate]
-        FROM
-            [dbo].[Cipher]
-        WHERE
-            [Id] = @CipherId
-
-        -- The config has no FK to Cipher, so the cipher may have been hard-deleted.
-        IF @CipherRevisionDate IS NULL
-        BEGIN
-            ROLLBACK TRANSACTION
-            SELECT 0 -- Rejected
-            RETURN
-        END
-
-        -- Drifted LastKnownRevisionDate means a concurrent edit; rejected, matching CipherService's tolerance.
-        IF ABS(DATEDIFF_BIG(MILLISECOND, @CipherRevisionDate, @LastKnownRevisionDate)) > 1000
-        BEGIN
-            ROLLBACK TRANSACTION
-            SELECT -1 -- RevisionMismatch
-            RETURN
-        END
-
+        -- Drifted LastKnownRevisionDate means a concurrent edit; rejected, matching CipherService's tolerance. The
+        -- check is part of the UPDATE, so a save can't land between it and the write.
         UPDATE
             [dbo].[Cipher]
         SET
@@ -75,6 +54,31 @@ BEGIN
             [RevisionDate] = @Now
         WHERE
             [Id] = @CipherId
+            AND ABS(DATEDIFF_BIG(MILLISECOND, [RevisionDate], @LastKnownRevisionDate)) <= 1000
+
+        IF @@ROWCOUNT = 0
+        BEGIN
+            ROLLBACK TRANSACTION
+
+            -- The config has no FK to Cipher, so the cipher may have been hard-deleted.
+            IF EXISTS (
+                SELECT
+                    1
+                FROM
+                    [dbo].[Cipher]
+                WHERE
+                    [Id] = @CipherId
+            )
+            BEGIN
+                SELECT -1 -- RevisionMismatch
+            END
+            ELSE
+            BEGIN
+                SELECT 0 -- Rejected
+            END
+
+            RETURN
+        END
 
         UPDATE
             [dbo].[PamRotationAttempt]

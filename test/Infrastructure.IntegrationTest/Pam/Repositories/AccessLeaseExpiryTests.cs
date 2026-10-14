@@ -13,6 +13,8 @@ namespace Bit.Infrastructure.IntegrationTest.Pam.Repositories;
 /// </summary>
 public class AccessLeaseExpiryTests
 {
+    private static readonly TimeSpan _sweepWindow = TimeSpan.FromDays(30);
+
     [DatabaseTheory, DatabaseData]
     public async Task ExpireDueAsync_LeasePastNotAfter_ReturnsIt(
         IOrganizationRepository organizationRepository,
@@ -25,7 +27,7 @@ public class AccessLeaseExpiryTests
         var lease = await SeedActiveLeaseAsync(
             accessRequestRepository, accessLeaseRepository, organization.Id, now.AddHours(-2), now.AddHours(-1));
 
-        var expired = await accessLeaseRepository.ExpireDueAsync(now);
+        var expired = await accessLeaseRepository.ExpireDueAsync(now, now - _sweepWindow);
 
         // The caller audits and triggers from the returned row alone.
         var row = Assert.Single(expired, r => r.Id == lease.Id);
@@ -72,7 +74,7 @@ public class AccessLeaseExpiryTests
             CreationDate = revokedAt,
         }, revokedAt);
 
-        var expired = await accessLeaseRepository.ExpireDueAsync(now);
+        var expired = await accessLeaseRepository.ExpireDueAsync(now, now - _sweepWindow);
 
         Assert.DoesNotContain(expired, r => r.Id == active.Id);
         Assert.DoesNotContain(expired, r => r.Id == revoked.Id);
@@ -92,11 +94,28 @@ public class AccessLeaseExpiryTests
         var lease = await SeedActiveLeaseAsync(
             accessRequestRepository, accessLeaseRepository, organization.Id, now.AddHours(-2), now.AddHours(-1));
 
-        var firstRun = await accessLeaseRepository.ExpireDueAsync(now);
+        var firstRun = await accessLeaseRepository.ExpireDueAsync(now, now - _sweepWindow);
         Assert.Contains(firstRun, r => r.Id == lease.Id);
 
-        var secondRun = await accessLeaseRepository.ExpireDueAsync(now.AddMinutes(1));
+        var secondRun = await accessLeaseRepository.ExpireDueAsync(now.AddMinutes(1), now - _sweepWindow);
         Assert.DoesNotContain(secondRun, r => r.Id == lease.Id);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task ExpireDueAsync_LeaseEndedBeforeWindow_NotReturned(
+        IOrganizationRepository organizationRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+        var since = now - _sweepWindow;
+        var lease = await SeedActiveLeaseAsync(
+            accessRequestRepository, accessLeaseRepository, organization.Id, since.AddHours(-2), since.AddHours(-1));
+
+        var expired = await accessLeaseRepository.ExpireDueAsync(now, since);
+
+        Assert.DoesNotContain(expired, r => r.Id == lease.Id);
     }
 
     private static async Task<AccessLease> SeedActiveLeaseAsync(

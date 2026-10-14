@@ -28,18 +28,21 @@ public interface IPamRotationJobRepository
     Task<ICollection<PamClaimableJob>> GetManyClaimableByAccessConnectorIdAsync(Guid accessConnectorId, DateTime now);
 
     /// <summary>
-    /// Returns every job recorded against the config, each with its attempts oldest first, for the config detail
-    /// page's attempt history. Statuses are derived against <paramref name="now"/>.
+    /// The <paramref name="limit"/> most recent jobs created since <paramref name="since"/>, newest first, each with its
+    /// attempts oldest first, for the config detail page's attempt history. Statuses are derived against
+    /// <paramref name="now"/>.
     /// </summary>
-    Task<ICollection<PamRotationJobDetails>> GetManyByConfigIdAsync(Guid configId, DateTime now);
+    Task<ICollection<PamRotationJobDetails>> GetManyByConfigIdAsync(Guid configId, int limit, DateTime since,
+        DateTime now);
 
     /// <summary>
     /// The <paramref name="limit"/> most recent jobs this access connector has worked, newest first, for its detail
     /// page. Matches on the attempts, not <see cref="PamRotationJob.ClaimedByAccessConnectorId"/>, since claim fields
-    /// clear once a job resolves or is released.
+    /// clear once a job resolves or is released. Only an attempt since <paramref name="since"/> counts, which keeps
+    /// the read from growing with the access connector's history.
     /// </summary>
     Task<ICollection<PamRotationJobDetails>> GetManyRecentByAccessConnectorIdAsync(Guid accessConnectorId, int limit,
-        DateTime now);
+        DateTime since, DateTime now);
 
     Task<PamRotationAttempt?> GetAttemptByIdAsync(Guid attemptId);
 

@@ -80,12 +80,13 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
         return results.ToList();
     }
 
-    public async Task<ICollection<PamRotationJobDetails>> GetManyByConfigIdAsync(Guid configId, DateTime now)
+    public async Task<ICollection<PamRotationJobDetails>> GetManyByConfigIdAsync(Guid configId, int limit, DateTime since,
+        DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);
         using var results = await connection.QueryMultipleAsync(
             "[dbo].[PamRotationJob_ReadManyByConfigId]",
-            new { RotationConfigId = configId },
+            new { RotationConfigId = configId, Limit = limit, Since = since },
             commandType: CommandType.StoredProcedure);
 
         var jobs = (await results.ReadAsync<PamRotationJob>()).ToList();
@@ -104,12 +105,13 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
     public async Task<ICollection<PamRotationJobDetails>> GetManyRecentByAccessConnectorIdAsync(
         Guid accessConnectorId,
         int limit,
+        DateTime since,
         DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);
         using var results = await connection.QueryMultipleAsync(
             "[dbo].[PamRotationJob_ReadManyRecentByAccessConnectorId]",
-            new { AccessConnectorId = accessConnectorId, Limit = limit },
+            new { AccessConnectorId = accessConnectorId, Limit = limit, Since = since },
             commandType: CommandType.StoredProcedure);
 
         var jobs = (await results.ReadAsync<PamRotationJob>()).ToList();

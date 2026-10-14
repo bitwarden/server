@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20261014104223_AddPamRotation")]
+    [Migration("20261014151657_AddPamRotation")]
     partial class AddPamRotation
     {
         /// <inheritdoc />
@@ -2868,7 +2868,8 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClaimedByAccessConnectorId", "JobId");
+                    b.HasIndex("ClaimedByAccessConnectorId", "CreationDate")
+                        .IsDescending(false, true);
 
                     b.HasIndex("JobId", "Action");
 

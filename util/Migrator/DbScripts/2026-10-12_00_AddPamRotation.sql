@@ -211,10 +211,11 @@ BEGIN
 END
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_PamRotationAttempt_ClaimedByAccessConnectorId_JobId' AND object_id = OBJECT_ID('[dbo].[PamRotationAttempt]'))
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_PamRotationAttempt_ClaimedByAccessConnectorId_CreationDate' AND object_id = OBJECT_ID('[dbo].[PamRotationAttempt]'))
 BEGIN
-    CREATE NONCLUSTERED INDEX [IX_PamRotationAttempt_ClaimedByAccessConnectorId_JobId]
-        ON [dbo].[PamRotationAttempt] ([ClaimedByAccessConnectorId] ASC, [JobId] ASC);
+    CREATE NONCLUSTERED INDEX [IX_PamRotationAttempt_ClaimedByAccessConnectorId_CreationDate]
+        ON [dbo].[PamRotationAttempt] ([ClaimedByAccessConnectorId] ASC, [CreationDate] DESC)
+        INCLUDE ([JobId]);
 END
 GO
 
@@ -662,7 +663,8 @@ END
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[PamLeaseExpirySweep_CreateManyDue]
-    @Now DATETIME2(7)
+    @Now DATETIME2(7),
+    @Since DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -687,6 +689,7 @@ BEGIN
     WHERE
         AL.[Action] = 0 -- None: no early end recorded, so the closed window is a natural expiry
         AND AL.[NotAfter] <= @Now
+        AND AL.[NotAfter] > @Since -- keeps the read from growing with lease history
         AND NOT EXISTS (
             SELECT
                 1
@@ -736,13 +739,13 @@ CREATE OR ALTER PROCEDURE [dbo].[PamRotationAttempt_UpdateCipherData]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- WITH (UPDLOCK) closes the check-then-act window before the cipher write.
+    -- The job's UPDLOCK holds the claim, and the revision check sits in the cipher UPDATE, so neither can change
+    -- between check and write.
     SET XACT_ABORT ON
 
     DECLARE @CipherId UNIQUEIDENTIFIER
     DECLARE @OrganizationId UNIQUEIDENTIFIER
     DECLARE @VerifiedJobId UNIQUEIDENTIFIER
-    DECLARE @CipherRevisionDate DATETIME2(7)
 
     BEGIN TRY
         BEGIN TRANSACTION
@@ -774,29 +777,8 @@ BEGIN
             RETURN
         END
 
-        SELECT
-            @CipherRevisionDate = [RevisionDate]
-        FROM
-            [dbo].[Cipher]
-        WHERE
-            [Id] = @CipherId
-
-        -- The config has no FK to Cipher, so the cipher may have been hard-deleted.
-        IF @CipherRevisionDate IS NULL
-        BEGIN
-            ROLLBACK TRANSACTION
-            SELECT 0 -- Rejected
-            RETURN
-        END
-
-        -- Drifted LastKnownRevisionDate means a concurrent edit; rejected, matching CipherService's tolerance.
-        IF ABS(DATEDIFF_BIG(MILLISECOND, @CipherRevisionDate, @LastKnownRevisionDate)) > 1000
-        BEGIN
-            ROLLBACK TRANSACTION
-            SELECT -1 -- RevisionMismatch
-            RETURN
-        END
-
+        -- Drifted LastKnownRevisionDate means a concurrent edit; rejected, matching CipherService's tolerance. The
+        -- check is part of the UPDATE, so a save can't land between it and the write.
         UPDATE
             [dbo].[Cipher]
         SET
@@ -804,6 +786,31 @@ BEGIN
             [RevisionDate] = @Now
         WHERE
             [Id] = @CipherId
+            AND ABS(DATEDIFF_BIG(MILLISECOND, [RevisionDate], @LastKnownRevisionDate)) <= 1000
+
+        IF @@ROWCOUNT = 0
+        BEGIN
+            ROLLBACK TRANSACTION
+
+            -- The config has no FK to Cipher, so the cipher may have been hard-deleted.
+            IF EXISTS (
+                SELECT
+                    1
+                FROM
+                    [dbo].[Cipher]
+                WHERE
+                    [Id] = @CipherId
+            )
+            BEGIN
+                SELECT -1 -- RevisionMismatch
+            END
+            ELSE
+            BEGIN
+                SELECT 0 -- Rejected
+            END
+
+            RETURN
+        END
 
         UPDATE
             [dbo].[PamRotationAttempt]
@@ -1154,13 +1161,20 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- DeleteTargetSystemCommand's guard; the delete itself re-checks under lock separately.
+    -- DeleteTargetSystemCommand's guard; the delete itself re-checks under lock separately. Returns 0 or 1, since
+    -- EXISTS stops at the first config.
     SELECT
-        COUNT(1)
-    FROM
-        [dbo].[PamRotationConfigView]
-    WHERE
-        [TargetSystemId] = @TargetSystemId
+        CASE
+            WHEN EXISTS (
+                SELECT
+                    1
+                FROM
+                    [dbo].[PamRotationConfigView]
+                WHERE
+                    [TargetSystemId] = @TargetSystemId
+            ) THEN 1
+            ELSE 0
+        END
 END
 GO
 
@@ -1451,18 +1465,30 @@ END
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[PamRotationJob_ReadManyByConfigId]
-    @RotationConfigId UNIQUEIDENTIFIER
+    @RotationConfigId UNIQUEIDENTIFIER,
+    @Limit INT,
+    @Since DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
 
     -- Two result sets let the caller zip jobs to attempts, grouped by JobId.
-    SELECT
+    SELECT TOP (@Limit)
         *
+    INTO
+        #Jobs
     FROM
         [dbo].[PamRotationJobView]
     WHERE
         [RotationConfigId] = @RotationConfigId
+        AND [CreationDate] >= @Since
+    ORDER BY
+        [CreationDate] DESC
+
+    SELECT
+        *
+    FROM
+        #Jobs
     ORDER BY
         [CreationDate] DESC
 
@@ -1471,12 +1497,12 @@ BEGIN
     FROM
         [dbo].[PamRotationAttemptView] A
     INNER JOIN
-        [dbo].[PamRotationJobView] J ON J.[Id] = A.[JobId]
-    WHERE
-        J.[RotationConfigId] = @RotationConfigId
+        #Jobs J ON J.[Id] = A.[JobId]
     ORDER BY
         A.[JobId],
         A.[CreationDate] ASC
+
+    DROP TABLE #Jobs
 END
 GO
 
@@ -1516,12 +1542,13 @@ GO
 
 CREATE OR ALTER PROCEDURE [dbo].[PamRotationJob_ReadManyRecentByAccessConnectorId]
     @AccessConnectorId UNIQUEIDENTIFIER,
-    @Limit INT
+    @Limit INT,
+    @Since DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Two result sets (jobs, attempts); membership is by the attempt's ClaimedByAccessConnectorId.
+    -- Two result sets (jobs, attempts); membership is by an attempt of this access connector since @Since.
     SELECT TOP (@Limit)
         J.*
     INTO
@@ -1537,6 +1564,7 @@ BEGIN
             WHERE
                 A.[JobId] = J.[Id]
                 AND A.[ClaimedByAccessConnectorId] = @AccessConnectorId
+                AND A.[CreationDate] >= @Since
         )
     ORDER BY
         J.[CreationDate] DESC

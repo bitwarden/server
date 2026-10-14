@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20261014104228_AddPamRotation")]
+    [Migration("20261014151701_AddPamRotation")]
     partial class AddPamRotation
     {
         /// <inheritdoc />
@@ -2851,7 +2851,8 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClaimedByAccessConnectorId", "JobId");
+                    b.HasIndex("ClaimedByAccessConnectorId", "CreationDate")
+                        .IsDescending(false, true);
 
                     b.HasIndex("JobId", "Action");
 

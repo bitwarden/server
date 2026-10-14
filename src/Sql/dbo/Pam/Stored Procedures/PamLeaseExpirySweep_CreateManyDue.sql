@@ -1,5 +1,6 @@
 CREATE PROCEDURE [dbo].[PamLeaseExpirySweep_CreateManyDue]
-    @Now DATETIME2(7)
+    @Now DATETIME2(7),
+    @Since DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -24,6 +25,7 @@ BEGIN
     WHERE
         AL.[Action] = 0 -- None: no early end recorded, so the closed window is a natural expiry
         AND AL.[NotAfter] <= @Now
+        AND AL.[NotAfter] > @Since -- keeps the read from growing with lease history
         AND NOT EXISTS (
             SELECT
                 1

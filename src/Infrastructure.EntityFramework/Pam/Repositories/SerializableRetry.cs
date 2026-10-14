@@ -16,10 +16,16 @@ internal static class SerializableRetry
             }
             catch (Exception e) when (attempt < MaxAttempts && IsSerializationFailure(e))
             {
+                // The aborted transaction committed nothing, so the next attempt starts from a fresh scope.
             }
         }
     }
 
+    /// <summary>
+    /// True when the provider refused the transaction because it could not serialize it against a concurrent one:
+    /// PostgreSQL's SSI aborting it at commit, or a deadlock victim elsewhere. The transaction is already gone in
+    /// every case, so the only recovery is to run the whole attempt again.
+    /// </summary>
     private static bool IsSerializationFailure(Exception e) => e switch
     {
         Npgsql.PostgresException pg => pg.SqlState is "40001" or "40P01",

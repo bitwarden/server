@@ -208,14 +208,16 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
             .ToListAsync();
     }
 
-    public async Task<ICollection<PamRotationJobDetails>> GetManyByConfigIdAsync(Guid configId, DateTime now)
+    public async Task<ICollection<PamRotationJobDetails>> GetManyByConfigIdAsync(Guid configId, int limit, DateTime since,
+        DateTime now)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
         var jobs = await dbContext.PamRotationJobs
-            .Where(j => j.RotationConfigId == configId)
+            .Where(j => j.RotationConfigId == configId && j.CreationDate >= since)
             .OrderByDescending(j => j.CreationDate)
+            .Take(limit)
             .AsNoTracking()
             .ToListAsync();
         if (jobs.Count == 0)
@@ -245,6 +247,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
     public async Task<ICollection<PamRotationJobDetails>> GetManyRecentByAccessConnectorIdAsync(
         Guid accessConnectorId,
         int limit,
+        DateTime since,
         DateTime now)
     {
         using var scope = ServiceScopeFactory.CreateScope();
@@ -252,7 +255,8 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
 
         var jobs = await dbContext.PamRotationJobs
             .Where(j => dbContext.PamRotationAttempts
-                .Any(a => a.JobId == j.Id && a.ClaimedByAccessConnectorId == accessConnectorId))
+                .Any(a => a.JobId == j.Id && a.ClaimedByAccessConnectorId == accessConnectorId
+                    && a.CreationDate >= since))
             .OrderByDescending(j => j.CreationDate)
             .Take(limit)
             .AsNoTracking()

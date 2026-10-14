@@ -22,7 +22,8 @@ CREATE NONCLUSTERED INDEX [IX_PamRotationAttempt_JobId_Action]
     ON [dbo].[PamRotationAttempt] ([JobId] ASC, [Action] ASC);
 GO
 
--- Both of PamRotationJob_ReadManyRecentByAccessConnectorId's result sets seek on ClaimedByAccessConnectorId.
-CREATE NONCLUSTERED INDEX [IX_PamRotationAttempt_ClaimedByAccessConnectorId_JobId]
-    ON [dbo].[PamRotationAttempt] ([ClaimedByAccessConnectorId] ASC, [JobId] ASC);
+-- PamRotationJob_ReadManyRecentByAccessConnectorId seeks the access connector's attempts in its window, newest first.
+CREATE NONCLUSTERED INDEX [IX_PamRotationAttempt_ClaimedByAccessConnectorId_CreationDate]
+    ON [dbo].[PamRotationAttempt] ([ClaimedByAccessConnectorId] ASC, [CreationDate] DESC)
+    INCLUDE ([JobId]);
 GO

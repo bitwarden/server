@@ -331,7 +331,8 @@ public class DatabaseContext : DbContext
 
         ePamRotationAttempt.Property(p => p.Id).ValueGeneratedNever();
         ePamRotationAttempt.HasIndex(p => new { p.JobId, p.Action });
-        ePamRotationAttempt.HasIndex(p => new { p.ClaimedByAccessConnectorId, p.JobId });
+        // MSSQL also INCLUDEs JobId, which has no EF equivalent.
+        ePamRotationAttempt.HasIndex(p => new { p.ClaimedByAccessConnectorId, p.CreationDate }).IsDescending(false, true);
         ePamRotationAttempt
             .HasOne<PamRotationJob>()
             .WithMany()

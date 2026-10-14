@@ -66,6 +66,10 @@ public interface IAccessLeaseRepository
     /// </summary>
     Task RevokeAsync(AccessLease lease, AccessLeaseAction endAction, AccessDecision auditDecision, DateTime now);
 
-    /// <summary>Returns each lease whose window closed on its own and that no earlier sweep returned.</summary>
-    Task<IReadOnlyList<PamExpiredLease>> ExpireDueAsync(DateTime now);
+    /// <summary>
+    /// Returns each lease whose window closed on its own after <paramref name="since"/> and that no earlier sweep
+    /// returned. A lease that closed before <paramref name="since"/> is never returned, so pass a window far longer
+    /// than any sweep outage.
+    /// </summary>
+    Task<IReadOnlyList<PamExpiredLease>> ExpireDueAsync(DateTime now, DateTime since);
 }

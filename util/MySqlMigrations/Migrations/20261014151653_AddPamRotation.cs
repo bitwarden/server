@@ -256,9 +256,10 @@ public partial class AddPamRotation : Migration
             column: "TargetSystemId");
 
         migrationBuilder.CreateIndex(
-            name: "IX_PamRotationAttempt_ClaimedByAccessConnectorId_JobId",
+            name: "IX_PamRotationAttempt_ClaimedByAccessConnectorId_CreationDate",
             table: "PamRotationAttempt",
-            columns: new[] { "ClaimedByAccessConnectorId", "JobId" });
+            columns: new[] { "ClaimedByAccessConnectorId", "CreationDate" },
+            descending: new[] { false, true });
 
         migrationBuilder.CreateIndex(
             name: "IX_PamRotationAttempt_JobId_Action",

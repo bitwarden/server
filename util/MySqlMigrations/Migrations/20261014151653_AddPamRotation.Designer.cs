@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20261014104213_AddPamRotation")]
+    [Migration("20261014151653_AddPamRotation")]
     partial class AddPamRotation
     {
         /// <inheritdoc />
@@ -2862,7 +2862,8 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClaimedByAccessConnectorId", "JobId");
+                    b.HasIndex("ClaimedByAccessConnectorId", "CreationDate")
+                        .IsDescending(false, true);
 
                     b.HasIndex("JobId", "Action");
 
