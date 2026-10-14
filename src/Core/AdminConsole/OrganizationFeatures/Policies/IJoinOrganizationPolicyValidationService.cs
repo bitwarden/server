@@ -69,6 +69,6 @@ public interface IJoinOrganizationPolicyValidationService
 
     /// <inheritdoc cref="ValidateAccountRecoveryPolicyAsync(Guid, User, OrganizationUserType, string?)" path="/summary|/param"/>
     /// <param name="policyEnforcer">The policy enforcer for the organization being joined.</param>
-    Task<AccountRecoveryPolicyValidationResult> ValidateAccountRecoveryPolicyAsync(Guid organizationId, User user,
+    AccountRecoveryPolicyValidationResult ValidateAccountRecoveryPolicy(Guid organizationId, User user,
         OrganizationUserType proposedRole, IPreAccessPolicyEnforcer policyEnforcer, string? resetPasswordKey);
 }

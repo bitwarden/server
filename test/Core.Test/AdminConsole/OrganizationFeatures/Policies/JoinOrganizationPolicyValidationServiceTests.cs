@@ -297,14 +297,14 @@ public class JoinOrganizationPolicyValidationServiceTests
     // ----- Account Recovery -----
 
     [Theory, BitAutoData]
-    public async Task ValidateAccountRecoveryPolicyAsync_WithNoPolicy_ReturnsNoAutoEnroll(
+    public void ValidateAccountRecoveryPolicy_WithNoPolicy_ReturnsNoAutoEnroll(
         Guid organizationId, User user, SutProvider<JoinOrganizationPolicyValidationService> sutProvider)
     {
         // Arrange
         var policyEnforcer = CreatePolicyEnforcer();
 
         // Act
-        var result = await sutProvider.Sut.ValidateAccountRecoveryPolicyAsync(
+        var result = sutProvider.Sut.ValidateAccountRecoveryPolicy(
             organizationId, user, OrganizationUserType.User, policyEnforcer, resetPasswordKey: null);
 
         // Assert
@@ -313,7 +313,7 @@ public class JoinOrganizationPolicyValidationServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAccountRecoveryPolicyAsync_WithoutAutoEnroll_DoesNotRequireKey(
+    public void ValidateAccountRecoveryPolicy_WithoutAutoEnroll_DoesNotRequireKey(
         Guid organizationId, User user, SutProvider<JoinOrganizationPolicyValidationService> sutProvider)
     {
         // Arrange
@@ -321,7 +321,7 @@ public class JoinOrganizationPolicyValidationServiceTests
         EnableAccountRecoveryPolicy(policyEnforcer, autoEnrollEnabled: false);
 
         // Act
-        var result = await sutProvider.Sut.ValidateAccountRecoveryPolicyAsync(
+        var result = sutProvider.Sut.ValidateAccountRecoveryPolicy(
             organizationId, user, OrganizationUserType.User, policyEnforcer, resetPasswordKey: null);
 
         // Assert
@@ -330,7 +330,7 @@ public class JoinOrganizationPolicyValidationServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAccountRecoveryPolicyAsync_WithAutoEnrollAndMissingKey_ReturnsError(
+    public void ValidateAccountRecoveryPolicy_WithAutoEnrollAndMissingKey_ReturnsError(
         Guid organizationId, User user, SutProvider<JoinOrganizationPolicyValidationService> sutProvider)
     {
         // Arrange
@@ -338,7 +338,7 @@ public class JoinOrganizationPolicyValidationServiceTests
         EnableAccountRecoveryPolicy(policyEnforcer, autoEnrollEnabled: true);
 
         // Act
-        var result = await sutProvider.Sut.ValidateAccountRecoveryPolicyAsync(
+        var result = sutProvider.Sut.ValidateAccountRecoveryPolicy(
             organizationId, user, OrganizationUserType.User, policyEnforcer, resetPasswordKey: null);
 
         // Assert
@@ -347,7 +347,7 @@ public class JoinOrganizationPolicyValidationServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAccountRecoveryPolicyAsync_WithAutoEnrollAndValidKey_ReturnsAutoEnrollWithoutError(
+    public void ValidateAccountRecoveryPolicy_WithAutoEnrollAndValidKey_ReturnsAutoEnrollWithoutError(
         Guid organizationId, User user, SutProvider<JoinOrganizationPolicyValidationService> sutProvider)
     {
         // Arrange
@@ -355,7 +355,7 @@ public class JoinOrganizationPolicyValidationServiceTests
         EnableAccountRecoveryPolicy(policyEnforcer, autoEnrollEnabled: true);
 
         // Act
-        var result = await sutProvider.Sut.ValidateAccountRecoveryPolicyAsync(
+        var result = sutProvider.Sut.ValidateAccountRecoveryPolicy(
             organizationId, user, OrganizationUserType.User, policyEnforcer, _validResetPasswordKey);
 
         // Assert

@@ -114,10 +114,10 @@ public class JoinOrganizationPolicyValidationService(
 
     public async Task<AccountRecoveryPolicyValidationResult> ValidateAccountRecoveryPolicyAsync(
         Guid organizationId, User user, OrganizationUserType proposedRole, string? resetPasswordKey) =>
-        await ValidateAccountRecoveryPolicyAsync(organizationId, user, proposedRole,
+        ValidateAccountRecoveryPolicy(organizationId, user, proposedRole,
             await preAccessEnforcerQuery.RunAsync(organizationId), resetPasswordKey);
 
-    public Task<AccountRecoveryPolicyValidationResult> ValidateAccountRecoveryPolicyAsync(Guid organizationId,
+    public AccountRecoveryPolicyValidationResult ValidateAccountRecoveryPolicy(Guid organizationId,
         User user, OrganizationUserType proposedRole, IPreAccessPolicyEnforcer policyEnforcer, string? resetPasswordKey)
     {
         var decision = policyEnforcer.Evaluate(PolicyType.ResetPassword, user.Id, proposedRole);
@@ -128,7 +128,7 @@ public class JoinOrganizationPolicyValidationService(
             ? new ResetPasswordKeyRequired()
             : null;
 
-        return Task.FromResult(new AccountRecoveryPolicyValidationResult(error, autoEnrollEnabled));
+        return new AccountRecoveryPolicyValidationResult(error, autoEnrollEnabled);
     }
 
     private static bool IsMemberOfAnotherOrganization(
