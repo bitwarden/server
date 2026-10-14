@@ -12,7 +12,7 @@ public record OrganizationInviteLinkValidationRequest
     /// <summary>
     /// The organization's invite link, or <see langword="null"/> if it has none.
     /// </summary>
-    public required OrganizationInviteLink? InviteLink { get; init; }
+    public required OrganizationInviteLink? ExistingInviteLink { get; init; }
 
     /// <summary>
     /// The secret code embedded in the invite link the user is attempting to use.

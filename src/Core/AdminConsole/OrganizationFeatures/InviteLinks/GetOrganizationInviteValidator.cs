@@ -1,8 +1,6 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
-using Bit.Core.Entities;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
@@ -12,35 +10,34 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 /// </summary>
 public class GetOrganizationInviteValidator : IGetOrganizationInviteValidator
 {
-    public Task<ValidationResult<OrganizationInviteLinkValidationRequest>> ValidateAsync(
+    public ValidationResult<OrganizationInviteLinkValidationRequest> Validate(
         OrganizationInviteLinkValidationRequest request)
     {
         var eligibilityError = InviteLinkRules.ValidateEligibility(
-            request.InviteLink, request.Code, request.Organization, request.User);
+            request.ExistingInviteLink, request.Code, request.Organization, request.User);
         if (eligibilityError is not null)
         {
-            return Task.FromResult(Invalid(request, eligibilityError));
+            return Invalid(request, eligibilityError);
         }
 
-        // The eligibility check guarantees both exist.
-        var validLink = request.InviteLink!;
-        var validOrganization = request.Organization!;
-
-        var membershipStatusError = ValidateMembershipStatus(validLink, validOrganization, request.ExistingOrganizationUser);
+        var membershipStatusError = ValidateMembershipStatus(request);
         if (membershipStatusError is not null)
         {
-            return Task.FromResult(Invalid(request, membershipStatusError));
+            return Invalid(request, membershipStatusError);
         }
 
-        return Task.FromResult(Valid(request));
+        return Valid(request);
     }
 
     /// <summary>
     /// The existing membership must allow the step the link leads to: confirming, or accepting.
     /// </summary>
-    private static Error? ValidateMembershipStatus(
-        OrganizationInviteLink inviteLink, Organization organization, OrganizationUser? existingOrganizationUser) =>
-        inviteLink.SupportsConfirmation
-            ? InviteLinkRules.ValidateConfirmMembershipStatus(organization, existingOrganizationUser)
-            : InviteLinkRules.ValidateAcceptMembershipStatus(organization, existingOrganizationUser);
+    /// <remarks>
+    /// Must run after <see cref="InviteLinkRules.ValidateEligibility"/>, which guarantees the invite link and
+    /// organization exist.
+    /// </remarks>
+    private static Error? ValidateMembershipStatus(OrganizationInviteLinkValidationRequest request) =>
+        request.ExistingInviteLink!.SupportsConfirmation
+            ? InviteLinkRules.ValidateConfirmMembershipStatus(request.Organization!, request.ExistingOrganizationUser)
+            : InviteLinkRules.ValidateAcceptMembershipStatus(request.Organization!, request.ExistingOrganizationUser);
 }

@@ -43,10 +43,8 @@ public static class InviteLinkRules
             return new InviteLinkNotAvailable();
         }
 
-        // The domain is checked before email verification so a user on a disallowed domain is told so first,
-        // rather than being sent through the client's email verification step only to be rejected afterwards.
-        // Auth's invite link email verification flow (PM-42435) relies on this order; coordinate with Auth before
-        // changing it.
+        // Order matters: the client starts email verification on EmailNotVerified, so reject disallowed domains
+        // first. Otherwise the user would verify their email only to be rejected afterwards.
         if (!InviteLinkDomainValidator.IsEmailDomainAllowed(user.Email, inviteLink.GetAllowedDomains()))
         {
             return new EmailDomainNotAllowed(organization.DisplayName());
