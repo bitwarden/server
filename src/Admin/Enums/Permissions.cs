@@ -27,6 +27,7 @@ public enum Permission
     Org_BusinessInformation_View,
     Org_InitiateTrial,
     Org_InitiateSalesAssistedTrial,
+    Org_ExtendTrial,
     Org_RequestDelete,
     Org_Delete,
     Org_BillingInformation_View,
