@@ -1,7 +1,7 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.Groups;
+﻿using Bit.Core.AdminConsole.Context;
+using Bit.Core.AdminConsole.OrganizationFeatures.Groups;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -64,7 +64,7 @@ public class ScopedApiKeyGroupMemberValidatorTests
         SutProvider<ScopedApiKeyGroupMemberValidator> sutProvider,
         Guid organizationId, Guid groupId, Guid adminId)
     {
-        sutProvider.GetDependency<ICurrentContext>().IsScopedOrganizationApiKey.Returns(true);
+        sutProvider.GetDependency<IScopedOrganizationApiKeyContext>().IsScopedOrganizationApiKey.Returns(true);
         sutProvider.GetDependency<IGroupRepository>().GetManyUserIdsByIdAsync(groupId).Returns([adminId]);
 
         var result = await sutProvider.Sut.ValidateAsync(organizationId, groupId, [adminId]);
@@ -111,7 +111,7 @@ public class ScopedApiKeyGroupMemberValidatorTests
     private static void ArrangeMembers(SutProvider<ScopedApiKeyGroupMemberValidator> sutProvider,
         bool isScopedApiKey, params OrganizationUser[] members)
     {
-        sutProvider.GetDependency<ICurrentContext>().IsScopedOrganizationApiKey.Returns(isScopedApiKey);
+        sutProvider.GetDependency<IScopedOrganizationApiKeyContext>().IsScopedOrganizationApiKey.Returns(isScopedApiKey);
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(callInfo => members.Where(m => callInfo.Arg<IEnumerable<Guid>>().Contains(m.Id)).ToList());

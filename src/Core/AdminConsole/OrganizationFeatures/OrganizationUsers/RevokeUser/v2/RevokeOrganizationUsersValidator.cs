@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Models.Data;
+﻿using Bit.Core.AdminConsole.Context;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
@@ -11,7 +12,8 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUse
 
 public class RevokeOrganizationUsersValidator(
     IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
-    ICurrentContext currentContext)
+    ICurrentContext currentContext,
+    IScopedOrganizationApiKeyContext scopedOrganizationApiKeyContext)
     : IRevokeOrganizationUserValidator
 {
     public async Task<ICollection<ValidationResult<OrganizationUser>>> ValidateAsync(
@@ -28,7 +30,7 @@ public class RevokeOrganizationUsersValidator(
         {
             return organizationUser switch
             {
-                { Type: not OrganizationUserType.User } when currentContext.IsScopedOrganizationApiKey =>
+                { Type: not OrganizationUserType.User } when scopedOrganizationApiKeyContext.IsScopedOrganizationApiKey =>
                     Invalid(organizationUser, new ScopedApiKeyCanOnlyManageUsers()),
                 _ when request.PerformedBy is not SystemUser
                        && organizationUser.UserId is not null

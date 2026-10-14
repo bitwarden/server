@@ -42,7 +42,6 @@ public class CurrentContext(
     public virtual Version ClientVersion { get; set; }
     public virtual bool ClientVersionIsPrerelease { get; set; }
     public virtual IdentityClientType IdentityClientType { get; set; }
-    public virtual bool IsScopedOrganizationApiKey { get; private set; }
     public virtual Guid? ServiceAccountOrganizationId { get; set; }
     public virtual Guid? PamAccessConnectorId { get; set; }
     public virtual Guid? PamAccessConnectorOrganizationId { get; set; }
@@ -152,9 +151,6 @@ public class CurrentContext(
                 }
             }
         }
-
-        IsScopedOrganizationApiKey = ClientId?.Split('.') is ["organization", var orgIdPart, var keyIdPart] &&
-            Guid.TryParse(orgIdPart, out _) && Guid.TryParse(keyIdPart, out _);
 
         if (IdentityClientType == IdentityClientType.ServiceAccount)
         {

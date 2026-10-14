@@ -1,8 +1,8 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Context;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -148,7 +148,7 @@ public class ResendOrganizationInviteCommandTests
         SutProvider<ResendOrganizationInviteCommand> sutProvider)
     {
         SetupInvitedMember(organization, organizationUser, targetRole, sutProvider);
-        sutProvider.GetDependency<ICurrentContext>().IsScopedOrganizationApiKey.Returns(true);
+        sutProvider.GetDependency<IScopedOrganizationApiKeyContext>().IsScopedOrganizationApiKey.Returns(true);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ResendInviteAsync(organization.Id, invitingUserId: null, organizationUser.Id));
@@ -167,7 +167,7 @@ public class ResendOrganizationInviteCommandTests
         SutProvider<ResendOrganizationInviteCommand> sutProvider)
     {
         SetupInvitedMember(organization, organizationUser, OrganizationUserType.User, sutProvider);
-        sutProvider.GetDependency<ICurrentContext>().IsScopedOrganizationApiKey.Returns(true);
+        sutProvider.GetDependency<IScopedOrganizationApiKeyContext>().IsScopedOrganizationApiKey.Returns(true);
 
         await sutProvider.Sut.ResendInviteAsync(organization.Id, invitingUserId: null, organizationUser.Id);
 

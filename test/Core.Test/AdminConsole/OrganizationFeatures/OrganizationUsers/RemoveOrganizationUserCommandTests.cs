@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+﻿using Bit.Core.AdminConsole.Context;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.Context;
@@ -234,7 +235,7 @@ public class RemoveOrganizationUserCommandTests
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
-        sutProvider.GetDependency<ICurrentContext>().IsScopedOrganizationApiKey.Returns(true);
+        sutProvider.GetDependency<IScopedOrganizationApiKeyContext>().IsScopedOrganizationApiKey.Returns(true);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RemoveUserAsync(organizationUser.OrganizationId, organizationUser.Id, null));
@@ -253,7 +254,7 @@ public class RemoveOrganizationUserCommandTests
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
-        sutProvider.GetDependency<ICurrentContext>().IsScopedOrganizationApiKey.Returns(true);
+        sutProvider.GetDependency<IScopedOrganizationApiKeyContext>().IsScopedOrganizationApiKey.Returns(true);
 
         await sutProvider.Sut.RemoveUserAsync(organizationUser.OrganizationId, organizationUser.Id, null);
 

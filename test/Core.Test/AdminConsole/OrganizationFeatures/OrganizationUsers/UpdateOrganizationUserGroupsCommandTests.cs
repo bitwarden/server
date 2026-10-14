@@ -1,6 +1,6 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+﻿using Bit.Core.AdminConsole.Context;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -90,7 +90,7 @@ public class UpdateOrganizationUserGroupsCommandTests
         var sutProvider = new SutProvider<UpdateOrganizationUserGroupsCommand>()
             .WithFakeTimeProvider()
             .Create();
-        sutProvider.GetDependency<ICurrentContext>().IsScopedOrganizationApiKey.Returns(isScopedApiKey);
+        sutProvider.GetDependency<IScopedOrganizationApiKeyContext>().IsScopedOrganizationApiKey.Returns(isScopedApiKey);
         return sutProvider;
     }
 }

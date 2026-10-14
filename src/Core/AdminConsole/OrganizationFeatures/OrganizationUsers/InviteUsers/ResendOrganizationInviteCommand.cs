@@ -1,8 +1,8 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Context;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.Utilities.DebuggingInstruments;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -17,20 +17,20 @@ public class ResendOrganizationInviteCommand : IResendOrganizationInviteCommand
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
     private readonly ILogger<ResendOrganizationInviteCommand> _logger;
-    private readonly ICurrentContext _currentContext;
+    private readonly IScopedOrganizationApiKeyContext _scopedOrganizationApiKeyContext;
 
     public ResendOrganizationInviteCommand(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
         ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
         ILogger<ResendOrganizationInviteCommand> logger,
-        ICurrentContext currentContext)
+        IScopedOrganizationApiKeyContext scopedOrganizationApiKeyContext)
     {
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
         _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
         _logger = logger;
-        _currentContext = currentContext;
+        _scopedOrganizationApiKeyContext = scopedOrganizationApiKeyContext;
     }
 
     public async Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId,
@@ -43,7 +43,7 @@ public class ResendOrganizationInviteCommand : IResendOrganizationInviteCommand
             throw new BadRequestException("User invalid.");
         }
 
-        if (_currentContext.IsScopedOrganizationApiKey && organizationUser.Type != OrganizationUserType.User)
+        if (_scopedOrganizationApiKeyContext.IsScopedOrganizationApiKey && organizationUser.Type != OrganizationUserType.User)
         {
             throw new BadRequestException(new ScopedApiKeyCanOnlyManageUsers().Message);
         }

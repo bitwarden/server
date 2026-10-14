@@ -1,10 +1,10 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Context;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Services;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -26,7 +26,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
     private readonly IEventService _eventService;
     private readonly IOrganizationService _organizationService;
     private readonly ICreateStagedOrganizationUsersCommand _createStagedOrganizationUsersCommand;
-    private readonly ICurrentContext _currentContext;
+    private readonly IScopedOrganizationApiKeyContext _scopedOrganizationApiKeyContext;
 
     private readonly EventSystemUser _EventSystemUser = EventSystemUser.PublicApi;
 
@@ -37,7 +37,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
             IEventService eventService,
             IOrganizationService organizationService,
             ICreateStagedOrganizationUsersCommand createStagedOrganizationUsersCommand,
-            ICurrentContext currentContext)
+            IScopedOrganizationApiKeyContext scopedOrganizationApiKeyContext)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -46,7 +46,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
         _eventService = eventService;
         _organizationService = organizationService;
         _createStagedOrganizationUsersCommand = createStagedOrganizationUsersCommand;
-        _currentContext = currentContext;
+        _scopedOrganizationApiKeyContext = scopedOrganizationApiKeyContext;
     }
 
     /// <summary>
@@ -456,7 +456,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
     }
 
     private bool IsProtectedFromScopedApiKey(OrganizationUserType type) =>
-        _currentContext.IsScopedOrganizationApiKey && type != OrganizationUserType.User;
+        _scopedOrganizationApiKeyContext.IsScopedOrganizationApiKey && type != OrganizationUserType.User;
 
     private async Task<Organization?> GetOrgById(Guid id)
     {

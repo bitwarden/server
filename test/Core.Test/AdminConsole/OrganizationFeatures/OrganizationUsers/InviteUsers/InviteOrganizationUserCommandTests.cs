@@ -1,5 +1,6 @@
 ﻿using System.Net.Mail;
 using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Context;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -15,7 +16,6 @@ using Bit.Core.AdminConsole.Utilities.Commands;
 using Bit.Core.AdminConsole.Utilities.Errors;
 using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -1337,7 +1337,7 @@ public class InviteOrganizationUserCommandTests
     {
         var request = BuildInviteRequest(organization, address.Address, timeProvider, [], [], type);
         ArrangeInvitableOrganization(sutProvider, organization, request);
-        sutProvider.GetDependency<ICurrentContext>().IsScopedOrganizationApiKey.Returns(true);
+        sutProvider.GetDependency<IScopedOrganizationApiKeyContext>().IsScopedOrganizationApiKey.Returns(true);
 
         var result = await sutProvider.Sut.InviteImportedOrganizationUsersAsync(request);
 
@@ -1358,7 +1358,7 @@ public class InviteOrganizationUserCommandTests
     {
         var request = BuildInviteRequest(organization, address.Address, timeProvider, [], []);
         ArrangeInvitableOrganization(sutProvider, organization, request);
-        sutProvider.GetDependency<ICurrentContext>().IsScopedOrganizationApiKey.Returns(true);
+        sutProvider.GetDependency<IScopedOrganizationApiKeyContext>().IsScopedOrganizationApiKey.Returns(true);
 
         var result = await sutProvider.Sut.InviteImportedOrganizationUsersAsync(request);
 
