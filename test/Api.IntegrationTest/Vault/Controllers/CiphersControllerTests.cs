@@ -10,7 +10,6 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
@@ -34,7 +33,7 @@ public class CiphersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     {
         _factory = factory;
         _factory.SubstituteService<IPushNotificationService>(_ => { });
-        _factory.SubstituteService<IFeatureService>(_ => { });
+        _factory.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(_ => { });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
