@@ -100,6 +100,7 @@ public static class ServiceCollectionExtension
         services.TryAddSingleton<Bitwarden.Server.Sdk.Features.IFeatureService, NoopFeatureService>();
 
         services.AddScoped<IOrganizationStripeBillingService, OrganizationStripeBillingService>();
+        services.AddScoped<IUserStripeBillingService, UserStripeBillingService>();
 
         // StripeAdapter reads these statics rather than GlobalSettings, mirroring src/Api/Startup.cs.
         // Left unarmed when no key is configured, or when the configured key isn't a test-mode key, so a

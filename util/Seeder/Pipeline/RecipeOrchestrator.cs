@@ -169,6 +169,19 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         var premium = options.Premium;
         var maxStorageGb = premium ? (short)1 : (short)0;
 
+        if (options.StripeBilling)
+        {
+            RequireBillingService(deps.UserStripeBillingService).ValidateConfiguration();
+
+            if (!deps.ManglerService.IsEnabled && deps.Db.Users.Any(u => u.Email == email))
+            {
+                throw new InvalidOperationException(
+                    $"A User with email '{email}' already exists in the database. Stripe billing runs before the " +
+                    "commit, so the duplicate would only fail the commit after Stripe had already billed a new " +
+                    "customer. Choose a different --email or add --mangle for test isolation.");
+            }
+        }
+
         var services = new ServiceCollection();
         services.AddSingleton(deps.LoggerFactory);
         services.AddLogging();
@@ -181,6 +194,10 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         if (deps.Progress is not null)
         {
             services.AddSingleton(deps.Progress);
+        }
+        if (options.StripeBilling)
+        {
+            services.AddSingleton(deps.UserStripeBillingService!());
         }
 
         var recipeName = "individual-from-options";
@@ -197,6 +214,11 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         {
             builder.AddNamedFolders(["Social", "Finance", "Work", "Shopping", "Entertainment"]);
             builder.AddPersonalCiphers(75);
+        }
+
+        if (options.StripeBilling)
+        {
+            builder.WithStripeUserBilling();
         }
 
         builder.Validate();
@@ -219,16 +241,19 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
     /// Billing runs in a post-commit step, so without this gate an unusable Stripe configuration would only
     /// surface after the organization and its users were already written to the database.
     /// </remarks>
-    private void ValidateBillingOptIn(PlanType planType)
+    private void ValidateBillingOptIn(PlanType planType) =>
+        RequireBillingService(deps.OrganizationStripeBillingService).ValidateConfiguration(planType);
+
+    private static T RequireBillingService<T>(Func<T>? factory)
     {
-        if (deps.OrganizationStripeBillingService is null)
+        if (factory is null)
         {
             throw new InvalidOperationException(
-                "Stripe billing was requested but no IOrganizationStripeBillingService was supplied on " +
+                $"Stripe billing was requested but no {typeof(T).Name} was supplied on " +
                 "SeederDependencies. The host has to register the billing services before opting in.");
         }
 
-        deps.OrganizationStripeBillingService().ValidateConfiguration(planType);
+        return factory();
     }
 
     /// <summary>

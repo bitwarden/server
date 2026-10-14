@@ -53,4 +53,11 @@ public record IndividualUserOptions
     /// Backdates the account by this many days (CreationDate = now - N). 0 (default) seeds a present-day account.
     /// </summary>
     public int AccountAgeDays { get; init; }
+
+    /// <summary>
+    /// When true, creates a real Stripe test-environment customer and premium subscription for the user.
+    /// Requires <see cref="Premium"/>, and is not supported with <see cref="SelfHosted"/>. Premium has no
+    /// trial in production, so unlike organization billing there are no trial settings.
+    /// </summary>
+    public bool StripeBilling { get; init; }
 }

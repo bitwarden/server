@@ -62,6 +62,8 @@ Add `--self-hosted` when targeting a self-hosted instance; without it, premium s
 
 Use `--account-age-days N` to backdate the account's `CreationDate` by `N` days (default `0` = today) for scenarios that depend on account age. Only `CreationDate` is backdated; the revision dates stay at the seed time.
 
+Add `--stripe-billing` to `--subscription premium` for a premium user with a real Stripe subscription — see [Stripe billing](#stripe-billing) below.
+
 ### `preset` - Fixture-Based Seeding
 
 Loads a named configuration from the embedded catalog. Presets are curated JSON fixtures with specific users, groups, collections, and cipher relationships — the same data every time. Reach for this when you need a known, reproducible scenario rather than generated data.
@@ -91,11 +93,13 @@ For the full preset catalog, see [presets.md](../Seeder/Seeds/docs/presets.md).
 
 Without it, **Billing → Subscription** hangs on a seeded org — nothing real to test seat auto-scaling or upgrades against. By default a seeded organization has no billing at all: its gateway columns stay NULL and the seeder makes **zero** Stripe calls. Pass `--stripe-billing` (on `organization` or `preset`) to create a real customer and subscription in Stripe's test environment, so seat auto-scaling, subscription management, and upgrade flows behave the way they do on a manually created org.
 
-| Flag               | Applies to               | Effect                                                                                                            |
-| ------------------ | ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| `--stripe-billing` | `organization`, `preset` | Creates a Stripe customer + subscription for the org. Not valid with `--plan-type free` or on individual presets. |
-| `--skip-trial`     | with `--stripe-billing`  | Subscription starts `active` instead of `trialing`, charging the `pm_card_visa` test card immediately.            |
-| `--trial-days N`   | with `--stripe-billing`  | Trial length in days, 1–30 (default 30). Mutually exclusive with `--skip-trial`.                                  |
+A seeded premium user is the same story: `Premium = 1` and an expiry date, but no Stripe subscription for the premium billing pages to read or change. Pass `--stripe-billing` on `individual --subscription premium` to give the user a real customer and an active premium subscription.
+
+| Flag               | Applies to                                     | Effect                                                                                                                                                                                        |
+| ------------------ | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--stripe-billing` | `organization`, `preset`, `individual`         | Creates a Stripe customer + subscription for the org, or for the premium user. Not valid with `--plan-type free`, on individual presets, with `--subscription free`, or with `--self-hosted`. |
+| `--skip-trial`     | `--stripe-billing` on `organization`, `preset` | Subscription starts `active` instead of `trialing`, charging the `pm_card_visa` test card immediately.                                                                                        |
+| `--trial-days N`   | `--stripe-billing` on `organization`, `preset` | Trial length in days, 1–30 (default 30). Mutually exclusive with `--skip-trial`.                                                                                                              |
 
 ```bash
 # Teams org with a working subscription page, 30-day trial
@@ -103,7 +107,12 @@ dotnet run -- organization -n "Billing Test" -u 3 -d billingtest.example --plan-
 
 # Preset org, already-paying subscription (no trial)
 dotnet run -- preset --name qa.enterprise-basic --stripe-billing --skip-trial --mangle
+
+# Premium user with an active subscription, charged to the test card
+dotnet run -- individual --subscription premium --stripe-billing --mangle
 ```
+
+Premium has no trial in production, so it has no trial flags: the subscription starts `active` and one test invoice is charged to `pm_card_visa`. Without `--mangle`, `individual --stripe-billing` refuses an email that already exists, before any Stripe call — billing runs before the commit, so a duplicate would otherwise bill a customer and then fail.
 
 On success the output gains two rows:
 
@@ -118,10 +127,11 @@ StripeSubscription : sub_…
 2. `globalSettings:pricingUri` must be set, so plan pricing can be resolved. `appsettings.Development.json` ships a value, which means **`ASPNETCORE_ENVIRONMENT=Development` is required**.
 3. `globalSettings:selfHosted` must be `false` — the Pricing Service is never called in self-hosted mode, so no plan could be resolved.
 
-All three are checked **before any entity is created**, so a misconfigured opt-in fails with a message and exit code 1 rather than leaving a half-seeded org behind.
+All three are checked **before any entity is created**, so a misconfigured opt-in fails with a message and exit code 1 rather than leaving a half-seeded org or user behind.
 
 ### Caveats
 
 - Seeded Teams and Enterprise orgs carry `UseSecretsManager = 1` with `SmSeats` NULL. Secrets Manager is included in the subscription only when `SmSeats` has a value, so those orgs have the flag set in the database but no Secrets Manager line items in Stripe.
-- Billing runs **after** the database commit. If Stripe rejects the request at that point (expired key, network failure), the organization is already committed and the command exits non-zero with the Stripe error and whatever gateway IDs made it through — a failure before customer creation leaves both NULL, but a failure during subscription creation leaves a real `GatewayCustomerId` behind. Check the error message for the actual state; cancel any orphaned Stripe customer before re-seeding.
+- Organization billing runs **after** the database commit. If Stripe rejects the request at that point (expired key, network failure), the organization is already committed and the command exits non-zero with the Stripe error and whatever gateway IDs made it through — a failure before customer creation leaves both NULL, but a failure during subscription creation leaves a real `GatewayCustomerId` behind. Check the error message for the actual state; cancel any orphaned Stripe customer before re-seeding.
+- Premium billing runs **before** the database commit, as the last step, so the user row is written once with its gateway IDs. If Stripe rejects the request, nothing is committed, and the error names any Stripe customer already created. If the commit fails after billing succeeded, the Stripe customer and subscription exist with no user row: find the customer in the Stripe test dashboard by the seeded email and cancel it.
 - Destroying the local database does not cancel the Stripe-side subscriptions. Test-mode subscriptions auto-cancel after roughly 90 days.

@@ -39,12 +39,28 @@ public class IndividualArgs : IArgumentModel
     [Option("mangle", Description = "Enable ID mangling for test isolation")]
     public bool Mangle { get; set; }
 
+    [Option("stripe-billing", Description = "Create a real Stripe test-environment customer and premium subscription for the user. Requires a sk_test_ key and pricingUri; requires --subscription premium; not valid with --self-hosted.")]
+    public bool StripeBilling { get; set; }
+
     public void Validate()
     {
         var sub = Subscription?.ToLowerInvariant();
         if (sub is not ("free" or "premium"))
         {
             throw new ArgumentException("Subscription must be 'free' or 'premium'.");
+        }
+
+        if (StripeBilling && sub == "free")
+        {
+            throw new ArgumentException(
+                "A free user has no Stripe subscription. Use --subscription premium or drop --stripe-billing.");
+        }
+
+        if (StripeBilling && SelfHosted)
+        {
+            throw new ArgumentException(
+                "--stripe-billing is not supported with --self-hosted. The self-hosted license is signed before " +
+                "billing runs, so it would carry the pre-Stripe expiry date.");
         }
 
         if (KdfIterations < 5_000)
@@ -82,6 +98,7 @@ public class IndividualArgs : IArgumentModel
         Password = Password,
         KdfIterations = KdfIterations,
         SelfHosted = SelfHosted,
-        AccountAgeDays = AccountAgeDays ?? 0
+        AccountAgeDays = AccountAgeDays ?? 0,
+        StripeBilling = StripeBilling
     };
 }

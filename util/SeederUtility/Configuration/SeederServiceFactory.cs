@@ -44,6 +44,8 @@ internal sealed class SeederServiceScope : IDisposable
 
     internal Func<IOrganizationStripeBillingService> OrganizationStripeBillingService { get; }
 
+    internal Func<IUserStripeBillingService> UserStripeBillingService { get; }
+
     internal ISeederLicenseSigner LicenseSigner { get; }
 
     internal ILoggerFactory LoggerFactory { get; }
@@ -52,6 +54,7 @@ internal sealed class SeederServiceScope : IDisposable
         => new(Db, Mapper, PasswordHasher, Mangler, LicensingService, AttachmentStorageService, LicenseSigner, LoggerFactory)
         {
             OrganizationStripeBillingService = OrganizationStripeBillingService,
+            UserStripeBillingService = UserStripeBillingService,
         };
 
     private readonly ServiceProvider _provider;
@@ -75,6 +78,7 @@ internal sealed class SeederServiceScope : IDisposable
         // provider: the billing graph is scoped and transient throughout, and capturing it on the root
         // provider would outlive the DbContext it depends on.
         OrganizationStripeBillingService = () => sp.GetRequiredService<IOrganizationStripeBillingService>();
+        UserStripeBillingService = () => sp.GetRequiredService<IUserStripeBillingService>();
         LicenseSigner = sp.GetRequiredService<ISeederLicenseSigner>();
         LoggerFactory = sp.GetRequiredService<ILoggerFactory>();
     }

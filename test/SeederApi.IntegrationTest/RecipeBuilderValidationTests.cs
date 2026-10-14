@@ -172,6 +172,21 @@ public class RecipeBuilderValidationTests
     }
 
     [Fact]
+    public void WithStripeUserBilling_WithoutIndividualUser_Throws()
+    {
+        // The user billing step reads context.Owner, which an organization recipe also sets, so without this
+        // guard an org recipe could bill its owner as an individual user.
+        var services = new ServiceCollection();
+        var builder = services.AddRecipe("test");
+
+        builder.UseOrganization("test");
+        builder.AddOwner();
+
+        var ex = Assert.Throws<InvalidOperationException>(() => builder.WithStripeUserBilling());
+        Assert.Contains("requires an individual user", ex.Message);
+    }
+
+    [Fact]
     public void StepsExecuteInRegistrationOrder()
     {
         var services = new ServiceCollection();

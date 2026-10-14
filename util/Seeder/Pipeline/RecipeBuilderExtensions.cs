@@ -573,6 +573,29 @@ public static class RecipeBuilderExtensions
     }
 
     /// <summary>
+    /// Create a real Stripe test-environment customer and premium subscription for the individual user.
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no individual user exists</exception>
+    /// <remarks>
+    /// Opt-in only. This step makes live network calls. Register it last, after every other pre-commit step,
+    /// so Stripe is called only once the rest of the seed has succeeded.
+    /// </remarks>
+    public static RecipeBuilder WithStripeUserBilling(this RecipeBuilder builder)
+    {
+        if (!builder.HasIndividualUser)
+        {
+            throw new InvalidOperationException(
+                "Stripe user billing requires an individual user. Call CreateIndividualUser() first.");
+        }
+
+        builder.AddAsyncStep(sp => new CreatePremiumSubscriptionStep(
+            sp.GetRequiredService<IUserStripeBillingService>()));
+        return builder;
+    }
+
+    /// <summary>
     /// Validates the builder state to ensure all required steps are present and dependencies are met.
     /// </summary>
     /// <param name="builder">The recipe builder</param>

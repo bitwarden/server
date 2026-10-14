@@ -38,4 +38,11 @@ public sealed record SeederDependencies(
     /// command actually opts in, instead of on every command.
     /// </summary>
     public Func<IOrganizationStripeBillingService>? OrganizationStripeBillingService { get; init; }
+
+    /// <summary>
+    /// Optional factory for the user Stripe billing service. Required only by callers that opt an individual
+    /// user into Stripe billing; when null, that opt-in fails fast. A factory for the same reason as
+    /// <see cref="OrganizationStripeBillingService"/>.
+    /// </summary>
+    public Func<IUserStripeBillingService>? UserStripeBillingService { get; init; }
 }

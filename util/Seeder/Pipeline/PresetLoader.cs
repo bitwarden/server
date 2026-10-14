@@ -23,7 +23,7 @@ internal static class PresetLoader
     /// <param name="services">The service collection to register steps in</param>
     /// <param name="stripeBilling">
     /// When set, adds real Stripe test-environment billing. Organization presets only — individual presets
-    /// ignore it, and the CLI rejects the combination before reaching here (premium billing is a later task).
+    /// ignore it, and the CLI rejects the combination before reaching here.
     /// </param>
     /// <exception cref="InvalidOperationException">Thrown when preset lacks organization configuration</exception>
     internal static void RegisterRecipe(
