@@ -4,6 +4,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.Seeder.Data.Enums;
+using Bit.Seeder.Options;
 using Bit.Seeder.Services;
 using NSubstitute;
 using Stripe;
@@ -22,6 +23,7 @@ public class UserStripeBillingServiceTests
     private const string _seatPriceId = "premium-annually-2026";
     private const short _providedStorageGb = 5;
     private static readonly DateTime _periodEnd = new(2027, 10, 13, 0, 0, 0, DateTimeKind.Utc);
+    private static readonly StripeBillingProfile _defaultProfile = new();
 
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
@@ -53,19 +55,70 @@ public class UserStripeBillingServiceTests
     }
 
     [Fact]
-    public async Task CreateSubscriptionAsync_AttachesTheStripeTestCardAsDefaultAsync()
+    public async Task CreateSubscriptionAsync_DefaultProfile_AttachesTheVisaTestCardAtTheUsAddressAsync()
     {
         var user = NewUser();
 
-        await Build().CreateSubscriptionAsync(user, UserSubscriptionType.Premium);
+        await Build().CreateSubscriptionAsync(user, UserSubscriptionType.Premium, _defaultProfile);
 
         Assert.NotNull(_sentCustomer);
         Assert.Equal("pm_card_visa", _sentCustomer.PaymentMethod);
         Assert.Equal("pm_card_visa", _sentCustomer.InvoiceSettings.DefaultPaymentMethod);
         Assert.Equal("US", _sentCustomer.Address.Country);
         Assert.Equal("43432", _sentCustomer.Address.PostalCode);
+        Assert.Null(_sentCustomer.TaxIdData);
         Assert.Equal("immediately", _sentCustomer.Tax.ValidateLocation);
         Assert.Equal(user.Email, _sentCustomer.Email);
+    }
+
+    [Fact]
+    public async Task CreateSubscriptionAsync_NonDefaultProfile_SendsItsCardAndAddressAsync()
+    {
+        var profile = new StripeBillingProfile { Card = StripeTestCard.Mastercard, Address = StripeTestAddress.Germany };
+
+        await Build().CreateSubscriptionAsync(NewUser(), UserSubscriptionType.Premium, profile);
+
+        Assert.NotNull(_sentCustomer);
+        Assert.Equal("pm_card_mastercard", _sentCustomer.PaymentMethod);
+        Assert.Equal("pm_card_mastercard", _sentCustomer.InvoiceSettings.DefaultPaymentMethod);
+        Assert.Equal("DE", _sentCustomer.Address.Country);
+        Assert.Equal("10117", _sentCustomer.Address.PostalCode);
+    }
+
+    [Fact]
+    public async Task CreateSubscriptionAsync_TaxIdAddress_SendsNoTaxIdAsync()
+    {
+        // Production premium signup never sends a tax ID, so the seeder doesn't either.
+        var profile = new StripeBillingProfile { Address = StripeTestAddress.GermanyWithVatId };
+
+        await Build().CreateSubscriptionAsync(NewUser(), UserSubscriptionType.Premium, profile);
+
+        Assert.NotNull(_sentCustomer);
+        Assert.Null(_sentCustomer.TaxIdData);
+    }
+
+    [Fact]
+    public async Task CreateSubscriptionAsync_IncompleteSubscription_StillStampsPremiumAndExpiryAsync()
+    {
+        // The fails-on-charge card leaves the subscription incomplete; production still grants premium.
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>())
+            .Returns(new Subscription
+            {
+                Id = "sub_incomplete",
+                Status = "incomplete",
+                Items = new StripeList<SubscriptionItem>
+                {
+                    Data = [new SubscriptionItem { CurrentPeriodEnd = _periodEnd }],
+                },
+            });
+        var user = NewUser();
+        var profile = new StripeBillingProfile { Card = StripeTestCard.FailsOnCharge };
+
+        await Build().CreateSubscriptionAsync(user, UserSubscriptionType.Premium, profile);
+
+        Assert.True(user.Premium);
+        Assert.Equal(_periodEnd, user.PremiumExpirationDate);
+        Assert.Equal("sub_incomplete", user.GatewaySubscriptionId);
     }
 
     [Fact]
@@ -73,7 +126,7 @@ public class UserStripeBillingServiceTests
     {
         var user = NewUser();
 
-        await Build().CreateSubscriptionAsync(user, UserSubscriptionType.Premium);
+        await Build().CreateSubscriptionAsync(user, UserSubscriptionType.Premium, _defaultProfile);
 
         Assert.NotNull(_sentSubscription);
         Assert.Equal(user.Id.ToString(), _sentSubscription.Metadata["userId"]);
@@ -82,7 +135,7 @@ public class UserStripeBillingServiceTests
     [Fact]
     public async Task CreateSubscriptionAsync_BillsOneSeatOfThePremiumPlanAsync()
     {
-        await Build().CreateSubscriptionAsync(NewUser(), UserSubscriptionType.Premium);
+        await Build().CreateSubscriptionAsync(NewUser(), UserSubscriptionType.Premium, _defaultProfile);
 
         Assert.NotNull(_sentSubscription);
         var item = Assert.Single(_sentSubscription.Items);
@@ -96,7 +149,7 @@ public class UserStripeBillingServiceTests
     {
         var user = NewUser();
 
-        await Build().CreateSubscriptionAsync(user, UserSubscriptionType.Premium);
+        await Build().CreateSubscriptionAsync(user, UserSubscriptionType.Premium, _defaultProfile);
 
         Assert.True(user.Premium);
         Assert.Equal(_periodEnd, user.PremiumExpirationDate);
@@ -115,7 +168,7 @@ public class UserStripeBillingServiceTests
         var user = NewUser();
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => Build().CreateSubscriptionAsync(user, UserSubscriptionType.Premium));
+            () => Build().CreateSubscriptionAsync(user, UserSubscriptionType.Premium, _defaultProfile));
 
         Assert.Contains("cus_test", ex.Message);
         Assert.Contains(user.Id.ToString(), ex.Message);
@@ -131,7 +184,7 @@ public class UserStripeBillingServiceTests
         var user = NewUser();
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => Build().CreateSubscriptionAsync(user, UserSubscriptionType.Premium));
+            () => Build().CreateSubscriptionAsync(user, UserSubscriptionType.Premium, _defaultProfile));
 
         Assert.Contains("Gateway customer: <none>", ex.Message);
         Assert.Contains(user.Id.ToString(), ex.Message);
@@ -145,7 +198,7 @@ public class UserStripeBillingServiceTests
         var service = Build(Settings(apiKey: "sk_live_abc123"));
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => service.CreateSubscriptionAsync(NewUser(), UserSubscriptionType.Premium));
+            () => service.CreateSubscriptionAsync(NewUser(), UserSubscriptionType.Premium, _defaultProfile));
 
         Assert.Empty(_stripeAdapter.ReceivedCalls());
     }
@@ -154,7 +207,7 @@ public class UserStripeBillingServiceTests
     public async Task CreateSubscriptionAsync_UnmappedSubscriptionType_ThrowsBeforeCallingStripeAsync()
     {
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
-            () => Build().CreateSubscriptionAsync(NewUser(), (UserSubscriptionType)999));
+            () => Build().CreateSubscriptionAsync(NewUser(), (UserSubscriptionType)999, _defaultProfile));
 
         Assert.Empty(_stripeAdapter.ReceivedCalls());
     }

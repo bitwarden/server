@@ -9,6 +9,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.Settings;
+using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Options;
 
 namespace Bit.Seeder.Services;
@@ -77,6 +78,11 @@ public sealed class OrganizationStripeBillingService(
     /// back-computation, clamped at zero so a plan whose base exceeds the seeded total never bills negative.
     /// </para>
     /// <para>
+    /// The card, country, postal code, and tax ID come from <see cref="StripeBillingOptions.Profile"/>.
+    /// <c>TaxIdType</c> stays unset because Core never reads it: it infers the type from the country and
+    /// <c>TaxIdNumber</c>, and rejects a number it can't infer before calling Stripe.
+    /// </para>
+    /// <para>
     /// Secrets Manager is included only when <see cref="Organization.SmSeats"/> has a value. Seeded Teams and
     /// Enterprise orgs carry <c>UseSecretsManager = true</c> with <c>SmSeats</c> NULL (the plan sets the flag;
     /// provisioning sets the seats), and inventing a quantity from NULL would bill for seats nobody asked for.
@@ -86,17 +92,19 @@ public sealed class OrganizationStripeBillingService(
     /// </remarks>
     internal static OrganizationSignup BuildSignup(Organization organization, Plan plan, StripeBillingOptions options)
     {
+        var address = options.Profile.Address;
         var signup = new OrganizationSignup
         {
             Plan = organization.PlanType,
             AdditionalSeats = AdditionalOver(organization.Seats, plan.PasswordManager.BaseSeats),
             AdditionalStorageGb = (short)AdditionalOver(organization.MaxStorageGb, plan.PasswordManager.BaseStorageGb),
             PaymentMethodType = PaymentMethodType.Card,
-            PaymentToken = "pm_card_visa",
+            PaymentToken = options.Profile.Card.PaymentMethodId,
             TaxInfo = new TaxInfo
             {
-                BillingAddressCountry = "US",
-                BillingAddressPostalCode = "43432",
+                BillingAddressCountry = address.Country,
+                BillingAddressPostalCode = address.PostalCode,
+                TaxIdNumber = address.TaxId,
             },
             InitiationPath = "Seeder",
             SkipTrial = options.SkipTrial,

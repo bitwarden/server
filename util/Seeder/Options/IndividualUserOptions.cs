@@ -55,9 +55,10 @@ public record IndividualUserOptions
     public int AccountAgeDays { get; init; }
 
     /// <summary>
-    /// When true, creates a real Stripe test-environment customer and premium subscription for the user.
-    /// Requires <see cref="Premium"/>, and is not supported with <see cref="SelfHosted"/>. Premium has no
-    /// trial in production, so unlike organization billing there are no trial settings.
+    /// When set, creates a real Stripe test-environment customer and premium subscription for the user, paid
+    /// with this profile's card at its address. Null (the default) makes no Stripe calls. Requires
+    /// <see cref="Premium"/>, is not supported with <see cref="SelfHosted"/>, and rejects an address with a
+    /// tax ID. Premium has no trial in production, so unlike organization billing there are no trial settings.
     /// </summary>
-    public bool StripeBilling { get; init; }
+    public StripeBillingProfile? StripeBilling { get; init; }
 }

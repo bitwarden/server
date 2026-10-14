@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Seeder.Data.Enums;
+using Bit.Seeder.Options;
 
 namespace Bit.Seeder.Services;
 
@@ -21,14 +22,16 @@ public interface IUserStripeBillingService
     void ValidateConfiguration();
 
     /// <summary>
-    /// Creates the Stripe customer and an active <paramref name="subscriptionType"/> subscription for
-    /// <paramref name="user"/>, then sets the user's subscription and gateway fields. Writes nothing to the
-    /// database.
+    /// Creates the Stripe customer and a <paramref name="subscriptionType"/> subscription for
+    /// <paramref name="user"/>, paid with <paramref name="profile"/>'s card at its address, then sets the
+    /// user's subscription and gateway fields. Writes nothing to the database.
     /// </summary>
     /// <remarks>
     /// Must run before the user row is committed, so the bulk commit writes those fields with the rest of the
     /// row. Calls <see cref="ValidateConfiguration"/> itself before contacting Stripe, and leaves the user
-    /// unchanged unless both Stripe calls succeed.
+    /// unchanged unless both Stripe calls succeed. The subscription comes back <c>active</c>, or
+    /// <c>incomplete</c> when the card's first charge fails; the user is premium either way, as in production.
+    /// The profile's tax ID, if any, is not sent: a personal account takes none.
     /// </remarks>
     /// <exception cref="ArgumentOutOfRangeException">
     /// Thrown when <paramref name="subscriptionType"/> has no Stripe billing mapping.
@@ -36,5 +39,5 @@ public interface IUserStripeBillingService
     /// <exception cref="InvalidOperationException">
     /// Thrown when Stripe billing fails. The message names any Stripe customer already created.
     /// </exception>
-    Task CreateSubscriptionAsync(User user, UserSubscriptionType subscriptionType);
+    Task CreateSubscriptionAsync(User user, UserSubscriptionType subscriptionType, StripeBillingProfile profile);
 }

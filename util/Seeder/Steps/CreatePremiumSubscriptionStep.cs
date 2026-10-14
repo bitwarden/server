@@ -1,4 +1,5 @@
 ﻿using Bit.Seeder.Data.Enums;
+using Bit.Seeder.Options;
 using Bit.Seeder.Pipeline;
 using Bit.Seeder.Services;
 
@@ -13,8 +14,10 @@ namespace Bit.Seeder.Steps;
 /// step has succeeded. Registered only by <c>RecipeBuilderExtensions.WithStripeUserBilling</c>, never
 /// appended automatically, so a default seed makes no Stripe calls.
 /// </remarks>
-internal sealed class CreatePremiumSubscriptionStep(IUserStripeBillingService billingService) : IAsyncStep
+internal sealed class CreatePremiumSubscriptionStep(
+    IUserStripeBillingService billingService,
+    StripeBillingProfile profile) : IAsyncStep
 {
     public Task ExecuteAsync(SeederContext context) =>
-        billingService.CreateSubscriptionAsync(context.RequireOwner(), UserSubscriptionType.Premium);
+        billingService.CreateSubscriptionAsync(context.RequireOwner(), UserSubscriptionType.Premium, profile);
 }

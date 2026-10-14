@@ -332,11 +332,40 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
         var billingService = new RecordingUserStripeBillingService(throwOnValidate: true, throwOnCreate: true);
         var orchestrator = NewFullPipelineOrchestrator(billingService);
 
-        await orchestrator.ExecuteAsync(IndividualBillingOptions() with { StripeBilling = false });
+        await orchestrator.ExecuteAsync(IndividualBillingOptions() with { StripeBilling = null });
 
         Assert.Equal(0, billingService.ValidateCalls);
         Assert.Empty(billingService.BilledUsers);
         Assert.Equal(1, _db.Users.Count());
+    }
+
+    [Fact]
+    public async Task Execute_Individual_BillingAccepted_HandsTheProfileToTheBillingServiceAsync()
+    {
+        var profile = new StripeBillingProfile { Card = StripeTestCard.FailsOnCharge, Address = StripeTestAddress.Philippines };
+        var billingService = new RecordingUserStripeBillingService();
+        var orchestrator = NewFullPipelineOrchestrator(billingService);
+
+        await orchestrator.ExecuteAsync(IndividualBillingOptions() with { StripeBilling = profile });
+
+        Assert.Equal([profile], billingService.Profiles);
+    }
+
+    [Fact]
+    public async Task Execute_Individual_TaxIdAddress_ThrowsBeforeAnyWriteAsync()
+    {
+        var billingService = new RecordingUserStripeBillingService();
+        var orchestrator = NewOrchestrator(new NoOpManglerService(), userStripeBillingService: billingService);
+        var options = IndividualBillingOptions() with
+        {
+            StripeBilling = new StripeBillingProfile { Address = StripeTestAddress.GermanyWithVatId },
+        };
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => orchestrator.ExecuteAsync(options));
+
+        Assert.Contains("'de-vat'", ex.Message);
+        Assert.Empty(billingService.BilledUsers);
+        Assert.Equal(0, _db.Users.Count());
     }
 
     private static OrganizationVaultOptions BillingOptions(PlanType planType = PlanType.EnterpriseAnnually) => new()
@@ -352,7 +381,7 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
     {
         Email = email,
         Premium = true,
-        StripeBilling = true,
+        StripeBilling = new StripeBillingProfile(),
     };
 
     private void SeedExistingUser(string email)
@@ -450,9 +479,10 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
     }
 
     /// <summary>
-    /// Counts <see cref="IUserStripeBillingService.ValidateConfiguration"/> calls and records the users handed
-    /// to <see cref="IUserStripeBillingService.CreateSubscriptionAsync"/>, stamping gateway IDs onto each —
-    /// standing in for successful Stripe subscription creation. Throws from either member when asked.
+    /// Counts <see cref="IUserStripeBillingService.ValidateConfiguration"/> calls and records the users and
+    /// profiles handed to <see cref="IUserStripeBillingService.CreateSubscriptionAsync"/>, stamping gateway IDs
+    /// onto each user — standing in for successful Stripe subscription creation. Throws from either member when
+    /// asked.
     /// </summary>
     private sealed class RecordingUserStripeBillingService(bool throwOnValidate = false, bool throwOnCreate = false)
         : IUserStripeBillingService
@@ -460,6 +490,8 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
         internal int ValidateCalls { get; private set; }
 
         internal List<User> BilledUsers { get; } = [];
+
+        internal List<StripeBillingProfile> Profiles { get; } = [];
 
         public void ValidateConfiguration()
         {
@@ -470,7 +502,8 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
             }
         }
 
-        public Task CreateSubscriptionAsync(User user, UserSubscriptionType subscriptionType)
+        public Task CreateSubscriptionAsync(
+            User user, UserSubscriptionType subscriptionType, StripeBillingProfile profile)
         {
             if (throwOnCreate)
             {
@@ -478,6 +511,7 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
             }
 
             BilledUsers.Add(user);
+            Profiles.Add(profile);
             user.GatewayCustomerId = "cus_test_stub";
             user.GatewaySubscriptionId = "sub_test_stub";
             return Task.CompletedTask;

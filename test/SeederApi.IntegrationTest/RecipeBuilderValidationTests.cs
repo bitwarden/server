@@ -182,7 +182,7 @@ public class RecipeBuilderValidationTests
         builder.UseOrganization("test");
         builder.AddOwner();
 
-        var ex = Assert.Throws<InvalidOperationException>(() => builder.WithStripeUserBilling());
+        var ex = Assert.Throws<InvalidOperationException>(() => builder.WithStripeUserBilling(new StripeBillingProfile()));
         Assert.Contains("requires an individual user", ex.Message);
     }
 

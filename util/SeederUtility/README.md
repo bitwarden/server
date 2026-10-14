@@ -98,8 +98,10 @@ A seeded premium user is the same story: `Premium = 1` and an expiry date, but n
 | Flag               | Applies to                                     | Effect                                                                                                                                                                                        |
 | ------------------ | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--stripe-billing` | `organization`, `preset`, `individual`         | Creates a Stripe customer + subscription for the org, or for the premium user. Not valid with `--plan-type free`, on individual presets, with `--subscription free`, or with `--self-hosted`. |
-| `--skip-trial`     | `--stripe-billing` on `organization`, `preset` | Subscription starts `active` instead of `trialing`, charging the `pm_card_visa` test card immediately.                                                                                        |
+| `--skip-trial`     | `--stripe-billing` on `organization`, `preset` | Subscription starts `active` instead of `trialing`, charging the test card immediately.                                                                                                       |
 | `--trial-days N`   | `--stripe-billing` on `organization`, `preset` | Trial length in days, 1–30 (default 30). Mutually exclusive with `--skip-trial`.                                                                                                              |
+| `--stripe-card`    | `--stripe-billing` on all three                | Test card the customer pays with (default `visa`). See [Cards](#cards).                                                                                                                       |
+| `--stripe-address` | `--stripe-billing` on all three                | Billing address and any tax ID (default `us`). See [Addresses](#addresses).                                                                                                                   |
 
 ```bash
 # Teams org with a working subscription page, 30-day trial
@@ -112,13 +114,51 @@ dotnet run -- preset --name qa.enterprise-basic --stripe-billing --skip-trial --
 dotnet run -- individual --subscription premium --stripe-billing --mangle
 ```
 
-Premium has no trial in production, so it has no trial flags: the subscription starts `active` and one test invoice is charged to `pm_card_visa`. Without `--mangle`, `individual --stripe-billing` refuses an email that already exists, before any Stripe call — billing runs before the commit, so a duplicate would otherwise bill a customer and then fail.
+Premium has no trial in production, so it has no trial flags: the subscription starts `active` and one test invoice is charged to the test card. Without `--mangle`, `individual --stripe-billing` refuses an email that already exists, before any Stripe call — billing runs before the commit, so a duplicate would otherwise bill a customer and then fail.
 
 On success the output gains two rows:
 
 ```bash
 StripeCustomer : cus_…
 StripeSubscription : sub_…
+```
+
+### Cards
+
+`--stripe-card` picks the Stripe test card. The subscription's outcome is the card's outcome, whatever the address.
+
+| Name                      | Stripe token                     | Card number         | Outcome                                                                                                                                  |
+| ------------------------- | -------------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `visa` (default)          | `pm_card_visa`                   | 4242 4242 4242 4242 | Every charge succeeds.                                                                                                                   |
+| `mastercard`              | `pm_card_mastercard`             | 5555 5555 5555 4444 | Every charge succeeds.                                                                                                                   |
+| `amex`                    | `pm_card_amex`                   | 3714 496353 98431   | Every charge succeeds.                                                                                                                   |
+| `fails-on-charge`         | `pm_card_chargeCustomerFail`     | 4000 0000 0000 0341 | Attaches, then every charge fails. Premium, or an org with `--skip-trial`, comes back `incomplete`; a trial charges nothing at creation. |
+| `requires-authentication` | `pm_card_authenticationRequired` | 4000 0027 6000 3184 | Stripe requires 3D Secure authentication on every payment.                                                                               |
+
+Cards that simulate issuer declines aren't offered: Stripe refuses to attach them to a customer, so customer creation fails before anything is seeded.
+
+### Addresses
+
+`--stripe-address` picks the billing address. The tax charged depends on the shared Stripe test account's tax registrations, not on the address alone.
+
+| Name           | Country | Postal code | Tax ID                             |
+| -------------- | ------- | ----------- | ---------------------------------- |
+| `us` (default) | US      | 43432       | —                                  |
+| `us-alaska`    | US      | 99901       | —                                  |
+| `de`           | DE      | 10117       | —                                  |
+| `de-vat`       | DE      | 10117       | `DE123456789` (organizations only) |
+| `ph`           | PH      | 1640        | —                                  |
+
+A personal account takes no tax ID, so `individual --stripe-address de-vat` fails before any write or Stripe call.
+
+Neither flag changes quantities: an organization is billed for the seats, storage, and Secrets Manager seats it was created with, and a premium user is always one seat.
+
+```bash
+# Teams org billed in Germany with a VAT ID, paying by Mastercard
+dotnet run -- organization -n "Billing VAT" -u 1 -d billingvat.example --plan-type teams-monthly --stripe-billing --stripe-card mastercard --stripe-address de-vat --mangle
+
+# Premium user whose first charge fails, so the web vault shows "Update payment"
+dotnet run -- individual --subscription premium --stripe-billing --stripe-card fails-on-charge --mangle
 ```
 
 ### Prerequisites
@@ -134,4 +174,5 @@ All three are checked **before any entity is created**, so a misconfigured opt-i
 - Seeded Teams and Enterprise orgs carry `UseSecretsManager = 1` with `SmSeats` NULL. Secrets Manager is included in the subscription only when `SmSeats` has a value, so those orgs have the flag set in the database but no Secrets Manager line items in Stripe.
 - Organization billing runs **after** the database commit. If Stripe rejects the request at that point (expired key, network failure), the organization is already committed and the command exits non-zero with the Stripe error and whatever gateway IDs made it through — a failure before customer creation leaves both NULL, but a failure during subscription creation leaves a real `GatewayCustomerId` behind. Check the error message for the actual state; cancel any orphaned Stripe customer before re-seeding.
 - Premium billing runs **before** the database commit, as the last step, so the user row is written once with its gateway IDs. If Stripe rejects the request, nothing is committed, and the error names any Stripe customer already created. If the commit fails after billing succeeded, the Stripe customer and subscription exist with no user row: find the customer in the Stripe test dashboard by the seeded email and cancel it.
+- An organization's **Billing → Subscription** page renders an `incomplete` subscription (e.g. `fails-on-charge` with `--skip-trial`) only with the `pm-36631-preview-driven-cart` flag on; without it the page is blank.
 - Destroying the local database does not cancel the Stripe-side subscriptions. Test-mode subscriptions auto-cancel after roughly 90 days.

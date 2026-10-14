@@ -5,6 +5,7 @@ using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Enums;
 using Bit.Core.Settings;
+using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Options;
 using Bit.Seeder.Services;
 using Stripe;
@@ -110,6 +111,29 @@ public class OrganizationStripeBillingServiceTests
         Assert.NotNull(signup.TaxInfo);
         Assert.Equal("US", signup.TaxInfo.BillingAddressCountry);
         Assert.Equal("43432", signup.TaxInfo.BillingAddressPostalCode);
+        Assert.Null(signup.TaxInfo.TaxIdNumber);
+    }
+
+    [Fact]
+    public void BuildSignup_NonDefaultProfile_SendsItsCardAddressAndVatNumber()
+    {
+        var options = new StripeBillingOptions
+        {
+            Profile = new StripeBillingProfile
+            {
+                Card = StripeTestCard.FailsOnCharge,
+                Address = StripeTestAddress.GermanyWithVatId,
+            },
+        };
+
+        var signup = OrganizationStripeBillingService.BuildSignup(Org(seats: 10), Plan(), options);
+
+        Assert.Equal("pm_card_chargeCustomerFail", signup.PaymentToken);
+        Assert.Equal("DE", signup.TaxInfo.BillingAddressCountry);
+        Assert.Equal("10117", signup.TaxInfo.BillingAddressPostalCode);
+        Assert.Equal("DE123456789", signup.TaxInfo.TaxIdNumber);
+        // Core infers the type from the country and number, and never reads this field.
+        Assert.Null(signup.TaxInfo.TaxIdType);
     }
 
     [Theory]
@@ -297,8 +321,7 @@ public class OrganizationStripeBillingServiceTests
         string? pricingUri = _pricingUri,
         bool selfHosted = false)
     {
-        var settings = new GlobalSettings { SelfHosted = selfHosted, PricingUri = pricingUri! };
-        settings.Stripe.ApiKey = apiKey!;
+        var settings = new GlobalSettings { SelfHosted = selfHosted, PricingUri = pricingUri!, Stripe = { ApiKey = apiKey! } };
         return settings;
     }
 

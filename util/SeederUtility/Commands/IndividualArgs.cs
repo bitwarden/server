@@ -42,6 +42,12 @@ public class IndividualArgs : IArgumentModel
     [Option("stripe-billing", Description = "Create a real Stripe test-environment customer and premium subscription for the user. Requires a sk_test_ key and pricingUri; requires --subscription premium; not valid with --self-hosted.")]
     public bool StripeBilling { get; set; }
 
+    [Option("stripe-card", Description = "Stripe test card: visa (default), mastercard, amex, fails-on-charge, or requires-authentication. Requires --stripe-billing.")]
+    public string? StripeCard { get; set; }
+
+    [Option("stripe-address", Description = "Billing address: us (default), us-alaska, de, or ph. de-vat is rejected: a personal account takes no tax ID. Requires --stripe-billing.")]
+    public string? StripeAddress { get; set; }
+
     public void Validate()
     {
         var sub = Subscription?.ToLowerInvariant();
@@ -62,6 +68,8 @@ public class IndividualArgs : IArgumentModel
                 "--stripe-billing is not supported with --self-hosted. The self-hosted license is signed before " +
                 "billing runs, so it would carry the pre-Stripe expiry date.");
         }
+
+        StripeBillingArgs.ValidateProfile(StripeBilling, StripeCard, StripeAddress);
 
         if (KdfIterations < 5_000)
         {
@@ -99,6 +107,6 @@ public class IndividualArgs : IArgumentModel
         KdfIterations = KdfIterations,
         SelfHosted = SelfHosted,
         AccountAgeDays = AccountAgeDays ?? 0,
-        StripeBilling = StripeBilling
+        StripeBilling = StripeBillingArgs.ToProfile(StripeBilling, StripeCard, StripeAddress)
     };
 }

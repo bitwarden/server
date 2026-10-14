@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Billing.Enums;
+using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Options;
@@ -169,8 +170,17 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         var premium = options.Premium;
         var maxStorageGb = premium ? (short)1 : (short)0;
 
-        if (options.StripeBilling)
+        if (options.StripeBilling is not null)
         {
+            var address = options.StripeBilling.Address;
+            if (address.TaxId is not null)
+            {
+                var withoutTaxId = Enum.GetValues<StripeTestAddress>().Where(a => a.TaxId is null).Select(a => a.Name);
+                throw new InvalidOperationException(
+                    $"The '{address.Name}' test address carries a tax ID, and a premium user's personal account " +
+                    $"takes none. Use one of: {string.Join(", ", withoutTaxId)}.");
+            }
+
             RequireBillingService(deps.UserStripeBillingService).ValidateConfiguration();
 
             if (!deps.ManglerService.IsEnabled && deps.Db.Users.Any(u => u.Email == email))
@@ -195,7 +205,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         {
             services.AddSingleton(deps.Progress);
         }
-        if (options.StripeBilling)
+        if (options.StripeBilling is not null)
         {
             services.AddSingleton(deps.UserStripeBillingService!());
         }
@@ -216,9 +226,9 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
             builder.AddPersonalCiphers(75);
         }
 
-        if (options.StripeBilling)
+        if (options.StripeBilling is not null)
         {
-            builder.WithStripeUserBilling();
+            builder.WithStripeUserBilling(options.StripeBilling);
         }
 
         builder.Validate();

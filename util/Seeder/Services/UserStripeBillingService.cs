@@ -9,17 +9,20 @@ using Bit.Core.Exceptions;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Seeder.Data.Enums;
+using Bit.Seeder.Options;
 using Stripe;
 
 namespace Bit.Seeder.Services;
 
 /// <summary>
-/// Creates a Stripe customer and an active subscription for a seeded individual user in the shared Stripe
+/// Creates a Stripe customer and a subscription for a seeded individual user in the shared Stripe
 /// <c>sk_test_</c> account.
 /// </summary>
 /// <remarks>
 /// Doesn't reuse <c>CreatePremiumCloudHostedSubscriptionCommand</c> because that command injects
-/// <c>IUserService</c>, which the Seeder never references. The requests copy that command's shape instead.
+/// <c>IUserService</c>, which the Seeder never references. The requests copy that command's shape instead:
+/// only the card and the address come from the <see cref="StripeBillingProfile"/>, and no tax ID is sent,
+/// because that command never sends one.
 /// </remarks>
 public sealed class UserStripeBillingService(
     GlobalSettings globalSettings,
@@ -34,9 +37,13 @@ public sealed class UserStripeBillingService(
     /// <summary>
     /// Creates the user's Stripe customer and subscription, then sets their subscription and gateway fields.
     /// </summary>
-    public async Task CreateSubscriptionAsync(User user, UserSubscriptionType subscriptionType)
+    public async Task CreateSubscriptionAsync(
+        User user, UserSubscriptionType subscriptionType, StripeBillingProfile profile)
     {
         ValidateConfiguration();
+
+        var paymentMethodId = profile.Card.PaymentMethodId;
+        var address = profile.Address;
 
         Customer? customer = null;
         try
@@ -49,16 +56,16 @@ public sealed class UserStripeBillingService(
 
             customer = await stripeAdapter.CreateCustomerAsync(new CustomerCreateOptions
             {
-                Address = new AddressOptions { Country = "US", PostalCode = "43432" },
+                Address = new AddressOptions { Country = address.Country, PostalCode = address.PostalCode },
                 Description = user.Name,
                 Email = user.Email,
-                InvoiceSettings = new CustomerInvoiceSettingsOptions { DefaultPaymentMethod = "pm_card_visa" },
+                InvoiceSettings = new CustomerInvoiceSettingsOptions { DefaultPaymentMethod = paymentMethodId },
                 Metadata = new Dictionary<string, string>
                 {
                     [StripeConstants.MetadataKeys.Region] = globalSettings.BaseServiceUri.CloudRegion,
                     [StripeConstants.MetadataKeys.UserId] = user.Id.ToString(),
                 },
-                PaymentMethod = "pm_card_visa",
+                PaymentMethod = paymentMethodId,
                 Tax = new CustomerTaxOptions
                 {
                     ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately,
