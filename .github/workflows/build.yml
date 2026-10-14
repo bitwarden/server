@@ -354,6 +354,7 @@ jobs:
           name: image-manifest-fragment-${{ steps.setup.outputs.project_name }}
           path: image-manifest-fragments/${{ steps.setup.outputs.project_name }}.json
           if-no-files-found: error
+          retention-days: 1
 
       - name: Install Cosign
         if: github.event_name != 'pull_request' && env.is_publish_branch == 'true'
@@ -387,7 +388,6 @@ jobs:
     needs: build-artifacts
     permissions:
       contents: read
-      actions: write # delete the intermediate fragment artifacts after aggregating
     steps:
       - name: Download image manifest fragments
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -411,19 +411,6 @@ jobs:
         with:
           mode: upload
           additional_artifacts: ${{ steps.combine.outputs.additional_artifacts }}
-
-      - name: Delete intermediate fragment artifacts
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          for f in image-manifest-fragments/*.json; do
-            name="image-manifest-fragment-$(basename "$f" .json)"
-            id=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?name=${name}" --jq '.artifacts[0].id // empty')
-            if [ -n "$id" ]; then
-              gh api --method DELETE "repos/${GITHUB_REPOSITORY}/actions/artifacts/${id}"
-              echo "Deleted fragment artifact ${name} (${id})"
-            fi
-          done
 
   upload:
     name: Upload
