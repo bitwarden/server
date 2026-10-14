@@ -5,6 +5,7 @@ using Bit.Api.IntegrationTest.SecretsManager.Helpers;
 using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -25,6 +26,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     private readonly IProjectRepository _projectRepository;
     private readonly IAccessPolicyRepository _accessPolicyRepository;
     private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly LoginHelper _loginHelper;
 
     private string _email = null!;
@@ -37,6 +39,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         _projectRepository = _factory.GetService<IProjectRepository>();
         _accessPolicyRepository = _factory.GetService<IAccessPolicyRepository>();
         _organizationRepository = _factory.GetService<IOrganizationRepository>();
+        _organizationAbilityCacheService = _factory.GetService<IOrganizationAbilityCacheService>();
         _loginHelper = new LoginHelper(_factory, _client);
     }
 
@@ -501,6 +504,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         org.UseSecretsManager = useSecretsManager;
         org.Enabled = enabled;
         await _organizationRepository.ReplaceAsync(org);
+        await _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(org);
 
         var request = new ProjectCreateRequestModel { Name = _mockEncryptedString };
 
@@ -519,6 +523,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         org.UseSecretsManager = useSecretsManager;
         org.Enabled = enabled;
         await _organizationRepository.ReplaceAsync(org);
+        await _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(org);
 
         var response = await _client.GetAsync($"/organizations/{org.Id}/projects");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);

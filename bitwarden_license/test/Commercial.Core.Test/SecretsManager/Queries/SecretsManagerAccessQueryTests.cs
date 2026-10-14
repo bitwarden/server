@@ -1,7 +1,7 @@
 ﻿using Bit.Commercial.Core.SecretsManager.Queries;
-using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Context;
-using Bit.Core.Repositories;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -14,7 +14,7 @@ public class SecretsManagerAccessQueryTests
 {
     [Theory]
     [BitAutoData]
-    public async Task HasAccessAsync_NoClaim_ReturnsFalseWithoutReadingOrganization(
+    public async Task HasAccessAsync_NoClaim_ReturnsFalseWithoutReadingAbility(
         SutProvider<SecretsManagerAccessQuery> sutProvider, Guid organizationId)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(false);
@@ -22,16 +22,18 @@ public class SecretsManagerAccessQueryTests
         var result = await sutProvider.Sut.HasAccessAsync(organizationId);
 
         Assert.False(result);
-        await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceiveWithAnyArgs().GetByIdAsync(default);
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>().DidNotReceiveWithAnyArgs()
+            .GetOrganizationAbilityAsync(default);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task HasAccessAsync_OrganizationNotFound_ReturnsFalse(
+    public async Task HasAccessAsync_AbilityNotFound_ReturnsFalse(
         SutProvider<SecretsManagerAccessQuery> sutProvider, Guid organizationId)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns((Organization?)null);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(organizationId)
+            .Returns((OrganizationAbility?)null);
 
         var result = await sutProvider.Sut.HasAccessAsync(organizationId);
 
@@ -44,14 +46,15 @@ public class SecretsManagerAccessQueryTests
     [BitAutoData(false, false)]
     public async Task HasAccessAsync_OrganizationNoLongerEligible_ReturnsFalse(
         bool useSecretsManager, bool enabled,
-        SutProvider<SecretsManagerAccessQuery> sutProvider, Organization organization)
+        SutProvider<SecretsManagerAccessQuery> sutProvider, OrganizationAbility ability)
     {
-        organization.UseSecretsManager = useSecretsManager;
-        organization.Enabled = enabled;
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organization.Id).Returns(true);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        ability.UseSecretsManager = useSecretsManager;
+        ability.Enabled = enabled;
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(ability.Id).Returns(true);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(ability.Id)
+            .Returns(ability);
 
-        var result = await sutProvider.Sut.HasAccessAsync(organization.Id);
+        var result = await sutProvider.Sut.HasAccessAsync(ability.Id);
 
         Assert.False(result);
     }
@@ -59,33 +62,16 @@ public class SecretsManagerAccessQueryTests
     [Theory]
     [BitAutoData]
     public async Task HasAccessAsync_ClaimAndOrganizationEligible_ReturnsTrue(
-        SutProvider<SecretsManagerAccessQuery> sutProvider, Organization organization)
+        SutProvider<SecretsManagerAccessQuery> sutProvider, OrganizationAbility ability)
     {
-        organization.UseSecretsManager = true;
-        organization.Enabled = true;
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organization.Id).Returns(true);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        ability.UseSecretsManager = true;
+        ability.Enabled = true;
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(ability.Id).Returns(true);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(ability.Id)
+            .Returns(ability);
 
-        var result = await sutProvider.Sut.HasAccessAsync(organization.Id);
+        var result = await sutProvider.Sut.HasAccessAsync(ability.Id);
 
         Assert.True(result);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task HasAccessAsync_SameOrganizationTwice_ReadsOrganizationOnce(
-        SutProvider<SecretsManagerAccessQuery> sutProvider, Organization organization)
-    {
-        organization.UseSecretsManager = true;
-        organization.Enabled = true;
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organization.Id).Returns(true);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-
-        var first = await sutProvider.Sut.HasAccessAsync(organization.Id);
-        var second = await sutProvider.Sut.HasAccessAsync(organization.Id);
-
-        Assert.True(first);
-        Assert.True(second);
-        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).GetByIdAsync(organization.Id);
     }
 }

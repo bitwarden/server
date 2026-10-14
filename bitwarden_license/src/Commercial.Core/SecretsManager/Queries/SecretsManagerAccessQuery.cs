@@ -1,5 +1,5 @@
-﻿using Bit.Core.Context;
-using Bit.Core.Repositories;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.Context;
 using Bit.Core.SecretsManager.Queries.Interfaces;
 
 namespace Bit.Commercial.Core.SecretsManager.Queries;
@@ -7,15 +7,13 @@ namespace Bit.Commercial.Core.SecretsManager.Queries;
 public class SecretsManagerAccessQuery : ISecretsManagerAccessQuery
 {
     private readonly ICurrentContext _currentContext;
-    private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
 
-    // Scoped per request, so an organization is only read once even when a request authorizes several resources.
-    private readonly Dictionary<Guid, bool> _organizationAccess = new();
-
-    public SecretsManagerAccessQuery(ICurrentContext currentContext, IOrganizationRepository organizationRepository)
+    public SecretsManagerAccessQuery(ICurrentContext currentContext,
+        IOrganizationAbilityCacheService organizationAbilityCacheService)
     {
         _currentContext = currentContext;
-        _organizationRepository = organizationRepository;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
     }
 
     public async Task<bool> HasAccessAsync(Guid organizationId)
@@ -25,14 +23,7 @@ public class SecretsManagerAccessQuery : ISecretsManagerAccessQuery
             return false;
         }
 
-        if (_organizationAccess.TryGetValue(organizationId, out var hasAccess))
-        {
-            return hasAccess;
-        }
-
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
-        hasAccess = organization is { Enabled: true, UseSecretsManager: true };
-        _organizationAccess[organizationId] = hasAccess;
-        return hasAccess;
+        var ability = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
+        return ability is { Enabled: true, UseSecretsManager: true };
     }
 }

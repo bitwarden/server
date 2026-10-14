@@ -5,6 +5,7 @@ using Bit.Api.IntegrationTest.SecretsManager.Helpers;
 using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -27,6 +28,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IAccessPolicyRepository _accessPolicyRepository;
     private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly LoginHelper _loginHelper;
 
     private string _email = null!;
@@ -40,6 +42,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         _projectRepository = _factory.GetService<IProjectRepository>();
         _accessPolicyRepository = _factory.GetService<IAccessPolicyRepository>();
         _organizationRepository = _factory.GetService<IOrganizationRepository>();
+        _organizationAbilityCacheService = _factory.GetService<IOrganizationAbilityCacheService>();
         _serviceAccountRepository = _factory.GetService<IServiceAccountRepository>();
         _loginHelper = new LoginHelper(_factory, _client);
     }
@@ -1306,6 +1309,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         org.UseSecretsManager = useSecretsManager;
         org.Enabled = enabled;
         await _organizationRepository.ReplaceAsync(org);
+        await _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(org);
 
         var request = new SecretCreateRequestModel
         {
