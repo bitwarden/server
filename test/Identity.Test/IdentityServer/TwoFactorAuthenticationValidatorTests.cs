@@ -452,7 +452,6 @@ public class TwoFactorAuthenticationValidatorTests
     {
         // Arrange
         var token = TwoFactorRememberTokenable.ClearTextPrefix + tokenBody;
-        _twoFactorEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(true);
         _validateTwoFactorRememberTokenQuery.ValidateAsync(user, null, DeviceIdentifier, token).Returns(true);
 
         // Act
@@ -464,15 +463,16 @@ public class TwoFactorAuthenticationValidatorTests
         await _validateTwoFactorRememberTokenQuery.Received(1).ValidateAsync(user, null, DeviceIdentifier, token);
     }
 
+    /// <summary>
+    /// The query decides whether the user, or their organization, supplies the second factor, so the
+    /// organization has to reach it.
+    /// </summary>
     [Theory, BitAutoData]
-    public async void VerifyTwoFactorAsync_Remember_OrgEnforcesTwoFactor_NoPersonalTwoFactor_DelegatesToRememberTokenQuery(
+    public async void VerifyTwoFactorAsync_Remember_PassesOrganizationToRememberTokenQuery(
         User user, Organization organization, string tokenBody)
     {
         // Arrange
-        organization.Use2fa = true;
-        organization.TwoFactorProviders = GetTwoFactorOrganizationDuoProviderJson();
         var token = TwoFactorRememberTokenable.ClearTextPrefix + tokenBody;
-        _twoFactorEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(false);
         _validateTwoFactorRememberTokenQuery.ValidateAsync(user, organization, DeviceIdentifier, token).Returns(true);
 
         // Act
@@ -481,28 +481,7 @@ public class TwoFactorAuthenticationValidatorTests
 
         // Assert
         Assert.True(result.Succeeded);
-        // The query repeats the check, so it has to be handed the organization too.
         await _validateTwoFactorRememberTokenQuery.Received(1).ValidateAsync(user, organization, DeviceIdentifier, token);
-    }
-
-    [Theory, BitAutoData]
-    public async void VerifyTwoFactorAsync_Remember_OrgDoesNotEnforceTwoFactor_NoPersonalTwoFactor_ReturnsFalse(
-        User user, Organization organization, string tokenBody)
-    {
-        // Arrange
-        organization.Use2fa = false;
-        organization.TwoFactorProviders = GetTwoFactorOrganizationDuoProviderJson();
-        var token = TwoFactorRememberTokenable.ClearTextPrefix + tokenBody;
-        _twoFactorEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(false);
-        _validateTwoFactorRememberTokenQuery.ValidateAsync(user, organization, DeviceIdentifier, token).Returns(true);
-
-        // Act
-        var result = await _sut.VerifyTwoFactorAsync(
-            user, organization, TwoFactorProviderType.Remember, token, DeviceIdentifier);
-
-        // Assert
-        Assert.False(result.Succeeded);
-        await _validateTwoFactorRememberTokenQuery.DidNotReceiveWithAnyArgs().ValidateAsync(default!, default!, default!, default!);
     }
 
     // ---------------------------------------------------------------------------------------
@@ -515,7 +494,6 @@ public class TwoFactorAuthenticationValidatorTests
     public async void VerifyTwoFactorAsync_LegacyRemember_ValidToken_ReturnsTrue(User user)
     {
         // Arrange
-        _twoFactorEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(true);
         _userManager.TWO_FACTOR_TOKEN_VERIFIED = true;
 
         // Act
@@ -534,7 +512,6 @@ public class TwoFactorAuthenticationValidatorTests
     public async void VerifyTwoFactorAsync_LegacyRemember_ProviderRejects_ReturnsFalse(User user)
     {
         // Arrange
-        _twoFactorEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(true);
         _userManager.TWO_FACTOR_TOKEN_VERIFIED = false;
 
         // Act
@@ -546,33 +523,13 @@ public class TwoFactorAuthenticationValidatorTests
         Assert.False(result.LegacyRememberUpgradeRequired);
     }
 
-    /// <summary>
-    /// The two-factor-enabled gate covers the previous format too, so an un-replaced token is
-    /// inert for as long as the account has no second factor configured.
-    /// </summary>
     [Theory, BitAutoData]
-    public async void VerifyTwoFactorAsync_LegacyRemember_NoTwoFactorEnabled_ReturnsFalse(User user)
-    {
-        // Arrange
-        _twoFactorEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(false);
-        _userManager.TWO_FACTOR_TOKEN_VERIFIED = true;
-
-        // Act
-        var result = await _sut.VerifyTwoFactorAsync(
-            user, null, TwoFactorProviderType.Remember, "legacy-format-token", DeviceIdentifier);
-
-        // Assert
-        Assert.False(result.Succeeded);
-    }
-
-    [Theory, BitAutoData]
-    public async void VerifyTwoFactorAsync_LegacyRemember_OrgEnforcesTwoFactor_NoPersonalTwoFactor_ReturnsTrue(
+    public async void VerifyTwoFactorAsync_LegacyRemember_OrgEnforcesTwoFactor_NoPersonalTwoFactor_ReturnsTrueAndSignalsUpgrade(
         User user, Organization organization)
     {
         // Arrange
         organization.Use2fa = true;
         organization.TwoFactorProviders = GetTwoFactorOrganizationDuoProviderJson();
-        _twoFactorEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(false);
         _userManager.TWO_FACTOR_TOKEN_VERIFIED = true;
 
         // Act
@@ -589,7 +546,6 @@ public class TwoFactorAuthenticationValidatorTests
     public async void VerifyTwoFactorAsync_LegacyRemember_Accepted_SignalsUpgrade(User user)
     {
         // Arrange
-        _twoFactorEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(true);
         _userManager.TWO_FACTOR_TOKEN_VERIFIED = true;
 
         // Act
@@ -609,7 +565,6 @@ public class TwoFactorAuthenticationValidatorTests
     {
         // Arrange
         var token = TwoFactorRememberTokenable.ClearTextPrefix + "current-format-token";
-        _twoFactorEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(true);
         _validateTwoFactorRememberTokenQuery.ValidateAsync(user, null, DeviceIdentifier, token).Returns(true);
         _userManager.TWO_FACTOR_TOKEN_VERIFIED = false;
 
@@ -627,7 +582,6 @@ public class TwoFactorAuthenticationValidatorTests
     {
         // Arrange
         var token = TwoFactorRememberTokenable.ClearTextPrefix + tokenBody;
-        _twoFactorEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(true);
         _validateTwoFactorRememberTokenQuery.ValidateAsync(user, null, DeviceIdentifier, token).Returns(false);
 
         // Act
