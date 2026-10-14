@@ -43,12 +43,58 @@ public class ExternalCookieIsolationTests : IDisposable
         _identityFactory.ConfigureServices(services => ShareHostInfrastructure(services, cache, _keyDirectory));
     }
 
+    [Fact]
+    public async Task IdentityExternalCookieScheme_CookieWrittenBySsoApp_DoesNotAuthenticate()
+    {
+        // Arrange
+        var ssoCookieValue = await WriteSsoExternalCookieAsync(JwtClaimTypes.Subject);
+        var identityExternalScheme = _identityFactory.GetIdentityExternalScheme();
+        var identityCookieName = ExternalCookieTestHelpers.GetCookieName(
+            _identityFactory.Services, identityExternalScheme);
+
+        // Act
+        var result = await ExternalCookieTestHelpers.AuthenticateCookieAsync(
+            _identityFactory.Services, identityExternalScheme, identityCookieName, ssoCookieValue);
+
+        // Assert
+        Assert.False(result.Succeeded);
+    }
+
     [Theory]
     [InlineData(JwtClaimTypes.Subject)]
     [InlineData(ClaimTypes.NameIdentifier)]
     public async Task IdentityExternalCallback_CookieWrittenBySsoApp_DoesNotSignIn(string userIdClaimType)
     {
         // Arrange
+        var ssoCookieValue = await WriteSsoExternalCookieAsync(userIdClaimType);
+        var identityCookieName = ExternalCookieTestHelpers.GetCookieName(
+            _identityFactory.Services, _identityFactory.GetIdentityExternalScheme());
+
+        // Act
+        var context = await _identityFactory.GetSsoExternalCallbackAsync(identityCookieName, ssoCookieValue);
+        var tokenSubject = await _identityFactory.GetAccessTokenSubjectAsync(context);
+
+        // Assert
+        Assert.Null(tokenSubject);
+        Assert.False(_identityFactory.SetsIdentityServerSessionCookie(context));
+        Assert.NotEqual(StatusCodes.Status302Found, context.Response.StatusCode);
+    }
+
+    public void Dispose()
+    {
+        _identityFactory.Dispose();
+        _ssoFactory.Dispose();
+        _keyDirectory.Delete(recursive: true);
+    }
+
+    /// <summary>
+    /// Has the Sso host write its external cookie for a new user who is in no organization, with the user id
+    /// under <paramref name="userIdClaimType"/>. Also checks that the Sso host reads the cookie back, and that
+    /// both hosts share the cache and the data protection key ring.
+    /// </summary>
+    /// <returns>The value of the Sso host's external cookie.</returns>
+    private async Task<string> WriteSsoExternalCookieAsync(string userIdClaimType)
+    {
         var user = await _identityFactory.RegisterNewIdentityFactoryUserAsync(new RegisterFinishRequestModel
         {
             Email = UserEmail,
@@ -89,24 +135,7 @@ public class ExternalCookieIsolationTests : IDisposable
         Assert.Equal("payload", _identityFactory.Services.GetRequiredService<IDataProtectionProvider>()
             .CreateProtector(protectorPurpose).Unprotect(protectedPayload));
 
-        var identityCookieName = ExternalCookieTestHelpers.GetCookieName(
-            _identityFactory.Services, _identityFactory.GetIdentityExternalScheme());
-
-        // Act
-        var context = await _identityFactory.GetSsoExternalCallbackAsync(identityCookieName, ssoCookie.Value);
-        var tokenSubject = await _identityFactory.GetAccessTokenSubjectAsync(context);
-
-        // Assert
-        Assert.Null(tokenSubject);
-        Assert.False(_identityFactory.SetsIdentityServerSessionCookie(context));
-        Assert.NotEqual(StatusCodes.Status302Found, context.Response.StatusCode);
-    }
-
-    public void Dispose()
-    {
-        _identityFactory.Dispose();
-        _ssoFactory.Dispose();
-        _keyDirectory.Delete(recursive: true);
+        return ssoCookie.Value;
     }
 
     private static void ShareHostInfrastructure(
