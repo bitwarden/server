@@ -228,7 +228,7 @@ internal static class PresetLoader
 
         if (stripeBilling is not null)
         {
-            builder.WithStripeBilling(stripeBilling);
+            builder.WithStripeOrganizationBilling(stripeBilling);
         }
 
         builder.Validate();

@@ -65,7 +65,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         }
         if (stripeBilling is not null)
         {
-            services.AddSingleton(deps.BillingInitializer!());
+            services.AddSingleton(deps.OrganizationStripeBillingService!());
         }
 
         PresetLoader.RegisterRecipe(presetName, reader, services, stripeBilling);
@@ -105,7 +105,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         }
         if (options.StripeBilling is not null)
         {
-            services.AddSingleton(deps.BillingInitializer!());
+            services.AddSingleton(deps.OrganizationStripeBillingService!());
         }
 
         var recipeName = "from-options";
@@ -149,7 +149,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
 
         if (options.StripeBilling is not null)
         {
-            builder.WithStripeBilling(options.StripeBilling);
+            builder.WithStripeOrganizationBilling(options.StripeBilling);
         }
 
         builder.Validate();
@@ -221,14 +221,14 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
     /// </remarks>
     private void ValidateBillingOptIn(PlanType planType)
     {
-        if (deps.BillingInitializer is null)
+        if (deps.OrganizationStripeBillingService is null)
         {
             throw new InvalidOperationException(
-                "Stripe billing was requested but no IStripeBillingInitializer was supplied on " +
+                "Stripe billing was requested but no IOrganizationStripeBillingService was supplied on " +
                 "SeederDependencies. The host has to register the billing services before opting in.");
         }
 
-        deps.BillingInitializer().ValidateConfiguration(planType);
+        deps.OrganizationStripeBillingService().ValidateConfiguration(planType);
     }
 
     /// <summary>

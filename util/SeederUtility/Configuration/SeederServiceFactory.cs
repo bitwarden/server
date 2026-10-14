@@ -42,7 +42,7 @@ internal sealed class SeederServiceScope : IDisposable
 
     internal IAttachmentStorageService AttachmentStorageService { get; }
 
-    internal Func<IStripeBillingInitializer> BillingInitializer { get; }
+    internal Func<IOrganizationStripeBillingService> OrganizationStripeBillingService { get; }
 
     internal ISeederLicenseSigner LicenseSigner { get; }
 
@@ -51,7 +51,7 @@ internal sealed class SeederServiceScope : IDisposable
     internal SeederDependencies ToDependencies()
         => new(Db, Mapper, PasswordHasher, Mangler, LicensingService, AttachmentStorageService, LicenseSigner, LoggerFactory)
         {
-            BillingInitializer = BillingInitializer,
+            OrganizationStripeBillingService = OrganizationStripeBillingService,
         };
 
     private readonly ServiceProvider _provider;
@@ -74,7 +74,7 @@ internal sealed class SeederServiceScope : IDisposable
         // that actually opt into Stripe billing, not on every command. Closes over the scope, not the root
         // provider: the billing graph is scoped and transient throughout, and capturing it on the root
         // provider would outlive the DbContext it depends on.
-        BillingInitializer = () => sp.GetRequiredService<IStripeBillingInitializer>();
+        OrganizationStripeBillingService = () => sp.GetRequiredService<IOrganizationStripeBillingService>();
         LicenseSigner = sp.GetRequiredService<ISeederLicenseSigner>();
         LoggerFactory = sp.GetRequiredService<ILoggerFactory>();
     }

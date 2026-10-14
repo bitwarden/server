@@ -152,7 +152,7 @@ public class RecipeBuilderValidationTests
         var builder = services.AddRecipe("test");
 
         builder.CreateIndividualUser("solo@bw.example", premium: true, maxStorageGb: 1);
-        builder.WithStripeBilling(new StripeBillingOptions());
+        builder.WithStripeOrganizationBilling(new StripeBillingOptions());
 
         var ex = Assert.Throws<InvalidOperationException>(() => builder.Validate());
         Assert.Contains("Stripe billing requires an organization", ex.Message);
@@ -166,7 +166,7 @@ public class RecipeBuilderValidationTests
 
         builder.UseOrganization("test");
         builder.AddOwner();
-        builder.WithStripeBilling(new StripeBillingOptions());
+        builder.WithStripeOrganizationBilling(new StripeBillingOptions());
 
         builder.Validate();
     }

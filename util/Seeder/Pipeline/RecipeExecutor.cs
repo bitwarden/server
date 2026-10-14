@@ -102,7 +102,7 @@ internal sealed class RecipeExecutor
         }
 
         // The sanctioned post-commit extension documented above: gateway IDs are written onto the
-        // organization by FinalizeOrganizationBillingStep, long after the snapshot was taken.
+        // organization by CreateOrganizationBillingStep, long after the snapshot was taken.
         return result with
         {
             GatewayCustomerId = context.Organization?.GatewayCustomerId,

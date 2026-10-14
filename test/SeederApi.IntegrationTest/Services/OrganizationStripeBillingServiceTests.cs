@@ -16,10 +16,10 @@ namespace Bit.SeederApi.IntegrationTest.Services;
 
 /// <summary>
 /// Covers the fail-fast configuration gate and the signup back-computation in
-/// <see cref="StripeBillingInitializer"/>. Nothing here reaches Stripe: the billing service is a capturing
+/// <see cref="OrganizationStripeBillingService"/>. Nothing here reaches Stripe: the billing service is a capturing
 /// stub, so the assertions are about the <see cref="OrganizationSale"/> the seeder would have submitted.
 /// </summary>
-public class StripeBillingInitializerTests
+public class OrganizationStripeBillingServiceTests
 {
     private const string _testKey = "sk_test_abc123";
     private const string _pricingUri = "https://billingpricing.qa.bitwarden.pw";
@@ -27,10 +27,10 @@ public class StripeBillingInitializerTests
     [Fact]
     public void ValidateConfiguration_MissingApiKey_Throws()
     {
-        var initializer = Build(Settings(apiKey: null));
+        var service = Build(Settings(apiKey: null));
 
         var ex = Assert.Throws<InvalidOperationException>(
-            () => initializer.ValidateConfiguration(PlanType.TeamsMonthly));
+            () => service.ValidateConfiguration(PlanType.TeamsMonthly));
 
         Assert.Contains("no Stripe API key", ex.Message);
     }
@@ -41,10 +41,10 @@ public class StripeBillingInitializerTests
     [InlineData("pk_test_abc123")]
     public void ValidateConfiguration_NonTestApiKey_Throws(string apiKey)
     {
-        var initializer = Build(Settings(apiKey: apiKey));
+        var service = Build(Settings(apiKey: apiKey));
 
         var ex = Assert.Throws<InvalidOperationException>(
-            () => initializer.ValidateConfiguration(PlanType.TeamsMonthly));
+            () => service.ValidateConfiguration(PlanType.TeamsMonthly));
 
         Assert.Contains("sk_test_", ex.Message);
     }
@@ -55,10 +55,10 @@ public class StripeBillingInitializerTests
     [InlineData("   ")]
     public void ValidateConfiguration_MissingPricingUri_ThrowsAndHintsAtTheEnvironment(string? pricingUri)
     {
-        var initializer = Build(Settings(pricingUri: pricingUri));
+        var service = Build(Settings(pricingUri: pricingUri));
 
         var ex = Assert.Throws<InvalidOperationException>(
-            () => initializer.ValidateConfiguration(PlanType.TeamsMonthly));
+            () => service.ValidateConfiguration(PlanType.TeamsMonthly));
 
         Assert.Contains("pricingUri", ex.Message);
         Assert.Contains("ASPNETCORE_ENVIRONMENT=Development", ex.Message);
@@ -69,10 +69,10 @@ public class StripeBillingInitializerTests
     {
         // The Pricing Service is never called in self-hosted mode, so GetPlanOrThrow could only ever 404.
         // dev/secrets.json.example ships selfHosted: true, which makes this the likeliest misconfiguration.
-        var initializer = Build(Settings(selfHosted: true));
+        var service = Build(Settings(selfHosted: true));
 
         var ex = Assert.Throws<InvalidOperationException>(
-            () => initializer.ValidateConfiguration(PlanType.TeamsMonthly));
+            () => service.ValidateConfiguration(PlanType.TeamsMonthly));
 
         Assert.Contains("selfHosted", ex.Message);
     }
@@ -80,10 +80,10 @@ public class StripeBillingInitializerTests
     [Fact]
     public void ValidateConfiguration_FreePlan_Throws()
     {
-        var initializer = Build(Settings());
+        var service = Build(Settings());
 
         var ex = Assert.Throws<InvalidOperationException>(
-            () => initializer.ValidateConfiguration(PlanType.Free));
+            () => service.ValidateConfiguration(PlanType.Free));
 
         Assert.Contains("Free plan", ex.Message);
     }
@@ -100,7 +100,7 @@ public class StripeBillingInitializerTests
     [Fact]
     public void BuildSignup_UsesTheCanonicalStripeTestPaymentShape()
     {
-        var signup = StripeBillingInitializer.BuildSignup(Org(seats: 10), Plan(), new StripeBillingOptions());
+        var signup = OrganizationStripeBillingService.BuildSignup(Org(seats: 10), Plan(), new StripeBillingOptions());
 
         Assert.Equal(PaymentMethodType.Card, signup.PaymentMethodType);
         Assert.Equal("pm_card_visa", signup.PaymentToken);
@@ -119,7 +119,7 @@ public class StripeBillingInitializerTests
     [InlineData(null, 1, 0)]
     public void BuildSignup_BackComputesAdditionalSeatsAndClampsAtZero(int? seats, int baseSeats, int expected)
     {
-        var signup = StripeBillingInitializer.BuildSignup(
+        var signup = OrganizationStripeBillingService.BuildSignup(
             Org(seats: seats), Plan(baseSeats: baseSeats), new StripeBillingOptions());
 
         Assert.Equal(expected, signup.AdditionalSeats);
@@ -133,7 +133,7 @@ public class StripeBillingInitializerTests
     public void BuildSignup_BackComputesAdditionalStorageAndClampsAtZero(
         int? maxStorageGb, int baseStorageGb, int expected)
     {
-        var signup = StripeBillingInitializer.BuildSignup(
+        var signup = OrganizationStripeBillingService.BuildSignup(
             Org(maxStorageGb: (short?)maxStorageGb),
             Plan(baseStorageGb: (short)baseStorageGb),
             new StripeBillingOptions());
@@ -150,7 +150,7 @@ public class StripeBillingInitializerTests
         organization.UseSecretsManager = true;
         organization.SmSeats = null;
 
-        var signup = StripeBillingInitializer.BuildSignup(organization, Plan(), new StripeBillingOptions());
+        var signup = OrganizationStripeBillingService.BuildSignup(organization, Plan(), new StripeBillingOptions());
 
         Assert.False(signup.UseSecretsManager);
         Assert.Null(signup.AdditionalSmSeats);
@@ -164,7 +164,7 @@ public class StripeBillingInitializerTests
         organization.SmSeats = 8;
         organization.SmServiceAccounts = 60;
 
-        var signup = StripeBillingInitializer.BuildSignup(
+        var signup = OrganizationStripeBillingService.BuildSignup(
             organization,
             Plan(smBaseSeats: 2, smBaseServiceAccounts: 50),
             new StripeBillingOptions());
@@ -180,7 +180,7 @@ public class StripeBillingInitializerTests
         var organization = Org(seats: 10);
         organization.SmSeats = 8;
 
-        var signup = StripeBillingInitializer.BuildSignup(
+        var signup = OrganizationStripeBillingService.BuildSignup(
             organization, Plan(withSecretsManager: false), new StripeBillingOptions());
 
         Assert.False(signup.UseSecretsManager);
@@ -190,7 +190,7 @@ public class StripeBillingInitializerTests
     [Fact]
     public void BuildSignup_DefaultOptions_RequestsATrial()
     {
-        var signup = StripeBillingInitializer.BuildSignup(Org(seats: 10), Plan(), new StripeBillingOptions());
+        var signup = OrganizationStripeBillingService.BuildSignup(Org(seats: 10), Plan(), new StripeBillingOptions());
 
         Assert.False(signup.SkipTrial);
         Assert.Equal(30, signup.TrialLength);
@@ -199,7 +199,7 @@ public class StripeBillingInitializerTests
     [Fact]
     public void BuildSignup_ExplicitTrialDays_FlowsThrough()
     {
-        var signup = StripeBillingInitializer.BuildSignup(
+        var signup = OrganizationStripeBillingService.BuildSignup(
             Org(seats: 10), Plan(), new StripeBillingOptions { TrialDays = 7 });
 
         Assert.False(signup.SkipTrial);
@@ -211,7 +211,7 @@ public class StripeBillingInitializerTests
     {
         // A TrialLength alongside SkipTrial would be ambiguous downstream: OrganizationBillingService reads
         // SkipTrial first, but leaving the length null keeps the sale unambiguous.
-        var signup = StripeBillingInitializer.BuildSignup(
+        var signup = OrganizationStripeBillingService.BuildSignup(
             Org(seats: 10), Plan(), new StripeBillingOptions { SkipTrial = true, TrialDays = 7 });
 
         Assert.True(signup.SkipTrial);
@@ -219,14 +219,14 @@ public class StripeBillingInitializerTests
     }
 
     [Fact]
-    public async Task InitializeOrganizationAsync_FinalizesASaleForTheSeededOrganizationAsync()
+    public async Task CreateSubscriptionAsync_FinalizesASaleForTheSeededOrganizationAsync()
     {
         var billingService = new CapturingOrganizationBillingService();
         var organization = Org(seats: 10);
-        var initializer = new StripeBillingInitializer(
+        var service = new OrganizationStripeBillingService(
             Settings(), billingService, new StubPricingClient(Plan(baseSeats: 1)));
 
-        await initializer.InitializeOrganizationAsync(organization, new StripeBillingOptions { TrialDays = 14 });
+        await service.CreateSubscriptionAsync(organization, new StripeBillingOptions { TrialDays = 14 });
 
         var sale = Assert.Single(billingService.Sales);
         Assert.Same(organization, sale.Organization);
@@ -240,28 +240,28 @@ public class StripeBillingInitializerTests
     }
 
     [Fact]
-    public async Task InitializeOrganizationAsync_LooksUpThePlanOfTheSeededOrganizationAsync()
+    public async Task CreateSubscriptionAsync_LooksUpThePlanOfTheSeededOrganizationAsync()
     {
         var pricingClient = new StubPricingClient(Plan());
         var organization = Org(seats: 10);
         organization.PlanType = PlanType.TeamsAnnually;
 
-        await new StripeBillingInitializer(Settings(), new CapturingOrganizationBillingService(), pricingClient)
-            .InitializeOrganizationAsync(organization, new StripeBillingOptions());
+        await new OrganizationStripeBillingService(Settings(), new CapturingOrganizationBillingService(), pricingClient)
+            .CreateSubscriptionAsync(organization, new StripeBillingOptions());
 
         Assert.Equal(PlanType.TeamsAnnually, Assert.Single(pricingClient.RequestedPlanTypes));
     }
 
     [Fact]
-    public async Task InitializeOrganizationAsync_BillingServiceThrows_WrapsAsInvalidOperationExceptionAsync()
+    public async Task CreateSubscriptionAsync_BillingServiceThrows_WrapsAsInvalidOperationExceptionAsync()
     {
         var stripeException = new StripeException("The card was declined.");
         var billingService = new CapturingOrganizationBillingService { ThrowOnFinalize = stripeException };
         var organization = Org(seats: 10);
-        var initializer = new StripeBillingInitializer(Settings(), billingService, new StubPricingClient(Plan()));
+        var service = new OrganizationStripeBillingService(Settings(), billingService, new StubPricingClient(Plan()));
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => initializer.InitializeOrganizationAsync(organization, new StripeBillingOptions()));
+            () => service.CreateSubscriptionAsync(organization, new StripeBillingOptions()));
 
         Assert.Contains(organization.Id.ToString(), ex.Message);
         Assert.Contains("already committed", ex.Message);
@@ -271,7 +271,7 @@ public class StripeBillingInitializerTests
     }
 
     [Fact]
-    public async Task InitializeOrganizationAsync_BillingServiceThrowsAfterCustomerCreated_MessageReportsTheRealStateAsync()
+    public async Task CreateSubscriptionAsync_BillingServiceThrowsAfterCustomerCreated_MessageReportsTheRealStateAsync()
     {
         // A customer-then-subscription failure leaves a real GatewayCustomerId committed. The message must
         // report it instead of assuming the "no gateway IDs" shape, so a developer knows to cancel the
@@ -280,16 +280,16 @@ public class StripeBillingInitializerTests
         var billingService = new CapturingOrganizationBillingService { ThrowOnFinalize = stripeException };
         var organization = Org(seats: 10);
         organization.GatewayCustomerId = "cus_partial";
-        var initializer = new StripeBillingInitializer(Settings(), billingService, new StubPricingClient(Plan()));
+        var service = new OrganizationStripeBillingService(Settings(), billingService, new StubPricingClient(Plan()));
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => initializer.InitializeOrganizationAsync(organization, new StripeBillingOptions()));
+            () => service.CreateSubscriptionAsync(organization, new StripeBillingOptions()));
 
         Assert.Contains("customer: cus_partial", ex.Message);
         Assert.Contains("subscription: <none>", ex.Message);
     }
 
-    private static StripeBillingInitializer Build(GlobalSettings globalSettings) =>
+    private static OrganizationStripeBillingService Build(GlobalSettings globalSettings) =>
         new(globalSettings, new CapturingOrganizationBillingService(), new StubPricingClient(Plan()));
 
     private static GlobalSettings Settings(

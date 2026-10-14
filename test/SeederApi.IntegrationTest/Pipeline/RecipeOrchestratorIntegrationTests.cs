@@ -166,14 +166,14 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task Execute_Options_BillingRequestedWithoutInitializer_ThrowsBeforeAnyWriteAsync()
+    public async Task Execute_Options_BillingRequestedWithoutBillingService_ThrowsBeforeAnyWriteAsync()
     {
         var orchestrator = NewOrchestrator(new NoOpManglerService());
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             orchestrator.ExecuteAsync(BillingOptions()));
 
-        Assert.Contains("IStripeBillingInitializer", ex.Message);
+        Assert.Contains("IOrganizationStripeBillingService", ex.Message);
         Assert.Equal(0, _db.Users.Count());
         Assert.Equal(0, _db.Organizations.Count());
     }
@@ -181,69 +181,69 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
     [Fact]
     public async Task Execute_Options_BillingRequested_ValidatesTheResolvedPlanTypeAsync()
     {
-        var initializer = new RecordingBillingInitializer(throwOnValidate: true);
-        var orchestrator = NewOrchestrator(new NoOpManglerService(), initializer);
+        var billingService = new RecordingOrganizationStripeBillingService(throwOnValidate: true);
+        var orchestrator = NewOrchestrator(new NoOpManglerService(), billingService);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             orchestrator.ExecuteAsync(BillingOptions(PlanType.TeamsMonthly)));
 
-        Assert.Equal([PlanType.TeamsMonthly], initializer.ValidatedPlanTypes);
+        Assert.Equal([PlanType.TeamsMonthly], billingService.ValidatedPlanTypes);
         Assert.Equal(0, _db.Organizations.Count());
     }
 
     [Fact]
     public async Task Execute_Preset_BillingRequested_ValidatesThePresetPlanTypeAsync()
     {
-        // The Free-plan rejection lives in the initializer, so the orchestrator has to hand it the plan
+        // The Free-plan rejection lives in the billing service, so the orchestrator has to hand it the plan
         // the preset will actually seed — read from the preset before anything is built.
-        var initializer = new RecordingBillingInitializer(throwOnValidate: true);
-        var orchestrator = NewOrchestrator(new NoOpManglerService(), initializer);
+        var billingService = new RecordingOrganizationStripeBillingService(throwOnValidate: true);
+        var orchestrator = NewOrchestrator(new NoOpManglerService(), billingService);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             orchestrator.ExecuteAsync("qa.stark-free-basic", stripeBilling: new StripeBillingOptions()));
 
-        Assert.Equal([PlanType.Free], initializer.ValidatedPlanTypes);
+        Assert.Equal([PlanType.Free], billingService.ValidatedPlanTypes);
         Assert.Equal(0, _db.Organizations.Count());
     }
 
     [Fact]
-    public async Task Execute_Preset_BillingRequestedWithoutInitializer_ThrowsBeforeAnyWriteAsync()
+    public async Task Execute_Preset_BillingRequestedWithoutBillingService_ThrowsBeforeAnyWriteAsync()
     {
         var orchestrator = NewOrchestrator(new NoOpManglerService());
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             orchestrator.ExecuteAsync("qa.enterprise-basic", stripeBilling: new StripeBillingOptions()));
 
-        Assert.Contains("IStripeBillingInitializer", ex.Message);
+        Assert.Contains("IOrganizationStripeBillingService", ex.Message);
         Assert.Equal(0, _db.Organizations.Count());
     }
 
     [Fact]
-    public async Task Execute_NoBillingOptIn_NeverTouchesTheInitializerAsync()
+    public async Task Execute_NoBillingOptIn_NeverTouchesTheBillingServiceAsync()
     {
         // The zero-Stripe-calls default. The stub throws from every member, so any consultation at all
-        // — validation or finalization — fails this test.
-        var initializer = new RecordingBillingInitializer(throwOnValidate: true);
-        var orchestrator = NewOrchestrator(new NoOpManglerService(), initializer);
+        // — validation or subscription creation — fails this test.
+        var billingService = new RecordingOrganizationStripeBillingService(throwOnValidate: true);
+        var orchestrator = NewOrchestrator(new NoOpManglerService(), billingService);
 
         // Fails on the unknown preset, proving execution got past the guard without consulting billing.
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             orchestrator.ExecuteAsync("non-existent-preset"));
 
         Assert.Contains("not found", ex.Message);
-        Assert.Empty(initializer.ValidatedPlanTypes);
+        Assert.Empty(billingService.ValidatedPlanTypes);
     }
 
     [Fact]
     public async Task Execute_Options_BillingAccepted_GatewayIdsReachTheResultAsync()
     {
         // The one test in this fixture that runs the real pipeline to completion: proves the DI
-        // registration (RecipeOrchestrator) and resolution (RecipeBuilderExtensions.WithStripeBilling)
-        // seam actually works, and that FinalizeOrganizationBillingStep's gateway IDs reach the result.
-        var initializer = new RecordingBillingInitializer(throwOnValidate: false);
+        // registration (RecipeOrchestrator) and resolution (RecipeBuilderExtensions.WithStripeOrganizationBilling)
+        // seam actually works, and that CreateOrganizationBillingStep's gateway IDs reach the result.
+        var billingService = new RecordingOrganizationStripeBillingService(throwOnValidate: false);
         var orchestrator = NewOrchestrator(
             new NoOpManglerService(),
-            initializer,
+            billingService,
             mapper: CreateRealMapper(),
             attachmentStorageService: new NoopAttachmentStorageService());
 
@@ -258,8 +258,8 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
 
         var result = await orchestrator.ExecuteAsync(options);
 
-        Assert.Equal([PlanType.TeamsMonthly], initializer.ValidatedPlanTypes);
-        Assert.NotNull(initializer.InitializedOrganization);
+        Assert.Equal([PlanType.TeamsMonthly], billingService.ValidatedPlanTypes);
+        Assert.NotNull(billingService.BilledOrganization);
         Assert.Equal("cus_test_stub", result.GatewayCustomerId);
         Assert.Equal("sub_test_stub", result.GatewaySubscriptionId);
         Assert.Equal(1, _db.Organizations.Count());
@@ -289,7 +289,7 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
 
     private RecipeOrchestrator NewOrchestrator(
         IManglerService mangler,
-        IStripeBillingInitializer? billingInitializer = null,
+        IOrganizationStripeBillingService? organizationStripeBillingService = null,
         IMapper? mapper = null,
         IAttachmentStorageService? attachmentStorageService = null)
     {
@@ -307,7 +307,7 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
             null!,
             NullLoggerFactory.Instance)
         {
-            BillingInitializer = billingInitializer is null ? null : () => billingInitializer,
+            OrganizationStripeBillingService = organizationStripeBillingService is null ? null : () => organizationStripeBillingService,
         };
         return new RecipeOrchestrator(deps);
     }
@@ -324,16 +324,16 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
     }
 
     /// <summary>
-    /// Records the plan types handed to <see cref="IStripeBillingInitializer.ValidateConfiguration"/> and,
+    /// Records the plan types handed to <see cref="IOrganizationStripeBillingService.ValidateConfiguration"/> and,
     /// when asked, rejects them — standing in for a host whose Stripe configuration is unusable. When
-    /// validation is not rejected, <see cref="InitializeOrganizationAsync"/> records the organization it
-    /// was handed and stamps gateway IDs onto it, standing in for a successful Stripe finalization.
+    /// validation is not rejected, <see cref="CreateSubscriptionAsync"/> records the organization it
+    /// was handed and stamps gateway IDs onto it, standing in for successful Stripe subscription creation.
     /// </summary>
-    private sealed class RecordingBillingInitializer(bool throwOnValidate) : IStripeBillingInitializer
+    private sealed class RecordingOrganizationStripeBillingService(bool throwOnValidate) : IOrganizationStripeBillingService
     {
         internal List<PlanType> ValidatedPlanTypes { get; } = [];
 
-        internal Organization? InitializedOrganization { get; private set; }
+        internal Organization? BilledOrganization { get; private set; }
 
         public void ValidateConfiguration(PlanType planType)
         {
@@ -344,9 +344,9 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
             }
         }
 
-        public Task InitializeOrganizationAsync(Organization organization, StripeBillingOptions options)
+        public Task CreateSubscriptionAsync(Organization organization, StripeBillingOptions options)
         {
-            InitializedOrganization = organization;
+            BilledOrganization = organization;
             organization.GatewayCustomerId = "cus_test_stub";
             organization.GatewaySubscriptionId = "sub_test_stub";
             return Task.CompletedTask;

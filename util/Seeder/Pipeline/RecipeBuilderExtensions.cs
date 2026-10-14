@@ -560,14 +560,15 @@ public static class RecipeBuilderExtensions
     /// <remarks>
     /// Opt-in only. This step makes live network calls. <c>RecipeOrchestrator.ValidateBillingOptIn</c> still
     /// validates the host's Stripe configuration before any entity is created, for fast feedback — but
-    /// <see cref="IStripeBillingInitializer.InitializeOrganizationAsync"/> also self-validates, so a caller that
-    /// skips the pre-flight check fails before touching Stripe rather than after.
+    /// <see cref="IOrganizationStripeBillingService.CreateSubscriptionAsync"/> also self-validates, so a
+    /// caller that skips the pre-flight check fails before touching Stripe rather than after.
     /// </remarks>
-    public static RecipeBuilder WithStripeBilling(this RecipeBuilder builder, StripeBillingOptions options)
+    public static RecipeBuilder WithStripeOrganizationBilling(
+        this RecipeBuilder builder, StripeBillingOptions options)
     {
         builder.HasBilling = true;
-        builder.AddAsyncStep(sp => new FinalizeOrganizationBillingStep(
-            sp.GetRequiredService<IStripeBillingInitializer>(), options));
+        builder.AddAsyncStep(sp => new CreateOrganizationBillingStep(
+            sp.GetRequiredService<IOrganizationStripeBillingService>(), options));
         return builder;
     }
 
