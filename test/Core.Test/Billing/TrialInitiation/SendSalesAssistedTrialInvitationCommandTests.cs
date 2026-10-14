@@ -190,6 +190,23 @@ public class SendSalesAssistedTrialInvitationCommandTests
 
     [Theory]
     [BitAutoData]
+    public async Task HandleAsync_EmptyProducts_ThrowsBadRequest(
+        string email,
+        string name,
+        string senderEmail,
+        SutProvider<SendSalesAssistedTrialInvitationCommand> sutProvider)
+    {
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.HandleAsync(email, name, senderEmail, ProductTierType.Enterprise, [], 7));
+
+        Assert.Equal("Select at least one product.", exception.Message);
+        await sutProvider.GetDependency<IMailer>()
+            .DidNotReceiveWithAnyArgs()
+            .SendEmail(Arg.Any<SalesAssistedTrialInvitationEmail>());
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task HandleAsync_PrivilegedControlsWithoutPasswordManager_ThrowsBadRequest(
         string email,
         string name,

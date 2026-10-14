@@ -35,7 +35,12 @@ public class SendSalesAssistedTrialInvitationCommand(
             throw new BadRequestException("Trial length must be between 1 and 30 days.");
         }
 
-        var requestedProducts = products as IReadOnlyCollection<ProductType> ?? [.. products];
+        var requestedProducts = products?.ToList() ?? [];
+
+        if (requestedProducts.Count == 0)
+        {
+            throw new BadRequestException("Select at least one product.");
+        }
 
         if (productTier == ProductTierType.Families && requestedProducts.Contains(ProductType.SecretsManager))
         {
