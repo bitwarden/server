@@ -1,7 +1,9 @@
 ﻿using System.Text.Json;
 using Bit.Api.IntegrationTest.Factories;
+using Bit.Api.Utilities;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.IdentityServer;
+using Bit.Core.Settings;
 using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
@@ -73,8 +75,9 @@ public class PublicApiOpenApiDocumentTests : IClassFixture<ApiApplicationFactory
                 o => o.OperationId!,
                 o => (o.Security ?? []).SelectMany(r => r.Values).Select(scopes => Describe("oauth2-client-credentials", scopes)).ToHashSet());
 
-        using var client = _factory.CreateClient();
-        using var served = JsonDocument.Parse(await client.GetStringAsync("specs/public/swagger.json"));
+        var document = GetDocument("public");
+        ServedSwaggerDocument.Configure(document, _factory.GetService<GlobalSettings>());
+        using var served = JsonDocument.Parse(await document.SerializeAsJsonAsync(OpenApiSpecVersion.OpenApi3_0));
 
         var operations = served.RootElement.GetProperty("paths").EnumerateObject()
             .SelectMany(p => p.Value.EnumerateObject())

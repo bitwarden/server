@@ -18,6 +18,10 @@
     <NoWarn>1701;1702;1591</NoWarn>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Api.IntegrationTest" />
+  </ItemGroup>
+
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Api' " />
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Api-SelfHost' " />
   <ItemGroup>
