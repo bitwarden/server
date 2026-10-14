@@ -318,6 +318,12 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
+    public Task SendPrivilegedControlsMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount,
+        IEnumerable<string> ownerEmails)
+    {
+        return Task.FromResult(0);
+    }
+
     public Task SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(Organization organization,
         int maxSeatCount,
         IEnumerable<string> ownerEmails)
