@@ -29,7 +29,7 @@ public class UsersController : Controller
     private readonly IAccessControlService _accessControlService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IUserService _userService;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly ISubscriberService _subscriberService;
     private readonly ILogger<UsersController> _logger;
 
@@ -41,7 +41,7 @@ public class UsersController : Controller
         IAccessControlService accessControlService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IUserService userService,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         ISubscriberService subscriberService,
         ILogger<UsersController> logger)
     {

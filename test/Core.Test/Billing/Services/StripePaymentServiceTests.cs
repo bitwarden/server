@@ -1371,10 +1371,9 @@ public class StripePaymentServiceTests
         SutProvider<StripePaymentService> sutProvider,
         User subscriber)
     {
-        // Arrange — SchedulePersonalPriceIncrease (Premium and Families price increases) calls
-        // CreateAndConfigureScheduleAsync with no phaseMetadata argument at all, so the schedules it
-        // creates carry no phase metadata whatsoever. This is the exact shape PriceIncreaseScheduler
-        // produces for a personal or Families price-increase schedule. It must still be repriced here;
+        // Arrange — Premium and Families price-increase schedules created before the managing_system
+        // marker existed carry no metadata at all: no schedule-level marker and no phase metadata.
+        // This is the exact shape those legacy schedules have. It must still be repriced here;
         // this is the regression guard for the bug where the ownership gate was inverted and every
         // Premium/Families price-increase schedule (classified Foreign, since it carries no
         // migration-cohort metadata) silently stopped being repriced on this endpoint.
@@ -1406,6 +1405,79 @@ public class StripePaymentServiceTests
         var schedule = new SubscriptionSchedule
         {
             Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase { StartDate = DateTime.UtcNow.AddDays(-30) },
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddDays(10),
+                    Items =
+                    [
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            Price = new Price { UnitAmount = 4788, ProductId = "prod_families", Nickname = "Families" }
+                        }
+                    ]
+                }
+            ]
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(subscriber.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionScheduleAsync("sub_sched_test123", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert — the Phase 2 amount is applied.
+        var item = Assert.Single(result.Subscription!.Items);
+        Assert.Equal(47.88m, item.Amount);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_PersonalPriceIncreaseSchedule_StillOverridesCurrentLineItems(
+        SutProvider<StripePaymentService> sutProvider,
+        User subscriber)
+    {
+        // Arrange — schedules created by the Premium/Families price increase now carry the personal
+        // managing-system marker and must still be repriced.
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
+            ScheduleId = "sub_sched_test123",
+            Customer = new Customer { Discount = null },
+            Discounts = new List<Discount>(),
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Plan = new Plan { ProductId = "prod_families", Nickname = "Families 2019", Amount = 1200, Interval = "year" },
+                        Quantity = 1
+                    }
+                ]
+            }
+        };
+
+        var schedule = new SubscriptionSchedule
+        {
+            Status = SubscriptionScheduleStatus.Active,
+            Metadata = new Dictionary<string, string>
+            {
+                [StripeConstants.MetadataKeys.ManagingSystem] = StripeConstants.ManagingSystems.PersonalPriceIncrease
+            },
             Phases =
             [
                 new SubscriptionSchedulePhase { StartDate = DateTime.UtcNow.AddDays(-30) },

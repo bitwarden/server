@@ -43,6 +43,8 @@ public class CurrentContext(
     public virtual bool ClientVersionIsPrerelease { get; set; }
     public virtual IdentityClientType IdentityClientType { get; set; }
     public virtual Guid? ServiceAccountOrganizationId { get; set; }
+    public virtual Guid? PamAccessConnectorId { get; set; }
+    public virtual Guid? PamAccessConnectorOrganizationId { get; set; }
 
     public async virtual Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings)
     {
@@ -153,6 +155,16 @@ public class CurrentContext(
         if (IdentityClientType == IdentityClientType.ServiceAccount)
         {
             ServiceAccountOrganizationId = new Guid(GetClaimValue(claimsDict, Claims.Organization));
+        }
+
+        if (IdentityClientType == IdentityClientType.AccessConnector)
+        {
+            if (Guid.TryParse(subject, out var accessConnectorId))
+            {
+                PamAccessConnectorId = accessConnectorId;
+            }
+
+            PamAccessConnectorOrganizationId = new Guid(GetClaimValue(claimsDict, Claims.Organization));
         }
 
         DeviceIdentifier = GetClaimValue(claimsDict, Claims.Device);
@@ -319,12 +331,6 @@ public class CurrentContext(
     {
         return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                     && (o.Permissions?.EditAnyCollection ?? false)) ?? false);
-    }
-
-    public async Task<bool> ViewAllCollections(Guid orgId)
-    {
-        var org = GetOrganization(orgId);
-        return await EditAnyCollection(orgId) || (org != null && org.Permissions.DeleteAnyCollection);
     }
 
     public async Task<bool> ManageGroups(Guid orgId)

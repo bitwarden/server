@@ -105,7 +105,8 @@ public class HandlebarsMailService : IMailService
         ProductTierType productTier,
         IEnumerable<ProductType> products,
         int trialLength,
-        bool paymentOptional = false)
+        bool paymentOptional = false,
+        int? pamSeatMinimum = null)
     {
         var message = CreateDefaultMessage("Verify your email", email);
         var model = new TrialInitiationVerifyEmail
@@ -118,7 +119,8 @@ public class HandlebarsMailService : IMailService
             ProductTier = productTier,
             Product = products,
             TrialLength = trialLength,
-            PaymentOptional = paymentOptional
+            PaymentOptional = paymentOptional,
+            PamSeatMinimum = pamSeatMinimum
         };
         await AddMessageContentAsync(message, "Billing.TrialInitiationVerifyEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
@@ -1549,7 +1551,7 @@ public class HandlebarsMailService : IMailService
     }
 
     public async Task SendTrustedDeviceAdminApprovalEmailAsync(string email, DateTime utcNow, string ip,
-        string deviceTypeAndIdentifier)
+        string deviceTypeDisplayName)
     {
         var message = CreateDefaultMessage("Login request approved", email);
         var model = new TrustedDeviceAdminApprovalViewModel
@@ -1558,7 +1560,7 @@ public class HandlebarsMailService : IMailService
             TheTime = utcNow.ToShortTimeString(),
             TimeZone = _utcTimeZoneDisplay,
             IpAddress = ip,
-            DeviceType = deviceTypeAndIdentifier,
+            DeviceType = deviceTypeDisplayName,
         };
         await AddMessageContentAsync(message, "Auth.TrustedDeviceAdminApproval", model);
         message.Category = "TrustedDeviceAdminApproval";

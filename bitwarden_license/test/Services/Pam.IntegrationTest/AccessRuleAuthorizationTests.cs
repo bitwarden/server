@@ -2,14 +2,8 @@
 using System.Net.Http.Json;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
-using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.Providers.Interfaces;
-using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.Repositories;
 using Xunit;
 
 namespace Bit.Services.Pam.IntegrationTest;
@@ -146,31 +140,4 @@ public class AccessRuleAuthorizationTests(ApiApplicationFactory factory)
         "DELETE" => Client.DeleteAsync(AccessRuleUrl(Guid.NewGuid())),
         _ => throw new ArgumentOutOfRangeException(nameof(method))
     };
-
-    private async Task LoginAsProviderForOrganizationAsync()
-    {
-        var providerEmail = $"provider-{Guid.NewGuid()}@bitwarden.com";
-        await Factory.LoginWithNewAccount(providerEmail);
-
-        await Factory.GetService<ICreateProviderCommand>()
-            .CreateBusinessUnitAsync(
-                new Provider { Name = "provider", Type = ProviderType.BusinessUnit },
-                providerEmail,
-                PlanType.EnterpriseAnnually2023,
-                10);
-
-        var providerUserAccount = await Factory.GetService<IUserRepository>().GetByEmailAsync(providerEmail);
-        var providerUser = (await Factory.GetService<IProviderUserRepository>()
-            .GetManyByUserAsync(providerUserAccount!.Id)).First();
-
-        await Factory.GetService<IProviderOrganizationRepository>().CreateAsync(new ProviderOrganization
-        {
-            ProviderId = providerUser.ProviderId,
-            OrganizationId = Organization.Id,
-            Key = null,
-            Settings = null
-        });
-
-        await LoginHelper.LoginAsync(providerEmail);
-    }
 }

@@ -97,6 +97,74 @@ public class CipherRequestModel : IValidatableObject
             yield return new ValidationResult(
                 "The Name field is required.", new[] { nameof(Name) });
         }
+
+        if (!string.IsNullOrWhiteSpace(Data) && !isBlobEncrypted)
+        {
+            var error = ValidateDataShape();
+            if (error != null)
+            {
+                yield return error;
+            }
+        }
+
+        if (Attachments != null)
+        {
+            // The legacy map's values are file names that clients store encrypted. Attributes cannot be
+            // applied to a dictionary's value type, so validate them here to match Attachments2.
+            var encryptedString = new EncryptedStringAttribute();
+            var encryptedStringLength = new EncryptedStringLengthAttribute(1000);
+
+            foreach (var attachment in Attachments.Where(a =>
+                         !encryptedString.IsValid(a.Value) || !encryptedStringLength.IsValid(a.Value)))
+            {
+                yield return new ValidationResult(
+                    $"The attachment file name for {attachment.Key} is not a valid encrypted string.",
+                    new[] { nameof(Attachments) });
+            }
+        }
+    }
+
+    private ValidationResult ValidateDataShape()
+    {
+        const string msg = "The Data field is not valid for the specified Type.";
+        try
+        {
+            object result;
+            switch (Type)
+            {
+                case CipherType.Login:
+                    result = JsonSerializer.Deserialize<CipherLoginData>(Data);
+                    break;
+                case CipherType.Card:
+                    result = JsonSerializer.Deserialize<CipherCardData>(Data);
+                    break;
+                case CipherType.Identity:
+                    result = JsonSerializer.Deserialize<CipherIdentityData>(Data);
+                    break;
+                case CipherType.SecureNote:
+                    result = JsonSerializer.Deserialize<CipherSecureNoteData>(Data);
+                    break;
+                case CipherType.SSHKey:
+                    result = JsonSerializer.Deserialize<CipherSSHKeyData>(Data);
+                    break;
+                case CipherType.BankAccount:
+                    result = JsonSerializer.Deserialize<CipherBankAccountData>(Data);
+                    break;
+                case CipherType.DriversLicense:
+                    result = JsonSerializer.Deserialize<CipherDriversLicenseData>(Data);
+                    break;
+                case CipherType.Passport:
+                    result = JsonSerializer.Deserialize<CipherPassportData>(Data);
+                    break;
+                default:
+                    return null;
+            }
+            return result == null ? new ValidationResult(msg, new[] { nameof(Data) }) : null;
+        }
+        catch (JsonException)
+        {
+            return new ValidationResult(msg, new[] { nameof(Data) });
+        }
     }
 
     /// <summary>
@@ -222,8 +290,14 @@ public class CipherRequestModel : IValidatableObject
                 {
                     continue;
                 }
+                // The legacy map carries only a file name and cannot express a per-attachment key.
+                // Applying it to a keyed attachment would null out the only copy of that key and
+                // render the file permanently undecryptable, so leave modern attachments untouched.
+                if (attachment.Value.Key != null)
+                {
+                    continue;
+                }
                 attachment.Value.FileName = attachmentForKey;
-                attachment.Value.Key = null;
             }
         }
 

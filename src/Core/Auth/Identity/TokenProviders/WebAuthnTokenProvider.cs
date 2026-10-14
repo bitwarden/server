@@ -2,6 +2,7 @@
 #nullable disable
 
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
@@ -53,10 +54,12 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
             return null;
         }
 
+        var appId = CoreHelpers.U2fAppIdUrl(_globalSettings);
+
         var exts = new AuthenticationExtensionsClientInputs()
         {
             UserVerificationMethod = true,
-            AppID = CoreHelpers.U2fAppIdUrl(_globalSettings),
+            AppID = appId,
         };
 
         var options = _fido2.GetAssertionOptions(new GetAssertionOptionsParams
@@ -67,14 +70,14 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
         });
 
         // TODO: Remove this when newtonsoft legacy converters are gone
-        provider.MetaData["login"] = JsonSerializer.Serialize(options);
+        provider.MetaData["login"] = WithAppIdExtension(JsonSerializer.Serialize(options), appId);
 
         var providers = user.GetTwoFactorProviders();
         providers[TwoFactorProviderType.WebAuthn] = provider;
         user.SetTwoFactorProviders(providers);
         await userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn, logEvent: false);
 
-        return options.ToJson();
+        return WithAppIdExtension(options.ToJson(), appId);
     }
 
     public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
@@ -98,6 +101,11 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
 
         var jsonOptions = login.ToString();
         var options = AssertionOptions.FromJson(jsonOptions);
+
+        // Always apply the server's own U2F AppID, also after a Fido2 version that serializes it again.
+        // The AppID never comes from the stored challenge or the client, so challenges stored without one still validate.
+        options.Extensions ??= new AuthenticationExtensionsClientInputs();
+        options.Extensions.AppID = CoreHelpers.U2fAppIdUrl(_globalSettings);
 
         var webAuthCred = keys.Find(k => k.Item2.Descriptor.Id.SequenceEqual(clientResponse.RawId));
 
@@ -149,6 +157,20 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
     private bool HasProperMetaData(TwoFactorProvider provider)
     {
         return provider?.MetaData?.Any() ?? false;
+    }
+
+    // Fido2 4.x does not serialize the appid extension input. Fido2 5.x fixes this, and then this helper is no longer needed.
+    private static string WithAppIdExtension(string optionsJson, string appId)
+    {
+        var root = JsonNode.Parse(optionsJson)!.AsObject();
+        if (root["extensions"] is not JsonObject extensions)
+        {
+            extensions = new JsonObject();
+            root["extensions"] = extensions;
+        }
+
+        extensions["appid"] = appId;
+        return root.ToJsonString();
     }
 
     private List<Tuple<string, TwoFactorProvider.WebAuthnData>> LoadKeys(TwoFactorProvider provider)

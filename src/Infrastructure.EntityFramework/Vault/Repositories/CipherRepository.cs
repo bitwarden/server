@@ -137,12 +137,15 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
 
     public async Task CreateAsync(CipherDetails cipher, IEnumerable<Guid> collectionIds)
     {
+        // CreateAsyncReturnCipher nulls cipher.UserId for org ciphers (the row itself stores no
+        // UserId). Capture it first so collection assignment still scopes to the acting user.
+        var savingUserId = cipher.UserId;
         cipher = await CreateAsyncReturnCipher(cipher);
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             await UpdateCollectionsAsync(dbContext, cipher.Id,
-                cipher.UserId, cipher.OrganizationId, collectionIds);
+                savingUserId, cipher.OrganizationId, collectionIds);
             await dbContext.SaveChangesAsync();
         }
     }

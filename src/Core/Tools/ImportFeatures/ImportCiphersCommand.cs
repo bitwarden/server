@@ -6,11 +6,11 @@ using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Tools.ImportFeatures.Interfaces;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
+using Bitwarden.Server.Sdk.Features;
 
 namespace Bit.Core.Tools.ImportFeatures;
 

@@ -4,10 +4,10 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
-using Bit.Core.Billing.Organizations.Schedules;
-using Bit.Core.Billing.Organizations.Schedules.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Schedules;
+using Bit.Core.Billing.Subscriptions.Schedules.Enums;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using Stripe;
@@ -21,7 +21,8 @@ public class RedeemAnnualUpgradeOfferCommand(
     IGetChurnOfferCohortMembershipQuery getChurnOfferCohortMembershipQuery,
     IPriceIncreaseScheduler priceIncreaseScheduler,
     IPricingClient pricingClient,
-    IStripeAdapter stripeAdapter)
+    IStripeAdapter stripeAdapter,
+    ISubscriptionScheduleCreator subscriptionScheduleCreator)
     : BaseBillingCommand<RedeemAnnualUpgradeOfferCommand>(logger), IRedeemAnnualUpgradeOfferCommand
 {
     private readonly ILogger<RedeemAnnualUpgradeOfferCommand> _logger = logger;
@@ -81,7 +82,7 @@ public class RedeemAnnualUpgradeOfferCommand(
             })
             .ToList();
 
-        // MapOrNull above already excluded Unexpanded, Foreign, and AnnualUpgrade ownership; only None and PriceMigration remain.
+        // MapOrNull above already excluded Unexpanded, Foreign, Unrecognized, PersonalPriceIncrease, and AnnualUpgrade ownership; only None and BusinessPriceIncrease remain.
         var ownership = SubscriptionScheduleOwnershipMapper.Map(subscription);
 
         // Releasing a price-migration schedule is intended: annual-latest is where the migration was
@@ -89,11 +90,13 @@ public class RedeemAnnualUpgradeOfferCommand(
         // required even when no schedule exists, because assignment precedes scheduling.
         SubscriptionSchedule? scheduleToRelease = ownership switch
         {
-            OrganizationSubscriptionScheduleOwnership.None or
-                OrganizationSubscriptionScheduleOwnership.Foreign or
-                OrganizationSubscriptionScheduleOwnership.Unexpanded => null,
-            OrganizationSubscriptionScheduleOwnership.AnnualUpgrade or
-                OrganizationSubscriptionScheduleOwnership.PriceMigration => subscription.Schedule
+            SubscriptionScheduleOwnership.None or
+                SubscriptionScheduleOwnership.Foreign or
+                SubscriptionScheduleOwnership.PersonalPriceIncrease or
+                SubscriptionScheduleOwnership.Unrecognized or
+                SubscriptionScheduleOwnership.Unexpanded => null,
+            SubscriptionScheduleOwnership.AnnualUpgrade or
+                SubscriptionScheduleOwnership.BusinessPriceIncrease => subscription.Schedule
         };
 
         // Stripe permits one active schedule per subscription, so the prior schedule has to go
@@ -102,82 +105,29 @@ public class RedeemAnnualUpgradeOfferCommand(
         // here would make a failed create unrecoverable.
         await priceIncreaseScheduler.ReleaseSchedule(scheduleToRelease);
 
+        // MapOrNull refused any subscription without line items, so the current period end is set.
+        var periodEnd = subscription.GetCurrentPeriodEnd()!.Value;
+        var phase2Options = new SubscriptionSchedulePhaseOptions
+        {
+            StartDate = periodEnd,
+            EndDate = periodEnd.AddYears(1),
+            Items = phase2Items,
+            Discounts = DiscountExtensions.BuildCurrentPhaseDiscounts(subscription),
+            ProrationBehavior = ProrationBehavior.None
+        };
+
         SubscriptionSchedule schedule;
 
         try
         {
-            schedule = await stripeAdapter.CreateSubscriptionScheduleAsync(
-                new SubscriptionScheduleCreateOptions { FromSubscription = subscription.Id });
+            schedule = await subscriptionScheduleCreator.CreateWithPhasesAsync(
+                subscription, phase2Options, ManagingSystems.AnnualUpgrade);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex,
                 "{Command}: Failed to create annual-upgrade schedule for Organization ({OrganizationId}) after releasing schedule ({ReleasedScheduleId}). The organization keeps its migration cohort assignment, so the recovery scheduler will re-create the released schedule on the next upcoming-invoice or subscription-updated event; verify it was re-created.",
                 CommandName, organization.Id, scheduleToRelease?.Id);
-
-            throw;
-        }
-
-        try
-        {
-            var phase1 = schedule.Phases[0];
-
-            var sourcePlanType = organization.PlanType.ToString();
-
-            // Phase 1 must round-trip its discounts. Omitting them is accepted by Stripe and
-            // silently strips them from the live subscription.
-            var phase1Options = new SubscriptionSchedulePhaseOptions
-            {
-                StartDate = phase1.StartDate,
-                EndDate = phase1.EndDate,
-                Items = [.. phase1.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
-                {
-                    Price = i.PriceId,
-                    Quantity = i.Quantity,
-                    Discounts = DiscountExtensions.BuildPhaseItemLevelDiscounts(
-                        i.Discounts?.Select(d => d.CouponId) ?? [])
-                })],
-                Discounts = ReusedPhaseDiscounts(subscription),
-                // Only the marker's presence is read; the value is for triage.
-                Metadata = new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = sourcePlanType },
-                ProrationBehavior = ProrationBehavior.None
-            };
-
-            // Stripe requires every phase to be bounded (end_date or duration); Phase 2 runs
-            // exactly one annual term, then the schedule releases per EndBehavior below.
-            var phase2Options = new SubscriptionSchedulePhaseOptions
-            {
-                StartDate = phase1.EndDate,
-                EndDate = phase1.EndDate.AddYears(1),
-                Items = phase2Items,
-                Discounts = ReusedPhaseDiscounts(subscription),
-                Metadata = new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = sourcePlanType },
-                ProrationBehavior = ProrationBehavior.None
-            };
-
-            await stripeAdapter.UpdateSubscriptionScheduleAsync(schedule.Id,
-                new SubscriptionScheduleUpdateOptions
-                {
-                    EndBehavior = SubscriptionScheduleEndBehavior.Release,
-                    Phases = [phase1Options, phase2Options]
-                });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex,
-                "{Command}: Failed to configure annual-upgrade schedule ({ScheduleId}) for Organization ({OrganizationId}), attempting to release orphaned schedule",
-                CommandName, schedule.Id, organization.Id);
-
-            try
-            {
-                await stripeAdapter.ReleaseSubscriptionScheduleAsync(schedule.Id);
-            }
-            catch (StripeException releaseEx)
-            {
-                _logger.LogError(releaseEx,
-                    "{Command}: Failed to release orphaned annual-upgrade schedule ({ScheduleId}) for Organization ({OrganizationId})",
-                    CommandName, schedule.Id, organization.Id);
-            }
 
             throw;
         }
@@ -193,10 +143,4 @@ public class RedeemAnnualUpgradeOfferCommand(
 
         return new None();
     });
-
-    // Reuse existing discounts (nothing re-minted); null lets Stripe inherit the customer's at renewal.
-    private static List<SubscriptionSchedulePhaseDiscountOptions>? ReusedPhaseDiscounts(Subscription subscription) =>
-        subscription.Discounts is { Count: > 0 }
-            ? [.. subscription.Discounts.Select(discount => new SubscriptionSchedulePhaseDiscountOptions { Discount = discount.Id })]
-            : null;
 }
