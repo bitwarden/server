@@ -93,7 +93,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IUpdateUserResetPasswordEnrollmentCommand _updateUserResetPasswordEnrollmentCommand;
     private readonly IAcceptOrganizationInviteLinkCommand _acceptOrganizationInviteLinkCommand;
     private readonly IConfirmOrganizationInviteLinkCommand _confirmOrganizationInviteLinkCommand;
-    private readonly IGetOrganizationInviteCommand _getOrganizationInviteCommand;
+    private readonly IGetOrganizationInviteQuery _getOrganizationInviteQuery;
     private readonly V2_UpdateUserCommand.IUpdateOrganizationUserCommand _updateOrganizationUserCommandVNext;
     private readonly IGetActingUserForOrganizationQuery _getActingUserForOrganizationQuery;
     private readonly IGlobalSettings _globalSettings;
@@ -131,7 +131,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IGetPendingAutoConfirmUsersQuery getPendingAutoConfirmUsersQuery,
         IAcceptOrganizationInviteLinkCommand acceptOrganizationInviteLinkCommand,
         IConfirmOrganizationInviteLinkCommand confirmOrganizationInviteLinkCommand,
-        IGetOrganizationInviteCommand getOrganizationInviteCommand,
+        IGetOrganizationInviteQuery getOrganizationInviteQuery,
         V2_UpdateUserCommand.IUpdateOrganizationUserCommand updateOrganizationUserCommandVNext,
         IGetActingUserForOrganizationQuery getActingUserForOrganizationQuery,
         IGlobalSettings globalSettings,
@@ -169,7 +169,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _updateUserResetPasswordEnrollmentCommand = updateUserResetPasswordEnrollmentCommand;
         _acceptOrganizationInviteLinkCommand = acceptOrganizationInviteLinkCommand;
         _confirmOrganizationInviteLinkCommand = confirmOrganizationInviteLinkCommand;
-        _getOrganizationInviteCommand = getOrganizationInviteCommand;
+        _getOrganizationInviteQuery = getOrganizationInviteQuery;
         _updateOrganizationUserCommandVNext = updateOrganizationUserCommandVNext;
         _getActingUserForOrganizationQuery = getActingUserForOrganizationQuery;
         _globalSettings = globalSettings;
@@ -948,7 +948,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _getOrganizationInviteCommand.GetInviteAsync(new GetOrganizationInviteRequest
+        var result = await _getOrganizationInviteQuery.GetInviteAsync(new GetOrganizationInviteRequest
         {
             OrganizationId = model.OrganizationId,
             Code = model.Code,
