@@ -37,7 +37,7 @@ public class SetKeyConnectorKeyCommand : ISetKeyConnectorKeyCommand
         _userRepository = userRepository;
     }
 
-    public async Task SetKeyConnectorKeyForUserAsync(User user, KeyConnectorKeysData keyConnectorKeysData)
+    public async Task SetKeyConnectorKeyForUserAsync(User user, KeyConnectorKeysData keyConnectorKeysData, bool acceptOrganizationInvite = true)
     {
         var authorizationResult = await _authorizationService.AuthorizeAsync(_currentContext.HttpContext.User, user,
             KeyConnectorOperations.Use);
@@ -60,8 +60,11 @@ public class SetKeyConnectorKeyCommand : ISetKeyConnectorKeyCommand
             keyConnectorKeysData.AccountKeys.ToAccountKeysData(), updateUserDataTasks);
 
         await _eventService.LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
-
-        await _acceptOrgUserCommand.AcceptOrgUserByOrgSsoIdAsync(keyConnectorKeysData.OrgIdentifier, user,
-            _userService);
+        // TODO do not accept a user's ending invite if they are using invite-link
+        if (acceptOrganizationInvite)
+        {
+            await _acceptOrgUserCommand.AcceptOrgUserByOrgSsoIdAsync(keyConnectorKeysData.OrgIdentifier, user,
+                _userService);
+        }
     }
 }

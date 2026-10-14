@@ -541,7 +541,8 @@ public class UserService : UserManager<User>, IUserService
     }
 
     // TODO removed with https://bitwarden.atlassian.net/browse/PM-27328
-    public async Task<IdentityResult> SetKeyConnectorKeyAsync(User user, string key, string orgIdentifier)
+    public async Task<IdentityResult> SetKeyConnectorKeyAsync(
+        User user, string key, string orgIdentifier, bool acceptOrganizationInvite = true)
     {
         var identityResult = CheckCanUseKeyConnector(user);
         if (identityResult != null)
@@ -556,7 +557,11 @@ public class UserService : UserManager<User>, IUserService
         await _userRepository.ReplaceAsync(user);
         await _eventService.LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
 
-        await _acceptOrgUserCommand.AcceptOrgUserByOrgSsoIdAsync(orgIdentifier, user, this);
+        //TODO need to move this set-key-connector-key to the new sso-jit-provision-finish controller
+        if (acceptOrganizationInvite)
+        {
+            await _acceptOrgUserCommand.AcceptOrgUserByOrgSsoIdAsync(orgIdentifier, user, this);
+        }
 
         return IdentityResult.Success;
     }

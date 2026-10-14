@@ -9,5 +9,5 @@ namespace Bit.Core.KeyManagement.Commands.Interfaces;
 /// </summary>
 public interface ISetKeyConnectorKeyCommand
 {
-    Task SetKeyConnectorKeyForUserAsync(User user, KeyConnectorKeysData keyConnectorKeysData);
+    Task SetKeyConnectorKeyForUserAsync(User user, KeyConnectorKeysData keyConnectorKeysData, bool acceptOrganizationInvite = true);
 }

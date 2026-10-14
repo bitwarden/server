@@ -219,13 +219,15 @@ public class AccountsKeyManagementController : Controller
         if (model.IsV2Request())
         {
             // V2 account registration
-            await _setKeyConnectorKeyCommand.SetKeyConnectorKeyForUserAsync(user, model.ToKeyConnectorKeysData());
+            await _setKeyConnectorKeyCommand.SetKeyConnectorKeyForUserAsync(
+                user, model.ToKeyConnectorKeysData(), model.AcceptOrganizationInvite);
         }
         else
         {
             // V1 account registration
             // TODO removed with https://bitwarden.atlassian.net/browse/PM-27328
-            var result = await _userService.SetKeyConnectorKeyAsync(model.ToUser(user), model.Key!, model.OrgIdentifier);
+            var result = await _userService.SetKeyConnectorKeyAsync(
+                model.ToUser(user), model.Key!, model.OrgIdentifier, model.AcceptOrganizationInvite);
             if (result.Succeeded)
             {
                 return;

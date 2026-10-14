@@ -42,6 +42,8 @@ public class SetKeyConnectorKeyRequestModel : IValidatableObject
     [Required]
     public required string OrgIdentifier { get; init; }
 
+    public bool AcceptOrganizationInvite { get; set; } = true;
+
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (IsV2Request())
