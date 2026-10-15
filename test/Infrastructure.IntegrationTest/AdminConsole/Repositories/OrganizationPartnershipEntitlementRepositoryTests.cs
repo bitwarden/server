@@ -316,6 +316,23 @@ public class OrganizationPartnershipEntitlementRepositoryTests
     }
 
     [Theory, DatabaseData]
+    public async Task GetManyCanceledWithExpiredResumeWindowAsync_CanceledWithoutBindingOrWindow_IsExcluded(
+        IOrganizationPartnershipEntitlementRepository repository,
+        IOrganizationPartnershipRepository partnershipRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        var partnership = await CreatePartnershipAsync(partnershipRepository, organizationRepository);
+        var entitlement = NewEntitlement(partnership, "customer-1");
+        entitlement.State = PartnershipEntitlementState.Canceled;
+        entitlement.CanceledDate = _asOf.AddDays(-1);
+        await repository.CreateAsync(entitlement);
+
+        var results = await GetExpiredForPartnershipAsync(repository, partnership);
+
+        Assert.Empty(results);
+    }
+
+    [Theory, DatabaseData]
     public async Task GetManyCanceledWithExpiredResumeWindowAsync_NotCanceled_IsExcluded(
         IOrganizationPartnershipEntitlementRepository repository,
         IOrganizationPartnershipRepository partnershipRepository,
