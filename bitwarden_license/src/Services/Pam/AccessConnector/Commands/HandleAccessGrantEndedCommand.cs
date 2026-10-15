@@ -1,11 +1,11 @@
 ﻿using Bit.Core;
-using Bit.Core.Services;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.AccessConnector.Commands.Interfaces;
 using Bit.Services.Pam.Services;
+using Bitwarden.Server.Sdk.Features;
 
 namespace Bit.Services.Pam.AccessConnector.Commands;
 

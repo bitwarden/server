@@ -1,6 +1,6 @@
 ﻿using Bit.Core;
 using Bit.Core.Jobs;
-using Bit.Core.Services;
+using Bitwarden.Server.Sdk.Features;
 using Quartz;
 
 namespace Bit.Services.Pam.AccessConnector.Jobs;
