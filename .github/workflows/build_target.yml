@@ -1,9 +1,8 @@
 # This workflow builds fork PRs in the context of the PR target, with access to secrets.
-# It only runs when a user with write access adds the "ci:signed-build" label to a fork PR. Pushes to the PR branch
-# (including "Update branch") do not trigger it. The label is removed once the build starts, so every new commit
-# needs to be reviewed and labeled again.
-# Only add the label after reviewing the PR to ensure that no malicious code has been introduced,
-# as it allows the code on the forked branch to have access to workflow secrets.
+# It only runs when a user with write access adds the "ci:signed-build" label to a fork PR.
+# Pushes to the PR branch (including "Update branch") do not trigger it.
+# The label is removed once the build starts, so every new commit needs to be reviewed and labeled again.
+# Only add the label after reviewing the PR to ensure that no malicious code has been introduced, as it allows the code on the forked branch to have access to workflow secrets.
 
 name: Build (Fork PR)
 
