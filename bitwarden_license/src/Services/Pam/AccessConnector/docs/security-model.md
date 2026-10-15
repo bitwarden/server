@@ -157,13 +157,15 @@ the push would see nothing changed, skip the sync, and keep serving the pre-rota
 
 ## Administrative authority
 
-The rotation admin surface is restricted to an Owner or an Admin by
+The rotation admin surface is restricted to an Owner, an Admin, or a Custom user with `ManageRotation` by
 [`ManageAccessConnectorRequirement`](../Api/Authorization/ManageAccessConnectorRequirement.cs). Two things about it
 are deliberate:
 
-- **There is no custom-permission arm.** PAM's only permission is authority over access-rule
-  authorship — over who may lease a credential. That is not the same authority as over the access
-  connectors that rewrite those credentials at the target.
+- **Item access still applies.** An access connector receives the cipher of every config on the
+  target systems it serves, and the organization key decrypts it. So every rotation config write, and
+  assigning an access connector to a target system, also needs edit access, with the password visible,
+  to each cipher involved ([`CanEditRotationCiphersQuery`](../Queries/CanEditRotationCiphersQuery.cs)).
+  An Admin is held to it too, unless the organization lets admins manage all collections and items.
 - **There is no provider arm.** The requirement implements `IOrganizationRequirement` directly
   rather than deriving from the base permission requirement, whose final arm authorizes any provider
   managing the organization. Registering an access connector hands it the organization key, and
