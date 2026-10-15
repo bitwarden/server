@@ -532,4 +532,41 @@ public class InvoicePreviewBuilderTests
         Assert.Equal(0.005m, preview.PasswordManager.Seats.Cost); // 0.5¢ unit price ÷ 100 — UnitAmountDecimal avoids the old truncate-to-0
         Assert.Equal(1.50m, preview.Total); // 300 × 0.5¢ ÷ 100
     }
+
+    // A reference that is known to the map but has no builder branch would stay in the total and appear in
+    // no section, with nothing logged. Every known reference must land somewhere.
+    [Theory]
+    [InlineData("pm-seat")]
+    [InlineData("pm-storage")]
+    [InlineData("sm-seat")]
+    [InlineData("sm-service-account")]
+    [InlineData("pam-seat")]
+    public void BuildFromInvoice_EveryKnownReference_IsPlacedAndReconciles(string reference)
+    {
+        var invoice = Deserialize($$"""
+        {
+          "id": "in_test", "total": 1000, "amount_due": 1000,
+          "lines": { "data": [
+            { "amount": 1000, "quantity": 1,
+              "parent": { "subscription_item_details": { "proration": false }, "type": "subscription_item_details" },
+              "pricing": { "price_details": { "price": { "id": "price_x", "unit_amount_decimal": "1000", "metadata": { "purchasable_reference": "{{reference}}" } } } } }
+          ] }
+        }
+        """);
+
+        var preview = Builder(out var logger).Build(invoice, PlanTierType.Enterprise, PlanCadenceType.Annually);
+
+        var placed = Assert.Single(
+            new[]
+            {
+                preview.PasswordManager.Seats,
+                preview.PasswordManager.AdditionalStorage,
+                preview.SecretsManager?.Seats,
+                preview.SecretsManager?.AdditionalServiceAccounts,
+                preview.PrivilegedControls?.Seats,
+            },
+            item => item?.Reference == reference);
+        Assert.Equal(preview.Total, placed!.Quantity * placed.Cost);
+        Assert.Empty(logger.Errors);
+    }
 }

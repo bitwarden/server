@@ -320,6 +320,11 @@ public class CipherRequestModelTests
         Assert.Empty(results);
     }
 
+    // A valid EncString (type 2 AesCbc256_B64) so [EncryptedString] on Name passes and
+    // IValidatableObject.Validate is called (it is skipped when property annotations fail).
+    private const string ValidEncString =
+        "2.AAECAwQFBgcICQoLDA0ODw==|aGVsbG8=|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=";
+
     [Fact]
     public void ToCipher_LegacyAttachmentsMap_DoesNotClearKeyOfKeyedAttachment()
     {
@@ -332,8 +337,8 @@ public class CipherRequestModelTests
                 new CipherAttachment.MetaData
                 {
                     AttachmentId = attachmentId,
-                    FileName = ENC_STRING,
-                    Key = ENC_STRING,
+                    FileName = ValidEncString,
+                    Key = ValidEncString,
                 }
             }
         });
@@ -341,16 +346,16 @@ public class CipherRequestModelTests
         var request = new CipherRequestModel
         {
             Type = CipherType.Login,
-            Name = ENC_STRING,
+            Name = ValidEncString,
             Login = new CipherLoginModel(),
-            Attachments = new Dictionary<string, string> { { attachmentId, ENC_STRING } },
+            Attachments = new Dictionary<string, string> { { attachmentId, ValidEncString } },
         };
 
         request.ToCipher(cipher);
 
         var attachment = cipher.GetAttachments()[attachmentId];
-        Assert.Equal(ENC_STRING, attachment.Key);
-        Assert.Equal(ENC_STRING, attachment.FileName);
+        Assert.Equal(ValidEncString, attachment.Key);
+        Assert.Equal(ValidEncString, attachment.FileName);
     }
 
     [Fact]
@@ -366,7 +371,7 @@ public class CipherRequestModelTests
                 new CipherAttachment.MetaData
                 {
                     AttachmentId = attachmentId,
-                    FileName = ENC_STRING,
+                    FileName = ValidEncString,
                     Key = null,
                 }
             }
@@ -375,7 +380,7 @@ public class CipherRequestModelTests
         var request = new CipherRequestModel
         {
             Type = CipherType.Login,
-            Name = ENC_STRING,
+            Name = ValidEncString,
             Login = new CipherLoginModel(),
             Attachments = new Dictionary<string, string> { { attachmentId, newFileName } },
         };
@@ -393,7 +398,7 @@ public class CipherRequestModelTests
         var request = new CipherRequestModel
         {
             Type = CipherType.Login,
-            Name = ENC_STRING,
+            Name = ValidEncString,
             Attachments = new Dictionary<string, string> { { "attachment-id", "OWNED-not-an-encstring" } },
         };
 
@@ -408,8 +413,8 @@ public class CipherRequestModelTests
         var request = new CipherRequestModel
         {
             Type = CipherType.Login,
-            Name = ENC_STRING,
-            Attachments = new Dictionary<string, string> { { "attachment-id", ENC_STRING } },
+            Name = ValidEncString,
+            Attachments = new Dictionary<string, string> { { "attachment-id", ValidEncString } },
         };
 
         var results = ValidateModel(request);
@@ -417,8 +422,96 @@ public class CipherRequestModelTests
         Assert.Empty(results);
     }
 
-    private const string ENC_STRING =
-        "2.AAECAwQFBgcICQoLDA0ODw==|aGVsbG8=|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=";
+    [Theory]
+    [InlineData(CipherType.Login)]
+    [InlineData(CipherType.Card)]
+    [InlineData(CipherType.Identity)]
+    [InlineData(CipherType.SecureNote)]
+    [InlineData(CipherType.SSHKey)]
+    [InlineData(CipherType.BankAccount)]
+    [InlineData(CipherType.DriversLicense)]
+    [InlineData(CipherType.Passport)]
+    public void Validate_DataIsJsonArray_ReturnsDataError(CipherType type)
+    {
+        var request = new CipherRequestModel
+        {
+            Type = type,
+            Name = ValidEncString,
+            Data = "[]",
+        };
+
+        var results = ValidateModel(request);
+
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(CipherRequestModel.Data)));
+    }
+
+    [Theory]
+    [InlineData(CipherType.Login)]
+    [InlineData(CipherType.Card)]
+    [InlineData(CipherType.Identity)]
+    [InlineData(CipherType.SecureNote)]
+    [InlineData(CipherType.SSHKey)]
+    [InlineData(CipherType.BankAccount)]
+    [InlineData(CipherType.DriversLicense)]
+    [InlineData(CipherType.Passport)]
+    public void Validate_DataIsEmptyJsonObject_Passes(CipherType type)
+    {
+        var request = new CipherRequestModel
+        {
+            Type = type,
+            Name = ValidEncString,
+            Data = "{}",
+        };
+
+        var results = ValidateModel(request);
+
+        Assert.DoesNotContain(results, r => r.MemberNames.Contains(nameof(CipherRequestModel.Data)));
+    }
+
+    [Theory]
+    [InlineData(CipherType.Login)]
+    [InlineData(CipherType.Card)]
+    [InlineData(CipherType.Identity)]
+    [InlineData(CipherType.SecureNote)]
+    [InlineData(CipherType.SSHKey)]
+    [InlineData(CipherType.BankAccount)]
+    [InlineData(CipherType.DriversLicense)]
+    [InlineData(CipherType.Passport)]
+    public void Validate_DataIsJsonNull_ReturnsDataError(CipherType type)
+    {
+        var request = new CipherRequestModel
+        {
+            Type = type,
+            Name = ValidEncString,
+            Data = "null",
+        };
+
+        var results = ValidateModel(request);
+
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(CipherRequestModel.Data)));
+    }
+
+    [Theory]
+    [InlineData(CipherType.Login)]
+    [InlineData(CipherType.Card)]
+    [InlineData(CipherType.Identity)]
+    [InlineData(CipherType.SecureNote)]
+    [InlineData(CipherType.SSHKey)]
+    [InlineData(CipherType.BankAccount)]
+    [InlineData(CipherType.DriversLicense)]
+    [InlineData(CipherType.Passport)]
+    public void Validate_BlobEncryptedData_SkipsTypeCheck(CipherType type)
+    {
+        var request = new CipherRequestModel
+        {
+            Type = type,
+            Data = "{\"format_version\":1,\"wrapped_cek\":\"abc\"}",
+        };
+
+        var results = ValidateModel(request);
+
+        Assert.DoesNotContain(results, r => r.MemberNames.Contains(nameof(CipherRequestModel.Data)));
+    }
 
     private static List<ValidationResult> ValidateModel(CipherRequestModel request)
     {

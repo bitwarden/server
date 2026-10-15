@@ -7,12 +7,7 @@ namespace Bit.Seeder.Services;
 /// has on feature services (e.g. <c>PriceIncreaseScheduler</c>) without pulling the LaunchDarkly-backed
 /// SDK implementation into a CLI tool.
 /// </summary>
-/// <remarks>
-/// Implements both the obsolete <see cref="Bit.Core.Services.IFeatureService"/> and
-/// <see cref="Bitwarden.Server.Sdk.Features.IFeatureService"/> while Core consumers are mid-migration.
-/// Drop the obsolete interface once nothing in the billing graph asks for it.
-/// </remarks>
-public sealed class NoopFeatureService : Bit.Core.Services.IFeatureService, Bitwarden.Server.Sdk.Features.IFeatureService
+public sealed class NoopFeatureService : Bitwarden.Server.Sdk.Features.IFeatureService
 {
     public bool IsEnabled(string key, bool defaultValue = false) => defaultValue;
 
