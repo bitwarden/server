@@ -23,7 +23,7 @@ public class PamLeaseExpirySweepServiceTests
         var sutProvider = Setup();
         var lease1 = MakeExpiredLease();
         var lease2 = MakeExpiredLease();
-        sutProvider.GetDependency<IAccessLeaseRepository>().ExpireDueAsync(_now)
+        sutProvider.GetDependency<IAccessLeaseRepository>().ExpireDueAsync(_now, _now.AddDays(-30))
             .Returns(new List<PamExpiredLease> { lease1, lease2 });
 
         await sutProvider.Sut.SweepAsync();
@@ -51,7 +51,7 @@ public class PamLeaseExpirySweepServiceTests
         var sutProvider = Setup();
         var lease1 = MakeExpiredLease();
         var lease2 = MakeExpiredLease();
-        sutProvider.GetDependency<IAccessLeaseRepository>().ExpireDueAsync(_now)
+        sutProvider.GetDependency<IAccessLeaseRepository>().ExpireDueAsync(_now, _now.AddDays(-30))
             .Returns(new List<PamExpiredLease> { lease1, lease2 });
         sutProvider.GetDependency<IHandleAccessGrantEndedCommand>().HandleAsync(lease1.CipherId)
             .Returns(Task.FromException(new InvalidOperationException("boom")));
@@ -68,7 +68,7 @@ public class PamLeaseExpirySweepServiceTests
     {
         var sutProvider = Setup();
         var lease = MakeExpiredLease();
-        sutProvider.GetDependency<IAccessLeaseRepository>().ExpireDueAsync(_now)
+        sutProvider.GetDependency<IAccessLeaseRepository>().ExpireDueAsync(_now, _now.AddDays(-30))
             .Returns(new List<PamExpiredLease> { lease });
         sutProvider.GetDependency<IAccessAuditEventEmitter>()
             .EmitAsync(Arg.Any<AccessAuditEventData>())

@@ -9,6 +9,12 @@ namespace Bit.Services.Pam.AccessConnector.Jobs;
 /// <inheritdoc cref="IPamLeaseExpirySweepService" />
 public class PamLeaseExpirySweepService : IPamLeaseExpirySweepService
 {
+    /// <summary>
+    /// How far back the sweep looks. A lease that ends while the sweep is down for longer is never swept, so this
+    /// stays far longer than any realistic outage.
+    /// </summary>
+    private static readonly TimeSpan _lookback = TimeSpan.FromDays(30);
+
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly IHandleAccessGrantEndedCommand _handleAccessGrantEndedCommand;
@@ -32,7 +38,7 @@ public class PamLeaseExpirySweepService : IPamLeaseExpirySweepService
     public async Task SweepAsync()
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        var expiredLeases = await _accessLeaseRepository.ExpireDueAsync(now);
+        var expiredLeases = await _accessLeaseRepository.ExpireDueAsync(now, now - _lookback);
 
         foreach (var lease in expiredLeases)
         {

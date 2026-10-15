@@ -86,11 +86,11 @@ public class PamRotationSweepService : IPamRotationSweepService
             {
                 var config = await _configRepository.GetByIdAsync(job.RotationConfigId);
 
-                // Only a scheduled config is pushed out. A cron-less config has nothing to clear NextRotationAt
+                // Only a scheduled config is pushed out. A cron-less config has nothing to clear NextRotationDate
                 // again, so it would stay in the due sweep forever.
                 if (config is { ScheduleCron: not null })
                 {
-                    config.NextRotationAt = now + _options.Value.FailureRetryDelay;
+                    config.NextRotationDate = now + _options.Value.FailureRetryDelay;
                     config.RevisionDate = now;
                     await _configRepository.ReplaceAsync(config);
                 }

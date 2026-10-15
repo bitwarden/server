@@ -73,7 +73,7 @@ public class GetRotationCipherQueryTests
         // The timeout sweep has not run, but the job already derives as TimedOut.
         var sutProvider = Setup();
         ClaimedBy(accessConnectorId, attempt, job);
-        job.ExpiresAt = _now;
+        job.ExpirationDate = _now;
         Returns(sutProvider, attempt, job);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(accessConnectorId, attempt.Id));
@@ -86,7 +86,7 @@ public class GetRotationCipherQueryTests
         // Released and re-claimed by the same access connector: the job is Claimed again, but by a newer attempt.
         var sutProvider = Setup();
         ClaimedBy(accessConnectorId, attempt, job);
-        job.ClaimedAt = _claimedAt.AddMinutes(1);
+        job.ClaimedDate = _claimedAt.AddMinutes(1);
         Returns(sutProvider, attempt, job);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(accessConnectorId, attempt.Id));
@@ -124,8 +124,8 @@ public class GetRotationCipherQueryTests
         attempt.CreationDate = _claimedAt;
         job.Action = PamRotationJobAction.Claimed;
         job.ClaimedByAccessConnectorId = accessConnectorId;
-        job.ClaimedAt = _claimedAt;
-        job.ExpiresAt = _now.AddHours(1);
+        job.ClaimedDate = _claimedAt;
+        job.ExpirationDate = _now.AddHours(1);
     }
 
     private static void Returns(

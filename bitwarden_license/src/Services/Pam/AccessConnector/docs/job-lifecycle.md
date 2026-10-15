@@ -87,7 +87,7 @@ A failed attempt either returns the job to pending or fails it outright, decided
 statement that records the failure:
 
 - Errored attempts are counted. If the count is below `MaxAttempts`, the job returns to pending with
-  `NextClaimableAt` pushed out by `RetryBaseDelay * 2^(errored - 1)`.
+  `NextClaimableDate` pushed out by `RetryBaseDelay * 2^(errored - 1)`.
 - Otherwise the job fails, and if the config has a cron expression its next rotation moves out by
   `FailureRetryDelay`.
 
@@ -111,7 +111,7 @@ and recomputes the next one.
 
 ### Timing out jobs
 
-A job still pending or claimed past its `ExpiresAt` is timed out and its executing attempt, if any, is
+A job still pending or claimed past its `ExpirationDate` is timed out and its executing attempt, if any, is
 abandoned — in one transaction, so a crash between the two cannot leave an executing attempt behind a
 job that already moved on.
 

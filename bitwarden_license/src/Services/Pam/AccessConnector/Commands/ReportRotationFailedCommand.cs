@@ -91,7 +91,7 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
             // Retry budget exhausted: push the next rotation out instead of retrying immediately, if scheduled.
             if (config.ScheduleCron is not null)
             {
-                config.NextRotationAt = now + _options.Value.FailureRetryDelay;
+                config.NextRotationDate = now + _options.Value.FailureRetryDelay;
                 config.RevisionDate = now;
                 await _configRepository.ReplaceAsync(config);
             }
