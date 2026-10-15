@@ -11,14 +11,14 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20261001094010_PamRotationDaemon")]
-    partial class PamRotationDaemon
+    [Migration("20261015201847_AddEventPamAccessIds")]
+    partial class AddEventPamAccessIds
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "8.0.8");
+            modelBuilder.HasAnnotation("ProductVersion", "8.0.11");
 
             modelBuilder.Entity("Bit.Core.Dirt.Reports.Models.Data.OrganizationMemberBaseDetail", b =>
                 {
@@ -258,6 +258,9 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<DateTime?>("OwnersNotifiedOfAutoscaling")
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("PamSeatMinimum")
+                        .HasColumnType("INTEGER");
 
                     b.Property<int?>("PamSeats")
                         .HasColumnType("INTEGER");
@@ -1573,6 +1576,12 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("AccessLeaseId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("AccessRequestId")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("ActingUserId")
                         .HasColumnType("TEXT");
 
@@ -2733,7 +2742,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.ToTable("AccessRule", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamDaemon", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamAccessConnector", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
@@ -2744,7 +2753,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("LastHeartbeatAt")
+                    b.Property<DateTime?>("LastHeartbeatDate")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
@@ -2768,18 +2777,18 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasIndex("OrganizationId");
 
-                    b.ToTable("PamDaemon", (string)null);
+                    b.ToTable("PamAccessConnector", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamDaemonTargetAssignment", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamAccessConnectorTargetAssignment", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("CreationDate")
+                    b.Property<Guid>("AccessConnectorId")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("DaemonId")
+                    b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("OrganizationId")
@@ -2794,10 +2803,10 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasIndex("TargetSystemId");
 
-                    b.HasIndex("DaemonId", "TargetSystemId")
+                    b.HasIndex("AccessConnectorId", "TargetSystemId")
                         .IsUnique();
 
-                    b.ToTable("PamDaemonTargetAssignment", (string)null);
+                    b.ToTable("PamAccessConnectorTargetAssignment", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamLeaseExpirySweep", b =>
@@ -2818,10 +2827,13 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
+                    b.Property<byte>("Action")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("CipherUpdated")
                         .HasColumnType("INTEGER");
 
-                    b.Property<Guid>("ClaimedByDaemonId")
+                    b.Property<Guid>("ClaimedByAccessConnectorId")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
@@ -2840,17 +2852,15 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<byte?>("SessionTermination")
                         .HasColumnType("INTEGER");
 
-                    b.Property<byte>("Status")
-                        .HasColumnType("INTEGER");
-
                     b.Property<byte?>("SyncState")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClaimedByDaemonId", "JobId");
+                    b.HasIndex("ClaimedByAccessConnectorId", "CreationDate")
+                        .IsDescending(false, true);
 
-                    b.HasIndex("JobId", "Status");
+                    b.HasIndex("JobId", "Action");
 
                     b.ToTable("PamRotationAttempt", (string)null);
                 });
@@ -2858,11 +2868,6 @@ namespace Bit.SqliteMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationConfig", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("AccountIdentity")
-                        .IsRequired()
-                        .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("CipherId")
@@ -2874,10 +2879,10 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("Enabled")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime?>("LastRotationAt")
+                    b.Property<DateTime?>("LastRotationDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("NextRotationAt")
+                    b.Property<DateTime?>("NextRotationDate")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("OrganizationId")
@@ -2893,18 +2898,20 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("TargetSystemId")
+                    b.Property<string>("SealedData")
+                        .IsRequired()
+                        .HasMaxLength(10000)
                         .HasColumnType("TEXT");
 
-                    b.Property<bool>("TerminateSessions")
-                        .HasColumnType("INTEGER");
+                    b.Property<Guid>("TargetSystemId")
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CipherId")
                         .IsUnique();
 
-                    b.HasIndex("NextRotationAt");
+                    b.HasIndex("NextRotationDate");
 
                     b.HasIndex("OrganizationId");
 
@@ -2918,19 +2925,22 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("ClaimedAt")
+                    b.Property<byte>("Action")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("ClaimedByAccessConnectorId")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("ClaimedByDaemonId")
+                    b.Property<DateTime?>("ClaimedDate")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("ExpiresAt")
+                    b.Property<DateTime>("ExpirationDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("NextClaimableAt")
+                    b.Property<DateTime>("NextClaimableDate")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("RotationConfigId")
@@ -2939,18 +2949,28 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<byte>("Source")
                         .HasColumnType("INTEGER");
 
-                    b.Property<byte>("Status")
-                        .HasColumnType("INTEGER");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("ClaimedByDaemonId", "Status");
+                    b.HasIndex("Action", "ExpirationDate");
 
-                    b.HasIndex("RotationConfigId", "Status");
+                    b.HasIndex("ClaimedByAccessConnectorId", "Action");
 
-                    b.HasIndex("Status", "ExpiresAt");
+                    b.HasIndex("RotationConfigId", "Action");
 
                     b.ToTable("PamRotationJob", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationJobTimeoutSweep", b =>
+                {
+                    b.Property<Guid>("RotationJobId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("SweptDate")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("RotationJobId");
+
+                    b.ToTable("PamRotationJobTimeoutSweep", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamTargetSystem", b =>
@@ -2960,9 +2980,6 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
-
-                    b.Property<byte?>("Kind")
-                        .HasColumnType("INTEGER");
 
                     b.Property<byte>("Method")
                         .HasColumnType("INTEGER");
@@ -2975,17 +2992,14 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("PasswordPolicy")
-                        .HasMaxLength(2000)
-                        .HasColumnType("TEXT");
-
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<byte>("Status")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("SealedData")
+                        .HasMaxLength(10000)
+                        .HasColumnType("TEXT");
 
-                    b.Property<bool?>("SupportsSessionTermination")
+                    b.Property<byte>("Status")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
@@ -4144,7 +4158,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Navigation("Organization");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamDaemon", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamAccessConnector", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ApiKey", null)
                         .WithMany()
@@ -4161,11 +4175,11 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Navigation("Organization");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamDaemonTargetAssignment", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamAccessConnectorTargetAssignment", b =>
                 {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.PamDaemon", null)
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.PamAccessConnector", null)
                         .WithMany()
-                        .HasForeignKey("DaemonId")
+                        .HasForeignKey("AccessConnectorId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
@@ -4198,7 +4212,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationJob", null)
                         .WithMany()
                         .HasForeignKey("JobId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
@@ -4224,7 +4238,16 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationConfig", null)
                         .WithMany()
                         .HasForeignKey("RotationConfigId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationJobTimeoutSweep", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationJob", null)
+                        .WithMany()
+                        .HasForeignKey("RotationJobId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
