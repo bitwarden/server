@@ -18,8 +18,8 @@ public class ClaimableRotationJobResponseModel : ResponseModel
 
         JobId = job.Id;
         Source = job.Source;
-        NextClaimableAt = job.NextClaimableAt.AsUtc();
-        ExpiresAt = job.ExpiresAt.AsUtc();
+        NextClaimableAt = job.NextClaimableDate.AsUtc();
+        ExpiresAt = job.ExpirationDate.AsUtc();
         TargetSystemId = job.TargetSystemId;
     }
 

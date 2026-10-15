@@ -24,9 +24,9 @@ public class PamRotationConfigResponseModel : ResponseModel
         WrappedKey = config.WrappedKey;
         ScheduleCron = config.ScheduleCron;
         RotateOnAccessEnd = config.RotateOnAccessEnd;
-        NextRotationAt = config.NextRotationAt.AsUtc();
+        NextRotationAt = config.NextRotationDate.AsUtc();
         Enabled = config.Enabled;
-        LastRotationAt = config.LastRotationAt.AsUtc();
+        LastRotationAt = config.LastRotationDate.AsUtc();
         HasActiveJob = config.HasActiveJob;
         AwaitingManualRotation = awaitingManualRotation;
         CreationDate = config.CreationDate.AsUtc();

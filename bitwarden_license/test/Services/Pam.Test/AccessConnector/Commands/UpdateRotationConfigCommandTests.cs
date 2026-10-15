@@ -147,12 +147,12 @@ public class UpdateRotationConfigCommandTests
         Assert.Equal(sealedData, result.SealedData);
         Assert.Equal(wrappedKey, result.WrappedKey);
         Assert.Equal(newCron, result.ScheduleCron);
-        Assert.Equal(nextOccurrence, result.NextRotationAt);
+        Assert.Equal(nextOccurrence, result.NextRotationDate);
         Assert.True(result.RotateOnAccessEnd);
         Assert.Equal(_now, result.RevisionDate);
         await sutProvider.GetDependency<IPamRotationConfigRepository>().Received(1).ReplaceAsync(Arg.Is<PamRotationConfig>(c =>
             c.Id == details.Id && c.SealedData == sealedData && c.WrappedKey == wrappedKey && c.ScheduleCron == newCron
-            && c.NextRotationAt == nextOccurrence && c.RevisionDate == _now));
+            && c.NextRotationDate == nextOccurrence && c.RevisionDate == _now));
     }
 
     [Theory, BitAutoData]
@@ -161,7 +161,7 @@ public class UpdateRotationConfigCommandTests
     {
         var sutProvider = Setup();
         details.HasActiveJob = false;
-        details.NextRotationAt = _now.AddDays(1);
+        details.NextRotationDate = _now.AddDays(1);
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetDetailsByIdAsync(details.Id).Returns(details);
         sutProvider.GetDependency<IRotationScheduleCalculator>().GetNextOccurrence(null, _now).Returns((DateTime?)null);
 
@@ -169,9 +169,9 @@ public class UpdateRotationConfigCommandTests
             details.OrganizationId, actingUserId, details.Id, sealedData, wrappedKey, null, false);
 
         Assert.Null(result.ScheduleCron);
-        Assert.Null(result.NextRotationAt);
+        Assert.Null(result.NextRotationDate);
         await sutProvider.GetDependency<IPamRotationConfigRepository>().Received(1).ReplaceAsync(Arg.Is<PamRotationConfig>(c =>
-            c.Id == details.Id && c.ScheduleCron == null && c.NextRotationAt == null));
+            c.Id == details.Id && c.ScheduleCron == null && c.NextRotationDate == null));
     }
 
     [Theory, BitAutoData]

@@ -43,7 +43,7 @@ public class GetRotationCipherQuery : IGetRotationCipherQuery
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        var jobStatus = PamRotationStatusDerivation.ComputeJobStatus(job.Action, job.ExpiresAt, now);
+        var jobStatus = PamRotationStatusDerivation.ComputeJobStatus(job.Action, job.ExpirationDate, now);
         var attemptStatus = PamRotationStatusDerivation.ComputeAttemptStatus(
             attempt.Action, PamRotationRules.IsCurrentAttempt(job, attempt), jobStatus);
         if (attemptStatus != PamRotationAttemptStatus.Executing)

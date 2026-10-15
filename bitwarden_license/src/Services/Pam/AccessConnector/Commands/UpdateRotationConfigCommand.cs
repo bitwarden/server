@@ -91,9 +91,9 @@ public class UpdateRotationConfigCommand : IUpdateRotationConfigCommand
             WrappedKey = wrappedKey,
             ScheduleCron = scheduleCron,
             RotateOnAccessEnd = rotateOnAccessEnd,
-            NextRotationAt = _scheduleCalculator.GetNextOccurrence(scheduleCron, now),
+            NextRotationDate = _scheduleCalculator.GetNextOccurrence(scheduleCron, now),
             Enabled = details.Enabled,
-            LastRotationAt = details.LastRotationAt,
+            LastRotationDate = details.LastRotationDate,
             CreationDate = details.CreationDate,
             RevisionDate = now,
         };

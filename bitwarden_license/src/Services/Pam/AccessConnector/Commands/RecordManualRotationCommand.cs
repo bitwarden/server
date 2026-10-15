@@ -66,9 +66,9 @@ public class RecordManualRotationCommand : IRecordManualRotationCommand
             ScheduleCron = details.ScheduleCron,
             RotateOnAccessEnd = details.RotateOnAccessEnd,
             // Clears awaiting_manual_rotation: the obligation just discharged.
-            NextRotationAt = nextRotationAt,
+            NextRotationDate = nextRotationAt,
             Enabled = details.Enabled,
-            LastRotationAt = now,
+            LastRotationDate = now,
             CreationDate = details.CreationDate,
             RevisionDate = now,
         };
