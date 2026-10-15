@@ -63,7 +63,8 @@ use "./access-connector.allium" as connector
 --   unopened and never reads, validates or routes on their contents -- see
 --   pam-rotation-sealed-config-plan.md. The access connector holds no target-system or
 --   attempt entity and receives the work snapshot it needs (attempt_id, id, name,
---   target_system_sealed_data, cipher, rotation_config_sealed_data) on each claim, unseals
+--   target_system_sealed_data, target_system_wrapped_key, cipher, rotation_config_sealed_data,
+--   rotation_config_wrapped_key) on each claim, unseals
 --   both locally with the organization key and verifies them against each other and the
 --   claim before touching the target.
 
@@ -201,6 +202,8 @@ entity TargetSystem {
     -- the target has been sealed at least once (status active or disabled); absent while
     -- pending_seal. See pam-rotation-sealed-config-plan.md.
     sealed_data: String when status = active | disabled
+    -- Opaque; the wrapped content key for sealed_data.
+    wrapped_key: String when status = active | disabled
     -- pending_seal   : registered (name, method) but not yet sealed -- not rotatable, not
     --                  offered, not enable/disable-able. UpdateTargetSystem is the only exit.
     -- active/disabled: enable/disable the whole target; a disabled system stops new
@@ -300,6 +303,8 @@ entity RotationConfig {
     -- binds -- target_system_id, cipher_id -- already exist). The server stores and
     -- forwards it unopened and never parses it. See pam-rotation-sealed-config-plan.md.
     sealed_data: String
+    -- Opaque; the wrapped content key for sealed_data.
+    wrapped_key: String
     -- Whether this credential rotates automatically or by hand is a property of its target
     -- system (target_system.method), not the configuration: every credential on an
     -- automatic target is rotated by the access connector; every credential on a manual target is
@@ -652,10 +657,11 @@ rule RegisterTargetSystem {
 }
 
 rule CompleteTargetSystemSeal {
-    when: UpdateTargetSystem(target_system, name, sealed_data)
+    when: UpdateTargetSystem(target_system, name, sealed_data, wrapped_key)
     requires: target_system.status = pending_seal
     ensures: target_system.name = name
     ensures: target_system.sealed_data = sealed_data
+    ensures: target_system.wrapped_key = wrapped_key
     ensures: target_system.status = active
     ensures: AdministrationAudited(operation: target_updated, target_system: target_system)
     @guidance
@@ -667,10 +673,11 @@ rule CompleteTargetSystemSeal {
 }
 
 rule ReSealTargetSystem {
-    when: UpdateTargetSystem(target_system, name, sealed_data)
+    when: UpdateTargetSystem(target_system, name, sealed_data, wrapped_key)
     requires: target_system.status in {active, disabled}
     ensures: target_system.name = name
     ensures: target_system.sealed_data = sealed_data
+    ensures: target_system.wrapped_key = wrapped_key
     ensures: AdministrationAudited(operation: target_updated, target_system: target_system)
     @guidance
         -- Re-seal: replaces the opaque blob with a freshly-sealed one (a fresh content key
@@ -779,7 +786,7 @@ rule DeleteTargetSystem {
 -- Rotation configuration
 
 rule CreateRotationConfig {
-    when: CreateRotationConfig(cipher, target_system, sealed_data, schedule, rotate_on_access_end)
+    when: CreateRotationConfig(cipher, target_system, sealed_data, wrapped_key, schedule, rotate_on_access_end)
     -- A config may be created against a pending_seal target (both ids its blob binds --
     -- target_system_id, cipher_id -- already exist); it simply does not run until the
     -- target is sealed (OfferRotation / ClaimRotation both require target_system.status =
@@ -792,6 +799,7 @@ rule CreateRotationConfig {
         cipher: cipher,
         target_system: target_system,
         sealed_data: sealed_data,
+        wrapped_key: wrapped_key,
         schedule: schedule,
         rotate_on_access_end: rotate_on_access_end,
         next_rotation_at: initial_next,
@@ -824,11 +832,13 @@ rule AuditRotationConfigCreated {
 }
 
 rule UpdateRotationConfig {
-    when: UpdateRotationConfig(actor, rotation_config, sealed_data, schedule, rotate_on_access_end)
-    requires: not rotation_config.has_active_job or sealed_data = rotation_config.sealed_data
+    when: UpdateRotationConfig(actor, rotation_config, sealed_data, wrapped_key, schedule, rotate_on_access_end)
+    requires: not rotation_config.has_active_job
+        or (sealed_data = rotation_config.sealed_data and wrapped_key = rotation_config.wrapped_key)
     let next = if schedule != null: NextScheduledTime(schedule, now)
                else: null
     ensures: rotation_config.sealed_data = sealed_data
+    ensures: rotation_config.wrapped_key = wrapped_key
     ensures: rotation_config.schedule = schedule
     ensures: rotation_config.rotate_on_access_end = rotate_on_access_end
     ensures: rotation_config.next_rotation_at = next
@@ -1163,8 +1173,10 @@ rule ClaimRotation {
         target_system_id: cfg.target_system.id,
         target_system_name: cfg.target_system.name,
         target_system_sealed_data: cfg.target_system.sealed_data,
+        target_system_wrapped_key: cfg.target_system.wrapped_key,
         cipher: cfg.cipher,
         rotation_config_sealed_data: cfg.sealed_data,
+        rotation_config_wrapped_key: cfg.wrapped_key,
         execute_by: job.execute_by
     )
     ensures: RotationAudited(rotation_config: cfg, outcome: dispatched, source: job.source)
@@ -1723,7 +1735,7 @@ surface RotationAdministration {
     provides:
         RegisterConnector(name, client_id)
         RegisterTargetSystem(name, method)
-        CreateRotationConfig(cipher, target_system, sealed_data, schedule, rotate_on_access_end)
+        CreateRotationConfig(cipher, target_system, sealed_data, wrapped_key, schedule, rotate_on_access_end)
 }
 
 surface ConnectorRegistrationView {
@@ -1763,10 +1775,11 @@ surface TargetSystemView {
         -- unseals it locally to show the integration kind, the password policy and the
         -- session-termination capability.
         target_system.sealed_data
+        target_system.wrapped_key
     provides:
         -- Phase 2 of registration while pending_seal; re-seal (a fresh blob) while active
         -- or disabled, which does not change status. Writes the name in the same call.
-        UpdateTargetSystem(target_system, name, sealed_data)
+        UpdateTargetSystem(target_system, name, sealed_data, wrapped_key)
         DisableTargetSystem(target_system)
             when target_system.status = active
         EnableTargetSystem(target_system)
@@ -1791,6 +1804,7 @@ surface RotationConfigView {
         -- Opaque; the admin client unseals it locally to show the account identity and the
         -- termination opt-in.
         rotation_config.sealed_data
+        rotation_config.wrapped_key
         rotation_config.enabled
         -- The triggers, inlined onto the configuration.
         rotation_config.schedule
@@ -1815,7 +1829,7 @@ surface RotationConfigView {
         -- access-end opt-in (recompute-on-edit). With an active job only an unchanged
         -- blob is accepted (the claim snapshot already carries it), so the triggers stay
         -- editable.
-        UpdateRotationConfig(admin, rotation_config, sealed_data, schedule, rotate_on_access_end)
+        UpdateRotationConfig(admin, rotation_config, sealed_data, wrapped_key, schedule, rotate_on_access_end)
         -- Pause / resume without losing configuration (UX2).
         PauseRotation(admin, rotation_config)
             when rotation_config.enabled

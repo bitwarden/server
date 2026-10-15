@@ -124,7 +124,7 @@ moment it is claimed.
 
 A successful claim returns the whole work snapshot, so the access connector needs no further round
 trip to start: the attempt id, the target system's name, the vault item id, two sealed blobs
-(`targetSystemSealedData` and `rotationConfigSealedData`), and `executeBy`.
+(`targetSystemSealedData` and `rotationConfigSealedData`), their `...WrappedKey` counterparts, and `executeBy`.
 
 Both sealed blobs are opaque to the server — stored and handed back verbatim, never parsed. The admin
 client seals them under the org key, so only the access connector can unseal them. Before trusting

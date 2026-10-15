@@ -12,7 +12,7 @@ leaves a claimable job for a real access connector to execute and report on:
     3. create a rotation config for a cipher   POST  organizations/{org}/access-connectors/rotation/configs
     4. trigger an on-demand rotation           POST  organizations/{org}/access-connectors/rotation/configs/{id}/rotate
 
-The server never parses `sealedData` — an opaque blob the admin client seals under the org key. This
+The server never parses `sealedData` (or `wrappedKey`) — opaque blobs the admin client seals under the org key. This
 script has no org key, so it sends a placeholder instead of a real seal: enough to exercise the
 admin/dispatch side, but a real access connector will refuse the job at claim time. For an
 end-to-end run, seal the target and config from the admin client instead.
@@ -94,8 +94,13 @@ def step(n, msg):
 
 
 def fake_sealed_data(note):
-    """Placeholder in the real sealed-blob shape ({formatVersion, wrappedCek, envelope}); not an actual seal."""
-    return json.dumps({"formatVersion": 1, "wrappedCek": "fake", "envelope": f"fake-dev-sim:{note}"})
+    """Placeholder for the base64 COSE envelope; not an actual seal."""
+    return f"fake-dev-sim:{note}"
+
+
+def fake_wrapped_key():
+    """Placeholder for the content key wrapped by the org key (opaque to the server); not an actual wrap."""
+    return "2.fake|fake|fake"
 
 
 def main():
@@ -147,7 +152,8 @@ def main():
         step("1b", "seal target system (phase 2: moves pending_seal -> active)")
         http("PUT", f"{api}/organizations/{org}/access-connectors/rotation/target-systems/{target_id}", admin, {
             "name": f"sim-{cipher_id[:8]}",
-            "sealedData": fake_sealed_data(f"target:{target_id}")})
+            "sealedData": fake_sealed_data(f"target:{target_id}"),
+            "wrappedKey": fake_wrapped_key()})
         print("    sealed (204)")
 
     step(2, "assign access connector to target")
@@ -159,6 +165,7 @@ def main():
     _, config = http("POST", f"{api}/organizations/{org}/access-connectors/rotation/configs", admin, {
         "cipherId": cipher_id, "targetSystemId": target_id,
         "sealedData": fake_sealed_data(f"config:{cipher_id}:{args.account_identity}"),
+        "wrappedKey": fake_wrapped_key(),
         "scheduleCron": None, "rotateOnAccessEnd": False})
     config_id = config["config"]["id"]   # POST returns the detail view: { "config": {...}, "jobs": [...] }
     print(f"    configId = {config_id}")
