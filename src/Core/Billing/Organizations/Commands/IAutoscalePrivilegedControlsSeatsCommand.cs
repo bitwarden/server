@@ -17,7 +17,11 @@ public interface IAutoscalePrivilegedControlsSeatsCommand
     /// never checked. When a limit is set and the total equals it, the organization's Owners are emailed.
     /// </summary>
     /// <param name="organization">The organization that already has Privileged Controls.</param>
-    /// <param name="seatsToAdd">The number of users about to be granted Privileged Controls access.</param>
+    /// <param name="seatsToAdd">
+    /// The number of users about to be granted Privileged Controls access who do not already occupy a seat. The
+    /// command adds this to the seats in use it reads itself, so counting a user who already holds a seat over-counts
+    /// and can buy seats that are not needed or return a limit reached failure.
+    /// </param>
     /// <returns>
     /// A successful result, or a failed result carrying the autoscale limit when the total would pass it.
     /// </returns>
