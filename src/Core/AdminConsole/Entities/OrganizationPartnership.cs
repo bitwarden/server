@@ -21,7 +21,11 @@ public class OrganizationPartnership : ITableObject<Guid>
     [MaxLength(50)]
     public string Name { get; set; } = null!;
     public PartnershipStatus Status { get; set; }
-    public SponsoredPlanType SponsoredPlanType { get; set; }
+    /// <summary>
+    /// A JSON-serialized list of the plan types this partnership may sponsor.
+    /// Use <see cref="GetAllowedSponsoredPlanTypes"/> and <see cref="SetAllowedSponsoredPlanTypes"/>.
+    /// </summary>
+    public string AllowedSponsoredPlanTypes { get; set; } = "[]";
     public PartnershipBindingMode BindingMode { get; set; }
     /// <summary>
     /// JSON settings for <see cref="PartnershipBindingMode.Oidc"/>, such as the claim path holding the
@@ -35,6 +39,15 @@ public class OrganizationPartnership : ITableObject<Guid>
     public string RegisteredReturnOrigins { get; set; } = "[]";
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
+
+    public IEnumerable<SponsoredPlanType> GetAllowedSponsoredPlanTypes() =>
+        JsonSerializer.Deserialize<IEnumerable<SponsoredPlanType>>(AllowedSponsoredPlanTypes) ?? [];
+
+    public void SetAllowedSponsoredPlanTypes(IEnumerable<SponsoredPlanType> planTypes) =>
+        AllowedSponsoredPlanTypes = JsonSerializer.Serialize(planTypes);
+
+    public bool IsSponsoredPlanTypeAllowed(SponsoredPlanType planType) =>
+        GetAllowedSponsoredPlanTypes().Contains(planType);
 
     public IEnumerable<string> GetRegisteredReturnOrigins() =>
         JsonSerializer.Deserialize<IEnumerable<string>>(RegisteredReturnOrigins) ?? [];

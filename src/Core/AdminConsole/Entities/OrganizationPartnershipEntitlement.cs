@@ -34,6 +34,10 @@ public class OrganizationPartnershipEntitlement : ITableObject<Guid>
     public string ExternalIdHash { get; set; } = null!;
     public PartnershipEntitlementState State { get; set; }
     /// <summary>
+    /// The sponsored plan, one of the partnership's allowed plan types.
+    /// </summary>
+    public SponsoredPlanType SponsoredPlanType { get; set; }
+    /// <summary>
     /// The bound account. Held through a cancel until the resume window elapses.
     /// </summary>
     public Guid? UserId { get; set; }
