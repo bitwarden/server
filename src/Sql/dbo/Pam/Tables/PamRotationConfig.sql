@@ -1,0 +1,41 @@
+-- One rotation policy per cipher (OneConfigPerCipher).
+CREATE TABLE [dbo].[PamRotationConfig] (
+    [Id]                    UNIQUEIDENTIFIER    NOT NULL,
+    [OrganizationId]        UNIQUEIDENTIFIER    NOT NULL,
+    [CipherId]              UNIQUEIDENTIFIER    NOT NULL,
+    [TargetSystemId]        UNIQUEIDENTIFIER    NOT NULL,
+    [ScheduleCron]          NVARCHAR(100)       NULL,
+    [RotateOnAccessEnd]     BIT                 NOT NULL,
+    [NextRotationDate]      DATETIME2(7)        NULL,
+    [Enabled]               BIT                 NOT NULL,
+    [LastRotationDate]      DATETIME2(7)        NULL,
+    [CreationDate]          DATETIME2(7)        NOT NULL,
+    [RevisionDate]          DATETIME2(7)        NOT NULL,
+    [SealedData]            NVARCHAR(MAX)       NOT NULL,
+    CONSTRAINT [PK_PamRotationConfig] PRIMARY KEY CLUSTERED ([Id] ASC),
+    CONSTRAINT [FK_PamRotationConfig_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE,
+    -- No cascade; configs must be detached or deleted via PamRotationConfig_DeleteWithJobs first.
+    CONSTRAINT [FK_PamRotationConfig_TargetSystem] FOREIGN KEY ([TargetSystemId]) REFERENCES [dbo].[PamTargetSystem] ([Id]) ON DELETE NO ACTION
+);
+GO
+
+-- OneConfigPerCipher.
+CREATE UNIQUE NONCLUSTERED INDEX [IX_PamRotationConfig_CipherId]
+    ON [dbo].[PamRotationConfig] ([CipherId] ASC);
+GO
+
+-- Backs the due-rotation sweep; the filter keeps paused and unscheduled configs out of the scan.
+CREATE NONCLUSTERED INDEX [IX_PamRotationConfig_NextRotationDate]
+    ON [dbo].[PamRotationConfig] ([NextRotationDate] ASC)
+    WHERE [Enabled] = 1 AND [NextRotationDate] IS NOT NULL;
+GO
+
+-- Backs PamRotationConfig_ReadManyByOrganizationId and the Organization cascade delete.
+CREATE NONCLUSTERED INDEX [IX_PamRotationConfig_OrganizationId]
+    ON [dbo].[PamRotationConfig] ([OrganizationId] ASC);
+GO
+
+-- Backs the access connector poll's join, ReadCountByTargetSystemId checks, and DeleteWithAssignments' range lock.
+CREATE NONCLUSTERED INDEX [IX_PamRotationConfig_TargetSystemId]
+    ON [dbo].[PamRotationConfig] ([TargetSystemId] ASC);
+GO

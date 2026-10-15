@@ -22,18 +22,22 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-22.04
+    # Fork PRs are already linted by the pull_request run. The steps are skipped (not the job) for fork builds
+    # under pull_request_target so that build-artifacts, which needs this job, still runs.
     steps:
       - name: Check out repo
+        if: github.event_name != 'pull_request_target'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
-          allow-unsafe-pr-checkout: true
 
       - name: Set up .NET
+        if: github.event_name != 'pull_request_target'
         uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
 
       - name: Verify format
+        if: github.event_name != 'pull_request_target'
         run: dotnet format --verify-no-changes
 
   build-artifacts:
@@ -356,12 +360,13 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+      # Never for fork PRs: under pull_request_target GITHUB_REF is the base branch, so is_publish_branch is true.
       - name: Install Cosign
-        if: github.event_name != 'pull_request' && env.is_publish_branch == 'true'
+        if: ${{ !github.event.pull_request && env.is_publish_branch == 'true' }}
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
 
       - name: Sign image with Cosign
-        if: github.event_name != 'pull_request' && env.is_publish_branch == 'true'
+        if: ${{ !github.event.pull_request && env.is_publish_branch == 'true' }}
         env:
           DIGEST: ${{ steps.build-artifacts.outputs.digest }}
           TAGS: ${{ steps.image-tags.outputs.tags }}
@@ -416,8 +421,9 @@ jobs:
     name: Upload
     runs-on: ubuntu-22.04
     needs: build-artifacts
+    # Fork builds under pull_request_target don't need Swagger or Docker stub artifacts.
+    if: github.event_name != 'pull_request_target'
     permissions:
-      id-token: write
       actions: read
     steps:
       - name: Check out repo
@@ -425,7 +431,6 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
-          allow-unsafe-pr-checkout: true
 
       - name: Set up .NET
         uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
@@ -532,6 +537,8 @@ jobs:
     name: Build MSSQL migrator utility
     runs-on: ubuntu-22.04
     needs: lint
+    # Fork PRs already build this in the pull_request run, which needs no secrets.
+    if: github.event_name != 'pull_request_target'
     defaults:
       run:
         shell: bash
@@ -549,7 +556,6 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
-          allow-unsafe-pr-checkout: true
 
       - name: Set up .NET
         uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
@@ -584,7 +590,8 @@ jobs:
 
   bitwarden-lite-build:
     name: Trigger Bitwarden lite build
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # Never for fork PRs: under pull_request_target the fork-built server images would end up in a Bitwarden lite image.
+    if: ${{ !github.event.pull_request || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-22.04
     needs: build-artifacts
     permissions:
@@ -654,7 +661,8 @@ jobs:
 
   trigger-k8s-deploy:
     name: Trigger K8s deploy
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    # Never for fork PRs: under pull_request_target github.ref is the base branch.
+    if: ${{ !github.event.pull_request && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-22.04
     needs:
       - build-artifacts
