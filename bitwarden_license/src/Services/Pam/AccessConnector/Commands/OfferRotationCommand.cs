@@ -57,10 +57,10 @@ public class OfferRotationCommand : IOfferRotationCommand
             Source = source,
             Action = PamRotationJobAction.None,
             ClaimedByAccessConnectorId = null,
-            ClaimedAt = null,
+            ClaimedDate = null,
             CreationDate = now,
-            NextClaimableAt = now,
-            ExpiresAt = now + _options.Value.JobTtl,
+            NextClaimableDate = now,
+            ExpirationDate = now + _options.Value.JobTtl,
         };
         // CreateGuardedAsync, unlike the generic CreateAsync, does not assign the id.
         job.SetNewId();

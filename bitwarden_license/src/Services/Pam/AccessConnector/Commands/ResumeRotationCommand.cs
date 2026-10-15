@@ -45,7 +45,7 @@ public class ResumeRotationCommand : IResumeRotationCommand
 
         var nextRotationAt =
             details.TargetSystemMethod == PamTargetSystemMethod.Manual
-            && details.NextRotationAt is { } nextRotationDue && nextRotationDue <= now
+            && details.NextRotationDate is { } nextRotationDue && nextRotationDue <= now
                 ? now
                 : _scheduleCalculator.GetNextOccurrence(details.ScheduleCron, now);
 
@@ -70,9 +70,9 @@ public class ResumeRotationCommand : IResumeRotationCommand
             WrappedKey = details.WrappedKey,
             ScheduleCron = details.ScheduleCron,
             RotateOnAccessEnd = details.RotateOnAccessEnd,
-            NextRotationAt = nextRotationAt,
+            NextRotationDate = nextRotationAt,
             Enabled = true,
-            LastRotationAt = details.LastRotationAt,
+            LastRotationDate = details.LastRotationDate,
             CreationDate = details.CreationDate,
             RevisionDate = now,
         };

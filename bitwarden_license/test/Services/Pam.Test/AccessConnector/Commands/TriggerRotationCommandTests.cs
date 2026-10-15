@@ -116,7 +116,7 @@ public class TriggerRotationCommandTests
     {
         var sutProvider = Setup();
         SetupOfferable(sutProvider, details, target);
-        details.LastRotationAt = _now.AddSeconds(-30); // inside the 1-minute cooldown
+        details.LastRotationDate = _now.AddSeconds(-30); // inside the 1-minute cooldown
 
         await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.TriggerAsync(details.OrganizationId, actingUserId, details.Id));
@@ -130,7 +130,7 @@ public class TriggerRotationCommandTests
     {
         var sutProvider = Setup();
         SetupOfferable(sutProvider, details, target);
-        details.LastRotationAt = _now.AddMinutes(-5); // past the 1-minute cooldown
+        details.LastRotationDate = _now.AddMinutes(-5); // past the 1-minute cooldown
 
         await sutProvider.Sut.TriggerAsync(details.OrganizationId, actingUserId, details.Id);
 
@@ -144,7 +144,7 @@ public class TriggerRotationCommandTests
     {
         var sutProvider = Setup();
         SetupOfferable(sutProvider, details, target);
-        details.LastRotationAt = null;
+        details.LastRotationDate = null;
 
         await sutProvider.Sut.TriggerAsync(details.OrganizationId, actingUserId, details.Id);
 
@@ -158,7 +158,7 @@ public class TriggerRotationCommandTests
         details.Enabled = true;
         details.TargetSystemMethod = PamTargetSystemMethod.Automatic;
         details.HasActiveJob = false;
-        details.LastRotationAt = null;
+        details.LastRotationDate = null;
         target.Status = PamTargetSystemStatus.Active;
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetDetailsByIdAsync(details.Id).Returns(details);
         sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(details.TargetSystemId).Returns(target);

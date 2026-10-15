@@ -76,8 +76,8 @@ public class ReportRotationSucceededCommand : IReportRotationSucceededCommand
             throw new ConflictException("This attempt is no longer executing.");
         }
 
-        config.LastRotationAt = now;
-        config.NextRotationAt = _scheduleCalculator.GetNextOccurrence(config.ScheduleCron, now);
+        config.LastRotationDate = now;
+        config.NextRotationDate = _scheduleCalculator.GetNextOccurrence(config.ScheduleCron, now);
         config.RevisionDate = now;
         await _configRepository.ReplaceAsync(config);
 
