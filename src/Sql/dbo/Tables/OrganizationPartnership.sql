@@ -4,7 +4,7 @@ CREATE TABLE [dbo].[OrganizationPartnership]
     [OrganizationId]               UNIQUEIDENTIFIER NOT NULL,
     [Name]                         NVARCHAR(50)     NOT NULL,
     [Status]                       TINYINT          NOT NULL,
-    [SponsoredPlanType]            TINYINT          NOT NULL,
+    [AllowedSponsoredPlanTypes]    NVARCHAR(MAX)    NOT NULL,
     [BindingMode]                  TINYINT          NOT NULL,
     [IdentityBindingConfiguration] NVARCHAR(MAX)    NULL,
     [RegisteredReturnOrigins]      NVARCHAR(MAX)    NOT NULL,

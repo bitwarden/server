@@ -5,6 +5,7 @@ CREATE TABLE [dbo].[OrganizationPartnershipEntitlement]
     [ExternalId]                 NVARCHAR(MAX)    NOT NULL,
     [ExternalIdHash]             VARCHAR(64)      NOT NULL,
     [State]                      TINYINT          NOT NULL,
+    [SponsoredPlanType]          TINYINT          NOT NULL,
     [UserId]                     UNIQUEIDENTIFIER NULL,
     [AccountRef]                 UNIQUEIDENTIFIER NULL,
     [Metadata]                   NVARCHAR(MAX)    NULL,
