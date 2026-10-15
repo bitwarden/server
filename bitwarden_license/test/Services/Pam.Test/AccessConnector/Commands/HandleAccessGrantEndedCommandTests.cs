@@ -1,5 +1,4 @@
 ﻿using Bit.Core;
-using Bit.Core.Services;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
@@ -9,6 +8,7 @@ using Bit.Services.Pam.AccessConnector.Commands.Interfaces;
 using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
