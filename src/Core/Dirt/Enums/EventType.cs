@@ -191,4 +191,6 @@ public enum EventType : int
     Pam_AccessRule_Created = 2609,
     Pam_AccessRule_Updated = 2610,
     Pam_AccessRule_Deleted = 2611,
+    Pam_Rotation_Succeeded = 2612,
+    Pam_Rotation_Failed = 2613,
 }

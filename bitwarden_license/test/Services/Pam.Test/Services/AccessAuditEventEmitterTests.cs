@@ -107,6 +107,9 @@ public class AccessAuditEventEmitterTests
     [BitAutoData(AccessAuditEventKind.RuleCreated, EventType.Pam_AccessRule_Created)]
     [BitAutoData(AccessAuditEventKind.RuleUpdated, EventType.Pam_AccessRule_Updated)]
     [BitAutoData(AccessAuditEventKind.RuleDeleted, EventType.Pam_AccessRule_Deleted)]
+    [BitAutoData(AccessAuditEventKind.RotationSucceeded, EventType.Pam_Rotation_Succeeded)]
+    [BitAutoData(AccessAuditEventKind.RotationFailed, EventType.Pam_Rotation_Failed)]
+    [BitAutoData(AccessAuditEventKind.RotationJobTimedOut, EventType.Pam_Rotation_Failed)]
     public async Task EmitAsync_WithAMappedKind_WritesToTheOrganizationEventLog(
         AccessAuditEventKind kind, EventType expectedType, Guid organizationId,
         SutProvider<AccessAuditEventEmitter> sutProvider)
@@ -211,11 +214,11 @@ public class AccessAuditEventEmitterTests
             .LogPamAccessEventAsync(default, default!);
     }
 
-    // Rotation and fleet subjects have no dbo.Event column, so a fan-out would file high-volume rows with nothing to
-    // identify them.
+    // Rotation steps come several per job, so only how the job ended is mapped. Fleet subjects have no dbo.Event column
+    // to identify them.
     [Theory]
     [BitAutoData(AccessAuditEventKind.RotationOffered)]
-    [BitAutoData(AccessAuditEventKind.RotationSucceeded)]
+    [BitAutoData(AccessAuditEventKind.RotationAttemptFailed)]
     [BitAutoData(AccessAuditEventKind.ManualRotationDue)]
     [BitAutoData(AccessAuditEventKind.AccessConnectorRegistered)]
     [BitAutoData(AccessAuditEventKind.TargetSystemRegistered)]
