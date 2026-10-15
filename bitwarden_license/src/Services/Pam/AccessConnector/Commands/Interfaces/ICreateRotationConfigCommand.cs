@@ -13,6 +13,7 @@ public interface ICreateRotationConfigCommand
         Guid cipherId,
         Guid targetSystemId,
         string sealedData,
+        string wrappedKey,
         string? scheduleCron,
         bool rotateOnAccessEnd);
 }

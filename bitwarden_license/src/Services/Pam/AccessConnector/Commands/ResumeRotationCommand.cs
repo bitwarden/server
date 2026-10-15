@@ -67,6 +67,7 @@ public class ResumeRotationCommand : IResumeRotationCommand
             CipherId = details.CipherId,
             TargetSystemId = details.TargetSystemId,
             SealedData = details.SealedData,
+            WrappedKey = details.WrappedKey,
             ScheduleCron = details.ScheduleCron,
             RotateOnAccessEnd = details.RotateOnAccessEnd,
             NextRotationAt = nextRotationAt,
