@@ -76,6 +76,7 @@ public class HandleAccessGrantEndedCommand : IHandleAccessGrantEndedCommand
             CipherId = config.CipherId,
             TargetSystemId = config.TargetSystemId,
             SealedData = config.SealedData,
+            WrappedKey = config.WrappedKey,
             ScheduleCron = config.ScheduleCron,
             RotateOnAccessEnd = config.RotateOnAccessEnd,
             NextRotationAt = now,
