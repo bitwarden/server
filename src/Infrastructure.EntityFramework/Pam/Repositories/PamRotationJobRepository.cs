@@ -305,10 +305,11 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        // Not Serializable: there the account bump's reads take shared locks on User rows, so two rotations in one org
+        // deadlock on MySQL and a user's save aborts the rotation on PostgreSQL. ReadCommitted is safe because the claim
+        // is re-checked under the job row's lock below and the cipher write is conditional.
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
 
-        // Serializable replaces the MSSQL UPDLOCK on the job row, closing the check-then-act window against a
-        // concurrent release.
         var target = await dbContext.PamRotationAttempts
             .Where(a => a.Id == attemptId
                 && a.Action == PamRotationAttemptAction.None
@@ -320,12 +321,29 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
                 && x.Job.ClaimedDate == x.Attempt.CreationDate)
             .Join(dbContext.PamRotationConfigs, x => x.Job.RotationConfigId, c => c.Id, (x, c) => new
             {
+                JobId = x.Job.Id,
+                AttemptCreationDate = x.Attempt.CreationDate,
                 c.CipherId,
                 c.OrganizationId,
             })
             .FirstOrDefaultAsync();
 
         if (target is null)
+        {
+            await transaction.RollbackAsync();
+            return PamRotationCipherWriteOutcome.Rejected;
+        }
+
+        // Locks the job row and re-checks the claim, the counterpart of the procedure's UPDLOCK. A concurrent release
+        // either committed first (0 rows) or waits for this transaction.
+        var claimed = await dbContext.PamRotationJobs
+            .Where(j => j.Id == target.JobId
+                && j.Action == PamRotationJobAction.Claimed
+                && j.ExpirationDate > now
+                && j.ClaimedByAccessConnectorId == accessConnectorId
+                && j.ClaimedDate == target.AttemptCreationDate)
+            .ExecuteUpdateAsync(s => s.SetProperty(j => j.ClaimedDate, j => j.ClaimedDate));
+        if (claimed == 0)
         {
             await transaction.RollbackAsync();
             return PamRotationCipherWriteOutcome.Rejected;
