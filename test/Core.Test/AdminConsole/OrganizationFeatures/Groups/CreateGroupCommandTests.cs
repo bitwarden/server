@@ -93,6 +93,107 @@ public class CreateGroupCommandTests
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
     }
 
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
+    public async Task CreateGroup_WithCollections_ValidatesCollectionAccess(
+        Organization organization, Group group, List<CollectionAccessSelection> collections)
+    {
+        var sutProvider = SetupSutProvider();
+        SetAccessToNonManage(collections);
+
+        await sutProvider.Sut.CreateGroupAsync(group, organization, collections);
+
+        await sutProvider.GetDependency<IGroupCollectionAccessValidator>().Received(1)
+            .ValidateAsync(group.OrganizationId, collections);
+    }
+
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
+    public async Task CreateGroup_WithEventSystemUser_WithCollections_ValidatesCollectionAccess(
+        Organization organization, Group group, EventSystemUser eventSystemUser,
+        List<CollectionAccessSelection> collections)
+    {
+        var sutProvider = SetupSutProvider();
+        SetAccessToNonManage(collections);
+
+        await sutProvider.Sut.CreateGroupAsync(group, organization, eventSystemUser, collections);
+
+        await sutProvider.GetDependency<IGroupCollectionAccessValidator>().Received(1)
+            .ValidateAsync(group.OrganizationId, collections);
+    }
+
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
+    public async Task CreateGroup_WithoutCollections_DoesNotValidateCollectionAccess(
+        Organization organization, Group group)
+    {
+        var sutProvider = SetupSutProvider();
+
+        await sutProvider.Sut.CreateGroupAsync(group, organization);
+
+        await sutProvider.GetDependency<IGroupCollectionAccessValidator>().DidNotReceiveWithAnyArgs()
+            .ValidateAsync(default, default);
+    }
+
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
+    public async Task CreateGroup_WithInvalidCollectionAccess_Throws(
+        Organization organization, Group group, List<CollectionAccessSelection> collections)
+    {
+        var sutProvider = SetupSutProvider();
+        ArrangeInvalidCollectionAccess(sutProvider);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.CreateGroupAsync(group, organization, collections));
+        Assert.Contains("You cannot modify group access for collections with the type as DefaultUserCollection.", exception.Message);
+
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default, default);
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
+    }
+
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
+    public async Task CreateGroup_WithEventSystemUser_WithInvalidCollectionAccess_Throws(
+        Organization organization, Group group, EventSystemUser eventSystemUser,
+        List<CollectionAccessSelection> collections)
+    {
+        var sutProvider = SetupSutProvider();
+        ArrangeInvalidCollectionAccess(sutProvider);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.CreateGroupAsync(group, organization, eventSystemUser, collections));
+        Assert.Contains("You cannot modify group access for collections with the type as DefaultUserCollection.", exception.Message);
+
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default, default);
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
+    }
+
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
+    public async Task CreateGroup_WithCollectionNotFound_Throws(
+        Organization organization, Group group, List<CollectionAccessSelection> collections)
+    {
+        var sutProvider = SetupSutProvider();
+        sutProvider.GetDependency<IGroupCollectionAccessValidator>()
+            .ValidateAsync(Arg.Any<Guid>(), Arg.Any<ICollection<CollectionAccessSelection>>())
+            .Returns(new CollectionNotFound());
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.CreateGroupAsync(group, organization, collections));
+
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default, default);
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
+    }
+
+    private static void SetAccessToNonManage(IEnumerable<CollectionAccessSelection> collections)
+    {
+        foreach (var cas in collections)
+        {
+            cas.Manage = false;
+        }
+    }
+
+    private static void ArrangeInvalidCollectionAccess(SutProvider<CreateGroupCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IGroupCollectionAccessValidator>()
+            .ValidateAsync(Arg.Any<Guid>(), Arg.Any<ICollection<CollectionAccessSelection>>())
+            .Returns(new CannotModifyDefaultUserCollection());
+    }
+
     private static SutProvider<CreateGroupCommand> SetupSutProvider()
     {
         var sutProvider = new SutProvider<CreateGroupCommand>()

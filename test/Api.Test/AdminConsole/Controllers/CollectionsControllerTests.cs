@@ -872,4 +872,55 @@ public class CollectionsControllerTests
             .DidNotReceive()
             .LogProviderAccessToOrganizationAsync(Arg.Any<Guid>());
     }
+
+    [Theory, BitAutoData]
+    public async Task GetAllWithAccess_ReturnsAllCollections(
+        Organization organization, Guid userId, List<CollectionAdminDetails> collections,
+        SutProvider<CollectionsController> sutProvider)
+    {
+        // Mix of shared and My Items collections — all should be returned without filtering
+        collections.ForEach(c => c.OrganizationId = organization.Id);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyOrganizationCollectionsWithPermissionsAsync(organization.Id, userId)
+            .Returns(collections);
+
+        var response = await sutProvider.Sut.GetAllWithAccess(organization.Id);
+
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .Received(1)
+            .GetManyOrganizationCollectionsWithPermissionsAsync(organization.Id, userId);
+
+        Assert.Equal(collections.Count, response.Data.Count());
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAllWithAccess_ProviderUser_LogsProviderAccess(
+        Organization organization, Guid userId, SutProvider<CollectionsController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(organization.Id).Returns(true);
+
+        await sutProvider.Sut.GetAllWithAccess(organization.Id);
+
+        await sutProvider.GetDependency<IProviderService>()
+            .Received(1)
+            .LogProviderAccessToOrganizationAsync(organization.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAllWithAccess_NonProviderUser_DoesNotLogProviderAccess(
+        Organization organization, Guid userId, SutProvider<CollectionsController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(organization.Id).Returns(false);
+
+        await sutProvider.Sut.GetAllWithAccess(organization.Id);
+
+        await sutProvider.GetDependency<IProviderService>()
+            .DidNotReceive()
+            .LogProviderAccessToOrganizationAsync(Arg.Any<Guid>());
+    }
 }

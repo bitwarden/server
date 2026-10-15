@@ -42,7 +42,7 @@ public class UpcomingInvoiceHandler(
     IUserRepository userRepository,
     IValidateSponsorshipCommand validateSponsorshipCommand,
     IMailer mailer,
-    IFeatureService featureService,
+    Bitwarden.Server.Sdk.Features.IFeatureService featureService,
     IBusinessPlanMigrationCoordinator businessPlanMigrationCoordinator)
     : IUpcomingInvoiceHandler
 {
@@ -554,6 +554,7 @@ public class UpcomingInvoiceHandler(
                 {
                     StartDate = phase.StartDate,
                     EndDate = phase.EndDate,
+                    TrialEnd = phase.TrialEnd,
                     Items = phase.Items.Select(item => new SubscriptionSchedulePhaseItemOptions
                     {
                         Price = item.PriceId,

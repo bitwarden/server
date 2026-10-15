@@ -15,15 +15,17 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.IntegrationTestCommon.Factories;
-using Bit.IntegrationTestCommon.Fido2;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Test.Common.Fakes;
 using Bit.Test.Common.Helpers;
 using Duende.IdentityModel;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Stores;
-using LinqToDB;
+using Fido2NetLib;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using NSubstitute;
 using Xunit;
@@ -105,6 +107,43 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
 
         var providers = AssertHelper.AssertJsonProperty(root, "TwoFactorProviders2", JsonValueKind.Object);
         Assert.True(providers.TryGetProperty("7", out _));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task TokenEndpoint_GrantTypePassword_MigratedU2fKeyWebAuthnTwoFactor_AssertionScopedToAppId_Success(
+        bool resavedAfterSuccessfulLogin)
+    {
+        // Arrange
+        var localFactory = new IdentityApplicationFactory();
+        using var authenticator = new FakeWebAuthnAuthenticator(FakeWebAuthnAuthenticator.GetLegacyU2fKeyHandle());
+        var twoFactorProviders = resavedAfterSuccessfulLogin
+            ? authenticator.GetResavedMigratedU2fTwoFactorProvidersJson("YubiKey 5 NFC", FakeWebAuthnAuthenticator.CarriedOverU2fCounter)
+            : authenticator.GetMigratedU2fTwoFactorProvidersJson("YubiKey 5 NFC", FakeWebAuthnAuthenticator.CarriedOverU2fCounter);
+        await CreateUserAsync(localFactory, _testEmail, twoFactorProviders);
+        var appId = CoreHelpers.U2fAppIdUrl(localFactory.GetService<GlobalSettings>());
+
+        // Act: password login returns the WebAuthn challenge
+        var challengeContext = await localFactory.ContextFromPasswordAsync(_testEmail, _testPassword);
+
+        // Assert: the client is told to also use the server's U2F AppID
+        var challengeBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(challengeContext);
+        var providers = AssertHelper.AssertJsonProperty(challengeBody.RootElement, "TwoFactorProviders2", JsonValueKind.Object);
+        Assert.True(providers.TryGetProperty("7", out var webAuthnOptions));
+        Assert.Equal(appId, webAuthnOptions.GetProperty("extensions").GetProperty("appid").GetString());
+
+        // Act: the authenticator signs for the AppID, as a browser does after the appid fallback
+        var challenge = AssertionOptions.FromJson(webAuthnOptions.GetRawText()).Challenge;
+        var assertion = authenticator.MakeAssertion(challenge, "localhost", "https://localhost:8080",
+            userHandle: null, appId: appId);
+        var loginContext = await localFactory.ContextFromPasswordWithTwoFactorAsync(
+            _testEmail, _testPassword, twoFactorProviderType: "7", twoFactorToken: FakeWebAuthnAuthenticator.MakeWebClientTokenString(assertion));
+
+        // Assert
+        var loginBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(loginContext);
+        var accessToken = AssertHelper.AssertJsonProperty(loginBody.RootElement, "access_token", JsonValueKind.String).GetString();
+        Assert.NotNull(accessToken);
     }
 
     [Fact]

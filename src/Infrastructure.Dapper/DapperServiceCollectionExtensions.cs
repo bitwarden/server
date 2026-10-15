@@ -58,6 +58,11 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IAccessRuleRepository, Pam.Repositories.AccessRuleRepository>();
         services.AddSingleton<IAccessRequestRepository, Pam.Repositories.AccessRequestRepository>();
         services.AddSingleton<IAccessLeaseRepository, Pam.Repositories.AccessLeaseRepository>();
+        services.AddSingleton<IAccessAuditEventRepository, Pam.Repositories.AccessAuditEventRepository>();
+        services.AddSingleton<IPamTargetSystemRepository, Pam.Repositories.PamTargetSystemRepository>();
+        services.AddSingleton<IPamAccessConnectorRepository, Pam.Repositories.PamAccessConnectorRepository>();
+        services.AddSingleton<IPamRotationConfigRepository, Pam.Repositories.PamRotationConfigRepository>();
+        services.AddSingleton<IPamRotationJobRepository, Pam.Repositories.PamRotationJobRepository>();
         services.AddSingleton<IPlayItemRepository, PlayItemRepository>();
         services.AddSingleton<IPolicyRepository, PolicyRepository>();
         services.AddSingleton<IProviderOrganizationRepository, ProviderOrganizationRepository>();
@@ -84,6 +89,7 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IOrganizationPlanMigrationCohortRepository, OrganizationPlanMigrationCohortRepository>();
         services.AddSingleton<IOrganizationPlanMigrationCohortAssignmentRepository, OrganizationPlanMigrationCohortAssignmentRepository>();
         services.AddSingleton<IUserSignatureKeyPairRepository, UserSignatureKeyPairRepository>();
+        services.AddSingleton<IOrganizationUserKeyRepository, OrganizationUserKeyRepository>();
         services.AddSingleton<IOrganizationReportRepository, OrganizationReportRepository>();
         services.AddSingleton<IOrganizationApplicationRepository, OrganizationApplicationRepository>();
         services.AddSingleton<IOrganizationDeleteTaskRepository, OrganizationDeleteTaskRepository>();

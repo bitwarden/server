@@ -212,4 +212,92 @@ public class SendRepositoryTests
         Assert.Contains(confirmedUserSend.Id, resultList);
         Assert.DoesNotContain(orgOwnedSend.Id, resultList);
     }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetIdsByOrganizationIdAsync_ExcludesRevokedOrganizationUsers(
+        ISendRepository sendRepository,
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        // Arrange — a revoked member is no longer part of the organization, so their personal
+        // Sends must not be swept by that organization's Send policies.
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var confirmedUser = await userRepository.CreateTestUserAsync("confirmed");
+        var revokedUser = await userRepository.CreateTestUserAsync("revoked");
+
+        await organizationUserRepository.CreateTestOrganizationUserAsync(organization, confirmedUser);
+        await organizationUserRepository.CreateRevokedTestOrganizationUserAsync(organization, revokedUser);
+
+        var confirmedUserSend = await sendRepository.CreateAsync(new Send
+        {
+            UserId = confirmedUser.Id,
+            Type = SendType.Text,
+            Data = "{\"Text\": \"2.t|t|t\"}",
+            Key = "2.t|t|t",
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+        });
+
+        var revokedUserSend = await sendRepository.CreateAsync(new Send
+        {
+            UserId = revokedUser.Id,
+            Type = SendType.Text,
+            Data = "{\"Text\": \"2.t|t|t\"}",
+            Key = "2.t|t|t",
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+        });
+
+        // Act
+        var result = await sendRepository.GetIdsByOrganizationIdAsync(organization.Id);
+
+        // Assert
+        var resultList = result.ToList();
+        Assert.Single(resultList);
+        Assert.Contains(confirmedUserSend.Id, resultList);
+        Assert.DoesNotContain(revokedUserSend.Id, resultList);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetIdsByOrganizationIdAsync_ExcludesStagedOrganizationUsers(
+        ISendRepository sendRepository,
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        // Arrange — Staged members are provisioned but not invited, and are not subject to
+        // organization policies, so their personal Sends must not be swept.
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var confirmedUser = await userRepository.CreateTestUserAsync("confirmed");
+        var stagedUser = await userRepository.CreateTestUserAsync("staged");
+
+        await organizationUserRepository.CreateTestOrganizationUserAsync(organization, confirmedUser);
+        await organizationUserRepository.CreateStagedTestOrganizationUserAsync(organization, stagedUser);
+
+        var confirmedUserSend = await sendRepository.CreateAsync(new Send
+        {
+            UserId = confirmedUser.Id,
+            Type = SendType.Text,
+            Data = "{\"Text\": \"2.t|t|t\"}",
+            Key = "2.t|t|t",
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+        });
+
+        var stagedUserSend = await sendRepository.CreateAsync(new Send
+        {
+            UserId = stagedUser.Id,
+            Type = SendType.Text,
+            Data = "{\"Text\": \"2.t|t|t\"}",
+            Key = "2.t|t|t",
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+        });
+
+        // Act
+        var result = await sendRepository.GetIdsByOrganizationIdAsync(organization.Id);
+
+        // Assert
+        var resultList = result.ToList();
+        Assert.Single(resultList);
+        Assert.Contains(confirmedUserSend.Id, resultList);
+        Assert.DoesNotContain(stagedUserSend.Id, resultList);
+    }
 }

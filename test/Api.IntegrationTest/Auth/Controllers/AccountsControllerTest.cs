@@ -55,7 +55,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     private readonly IUserRepository _userRepository;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IMailService _mailService;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ISsoConfigRepository _ssoConfigRepository;
@@ -71,7 +71,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     {
         _factory = factory;
         _factory.SubstituteService<IPushNotificationService>(_ => { });
-        _factory.SubstituteService<IFeatureService>(_ => { });
+        _factory.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(_ => { });
         _factory.SubstituteService<IStripeSyncService>(_ => { });
         _factory.SubstituteService<IMailService>(_ => { });
         _factory.SubstituteService<ITwoFactorEmailService>(_ => { });
@@ -80,7 +80,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         _userRepository = _factory.GetService<IUserRepository>();
         _pushNotificationService = _factory.GetService<IPushNotificationService>();
         _mailService = _factory.GetService<IMailService>();
-        _featureService = _factory.GetService<IFeatureService>();
+        _featureService = _factory.GetService<Bitwarden.Server.Sdk.Features.IFeatureService>();
         _passwordHasher = _factory.GetService<IPasswordHasher<User>>();
         _organizationRepository = _factory.GetService<IOrganizationRepository>();
         _ssoConfigRepository = _factory.GetService<ISsoConfigRepository>();
@@ -155,58 +155,11 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     [Theory]
     [BitAutoData(KdfType.PBKDF2_SHA256, 600001, null, null)]
     [BitAutoData(KdfType.Argon2id, 4, 65, 5)]
-    public async Task PostKdf_ValidRequestLogoutOnKdfChangeFeatureFlagOff_SuccessLogout(KdfType kdf,
+    public async Task PostKdf_ValidRequest_SuccessSyncAndLogoutWithReason(KdfType kdf,
         int kdfIterations, int? kdfMemory, int? kdfParallelism)
     {
         var userBeforeKdfChange = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(userBeforeKdfChange);
-
-        _featureService.IsEnabled(FeatureFlagKeys.NoLogoutOnKdfChange).Returns(false);
-
-        await _loginHelper.LoginAsync(_ownerEmail);
-
-        var kdfRequest = new KdfRequestModel
-        {
-            KdfType = kdf,
-            Iterations = kdfIterations,
-            Memory = kdfMemory,
-            Parallelism = kdfParallelism,
-        };
-
-        var response = await PostKdfWithKdfRequestAsync(kdfRequest);
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        // Validate that the user fields were updated correctly
-        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
-        Assert.NotNull(user);
-        Assert.Equal(kdfRequest.KdfType, user.Kdf);
-        Assert.Equal(kdfRequest.Iterations, user.KdfIterations);
-        Assert.Equal(kdfRequest.Memory, user.KdfMemory);
-        Assert.Equal(kdfRequest.Parallelism, user.KdfParallelism);
-        Assert.Equal(_masterKeyWrappedUserKey, user.Key);
-        Assert.NotNull(user.LastKdfChangeDate);
-        Assert.True(user.LastKdfChangeDate > DateTime.UtcNow.AddMinutes(-1));
-        Assert.True(user.RevisionDate > DateTime.UtcNow.AddMinutes(-1));
-        Assert.True(user.AccountRevisionDate > DateTime.UtcNow.AddMinutes(-1));
-        Assert.NotEqual(userBeforeKdfChange.SecurityStamp, user.SecurityStamp);
-        Assert.Equal(PasswordVerificationResult.Success,
-            _passwordHasher.VerifyHashedPassword(user, user.MasterPassword!, _newMasterPasswordHash));
-
-        // Validate push notification
-        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
-    }
-
-    [Theory]
-    [BitAutoData(KdfType.PBKDF2_SHA256, 600001, null, null)]
-    [BitAutoData(KdfType.Argon2id, 4, 65, 5)]
-    public async Task PostKdf_ValidRequestLogoutOnKdfChangeFeatureFlagOn_SuccessSyncAndLogoutWithReason(KdfType kdf,
-        int kdfIterations, int? kdfMemory, int? kdfParallelism)
-    {
-        var userBeforeKdfChange = await _userRepository.GetByEmailAsync(_ownerEmail);
-        Assert.NotNull(userBeforeKdfChange);
-
-        _featureService.IsEnabled(FeatureFlagKeys.NoLogoutOnKdfChange).Returns(true);
 
         await _loginHelper.LoginAsync(_ownerEmail);
 
@@ -1654,7 +1607,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     // which rotates the master password and wrapped user key as part of the email change. They
     // share the legacy-shaped PostEmailAsync helper at the end of this block.
     //
-    // The class-scoped IFeatureService substitute leaks Returns(...) values across tests in this
+    // The class-scoped Bitwarden.Server.Sdk.Features.IFeatureService substitute leaks Returns(...) values across tests in this
     // class, so every test sets the flag explicitly rather than relying on a default.
     //
     // TODO: PM-39120 - On flag cleanup, delete this entire block (all four _SelfServiceFlagOff_

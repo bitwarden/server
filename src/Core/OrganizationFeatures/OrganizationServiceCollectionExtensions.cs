@@ -196,6 +196,7 @@ public static class OrganizationServiceCollectionExtensions
 
     private static void AddOrganizationGroupCommands(this IServiceCollection services)
     {
+        services.TryAddScoped<IGroupCollectionAccessValidator, GroupCollectionAccessValidator>();
         services.AddScoped<ICreateGroupCommand, CreateGroupCommand>();
         services.AddScoped<IDeleteGroupCommand, DeleteGroupCommand>();
         services.AddScoped<IUpdateGroupCommand, UpdateGroupCommand>();
@@ -216,7 +217,8 @@ public static class OrganizationServiceCollectionExtensions
         services.TryAddScoped<IAcceptOrganizationInviteLinkCommand, AcceptOrganizationInviteLinkCommand>();
         services.TryAddScoped<IConfirmOrganizationInviteLinkValidator, ConfirmOrganizationInviteLinkValidator>();
         services.TryAddScoped<IConfirmOrganizationInviteLinkCommand, ConfirmOrganizationInviteLinkCommand>();
-        services.TryAddScoped<IGetOrganizationInviteCommand, GetOrganizationInviteCommand>();
+        services.TryAddScoped<IGetOrganizationInviteValidator, GetOrganizationInviteValidator>();
+        services.TryAddScoped<IGetOrganizationInviteQuery, GetOrganizationInviteQuery>();
     }
 
     private static void AddOrganizationDomainCommandsQueries(this IServiceCollection services)

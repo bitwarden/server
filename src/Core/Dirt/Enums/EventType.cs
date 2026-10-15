@@ -49,6 +49,7 @@ public enum EventType : int
     Cipher_ClientToggledIbanVisible = 1130,
     Cipher_ClientCopiedNationalIdentificationNumber = 1131,
     Cipher_ClientToggledNationalIdentificationNumberVisible = 1132,
+    Cipher_ClientHttpAuthReleased = 1133,
 
     Collection_Created = 1300,
     Collection_Updated = 1301,
@@ -171,4 +172,6 @@ public enum EventType : int
     Send_Deleted_File = 2509,
     Send_Accessed_Text = 2510,
     Send_Accessed_File = 2511,
+    Send_PolicyDisabled = 2512,
+    Send_PolicyEnabled = 2513,
 }

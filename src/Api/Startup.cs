@@ -149,6 +149,12 @@ public class Startup
                     (c.Value.Contains(ApiScopes.Api) || c.Value.Contains(ApiScopes.ApiSecrets))
                 ));
             });
+            config.AddPolicy(Policies.AccessConnector, policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiPamCredentialRotation);
+                policy.RequireClaim(Claims.Type, IdentityClientType.AccessConnector.ToString());
+            });
             config.AddPolicy(Policies.Send, configurePolicy: policy =>
             {
                 policy.RequireAuthenticatedUser();
@@ -238,7 +244,6 @@ public class Startup
         // Add Event Integrations services
         services.AddEventIntegrationsCommandsQueries(globalSettings);
         services.AddSlackService(globalSettings);
-        services.AddTeamsService(globalSettings);
     }
 
     public void Configure(
@@ -413,5 +418,7 @@ public class Startup
             .MapUserSubscriptionEndpoints();
         endpoints.MapGroup("/organizations/{organizationId:guid}/billing/subscription")
             .MapOrganizationSubscriptionEndpoints();
+        endpoints.MapGroup("/organizations/billing/subscription")
+            .MapOrganizationSubscriptionPurchaseEndpoints();
     }
 }

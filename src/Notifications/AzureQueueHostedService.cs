@@ -74,12 +74,19 @@ public class AzureQueueHostedService : IHostedService, IDisposable
                     {
                         try
                         {
-                            var decodedMessage = message.DecodeMessageText();
-                            if (!string.IsNullOrWhiteSpace(decodedMessage))
+                            // The default options are case-sensitive, which matches the PascalCase
+                            // the push engines write.
+                            var notification = message.Body.ToObjectFromJson<InboundNotification>();
+                            if (notification is null)
                             {
-                                await _hubHelpers.SendNotificationToHubAsync(decodedMessage, cancellationToken);
+                                // A JSON null will never become a notification, so retrying it is pointless.
+                                _logger.LogError("Dequeued message {MessageId} was null and will be deleted.",
+                                    message.MessageId);
                             }
-
+                            else
+                            {
+                                await _hubHelpers.SendNotificationToHubAsync(notification, cancellationToken);
+                            }
                             await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt,
                                 cancellationToken);
                         }

@@ -1390,8 +1390,8 @@
       },
       "YamlDotNet": {
         "type": "Transitive",
-        "resolved": "11.2.1",
-        "contentHash": "tBt8K+korVfrjH9wyDEhiLKxbs8qoLCLIFwvYgkSUuMC9//w3z0cFQ8LQAI/5MCKq+BMil0cfRTRvPeE7eXhQw=="
+        "resolved": "18.1.0",
+        "contentHash": "5K+9KFg2TdTl7VXv88Qzi/0lqK6JFoNP3lRuImPYGRV7K/QYklDyTrj4+A+KAki1JsQi6qKY+hDyY7d6WRqjrw=="
       },
       "YubicoDotNetClient": {
         "type": "Transitive",
@@ -1490,7 +1490,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.9.2, )"
+          "HttpExtensions": "[2026.10.0, )"
         }
       },
       "httpextensions": {
@@ -1499,7 +1499,7 @@
       "migrator": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.9.2, )",
+          "Core": "[2026.10.0, )",
           "Microsoft.Extensions.Logging": "[10.0.10, 10.0.10]",
           "dbup-sqlserver": "[7.2.0, 7.2.0]"
         }
@@ -1513,11 +1513,11 @@
       "setup": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.9.2, )",
+          "Core": "[2026.10.0, )",
           "Handlebars.Net": "[2.1.6, 2.1.6]",
           "Microsoft.Extensions.Logging": "[10.0.10, 10.0.10]",
-          "Migrator": "[2026.9.2, )",
-          "YamlDotNet": "[11.2.1, 11.2.1]"
+          "Migrator": "[2026.10.0, )",
+          "YamlDotNet": "[18.1.0, 18.1.0]"
         }
       },
       "ssrfprotection": {

@@ -25,6 +25,19 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.InviteLinks;
 [SutProviderCustomize]
 public class ConfirmOrganizationInviteLinkCommandTests
 {
+    // The two confirmations that consume a seat: a brand-new membership (no existing row), or a Staged row,
+    // which is excluded from the occupied seat count.
+    public static IEnumerable<object?[]> SeatConsumingMemberships() =>
+    [
+        [null],
+        [new OrganizationUser { Status = OrganizationUserStatusType.Staged }],
+    ];
+
+    public static IEnumerable<object?[]> SeatExpansionFailures() =>
+        from failure in new Exception[] { new BadRequestException("seat failure"), new GatewayException("seat failure") }
+        from membership in SeatConsumingMemberships()
+        select new object?[] { failure, membership[0] };
+
     [Theory, BitAutoData]
     public async Task ConfirmAsync_WhenValidationFails_ReturnsErrorAndDoesNotWrite(
         ConfirmOrganizationInviteLinkRequest request,
@@ -41,19 +54,23 @@ public class ConfirmOrganizationInviteLinkCommandTests
         // Assert
         Assert.True(result.IsError);
         Assert.IsType<InviteLinkNotFound>(result.AsError);
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
+        await sutProvider.GetDependency<IOrganizationService>()
             .DidNotReceiveWithAnyArgs()
-            .ReplaceAsync(Arg.Any<OrganizationUser>());
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .AutoAddSeatsAsync(Arg.Any<Organization>(), Arg.Any<int>());
+        await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceiveWithAnyArgs()
-            .CreateAsync(Arg.Any<OrganizationUser>());
-        await sutProvider.GetDependency<IEventService>()
+            .CreateDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
+        await sutProvider.GetDependency<IUpdateUserResetPasswordEnrollmentCommand>()
             .DidNotReceiveWithAnyArgs()
-            .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>());
+            .UpdateUserResetPasswordEnrollmentAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Guid?>());
+        AssertNoMembershipWritten(sutProvider);
     }
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData(OrganizationUserStatusType.Invited)]
+    [BitAutoData(OrganizationUserStatusType.Accepted)]
     public async Task ConfirmAsync_WithExistingMembership_ConfirmsDirectlyWithoutCreatingMembership(
+        OrganizationUserStatusType status,
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
@@ -62,6 +79,13 @@ public class ConfirmOrganizationInviteLinkCommandTests
     {
         // Arrange
         SetupHappyPath(organization, inviteLink, user, existingOrganizationUser, sutProvider);
+        existingOrganizationUser.Status = status;
+        organization.Seats = 2;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Users = 2, Sponsored = 0 });
+
         var request = BuildRequest(inviteLink, user);
 
         // Act
@@ -128,16 +152,19 @@ public class ConfirmOrganizationInviteLinkCommandTests
                 EventType.OrganizationUser_InviteLinkConfirmed);
     }
 
-    [Theory, BitAutoData]
-    public async Task ConfirmAsync_WithNewUser_AtCapacity_AutoAddsSeat(
+    [Theory]
+    [BitMemberAutoData(nameof(SeatConsumingMemberships))]
+    public async Task ConfirmAsync_WithSeatConsumingMembership_AtCapacity_AutoAddsSeat(
+        OrganizationUser? existingOrganizationUser,
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
         SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
     {
         // Arrange
-        SetupHappyPath(organization, inviteLink, user, existingOrganizationUser: null, sutProvider);
+        SetupValidatedConfirmation(organization, inviteLink, user, existingOrganizationUser, sutProvider);
         organization.Seats = 2;
+        organization.MaxAutoscaleSeats = 5;
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
@@ -151,28 +178,30 @@ public class ConfirmOrganizationInviteLinkCommandTests
         await sutProvider.GetDependency<IOrganizationService>()
             .Received(1)
             .AutoAddSeatsAsync(organization, 1);
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .Received(1)
-            .CreateAsync(Arg.Any<OrganizationUser>());
     }
 
-    [Theory, BitAutoData]
-    public async Task ConfirmAsync_WithNewUser_SeatExpansionFails_ReturnsErrorAndDoesNotCreate(
+    [Theory]
+    [BitMemberAutoData(nameof(SeatExpansionFailures))]
+    public async Task ConfirmAsync_WithSeatConsumingMembership_SeatExpansionFails_ReturnsErrorAndDoesNotWrite(
+        Exception businessFailure,
+        OrganizationUser? existingOrganizationUser,
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
         SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
     {
         // Arrange
-        SetupHappyPath(organization, inviteLink, user, existingOrganizationUser: null, sutProvider);
+        SetupValidatedConfirmation(organization, inviteLink, user, existingOrganizationUser, sutProvider);
         organization.Seats = 2;
+        organization.MaxAutoscaleSeats = 5;
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
             .Returns(new OrganizationSeatCounts { Users = 2, Sponsored = 0 });
+
         sutProvider.GetDependency<IOrganizationService>()
             .AutoAddSeatsAsync(organization, 1)
-            .ThrowsAsync(new BadRequestException("No payment method."));
+            .ThrowsAsync(businessFailure);
 
         // Act
         var result = await sutProvider.Sut.ConfirmAsync(BuildRequest(inviteLink, user));
@@ -180,12 +209,79 @@ public class ConfirmOrganizationInviteLinkCommandTests
         // Assert
         Assert.True(result.IsError);
         Assert.IsType<ConfirmSeatAddFailed>(result.AsError);
+        AssertNoMembershipWritten(sutProvider);
+    }
+
+    [Theory]
+    [BitMemberAutoData(nameof(SeatConsumingMemberships))]
+    public async Task ConfirmAsync_WithSeatConsumingMembership_NoSeatsAvailable_ReturnsErrorAndDoesNotWrite(
+        OrganizationUser? existingOrganizationUser,
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
+    {
+        // Arrange
+        SetupValidatedConfirmation(organization, inviteLink, user, existingOrganizationUser, sutProvider);
+        organization.Seats = 2;
+        organization.MaxAutoscaleSeats = 2;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Users = 2, Sponsored = 0 });
+
+        // Act
+        var result = await sutProvider.Sut.ConfirmAsync(BuildRequest(inviteLink, user));
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<ConfirmOrganizationHasNoAvailableSeats>(result.AsError);
+        await sutProvider.GetDependency<IOrganizationService>()
+            .DidNotReceiveWithAnyArgs()
+            .AutoAddSeatsAsync(Arg.Any<Organization>(), Arg.Any<int>());
+        AssertNoMembershipWritten(sutProvider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmAsync_WithStagedMembership_AndSeatsAvailable_ConfirmsWithoutAutoscaling(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser stagedOrganizationUser,
+        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
+    {
+        // Arrange
+        SetupHappyPath(organization, inviteLink, user, stagedOrganizationUser, sutProvider);
+        SetupStagedMembership(user, stagedOrganizationUser);
+        stagedOrganizationUser.ExternalId = "ext-123";
+        organization.Seats = 2;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Users = 1, Sponsored = 0 });
+
+        var request = BuildRequest(inviteLink, user);
+
+        // Act
+        var result = await sutProvider.Sut.ConfirmAsync(request);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IOrganizationService>()
+            .DidNotReceiveWithAnyArgs()
+            .AutoAddSeatsAsync(Arg.Any<Organization>(), Arg.Any<int>());
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .CreateAsync(Arg.Any<OrganizationUser>());
         await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .ReplaceAsync(Arg.Any<OrganizationUser>());
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou =>
+                ou.Id == stagedOrganizationUser.Id &&
+                ou.Status == OrganizationUserStatusType.Confirmed &&
+                ou.UserId == user.Id &&
+                ou.Email == null &&
+                ou.Key == request.OrgUserKey &&
+                ou.ExternalId == stagedOrganizationUser.ExternalId));
     }
 
     [Theory, BitAutoData]
@@ -306,26 +402,6 @@ public class ConfirmOrganizationInviteLinkCommandTests
             .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncOrgKeys && n.TargetId == user.Id));
     }
 
-    [Theory, BitAutoData]
-    public async Task ConfirmAsync_WhenValidationFails_DoesNotPushSyncOrgKeys(
-        ConfirmOrganizationInviteLinkRequest request,
-        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
-    {
-        // Arrange
-        sutProvider.GetDependency<IConfirmOrganizationInviteLinkValidator>()
-            .ValidateAsync(Arg.Any<ConfirmOrganizationInviteLinkValidationRequest>())
-            .Returns(new InviteLinkNotFound());
-
-        // Act
-        var result = await sutProvider.Sut.ConfirmAsync(request);
-
-        // Assert
-        Assert.True(result.IsError);
-        await sutProvider.GetDependency<IPushNotificationService>()
-            .DidNotReceiveWithAnyArgs()
-            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
-    }
-
     private static ConfirmOrganizationInviteLinkRequest BuildRequest(OrganizationInviteLink inviteLink, User user) =>
         new()
         {
@@ -343,14 +419,26 @@ public class ConfirmOrganizationInviteLinkCommandTests
         OrganizationUser? existingOrganizationUser,
         SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
     {
-        inviteLink.OrganizationId = organization.Id;
-        inviteLink.Code = Guid.NewGuid().ToString();
         if (existingOrganizationUser is not null)
         {
             existingOrganizationUser.OrganizationId = organization.Id;
             existingOrganizationUser.UserId = user.Id;
             existingOrganizationUser.Status = OrganizationUserStatusType.Accepted;
         }
+
+        SetupValidatedConfirmation(organization, inviteLink, user, existingOrganizationUser, sutProvider);
+    }
+
+    // Stubs a successful validation that resolves to the given membership, leaving the membership untouched.
+    private static void SetupValidatedConfirmation(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser? existingOrganizationUser,
+        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
+    {
+        inviteLink.OrganizationId = organization.Id;
+        inviteLink.Code = Guid.NewGuid().ToString();
 
         sutProvider.GetDependency<IConfirmOrganizationInviteLinkValidator>()
             .ValidateAsync(Arg.Any<ConfirmOrganizationInviteLinkValidationRequest>())
@@ -372,6 +460,31 @@ public class ConfirmOrganizationInviteLinkCommandTests
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(user.Id)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Disabled, []));
+    }
+
+    private static void AssertNoMembershipWritten(SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(Arg.Any<OrganizationUser>());
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(Arg.Any<OrganizationUser>());
+        sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>());
+        sutProvider.GetDependency<IPushNotificationService>()
+            .DidNotReceiveWithAnyArgs()
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
+    }
+
+    // A Staged membership: SCIM/Directory-Connector provisioned, email set, not yet linked to a User.
+    // Call after SetupHappyPath, which defaults the existing membership to Accepted.
+    private static void SetupStagedMembership(User user, OrganizationUser stagedOrganizationUser)
+    {
+        stagedOrganizationUser.Status = OrganizationUserStatusType.Staged;
+        stagedOrganizationUser.Email = user.Email;
+        stagedOrganizationUser.UserId = null;
     }
 
     private static void SetupAutoEnrollPolicy(

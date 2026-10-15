@@ -96,9 +96,10 @@ public class ConfirmOrganizationInviteLinkValidator(
             return freeAdminError;
         }
 
-        // A seat is only consumed when a brand-new membership will be created. An existing pending
+        // A seat is only consumed when a brand-new membership will be created or a Staged membership is
+        // promoted, since Staged rows are excluded from the occupied seat count. An existing pending
         // invitation already occupies a seat, so confirming it adds no capacity pressure.
-        if (existingOrganizationUser is null)
+        if (existingOrganizationUser is null or { Status: OrganizationUserStatusType.Staged })
         {
             var seatError = await ValidatePasswordManagerSeatsAsync(organization);
             if (seatError is not null)
