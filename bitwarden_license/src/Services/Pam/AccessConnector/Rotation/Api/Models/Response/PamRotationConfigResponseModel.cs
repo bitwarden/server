@@ -27,6 +27,9 @@ public class PamRotationConfigResponseModel : ResponseModel
     /// <summary>The config's sealed blob.</summary>
     public string SealedData { get; set; } = null!;
 
+    /// <summary>The content key of the sealed blob, wrapped by the organization key.</summary>
+    public string? WrappedKey { get; set; }
+
     /// <summary>A Quartz 6-field cron expression evaluated in UTC. Null means no scheduled rotation.</summary>
     public string? ScheduleCron { get; set; }
 
