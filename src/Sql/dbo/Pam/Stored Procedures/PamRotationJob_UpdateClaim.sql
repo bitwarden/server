@@ -45,6 +45,8 @@ BEGIN
 
         IF @@ROWCOUNT = 0
         BEGIN
+            ROLLBACK TRANSACTION
+
             -- Unknown job or one outside this access connector's assignment share NotEligible; no existence oracle.
             SET @Outcome = CASE
                 WHEN NOT EXISTS (
@@ -66,8 +68,6 @@ BEGIN
                 ) THEN -1 -- NotEligible: unknown, outside the assignment or org, or the access connector is disabled
                 ELSE 0 -- NotClaimable: eligible, but not Pending, in backoff, or its config or target is disabled
             END
-
-            ROLLBACK TRANSACTION
 
             SELECT
                 @Outcome AS [Outcome],

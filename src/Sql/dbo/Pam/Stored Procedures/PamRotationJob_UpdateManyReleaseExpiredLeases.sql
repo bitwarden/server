@@ -54,6 +54,8 @@ BEGIN
             AND [Action] = 0 -- None
             AND [ResolvedDate] IS NULL
 
+        COMMIT TRANSACTION
+
         -- One row per released job; ClaimedByAccessConnectorId is the pre-clear claimant, always non-null.
         SELECT
             AF.[JobId],
@@ -68,8 +70,6 @@ BEGIN
             [dbo].[PamRotationJob] J ON J.[Id] = AF.[JobId]
         INNER JOIN
             [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]
-
-        COMMIT TRANSACTION
     END TRY
     BEGIN CATCH
         IF @@TRANCOUNT > 0
