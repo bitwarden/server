@@ -19,6 +19,7 @@ public class PamTargetSystemResponseModel : ResponseModel
         Method = targetSystem.Method;
         Status = targetSystem.Status;
         SealedData = targetSystem.SealedData;
+        WrappedKey = targetSystem.WrappedKey;
         CreationDate = targetSystem.CreationDate.AsUtc();
         RevisionDate = targetSystem.RevisionDate.AsUtc();
     }

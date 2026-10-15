@@ -22,39 +22,65 @@ public class UpdateRotationConfigCommandTests
 
     [Theory, BitAutoData]
     public async Task UpdateAsync_SealedDataMissing_ThrowsBadRequest(
-        Guid organizationId, Guid actingUserId, Guid configId, string cron)
+        Guid organizationId, Guid actingUserId, Guid configId, string wrappedKey, string cron)
     {
         var sutProvider = Setup();
 
         await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpdateAsync(organizationId, actingUserId, configId, " ", cron, false));
+            () => sutProvider.Sut.UpdateAsync(organizationId, actingUserId, configId, " ", wrappedKey, cron, false));
+
+        await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_WrappedKeyMissing_ThrowsBadRequest(
+        Guid organizationId, Guid actingUserId, Guid configId, string sealedData, string cron)
+    {
+        var sutProvider = Setup();
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateAsync(organizationId, actingUserId, configId, sealedData, " ", cron, false));
+
+        await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_ActiveJobWithChangedWrappedKey_ThrowsBadRequest(
+        Guid actingUserId, PamRotationConfigDetails details, string newWrappedKey, string cron)
+    {
+        var sutProvider = Setup();
+        details.HasActiveJob = true;
+        sutProvider.GetDependency<IPamRotationConfigRepository>().GetDetailsByIdAsync(details.Id).Returns(details);
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateAsync(
+            details.OrganizationId, actingUserId, details.Id, details.SealedData, newWrappedKey, cron, false));
 
         await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
     }
 
     [Theory, BitAutoData]
     public async Task UpdateAsync_ConfigMissing_ThrowsNotFound(
-        Guid organizationId, Guid actingUserId, Guid configId, string sealedData, string cron)
+        Guid organizationId, Guid actingUserId, Guid configId, string sealedData, string wrappedKey, string cron)
     {
         var sutProvider = Setup();
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetDetailsByIdAsync(configId)
             .Returns((PamRotationConfigDetails?)null);
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UpdateAsync(organizationId, actingUserId, configId, sealedData, cron, false));
+            () => sutProvider.Sut.UpdateAsync(organizationId, actingUserId, configId, sealedData, wrappedKey, cron, false));
 
         await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
     }
 
     [Theory, BitAutoData]
     public async Task UpdateAsync_WrongOrg_ThrowsNotFound(
-        Guid actingUserId, PamRotationConfigDetails details, string sealedData, string cron)
+        Guid actingUserId, PamRotationConfigDetails details, string sealedData, string wrappedKey, string cron)
     {
         var sutProvider = Setup();
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetDetailsByIdAsync(details.Id).Returns(details);
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UpdateAsync(Guid.NewGuid(), actingUserId, details.Id, sealedData, cron, false));
+            () => sutProvider.Sut.UpdateAsync(Guid.NewGuid(), actingUserId, details.Id, sealedData, wrappedKey, cron, false));
 
         await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
     }
@@ -68,7 +94,7 @@ public class UpdateRotationConfigCommandTests
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetDetailsByIdAsync(details.Id).Returns(details);
 
         await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateAsync(
-            details.OrganizationId, actingUserId, details.Id, newSealedData, cron, false));
+            details.OrganizationId, actingUserId, details.Id, newSealedData, details.WrappedKey, cron, false));
 
         await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
     }
@@ -81,7 +107,7 @@ public class UpdateRotationConfigCommandTests
         details.HasActiveJob = true;
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetDetailsByIdAsync(details.Id).Returns(details);
 
-        await sutProvider.Sut.UpdateAsync(details.OrganizationId, actingUserId, details.Id, details.SealedData, newCron, true);
+        await sutProvider.Sut.UpdateAsync(details.OrganizationId, actingUserId, details.Id, details.SealedData, details.WrappedKey, newCron, true);
 
         await sutProvider.GetDependency<IPamRotationConfigRepository>().Received(1).ReplaceAsync(Arg.Is<PamRotationConfig>(c =>
             c.Id == details.Id && c.SealedData == details.SealedData && c.ScheduleCron == newCron && c.RotateOnAccessEnd));
@@ -89,7 +115,7 @@ public class UpdateRotationConfigCommandTests
 
     [Theory, BitAutoData]
     public async Task UpdateAsync_InvalidCron_ThrowsBadRequestBeforeWriting(
-        Guid actingUserId, PamRotationConfigDetails details, string sealedData, string cron)
+        Guid actingUserId, PamRotationConfigDetails details, string sealedData, string wrappedKey, string cron)
     {
         var sutProvider = Setup();
         details.HasActiveJob = false;
@@ -99,7 +125,7 @@ public class UpdateRotationConfigCommandTests
             .Do(_ => throw new BadRequestException("The schedule is not a valid cron expression."));
 
         await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpdateAsync(details.OrganizationId, actingUserId, details.Id, sealedData, cron, false));
+            () => sutProvider.Sut.UpdateAsync(details.OrganizationId, actingUserId, details.Id, sealedData, wrappedKey, cron, false));
 
         await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs().EmitAsync(default!);
@@ -107,7 +133,7 @@ public class UpdateRotationConfigCommandTests
 
     [Theory, BitAutoData]
     public async Task UpdateAsync_HappyPath_WritesAllFieldsAndRecomputesNextRotationAt(
-        Guid actingUserId, PamRotationConfigDetails details, string sealedData, string newCron)
+        Guid actingUserId, PamRotationConfigDetails details, string sealedData, string wrappedKey, string newCron)
     {
         var sutProvider = Setup();
         details.HasActiveJob = false;
@@ -116,21 +142,22 @@ public class UpdateRotationConfigCommandTests
         sutProvider.GetDependency<IRotationScheduleCalculator>().GetNextOccurrence(newCron, _now).Returns(nextOccurrence);
 
         var result = await sutProvider.Sut.UpdateAsync(
-            details.OrganizationId, actingUserId, details.Id, sealedData, newCron, true);
+            details.OrganizationId, actingUserId, details.Id, sealedData, wrappedKey, newCron, true);
 
         Assert.Equal(sealedData, result.SealedData);
+        Assert.Equal(wrappedKey, result.WrappedKey);
         Assert.Equal(newCron, result.ScheduleCron);
         Assert.Equal(nextOccurrence, result.NextRotationAt);
         Assert.True(result.RotateOnAccessEnd);
         Assert.Equal(_now, result.RevisionDate);
         await sutProvider.GetDependency<IPamRotationConfigRepository>().Received(1).ReplaceAsync(Arg.Is<PamRotationConfig>(c =>
-            c.Id == details.Id && c.SealedData == sealedData && c.ScheduleCron == newCron
+            c.Id == details.Id && c.SealedData == sealedData && c.WrappedKey == wrappedKey && c.ScheduleCron == newCron
             && c.NextRotationAt == nextOccurrence && c.RevisionDate == _now));
     }
 
     [Theory, BitAutoData]
     public async Task UpdateAsync_NullCron_ClearsNextRotationAt(
-        Guid actingUserId, PamRotationConfigDetails details, string sealedData)
+        Guid actingUserId, PamRotationConfigDetails details, string sealedData, string wrappedKey)
     {
         var sutProvider = Setup();
         details.HasActiveJob = false;
@@ -139,7 +166,7 @@ public class UpdateRotationConfigCommandTests
         sutProvider.GetDependency<IRotationScheduleCalculator>().GetNextOccurrence(null, _now).Returns((DateTime?)null);
 
         var result = await sutProvider.Sut.UpdateAsync(
-            details.OrganizationId, actingUserId, details.Id, sealedData, null, false);
+            details.OrganizationId, actingUserId, details.Id, sealedData, wrappedKey, null, false);
 
         Assert.Null(result.ScheduleCron);
         Assert.Null(result.NextRotationAt);
@@ -149,13 +176,13 @@ public class UpdateRotationConfigCommandTests
 
     [Theory, BitAutoData]
     public async Task UpdateAsync_HappyPath_EmitsAttemptThenOutcome(
-        Guid actingUserId, PamRotationConfigDetails details, string sealedData, string cron)
+        Guid actingUserId, PamRotationConfigDetails details, string sealedData, string wrappedKey, string cron)
     {
         var sutProvider = Setup();
         details.HasActiveJob = false;
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetDetailsByIdAsync(details.Id).Returns(details);
 
-        await sutProvider.Sut.UpdateAsync(details.OrganizationId, actingUserId, details.Id, sealedData, cron, false);
+        await sutProvider.Sut.UpdateAsync(details.OrganizationId, actingUserId, details.Id, sealedData, wrappedKey, cron, false);
 
         var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>

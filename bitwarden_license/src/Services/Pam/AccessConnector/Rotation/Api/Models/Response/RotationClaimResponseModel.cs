@@ -20,8 +20,10 @@ public class RotationClaimResponseModel
         TargetSystemId = result.TargetSystemId!.Value;
         TargetSystemName = result.TargetSystemName!;
         TargetSystemSealedData = result.TargetSystemSealedData!;
+        TargetSystemWrappedKey = result.TargetSystemWrappedKey!;
         CipherId = result.CipherId!.Value;
         RotationConfigSealedData = result.RotationConfigSealedData!;
+        RotationConfigWrappedKey = result.RotationConfigWrappedKey!;
         ExecuteBy = result.ExecuteBy!.Value.AsUtc();
     }
 

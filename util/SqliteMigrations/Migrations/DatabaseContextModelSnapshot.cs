@@ -2903,6 +2903,10 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("TargetSystemId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("WrappedKey")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CipherId")
@@ -2998,6 +3002,10 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<byte>("Status")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("WrappedKey")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 

@@ -25,7 +25,7 @@ public class UpdateTargetSystemCommand : IUpdateTargetSystemCommand
     }
 
     public async Task UpdateAsync(
-        Guid organizationId, Guid actingUserId, Guid targetSystemId, string name, string sealedData)
+        Guid organizationId, Guid actingUserId, Guid targetSystemId, string name, string sealedData, string wrappedKey)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -35,6 +35,11 @@ public class UpdateTargetSystemCommand : IUpdateTargetSystemCommand
         if (string.IsNullOrWhiteSpace(sealedData))
         {
             throw new BadRequestException("Sealed data is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(wrappedKey))
+        {
+            throw new BadRequestException("Wrapped key is required.");
         }
 
         var target = await _targetSystemRepository.GetByIdAsync(targetSystemId);
@@ -58,6 +63,7 @@ public class UpdateTargetSystemCommand : IUpdateTargetSystemCommand
 
         target.Name = name;
         target.SealedData = sealedData;
+        target.WrappedKey = wrappedKey;
         if (target.Status == PamTargetSystemStatus.PendingSeal)
         {
             target.Status = PamTargetSystemStatus.Active;

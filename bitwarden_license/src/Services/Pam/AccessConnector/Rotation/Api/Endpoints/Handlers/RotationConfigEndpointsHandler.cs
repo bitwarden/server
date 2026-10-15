@@ -49,6 +49,7 @@ public class RotationConfigEndpointsHandler(
             model.CipherId,
             model.TargetSystemId,
             model.SealedData,
+            model.WrappedKey,
             model.ScheduleCron,
             model.RotateOnAccessEnd);
         return await GetDetailAsync(orgId, created.Id);
@@ -58,7 +59,7 @@ public class RotationConfigEndpointsHandler(
         Guid orgId, Guid id, UpdateRotationConfigRequestModel model)
     {
         var updated = await updateRotationConfigCommand.UpdateAsync(
-            orgId, currentContext.UserId!.Value, id, model.SealedData, model.ScheduleCron, model.RotateOnAccessEnd);
+            orgId, currentContext.UserId!.Value, id, model.SealedData, model.WrappedKey, model.ScheduleCron, model.RotateOnAccessEnd);
         return await GetDetailAsync(orgId, updated.Id);
     }
 

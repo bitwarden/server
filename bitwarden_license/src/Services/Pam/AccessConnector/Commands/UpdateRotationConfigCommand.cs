@@ -37,6 +37,7 @@ public class UpdateRotationConfigCommand : IUpdateRotationConfigCommand
         Guid actingUserId,
         Guid configId,
         string sealedData,
+        string wrappedKey,
         string? scheduleCron,
         bool rotateOnAccessEnd)
     {
@@ -45,13 +46,18 @@ public class UpdateRotationConfigCommand : IUpdateRotationConfigCommand
             throw new BadRequestException("Sealed data is required.");
         }
 
+        if (string.IsNullOrWhiteSpace(wrappedKey))
+        {
+            throw new BadRequestException("Wrapped key is required.");
+        }
+
         var details = await _configRepository.GetDetailsByIdAsync(configId);
         if (details is null || details.OrganizationId != organizationId)
         {
             throw new NotFoundException();
         }
 
-        if (details.HasActiveJob && sealedData != details.SealedData)
+        if (details.HasActiveJob && (sealedData != details.SealedData || wrappedKey != details.WrappedKey))
         {
             throw new BadRequestException("This rotation config has an active job.");
         }
@@ -82,6 +88,7 @@ public class UpdateRotationConfigCommand : IUpdateRotationConfigCommand
             CipherId = details.CipherId,
             TargetSystemId = details.TargetSystemId,
             SealedData = sealedData,
+            WrappedKey = wrappedKey,
             ScheduleCron = scheduleCron,
             RotateOnAccessEnd = rotateOnAccessEnd,
             NextRotationAt = _scheduleCalculator.GetNextOccurrence(scheduleCron, now),
