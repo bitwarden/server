@@ -7,13 +7,14 @@ CREATE PROCEDURE [dbo].[PamRotationAttempt_UpdateCipherData]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- The job's UPDLOCK holds the claim, and the revision check sits in the cipher UPDATE, so neither can change
-    -- between check and write.
+    -- The job's UPDLOCK holds the claim, and Cipher_UpdateData checks the revision in its UPDATE, so neither can
+    -- change between check and write.
     SET XACT_ABORT ON
 
     DECLARE @CipherId UNIQUEIDENTIFIER
     DECLARE @OrganizationId UNIQUEIDENTIFIER
     DECLARE @VerifiedJobId UNIQUEIDENTIFIER
+    DECLARE @CipherOutcome INT
 
     BEGIN TRY
         BEGIN TRANSACTION
@@ -45,38 +46,23 @@ BEGIN
             RETURN
         END
 
-        -- Drifted LastKnownRevisionDate means a concurrent edit; rejected, matching CipherService's tolerance. The
-        -- check is part of the UPDATE, so a save can't land between it and the write.
-        UPDATE
-            [dbo].[Cipher]
-        SET
-            [Data] = @CipherData,
-            [RevisionDate] = @Now
-        WHERE
-            [Id] = @CipherId
-            AND ABS(DATEDIFF_BIG(MILLISECOND, [RevisionDate], @LastKnownRevisionDate)) <= 1000
+        -- Joins this transaction, and bumps the account revision dates on success.
+        EXEC [dbo].[Cipher_UpdateData]
+            @Id = @CipherId,
+            @OrganizationId = @OrganizationId,
+            @Data = @CipherData,
+            @RevisionDate = @Now,
+            @LastKnownRevisionDate = @LastKnownRevisionDate,
+            @Outcome = @CipherOutcome OUTPUT
 
-        IF @@ROWCOUNT = 0
+        IF @CipherOutcome <> 1 -- Updated
         BEGIN
             ROLLBACK TRANSACTION
-
-            -- The config has no FK to Cipher, so the cipher may have been hard-deleted.
-            IF EXISTS (
-                SELECT
-                    1
-                FROM
-                    [dbo].[Cipher]
-                WHERE
-                    [Id] = @CipherId
-            )
-            BEGIN
-                SELECT -1 -- RevisionMismatch
-            END
-            ELSE
-            BEGIN
-                SELECT 0 -- Rejected
-            END
-
+            SELECT
+                CASE @CipherOutcome
+                    WHEN -1 THEN -1 -- RevisionMismatch: a concurrent edit moved the revision date
+                    ELSE 0 -- Rejected: the cipher was hard-deleted, as the config has no FK to Cipher
+                END
             RETURN
         END
 
@@ -86,9 +72,6 @@ BEGIN
             [CipherUpdated] = 1
         WHERE
             [Id] = @AttemptId
-
-        -- Other writers of dbo.Cipher bump here too, so clients do not keep a stale password.
-        EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @CipherId, @OrganizationId
 
         COMMIT TRANSACTION
 

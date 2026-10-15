@@ -141,17 +141,21 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
     public async Task<PamRotationCipherWriteOutcome> AcceptCipherWriteAsync(Guid attemptId, Guid accessConnectorId, string cipherData,
         DateTime lastKnownRevisionDate, DateTime now)
     {
+        var parameters = new DynamicParameters(new
+        {
+            AttemptId = attemptId,
+            AccessConnectorId = accessConnectorId,
+            CipherData = cipherData,
+        });
+        // DATETIME2(7) rather than Dapper's default DATETIME, which rounds the cipher's new revision date to about 3ms
+        // and can't hold an out-of-range last-known date, which should read as a mismatch.
+        parameters.Add("@LastKnownRevisionDate", lastKnownRevisionDate, DbType.DateTime2, null, 7);
+        parameters.Add("@Now", now, DbType.DateTime2, null, 7);
+
         await using var connection = new SqlConnection(ConnectionString);
         var result = await connection.ExecuteScalarAsync<int>(
             "[dbo].[PamRotationAttempt_UpdateCipherData]",
-            new
-            {
-                AttemptId = attemptId,
-                AccessConnectorId = accessConnectorId,
-                CipherData = cipherData,
-                LastKnownRevisionDate = lastKnownRevisionDate,
-                Now = now,
-            },
+            parameters,
             commandType: CommandType.StoredProcedure);
 
         return (PamRotationCipherWriteOutcome)result;

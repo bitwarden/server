@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
@@ -391,6 +392,48 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(PamRotationAttemptAction.None, attempt.Action);
     }
 
+    // Without the bump, a member's client that misses the push skips its sync and keeps serving the old password.
+    [DatabaseTheory, DatabaseData]
+    public async Task AcceptCipherWriteAsync_Accepted_BumpsAccountRevisionDateOfMembersWithAccess(
+        IOrganizationRepository organizationRepository,
+        IPamTargetSystemRepository pamTargetSystemRepository,
+        IApiKeyRepository apiKeyRepository,
+        IPamAccessConnectorRepository pamAccessConnectorRepository,
+        ICipherRepository cipherRepository,
+        IPamRotationConfigRepository pamRotationConfigRepository,
+        IPamRotationJobRepository pamRotationJobRepository,
+        IUserRepository userRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository,
+        ICollectionCipherRepository collectionCipherRepository)
+    {
+        var fixture = await SeedClaimableJobAsync(organizationRepository, pamTargetSystemRepository, apiKeyRepository,
+            pamAccessConnectorRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository);
+        var member = await userRepository.CreateTestUserAsync();
+        var orgUser = await organizationUserRepository.CreateConfirmedTestOrganizationUserAsync(
+            fixture.Organization, member);
+        var collection = await collectionRepository.CreateTestCollectionAsync(fixture.Organization);
+        await collectionRepository.UpdateUsersAsync(collection.Id,
+            [new CollectionAccessSelection { Id = orgUser.Id, Manage = true }]);
+        await collectionCipherRepository.UpdateCollectionsForAdminAsync(
+            fixture.Cipher.Id, fixture.Organization.Id, [collection.Id]);
+
+        // The setup bumps the member too, so start from a known old date.
+        var staleDate = DateTime.UtcNow.AddDays(-1);
+        var reloaded = await userRepository.GetByIdAsync(member.Id);
+        reloaded!.AccountRevisionDate = staleDate;
+        await userRepository.ReplaceAsync(reloaded);
+        var cipher = await cipherRepository.GetByIdAsync(fixture.Cipher.Id);
+
+        var claim = await pamRotationJobRepository.ClaimAsync(
+            fixture.Job.Id, fixture.AccessConnector.Id, fixture.Now, _releaseDelay);
+        Assert.Equal(PamRotationCipherWriteOutcome.Accepted, await pamRotationJobRepository.AcceptCipherWriteAsync(
+            claim.AttemptId!.Value, fixture.AccessConnector.Id, "{\"rotated\":true}", cipher!.RevisionDate,
+            fixture.Now));
+
+        Assert.True(await userRepository.GetAccountRevisionDateAsync(member.Id) > staleDate.AddHours(12));
+    }
+
     [DatabaseTheory, DatabaseData]
     public async Task AcceptCipherWriteAsync_WrongAccessConnector_RejectedAndNothingPersisted(
         IOrganizationRepository organizationRepository,
@@ -495,6 +538,30 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(fixture.Cipher.Data, cipher!.Data);
         var attempt = await pamRotationJobRepository.GetAttemptByIdAsync(claim.AttemptId.Value);
         Assert.False(attempt!.CipherUpdated);
+    }
+
+    // A connector that omits the date sends DateTime.MinValue; it reads as a mismatch rather than failing the write.
+    [DatabaseTheory, DatabaseData]
+    public async Task AcceptCipherWriteAsync_DefaultLastKnownRevisionDate_RevisionMismatch(
+        IOrganizationRepository organizationRepository,
+        IPamTargetSystemRepository pamTargetSystemRepository,
+        IApiKeyRepository apiKeyRepository,
+        IPamAccessConnectorRepository pamAccessConnectorRepository,
+        ICipherRepository cipherRepository,
+        IPamRotationConfigRepository pamRotationConfigRepository,
+        IPamRotationJobRepository pamRotationJobRepository)
+    {
+        var fixture = await SeedClaimableJobAsync(organizationRepository, pamTargetSystemRepository, apiKeyRepository,
+            pamAccessConnectorRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository);
+        var claim = await pamRotationJobRepository.ClaimAsync(
+            fixture.Job.Id, fixture.AccessConnector.Id, fixture.Now, _releaseDelay);
+
+        var outcome = await pamRotationJobRepository.AcceptCipherWriteAsync(
+            claim.AttemptId!.Value, fixture.AccessConnector.Id, "{\"rotated\":true}", default, fixture.Now);
+
+        Assert.Equal(PamRotationCipherWriteOutcome.RevisionMismatch, outcome);
+        var cipher = await cipherRepository.GetByIdAsync(fixture.Cipher.Id);
+        Assert.Equal(fixture.Cipher.Data, cipher!.Data);
     }
 
     [DatabaseTheory, DatabaseData]

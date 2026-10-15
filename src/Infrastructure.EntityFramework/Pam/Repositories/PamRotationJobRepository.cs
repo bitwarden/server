@@ -1,7 +1,9 @@
 ﻿using System.Data;
 using AutoMapper;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Enums;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Infrastructure.EntityFramework.Vault.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
@@ -329,32 +331,22 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
             return PamRotationCipherWriteOutcome.Rejected;
         }
 
-        var cipher = await dbContext.Ciphers.FirstOrDefaultAsync(c => c.Id == target.CipherId);
-        if (cipher is null)
+        // Vault's write joins this transaction. A deleted cipher (the config has no FK to Cipher) is Rejected, and a
+        // concurrent user edit is refused rather than clobbered.
+        var cipherResult = await dbContext.CipherUpdateDataAsync(
+            target.CipherId, target.OrganizationId, cipherData, lastKnownRevisionDate, now);
+        if (cipherResult != CipherDataUpdateResult.Updated)
         {
             await transaction.RollbackAsync();
-            return PamRotationCipherWriteOutcome.Rejected;
+            return cipherResult == CipherDataUpdateResult.RevisionMismatch
+                ? PamRotationCipherWriteOutcome.RevisionMismatch
+                : PamRotationCipherWriteOutcome.Rejected;
         }
-
-        // A drifted revision date means a concurrent user edit; refused rather than clobbered. Tolerance mirrors
-        // CipherService.
-        if (Math.Abs((cipher.RevisionDate - lastKnownRevisionDate).TotalMilliseconds) > 1000)
-        {
-            await transaction.RollbackAsync();
-            return PamRotationCipherWriteOutcome.RevisionMismatch;
-        }
-
-        cipher.Data = cipherData;
-        cipher.RevisionDate = now;
 
         var attempt = await dbContext.PamRotationAttempts.FirstAsync(a => a.Id == attemptId);
         attempt.CipherUpdated = true;
 
-        await dbContext.SaveChangesAsync();
-
-        // As every Cipher writer does: without the bump, a client that misses the push skips the sync and keeps
-        // serving the old password.
-        await dbContext.UserBumpAccountRevisionDateByCipherIdAsync(target.CipherId, target.OrganizationId);
+        // One save persists the attempt flag and the account revision bumps.
         await dbContext.SaveChangesAsync();
 
         await transaction.CommitAsync();
