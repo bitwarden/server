@@ -583,6 +583,27 @@ public class OrganizationPartnershipEntitlementRepositoryTests
     }
 
     [Theory, DatabaseData]
+    public async Task ReplaceIfUnchangedAsync_AdvancedByOneMillisecond_RejectsSecondWriterHoldingOldRevision(
+        IOrganizationPartnershipEntitlementRepository repository,
+        IOrganizationPartnershipRepository partnershipRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        var partnership = await CreatePartnershipAsync(partnershipRepository, organizationRepository);
+        await repository.CreateAsync(NewEntitlement(partnership, "customer-1"));
+        var first = (await repository.GetByExternalIdAsync(partnership.Id, "customer-1"))!;
+        var second = (await repository.GetByExternalIdAsync(partnership.Id, "customer-1"))!;
+        var expected = first.RevisionDate;
+
+        first.State = PartnershipEntitlementState.Active;
+        first.RevisionDate = expected.AddMilliseconds(1);
+        Assert.True(await repository.ReplaceIfUnchangedAsync(first, expected));
+
+        second.State = PartnershipEntitlementState.Canceled;
+        second.RevisionDate = expected.AddMilliseconds(2);
+        Assert.False(await repository.ReplaceIfUnchangedAsync(second, expected));
+    }
+
+    [Theory, DatabaseData]
     public async Task ReplaceIfUnchangedAsync_ChangedSinceRead_LeavesRowUntouched(
         IOrganizationPartnershipEntitlementRepository repository,
         IOrganizationPartnershipRepository partnershipRepository,
