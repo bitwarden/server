@@ -1,8 +1,15 @@
+# This workflow builds fork PRs in the context of the PR target, with access to secrets.
+# It only runs when a user with write access adds the "ci:signed-build" label to a fork PR. Pushes to the PR branch
+# (including "Update branch") do not trigger it. The label is removed once the build starts, so every new commit
+# needs to be reviewed and labeled again.
+# Only add the label after reviewing the PR to ensure that no malicious code has been introduced,
+# as it allows the code on the forked branch to have access to workflow secrets.
+
 name: Build (Fork PR)
 
 on:
   pull_request_target:
-    types: [opened, synchronize, reopened]
+    types: [labeled]
     branches:
       - "main"
 
@@ -13,14 +20,35 @@ defaults:
 jobs:
   check-run:
     name: Check PR run
+    if: ${{ github.event.label.name == 'ci:signed-build' && github.event.pull_request.head.repo.full_name != github.repository }}
     uses: bitwarden/gh-actions/.github/workflows/check-run.yml@main
     permissions:
       contents: read
 
+  remove-label:
+    name: Remove signed build label
+    needs: check-run
+    runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Remove label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          _PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if ! OUTPUT=$(gh api --method DELETE "repos/$GITHUB_REPOSITORY/issues/$_PR_NUMBER/labels/ci%3Asigned-build" 2>&1); then
+            if [[ "$OUTPUT" == *"HTTP 404"* ]]; then
+              echo "Label already removed."
+            else
+              echo "$OUTPUT"
+              exit 1
+            fi
+          fi
+
   run-workflow:
     name: Build
     needs: check-run
-    if: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
     uses: ./.github/workflows/build.yml
     secrets: inherit
 
