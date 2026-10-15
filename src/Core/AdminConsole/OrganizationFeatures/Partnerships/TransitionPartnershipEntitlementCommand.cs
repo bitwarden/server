@@ -83,7 +83,8 @@ public class TransitionPartnershipEntitlementCommand(
             PartnershipEntitlementAction.Suspend => Suspend(entitlement, effectiveAt),
             PartnershipEntitlementAction.Resume => Resume(entitlement, now),
             PartnershipEntitlementAction.Cancel => Cancel(entitlement, effectiveAt,
-                PartnershipEntitlementState.Active, PartnershipEntitlementState.Suspended),
+                PartnershipEntitlementState.Provisioned, PartnershipEntitlementState.Active,
+                PartnershipEntitlementState.Suspended),
             PartnershipEntitlementAction.UserExit => UserExit(entitlement, effectiveAt),
             _ => new IllegalEntitlementTransition(),
         };
@@ -153,6 +154,10 @@ public class TransitionPartnershipEntitlementCommand(
                 entitlement.BoundDate = effectiveAt;
                 return null;
             case PartnershipEntitlementState.Canceled:
+                if (entitlement.UserId is null)
+                {
+                    return new EntitlementNotProvisioned();
+                }
                 if (!IsWithinResumeWindow(entitlement, now))
                 {
                     return new EntitlementNotResumable();
@@ -209,7 +214,10 @@ public class TransitionPartnershipEntitlementCommand(
 
         entitlement.State = PartnershipEntitlementState.Canceled;
         entitlement.CanceledDate = effectiveAt;
-        entitlement.ResumeWindowExpirationDate = effectiveAt + globalSettings.Partnerships.ResumeWindow;
+        // An unbound entitlement has no binding to hold, so it gets no resume window.
+        entitlement.ResumeWindowExpirationDate = entitlement.UserId is null
+            ? null
+            : effectiveAt + globalSettings.Partnerships.ResumeWindow;
         return null;
     }
 

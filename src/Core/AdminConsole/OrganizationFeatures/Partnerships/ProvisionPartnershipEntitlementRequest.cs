@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.Partnerships;
+﻿using Bit.Core.AdminConsole.Enums.Partnerships;
+
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Partnerships;
 
 public record ProvisionPartnershipEntitlementRequest
 {
@@ -6,6 +8,10 @@ public record ProvisionPartnershipEntitlementRequest
 
     public required Guid OrganizationPartnershipId { get; init; }
     public required string ExternalId { get; init; }
+    /// <summary>
+    /// Must be one the partnership allows. May be omitted when the partnership allows exactly one.
+    /// </summary>
+    public SponsoredPlanType? SponsoredPlanType { get; init; }
     public IDictionary<string, string>? Metadata { get; init; }
     /// <summary>
     /// When the partner provisioned the customer, in UTC. Defaults to now.

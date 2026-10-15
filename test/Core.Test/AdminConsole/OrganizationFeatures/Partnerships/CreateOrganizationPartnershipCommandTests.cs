@@ -27,6 +27,7 @@ public class CreateOrganizationPartnershipCommandTests
         Assert.Equal(PartnershipStatus.Active, partnership.Status);
         Assert.Equal(PartnershipBindingMode.Token, partnership.BindingMode);
         Assert.Equal(["https://partner.example.com"], partnership.GetRegisteredReturnOrigins());
+        Assert.Equal([SponsoredPlanType.Premium], partnership.GetAllowedSponsoredPlanTypes());
         await sutProvider.GetDependency<IOrganizationPartnershipRepository>().Received(1).CreateAsync(partnership);
     }
 
@@ -83,9 +84,38 @@ public class CreateOrganizationPartnershipCommandTests
         ArrangeOrganization(sutProvider, organization);
 
         var result = await sutProvider.Sut.CreateAsync(
-            CreateRequest(organization, "https://partner.example.com") with { SponsoredPlanType = (SponsoredPlanType)5 });
+            CreateRequest(organization, "https://partner.example.com") with { AllowedSponsoredPlanTypes = [(SponsoredPlanType)5] });
 
         Assert.Equal("unsupported_sponsored_plan_type", Assert.IsType<UnsupportedSponsoredPlanType>(result.AsError).Code);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_NoAllowedSponsoredPlanTypes_ReturnsValidationError(
+        Organization organization, SutProvider<CreateOrganizationPartnershipCommand> sutProvider)
+    {
+        ArrangeOrganization(sutProvider, organization);
+
+        var result = await sutProvider.Sut.CreateAsync(
+            CreateRequest(organization, "https://partner.example.com") with { AllowedSponsoredPlanTypes = [] });
+
+        Assert.Equal("allowed_sponsored_plan_types_required",
+            Assert.IsType<AllowedSponsoredPlanTypesRequired>(result.AsError).Code);
+        await sutProvider.GetDependency<IOrganizationPartnershipRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_DuplicateAllowedSponsoredPlanTypes_StoresEachOnce(
+        Organization organization, SutProvider<CreateOrganizationPartnershipCommand> sutProvider)
+    {
+        ArrangeOrganization(sutProvider, organization);
+
+        var result = await sutProvider.Sut.CreateAsync(
+            CreateRequest(organization, "https://partner.example.com") with
+            {
+                AllowedSponsoredPlanTypes = [SponsoredPlanType.Premium, SponsoredPlanType.Premium],
+            });
+
+        Assert.Equal([SponsoredPlanType.Premium], result.AsSuccess.GetAllowedSponsoredPlanTypes());
     }
 
     [Theory]
@@ -151,7 +181,7 @@ public class CreateOrganizationPartnershipCommandTests
         {
             OrganizationId = organization.Id,
             Name = "Partner",
-            SponsoredPlanType = SponsoredPlanType.Premium,
+            AllowedSponsoredPlanTypes = [SponsoredPlanType.Premium],
             BindingMode = PartnershipBindingMode.Token,
             RegisteredReturnOrigins = [origin],
         };

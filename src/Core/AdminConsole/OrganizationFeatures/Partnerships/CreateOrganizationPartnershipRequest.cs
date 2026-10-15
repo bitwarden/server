@@ -8,7 +8,10 @@ public record CreateOrganizationPartnershipRequest
 
     public required Guid OrganizationId { get; init; }
     public required string Name { get; init; }
-    public required SponsoredPlanType SponsoredPlanType { get; init; }
+    /// <summary>
+    /// The plan types the partnership may sponsor. At least one is required.
+    /// </summary>
+    public required IEnumerable<SponsoredPlanType> AllowedSponsoredPlanTypes { get; init; }
     /// <summary>
     /// Only <see cref="PartnershipBindingMode.Token"/> is supported.
     /// </summary>

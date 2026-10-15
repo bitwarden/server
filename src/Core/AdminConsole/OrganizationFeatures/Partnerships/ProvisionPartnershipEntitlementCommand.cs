@@ -47,6 +47,13 @@ public class ProvisionPartnershipEntitlementCommand(
             return new PartnershipNotActive();
         }
 
+        var planTypeResult = ResolveSponsoredPlanType(partnership, request.SponsoredPlanType);
+        if (planTypeResult.IsError)
+        {
+            return planTypeResult.AsError;
+        }
+        var planType = planTypeResult.AsSuccess;
+
         var existing = await organizationPartnershipEntitlementRepository
             .GetByExternalIdAsync(partnership.Id, request.ExternalId);
 
@@ -57,6 +64,7 @@ public class ProvisionPartnershipEntitlementCommand(
                 OrganizationPartnershipId = partnership.Id,
                 ExternalId = request.ExternalId,
                 State = PartnershipEntitlementState.Provisioned,
+                SponsoredPlanType = planType,
                 LastAppliedEffectiveDate = effectiveAt,
                 CreationDate = now,
                 RevisionDate = now,
@@ -85,6 +93,7 @@ public class ProvisionPartnershipEntitlementCommand(
 
         var expectedRevisionDate = existing.RevisionDate;
         existing.State = PartnershipEntitlementState.Provisioned;
+        existing.SponsoredPlanType = planType;
         existing.UserId = null;
         existing.AccountRef = null;
         existing.BoundDate = null;
@@ -102,6 +111,18 @@ public class ProvisionPartnershipEntitlementCommand(
         await LogProvisionedAsync(partnership, effectiveAt);
 
         return new ProvisionPartnershipEntitlementResult(existing, Created: false, Applied: true, null, effectiveAt);
+    }
+
+    private static CommandResult<SponsoredPlanType> ResolveSponsoredPlanType(
+        OrganizationPartnership partnership, SponsoredPlanType? requested)
+    {
+        if (requested is { } planType)
+        {
+            return partnership.IsSponsoredPlanTypeAllowed(planType) ? planType : new SponsoredPlanTypeNotAllowed();
+        }
+
+        var allowed = partnership.GetAllowedSponsoredPlanTypes().ToList();
+        return allowed.Count == 1 ? allowed[0] : new SponsoredPlanTypeRequired();
     }
 
     private Task LogProvisionedAsync(OrganizationPartnership partnership, DateTime effectiveAt) =>

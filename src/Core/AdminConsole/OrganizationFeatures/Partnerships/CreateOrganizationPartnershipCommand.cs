@@ -25,7 +25,13 @@ public class CreateOrganizationPartnershipCommand(
             return new UnsupportedBindingMode();
         }
 
-        if (!Enum.IsDefined(request.SponsoredPlanType))
+        var allowedPlanTypes = request.AllowedSponsoredPlanTypes.Distinct().ToList();
+        if (allowedPlanTypes.Count == 0)
+        {
+            return new AllowedSponsoredPlanTypesRequired();
+        }
+
+        if (!allowedPlanTypes.All(Enum.IsDefined))
         {
             return new UnsupportedSponsoredPlanType();
         }
@@ -57,11 +63,11 @@ public class CreateOrganizationPartnershipCommand(
             OrganizationId = request.OrganizationId,
             Name = request.Name,
             Status = PartnershipStatus.Active,
-            SponsoredPlanType = request.SponsoredPlanType,
             BindingMode = request.BindingMode,
             CreationDate = now,
             RevisionDate = now,
         };
+        partnership.SetAllowedSponsoredPlanTypes(allowedPlanTypes);
         partnership.SetRegisteredReturnOrigins(origins.Distinct(StringComparer.OrdinalIgnoreCase));
         partnership.SetNewId();
 

@@ -53,7 +53,22 @@ public record UnsupportedBindingMode()
 
 public record UnsupportedSponsoredPlanType()
     : PartnershipValidationError(
-        "Sponsored plan type is not supported.", "sponsoredPlanType", "unsupported_sponsored_plan_type");
+        "Sponsored plan type is not supported.", "allowedSponsoredPlanTypes", "unsupported_sponsored_plan_type");
+
+public record AllowedSponsoredPlanTypesRequired()
+    : PartnershipValidationError(
+        "At least one allowed sponsored plan type is required.", "allowedSponsoredPlanTypes",
+        "allowed_sponsored_plan_types_required");
+
+public record SponsoredPlanTypeRequired()
+    : PartnershipValidationError(
+        "A sponsored plan type is required because the partnership allows more than one.", "sponsoredPlanType",
+        "sponsored_plan_type_required");
+
+public record SponsoredPlanTypeNotAllowed()
+    : PartnershipValidationError(
+        "The partnership does not allow this sponsored plan type.", "sponsoredPlanType",
+        "sponsored_plan_type_not_allowed");
 
 public record InvalidReturnOrigin()
     : PartnershipValidationError(
@@ -106,7 +121,8 @@ public record IllegalEntitlementTransition()
 }
 
 public record EntitlementNotResumable()
-    : ConflictError("The entitlement's resume window has expired."), IPartnershipError, IPartnershipBindingFailure
+    : ConflictError("The entitlement has no held binding to resume, or its resume window has expired."),
+      IPartnershipError, IPartnershipBindingFailure
 {
     public string Code => "entitlement_not_resumable";
     public PartnershipEntitlementReason Reason => PartnershipEntitlementReason.ResumeWindowExpired;

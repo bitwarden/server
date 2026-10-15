@@ -21,6 +21,7 @@ public class TransitionPartnershipEntitlementCommandTests
     private static readonly (PartnershipEntitlementState From, PartnershipEntitlementAction Action, PartnershipEntitlementState To, EventType Event)[] _legalTransitions =
     [
         (PartnershipEntitlementState.Provisioned, PartnershipEntitlementAction.Activate, PartnershipEntitlementState.Active, EventType.PartnershipEntitlement_Activated),
+        (PartnershipEntitlementState.Provisioned, PartnershipEntitlementAction.Cancel, PartnershipEntitlementState.Canceled, EventType.PartnershipEntitlement_Deactivated),
         (PartnershipEntitlementState.Active, PartnershipEntitlementAction.Suspend, PartnershipEntitlementState.Suspended, EventType.PartnershipEntitlement_Suspended),
         (PartnershipEntitlementState.Active, PartnershipEntitlementAction.Cancel, PartnershipEntitlementState.Canceled, EventType.PartnershipEntitlement_Deactivated),
         (PartnershipEntitlementState.Active, PartnershipEntitlementAction.UserExit, PartnershipEntitlementState.Canceled, EventType.PartnershipEntitlement_Deactivated),
@@ -77,7 +78,6 @@ public class TransitionPartnershipEntitlementCommandTests
         {
             { PartnershipEntitlementState.Provisioned, PartnershipEntitlementAction.Suspend, "illegal_transition" },
             { PartnershipEntitlementState.Provisioned, PartnershipEntitlementAction.Resume, "illegal_transition" },
-            { PartnershipEntitlementState.Provisioned, PartnershipEntitlementAction.Cancel, "illegal_transition" },
             { PartnershipEntitlementState.Provisioned, PartnershipEntitlementAction.UserExit, "not_found" },
             { PartnershipEntitlementState.Active, PartnershipEntitlementAction.Activate, "already_bound" },
             { PartnershipEntitlementState.Active, PartnershipEntitlementAction.Resume, "illegal_transition" },
@@ -201,6 +201,67 @@ public class TransitionPartnershipEntitlementCommandTests
         Assert.Equal(effectiveAt + _resumeWindow, canceled.ResumeWindowExpirationDate);
         Assert.Equal(_boundUserId, canceled.UserId);
         Assert.Equal(accountRef, canceled.AccountRef);
+    }
+
+    [Fact]
+    public async Task TransitionAsync_CancelFromProvisioned_SetsNoBindingOrResumeWindow()
+    {
+        var sutProvider = CreateSutProvider();
+        var entitlement = CreateEntitlement(PartnershipEntitlementState.Provisioned);
+        ArrangePartnership(sutProvider, entitlement);
+
+        var result = await sutProvider.Sut.TransitionAsync(CreateRequest(entitlement, PartnershipEntitlementAction.Cancel));
+
+        var canceled = result.AsSuccess.Entitlement;
+        Assert.Equal(PartnershipEntitlementState.Canceled, canceled.State);
+        Assert.Null(canceled.UserId);
+        Assert.Null(canceled.AccountRef);
+        Assert.Null(canceled.ResumeWindowExpirationDate);
+    }
+
+    [Fact]
+    public async Task TransitionAsync_ResumeAfterCancelFromProvisioned_ReturnsNotResumable()
+    {
+        var sutProvider = CreateSutProvider();
+        var entitlement = CreateEntitlement(PartnershipEntitlementState.Provisioned);
+        ArrangePartnership(sutProvider, entitlement);
+
+        await sutProvider.Sut.TransitionAsync(CreateRequest(entitlement, PartnershipEntitlementAction.Cancel));
+        var result = await sutProvider.Sut.TransitionAsync(CreateRequest(entitlement, PartnershipEntitlementAction.Resume));
+
+        Assert.IsType<EntitlementNotResumable>(result.AsError);
+        Assert.Equal(PartnershipEntitlementState.Canceled, entitlement.State);
+    }
+
+    [Fact]
+    public async Task TransitionAsync_ActivateAfterCancelFromProvisioned_ReturnsNotProvisioned()
+    {
+        var sutProvider = CreateSutProvider();
+        var entitlement = CreateEntitlement(PartnershipEntitlementState.Provisioned);
+        ArrangePartnership(sutProvider, entitlement);
+
+        await sutProvider.Sut.TransitionAsync(CreateRequest(entitlement, PartnershipEntitlementAction.Cancel));
+        var result = await sutProvider.Sut.TransitionAsync(CreateRequest(entitlement, PartnershipEntitlementAction.Activate));
+
+        var error = Assert.IsType<EntitlementNotProvisioned>(result.AsError);
+        Assert.Equal("not_provisioned", error.Code);
+        Assert.Equal(PartnershipEntitlementReason.NotProvisioned, error.Reason);
+        Assert.Null(entitlement.UserId);
+    }
+
+    [Fact]
+    public async Task TransitionAsync_ActivateAfterCancelFromProvisioned_LogsBindingFailed()
+    {
+        var sutProvider = CreateSutProvider();
+        var entitlement = CreateEntitlement(PartnershipEntitlementState.Provisioned);
+        var partnership = ArrangePartnership(sutProvider, entitlement);
+
+        await sutProvider.Sut.TransitionAsync(CreateRequest(entitlement, PartnershipEntitlementAction.Cancel));
+        await sutProvider.Sut.TransitionAsync(CreateRequest(entitlement, PartnershipEntitlementAction.Activate));
+
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationPartnershipEventAsync(partnership.OrganizationId, EventType.PartnershipEntitlement_BindingFailed, _now);
     }
 
     [Fact]

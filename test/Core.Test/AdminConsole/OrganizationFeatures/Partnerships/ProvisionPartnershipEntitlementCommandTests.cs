@@ -15,6 +15,8 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Partnerships;
 public class ProvisionPartnershipEntitlementCommandTests
 {
     private static readonly DateTime _now = new(2026, 10, 1, 12, 0, 0, DateTimeKind.Utc);
+    // v1 defines only Premium; this stands in for a later plan type so multi-plan rules can be exercised.
+    private const SponsoredPlanType _otherPlanType = (SponsoredPlanType)1;
 
     [Fact]
     public async Task ProvisionAsync_NewExternalId_CreatesProvisionedEntitlement()
@@ -272,6 +274,99 @@ public class ProvisionPartnershipEntitlementCommandTests
         Assert.True(result.IsSuccess);
     }
 
+    [Fact]
+    public async Task ProvisionAsync_PlanTypeOmittedAndOneAllowed_DefaultsToIt()
+    {
+        var sutProvider = CreateSutProvider();
+        var partnership = ArrangePartnership(sutProvider, allowedPlanTypes: [_otherPlanType]);
+
+        var result = await sutProvider.Sut.ProvisionAsync(CreateRequest(partnership));
+
+        Assert.Equal(_otherPlanType, result.AsSuccess.Entitlement.SponsoredPlanType);
+    }
+
+    [Fact]
+    public async Task ProvisionAsync_RequestedPlanTypeAllowed_UsesIt()
+    {
+        var sutProvider = CreateSutProvider();
+        var partnership = ArrangePartnership(sutProvider, allowedPlanTypes: [SponsoredPlanType.Premium, _otherPlanType]);
+
+        var result = await sutProvider.Sut.ProvisionAsync(
+            CreateRequest(partnership) with { SponsoredPlanType = _otherPlanType });
+
+        Assert.Equal(_otherPlanType, result.AsSuccess.Entitlement.SponsoredPlanType);
+    }
+
+    [Fact]
+    public async Task ProvisionAsync_PlanTypeOmittedAndSeveralAllowed_ReturnsValidationError()
+    {
+        var sutProvider = CreateSutProvider();
+        var partnership = ArrangePartnership(sutProvider, allowedPlanTypes: [SponsoredPlanType.Premium, _otherPlanType]);
+
+        var result = await sutProvider.Sut.ProvisionAsync(CreateRequest(partnership));
+
+        Assert.Equal("sponsored_plan_type_required", Assert.IsType<SponsoredPlanTypeRequired>(result.AsError).Code);
+        await sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
+    }
+
+    [Fact]
+    public async Task ProvisionAsync_PlanTypeNotAllowed_ReturnsValidationError()
+    {
+        var sutProvider = CreateSutProvider();
+        var partnership = ArrangePartnership(sutProvider);
+
+        var result = await sutProvider.Sut.ProvisionAsync(
+            CreateRequest(partnership) with { SponsoredPlanType = _otherPlanType });
+
+        Assert.Equal("sponsored_plan_type_not_allowed", Assert.IsType<SponsoredPlanTypeNotAllowed>(result.AsError).Code);
+        await sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
+    }
+
+    [Fact]
+    public async Task ProvisionAsync_ExistingNotCanceledWithOtherAllowedPlanType_ReturnsExistingUnchanged()
+    {
+        var sutProvider = CreateSutProvider();
+        var partnership = ArrangePartnership(sutProvider, allowedPlanTypes: [SponsoredPlanType.Premium, _otherPlanType]);
+        var existing = ArrangeExisting(sutProvider, partnership, PartnershipEntitlementState.Active);
+
+        var result = await sutProvider.Sut.ProvisionAsync(
+            CreateRequest(partnership) with { SponsoredPlanType = _otherPlanType });
+
+        Assert.False(result.AsSuccess.Applied);
+        Assert.Equal(SponsoredPlanType.Premium, existing.SponsoredPlanType);
+    }
+
+    [Fact]
+    public async Task ProvisionAsync_ExistingCanceled_AppliesRequestedPlanType()
+    {
+        var sutProvider = CreateSutProvider();
+        var partnership = ArrangePartnership(sutProvider, allowedPlanTypes: [SponsoredPlanType.Premium, _otherPlanType]);
+        var existing = ArrangeExisting(sutProvider, partnership, PartnershipEntitlementState.Canceled, _otherPlanType);
+
+        var result = await sutProvider.Sut.ProvisionAsync(
+            CreateRequest(partnership) with { SponsoredPlanType = SponsoredPlanType.Premium });
+
+        Assert.Equal(SponsoredPlanType.Premium, result.AsSuccess.Entitlement.SponsoredPlanType);
+        await sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>().Received(1).ReplaceIfUnchangedAsync(existing, Arg.Any<DateTime>());
+    }
+
+    [Fact]
+    public async Task ProvisionAsync_ExistingCanceledWithoutBinding_ReturnsToProvisioned()
+    {
+        var sutProvider = CreateSutProvider();
+        var partnership = ArrangePartnership(sutProvider);
+        var existing = ArrangeExisting(sutProvider, partnership, PartnershipEntitlementState.Canceled);
+        existing.UserId = null;
+        existing.AccountRef = null;
+        existing.BoundDate = null;
+        existing.ResumeWindowExpirationDate = null;
+
+        var result = await sutProvider.Sut.ProvisionAsync(CreateRequest(partnership));
+
+        Assert.True(result.AsSuccess.Applied);
+        Assert.Equal(PartnershipEntitlementState.Provisioned, result.AsSuccess.Entitlement.State);
+    }
+
     private static SutProvider<ProvisionPartnershipEntitlementCommand> CreateSutProvider()
     {
         var sutProvider = new SutProvider<ProvisionPartnershipEntitlementCommand>()
@@ -286,7 +381,8 @@ public class ProvisionPartnershipEntitlementCommandTests
 
     private static OrganizationPartnership ArrangePartnership(
         SutProvider<ProvisionPartnershipEntitlementCommand> sutProvider,
-        PartnershipStatus status = PartnershipStatus.Active)
+        PartnershipStatus status = PartnershipStatus.Active,
+        params SponsoredPlanType[] allowedPlanTypes)
     {
         var partnership = new OrganizationPartnership
         {
@@ -295,6 +391,7 @@ public class ProvisionPartnershipEntitlementCommandTests
             Name = "Partner",
             Status = status,
         };
+        partnership.SetAllowedSponsoredPlanTypes(allowedPlanTypes.Length > 0 ? allowedPlanTypes : [SponsoredPlanType.Premium]);
         sutProvider.GetDependency<IOrganizationPartnershipRepository>()
             .GetByIdAsync(partnership.Id)
             .Returns(partnership);
@@ -304,7 +401,8 @@ public class ProvisionPartnershipEntitlementCommandTests
     private static OrganizationPartnershipEntitlement ArrangeExisting(
         SutProvider<ProvisionPartnershipEntitlementCommand> sutProvider,
         OrganizationPartnership partnership,
-        PartnershipEntitlementState state)
+        PartnershipEntitlementState state,
+        SponsoredPlanType planType = SponsoredPlanType.Premium)
     {
         var existing = new OrganizationPartnershipEntitlement
         {
@@ -313,6 +411,7 @@ public class ProvisionPartnershipEntitlementCommandTests
             ExternalId = "customer-1",
             ExternalIdHash = "hash",
             State = state,
+            SponsoredPlanType = planType,
             LastAppliedEffectiveDate = _now.AddDays(-1),
         };
         if (state != PartnershipEntitlementState.Provisioned)
