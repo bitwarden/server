@@ -2,6 +2,7 @@
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
 using Bit.Core;
+using Bit.Core.AdminConsole.Enums.Partnerships;
 using Bit.Core.AdminConsole.OrganizationFeatures.Partnerships;
 using Bit.Core.AdminConsole.OrganizationFeatures.Partnerships.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -50,6 +51,7 @@ public class OrganizationPartnershipsController(
         {
             OrganizationId = organizationId,
             OrganizationName = organization.DisplayName(),
+            AllowedSponsoredPlanTypes = [SponsoredPlanType.Premium],
         });
     }
 
@@ -96,7 +98,9 @@ public class OrganizationPartnershipsController(
             "invalid_name" => (nameof(model.Name),
                 $"Name is required and must be at most {CreateOrganizationPartnershipRequest.NameMaxLength} characters."),
             "unsupported_binding_mode" => (nameof(model.BindingMode), "Only token binding is supported."),
-            "unsupported_sponsored_plan_type" => (nameof(model.SponsoredPlanType), "Choose a supported sponsored plan."),
+            "allowed_sponsored_plan_types_required" => (nameof(model.AllowedSponsoredPlanTypes),
+                "Choose at least one allowed sponsored plan type."),
+            "unsupported_sponsored_plan_type" => (nameof(model.AllowedSponsoredPlanTypes), "Choose a supported sponsored plan."),
             "invalid_return_origin" => (nameof(model.RegisteredReturnOrigins),
                 "Each return origin must be an https origin such as https://partner.example.com, " +
                 "with no path, query, fragment, credentials, or default port."),

@@ -32,7 +32,7 @@ public class OrganizationPartnershipsControllerTests
     private static CreateOrganizationPartnershipModel ValidModel() => new()
     {
         Name = "Partner",
-        SponsoredPlanType = SponsoredPlanType.Premium,
+        AllowedSponsoredPlanTypes = [SponsoredPlanType.Premium],
         BindingMode = PartnershipBindingMode.Token,
         RegisteredReturnOrigins = "https://partner.example.com",
     };
@@ -108,6 +108,19 @@ public class OrganizationPartnershipsControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task CreateGet_NoPartnership_PreselectsPremium(
+        Organization organization,
+        SutProvider<OrganizationPartnershipsController> sutProvider)
+    {
+        Arrange(sutProvider, organization);
+
+        var result = await sutProvider.Sut.Create(organization.Id);
+
+        var model = Assert.IsType<CreateOrganizationPartnershipModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.Equal([SponsoredPlanType.Premium], model.AllowedSponsoredPlanTypes);
+    }
+
+    [Theory, BitAutoData]
     public async Task CreateGet_ExistingPartnership_RedirectsToOrganizationWithError(
         Organization organization,
         OrganizationPartnership partnership,
@@ -145,7 +158,7 @@ public class OrganizationPartnershipsControllerTests
         await command.Received(1).CreateAsync(Arg.Is<CreateOrganizationPartnershipRequest>(r =>
             r.OrganizationId == organization.Id &&
             r.Name == "Partner" &&
-            r.SponsoredPlanType == SponsoredPlanType.Premium &&
+            r.AllowedSponsoredPlanTypes.SequenceEqual(new[] { SponsoredPlanType.Premium }) &&
             r.BindingMode == PartnershipBindingMode.Token &&
             r.RegisteredReturnOrigins.SequenceEqual(new[] { "https://a.example.com", "https://b.example.com:8443" })));
     }
@@ -188,6 +201,25 @@ public class OrganizationPartnershipsControllerTests
         var error = Assert.Single(sutProvider.Sut.ModelState[nameof(model.RegisteredReturnOrigins)]!.Errors);
         Assert.StartsWith("Each return origin must be an https origin", error.ErrorMessage);
         Assert.Null(sutProvider.Sut.TempData["Success"]);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreatePost_NoAllowedPlanTypes_ReRendersFormWithPlanTypeMessage(
+        Organization organization,
+        SutProvider<OrganizationPartnershipsController> sutProvider)
+    {
+        Arrange(sutProvider, organization);
+        sutProvider.GetDependency<ICreateOrganizationPartnershipCommand>()
+            .CreateAsync(Arg.Any<CreateOrganizationPartnershipRequest>())
+            .Returns(new AllowedSponsoredPlanTypesRequired());
+        var model = ValidModel();
+        model.AllowedSponsoredPlanTypes = [];
+
+        var result = await sutProvider.Sut.Create(organization.Id, model);
+
+        Assert.IsType<ViewResult>(result);
+        var error = Assert.Single(sutProvider.Sut.ModelState[nameof(model.AllowedSponsoredPlanTypes)]!.Errors);
+        Assert.Equal("Choose at least one allowed sponsored plan type.", error.ErrorMessage);
     }
 
     [Theory, BitAutoData]

@@ -1,4 +1,4 @@
-@using Bit.Admin.Enums
+﻿@using Bit.Admin.Enums
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
 @inject Bit.Core.Settings.GlobalSettings GlobalSettings
 @model OrganizationViewModel
@@ -17,8 +17,8 @@
         <dt class="col-sm-4 col-lg-3">Status</dt>
         <dd id="partnership-status" class="col-sm-8 col-lg-9">@Model.Partnership.Status</dd>
 
-        <dt class="col-sm-4 col-lg-3">Sponsored plan type</dt>
-        <dd id="partnership-sponsored-plan-type" class="col-sm-8 col-lg-9">@Model.Partnership.SponsoredPlanType</dd>
+        <dt class="col-sm-4 col-lg-3">Allowed sponsored plan types</dt>
+        <dd id="partnership-allowed-sponsored-plan-types" class="col-sm-8 col-lg-9">@string.Join(", ", Model.Partnership.GetAllowedSponsoredPlanTypes())</dd>
 
         <dt class="col-sm-4 col-lg-3">Binding mode</dt>
         <dd id="partnership-binding-mode" class="col-sm-8 col-lg-9">@Model.Partnership.BindingMode</dd>

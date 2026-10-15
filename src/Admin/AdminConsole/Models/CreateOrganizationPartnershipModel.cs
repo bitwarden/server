@@ -17,9 +17,12 @@ public class CreateOrganizationPartnershipModel
     [StringLength(CreateOrganizationPartnershipRequest.NameMaxLength)]
     public string? Name { get; set; }
 
-    [Display(Name = "Sponsored plan type")]
-    [EnumDataType(typeof(SponsoredPlanType))]
-    public SponsoredPlanType SponsoredPlanType { get; set; } = SponsoredPlanType.Premium;
+    /// <summary>
+    /// Empty by default because unchecked boxes post nothing, which must fail the at-least-one rule.
+    /// </summary>
+    [Display(Name = "Allowed sponsored plan types")]
+    [MinLength(1, ErrorMessage = "Choose at least one allowed sponsored plan type.")]
+    public List<SponsoredPlanType> AllowedSponsoredPlanTypes { get; set; } = [];
 
     [Display(Name = "Binding mode")]
     public PartnershipBindingMode BindingMode { get; set; } = PartnershipBindingMode.Token;
@@ -34,7 +37,7 @@ public class CreateOrganizationPartnershipModel
     {
         OrganizationId = organizationId,
         Name = Name!.Trim(),
-        SponsoredPlanType = SponsoredPlanType,
+        AllowedSponsoredPlanTypes = AllowedSponsoredPlanTypes,
         BindingMode = BindingMode,
         RegisteredReturnOrigins = (RegisteredReturnOrigins ?? string.Empty)
             .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),

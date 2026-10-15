@@ -1,4 +1,4 @@
-@using Bit.Core.AdminConsole.Enums.Partnerships
+﻿@using Bit.Core.AdminConsole.Enums.Partnerships
 @using Bit.Core.AdminConsole.OrganizationFeatures.Partnerships
 @model CreateOrganizationPartnershipModel
 @{
@@ -16,13 +16,19 @@
         <span asp-validation-for="Name" class="text-danger"></span>
     </div>
 
-    <div class="mb-3">
-        <label asp-for="SponsoredPlanType" class="form-label"></label>
-        <select asp-for="SponsoredPlanType" class="form-select">
-            <option value="@SponsoredPlanType.Premium">Premium</option>
-        </select>
-        <span asp-validation-for="SponsoredPlanType" class="text-danger"></span>
-    </div>
+    <fieldset class="mb-3">
+        <legend class="form-label fs-6">@Html.DisplayNameFor(m => m.AllowedSponsoredPlanTypes)</legend>
+        @foreach (var planType in Enum.GetValues<SponsoredPlanType>())
+        {
+            var id = $"allowed-plan-type-{planType}";
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="@id" name="@nameof(Model.AllowedSponsoredPlanTypes)"
+                       value="@planType" checked="@Model.AllowedSponsoredPlanTypes.Contains(planType)" />
+                <label class="form-check-label" for="@id">@planType</label>
+            </div>
+        }
+        <span asp-validation-for="AllowedSponsoredPlanTypes" class="text-danger"></span>
+    </fieldset>
 
     <div class="mb-3">
         <label asp-for="BindingMode" class="form-label"></label>
