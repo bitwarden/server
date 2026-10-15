@@ -79,9 +79,9 @@ public class HandleAccessGrantEndedCommand : IHandleAccessGrantEndedCommand
             WrappedKey = config.WrappedKey,
             ScheduleCron = config.ScheduleCron,
             RotateOnAccessEnd = config.RotateOnAccessEnd,
-            NextRotationAt = now,
+            NextRotationDate = now,
             Enabled = config.Enabled,
-            LastRotationAt = config.LastRotationAt,
+            LastRotationDate = config.LastRotationDate,
             CreationDate = config.CreationDate,
             RevisionDate = now,
         };

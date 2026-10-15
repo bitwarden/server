@@ -156,7 +156,7 @@ public class OfferRotationCommandTests
                 && j.Source == source
                 && j.Action == PamRotationJobAction.None
                 && j.ClaimedByAccessConnectorId == null
-                && j.ClaimedAt == null));
+                && j.ClaimedDate == null));
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationOffered
                 && a.OrganizationId == config.OrganizationId

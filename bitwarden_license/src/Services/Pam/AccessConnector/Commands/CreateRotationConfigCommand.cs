@@ -95,7 +95,7 @@ public class CreateRotationConfigCommand : ICreateRotationConfigCommand
             WrappedKey = wrappedKey,
             ScheduleCron = scheduleCron,
             RotateOnAccessEnd = rotateOnAccessEnd,
-            NextRotationAt = _scheduleCalculator.GetNextOccurrence(scheduleCron, now),
+            NextRotationDate = _scheduleCalculator.GetNextOccurrence(scheduleCron, now),
             Enabled = true,
             CreationDate = now,
             RevisionDate = now,

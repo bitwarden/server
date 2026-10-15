@@ -18,7 +18,7 @@ public class PamAccessConnectorResponseModel : ResponseModel
         Name = item.AccessConnector.Name;
         Status = item.AccessConnector.Status;
         IsConnected = item.IsConnected;
-        LastHeartbeatAt = item.AccessConnector.LastHeartbeatAt.AsUtc();
+        LastHeartbeatAt = item.AccessConnector.LastHeartbeatDate.AsUtc();
         AssignedTargetSystemIds = item.AssignedTargetSystemIds;
         CreationDate = item.AccessConnector.CreationDate.AsUtc();
         RevisionDate = item.AccessConnector.RevisionDate.AsUtc();

@@ -53,7 +53,7 @@ public class TriggerRotationCommand : ITriggerRotationCommand
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        if (details.LastRotationAt is { } lastRotationAt && now - lastRotationAt < _options.Value.OnDemandCooldown)
+        if (details.LastRotationDate is { } lastRotationAt && now - lastRotationAt < _options.Value.OnDemandCooldown)
         {
             throw new BadRequestException("This rotation config was rotated recently; try again later.");
         }

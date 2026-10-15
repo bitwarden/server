@@ -64,7 +64,7 @@ public class RecordManualRotationCommandTests
     {
         var sutProvider = Setup();
         details.TargetSystemMethod = PamTargetSystemMethod.Manual;
-        details.NextRotationAt = _now.AddMinutes(-10);
+        details.NextRotationDate = _now.AddMinutes(-10);
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetDetailsByIdAsync(details.Id).Returns(details);
         var nextOccurrence = _now.AddDays(30);
         sutProvider.GetDependency<IRotationScheduleCalculator>().GetNextOccurrence(details.ScheduleCron, _now)
@@ -73,7 +73,7 @@ public class RecordManualRotationCommandTests
         await sutProvider.Sut.RecordAsync(details.OrganizationId, actingUserId, details.Id);
 
         await sutProvider.GetDependency<IPamRotationConfigRepository>().Received(1).ReplaceAsync(Arg.Is<PamRotationConfig>(c =>
-            c.Id == details.Id && c.LastRotationAt == _now && c.NextRotationAt == nextOccurrence
+            c.Id == details.Id && c.LastRotationDate == _now && c.NextRotationDate == nextOccurrence
             && c.RevisionDate == _now));
     }
 
@@ -83,14 +83,14 @@ public class RecordManualRotationCommandTests
         var sutProvider = Setup();
         details.TargetSystemMethod = PamTargetSystemMethod.Manual;
         details.ScheduleCron = null;
-        details.NextRotationAt = _now.AddMinutes(-10);
+        details.NextRotationDate = _now.AddMinutes(-10);
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetDetailsByIdAsync(details.Id).Returns(details);
         sutProvider.GetDependency<IRotationScheduleCalculator>().GetNextOccurrence(null, _now).Returns((DateTime?)null);
 
         await sutProvider.Sut.RecordAsync(details.OrganizationId, actingUserId, details.Id);
 
         await sutProvider.GetDependency<IPamRotationConfigRepository>().Received(1).ReplaceAsync(Arg.Is<PamRotationConfig>(c =>
-            c.Id == details.Id && c.LastRotationAt == _now && c.NextRotationAt == null));
+            c.Id == details.Id && c.LastRotationDate == _now && c.NextRotationDate == null));
     }
 
     [Theory, BitAutoData]

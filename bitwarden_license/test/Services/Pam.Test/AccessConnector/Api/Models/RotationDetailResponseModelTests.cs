@@ -27,7 +27,7 @@ public class RotationDetailResponseModelTests
             OrganizationId = Guid.NewGuid(),
             Name = "access-connector-1",
             Status = PamAccessConnectorStatus.Enabled,
-            LastHeartbeatAt = _created,
+            LastHeartbeatDate = _created,
             CreationDate = _created,
             RevisionDate = _created,
         };
@@ -91,8 +91,8 @@ public class RotationDetailResponseModelTests
             Source = PamRotationSource.Scheduled,
             Action = PamRotationJobAction.Succeeded,
             CreationDate = _created,
-            NextClaimableAt = _created,
-            ExpiresAt = _resolved,
+            NextClaimableDate = _created,
+            ExpirationDate = _resolved,
         };
         return PamRotationJobDetails.From(job, [
             new PamRotationAttempt

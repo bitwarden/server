@@ -16,10 +16,10 @@ public class PamRotationJobResponseModel
         Source = job.Source;
         Status = job.Status;
         ClaimedByAccessConnectorId = job.ClaimedByAccessConnectorId;
-        ClaimedAt = job.ClaimedAt.AsUtc();
+        ClaimedAt = job.ClaimedDate.AsUtc();
         CreationDate = job.CreationDate.AsUtc();
-        NextClaimableAt = job.NextClaimableAt.AsUtc();
-        ExpiresAt = job.ExpiresAt.AsUtc();
+        NextClaimableAt = job.NextClaimableDate.AsUtc();
+        ExpiresAt = job.ExpirationDate.AsUtc();
         Attempts = job.Attempts.Select(attempt => new PamRotationAttemptResponseModel(attempt)).ToList();
     }
 

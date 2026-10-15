@@ -3,6 +3,7 @@ using Bit.Pam;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.AccessConnector.Models;
 using Bit.Services.Pam.AccessConnector.Queries.Interfaces;
+using Bit.Services.Pam.OrganizationFeatures.Queries;
 using Microsoft.Extensions.Options;
 
 namespace Bit.Services.Pam.AccessConnector.Queries;
@@ -40,7 +41,8 @@ public class GetAccessConnectorDetailsQuery : IGetAccessConnectorDetailsQuery
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var assignments = await _accessConnectorRepository.GetAssignmentsByOrganizationIdAsync(organizationId);
-        var jobs = await _jobRepository.GetManyRecentByAccessConnectorIdAsync(accessConnectorId, RecentJobLimit, now);
+        var jobs = await _jobRepository.GetManyRecentByAccessConnectorIdAsync(
+            accessConnectorId, RecentJobLimit, now.AddDays(-AccessHistoryWindow.RetentionDays), now);
 
         var listItem = new PamAccessConnectorListItem(
             accessConnector,

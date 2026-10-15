@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 namespace Bit.Services.Pam.AccessConnector.Api.Endpoints.Filters;
 
 /// <summary>
-/// Bumps <see cref="PamAccessConnector.LastHeartbeatAt"/> on every connector-facing route, at most once per
+/// Bumps <see cref="PamAccessConnector.LastHeartbeatDate"/> on every connector-facing route, at most once per
 /// <c>HeartbeatMinInterval</c> since the repository write is conditional. Authorizes nothing; token issuance and the
 /// work queries check eligibility.
 /// </summary>

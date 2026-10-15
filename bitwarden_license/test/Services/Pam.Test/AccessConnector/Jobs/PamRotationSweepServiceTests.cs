@@ -74,7 +74,7 @@ public class PamRotationSweepServiceTests
         await sutProvider.Sut.SweepAsync();
 
         await sutProvider.GetDependency<IPamRotationConfigRepository>().Received(1).ReplaceAsync(
-            Arg.Is<PamRotationConfig>(c => c.Id == config.Id && c.NextRotationAt == _now + _failureRetryDelay));
+            Arg.Is<PamRotationConfig>(c => c.Id == config.Id && c.NextRotationDate == _now + _failureRetryDelay));
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationJobTimedOut
                 && a.RotationJobId == timedOutJob.JobId
@@ -86,7 +86,7 @@ public class PamRotationSweepServiceTests
     public async Task SweepAsync_TimeoutPhase_ConfigWithoutASchedule_LeavesNextRotationAlone(PamRotationConfig config)
     {
         var sutProvider = Setup();
-        // A concrete NextRotationAt here would enrol this config in the due sweep permanently.
+        // A concrete NextRotationDate here would enrol this config in the due sweep permanently.
         config.ScheduleCron = null;
         var timedOutJob = new PamTimedOutJob
         {

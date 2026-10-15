@@ -189,13 +189,13 @@ public class CreateRotationConfigCommandTests
         var result = await sutProvider.Sut.CreateAsync(
             target.OrganizationId, actingUserId, cipher.Id, target.Id, sealedData, wrappedKey, scheduleCron, true);
 
-        Assert.Equal(nextOccurrence, result.NextRotationAt);
+        Assert.Equal(nextOccurrence, result.NextRotationDate);
         Assert.True(result.Enabled);
         Assert.Equal(sealedData, result.SealedData);
         Assert.True(result.RotateOnAccessEnd);
         await sutProvider.GetDependency<IPamRotationConfigRepository>().Received(1).CreateAsync(Arg.Is<PamRotationConfig>(c =>
             c.OrganizationId == target.OrganizationId && c.CipherId == cipher.Id && c.TargetSystemId == target.Id
-            && c.NextRotationAt == nextOccurrence && c.Enabled));
+            && c.NextRotationDate == nextOccurrence && c.Enabled));
     }
 
     [Theory, BitAutoData]

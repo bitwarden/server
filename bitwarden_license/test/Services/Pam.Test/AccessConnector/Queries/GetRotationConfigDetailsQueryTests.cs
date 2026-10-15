@@ -2,6 +2,7 @@
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.AccessConnector.Queries;
+using Bit.Services.Pam.OrganizationFeatures.Queries;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Time.Testing;
@@ -27,7 +28,7 @@ public class GetRotationConfigDetailsQueryTests
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(organizationId, configId));
 
         await sutProvider.GetDependency<IPamRotationJobRepository>().DidNotReceiveWithAnyArgs()
-            .GetManyByConfigIdAsync(default, default);
+            .GetManyByConfigIdAsync(default, default, default, default);
     }
 
     [Theory, BitAutoData]
@@ -42,7 +43,7 @@ public class GetRotationConfigDetailsQueryTests
 
         // The history read is expensive and would leak; it must not happen at all.
         await sutProvider.GetDependency<IPamRotationJobRepository>().DidNotReceiveWithAnyArgs()
-            .GetManyByConfigIdAsync(default, default);
+            .GetManyByConfigIdAsync(default, default, default, default);
     }
 
     [Theory, BitAutoData]
@@ -54,7 +55,9 @@ public class GetRotationConfigDetailsQueryTests
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(now);
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetDetailsByIdAsync(details.Id).Returns(details);
         // Statuses are derived against the query's own clock.
-        sutProvider.GetDependency<IPamRotationJobRepository>().GetManyByConfigIdAsync(details.Id, now).Returns(jobs);
+        sutProvider.GetDependency<IPamRotationJobRepository>().GetManyByConfigIdAsync(
+            details.Id, Arg.Is<int>(limit => limit > 0), now.AddDays(-AccessHistoryWindow.RetentionDays), now)
+            .Returns(jobs);
 
         var result = await sutProvider.Sut.GetAsync(details.OrganizationId, details.Id);
 

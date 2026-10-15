@@ -5,6 +5,7 @@ using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.AccessConnector;
 using Bit.Services.Pam.AccessConnector.Queries;
+using Bit.Services.Pam.OrganizationFeatures.Queries;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Options;
@@ -21,6 +22,7 @@ namespace Bit.Services.Pam.Test.AccessConnector.Queries;
 public class GetAccessConnectorDetailsQueryTests
 {
     private static readonly DateTime _now = new(2026, 8, 25, 12, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime _historySince = _now.AddDays(-AccessHistoryWindow.RetentionDays);
 
     [Theory, BitAutoData]
     public async Task GetAsync_AccessConnectorMissing_ThrowsNotFound(Guid organizationId, Guid accessConnectorId)
@@ -32,7 +34,7 @@ public class GetAccessConnectorDetailsQueryTests
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(organizationId, accessConnectorId));
 
         await sutProvider.GetDependency<IPamRotationJobRepository>().DidNotReceiveWithAnyArgs()
-            .GetManyRecentByAccessConnectorIdAsync(default, default, default);
+            .GetManyRecentByAccessConnectorIdAsync(default, default, default, default);
     }
 
     [Theory, BitAutoData]
@@ -47,7 +49,7 @@ public class GetAccessConnectorDetailsQueryTests
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(organizationId, accessConnector.Id));
 
         await sutProvider.GetDependency<IPamRotationJobRepository>().DidNotReceiveWithAnyArgs()
-            .GetManyRecentByAccessConnectorIdAsync(default, default, default);
+            .GetManyRecentByAccessConnectorIdAsync(default, default, default, default);
     }
 
     [Theory, BitAutoData]
@@ -55,7 +57,7 @@ public class GetAccessConnectorDetailsQueryTests
         PamAccessConnector accessConnector, List<PamRotationJobDetails> jobs, Guid otherAccessConnectorId)
     {
         var sutProvider = Setup();
-        accessConnector.LastHeartbeatAt =
+        accessConnector.LastHeartbeatDate =
             _now - new PamRotationOptions().AccessConnectorOfflineAfter + TimeSpan.FromSeconds(1);
         sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
             .Returns(accessConnector);
@@ -64,7 +66,7 @@ public class GetAccessConnectorDetailsQueryTests
             .GetAssignmentsByOrganizationIdAsync(accessConnector.OrganizationId)
             .Returns([assigned, Assignment(accessConnector.OrganizationId, otherAccessConnectorId)]);
         sutProvider.GetDependency<IPamRotationJobRepository>()
-            .GetManyRecentByAccessConnectorIdAsync(accessConnector.Id, Arg.Any<int>(), _now)
+            .GetManyRecentByAccessConnectorIdAsync(accessConnector.Id, Arg.Any<int>(), _historySince, _now)
             .Returns(jobs);
 
         var result = await sutProvider.Sut.GetAsync(accessConnector.OrganizationId, accessConnector.Id);
@@ -80,7 +82,7 @@ public class GetAccessConnectorDetailsQueryTests
     public async Task GetAsync_HeartbeatOlderThanOfflineAfter_IsNotConnected(PamAccessConnector accessConnector)
     {
         var sutProvider = Setup();
-        accessConnector.LastHeartbeatAt =
+        accessConnector.LastHeartbeatDate =
             _now - new PamRotationOptions().AccessConnectorOfflineAfter - TimeSpan.FromSeconds(1);
         sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
             .Returns(accessConnector);
@@ -100,7 +102,8 @@ public class GetAccessConnectorDetailsQueryTests
         await sutProvider.Sut.GetAsync(accessConnector.OrganizationId, accessConnector.Id);
 
         await sutProvider.GetDependency<IPamRotationJobRepository>().Received(1)
-            .GetManyRecentByAccessConnectorIdAsync(accessConnector.Id, Arg.Is<int>(limit => limit > 0), _now);
+            .GetManyRecentByAccessConnectorIdAsync(
+                accessConnector.Id, Arg.Is<int>(limit => limit > 0), _historySince, _now);
     }
 
     private static SutProvider<GetAccessConnectorDetailsQuery> Setup()
