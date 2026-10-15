@@ -102,7 +102,7 @@ public class ProvisionPartnershipEntitlementCommand(
         existing.ResumeWindowExpirationDate = null;
         existing.SetMetadata(request.Metadata);
         existing.LastAppliedEffectiveDate = effectiveAt;
-        existing.RevisionDate = now;
+        existing.RevisionDate = PartnershipEntitlementRules.NextRevisionDate(expectedRevisionDate, now);
 
         if (!await organizationPartnershipEntitlementRepository.ReplaceIfUnchangedAsync(existing, expectedRevisionDate))
         {

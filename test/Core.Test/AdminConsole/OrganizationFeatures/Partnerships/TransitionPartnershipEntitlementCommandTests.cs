@@ -265,6 +265,24 @@ public class TransitionPartnershipEntitlementCommandTests
     }
 
     [Fact]
+    public async Task TransitionAsync_ReadRevisionDateAfterNow_AdvancesPastIt()
+    {
+        var sutProvider = CreateSutProvider();
+        var entitlement = CreateEntitlement(PartnershipEntitlementState.Active);
+        var readRevisionDate = _now.AddSeconds(5);
+        entitlement.RevisionDate = readRevisionDate;
+        ArrangePartnership(sutProvider, entitlement);
+
+        var result = await sutProvider.Sut.TransitionAsync(CreateRequest(entitlement, PartnershipEntitlementAction.Suspend));
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>()
+            .Received(1)
+            .ReplaceIfUnchangedAsync(Arg.Is<OrganizationPartnershipEntitlement>(e => e.RevisionDate > readRevisionDate),
+                readRevisionDate);
+    }
+
+    [Fact]
     public async Task TransitionAsync_ChangedSinceRead_ReturnsConflictAndLogsNothing()
     {
         var sutProvider = CreateSutProvider();
@@ -666,6 +684,7 @@ public class TransitionPartnershipEntitlementCommandTests
             ExternalIdHash = "hash",
             State = state,
             LastAppliedEffectiveDate = _now.AddDays(-1),
+            RevisionDate = _now.AddDays(-1),
         };
 
         if (state != PartnershipEntitlementState.Provisioned)

@@ -275,6 +275,24 @@ public class ProvisionPartnershipEntitlementCommandTests
     }
 
     [Fact]
+    public async Task ProvisionAsync_ReprovisionWithReadRevisionDateAfterNow_AdvancesPastIt()
+    {
+        var sutProvider = CreateSutProvider();
+        var partnership = ArrangePartnership(sutProvider);
+        var existing = ArrangeExisting(sutProvider, partnership, PartnershipEntitlementState.Canceled);
+        var readRevisionDate = _now.AddSeconds(5);
+        existing.RevisionDate = readRevisionDate;
+
+        var result = await sutProvider.Sut.ProvisionAsync(CreateRequest(partnership));
+
+        Assert.True(result.AsSuccess.Applied);
+        await sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>()
+            .Received(1)
+            .ReplaceIfUnchangedAsync(Arg.Is<OrganizationPartnershipEntitlement>(e => e.RevisionDate > readRevisionDate),
+                readRevisionDate);
+    }
+
+    [Fact]
     public async Task ProvisionAsync_PlanTypeOmittedAndOneAllowed_DefaultsToIt()
     {
         var sutProvider = CreateSutProvider();
@@ -413,6 +431,7 @@ public class ProvisionPartnershipEntitlementCommandTests
             State = state,
             SponsoredPlanType = planType,
             LastAppliedEffectiveDate = _now.AddDays(-1),
+            RevisionDate = _now.AddDays(-1),
         };
         if (state != PartnershipEntitlementState.Provisioned)
         {

@@ -18,4 +18,11 @@ internal static class PartnershipEntitlementRules
     /// </summary>
     public static bool IsStale(OrganizationPartnershipEntitlement entitlement, DateTime effectiveAt) =>
         effectiveAt < entitlement.LastAppliedEffectiveDate;
+
+    /// <summary>
+    /// A revision date later than <paramref name="readRevisionDate"/>, as a conditional replace requires, even when
+    /// <paramref name="now"/> trails it from request overlap or clock skew. The 1 ms step survives every provider's precision.
+    /// </summary>
+    public static DateTime NextRevisionDate(DateTime readRevisionDate, DateTime now) =>
+        now > readRevisionDate ? now : readRevisionDate.AddMilliseconds(1);
 }

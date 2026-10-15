@@ -97,7 +97,7 @@ public class TransitionPartnershipEntitlementCommand(
         }
 
         entitlement.LastAppliedEffectiveDate = effectiveAt;
-        entitlement.RevisionDate = now;
+        entitlement.RevisionDate = PartnershipEntitlementRules.NextRevisionDate(expectedRevisionDate, now);
         if (!await organizationPartnershipEntitlementRepository.ReplaceIfUnchangedAsync(entitlement, expectedRevisionDate))
         {
             return new EntitlementConcurrentlyModified();
