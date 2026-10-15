@@ -13,4 +13,9 @@ public class UpdateTargetSystemRequestModel
     [Required]
     [StringLength(10000)]
     public string SealedData { get; set; } = null!;
+
+    /// <summary>The content key of the sealed blob, wrapped by the organization key.</summary>
+    [Required]
+    [StringLength(2000)]
+    public string WrappedKey { get; set; } = null!;
 }

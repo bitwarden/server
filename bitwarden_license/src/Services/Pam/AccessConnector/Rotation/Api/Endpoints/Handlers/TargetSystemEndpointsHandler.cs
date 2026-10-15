@@ -49,7 +49,7 @@ public class TargetSystemEndpointsHandler(
     public async Task Put(Guid orgId, Guid id, UpdateTargetSystemRequestModel model)
     {
         await updateTargetSystemCommand.UpdateAsync(
-            orgId, currentContext.UserId!.Value, id, model.Name, model.SealedData);
+            orgId, currentContext.UserId!.Value, id, model.Name, model.SealedData, model.WrappedKey);
     }
 
     public async Task Delete(Guid orgId, Guid id)

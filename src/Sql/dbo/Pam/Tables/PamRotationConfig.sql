@@ -12,6 +12,7 @@ CREATE TABLE [dbo].[PamRotationConfig] (
     [CreationDate]          DATETIME2(7)        NOT NULL,
     [RevisionDate]          DATETIME2(7)        NOT NULL,
     [SealedData]            NVARCHAR(MAX)       NOT NULL,
+    [WrappedKey]            NVARCHAR(MAX)       NULL,
     CONSTRAINT [PK_PamRotationConfig] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_PamRotationConfig_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE,
     -- No cascade; configs must be detached or deleted via PamRotationConfig_DeleteWithJobs first.

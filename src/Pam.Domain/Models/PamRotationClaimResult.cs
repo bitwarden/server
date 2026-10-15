@@ -20,10 +20,16 @@ public class PamRotationClaimResult
     /// <summary>The target system's sealed blob.</summary>
     public string? TargetSystemSealedData { get; init; }
 
+    /// <summary>The target system's wrapped content key.</summary>
+    public string? TargetSystemWrappedKey { get; init; }
+
     public Guid? CipherId { get; init; }
 
     /// <summary>The rotation config's sealed blob.</summary>
     public string? RotationConfigSealedData { get; init; }
+
+    /// <summary>The rotation config's wrapped content key.</summary>
+    public string? RotationConfigWrappedKey { get; init; }
 
     /// <summary><c>ClaimedAt + ReleaseDelay</c>; the access connector should finish before then.</summary>
     public DateTime? ExecuteBy { get; init; }

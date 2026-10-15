@@ -126,6 +126,7 @@ public class PamRotationConfigRepository : Repository<CoreEntity, EfModel, Guid>
                 CipherId = c.CipherId,
                 TargetSystemId = c.TargetSystemId,
                 SealedData = c.SealedData,
+                WrappedKey = c.WrappedKey,
                 ScheduleCron = c.ScheduleCron,
                 RotateOnAccessEnd = c.RotateOnAccessEnd,
                 NextRotationAt = c.NextRotationAt,

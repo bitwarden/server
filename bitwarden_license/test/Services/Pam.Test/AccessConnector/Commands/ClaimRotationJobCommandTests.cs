@@ -37,8 +37,10 @@ public class ClaimRotationJobCommandTests
             TargetSystemId = Guid.NewGuid(),
             TargetSystemName = "Prod SQL",
             TargetSystemSealedData = "target-sealed-blob",
+            TargetSystemWrappedKey = "target-wrapped-key",
             CipherId = Guid.NewGuid(),
             RotationConfigSealedData = "config-sealed-blob",
+            RotationConfigWrappedKey = "config-wrapped-key",
             ExecuteBy = _now + _releaseDelay,
         };
         sutProvider.GetDependency<IPamRotationJobRepository>()

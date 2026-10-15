@@ -151,8 +151,10 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(fixture.Target.Id, winner.TargetSystemId);
         Assert.Equal(fixture.Target.Name, winner.TargetSystemName);
         Assert.Equal(fixture.Target.SealedData, winner.TargetSystemSealedData);
+        Assert.Equal("target-wrapped-key", winner.TargetSystemWrappedKey);
         Assert.Equal(fixture.Cipher.Id, winner.CipherId);
         Assert.Equal(fixture.Config.SealedData, winner.RotationConfigSealedData);
+        Assert.Equal("config-wrapped-key", winner.RotationConfigWrappedKey);
         Assert.Equal(claimNow.Add(_releaseDelay), winner.ExecuteBy!.Value, LaxDateTimeComparer.Default);
 
         var job = await pamRotationJobRepository.GetByIdAsync(fixture.Job.Id);
@@ -1203,7 +1205,8 @@ public class PamRotationJobRepositoryTests
             OrganizationId = organizationId,
             Name = $"target-{Guid.NewGuid()}",
             Method = PamTargetSystemMethod.Automatic,
-            SealedData = """{"formatVersion":1,"wrappedCek":"...","envelope":"..."}""",
+            SealedData = "target-sealed-envelope",
+            WrappedKey = "target-wrapped-key",
             Status = PamTargetSystemStatus.Active,
             CreationDate = now,
             RevisionDate = now,
@@ -1257,6 +1260,7 @@ public class PamRotationJobRepositoryTests
             CipherId = cipherId,
             TargetSystemId = targetSystemId,
             SealedData = "sealed-blob",
+            WrappedKey = "config-wrapped-key",
             RotateOnAccessEnd = false,
             Enabled = enabled,
             CreationDate = now,

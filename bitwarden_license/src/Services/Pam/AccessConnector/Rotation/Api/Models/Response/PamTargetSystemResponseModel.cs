@@ -19,6 +19,7 @@ public class PamTargetSystemResponseModel : ResponseModel
         Method = targetSystem.Method;
         Status = targetSystem.Status;
         SealedData = targetSystem.SealedData;
+        WrappedKey = targetSystem.WrappedKey;
         CreationDate = targetSystem.CreationDate.AsUtc();
         RevisionDate = targetSystem.RevisionDate.AsUtc();
     }
@@ -36,6 +37,9 @@ public class PamTargetSystemResponseModel : ResponseModel
 
     /// <summary>The target system's sealed blob.</summary>
     public string? SealedData { get; set; }
+
+    /// <summary>The content key of the sealed blob, wrapped by the organization key.</summary>
+    public string? WrappedKey { get; set; }
 
     public DateTime CreationDate { get; set; }
 

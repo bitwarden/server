@@ -153,8 +153,10 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
                 TargetSystemId = t.Id,
                 TargetSystemName = t.Name,
                 t.SealedData,
+                TargetSystemWrappedKey = t.WrappedKey,
                 x.Config.CipherId,
                 RotationConfigSealedData = x.Config.SealedData,
+                RotationConfigWrappedKey = x.Config.WrappedKey,
             })
             .AsNoTracking()
             .FirstAsync();
@@ -170,8 +172,10 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
             TargetSystemId = snapshot.TargetSystemId,
             TargetSystemName = snapshot.TargetSystemName,
             TargetSystemSealedData = snapshot.SealedData,
+            TargetSystemWrappedKey = snapshot.TargetSystemWrappedKey,
             CipherId = snapshot.CipherId,
             RotationConfigSealedData = snapshot.RotationConfigSealedData,
+            RotationConfigWrappedKey = snapshot.RotationConfigWrappedKey,
             ExecuteBy = now + releaseDelay,
         };
     }

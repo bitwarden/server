@@ -18,6 +18,13 @@ public class PamRotationConfig : ITableObject<Guid>
     [MaxLength(10000)]
     public string SealedData { get; set; } = null!;
 
+    /// <summary>
+    /// The content key of SealedData, wrapped by the org key. Stored apart from SealedData so org-key rotation only
+    /// re-wraps the key. Null for rows that predate the column.
+    /// </summary>
+    [MaxLength(2000)]
+    public string? WrappedKey { get; set; }
+
     /// <summary>A Quartz 6-field cron expression; null means no scheduled rotation.</summary>
     [MaxLength(100)]
     public string? ScheduleCron { get; set; }

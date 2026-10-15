@@ -20,8 +20,10 @@ public class RotationClaimResponseModel
         TargetSystemId = result.TargetSystemId!.Value;
         TargetSystemName = result.TargetSystemName!;
         TargetSystemSealedData = result.TargetSystemSealedData!;
+        TargetSystemWrappedKey = result.TargetSystemWrappedKey!;
         CipherId = result.CipherId!.Value;
         RotationConfigSealedData = result.RotationConfigSealedData!;
+        RotationConfigWrappedKey = result.RotationConfigWrappedKey!;
         ExecuteBy = result.ExecuteBy!.Value.AsUtc();
     }
 
@@ -39,10 +41,16 @@ public class RotationClaimResponseModel
     /// <summary>The target system's sealed blob.</summary>
     public string TargetSystemSealedData { get; set; } = null!;
 
+    /// <summary>The content key of the target system's sealed blob, wrapped by the organization key.</summary>
+    public string TargetSystemWrappedKey { get; set; } = null!;
+
     public Guid CipherId { get; set; }
 
     /// <summary>The rotation config's sealed blob.</summary>
     public string RotationConfigSealedData { get; set; } = null!;
+
+    /// <summary>The content key of the rotation config's sealed blob, wrapped by the organization key.</summary>
+    public string RotationConfigWrappedKey { get; set; } = null!;
 
     /// <summary>
     /// The claim's lease deadline. Past it, the release sweep may reclaim the job if the access connector's heartbeat

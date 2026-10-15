@@ -45,12 +45,18 @@ public class CreateRotationConfigCommand : ICreateRotationConfigCommand
         Guid cipherId,
         Guid targetSystemId,
         string sealedData,
+        string wrappedKey,
         string? scheduleCron,
         bool rotateOnAccessEnd)
     {
         if (string.IsNullOrWhiteSpace(sealedData))
         {
             throw new BadRequestException("Sealed data is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(wrappedKey))
+        {
+            throw new BadRequestException("Wrapped key is required.");
         }
 
         var target = await _targetSystemRepository.GetByIdAsync(targetSystemId);
@@ -86,6 +92,7 @@ public class CreateRotationConfigCommand : ICreateRotationConfigCommand
             CipherId = cipherId,
             TargetSystemId = targetSystemId,
             SealedData = sealedData,
+            WrappedKey = wrappedKey,
             ScheduleCron = scheduleCron,
             RotateOnAccessEnd = rotateOnAccessEnd,
             NextRotationAt = _scheduleCalculator.GetNextOccurrence(scheduleCron, now),

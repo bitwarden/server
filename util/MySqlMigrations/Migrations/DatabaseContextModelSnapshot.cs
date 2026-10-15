@@ -2913,6 +2913,10 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("TargetSystemId")
                         .HasColumnType("char(36)");
 
+                    b.Property<string>("WrappedKey")
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CipherId")
@@ -3008,6 +3012,10 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<byte>("Status")
                         .HasColumnType("tinyint unsigned");
+
+                    b.Property<string>("WrappedKey")
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
 
                     b.HasKey("Id");
 
