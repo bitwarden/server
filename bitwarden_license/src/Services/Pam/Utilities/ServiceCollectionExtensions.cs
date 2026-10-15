@@ -135,6 +135,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IListAccessConnectorsQuery, ListAccessConnectorsQuery>();
         services.AddScoped<IGetAccessConnectorDetailsQuery, GetAccessConnectorDetailsQuery>();
         services.AddScoped<IGetRotationCipherQuery, GetRotationCipherQuery>();
+        services.AddScoped<ICanEditRotationCiphersQuery, CanEditRotationCiphersQuery>();
 
         return services;
     }
