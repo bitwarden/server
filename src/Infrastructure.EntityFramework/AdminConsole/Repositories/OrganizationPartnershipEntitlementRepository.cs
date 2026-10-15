@@ -87,6 +87,7 @@ public class OrganizationPartnershipEntitlementRepository
                     .SetProperty(e => e.ExternalId, entitlement.ExternalId)
                     .SetProperty(e => e.ExternalIdHash, entitlement.ExternalIdHash)
                     .SetProperty(e => e.State, entitlement.State)
+                    .SetProperty(e => e.SponsoredPlanType, entitlement.SponsoredPlanType)
                     .SetProperty(e => e.UserId, entitlement.UserId)
                     .SetProperty(e => e.AccountRef, entitlement.AccountRef)
                     .SetProperty(e => e.Metadata, entitlement.Metadata)

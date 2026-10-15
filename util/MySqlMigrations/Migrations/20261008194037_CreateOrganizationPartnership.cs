@@ -19,7 +19,8 @@ public partial class CreateOrganizationPartnership : Migration
                 Name = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: false)
                     .Annotation("MySql:CharSet", "utf8mb4"),
                 Status = table.Column<byte>(type: "tinyint unsigned", nullable: false),
-                SponsoredPlanType = table.Column<byte>(type: "tinyint unsigned", nullable: false),
+                AllowedSponsoredPlanTypes = table.Column<string>(type: "longtext", nullable: false)
+                    .Annotation("MySql:CharSet", "utf8mb4"),
                 BindingMode = table.Column<byte>(type: "tinyint unsigned", nullable: false),
                 IdentityBindingConfiguration = table.Column<string>(type: "longtext", nullable: true)
                     .Annotation("MySql:CharSet", "utf8mb4"),
@@ -50,6 +51,7 @@ public partial class CreateOrganizationPartnership : Migration
                 ExternalIdHash = table.Column<string>(type: "varchar(64)", maxLength: 64, nullable: false)
                     .Annotation("MySql:CharSet", "utf8mb4"),
                 State = table.Column<byte>(type: "tinyint unsigned", nullable: false),
+                SponsoredPlanType = table.Column<byte>(type: "tinyint unsigned", nullable: false),
                 UserId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                 AccountRef = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                 Metadata = table.Column<string>(type: "longtext", nullable: true)

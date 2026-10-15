@@ -436,6 +436,10 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("AllowedSponsoredPlanTypes")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<byte>("BindingMode")
                         .HasColumnType("INTEGER");
 
@@ -459,9 +463,6 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("TEXT");
-
-                    b.Property<byte>("SponsoredPlanType")
-                        .HasColumnType("INTEGER");
 
                     b.Property<byte>("Status")
                         .HasColumnType("INTEGER");
@@ -515,6 +516,9 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("TEXT");
+
+                    b.Property<byte>("SponsoredPlanType")
+                        .HasColumnType("INTEGER");
 
                     b.Property<byte>("State")
                         .HasColumnType("INTEGER");

@@ -50,6 +50,7 @@ public class OrganizationPartnershipEntitlementRepositoryTests
         Assert.Equal("customer-1", result.ExternalId);
         Assert.Equal(entitlement.ExternalIdHash, result.ExternalIdHash);
         Assert.Equal(PartnershipEntitlementState.Canceled, result.State);
+        Assert.Equal(SponsoredPlanType.Premium, result.SponsoredPlanType);
         Assert.Equal(user.Id, result.UserId);
         Assert.Equal(entitlement.AccountRef, result.AccountRef);
         Assert.Equal("gold", result.GetMetadata()["tier"]);
@@ -664,7 +665,6 @@ public class OrganizationPartnershipEntitlementRepositoryTests
             OrganizationId = organization.Id,
             Name = "Partner",
             Status = PartnershipStatus.Active,
-            SponsoredPlanType = SponsoredPlanType.Premium,
             BindingMode = PartnershipBindingMode.Token,
         });
 
@@ -676,6 +676,7 @@ public class OrganizationPartnershipEntitlementRepositoryTests
             ExternalId = externalId,
             ExternalIdHash = string.Empty,
             State = PartnershipEntitlementState.Provisioned,
+            SponsoredPlanType = SponsoredPlanType.Premium,
             LastAppliedEffectiveDate = DateTime.UtcNow,
         };
 

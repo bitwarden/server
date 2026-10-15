@@ -20,13 +20,13 @@ public class OrganizationPartnershipRepositoryTests
             OrganizationId = organization.Id,
             Name = "Partner",
             Status = PartnershipStatus.Inactive,
-            SponsoredPlanType = SponsoredPlanType.Premium,
             BindingMode = PartnershipBindingMode.Oidc,
             IdentityBindingConfiguration = "{\"claim\":\"sub\"}",
             CreationDate = creationDate,
             RevisionDate = creationDate.AddMinutes(1),
         };
         partnership.SetRegisteredReturnOrigins(["https://partner.example.com"]);
+        partnership.SetAllowedSponsoredPlanTypes([SponsoredPlanType.Premium]);
 
         await repository.CreateAsync(partnership);
         var result = await repository.GetByIdAsync(partnership.Id);
@@ -35,7 +35,7 @@ public class OrganizationPartnershipRepositoryTests
         Assert.Equal(organization.Id, result.OrganizationId);
         Assert.Equal("Partner", result.Name);
         Assert.Equal(PartnershipStatus.Inactive, result.Status);
-        Assert.Equal(SponsoredPlanType.Premium, result.SponsoredPlanType);
+        Assert.Equal([SponsoredPlanType.Premium], result.GetAllowedSponsoredPlanTypes());
         Assert.Equal(PartnershipBindingMode.Oidc, result.BindingMode);
         Assert.Equal("{\"claim\":\"sub\"}", result.IdentityBindingConfiguration);
         Assert.Equal(["https://partner.example.com"], result.GetRegisteredReturnOrigins());
@@ -93,6 +93,7 @@ public class OrganizationPartnershipRepositoryTests
         partnership.BindingMode = PartnershipBindingMode.Oidc;
         partnership.IdentityBindingConfiguration = "{\"claim\":\"sub\"}";
         partnership.SetRegisteredReturnOrigins(["https://a.example.com", "https://b.example.com"]);
+        partnership.SetAllowedSponsoredPlanTypes([SponsoredPlanType.Premium]);
         await repository.ReplaceAsync(partnership);
 
         var result = await repository.GetByIdAsync(partnership.Id);
@@ -103,6 +104,7 @@ public class OrganizationPartnershipRepositoryTests
         Assert.Equal(PartnershipBindingMode.Oidc, result.BindingMode);
         Assert.Equal("{\"claim\":\"sub\"}", result.IdentityBindingConfiguration);
         Assert.Equal(["https://a.example.com", "https://b.example.com"], result.GetRegisteredReturnOrigins());
+        Assert.Equal([SponsoredPlanType.Premium], result.GetAllowedSponsoredPlanTypes());
     }
 
     [Theory, DatabaseData]
@@ -160,7 +162,6 @@ public class OrganizationPartnershipRepositoryTests
             OrganizationId = organization.Id,
             Name = "Partner",
             Status = PartnershipStatus.Active,
-            SponsoredPlanType = SponsoredPlanType.Premium,
             BindingMode = PartnershipBindingMode.Token,
         });
 }

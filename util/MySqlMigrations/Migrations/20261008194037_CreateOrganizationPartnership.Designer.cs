@@ -441,6 +441,10 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
+                    b.Property<string>("AllowedSponsoredPlanTypes")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.Property<byte>("BindingMode")
                         .HasColumnType("tinyint unsigned");
 
@@ -464,9 +468,6 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");
-
-                    b.Property<byte>("SponsoredPlanType")
-                        .HasColumnType("tinyint unsigned");
 
                     b.Property<byte>("Status")
                         .HasColumnType("tinyint unsigned");
@@ -520,6 +521,9 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<byte>("SponsoredPlanType")
+                        .HasColumnType("tinyint unsigned");
 
                     b.Property<byte>("State")
                         .HasColumnType("tinyint unsigned");

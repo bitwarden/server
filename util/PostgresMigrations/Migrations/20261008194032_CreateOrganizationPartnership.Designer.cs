@@ -444,6 +444,10 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AllowedSponsoredPlanTypes")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<byte>("BindingMode")
                         .HasColumnType("smallint");
 
@@ -467,9 +471,6 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<byte>("SponsoredPlanType")
-                        .HasColumnType("smallint");
 
                     b.Property<byte>("Status")
                         .HasColumnType("smallint");
@@ -523,6 +524,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte>("SponsoredPlanType")
+                        .HasColumnType("smallint");
 
                     b.Property<byte>("State")
                         .HasColumnType("smallint");
