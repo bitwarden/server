@@ -88,8 +88,10 @@ public class OrganizationPartnershipEntitlementRepository
         var rowsAffected = 0;
         await ProtectDataAndSaveAsync(entitlement, async () =>
         {
+            // Dapper's default DateTime mapping rounds to 1/300 s, which could swallow a small revision step.
             var parameters = new DynamicParameters(entitlement);
-            parameters.Add("ExpectedRevisionDate", expectedRevisionDate);
+            parameters.Add(nameof(entitlement.RevisionDate), entitlement.RevisionDate, DbType.DateTime2, null, 7);
+            parameters.Add("ExpectedRevisionDate", expectedRevisionDate, DbType.DateTime2, null, 7);
             using var connection = new SqlConnection(ConnectionString);
             rowsAffected = await connection.ExecuteScalarAsync<int>(
                 $"[{Schema}].[{Table}_UpdateIfUnchanged]",
@@ -101,10 +103,12 @@ public class OrganizationPartnershipEntitlementRepository
 
     public async Task<bool> ReleaseExpiredResumeWindowBindingAsync(Guid id, DateTime asOf, DateTime revisionDate)
     {
+        var parameters = new DynamicParameters(new { Id = id, AsOf = asOf });
+        parameters.Add("RevisionDate", revisionDate, DbType.DateTime2, null, 7);
         using var connection = new SqlConnection(ConnectionString);
         var rowsAffected = await connection.ExecuteScalarAsync<int>(
             $"[{Schema}].[{Table}_ReleaseExpiredResumeWindowBinding]",
-            new { Id = id, AsOf = asOf, RevisionDate = revisionDate },
+            parameters,
             commandType: CommandType.StoredProcedure);
         return rowsAffected > 0;
     }
