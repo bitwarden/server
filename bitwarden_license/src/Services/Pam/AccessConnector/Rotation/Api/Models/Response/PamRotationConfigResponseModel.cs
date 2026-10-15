@@ -21,6 +21,7 @@ public class PamRotationConfigResponseModel : ResponseModel
         TargetSystemName = config.TargetSystemName;
         TargetSystemMethod = config.TargetSystemMethod;
         SealedData = config.SealedData;
+        WrappedKey = config.WrappedKey;
         ScheduleCron = config.ScheduleCron;
         RotateOnAccessEnd = config.RotateOnAccessEnd;
         NextRotationAt = config.NextRotationAt.AsUtc();

@@ -62,6 +62,7 @@ public class RecordManualRotationCommand : IRecordManualRotationCommand
             CipherId = details.CipherId,
             TargetSystemId = details.TargetSystemId,
             SealedData = details.SealedData,
+            WrappedKey = details.WrappedKey,
             ScheduleCron = details.ScheduleCron,
             RotateOnAccessEnd = details.RotateOnAccessEnd,
             // Clears awaiting_manual_rotation: the obligation just discharged.

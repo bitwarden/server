@@ -43,9 +43,10 @@ public class RegisterTargetSystemCommandTests
         Assert.Equal(PamTargetSystemMethod.Automatic, result.Method);
         Assert.Equal(PamTargetSystemStatus.PendingSeal, result.Status);
         Assert.Null(result.SealedData);
+        Assert.Null(result.WrappedKey);
         await sutProvider.GetDependency<IPamTargetSystemRepository>().Received(1).CreateAsync(Arg.Is<PamTargetSystem>(t =>
             t.OrganizationId == organizationId && t.Name == name && t.CreationDate == _now && t.RevisionDate == _now
-            && t.Status == PamTargetSystemStatus.PendingSeal && t.SealedData == null));
+            && t.Status == PamTargetSystemStatus.PendingSeal && t.SealedData == null && t.WrappedKey == null));
     }
 
     [Theory, BitAutoData]

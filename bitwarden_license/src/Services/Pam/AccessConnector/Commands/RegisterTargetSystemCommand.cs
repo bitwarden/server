@@ -43,6 +43,7 @@ public class RegisterTargetSystemCommand : IRegisterTargetSystemCommand
             Name = name,
             Method = method,
             SealedData = null,
+            WrappedKey = null,
             Status = PamTargetSystemStatus.PendingSeal,
             CreationDate = now,
             RevisionDate = now,

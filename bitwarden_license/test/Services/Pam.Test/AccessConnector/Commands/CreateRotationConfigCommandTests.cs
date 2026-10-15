@@ -24,59 +24,71 @@ public class CreateRotationConfigCommandTests
 
     [Theory, BitAutoData]
     public async Task CreateAsync_SealedDataMissing_ThrowsBadRequest(
-        Guid organizationId, Guid actingUserId, Guid cipherId, Guid targetSystemId)
+        Guid organizationId, Guid actingUserId, Guid cipherId, Guid targetSystemId, string wrappedKey)
     {
         var sutProvider = Setup();
 
         await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(
-            organizationId, actingUserId, cipherId, targetSystemId, " ", null, false));
+            organizationId, actingUserId, cipherId, targetSystemId, " ", wrappedKey, null, false));
+
+        await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_WrappedKeyMissing_ThrowsBadRequest(
+        Guid organizationId, Guid actingUserId, Guid cipherId, Guid targetSystemId, string sealedData)
+    {
+        var sutProvider = Setup();
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(
+            organizationId, actingUserId, cipherId, targetSystemId, sealedData, " ", null, false));
 
         await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
     }
 
     [Theory, BitAutoData]
     public async Task CreateAsync_TargetMissing_ThrowsNotFound(
-        Guid organizationId, Guid actingUserId, Guid cipherId, Guid targetSystemId, string sealedData)
+        Guid organizationId, Guid actingUserId, Guid cipherId, Guid targetSystemId, string sealedData, string wrappedKey)
     {
         var sutProvider = Setup();
         sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(targetSystemId).Returns((PamTargetSystem?)null);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(
-            organizationId, actingUserId, cipherId, targetSystemId, sealedData, null, false));
+            organizationId, actingUserId, cipherId, targetSystemId, sealedData, wrappedKey, null, false));
 
         await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
     }
 
     [Theory, BitAutoData]
     public async Task CreateAsync_TargetWrongOrg_ThrowsNotFound(
-        Guid actingUserId, Guid cipherId, PamTargetSystem target, string sealedData)
+        Guid actingUserId, Guid cipherId, PamTargetSystem target, string sealedData, string wrappedKey)
     {
         var sutProvider = Setup();
         sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(target.Id).Returns(target);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(
-            Guid.NewGuid(), actingUserId, cipherId, target.Id, sealedData, null, false));
+            Guid.NewGuid(), actingUserId, cipherId, target.Id, sealedData, wrappedKey, null, false));
 
         await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
     }
 
     [Theory, BitAutoData]
     public async Task CreateAsync_TargetDisabled_ThrowsBadRequest(
-        Guid actingUserId, Guid cipherId, PamTargetSystem target, string sealedData)
+        Guid actingUserId, Guid cipherId, PamTargetSystem target, string sealedData, string wrappedKey)
     {
         var sutProvider = Setup();
         target.Status = PamTargetSystemStatus.Disabled;
         sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(target.Id).Returns(target);
 
         await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(
-            target.OrganizationId, actingUserId, cipherId, target.Id, sealedData, null, false));
+            target.OrganizationId, actingUserId, cipherId, target.Id, sealedData, wrappedKey, null, false));
 
         await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
     }
 
     [Theory, BitAutoData]
     public async Task CreateAsync_TargetPendingSeal_Allowed(
-        Guid actingUserId, PamTargetSystem target, Cipher cipher, string sealedData)
+        Guid actingUserId, PamTargetSystem target, Cipher cipher, string sealedData, string wrappedKey)
     {
         var sutProvider = Setup();
         target.Status = PamTargetSystemStatus.PendingSeal;
@@ -86,15 +98,16 @@ public class CreateRotationConfigCommandTests
             .Returns(call => Task.FromResult(call.Arg<PamRotationConfig>()));
 
         var result = await sutProvider.Sut.CreateAsync(
-            target.OrganizationId, actingUserId, cipher.Id, target.Id, sealedData, null, false);
+            target.OrganizationId, actingUserId, cipher.Id, target.Id, sealedData, wrappedKey, null, false);
 
         Assert.Equal(sealedData, result.SealedData);
+        Assert.Equal(wrappedKey, result.WrappedKey);
         await sutProvider.GetDependency<IPamRotationConfigRepository>().Received(1).CreateAsync(Arg.Any<PamRotationConfig>());
     }
 
     [Theory, BitAutoData]
     public async Task CreateAsync_CipherMissing_ThrowsNotFound(
-        Guid actingUserId, PamTargetSystem target, Guid cipherId, string sealedData)
+        Guid actingUserId, PamTargetSystem target, Guid cipherId, string sealedData, string wrappedKey)
     {
         var sutProvider = Setup();
         target.Status = PamTargetSystemStatus.Active;
@@ -102,14 +115,14 @@ public class CreateRotationConfigCommandTests
         sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId).Returns((Cipher?)null);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(
-            target.OrganizationId, actingUserId, cipherId, target.Id, sealedData, null, false));
+            target.OrganizationId, actingUserId, cipherId, target.Id, sealedData, wrappedKey, null, false));
 
         await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
     }
 
     [Theory, BitAutoData]
     public async Task CreateAsync_CipherWrongOrg_ThrowsNotFound(
-        Guid actingUserId, PamTargetSystem target, Cipher cipher, string sealedData)
+        Guid actingUserId, PamTargetSystem target, Cipher cipher, string sealedData, string wrappedKey)
     {
         var sutProvider = Setup();
         target.Status = PamTargetSystemStatus.Active;
@@ -118,14 +131,14 @@ public class CreateRotationConfigCommandTests
         sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipher.Id).Returns(cipher);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(
-            target.OrganizationId, actingUserId, cipher.Id, target.Id, sealedData, null, false));
+            target.OrganizationId, actingUserId, cipher.Id, target.Id, sealedData, wrappedKey, null, false));
 
         await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
     }
 
     [Theory, BitAutoData]
     public async Task CreateAsync_DuplicateCipherConfig_ThrowsBadRequest(
-        Guid actingUserId, PamTargetSystem target, Cipher cipher, PamRotationConfig existing, string sealedData)
+        Guid actingUserId, PamTargetSystem target, Cipher cipher, PamRotationConfig existing, string sealedData, string wrappedKey)
     {
         var sutProvider = Setup();
         target.Status = PamTargetSystemStatus.Active;
@@ -135,14 +148,14 @@ public class CreateRotationConfigCommandTests
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetByCipherIdAsync(cipher.Id).Returns(existing);
 
         await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(
-            target.OrganizationId, actingUserId, cipher.Id, target.Id, sealedData, null, false));
+            target.OrganizationId, actingUserId, cipher.Id, target.Id, sealedData, wrappedKey, null, false));
 
         await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
     }
 
     [Theory, BitAutoData]
     public async Task CreateAsync_CronFloorViolation_ThrowsBadRequest(
-        Guid actingUserId, PamTargetSystem target, Cipher cipher, string sealedData, string scheduleCron)
+        Guid actingUserId, PamTargetSystem target, Cipher cipher, string sealedData, string wrappedKey, string scheduleCron)
     {
         var sutProvider = Setup();
         target.Status = PamTargetSystemStatus.Active;
@@ -153,14 +166,14 @@ public class CreateRotationConfigCommandTests
             .Do(_ => throw new BadRequestException("The schedule must run no more often than every 15 minutes."));
 
         await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(
-            target.OrganizationId, actingUserId, cipher.Id, target.Id, sealedData, scheduleCron, false));
+            target.OrganizationId, actingUserId, cipher.Id, target.Id, sealedData, wrappedKey, scheduleCron, false));
 
         await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
     }
 
     [Theory, BitAutoData]
     public async Task CreateAsync_HappyPath_SetsNextRotationAtFromCalculatorAndEnables(
-        Guid actingUserId, PamTargetSystem target, Cipher cipher, string sealedData, string scheduleCron)
+        Guid actingUserId, PamTargetSystem target, Cipher cipher, string sealedData, string wrappedKey, string scheduleCron)
     {
         var sutProvider = Setup();
         target.Status = PamTargetSystemStatus.Active;
@@ -174,7 +187,7 @@ public class CreateRotationConfigCommandTests
             .Returns(call => Task.FromResult(call.Arg<PamRotationConfig>()));
 
         var result = await sutProvider.Sut.CreateAsync(
-            target.OrganizationId, actingUserId, cipher.Id, target.Id, sealedData, scheduleCron, true);
+            target.OrganizationId, actingUserId, cipher.Id, target.Id, sealedData, wrappedKey, scheduleCron, true);
 
         Assert.Equal(nextOccurrence, result.NextRotationAt);
         Assert.True(result.Enabled);
@@ -187,7 +200,7 @@ public class CreateRotationConfigCommandTests
 
     [Theory, BitAutoData]
     public async Task CreateAsync_HappyPath_EmitsAttemptThenOutcome(
-        Guid actingUserId, PamTargetSystem target, Cipher cipher, string sealedData)
+        Guid actingUserId, PamTargetSystem target, Cipher cipher, string sealedData, string wrappedKey)
     {
         var sutProvider = Setup();
         target.Status = PamTargetSystemStatus.Active;
@@ -203,7 +216,7 @@ public class CreateRotationConfigCommandTests
             });
 
         await sutProvider.Sut.CreateAsync(
-            target.OrganizationId, actingUserId, cipher.Id, target.Id, sealedData, null, false);
+            target.OrganizationId, actingUserId, cipher.Id, target.Id, sealedData, wrappedKey, null, false);
 
         var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
