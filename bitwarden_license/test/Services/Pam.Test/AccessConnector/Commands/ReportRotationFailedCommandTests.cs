@@ -117,7 +117,7 @@ public class ReportRotationFailedCommandTests
         await sutProvider.Sut.ReportFailedAsync(accessConnectorId, attempt.Id, failureReason, syncState);
 
         await sutProvider.GetDependency<IPamRotationConfigRepository>().Received(1).ReplaceAsync(
-            Arg.Is<PamRotationConfig>(c => c.Id == config.Id && c.NextRotationAt == _now + _failureRetryDelay));
+            Arg.Is<PamRotationConfig>(c => c.Id == config.Id && c.NextRotationDate == _now + _failureRetryDelay));
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationFailed
                 && a.OrganizationId == config.OrganizationId
@@ -168,7 +168,7 @@ public class ReportRotationFailedCommandTests
         job.RotationConfigId = config.Id;
         attempt.JobId = job.Id;
         accessConnector.OrganizationId = config.OrganizationId;
-        // With no schedule, nothing would clear a pushed-out NextRotationAt, so the config would stay due forever.
+        // With no schedule, nothing would clear a pushed-out NextRotationDate, so the config would stay due forever.
         config.ScheduleCron = null;
         SetupAttempt(sutProvider, attempt);
         sutProvider.GetDependency<IPamRotationJobRepository>()

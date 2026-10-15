@@ -128,7 +128,7 @@ public class HandleAccessGrantEndedCommandTests
         await sutProvider.GetDependency<IOfferRotationCommand>().DidNotReceiveWithAnyArgs()
             .OfferAsync(default, default);
         await sutProvider.GetDependency<IPamRotationConfigRepository>().Received(1).ReplaceAsync(
-            Arg.Is<PamRotationConfig>(c => c.Id == config.Id && c.NextRotationAt == _now));
+            Arg.Is<PamRotationConfig>(c => c.Id == config.Id && c.NextRotationDate == _now));
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.ManualRotationDue
                 && a.OrganizationId == config.OrganizationId

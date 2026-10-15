@@ -64,8 +64,8 @@ public class ReportRotationSucceededCommandTests
         Assert.Same(attempt, returned);
         await sutProvider.GetDependency<IPamRotationConfigRepository>().Received(1).ReplaceAsync(
             Arg.Is<PamRotationConfig>(c => c.Id == config.Id
-                && c.LastRotationAt == _now
-                && c.NextRotationAt == _nextOccurrence));
+                && c.LastRotationDate == _now
+                && c.NextRotationDate == _nextOccurrence));
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationSucceeded
                 && a.OrganizationId == config.OrganizationId
