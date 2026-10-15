@@ -33,11 +33,3 @@ SELECT
 FROM
     [dbo].[Organization]
 GO
-
--- Organization_ReadAbilityById selects * from the view, so its cached column
--- metadata must be refreshed to include the new column.
-IF OBJECT_ID('[dbo].[Organization_ReadAbilityById]') IS NOT NULL
-BEGIN
-    EXECUTE sp_refreshsqlmodule N'[dbo].[Organization_ReadAbilityById]'
-END
-GO
