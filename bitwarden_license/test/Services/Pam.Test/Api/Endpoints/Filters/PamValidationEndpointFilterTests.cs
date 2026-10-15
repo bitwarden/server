@@ -116,6 +116,54 @@ public class PamValidationEndpointFilterTests
     }
 
     [Fact]
+    public async Task InvokeAsync_TargetSystemUpdateWithoutWrappedKey_ReportsOnlyTheMissingWrappedKey()
+    {
+        var context = CreateContext(new UpdateTargetSystemRequestModel { Name = "db-prod", SealedData = "envelope" });
+
+        var result = await new PamValidationEndpointFilter().InvokeAsync(context, NotCalled());
+
+        var jsonResult = Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
+        Assert.Equal(StatusCodes.Status400BadRequest, jsonResult.StatusCode);
+        Assert.Equal(
+            [nameof(UpdateTargetSystemRequestModel.WrappedKey)],
+            jsonResult.Value!.ValidationErrors!.Keys);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_RotationConfigUpdateWithOverlongWrappedKey_Returns400()
+    {
+        var context = CreateContext(new UpdateRotationConfigRequestModel
+        {
+            SealedData = "envelope",
+            WrappedKey = new string('a', 2001),
+        });
+
+        var result = await new PamValidationEndpointFilter().InvokeAsync(context, NotCalled());
+
+        var jsonResult = Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
+        Assert.Equal(StatusCodes.Status400BadRequest, jsonResult.StatusCode);
+        Assert.Equal(
+            [nameof(UpdateRotationConfigRequestModel.WrappedKey)],
+            jsonResult.Value!.ValidationErrors!.Keys);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_RotationConfigCreateWithoutWrappedKey_ReportsWrappedKey()
+    {
+        var context = CreateContext(new CreateRotationConfigRequestModel
+        {
+            CipherId = Guid.NewGuid(),
+            TargetSystemId = Guid.NewGuid(),
+            SealedData = "envelope",
+        });
+
+        var result = await new PamValidationEndpointFilter().InvokeAsync(context, NotCalled());
+
+        var jsonResult = Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
+        Assert.Contains(nameof(CreateRotationConfigRequestModel.WrappedKey), jsonResult.Value!.ValidationErrors!.Keys);
+    }
+
+    [Fact]
     public async Task InvokeAsync_TargetSystemRegistrationWithOutOfRangeMethod_Returns400()
     {
         // Without [EnumDataType] an undefined member deserializes and validates, reaching RegisterAsync as a method
