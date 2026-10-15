@@ -12,15 +12,15 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20261001094000_PamRotationDaemon")]
-    partial class PamRotationDaemon
+    [Migration("20261015201836_AddEventPamAccessIds")]
+    partial class AddEventPamAccessIds
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.8")
+                .HasAnnotation("ProductVersion", "8.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
@@ -263,6 +263,9 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<DateTime?>("OwnersNotifiedOfAutoscaling")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("PamSeatMinimum")
+                        .HasColumnType("int");
 
                     b.Property<int?>("PamSeats")
                         .HasColumnType("int");
@@ -1584,6 +1587,12 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid?>("AccessLeaseId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("AccessRequestId")
+                        .HasColumnType("char(36)");
+
                     b.Property<Guid?>("ActingUserId")
                         .HasColumnType("char(36)");
 
@@ -2744,7 +2753,7 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("AccessRule", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamDaemon", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamAccessConnector", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
@@ -2755,7 +2764,7 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<DateTime?>("LastHeartbeatAt")
+                    b.Property<DateTime?>("LastHeartbeatDate")
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("Name")
@@ -2779,19 +2788,19 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("OrganizationId");
 
-                    b.ToTable("PamDaemon", (string)null);
+                    b.ToTable("PamAccessConnector", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamDaemonTargetAssignment", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamAccessConnectorTargetAssignment", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid>("AccessConnectorId")
+                        .HasColumnType("char(36)");
+
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
-
-                    b.Property<Guid>("DaemonId")
-                        .HasColumnType("char(36)");
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("char(36)");
@@ -2805,10 +2814,10 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("TargetSystemId");
 
-                    b.HasIndex("DaemonId", "TargetSystemId")
+                    b.HasIndex("AccessConnectorId", "TargetSystemId")
                         .IsUnique();
 
-                    b.ToTable("PamDaemonTargetAssignment", (string)null);
+                    b.ToTable("PamAccessConnectorTargetAssignment", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamLeaseExpirySweep", b =>
@@ -2829,10 +2838,13 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
+                    b.Property<byte>("Action")
+                        .HasColumnType("tinyint unsigned");
+
                     b.Property<bool>("CipherUpdated")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<Guid>("ClaimedByDaemonId")
+                    b.Property<Guid>("ClaimedByAccessConnectorId")
                         .HasColumnType("char(36)");
 
                     b.Property<DateTime>("CreationDate")
@@ -2851,17 +2863,15 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<byte?>("SessionTermination")
                         .HasColumnType("tinyint unsigned");
 
-                    b.Property<byte>("Status")
-                        .HasColumnType("tinyint unsigned");
-
                     b.Property<byte?>("SyncState")
                         .HasColumnType("tinyint unsigned");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClaimedByDaemonId", "JobId");
+                    b.HasIndex("ClaimedByAccessConnectorId", "CreationDate")
+                        .IsDescending(false, true);
 
-                    b.HasIndex("JobId", "Status");
+                    b.HasIndex("JobId", "Action");
 
                     b.ToTable("PamRotationAttempt", (string)null);
                 });
@@ -2870,11 +2880,6 @@ namespace Bit.MySqlMigrations.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
-
-                    b.Property<string>("AccountIdentity")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)");
 
                     b.Property<Guid>("CipherId")
                         .HasColumnType("char(36)");
@@ -2885,10 +2890,10 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("Enabled")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<DateTime?>("LastRotationAt")
+                    b.Property<DateTime?>("LastRotationDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<DateTime?>("NextRotationAt")
+                    b.Property<DateTime?>("NextRotationDate")
                         .HasColumnType("datetime(6)");
 
                     b.Property<Guid>("OrganizationId")
@@ -2904,18 +2909,20 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
 
+                    b.Property<string>("SealedData")
+                        .IsRequired()
+                        .HasMaxLength(10000)
+                        .HasColumnType("varchar(10000)");
+
                     b.Property<Guid>("TargetSystemId")
                         .HasColumnType("char(36)");
-
-                    b.Property<bool>("TerminateSessions")
-                        .HasColumnType("tinyint(1)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CipherId")
                         .IsUnique();
 
-                    b.HasIndex("NextRotationAt");
+                    b.HasIndex("NextRotationDate");
 
                     b.HasIndex("OrganizationId");
 
@@ -2929,19 +2936,22 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
-                    b.Property<DateTime?>("ClaimedAt")
-                        .HasColumnType("datetime(6)");
+                    b.Property<byte>("Action")
+                        .HasColumnType("tinyint unsigned");
 
-                    b.Property<Guid?>("ClaimedByDaemonId")
+                    b.Property<Guid?>("ClaimedByAccessConnectorId")
                         .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("ClaimedDate")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<DateTime>("ExpiresAt")
+                    b.Property<DateTime>("ExpirationDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<DateTime>("NextClaimableAt")
+                    b.Property<DateTime>("NextClaimableDate")
                         .HasColumnType("datetime(6)");
 
                     b.Property<Guid>("RotationConfigId")
@@ -2950,18 +2960,28 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<byte>("Source")
                         .HasColumnType("tinyint unsigned");
 
-                    b.Property<byte>("Status")
-                        .HasColumnType("tinyint unsigned");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("ClaimedByDaemonId", "Status");
+                    b.HasIndex("Action", "ExpirationDate");
 
-                    b.HasIndex("RotationConfigId", "Status");
+                    b.HasIndex("ClaimedByAccessConnectorId", "Action");
 
-                    b.HasIndex("Status", "ExpiresAt");
+                    b.HasIndex("RotationConfigId", "Action");
 
                     b.ToTable("PamRotationJob", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationJobTimeoutSweep", b =>
+                {
+                    b.Property<Guid>("RotationJobId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("SweptDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("RotationJobId");
+
+                    b.ToTable("PamRotationJobTimeoutSweep", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamTargetSystem", b =>
@@ -2971,9 +2991,6 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
-
-                    b.Property<byte?>("Kind")
-                        .HasColumnType("tinyint unsigned");
 
                     b.Property<byte>("Method")
                         .HasColumnType("tinyint unsigned");
@@ -2986,18 +3003,15 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("PasswordPolicy")
-                        .HasMaxLength(2000)
-                        .HasColumnType("varchar(2000)");
-
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("SealedData")
+                        .HasMaxLength(10000)
+                        .HasColumnType("varchar(10000)");
+
                     b.Property<byte>("Status")
                         .HasColumnType("tinyint unsigned");
-
-                    b.Property<bool?>("SupportsSessionTermination")
-                        .HasColumnType("tinyint(1)");
 
                     b.HasKey("Id");
 
@@ -4155,7 +4169,7 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("Organization");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamDaemon", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamAccessConnector", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ApiKey", null)
                         .WithMany()
@@ -4172,11 +4186,11 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("Organization");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamDaemonTargetAssignment", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamAccessConnectorTargetAssignment", b =>
                 {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.PamDaemon", null)
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.PamAccessConnector", null)
                         .WithMany()
-                        .HasForeignKey("DaemonId")
+                        .HasForeignKey("AccessConnectorId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
@@ -4209,7 +4223,7 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationJob", null)
                         .WithMany()
                         .HasForeignKey("JobId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
@@ -4235,7 +4249,16 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationConfig", null)
                         .WithMany()
                         .HasForeignKey("RotationConfigId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationJobTimeoutSweep", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationJob", null)
+                        .WithMany()
+                        .HasForeignKey("RotationJobId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
