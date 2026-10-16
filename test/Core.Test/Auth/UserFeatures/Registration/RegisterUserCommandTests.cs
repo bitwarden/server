@@ -627,6 +627,7 @@ public class RegisterUserCommandTests
     [BitAutoData(OrganizationUserStatusType.Revoked)]
     [BitAutoData(OrganizationUserStatusType.Accepted)]
     [BitAutoData(OrganizationUserStatusType.Confirmed)]
+    [BitAutoData(OrganizationUserStatusType.Staged)]
     public async Task RegisterUserViaOrganizationInviteToken_OrgUserNotInvited_ThrowsBadRequestException(
         OrganizationUserStatusType status,
         SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData, OrganizationUser orgUser,
