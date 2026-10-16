@@ -43,6 +43,16 @@ public static class PartnershipErrorResults
         Create(StatusCodes.Status400BadRequest, InvalidRequestCode, InvalidRequestMessage, httpContext);
 
     /// <summary>
+    /// 403 for an authenticated partner whose partnership is inactive. Commands report the same error as 409 through
+    /// <see cref="FromError"/>.
+    /// </summary>
+    public static ObjectResult PartnershipNotActive(HttpContext httpContext)
+    {
+        var error = new PartnershipNotActive();
+        return Create(StatusCodes.Status403Forbidden, error.Code, error.Message, httpContext);
+    }
+
+    /// <summary>
     /// 429 for a request rejected by partnership rate limiting.
     /// </summary>
     public static ObjectResult RateLimited(HttpContext httpContext) =>
