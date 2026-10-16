@@ -104,8 +104,14 @@ server {
     proxy_pass http://web:5000/sso-connector.html;
   }
 
+  # Send files only. Cipher attachments are served by the API's signed-URL
+  # endpoint (/api/ciphers/attachment/download) and must not be exposed here.
+  location /attachments/send/ {
+    proxy_pass http://attachments:5000/send/;
+  }
+
   location /attachments/ {
-    proxy_pass http://attachments:5000/;
+    return 404;
   }
 
   location /api/ {
