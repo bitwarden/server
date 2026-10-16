@@ -1,4 +1,5 @@
-﻿using Bit.Api.AdminConsole.Partnerships.Models.Response;
+﻿using Bit.Api.AdminConsole.Partnerships.Idempotency;
+using Bit.Api.AdminConsole.Partnerships.Models.Response;
 using Bit.Core.AdminConsole.OrganizationFeatures.Partnerships.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,6 +16,7 @@ public class PartnershipReconciliationExportsController(
     /// Starts an export of all of the partnership's entitlements. Poll the returned export until it completes.
     /// </summary>
     [HttpPost("")]
+    [PartnershipIdempotent]
     [ProducesResponseType(StatusCodes.Status202Accepted)]
     public async Task<ActionResult<PartnershipReconciliationExportResponseModel>> PostAsync()
     {
