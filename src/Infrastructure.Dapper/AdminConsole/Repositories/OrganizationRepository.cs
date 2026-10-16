@@ -8,6 +8,7 @@ using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Enums;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -332,7 +333,8 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task InitializeOrganizationAsync(Organization organization, Func<DbConnection, DbTransaction, Task> confirmOwnerAction)
+    public async Task InitializeOrganizationAsync(Organization organization, Func<DbConnection, DbTransaction, Task> confirmOwnerAction,
+        IEnumerable<DatabaseTransactionAction>? additionalActions = null)
     {
         await using var connection = new SqlConnection(ConnectionString);
         await connection.OpenAsync();
@@ -348,6 +350,11 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
 
             await confirmOwnerAction(connection, transaction);
 
+            foreach (var action in additionalActions ?? [])
+            {
+                await action(connection, transaction);
+            }
+
             await transaction.CommitAsync();
         }
         catch (Exception ex)
@@ -357,5 +364,35 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
             await transaction.RollbackAsync();
             throw;
         }
+    }
+
+    /// <inheritdoc />
+    public DatabaseTransactionAction BuildSetOrganizationKeyIdAction(Guid organizationId, KeyId organizationKeyId)
+    {
+        return async (connection, transaction) =>
+        {
+            if (!await SetOrganizationKeyIdAsync(connection, transaction, organizationId, organizationKeyId))
+            {
+                throw new InvalidOperationException(
+                    $"Organization {organizationId} already has a key id or does not exist.");
+            }
+        };
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> SetOrganizationKeyIdAsync(Guid organizationId, KeyId organizationKeyId)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        return await SetOrganizationKeyIdAsync(connection, null, organizationId, organizationKeyId);
+    }
+
+    private static async Task<bool> SetOrganizationKeyIdAsync(DbConnection connection, DbTransaction? transaction,
+        Guid organizationId, KeyId organizationKeyId)
+    {
+        return await connection.ExecuteScalarAsync<bool>(
+            "[dbo].[Organization_SetOrganizationKeyId]",
+            new { Id = organizationId, OrganizationKeyId = organizationKeyId.ToString(), RevisionDate = DateTime.UtcNow },
+            transaction: transaction,
+            commandType: CommandType.StoredProcedure);
     }
 }

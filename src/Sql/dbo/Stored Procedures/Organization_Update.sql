@@ -68,7 +68,11 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @UsePam BIT = 0,
     @PamSeats INT = null,
     @MaxAutoscalePamSeats INT = null,
-    @PamSeatMinimum INT = null
+    @PamSeatMinimum INT = null,
+    -- Accepted but not written. Dapper passes every entity property to this procedure, so the parameter must
+    -- exist. The key id is only written by Organization_Create and Organization_SetOrganizationKeyId, so that an
+    -- update from a stale organization read cannot overwrite it.
+    @OrganizationKeyId VARCHAR(32) = NULL
 AS
 BEGIN
     SET NOCOUNT ON

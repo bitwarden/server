@@ -10,6 +10,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Dirt.Enums;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -524,7 +525,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .SetProperty(o => o.RevisionDate, requestDate));
     }
 
-    public async Task InitializeOrganizationAsync(Core.AdminConsole.Entities.Organization organization, Func<DbConnection, DbTransaction, Task> confirmOwnerAction)
+    public async Task InitializeOrganizationAsync(Core.AdminConsole.Entities.Organization organization, Func<DbConnection, DbTransaction, Task> confirmOwnerAction,
+        IEnumerable<DatabaseTransactionAction> additionalActions = null)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -552,6 +554,11 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 
             await confirmOwnerAction(connection, transaction);
 
+            foreach (var action in additionalActions ?? [])
+            {
+                await action(connection, transaction);
+            }
+
             await transaction.CommitAsync();
         }
         catch (Exception ex)
@@ -561,5 +568,48 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             await transaction.RollbackAsync();
             throw;
         }
+    }
+
+    /// <inheritdoc />
+    public DatabaseTransactionAction BuildSetOrganizationKeyIdAction(Guid organizationId, KeyId organizationKeyId)
+    {
+        return async (connection, transaction) =>
+        {
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetTransactionalDatabaseContext(scope, connection, transaction);
+
+            if (!await SetOrganizationKeyIdAsync(dbContext, organizationId, organizationKeyId))
+            {
+                throw new InvalidOperationException(
+                    $"Organization {organizationId} already has a key id or does not exist.");
+            }
+        };
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> SetOrganizationKeyIdAsync(Guid organizationId, KeyId organizationKeyId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        return await SetOrganizationKeyIdAsync(dbContext, organizationId, organizationKeyId);
+    }
+
+    /// <summary>
+    /// Matches Organization_SetOrganizationKeyId. ExecuteUpdateAsync bypasses change tracking, so it writes the key id
+    /// even though tracked updates ignore it (see OrganizationEntityTypeConfiguration).
+    /// </summary>
+    private static async Task<bool> SetOrganizationKeyIdAsync(DatabaseContext dbContext, Guid organizationId,
+        KeyId organizationKeyId)
+    {
+        var keyId = organizationKeyId.ToString();
+        var revisionDate = DateTime.UtcNow;
+
+        var updatedRows = await dbContext.Organizations
+            .Where(o => o.Id == organizationId && o.OrganizationKeyId == null)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(o => o.OrganizationKeyId, keyId)
+                .SetProperty(o => o.RevisionDate, revisionDate));
+
+        return updatedRows == 1;
     }
 }
