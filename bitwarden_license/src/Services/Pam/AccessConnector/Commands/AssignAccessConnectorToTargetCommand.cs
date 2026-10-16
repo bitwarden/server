@@ -5,6 +5,7 @@ using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.AccessConnector.Commands.Interfaces;
+using Bit.Services.Pam.AccessConnector.Queries.Interfaces;
 using Bit.Services.Pam.Services;
 using Bit.Services.Pam.Utilities;
 
@@ -15,6 +16,8 @@ public class AssignAccessConnectorToTargetCommand : IAssignAccessConnectorToTarg
 {
     private readonly IPamAccessConnectorRepository _accessConnectorRepository;
     private readonly IPamTargetSystemRepository _targetSystemRepository;
+    private readonly IPamRotationConfigRepository _rotationConfigRepository;
+    private readonly ICanEditRotationCiphersQuery _canEditRotationCiphersQuery;
     private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
@@ -22,12 +25,16 @@ public class AssignAccessConnectorToTargetCommand : IAssignAccessConnectorToTarg
     public AssignAccessConnectorToTargetCommand(
         IPamAccessConnectorRepository accessConnectorRepository,
         IPamTargetSystemRepository targetSystemRepository,
+        IPamRotationConfigRepository rotationConfigRepository,
+        ICanEditRotationCiphersQuery canEditRotationCiphersQuery,
         IOrganizationAbilityCacheService organizationAbilityCacheService,
         IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
         _accessConnectorRepository = accessConnectorRepository;
         _targetSystemRepository = targetSystemRepository;
+        _rotationConfigRepository = rotationConfigRepository;
+        _canEditRotationCiphersQuery = canEditRotationCiphersQuery;
         _organizationAbilityCacheService = organizationAbilityCacheService;
         _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
@@ -63,6 +70,14 @@ public class AssignAccessConnectorToTargetCommand : IAssignAccessConnectorToTarg
         if (await _accessConnectorRepository.AssignmentExistsAsync(accessConnectorId, targetSystemId))
         {
             throw new BadRequestException("This access connector is already assigned to this target system.");
+        }
+
+        // The access connector receives every cipher the target system rotates.
+        var configs = await _rotationConfigRepository.GetManyDetailsByOrganizationIdAsync(organizationId);
+        var cipherIds = configs.Where(c => c.TargetSystemId == targetSystemId).Select(c => c.CipherId);
+        if (!await _canEditRotationCiphersQuery.CanEditAllAsync(organizationId, cipherIds))
+        {
+            throw new BadRequestException("You need edit access to every item this target system rotates.");
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;

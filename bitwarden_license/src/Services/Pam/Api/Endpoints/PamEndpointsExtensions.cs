@@ -36,8 +36,9 @@ public static class PamEndpointsExtensions
         group.WithPamDefaults(Policies.Application, FeatureFlagKeys.Pam);
 
     /// <summary>
-    /// Authorized in the middleware by <see cref="ManageAccessConnectorRequirement"/>, so handlers and commands only
-    /// check that an id reached by route belongs to the route's organization.
+    /// Authorized in the middleware by <see cref="ManageAccessConnectorRequirement"/>. Handlers and commands check
+    /// that an id reached by route belongs to the route's organization, and the commands also check the plan and edit
+    /// access.
     /// </summary>
     private static RouteGroupBuilder WithPamAccessConnectorAdminDefaults(this RouteGroupBuilder group)
     {

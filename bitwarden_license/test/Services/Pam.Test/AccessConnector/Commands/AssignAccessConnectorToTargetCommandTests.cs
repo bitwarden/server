@@ -6,6 +6,7 @@ using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.AccessConnector.Commands;
+using Bit.Services.Pam.AccessConnector.Queries.Interfaces;
 using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -126,6 +127,10 @@ public class AssignAccessConnectorToTargetCommandTests
 
         await sutProvider.GetDependency<IPamAccessConnectorRepository>().DidNotReceiveWithAnyArgs()
             .CreateAssignmentAsync(default!);
+        await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs()
+            .GetManyDetailsByOrganizationIdAsync(default);
+        await sutProvider.GetDependency<ICanEditRotationCiphersQuery>().DidNotReceiveWithAnyArgs()
+            .CanEditAllAsync(default, default!);
     }
 
     [Theory, BitAutoData]
@@ -165,6 +170,66 @@ public class AssignAccessConnectorToTargetCommandTests
                 accessConnector.OrganizationId, actingUserId, accessConnector.Id, target.Id));
 
         await sutProvider.GetDependency<IPamAccessConnectorRepository>().DidNotReceiveWithAnyArgs()
+            .CreateAssignmentAsync(default!);
+        await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs()
+            .GetManyDetailsByOrganizationIdAsync(default);
+        await sutProvider.GetDependency<ICanEditRotationCiphersQuery>().DidNotReceiveWithAnyArgs()
+            .CanEditAllAsync(default, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AssignAsync_TargetRotatesACipherNotEditable_ThrowsBadRequest(
+        Guid actingUserId, PamAccessConnector accessConnector, PamTargetSystem target, PamRotationConfigDetails config)
+    {
+        var sutProvider = Setup();
+        accessConnector.Status = PamAccessConnectorStatus.Enabled;
+        target.OrganizationId = accessConnector.OrganizationId;
+        target.Method = PamTargetSystemMethod.Automatic;
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
+            .Returns(accessConnector);
+        sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(target.Id).Returns(target);
+        config.TargetSystemId = target.Id;
+        sutProvider.GetDependency<IPamRotationConfigRepository>()
+            .GetManyDetailsByOrganizationIdAsync(accessConnector.OrganizationId)
+            .Returns(new List<PamRotationConfigDetails> { config });
+        sutProvider.GetDependency<ICanEditRotationCiphersQuery>()
+            .CanEditAllAsync(accessConnector.OrganizationId,
+                Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(new[] { config.CipherId })))
+            .Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AssignAsync(
+                accessConnector.OrganizationId, actingUserId, accessConnector.Id, target.Id));
+
+        Assert.Equal("You need edit access to every item this target system rotates.", exception.Message);
+        await sutProvider.GetDependency<IPamAccessConnectorRepository>().DidNotReceiveWithAnyArgs()
+            .CreateAssignmentAsync(default!);
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs().EmitAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AssignAsync_ChecksOnlyTheTargetsCiphers(
+        Guid actingUserId, PamAccessConnector accessConnector, PamTargetSystem target,
+        PamRotationConfigDetails onTarget, PamRotationConfigDetails onAnotherTarget)
+    {
+        var sutProvider = Setup();
+        accessConnector.Status = PamAccessConnectorStatus.Enabled;
+        target.OrganizationId = accessConnector.OrganizationId;
+        target.Method = PamTargetSystemMethod.Automatic;
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
+            .Returns(accessConnector);
+        sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(target.Id).Returns(target);
+        onTarget.TargetSystemId = target.Id;
+        sutProvider.GetDependency<IPamRotationConfigRepository>()
+            .GetManyDetailsByOrganizationIdAsync(accessConnector.OrganizationId)
+            .Returns(new List<PamRotationConfigDetails> { onTarget, onAnotherTarget });
+
+        await sutProvider.Sut.AssignAsync(accessConnector.OrganizationId, actingUserId, accessConnector.Id, target.Id);
+
+        await sutProvider.GetDependency<ICanEditRotationCiphersQuery>().Received(1)
+            .CanEditAllAsync(accessConnector.OrganizationId,
+                Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(new[] { onTarget.CipherId })));
+        await sutProvider.GetDependency<IPamAccessConnectorRepository>().ReceivedWithAnyArgs(1)
             .CreateAssignmentAsync(default!);
     }
 
@@ -220,6 +285,12 @@ public class AssignAccessConnectorToTargetCommandTests
         sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(Arg.Any<Guid>())
             .Returns(call => new OrganizationAbility { Id = call.Arg<Guid>(), UsePam = true });
+        sutProvider.GetDependency<IPamRotationConfigRepository>()
+            .GetManyDetailsByOrganizationIdAsync(Arg.Any<Guid>())
+            .Returns(new List<PamRotationConfigDetails>());
+        sutProvider.GetDependency<ICanEditRotationCiphersQuery>()
+            .CanEditAllAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
         return sutProvider;
     }
 }
