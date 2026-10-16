@@ -1,4 +1,5 @@
-﻿using Bit.Api.AdminConsole.Partnerships.Models.Request;
+﻿using Bit.Api.AdminConsole.Partnerships.Idempotency;
+using Bit.Api.AdminConsole.Partnerships.Models.Request;
 using Bit.Api.AdminConsole.Partnerships.Models.Response;
 using Bit.Core.AdminConsole.OrganizationFeatures.Partnerships;
 using Bit.Core.AdminConsole.OrganizationFeatures.Partnerships.Interfaces;
@@ -17,6 +18,7 @@ public class ActivationLinksController(
     /// still inside its resume window.
     /// </summary>
     [HttpPost]
+    [PartnershipIdempotent]
     public async Task<ActionResult<ActivationLinkResponseModel>> PostAsync([FromBody] CreateActivationLinkRequestModel model)
     {
         var result = await createPartnershipActivationLinkCommand.CreateAsync(new CreatePartnershipActivationLinkRequest
