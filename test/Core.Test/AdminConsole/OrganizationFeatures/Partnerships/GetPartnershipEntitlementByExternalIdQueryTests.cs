@@ -34,4 +34,18 @@ public class GetPartnershipEntitlementByExternalIdQueryTests
 
         Assert.Equal("not_found", Assert.IsType<EntitlementNotFound>(result.AsError).Code);
     }
+
+    [Theory]
+    [BitAutoData("")]
+    [BitAutoData("P|protected")]
+    public async Task GetAsync_InvalidExternalId_ReturnsInvalidExternalIdWithoutLookup(
+        string externalId, Guid organizationPartnershipId,
+        SutProvider<GetPartnershipEntitlementByExternalIdQuery> sutProvider)
+    {
+        var result = await sutProvider.Sut.GetAsync(organizationPartnershipId, externalId);
+
+        Assert.IsType<InvalidExternalId>(result.AsError);
+        await sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>().DidNotReceive()
+            .GetByExternalIdAsync(Arg.Any<Guid>(), Arg.Any<string>());
+    }
 }
