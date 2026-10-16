@@ -1,4 +1,5 @@
-﻿using Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints.Handlers;
+﻿using System.Security.Claims;
+using Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints.Handlers;
 using Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Request;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,37 +15,37 @@ internal static class TargetSystemEndpoints
         group.MapGet("", ([FromRoute] Guid orgId, TargetSystemEndpointsHandler handler) => handler.GetAll(orgId))
             .WithName("Pam_AccessConnectors_Rotation_TargetSystems_GetAll");
 
-        group.MapPost("", ([FromRoute] Guid orgId, RegisterTargetSystemRequestModel model, TargetSystemEndpointsHandler handler) => handler.Post(orgId, model))
+        group.MapPost("", ([FromRoute] Guid orgId, RegisterTargetSystemRequestModel model, TargetSystemEndpointsHandler handler, ClaimsPrincipal user) => handler.Post(user, orgId, model))
             .WithName("Pam_AccessConnectors_Rotation_TargetSystems_Post");
 
         group.MapPost("{id:guid}/enable",
-            async ([FromRoute] Guid orgId, Guid id, TargetSystemEndpointsHandler handler) =>
+            async ([FromRoute] Guid orgId, Guid id, TargetSystemEndpointsHandler handler, ClaimsPrincipal user) =>
             {
-                await handler.Enable(orgId, id);
+                await handler.Enable(user, orgId, id);
                 return TypedResults.NoContent();
             })
             .WithName("Pam_AccessConnectors_Rotation_TargetSystems_Enable");
 
         group.MapPost("{id:guid}/disable",
-            async ([FromRoute] Guid orgId, Guid id, TargetSystemEndpointsHandler handler) =>
+            async ([FromRoute] Guid orgId, Guid id, TargetSystemEndpointsHandler handler, ClaimsPrincipal user) =>
             {
-                await handler.Disable(orgId, id);
+                await handler.Disable(user, orgId, id);
                 return TypedResults.NoContent();
             })
             .WithName("Pam_AccessConnectors_Rotation_TargetSystems_Disable");
 
         group.MapPut("{id:guid}",
-            async ([FromRoute] Guid orgId, Guid id, UpdateTargetSystemRequestModel model, TargetSystemEndpointsHandler handler) =>
+            async ([FromRoute] Guid orgId, Guid id, UpdateTargetSystemRequestModel model, TargetSystemEndpointsHandler handler, ClaimsPrincipal user) =>
             {
-                await handler.Put(orgId, id, model);
+                await handler.Put(user, orgId, id, model);
                 return TypedResults.NoContent();
             })
             .WithName("Pam_AccessConnectors_Rotation_TargetSystems_Put");
 
         group.MapDelete("{id:guid}",
-            async ([FromRoute] Guid orgId, Guid id, TargetSystemEndpointsHandler handler) =>
+            async ([FromRoute] Guid orgId, Guid id, TargetSystemEndpointsHandler handler, ClaimsPrincipal user) =>
             {
-                await handler.Delete(orgId, id);
+                await handler.Delete(user, orgId, id);
                 return TypedResults.NoContent();
             })
             .WithName("Pam_AccessConnectors_Rotation_TargetSystems_Delete");

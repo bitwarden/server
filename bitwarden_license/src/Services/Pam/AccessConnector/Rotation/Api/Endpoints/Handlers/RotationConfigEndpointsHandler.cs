@@ -1,5 +1,6 @@
-﻿using Bit.Core.Context;
+﻿using System.Security.Claims;
 using Bit.Core.Exceptions;
+using Bit.Core.Services;
 using Bit.HttpExtensions;
 using Bit.Pam;
 using Bit.Pam.Repositories;
@@ -16,7 +17,7 @@ namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints.Handlers;
 /// re-read the detail view, since the commands return the bare entity.
 /// </summary>
 public class RotationConfigEndpointsHandler(
-    ICurrentContext currentContext,
+    IUserService userService,
     TimeProvider timeProvider,
     IPamRotationConfigRepository configRepository,
     IGetRotationConfigDetailsQuery getRotationConfigDetailsQuery,
@@ -43,12 +44,13 @@ public class RotationConfigEndpointsHandler(
         return await GetDetailAsync(orgId, id);
     }
 
-    public async Task<PamRotationConfigDetailResponseModel> Post(Guid orgId, CreateRotationConfigRequestModel model)
+    public async Task<PamRotationConfigDetailResponseModel> Post(
+        ClaimsPrincipal user, Guid orgId, CreateRotationConfigRequestModel model)
     {
         await EnsureCanEditCipherAsync(orgId, model.CipherId);
         var created = await createRotationConfigCommand.CreateAsync(
             orgId,
-            currentContext.UserId!.Value,
+            userService.GetProperUserId(user)!.Value,
             model.CipherId,
             model.TargetSystemId,
             model.SealedData,
@@ -59,42 +61,43 @@ public class RotationConfigEndpointsHandler(
     }
 
     public async Task<PamRotationConfigDetailResponseModel> Put(
-        Guid orgId, Guid id, UpdateRotationConfigRequestModel model)
+        ClaimsPrincipal user, Guid orgId, Guid id, UpdateRotationConfigRequestModel model)
     {
         await EnsureCanEditConfigCipherAsync(orgId, id);
         var updated = await updateRotationConfigCommand.UpdateAsync(
-            orgId, currentContext.UserId!.Value, id, model.SealedData, model.WrappedKey, model.ScheduleCron, model.RotateOnAccessEnd);
+            orgId, userService.GetProperUserId(user)!.Value, id, model.SealedData, model.WrappedKey, model.ScheduleCron,
+            model.RotateOnAccessEnd);
         return await GetDetailAsync(orgId, updated.Id);
     }
 
-    public async Task Pause(Guid orgId, Guid id)
+    public async Task Pause(ClaimsPrincipal user, Guid orgId, Guid id)
     {
         await EnsureCanEditConfigCipherAsync(orgId, id);
-        await pauseRotationCommand.PauseAsync(orgId, currentContext.UserId!.Value, id);
+        await pauseRotationCommand.PauseAsync(orgId, userService.GetProperUserId(user)!.Value, id);
     }
 
-    public async Task Resume(Guid orgId, Guid id)
+    public async Task Resume(ClaimsPrincipal user, Guid orgId, Guid id)
     {
         await EnsureCanEditConfigCipherAsync(orgId, id);
-        await resumeRotationCommand.ResumeAsync(orgId, currentContext.UserId!.Value, id);
+        await resumeRotationCommand.ResumeAsync(orgId, userService.GetProperUserId(user)!.Value, id);
     }
 
-    public async Task Rotate(Guid orgId, Guid id)
+    public async Task Rotate(ClaimsPrincipal user, Guid orgId, Guid id)
     {
         await EnsureCanEditConfigCipherAsync(orgId, id);
-        await triggerRotationCommand.TriggerAsync(orgId, currentContext.UserId!.Value, id);
+        await triggerRotationCommand.TriggerAsync(orgId, userService.GetProperUserId(user)!.Value, id);
     }
 
-    public async Task RecordManual(Guid orgId, Guid id)
+    public async Task RecordManual(ClaimsPrincipal user, Guid orgId, Guid id)
     {
         await EnsureCanEditConfigCipherAsync(orgId, id);
-        await recordManualRotationCommand.RecordAsync(orgId, currentContext.UserId!.Value, id);
+        await recordManualRotationCommand.RecordAsync(orgId, userService.GetProperUserId(user)!.Value, id);
     }
 
-    public async Task Delete(Guid orgId, Guid id)
+    public async Task Delete(ClaimsPrincipal user, Guid orgId, Guid id)
     {
         await EnsureCanEditConfigCipherAsync(orgId, id);
-        await deleteRotationConfigCommand.DeleteAsync(orgId, currentContext.UserId!.Value, id);
+        await deleteRotationConfigCommand.DeleteAsync(orgId, userService.GetProperUserId(user)!.Value, id);
     }
 
     private async Task EnsureCanEditConfigCipherAsync(Guid orgId, Guid configId)

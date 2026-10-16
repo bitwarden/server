@@ -1,5 +1,6 @@
-﻿using Bit.Core.Context;
+﻿using System.Security.Claims;
 using Bit.Core.Exceptions;
+using Bit.Core.Services;
 using Bit.Pam.Entities;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
@@ -30,7 +31,8 @@ public class RotationConfigEndpointsHandlerTests
     {
         SetCanEdit(sutProvider, organizationId, model.CipherId, false);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Post(organizationId, model));
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.Post(new ClaimsPrincipal(), organizationId, model));
 
         Assert.Empty(sutProvider.GetDependency<ICreateRotationConfigCommand>().ReceivedCalls());
     }
@@ -43,7 +45,7 @@ public class RotationConfigEndpointsHandlerTests
         SetCanEdit(sutProvider, organizationId, model.CipherId, true);
         SetUpWrites(sutProvider, details);
 
-        await sutProvider.Sut.Post(organizationId, model);
+        await sutProvider.Sut.Post(new ClaimsPrincipal(), organizationId, model);
 
         await sutProvider.GetDependency<ICreateRotationConfigCommand>().Received(1).CreateAsync(
             organizationId, Arg.Any<Guid>(), model.CipherId, model.TargetSystemId, model.SealedData,
@@ -139,7 +141,7 @@ public class RotationConfigEndpointsHandlerTests
     private static void SetUpWrites(
         SutProvider<RotationConfigEndpointsHandler> sutProvider, PamRotationConfigDetails details)
     {
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(Guid.NewGuid());
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(Guid.NewGuid());
         sutProvider.GetDependency<ICreateRotationConfigCommand>()
             .CreateAsync(default, default, default, default, default!, default!, default, default)
             .ReturnsForAnyArgs(details);
@@ -151,18 +153,21 @@ public class RotationConfigEndpointsHandlerTests
             .ReturnsForAnyArgs(new PamRotationConfigHistory(details, []));
     }
 
-    private static Task InvokeAsync(RotationConfigEndpointsHandler handler, string write, Guid orgId, Guid id) =>
-        write switch
+    private static Task InvokeAsync(RotationConfigEndpointsHandler handler, string write, Guid orgId, Guid id)
+    {
+        var user = new ClaimsPrincipal();
+        return write switch
         {
             nameof(RotationConfigEndpointsHandler.Put) =>
-                handler.Put(orgId, id, new UpdateRotationConfigRequestModel { SealedData = "sealed" }),
-            nameof(RotationConfigEndpointsHandler.Pause) => handler.Pause(orgId, id),
-            nameof(RotationConfigEndpointsHandler.Resume) => handler.Resume(orgId, id),
-            nameof(RotationConfigEndpointsHandler.Rotate) => handler.Rotate(orgId, id),
-            nameof(RotationConfigEndpointsHandler.RecordManual) => handler.RecordManual(orgId, id),
-            nameof(RotationConfigEndpointsHandler.Delete) => handler.Delete(orgId, id),
+                handler.Put(user, orgId, id, new UpdateRotationConfigRequestModel { SealedData = "sealed" }),
+            nameof(RotationConfigEndpointsHandler.Pause) => handler.Pause(user, orgId, id),
+            nameof(RotationConfigEndpointsHandler.Resume) => handler.Resume(user, orgId, id),
+            nameof(RotationConfigEndpointsHandler.Rotate) => handler.Rotate(user, orgId, id),
+            nameof(RotationConfigEndpointsHandler.RecordManual) => handler.RecordManual(user, orgId, id),
+            nameof(RotationConfigEndpointsHandler.Delete) => handler.Delete(user, orgId, id),
             _ => throw new ArgumentOutOfRangeException(nameof(write)),
         };
+    }
 
     private static object CommandFor(SutProvider<RotationConfigEndpointsHandler> sutProvider, string write) =>
         write switch
