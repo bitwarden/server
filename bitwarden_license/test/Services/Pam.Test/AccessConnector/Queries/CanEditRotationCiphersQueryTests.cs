@@ -1,4 +1,9 @@
-﻿using Bit.Core.Vault.Models.Data;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.Context;
+using Bit.Core.Enums;
+using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
 using Bit.Services.Pam.AccessConnector.Queries;
 using Bit.Test.Common.AutoFixture;
@@ -53,6 +58,84 @@ public class CanEditRotationCiphersQueryTests
         SetPermissions(sutProvider, organizationId, Permission(visibleId, edit: true, viewPassword: true));
 
         Assert.False(await sutProvider.Sut.CanEditAllAsync(organizationId, [hiddenId]));
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    public async Task CanEditAllAsync_OwnerOrAdminWithAccessToAllItems_ReturnsTrueWithoutReadingPermissions(
+        OrganizationUserType type, Guid organizationId, Guid userId, Guid cipherId,
+        SutProvider<CanEditRotationCiphersQuery> sutProvider)
+    {
+        SetMembership(sutProvider, organizationId, userId,
+            new CurrentContextOrganization { Id = organizationId, Type = type });
+        SetAbility(sutProvider, organizationId, enabled: true, allowAdminAccessToAllCollectionItems: true);
+
+        Assert.True(await sutProvider.Sut.CanEditAllAsync(organizationId, [cipherId]));
+
+        await sutProvider.GetDependency<IGetCipherPermissionsForUserQuery>().DidNotReceiveWithAnyArgs()
+            .GetByOrganization(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CanEditAllAsync_CustomUserWithEditAnyCollection_ReturnsTrueWithoutReadingPermissions(
+        Guid organizationId, Guid userId, Guid cipherId, SutProvider<CanEditRotationCiphersQuery> sutProvider)
+    {
+        SetMembership(sutProvider, organizationId, userId, new CurrentContextOrganization
+        {
+            Id = organizationId,
+            Type = OrganizationUserType.Custom,
+            Permissions = new Permissions { EditAnyCollection = true },
+        });
+        SetAbility(sutProvider, organizationId, enabled: true, allowAdminAccessToAllCollectionItems: false);
+
+        Assert.True(await sutProvider.Sut.CanEditAllAsync(organizationId, [cipherId]));
+
+        await sutProvider.GetDependency<IGetCipherPermissionsForUserQuery>().DidNotReceiveWithAnyArgs()
+            .GetByOrganization(default);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Admin, true, false)]
+    [BitAutoData(OrganizationUserType.User, true, true)]
+    [BitAutoData(OrganizationUserType.Custom, true, true)]
+    [BitAutoData(OrganizationUserType.Owner, false, true)]
+    public async Task CanEditAllAsync_NotGrantedEveryCipher_ReadsPermissions(
+        OrganizationUserType type, bool enabled, bool allowAdminAccessToAllCollectionItems,
+        Guid organizationId, Guid userId, Guid visibleId, Guid hiddenId,
+        SutProvider<CanEditRotationCiphersQuery> sutProvider)
+    {
+        SetMembership(sutProvider, organizationId, userId,
+            new CurrentContextOrganization { Id = organizationId, Type = type });
+        SetAbility(sutProvider, organizationId, enabled, allowAdminAccessToAllCollectionItems);
+        SetPermissions(sutProvider, organizationId, Permission(visibleId, edit: true, viewPassword: true));
+
+        Assert.False(await sutProvider.Sut.CanEditAllAsync(organizationId, [hiddenId]));
+
+        await sutProvider.GetDependency<IGetCipherPermissionsForUserQuery>().Received(1)
+            .GetByOrganization(organizationId);
+    }
+
+    private static void SetMembership(
+        SutProvider<CanEditRotationCiphersQuery> sutProvider, Guid organizationId, Guid userId,
+        CurrentContextOrganization organization)
+    {
+        var currentContext = sutProvider.GetDependency<ICurrentContext>();
+        currentContext.UserId.Returns(userId);
+        currentContext.GetOrganization(organizationId).Returns(organization);
+    }
+
+    private static void SetAbility(
+        SutProvider<CanEditRotationCiphersQuery> sutProvider, Guid organizationId, bool enabled,
+        bool allowAdminAccessToAllCollectionItems)
+    {
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility
+            {
+                Id = organizationId,
+                Enabled = enabled,
+                AllowAdminAccessToAllCollectionItems = allowAdminAccessToAllCollectionItems,
+            });
     }
 
     private static OrganizationCipherPermission Permission(Guid id, bool edit, bool viewPassword) =>
