@@ -136,6 +136,32 @@ public class OrganizationSponsorshipsController : Controller
     }
 
     [Authorize("Application")]
+    [Authorize<MemberRequirement>]
+    [HttpPost("{organizationId}/families-for-enterprise/resend-self")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task ResendOwnSponsorshipOffer([FromRoute(Name = "organizationId")] Guid sponsoringOrgId)
+    {
+        var freeFamiliesSponsorshipPolicy = await _policyQuery.RunAsync(sponsoringOrgId,
+            PolicyType.FreeFamiliesSponsorshipPolicy);
+
+        if (freeFamiliesSponsorshipPolicy.Enabled)
+        {
+            throw new BadRequestException("Free Bitwarden Families sponsorship has been disabled by your organization administrator.");
+        }
+
+        var sponsoringOrgUser = await _organizationUserRepository
+            .GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default);
+
+        var sponsorship = sponsoringOrgUser == null
+            ? null
+            : await _organizationSponsorshipRepository.GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id);
+
+        await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(
+            await _organizationRepository.GetByIdAsync(sponsoringOrgId),
+            sponsoringOrgUser, sponsorship);
+    }
+
+    [Authorize("Application")]
     [HttpPost("validate-token")]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<PreValidateSponsorshipResponseModel> PreValidateSponsorshipToken([FromQuery] string sponsorshipToken)
