@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.Auth.Identity;
+﻿using Bit.Core.Auth.Identity;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Pam.Enums;
 using Bit.Pam.Repositories;
@@ -36,7 +33,7 @@ internal class PamAccessConnectorClientProvider : IClientProvider
         _pamAccessConnectorRepository = pamAccessConnectorRepository;
     }
 
-    public async Task<Client> GetAsync(string identifier)
+    public async Task<Client?> GetAsync(string identifier)
     {
         if (!Guid.TryParse(identifier, out var apiKeyId))
         {
@@ -44,7 +41,7 @@ internal class PamAccessConnectorClientProvider : IClientProvider
         }
 
         var apiKey = await _apiKeyRepository.GetByIdAsync(apiKeyId);
-        if (apiKey == null || apiKey.ExpireAt <= DateTime.UtcNow)
+        if (apiKey?.ClientSecretHash == null || apiKey.ExpireAt <= DateTime.UtcNow)
         {
             return null;
         }
