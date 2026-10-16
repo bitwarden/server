@@ -1,5 +1,7 @@
 ﻿using Bit.Core.Context;
+using Bit.Core.Exceptions;
 using Bit.HttpExtensions;
+using Bit.Pam.Repositories;
 using Bit.Services.Pam.AccessConnector.Api.Models.Request;
 using Bit.Services.Pam.AccessConnector.Api.Models.Response;
 using Bit.Services.Pam.AccessConnector.Commands.Interfaces;
@@ -19,7 +21,9 @@ public class AccessConnectorEndpointsHandler(
     ISetAccessConnectorStatusCommand setAccessConnectorStatusCommand,
     IDeleteAccessConnectorCommand deleteAccessConnectorCommand,
     IAssignAccessConnectorToTargetCommand assignAccessConnectorToTargetCommand,
-    IUnassignAccessConnectorFromTargetCommand unassignAccessConnectorFromTargetCommand)
+    IUnassignAccessConnectorFromTargetCommand unassignAccessConnectorFromTargetCommand,
+    IPamRotationConfigRepository configRepository,
+    ICanEditRotationCiphersQuery canEditRotationCiphersQuery)
 {
     public async Task<ListResponseModel<PamAccessConnectorResponseModel>> GetAll(Guid orgId)
     {
@@ -58,6 +62,14 @@ public class AccessConnectorEndpointsHandler(
 
     public async Task AssignTarget(Guid orgId, Guid id, AssignAccessConnectorTargetRequestModel model)
     {
+        // The access connector receives every cipher the target system rotates.
+        var configs = await configRepository.GetManyDetailsByOrganizationIdAsync(orgId);
+        var cipherIds = configs.Where(c => c.TargetSystemId == model.TargetSystemId).Select(c => c.CipherId);
+        if (!await canEditRotationCiphersQuery.CanEditAllAsync(orgId, cipherIds))
+        {
+            throw new BadRequestException("You need edit access to every item this target system rotates.");
+        }
+
         await assignAccessConnectorToTargetCommand.AssignAsync(
             orgId, currentContext.UserId!.Value, id, model.TargetSystemId);
     }
