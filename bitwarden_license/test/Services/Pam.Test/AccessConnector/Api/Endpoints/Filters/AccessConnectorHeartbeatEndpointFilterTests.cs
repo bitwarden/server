@@ -11,7 +11,7 @@ using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Services.Pam.Test.AccessConnector.Api;
+namespace Bit.Services.Pam.Test.AccessConnector.Api.Endpoints.Filters;
 
 /// <remarks>
 /// The filter does not check connector eligibility; PamAccessConnectorClientProviderTests and
