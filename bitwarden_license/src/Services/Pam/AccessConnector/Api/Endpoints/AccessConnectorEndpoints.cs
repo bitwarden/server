@@ -1,4 +1,5 @@
-﻿using Bit.Services.Pam.AccessConnector.Api.Endpoints.Handlers;
+﻿using System.Security.Claims;
+using Bit.Services.Pam.AccessConnector.Api.Endpoints.Handlers;
 using Bit.Services.Pam.AccessConnector.Api.Models.Request;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,25 +21,25 @@ internal static class AccessConnectorEndpoints
                 "Returns one access connector with its recent rotation activity -- the jobs it has worked and " +
                 "the attempts it recorded against them, newest first.");
 
-        group.MapPost("", ([FromRoute] Guid orgId, RegisterAccessConnectorRequestModel model, AccessConnectorEndpointsHandler handler) => handler.Post(orgId, model))
+        group.MapPost("", ([FromRoute] Guid orgId, RegisterAccessConnectorRequestModel model, AccessConnectorEndpointsHandler handler, ClaimsPrincipal user) => handler.Post(user, orgId, model))
             .WithName("Pam_AccessConnectors_Post")
             .WithDescription(
                 "Registers an access connector and returns its client secret. The secret is shown exactly once here " +
                 "-- the server hashes it for storage and cannot return it again.");
 
         group.MapPost("{id:guid}/enable",
-            async ([FromRoute] Guid orgId, Guid id, AccessConnectorEndpointsHandler handler) =>
+            async ([FromRoute] Guid orgId, Guid id, AccessConnectorEndpointsHandler handler, ClaimsPrincipal user) =>
             {
-                await handler.Enable(orgId, id);
+                await handler.Enable(user, orgId, id);
                 return TypedResults.NoContent();
             })
             .WithName("Pam_AccessConnectors_Enable")
             .WithDescription("Re-enables a disabled access connector so it can authenticate and claim jobs again.");
 
         group.MapPost("{id:guid}/disable",
-            async ([FromRoute] Guid orgId, Guid id, AccessConnectorEndpointsHandler handler) =>
+            async ([FromRoute] Guid orgId, Guid id, AccessConnectorEndpointsHandler handler, ClaimsPrincipal user) =>
             {
-                await handler.Disable(orgId, id);
+                await handler.Disable(user, orgId, id);
                 return TypedResults.NoContent();
             })
             .WithName("Pam_AccessConnectors_Disable")
@@ -47,9 +48,9 @@ internal static class AccessConnectorEndpoints
                 "are released, but its credential is retained so it can be re-enabled later.");
 
         group.MapDelete("{id:guid}",
-            async ([FromRoute] Guid orgId, Guid id, AccessConnectorEndpointsHandler handler) =>
+            async ([FromRoute] Guid orgId, Guid id, AccessConnectorEndpointsHandler handler, ClaimsPrincipal user) =>
             {
-                await handler.Delete(orgId, id);
+                await handler.Delete(user, orgId, id);
                 return TypedResults.NoContent();
             })
             .WithName("Pam_AccessConnectors_Delete")
@@ -59,17 +60,17 @@ internal static class AccessConnectorEndpoints
                 "remediation for a suspected compromise.");
 
         group.MapPost("{id:guid}/assignments",
-            async ([FromRoute] Guid orgId, Guid id, AssignAccessConnectorTargetRequestModel model, AccessConnectorEndpointsHandler handler) =>
+            async ([FromRoute] Guid orgId, Guid id, AssignAccessConnectorTargetRequestModel model, AccessConnectorEndpointsHandler handler, ClaimsPrincipal user) =>
             {
-                await handler.AssignTarget(orgId, id, model);
+                await handler.AssignTarget(user, orgId, id, model);
                 return TypedResults.NoContent();
             })
             .WithName("Pam_AccessConnectors_AssignTarget");
 
         group.MapDelete("{id:guid}/assignments/{targetSystemId:guid}",
-            async ([FromRoute] Guid orgId, Guid id, Guid targetSystemId, AccessConnectorEndpointsHandler handler) =>
+            async ([FromRoute] Guid orgId, Guid id, Guid targetSystemId, AccessConnectorEndpointsHandler handler, ClaimsPrincipal user) =>
             {
-                await handler.UnassignTarget(orgId, id, targetSystemId);
+                await handler.UnassignTarget(user, orgId, id, targetSystemId);
                 return TypedResults.NoContent();
             })
             .WithName("Pam_AccessConnectors_UnassignTarget");

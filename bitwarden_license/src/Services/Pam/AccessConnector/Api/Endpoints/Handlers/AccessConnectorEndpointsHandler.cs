@@ -1,4 +1,5 @@
-﻿using Bit.Core.Context;
+﻿using System.Security.Claims;
+using Bit.Core.Services;
 using Bit.HttpExtensions;
 using Bit.Services.Pam.AccessConnector.Api.Models.Request;
 using Bit.Services.Pam.AccessConnector.Api.Models.Response;
@@ -12,7 +13,7 @@ namespace Bit.Services.Pam.AccessConnector.Api.Endpoints.Handlers;
 /// <c>ManageAccessConnectorRequirement</c>. The commands check the plan and edit access.
 /// </summary>
 public class AccessConnectorEndpointsHandler(
-    ICurrentContext currentContext,
+    IUserService userService,
     IListAccessConnectorsQuery listAccessConnectorsQuery,
     IGetAccessConnectorDetailsQuery getAccessConnectorDetailsQuery,
     IRegisterAccessConnectorCommand registerAccessConnectorCommand,
@@ -34,37 +35,41 @@ public class AccessConnectorEndpointsHandler(
         return new PamAccessConnectorDetailResponseModel(history);
     }
 
-    public async Task<RegisterAccessConnectorResponseModel> Post(Guid orgId, RegisterAccessConnectorRequestModel model)
+    public async Task<RegisterAccessConnectorResponseModel> Post(
+        ClaimsPrincipal user, Guid orgId, RegisterAccessConnectorRequestModel model)
     {
         var result = await registerAccessConnectorCommand.RegisterAsync(
-            orgId, currentContext.UserId!.Value, model.Name, model.EncryptedPayload, model.Key);
+            orgId, userService.GetProperUserId(user)!.Value, model.Name, model.EncryptedPayload, model.Key);
         return new RegisterAccessConnectorResponseModel(result);
     }
 
-    public async Task Enable(Guid orgId, Guid id)
+    public async Task Enable(ClaimsPrincipal user, Guid orgId, Guid id)
     {
-        await setAccessConnectorStatusCommand.SetStatusAsync(orgId, currentContext.UserId!.Value, id, enable: true);
+        await setAccessConnectorStatusCommand.SetStatusAsync(
+            orgId, userService.GetProperUserId(user)!.Value, id, enable: true);
     }
 
-    public async Task Disable(Guid orgId, Guid id)
+    public async Task Disable(ClaimsPrincipal user, Guid orgId, Guid id)
     {
-        await setAccessConnectorStatusCommand.SetStatusAsync(orgId, currentContext.UserId!.Value, id, enable: false);
+        await setAccessConnectorStatusCommand.SetStatusAsync(
+            orgId, userService.GetProperUserId(user)!.Value, id, enable: false);
     }
 
-    public async Task Delete(Guid orgId, Guid id)
+    public async Task Delete(ClaimsPrincipal user, Guid orgId, Guid id)
     {
-        await deleteAccessConnectorCommand.DeleteAsync(orgId, currentContext.UserId!.Value, id);
+        await deleteAccessConnectorCommand.DeleteAsync(orgId, userService.GetProperUserId(user)!.Value, id);
     }
 
-    public async Task AssignTarget(Guid orgId, Guid id, AssignAccessConnectorTargetRequestModel model)
+    public async Task AssignTarget(
+        ClaimsPrincipal user, Guid orgId, Guid id, AssignAccessConnectorTargetRequestModel model)
     {
         await assignAccessConnectorToTargetCommand.AssignAsync(
-            orgId, currentContext.UserId!.Value, id, model.TargetSystemId);
+            orgId, userService.GetProperUserId(user)!.Value, id, model.TargetSystemId);
     }
 
-    public async Task UnassignTarget(Guid orgId, Guid id, Guid targetSystemId)
+    public async Task UnassignTarget(ClaimsPrincipal user, Guid orgId, Guid id, Guid targetSystemId)
     {
         await unassignAccessConnectorFromTargetCommand.UnassignAsync(
-            orgId, currentContext.UserId!.Value, id, targetSystemId);
+            orgId, userService.GetProperUserId(user)!.Value, id, targetSystemId);
     }
 }
