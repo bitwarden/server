@@ -831,6 +831,14 @@ public class GlobalSettings : IGlobalSettings
         /// Secret HMAC key for the external ID lookup hash, so the stored hash can't be reversed by enumeration.
         /// </summary>
         public string ExternalIdHashKey { get; set; }
+        /// <summary>
+        /// Maximum partner API requests each partnership may make per <see cref="RateLimitWindow"/>.
+        /// </summary>
+        public int RateLimitRequests { get; set; } = 600;
+        /// <summary>
+        /// Length of the fixed window for <see cref="RateLimitRequests"/>.
+        /// </summary>
+        public TimeSpan RateLimitWindow { get; set; } = TimeSpan.FromMinutes(1);
 
         /// <exception cref="InvalidOperationException">The key is not configured.</exception>
         public byte[] GetExternalIdHashKey() =>

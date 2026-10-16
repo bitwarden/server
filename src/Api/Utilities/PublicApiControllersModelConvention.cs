@@ -15,7 +15,8 @@ public class PublicApiControllersModelConvention : IControllerModelConvention
         if (controller.ControllerType.IsSubclassOf(typeof(PartnershipControllerBase)))
         {
             // Runs before the error filter's model validation so a request without partnership access never sees a 400.
-            controller.Filters.Add(new TypeFilterAttribute(typeof(PartnershipAccessFilter)) { Order = -1 });
+            controller.Filters.Add(new TypeFilterAttribute(typeof(PartnershipAccessFilter)) { Order = -2 });
+            controller.Filters.Add(new TypeFilterAttribute(typeof(PartnershipRateLimitFilter)) { Order = -1 });
             controller.Filters.Add(new PartnershipErrorFilter());
             return;
         }
