@@ -9,7 +9,7 @@ namespace Bit.Services.Pam.AccessConnector.Api.Models.Response;
 public class RegisterAccessConnectorResponseModel : ResponseModel
 {
     public RegisterAccessConnectorResponseModel(PamAccessConnectorRegistrationResult result)
-        : base("pamAccessConnector")
+        : base("pamAccessConnectorRegistration")
     {
         ArgumentNullException.ThrowIfNull(result);
 
