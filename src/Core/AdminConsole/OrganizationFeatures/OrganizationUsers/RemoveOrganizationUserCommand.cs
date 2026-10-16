@@ -1,7 +1,9 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.AdminConsole.Context;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -25,6 +27,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
     private readonly IGetOrganizationUsersClaimedStatusQuery _getOrganizationUsersClaimedStatusQuery;
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly TimeProvider _timeProvider;
+    private readonly IScopedOrganizationApiKeyContext _scopedOrganizationApiKeyContext;
 
     public const string UserNotFoundErrorMessage = "User not found.";
     public static readonly string UsersInvalidErrorMessage = new UsersInvalid().Message;
@@ -44,7 +47,8 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery,
         Bitwarden.Server.Sdk.Features.IFeatureService featureService,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IScopedOrganizationApiKeyContext scopedOrganizationApiKeyContext)
     {
         _deviceRepository = deviceRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -56,6 +60,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         _getOrganizationUsersClaimedStatusQuery = getOrganizationUsersClaimedStatusQuery;
         _featureService = featureService;
         _timeProvider = timeProvider;
+        _scopedOrganizationApiKeyContext = scopedOrganizationApiKeyContext;
     }
 
     public async Task RemoveUserAsync(Guid organizationId, Guid userId)
@@ -140,6 +145,11 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
 
     private async Task RepositoryRemoveUserAsync(OrganizationUser orgUser, Guid? deletingUserId, EventSystemUser? eventSystemUser)
     {
+        if (_scopedOrganizationApiKeyContext.IsScopedOrganizationApiKey && orgUser.Type != OrganizationUserType.User)
+        {
+            throw new BadRequestException(new ScopedApiKeyCanOnlyManageUsers().Message);
+        }
+
         if (deletingUserId.HasValue && orgUser.UserId == deletingUserId.Value)
         {
             throw new BadRequestException(RemoveYourselfErrorMessage);
