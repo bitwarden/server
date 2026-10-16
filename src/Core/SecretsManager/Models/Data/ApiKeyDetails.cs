@@ -14,6 +14,7 @@ public class ApiKeyDetails : ApiKey
     {
         Id = apiKey.Id;
         ServiceAccountId = apiKey.ServiceAccountId;
+        OrganizationId = apiKey.OrganizationId;
         Name = apiKey.Name;
         ClientSecretHash = apiKey.ClientSecretHash;
         Scope = apiKey.Scope;

@@ -26,6 +26,32 @@ public class CreateServiceAccountCommandTests
     }
 
     [Theory]
+    [BitAutoData((string?)null)]
+    [BitAutoData("")]
+    public async Task CreateAsync_NoEncryptedPayload_ThrowsBadRequestException(string? encryptedPayload,
+        SutProvider<CreateAccessTokenCommand> sutProvider, ApiKey data)
+    {
+        data.EncryptedPayload = encryptedPayload;
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(data));
+
+        await sutProvider.GetDependency<IApiKeyRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData((string?)null)]
+    [BitAutoData("")]
+    public async Task CreateAsync_NoKey_ThrowsBadRequestException(string? key,
+        SutProvider<CreateAccessTokenCommand> sutProvider, ApiKey data)
+    {
+        data.Key = key;
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(data));
+
+        await sutProvider.GetDependency<IApiKeyRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
+    }
+
+    [Theory]
     [BitAutoData]
     public async Task CreateAsync_Success(SutProvider<CreateAccessTokenCommand> sutProvider, ApiKey data)
     {

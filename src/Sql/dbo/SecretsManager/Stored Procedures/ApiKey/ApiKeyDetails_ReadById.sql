@@ -10,4 +10,5 @@ BEGIN
         [dbo].[ApiKeyDetailsView]
     WHERE
         [Id] = @Id
+        AND [ServiceAccountId] IS NOT NULL
 END

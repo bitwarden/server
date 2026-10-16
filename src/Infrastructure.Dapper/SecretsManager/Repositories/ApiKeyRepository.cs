@@ -46,6 +46,17 @@ public class ApiKeyRepository : Repository<ApiKey, Guid>, IApiKeyRepository
         return results.ToList();
     }
 
+    public async Task<ICollection<ApiKey>> GetManyByOrganizationIdAsync(Guid organizationId)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<ApiKey>(
+            $"[{Schema}].[ApiKey_ReadManyByOrganizationId]",
+            new { OrganizationId = organizationId },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToList();
+    }
+
     public async Task DeleteManyAsync(IEnumerable<ApiKey> objs)
     {
         using var connection = new SqlConnection(ConnectionString);
