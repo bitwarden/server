@@ -1,4 +1,6 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
@@ -84,6 +86,47 @@ public class SetAccessConnectorStatusCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task SetStatusAsync_Enable_OrganizationWithoutPam_ThrowsBadRequest(
+        Guid actingUserId, PamAccessConnector accessConnector)
+    {
+        var sutProvider = Setup();
+        accessConnector.Status = PamAccessConnectorStatus.Disabled;
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
+            .Returns(accessConnector);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(accessConnector.OrganizationId)
+            .Returns(new Organization { Id = accessConnector.OrganizationId, UsePam = false });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SetStatusAsync(
+                accessConnector.OrganizationId, actingUserId, accessConnector.Id, enable: true));
+
+        Assert.Equal("Your organization's plan does not include Privileged Controls.", exception.Message);
+        await sutProvider.GetDependency<IPamAccessConnectorRepository>()
+            .DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs().EmitAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SetStatusAsync_Disable_OrganizationWithoutPam_SetsDisabled(
+        Guid actingUserId, PamAccessConnector accessConnector)
+    {
+        var sutProvider = Setup();
+        accessConnector.Status = PamAccessConnectorStatus.Enabled;
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
+            .Returns(accessConnector);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(accessConnector.OrganizationId)
+            .Returns(new Organization { Id = accessConnector.OrganizationId, UsePam = false });
+
+        // Disable stays open, so an admin can clean up after the organization loses PAM.
+        await sutProvider.Sut.SetStatusAsync(
+            accessConnector.OrganizationId, actingUserId, accessConnector.Id, enable: false);
+
+        await sutProvider.GetDependency<IPamAccessConnectorRepository>()
+            .Received(1).ReplaceAsync(Arg.Is<PamAccessConnector>(d =>
+            d.Id == accessConnector.Id && d.Status == PamAccessConnectorStatus.Disabled));
+    }
+
+    [Theory, BitAutoData]
     public async Task SetStatusAsync_Disable_SetsDisabled(Guid actingUserId, PamAccessConnector accessConnector)
     {
         var sutProvider = Setup();
@@ -158,6 +201,8 @@ public class SetAccessConnectorStatusCommandTests
     {
         var sutProvider = new SutProvider<SetAccessConnectorStatusCommand>().WithFakeTimeProvider().Create();
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(Arg.Any<Guid>())
+            .Returns(call => new Organization { Id = call.Arg<Guid>(), UsePam = true });
         return sutProvider;
     }
 }
