@@ -157,6 +157,15 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | `PlanCadenceType`, `PlanType`, `ProductTierType` (`Bit.Core.Billing.Enums`), `StripeConstants.SubscriptionStatus` | Resolving the target plan and gating the previewable subscription statuses |
 | `StripeConstants` (`Bit.Core.Billing.Constants`) | `classic` billing mode, the `sm-standalone` coupon, `customer_tax_location_invalid`, `tax_id_invalid`, the `es_cif` and `eu_vat` tax ID types |
 | `BadRequestException`, `ConflictException` (`Bit.Core.Exceptions`) | Rejected-request responses from the previews and the Privileged Controls purchase, via the group's exception handling |
+| `ICreateOrganizationSubscriptionCommand` (`Bit.Core.Billing.Organizations.Commands`), `OrganizationSubscriptionCreation` (`Bit.Core.Billing.Organizations.Models`) | The net-new-subscription purchase contract Core owns so the cloud sign-up command can inject it; this library implements it |
+| `CustomerSetup`, `SubscriptionSetup` (`Bit.Core.Billing.Models.Sales`), `TokenizedPaymentSource` (`Bit.Core.Billing.Models`), `TaxInformation` (`Bit.Core.Billing.Tax.Models`) | The customer payment/tax/coupon inputs for creating the subscription |
+| `ISubscriberService`, `IHasPaymentMethodQuery` (`Bit.Core.Billing.Services`, `Bit.Core.Billing.Payment.Queries`), `IBraintreeGateway` (`Braintree`) | Creating the Stripe customer (Braintree customer for PayPal) and setting the trial's missing-payment-method cancel behavior (cloud region is passed in on the request, not read from `IGlobalSettings`) |
+| `GatewayType`, `PaymentMethodType` (`Bit.Core.Enums`) | Linking the created Stripe gateway and switching on the tokenized payment source type |
 
 Depending on `Core` for these is fine for now; this table exists so they're known, not because
 they're queued up for extraction.
+
+The net-new-subscription create commands (`CreateOrganizationSubscriptionCommand` and its helpers) carry the
+heaviest Core surface here — the full customer-creation path (Braintree, tax, global settings). This mirrors
+`OrganizationBillingService.Finalize` in Core, which the cloud sign-up command still uses for non-Privileged-Controls
+signups; migrating those callers and retiring the Core duplication is follow-up work.
