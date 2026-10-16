@@ -36,7 +36,7 @@ public class SecretsControllerTests
     [BitAutoData]
     public async Task GetSecretsByOrganization_ReturnsEmptyList(SutProvider<SecretsController> sutProvider, Guid id, Guid organizationId, Guid userId, AccessClientType accessType)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(id).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(true);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 
@@ -53,7 +53,7 @@ public class SecretsControllerTests
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
     public async Task GetSecretsByOrganization_Success(PermissionType permissionType, SutProvider<SecretsController> sutProvider, Secret resultSecret, Guid organizationId, Guid userId, Project mockProject, AccessClientType accessType)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(default).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<ISecretRepository>().GetManyDetailsByOrganizationIdAsync(default, default, default)
             .ReturnsForAnyArgs(new List<SecretPermissionDetails>
             {
@@ -84,7 +84,7 @@ public class SecretsControllerTests
     [BitAutoData]
     public async Task GetSecretsByOrganization_AccessDenied_Throws(SutProvider<SecretsController> sutProvider, Secret resultSecret)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(default).ReturnsForAnyArgs(false);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.ListByOrganizationAsync(resultSecret.OrganizationId));
@@ -102,7 +102,7 @@ public class SecretsControllerTests
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
     public async Task GetSecret_Success(PermissionType permissionType, SutProvider<SecretsController> sutProvider, Secret resultSecret, Guid userId, Guid organizationId, Project mockProject)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(organizationId).Returns(true);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         mockProject.OrganizationId = organizationId;
         resultSecret.Projects = new List<Project>() { mockProject };
@@ -364,7 +364,7 @@ public class SecretsControllerTests
         {
             s.OrganizationId = organizationId;
         }
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(Arg.Is(organizationId)).ReturnsForAnyArgs(false);
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.BulkDeleteAsync(ids));
         await sutProvider.GetDependency<IDeleteSecretCommand>().DidNotReceiveWithAnyArgs().DeleteSecrets(Arg.Any<List<Secret>>());
@@ -388,7 +388,7 @@ public class SecretsControllerTests
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.First(),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Failed());
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
 
         var results = await sutProvider.Sut.BulkDeleteAsync(ids);
@@ -415,7 +415,7 @@ public class SecretsControllerTests
                     Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
         }
 
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
         SetControllerUser(sutProvider, new Guid());
         var results = await sutProvider.Sut.BulkDeleteAsync(ids);
@@ -492,7 +492,7 @@ public class SecretsControllerTests
     {
         var lastSyncedDate = GetLastSyncedDate(nullLastSyncedDate);
 
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId))
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(Arg.Is(organizationId))
             .ReturnsForAnyArgs(false);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
@@ -513,7 +513,7 @@ public class SecretsControllerTests
     {
         var lastSyncedDate = GetLastSyncedDate(nullLastSyncedDate);
 
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId))
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(Arg.Is(organizationId))
             .ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IAccessClientQuery>()
             .GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Guid>())
@@ -577,7 +577,7 @@ public class SecretsControllerTests
     {
         var lastSyncedDate = GetLastSyncedDate(nullLastSyncedDate);
 
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId))
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(Arg.Is(organizationId))
             .ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IAccessClientQuery>()
             .GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Guid>())

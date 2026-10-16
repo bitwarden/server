@@ -23,6 +23,7 @@ public class AccessPoliciesController : Controller
     private readonly IAccessPolicyRepository _accessPolicyRepository;
     private readonly IAuthorizationService _authorizationService;
     private readonly ICurrentContext _currentContext;
+    private readonly ISecretsManagerAccessQuery _secretsManagerAccessQuery;
     private readonly IProjectRepository _projectRepository;
     private readonly ISecretRepository _secretRepository;
     private readonly IServiceAccountGrantedPolicyUpdatesQuery _serviceAccountGrantedPolicyUpdatesQuery;
@@ -40,6 +41,7 @@ public class AccessPoliciesController : Controller
         IAuthorizationService authorizationService,
         IUserService userService,
         ICurrentContext currentContext,
+        ISecretsManagerAccessQuery secretsManagerAccessQuery,
         IAccessPolicyRepository accessPolicyRepository,
         IServiceAccountRepository serviceAccountRepository,
         IProjectRepository projectRepository,
@@ -54,6 +56,7 @@ public class AccessPoliciesController : Controller
         _authorizationService = authorizationService;
         _userService = userService;
         _currentContext = currentContext;
+        _secretsManagerAccessQuery = secretsManagerAccessQuery;
         _serviceAccountRepository = serviceAccountRepository;
         _projectRepository = projectRepository;
         _secretRepository = secretRepository;
@@ -70,7 +73,7 @@ public class AccessPoliciesController : Controller
     public async Task<ListResponseModel<PotentialGranteeResponseModel>> GetPeoplePotentialGranteesAsync(
         [FromRoute] Guid id)
     {
-        if (!_currentContext.AccessSecretsManager(id))
+        if (!await _secretsManagerAccessQuery.HasAccessAsync(id))
         {
             throw new NotFoundException();
         }
@@ -87,7 +90,7 @@ public class AccessPoliciesController : Controller
     public async Task<ListResponseModel<PotentialGranteeResponseModel>> GetServiceAccountsPotentialGranteesAsync(
         [FromRoute] Guid id)
     {
-        if (!_currentContext.AccessSecretsManager(id))
+        if (!await _secretsManagerAccessQuery.HasAccessAsync(id))
         {
             throw new NotFoundException();
         }
@@ -108,7 +111,7 @@ public class AccessPoliciesController : Controller
     public async Task<ListResponseModel<PotentialGranteeResponseModel>> GetProjectPotentialGranteesAsync(
         [FromRoute] Guid id)
     {
-        if (!_currentContext.AccessSecretsManager(id))
+        if (!await _secretsManagerAccessQuery.HasAccessAsync(id))
         {
             throw new NotFoundException();
         }
@@ -291,7 +294,7 @@ public class AccessPoliciesController : Controller
             throw new NotFoundException();
         }
 
-        if (!_currentContext.AccessSecretsManager(project.OrganizationId))
+        if (!await _secretsManagerAccessQuery.HasAccessAsync(project.OrganizationId))
         {
             throw new NotFoundException();
         }
@@ -315,7 +318,7 @@ public class AccessPoliciesController : Controller
             throw new NotFoundException();
         }
 
-        if (!_currentContext.AccessSecretsManager(serviceAccount.OrganizationId))
+        if (!await _secretsManagerAccessQuery.HasAccessAsync(serviceAccount.OrganizationId))
         {
             throw new NotFoundException();
         }

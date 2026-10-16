@@ -2,7 +2,6 @@
 using System.Security.Claims;
 using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.ServiceAccounts;
 using Bit.Commercial.Core.Test.SecretsManager.Enums;
-using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Entities;
@@ -22,7 +21,7 @@ public class ServiceAccountAuthorizationHandlerTests
     private static void SetupPermission(SutProvider<ServiceAccountAuthorizationHandler> sutProvider,
         PermissionType permissionType, Guid organizationId, Guid userId = new())
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(organizationId)
             .Returns(true);
 
         switch (permissionType)
@@ -56,7 +55,7 @@ public class ServiceAccountAuthorizationHandlerTests
         SutProvider<ServiceAccountAuthorizationHandler> sutProvider, ServiceAccount serviceAccount,
         ClaimsPrincipal claimsPrincipal)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(serviceAccount.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(serviceAccount.OrganizationId)
             .Returns(true);
         var requirement = new ServiceAccountOperationRequirement();
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
@@ -71,7 +70,7 @@ public class ServiceAccountAuthorizationHandlerTests
         SutProvider<ServiceAccountAuthorizationHandler> sutProvider, ServiceAccount serviceAccount,
         ClaimsPrincipal claimsPrincipal)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(serviceAccount.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(serviceAccount.OrganizationId)
             .Returns(true);
 
         var requirements = typeof(ServiceAccountOperations).GetFields(BindingFlags.Public | BindingFlags.Static)
@@ -92,7 +91,7 @@ public class ServiceAccountAuthorizationHandlerTests
         SutProvider<ServiceAccountAuthorizationHandler> sutProvider, ServiceAccount serviceAccount,
         ClaimsPrincipal claimsPrincipal)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(serviceAccount.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(serviceAccount.OrganizationId)
             .Returns(false);
         var requirement = ServiceAccountOperations.Create;
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
@@ -111,10 +110,8 @@ public class ServiceAccountAuthorizationHandlerTests
         ClaimsPrincipal claimsPrincipal)
     {
         var requirement = ServiceAccountOperations.Create;
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(serviceAccount.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(serviceAccount.OrganizationId)
             .Returns(true);
-        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(serviceAccount.OrganizationId)
-            .Returns(false);
         sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, serviceAccount.OrganizationId)
             .ReturnsForAnyArgs(
                 (clientType, new Guid()));
@@ -150,7 +147,7 @@ public class ServiceAccountAuthorizationHandlerTests
         ClaimsPrincipal claimsPrincipal)
     {
         var requirement = ServiceAccountOperations.Update;
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(serviceAccount.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(serviceAccount.OrganizationId)
             .Returns(false);
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, serviceAccount);
@@ -210,7 +207,7 @@ public class ServiceAccountAuthorizationHandlerTests
         ClaimsPrincipal claimsPrincipal)
     {
         var requirement = ServiceAccountOperations.Read;
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(serviceAccount.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(serviceAccount.OrganizationId)
             .Returns(false);
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, serviceAccount);
@@ -269,7 +266,7 @@ public class ServiceAccountAuthorizationHandlerTests
         ClaimsPrincipal claimsPrincipal)
     {
         var requirement = ServiceAccountOperations.CreateAccessToken;
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(serviceAccount.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(serviceAccount.OrganizationId)
             .Returns(false);
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, serviceAccount);
@@ -328,7 +325,7 @@ public class ServiceAccountAuthorizationHandlerTests
         ClaimsPrincipal claimsPrincipal)
     {
         var requirement = ServiceAccountOperations.ReadAccessTokens;
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(serviceAccount.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(serviceAccount.OrganizationId)
             .Returns(false);
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, serviceAccount);
@@ -387,7 +384,7 @@ public class ServiceAccountAuthorizationHandlerTests
         ClaimsPrincipal claimsPrincipal)
     {
         var requirement = ServiceAccountOperations.RevokeAccessTokens;
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(serviceAccount.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(serviceAccount.OrganizationId)
             .Returns(false);
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, serviceAccount);
@@ -446,7 +443,7 @@ public class ServiceAccountAuthorizationHandlerTests
         ClaimsPrincipal claimsPrincipal)
     {
         var requirement = ServiceAccountOperations.Delete;
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(serviceAccount.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(serviceAccount.OrganizationId)
             .Returns(false);
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, serviceAccount);
@@ -505,7 +502,7 @@ public class ServiceAccountAuthorizationHandlerTests
         ClaimsPrincipal claimsPrincipal)
     {
         var requirement = ServiceAccountOperations.ReadEvents;
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(serviceAccount.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(serviceAccount.OrganizationId)
             .Returns(false);
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, serviceAccount);
