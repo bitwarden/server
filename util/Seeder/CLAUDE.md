@@ -149,6 +149,8 @@ CipherViewDto → JSON + [EncryptProperty] field paths → encrypt_fields (Rust 
 
 Shared logic: `Factories/CipherEncryption.cs`, `Models/EncryptedCipherDtoExtensions.cs`
 
+Every login URI must carry `uriChecksum` (set in `LoginCipherSeeder`): the SDK silently drops URIs without a valid checksum from items that have their own key.
+
 ## Rust Crypto Dependency
 
 The Rust shim (`util/RustSdk/rust/`) depends only on `bitwarden_crypto`. It does **not** depend on `bitwarden_vault` — the seeder drives field selection via `[EncryptProperty]` attributes, not SDK cipher types.
