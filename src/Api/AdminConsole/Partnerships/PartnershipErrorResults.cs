@@ -16,10 +16,19 @@ public static class PartnershipErrorResults
     public const string ConflictCode = "conflict";
     public const string RateLimitedCode = "rate_limited";
     public const string InternalErrorCode = "internal_error";
+    public const string InvalidIdempotencyKeyCode = "invalid_idempotency_key";
+    public const string IdempotencyKeyReusedCode = "idempotency_key_reused";
+    public const string IdempotencyKeyInProgressCode = "idempotency_key_in_progress";
 
     public const string InvalidRequestMessage = "The request body is missing or invalid.";
     public const string RateLimitedMessage = "Too many requests. Retry later.";
     public const string InternalErrorMessage = "An unexpected error occurred. Contact support with the request ID.";
+    public const string InvalidIdempotencyKeyMessage =
+        "The Idempotency-Key header must be 1 to 255 printable ASCII characters.";
+    public const string IdempotencyKeyReusedMessage =
+        "This Idempotency-Key was already used with a different request.";
+    public const string IdempotencyKeyInProgressMessage =
+        "A request with this Idempotency-Key is still being processed. Retry later.";
 
     /// <summary>
     /// Maps a domain <see cref="Error"/> to its status code and envelope. Uses the error's
@@ -57,6 +66,25 @@ public static class PartnershipErrorResults
     /// </summary>
     public static ObjectResult RateLimited(HttpContext httpContext) =>
         Create(StatusCodes.Status429TooManyRequests, RateLimitedCode, RateLimitedMessage, httpContext);
+
+    /// <summary>
+    /// 400 for a malformed <c>Idempotency-Key</c> header.
+    /// </summary>
+    public static ObjectResult InvalidIdempotencyKey(HttpContext httpContext) =>
+        Create(StatusCodes.Status400BadRequest, InvalidIdempotencyKeyCode, InvalidIdempotencyKeyMessage, httpContext);
+
+    /// <summary>
+    /// 409 for an <c>Idempotency-Key</c> already stored against a different request.
+    /// </summary>
+    public static ObjectResult IdempotencyKeyReused(HttpContext httpContext) =>
+        Create(StatusCodes.Status409Conflict, IdempotencyKeyReusedCode, IdempotencyKeyReusedMessage, httpContext);
+
+    /// <summary>
+    /// 409 for an <c>Idempotency-Key</c> whose first request has not finished.
+    /// </summary>
+    public static ObjectResult IdempotencyKeyInProgress(HttpContext httpContext) =>
+        Create(StatusCodes.Status409Conflict, IdempotencyKeyInProgressCode, IdempotencyKeyInProgressMessage,
+            httpContext);
 
     /// <summary>
     /// 500 with a generic message. Never carries exception or error detail.
