@@ -119,6 +119,8 @@ curl -X POST http://localhost:5000/seed \
 - `gateway`, `gatewayCustomerId`, `gatewaySubscriptionId` — billing gateway identity, so the seeded user resembles a
   real premium cloud user linked to a Stripe (or other gateway) customer/subscription. Any field left unset leaves the
   user's existing value unchanged.
+- `kdfIterations`: PBKDF2 iteration count, from 5,000 to 2,000,000. Defaults to 5,000 for fast seeding; use 600,000
+  for production-realistic logins.
 
 Enum fields (`gateway`) must be sent as their **numeric value**. In the example below, `gateway: 0` is `Stripe`.
 
