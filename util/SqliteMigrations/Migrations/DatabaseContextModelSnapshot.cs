@@ -1565,6 +1565,9 @@ namespace Bit.SqliteMigrations.Migrations
                         .IsUnique()
                         .HasAnnotation("SqlServer:Clustered", false);
 
+                    b.HasIndex("UserId", "LastActivityDate", "Type")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
                     b.ToTable("Device", (string)null);
                 });
 
