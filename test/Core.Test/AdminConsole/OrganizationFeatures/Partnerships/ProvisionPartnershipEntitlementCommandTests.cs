@@ -236,6 +236,39 @@ public class ProvisionPartnershipEntitlementCommandTests
         Assert.IsType<InvalidExternalId>(result.AsError);
     }
 
+    [Theory]
+    [InlineData("a/b")]
+    [InlineData("cust 1")]
+    [InlineData("a?b")]
+    [InlineData("a#b")]
+    [InlineData("a%2Fb")]
+    [InlineData("caf\u00e9")]
+    public async Task ProvisionAsync_ExternalIdWithCharacterUnsafeInUrlPath_ReturnsValidationError(string externalId)
+    {
+        var sutProvider = CreateSutProvider();
+        var partnership = ArrangePartnership(sutProvider);
+
+        var result = await sutProvider.Sut.ProvisionAsync(CreateRequest(partnership) with { ExternalId = externalId });
+
+        Assert.IsType<InvalidExternalId>(result.AsError);
+        await sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
+    }
+
+    [Theory]
+    [InlineData("cust-001")]
+    [InlineData("acct:42")]
+    [InlineData("a.b_c~d@e")]
+    [InlineData("9f1c3e2a-6b7d-4c8e-9f0a-1b2c3d4e5f60")]
+    public async Task ProvisionAsync_ExternalIdWithUrlPathSafeCharacters_IsAccepted(string externalId)
+    {
+        var sutProvider = CreateSutProvider();
+        var partnership = ArrangePartnership(sutProvider);
+
+        var result = await sutProvider.Sut.ProvisionAsync(CreateRequest(partnership) with { ExternalId = externalId });
+
+        Assert.True(result.IsSuccess);
+    }
+
     [Fact]
     public async Task ProvisionAsync_ExternalIdAtMaxLength_IsAccepted()
     {

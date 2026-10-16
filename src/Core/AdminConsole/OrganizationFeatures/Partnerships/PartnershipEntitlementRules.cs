@@ -4,13 +4,20 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Partnerships;
 
 internal static class PartnershipEntitlementRules
 {
+    /// <summary>
+    /// Characters allowed in an external ID besides ASCII letters and digits. All are safe in a URL path segment
+    /// without encoding, so every external ID can appear in partner API routes.
+    /// </summary>
+    public const string ExternalIdPunctuation = "-._~:@";
+
     /// <remarks>
-    /// Rejects the database field protection prefix, which the repositories would otherwise mistake for an
+    /// Also rejects the database field protection prefix, which the repositories would otherwise mistake for an
     /// already-protected value.
     /// </remarks>
     public static bool IsValidExternalId(string? externalId) =>
-        !string.IsNullOrWhiteSpace(externalId) &&
+        !string.IsNullOrEmpty(externalId) &&
         externalId.Length <= OrganizationPartnershipEntitlement.ExternalIdMaxLength &&
+        externalId.All(c => char.IsAsciiLetterOrDigit(c) || ExternalIdPunctuation.Contains(c)) &&
         !externalId.StartsWith(Constants.DatabaseFieldProtectedPrefix, StringComparison.Ordinal);
 
     /// <summary>
