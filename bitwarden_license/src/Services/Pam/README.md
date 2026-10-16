@@ -74,11 +74,12 @@ is governed. A group-level policy would run ahead of both and change them.
 
 ## Registration
 
-`AddPamServices(Configuration)` registers the handlers, commands, queries, and rotation options, and
+`AddPamServices()` registers the handlers, commands, and queries, and
 `AddPamJobServices()` registers the Quartz sweep services and job classes — see
 [`AccessConnector/Jobs`](AccessConnector/Jobs/PamJobsServiceCollectionExtensions.cs). Both are called from
 `src/Api/Startup.cs` inside its non-open-source branch, as are `MapPamEndpoints()` and the sweep jobs'
-Quartz triggers in `JobsHostedService`. PAM is commercial, so an open-source build has none of it; the
+Quartz triggers in `JobsHostedService`. That branch also binds `PamRotationOptions` from
+`globalSettings:pam:rotation`. PAM is commercial, so an open-source build has none of it; the
 feature flags gate it again at runtime for builds that do.
 
 ## Tests
