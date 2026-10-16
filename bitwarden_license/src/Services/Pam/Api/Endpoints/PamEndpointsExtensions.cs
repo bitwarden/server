@@ -47,8 +47,8 @@ public static class PamEndpointsExtensions
     /// <summary>
     /// The access connector's admin surface: behind the connector flag rather than the base PAM flag, and authorized
     /// in the middleware by <see cref="ManageAccessConnectorRequirement"/> rather than in the handlers. Handlers and
-    /// commands are left with resource scoping only -- confirming an id reached by route belongs to the route
-    /// organization.
+    /// commands are left with resource scoping -- confirming an id reached by route belongs to the route
+    /// organization -- and the commands also check the plan and edit access.
     /// </summary>
     private static RouteGroupBuilder WithPamAccessConnectorAdminDefaults(this RouteGroupBuilder group)
     {
