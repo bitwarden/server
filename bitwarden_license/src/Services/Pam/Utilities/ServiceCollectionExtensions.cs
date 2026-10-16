@@ -16,18 +16,13 @@ using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.OrganizationFeatures.Queries;
 using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Services.Pam.Services;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bit.Services.Pam.Utilities;
 
 public static class ServiceCollectionExtensions
 {
-    /// <summary>
-    /// Registers PAM's commercial services, including credential rotation. <paramref name="configuration"/> binds
-    /// <see cref="PamRotationOptions"/> from <c>globalSettings:pam:rotation</c>.
-    /// </summary>
-    public static IServiceCollection AddPamServices(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddPamServices(this IServiceCollection services)
     {
         services.AddScoped<LeaseEndpointsHandler>();
         services.AddScoped<AccessRequestEndpointsHandler>();
@@ -90,20 +85,18 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<AccessConnectorHeartbeatEndpointFilter>();
 
-        services.AddPamRotationServices(configuration);
+        services.AddPamRotationServices();
         services.AddPamOpenApiEndpointDataSource();
 
         return services;
     }
 
     /// <summary>
-    /// Registers credential rotation. The sweep jobs (<c>AddPamJobServices</c>) and repositories are registered
-    /// elsewhere.
+    /// Registers credential rotation. The host registers the sweep jobs (<c>AddPamJobServices</c>) and the
+    /// repositories, and binds <c>PamRotationOptions</c>.
     /// </summary>
-    private static IServiceCollection AddPamRotationServices(this IServiceCollection services, IConfiguration configuration)
+    private static IServiceCollection AddPamRotationServices(this IServiceCollection services)
     {
-        services.Configure<PamRotationOptions>(configuration.GetSection("globalSettings:pam:rotation"));
-
         // Stateless, so a singleton is safe.
         services.AddSingleton<IRotationScheduleCalculator, RotationScheduleCalculator>();
 
