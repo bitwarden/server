@@ -1,5 +1,5 @@
-﻿using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
@@ -15,20 +15,20 @@ public class AssignAccessConnectorToTargetCommand : IAssignAccessConnectorToTarg
 {
     private readonly IPamAccessConnectorRepository _accessConnectorRepository;
     private readonly IPamTargetSystemRepository _targetSystemRepository;
-    private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
     public AssignAccessConnectorToTargetCommand(
         IPamAccessConnectorRepository accessConnectorRepository,
         IPamTargetSystemRepository targetSystemRepository,
-        IOrganizationRepository organizationRepository,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
         _accessConnectorRepository = accessConnectorRepository;
         _targetSystemRepository = targetSystemRepository;
-        _organizationRepository = organizationRepository;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
@@ -47,7 +47,7 @@ public class AssignAccessConnectorToTargetCommand : IAssignAccessConnectorToTarg
             throw new NotFoundException();
         }
 
-        await _organizationRepository.RequirePamPlanAsync(organizationId);
+        await _organizationAbilityCacheService.RequirePamPlanAsync(organizationId);
 
         // Both rows matched the route organization, so the same-org invariant holds.
         if (accessConnector.Status != PamAccessConnectorStatus.Enabled)

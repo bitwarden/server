@@ -1,6 +1,6 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
@@ -93,8 +93,9 @@ public class SetAccessConnectorStatusCommandTests
         accessConnector.Status = PamAccessConnectorStatus.Disabled;
         sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
             .Returns(accessConnector);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(accessConnector.OrganizationId)
-            .Returns(new Organization { Id = accessConnector.OrganizationId, UsePam = false });
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(accessConnector.OrganizationId)
+            .Returns(new OrganizationAbility { Id = accessConnector.OrganizationId, UsePam = false });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SetStatusAsync(
@@ -114,8 +115,9 @@ public class SetAccessConnectorStatusCommandTests
         accessConnector.Status = PamAccessConnectorStatus.Enabled;
         sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
             .Returns(accessConnector);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(accessConnector.OrganizationId)
-            .Returns(new Organization { Id = accessConnector.OrganizationId, UsePam = false });
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(accessConnector.OrganizationId)
+            .Returns(new OrganizationAbility { Id = accessConnector.OrganizationId, UsePam = false });
 
         // Disable stays open, so an admin can clean up after the organization loses PAM.
         await sutProvider.Sut.SetStatusAsync(
@@ -201,8 +203,9 @@ public class SetAccessConnectorStatusCommandTests
     {
         var sutProvider = new SutProvider<SetAccessConnectorStatusCommand>().WithFakeTimeProvider().Create();
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(Arg.Any<Guid>())
-            .Returns(call => new Organization { Id = call.Arg<Guid>(), UsePam = true });
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(Arg.Any<Guid>())
+            .Returns(call => new OrganizationAbility { Id = call.Arg<Guid>(), UsePam = true });
         return sutProvider;
     }
 }

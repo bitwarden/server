@@ -1,6 +1,6 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
@@ -95,8 +95,9 @@ public class AssignAccessConnectorToTargetCommandTests
         sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
             .Returns(accessConnector);
         sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(target.Id).Returns(target);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(accessConnector.OrganizationId)
-            .Returns(new Organization { Id = accessConnector.OrganizationId, UsePam = false });
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(accessConnector.OrganizationId)
+            .Returns(new OrganizationAbility { Id = accessConnector.OrganizationId, UsePam = false });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.AssignAsync(
@@ -216,8 +217,9 @@ public class AssignAccessConnectorToTargetCommandTests
     {
         var sutProvider = new SutProvider<AssignAccessConnectorToTargetCommand>().WithFakeTimeProvider().Create();
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(Arg.Any<Guid>())
-            .Returns(call => new Organization { Id = call.Arg<Guid>(), UsePam = true });
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(Arg.Any<Guid>())
+            .Returns(call => new OrganizationAbility { Id = call.Arg<Guid>(), UsePam = true });
         return sutProvider;
     }
 }

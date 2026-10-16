@@ -1,5 +1,5 @@
-﻿using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.Exceptions;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
@@ -13,18 +13,18 @@ namespace Bit.Services.Pam.AccessConnector.Commands;
 public class SetAccessConnectorStatusCommand : ISetAccessConnectorStatusCommand
 {
     private readonly IPamAccessConnectorRepository _accessConnectorRepository;
-    private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
     public SetAccessConnectorStatusCommand(
         IPamAccessConnectorRepository accessConnectorRepository,
-        IOrganizationRepository organizationRepository,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
         _accessConnectorRepository = accessConnectorRepository;
-        _organizationRepository = organizationRepository;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
@@ -40,7 +40,7 @@ public class SetAccessConnectorStatusCommand : ISetAccessConnectorStatusCommand
         // Disable stays open, so an admin can still turn a connector off after the organization loses PAM.
         if (enable)
         {
-            await _organizationRepository.RequirePamPlanAsync(organizationId);
+            await _organizationAbilityCacheService.RequirePamPlanAsync(organizationId);
         }
 
         var desired = enable ? PamAccessConnectorStatus.Enabled : PamAccessConnectorStatus.Disabled;

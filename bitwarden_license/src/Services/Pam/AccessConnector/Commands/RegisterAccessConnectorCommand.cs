@@ -1,7 +1,7 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Utilities;
@@ -26,20 +26,20 @@ public class RegisterAccessConnectorCommand : IRegisterAccessConnectorCommand
 
     private readonly IApiKeyRepository _apiKeyRepository;
     private readonly IPamAccessConnectorRepository _accessConnectorRepository;
-    private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
     public RegisterAccessConnectorCommand(
         IApiKeyRepository apiKeyRepository,
         IPamAccessConnectorRepository accessConnectorRepository,
-        IOrganizationRepository organizationRepository,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
         _apiKeyRepository = apiKeyRepository;
         _accessConnectorRepository = accessConnectorRepository;
-        _organizationRepository = organizationRepository;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
@@ -52,7 +52,7 @@ public class RegisterAccessConnectorCommand : IRegisterAccessConnectorCommand
             throw new BadRequestException("Name is required.");
         }
 
-        await _organizationRepository.RequirePamPlanAsync(organizationId);
+        await _organizationAbilityCacheService.RequirePamPlanAsync(organizationId);
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 

@@ -1,6 +1,6 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Pam.Entities;
@@ -41,8 +41,9 @@ public class RegisterAccessConnectorCommandTests
         Guid organizationId, Guid actingUserId, string name, string encryptedPayload, string key)
     {
         var sutProvider = Setup();
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
-            .Returns(new Organization { Id = organizationId, UsePam = false });
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { Id = organizationId, UsePam = false });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RegisterAsync(organizationId, actingUserId, name, encryptedPayload, key));
@@ -56,8 +57,9 @@ public class RegisterAccessConnectorCommandTests
         Guid organizationId, Guid actingUserId, string name, string encryptedPayload, string key)
     {
         var sutProvider = Setup();
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
-            .Returns((Organization?)null);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns((OrganizationAbility?)null);
 
         await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RegisterAsync(organizationId, actingUserId, name, encryptedPayload, key));
@@ -124,8 +126,9 @@ public class RegisterAccessConnectorCommandTests
     {
         var sutProvider = new SutProvider<RegisterAccessConnectorCommand>().WithFakeTimeProvider().Create();
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(Arg.Any<Guid>())
-            .Returns(call => new Organization { Id = call.Arg<Guid>(), UsePam = true });
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(Arg.Any<Guid>())
+            .Returns(call => new OrganizationAbility { Id = call.Arg<Guid>(), UsePam = true });
         return sutProvider;
     }
 
