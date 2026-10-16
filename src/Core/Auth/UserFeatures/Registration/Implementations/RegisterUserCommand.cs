@@ -9,6 +9,7 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -121,7 +122,7 @@ public class RegisterUserCommand : IRegisterUserCommand
     {
         TryValidateOrgInviteToken(orgInviteToken, orgUserId, user);
         var orgUser = await SetUserEmail2FaIfOrgPolicyEnabledAsync(orgUserId, user);
-        if (orgUser == null && orgUserId.HasValue)
+        if (orgUserId.HasValue && orgUser?.Status != OrganizationUserStatusType.Invited)
         {
             throw new BadRequestException("Invalid organization user invitation.");
         }

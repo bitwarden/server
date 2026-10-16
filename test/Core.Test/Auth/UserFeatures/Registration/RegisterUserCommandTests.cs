@@ -13,6 +13,7 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.Registration.Implementations;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -294,6 +295,7 @@ public class RegisterUserCommandTests
 
         orgUser.Email = user.Email;
         orgUser.Id = orgUserId;
+        orgUser.Status = OrganizationUserStatusType.Invited;
 
         var orgInviteTokenable = new OrgUserInviteTokenable(orgUser);
 
@@ -491,6 +493,7 @@ public class RegisterUserCommandTests
         user.Email = "user@blocked-domain.com";
         orgUser.Email = user.Email;
         orgUser.Id = orgUserId;
+        orgUser.Status = OrganizationUserStatusType.Invited;
         var blockingOrganizationId = Guid.NewGuid(); // Different org that has the domain blocked
         orgUser.OrganizationId = Guid.NewGuid(); // The org they're trying to join
 
@@ -534,6 +537,7 @@ public class RegisterUserCommandTests
         user.ReferenceData = null;
         orgUser.Email = user.Email;
         orgUser.Id = orgUserId;
+        orgUser.Status = OrganizationUserStatusType.Invited;
         // The organization owns the domain and is trying to invite the user
         orgUser.OrganizationId = Guid.NewGuid();
 
@@ -614,6 +618,51 @@ public class RegisterUserCommandTests
             .GetByIdAsync(orgUserId);
 
         // Verify that user creation was never attempted
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceive()
+            .CreateUserAsync(Arg.Any<User>(), Arg.Any<RegisterFinishData>());
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserStatusType.Revoked)]
+    [BitAutoData(OrganizationUserStatusType.Accepted)]
+    [BitAutoData(OrganizationUserStatusType.Confirmed)]
+    [BitAutoData(OrganizationUserStatusType.Staged)]
+    public async Task RegisterUserViaOrganizationInviteToken_OrgUserNotInvited_ThrowsBadRequestException(
+        OrganizationUserStatusType status,
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData, OrganizationUser orgUser,
+        string orgInviteToken, Guid orgUserId,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy)
+    {
+        // Arrange
+        user.Email = "user@example.com";
+        orgUser.Email = user.Email;
+        orgUser.Id = orgUserId;
+        orgUser.Status = status;
+
+        var orgInviteTokenable = new OrgUserInviteTokenable(orgUser);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>()
+            .TryUnprotect(orgInviteToken, out Arg.Any<OrgUserInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = orgInviteTokenable;
+                return true;
+            });
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUserId)
+            .Returns(orgUser);
+
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(orgUser.OrganizationId, PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, registerFinishData, orgInviteToken, orgUserId));
+        Assert.Equal("Invalid organization user invitation.", exception.Message);
+
         await sutProvider.GetDependency<IUserService>()
             .DidNotReceive()
             .CreateUserAsync(Arg.Any<User>(), Arg.Any<RegisterFinishData>());
@@ -2182,6 +2231,7 @@ public class RegisterUserCommandTests
         user.Email = $"test+{Guid.NewGuid()}@example.com";
         user.ReferenceData = null;
         orgUser.Email = user.Email;
+        orgUser.Status = OrganizationUserStatusType.Invited;
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
@@ -2279,6 +2329,7 @@ public class RegisterUserCommandTests
         user.Email = $"test+{Guid.NewGuid()}@example.com";
         user.ReferenceData = null;
         orgUser.Email = user.Email;
+        orgUser.Status = OrganizationUserStatusType.Invited;
         organization.PlanType = PlanType.EnterpriseAnnually;
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
