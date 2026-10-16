@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography.X509Certificates;
+﻿using System.IO.Compression;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Bit.Core;
 using Bit.Core.Settings;
@@ -27,6 +28,7 @@ public class Saml2OptionsExtensionsTests
     private const string IdpEntityId = "https://idp.example.com/metadata";
     private const string RsaPkcs1 = "http://www.w3.org/2001/04/xmlenc#rsa-1_5";
     private const string RsaOaep = "http://www.w3.org/2009/xmlenc11#rsa-oaep";
+    private const string PlaintextAssertion = "<saml:Assertion ID=\"_assertion\"><saml:Issuer>idp</saml:Issuer></saml:Assertion>";
 
     [Fact]
     public async Task CouldHandleAsync_PathOutsideModulePath_ReturnsFalse()
@@ -316,7 +318,7 @@ public class Saml2OptionsExtensionsTests
     {
         var options = BuildOptions(wantAssertionsSigned: false);
         var testContext = BuildPostContext(
-            BuildResponseXml("<saml:Assertion ID=\"_assertion\"><saml:Issuer>idp</saml:Issuer></saml:Assertion>"));
+            BuildResponseXml(PlaintextAssertion));
 
         Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
 
@@ -370,6 +372,104 @@ public class Saml2OptionsExtensionsTests
         var exception = await Assert.ThrowsAsync<Exception>(
             () => options.CouldHandleAsync(Scheme, testContext.Context));
         Assert.Equal("Cannot verify SAML assertion signature.", exception.Message);
+        testContext.Notifier.Received(1).TryQueue(OrganizationId);
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_PostWithFormAndQueryMessages_InspectsFormMessageOnly()
+    {
+        // The Sustainsys.Saml2 handler reads the query message first. Current behavior; PM-42283 changes this.
+        var options = BuildOptions(wantAssertionsSigned: false);
+        var testContext = BuildPostContext(
+            BuildResponseXml(PlaintextAssertion));
+        testContext.Context.Request.QueryString = QueryString.Create(
+            "SAMLResponse", EncodeDeflatedBase64(BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1))));
+
+        Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
+
+        testContext.Notifier.DidNotReceiveWithAnyArgs().TryQueue(default);
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_PutWithQuerySamlResponse_ReturnsFalse()
+    {
+        // Neither the POST branch nor the GET branch reads a PUT. Current behavior; PM-42283 changes this.
+        var options = BuildOptions(wantAssertionsSigned: false);
+        var testContext = BuildPostContext(BuildResponseXml(PlaintextAssertion));
+        testContext.Context.Request.Method = HttpMethods.Put;
+        testContext.Context.Request.QueryString = QueryString.Create(
+            "SAMLResponse", EncodeDeflatedBase64(BuildResponseXml(PlaintextAssertion)));
+
+        Assert.False(await options.CouldHandleAsync(Scheme, testContext.Context));
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_PutWithQuerySamlResponseAndSchemeQuery_ReturnsTrue()
+    {
+        // The scheme shortcut accepts the PUT. Current behavior; PM-42283 changes this.
+        var options = BuildOptions(wantAssertionsSigned: false);
+        var testContext = BuildPostContext(BuildResponseXml(PlaintextAssertion));
+        testContext.Context.Request.Method = HttpMethods.Put;
+        testContext.Context.Request.QueryString = new QueryString(
+            "?scheme=" + Scheme + "&SAMLResponse=" +
+            Uri.EscapeDataString(EncodeDeflatedBase64(BuildResponseXml(PlaintextAssertion))));
+
+        Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_LowercasePostMethodWithFormSamlResponse_ReturnsTrue()
+    {
+        // The method comparison ignores case. Current behavior; PM-42283 changes this.
+        var options = BuildOptions(wantAssertionsSigned: false);
+        var testContext = BuildPostContext(BuildResponseXml(PlaintextAssertion));
+        testContext.Context.Request.Method = "post";
+
+        Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_PostWithFormSamlResponseAndSamlRequest_InspectsSamlResponseFirst()
+    {
+        var options = BuildOptions(wantAssertionsSigned: false);
+        var testContext = BuildPostContext(BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)));
+        testContext.Context.Request.Form = new FormCollection(new Dictionary<string, StringValues>
+        {
+            ["SAMLResponse"] = EncodeBase64(BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1))),
+            ["SAMLRequest"] = EncodeBase64(BuildResponseXml(PlaintextAssertion)),
+        });
+
+        Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
+
+        testContext.Notifier.Received(1).TryQueue(OrganizationId);
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_GetWithQuerySamlRequestAndSamlResponse_InspectsSamlRequestFirst()
+    {
+        var options = BuildOptions(wantAssertionsSigned: false);
+        var testContext = BuildPostContext(BuildResponseXml(PlaintextAssertion));
+        testContext.Context.Request.Method = HttpMethods.Get;
+        testContext.Context.Request.QueryString = new QueryString(
+            "?SAMLRequest=" + Uri.EscapeDataString(EncodeDeflatedBase64(BuildResponseXml(PlaintextAssertion))) +
+            "&SAMLResponse=" + Uri.EscapeDataString(
+                EncodeDeflatedBase64(BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)))));
+
+        Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
+
+        testContext.Notifier.DidNotReceiveWithAnyArgs().TryQueue(default);
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_PostWithRsa15FormAndBenignQueryMessages_InspectsFormMessageOnly()
+    {
+        var options = BuildOptions(wantAssertionsSigned: false);
+        var testContext = BuildPostContext(BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)));
+        testContext.Context.Request.QueryString = QueryString.Create(
+            "SAMLResponse", EncodeDeflatedBase64(BuildResponseXml(PlaintextAssertion)));
+
+        Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
+
         testContext.Notifier.Received(1).TryQueue(OrganizationId);
     }
 
@@ -450,6 +550,16 @@ public class Saml2OptionsExtensionsTests
     }
 
     private static string EncodeBase64(string value) => Convert.ToBase64String(Encoding.UTF8.GetBytes(value));
+
+    private static string EncodeDeflatedBase64(string value)
+    {
+        using var compressed = new MemoryStream();
+        using (var deflate = new DeflateStream(compressed, CompressionMode.Compress, leaveOpen: true))
+        {
+            deflate.Write(Encoding.UTF8.GetBytes(value));
+        }
+        return Convert.ToBase64String(compressed.ToArray());
+    }
 
     // CouldHandleAsync resolves the PM42982_WantAssertionsSigned feature flag (when WantAssertionsSigned is true)
     // from the request services.

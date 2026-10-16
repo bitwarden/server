@@ -421,6 +421,116 @@ public class Saml2WantAssertionsSignedTests
         Assert.False(await samlOptions.CouldHandleAsync(organizationId, context));
     }
 
+    [Fact]
+    public async Task CouldHandleAsync_SignedEncryptedAssertionWithRsa15KeyTransportAndWantAssertionsSigned_ReturnsTrue()
+    {
+        // The signature sits inside the encrypted assertion, so a true result proves that
+        // CouldHandleAsync decrypted the rsa-1_5 key transport. Current behavior; PM-42283 changes this.
+        var (idpCertificate, spCertificate) = BuildCertificates();
+        var encryptedAssertionXml = EncryptAssertion(
+            BuildSignedAssertion(idpCertificate).OuterXml, spCertificate, EncryptedXml.XmlEncRSA15Url);
+
+        var (testData, samlOptions, organizationId) = await BuildSchemeAsync(
+            idpCertificate, spCertificate, wantAssertionsSigned: true, rsa15EmailCooldownInDays: 0);
+        var context = BuildPostContext(testData,
+            SsoConfigurationData.BuildSaml2AcsUrl(null, organizationId),
+            "SAMLResponse", BuildResponseXml(encryptedAssertionXml));
+
+        Assert.True(await samlOptions.CouldHandleAsync(organizationId, context));
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_UnsignedEncryptedAssertionWithRsa15KeyTransportAndWantAssertionsSignedFalse_ReturnsTrue()
+    {
+        // Current behavior; PM-42283 changes this.
+        var (idpCertificate, spCertificate) = BuildCertificates();
+        var encryptedAssertionXml = EncryptAssertion(
+            BuildAssertionDocument().DocumentElement!.OuterXml, spCertificate, EncryptedXml.XmlEncRSA15Url);
+
+        var (testData, samlOptions, organizationId) = await BuildSchemeAsync(
+            idpCertificate, spCertificate, wantAssertionsSigned: false, rsa15EmailCooldownInDays: 0);
+        var context = BuildPostContext(testData,
+            SsoConfigurationData.BuildSaml2AcsUrl(null, organizationId),
+            "SAMLResponse", BuildResponseXml(encryptedAssertionXml));
+
+        Assert.True(await samlOptions.CouldHandleAsync(organizationId, context));
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_SchemeQueryAndUnsignedEnvelopeAndWantAssertionsSigned_ReturnsTrue()
+    {
+        // The scheme shortcut returns true. Current behavior; PM-42283 changes this.
+        var (idpCertificate, spCertificate) = BuildCertificates();
+        var arrangement = await ArrangeAsync(
+            BuildAssertionDocument().DocumentElement!.OuterXml, idpCertificate, spCertificate,
+            wantAssertionsSigned: true);
+        arrangement.Context.Request.QueryString = QueryString.Create("scheme", arrangement.Scheme);
+
+        Assert.True(await arrangement.SamlOptions.CouldHandleAsync(arrangement.Scheme, arrangement.Context));
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_SchemeQueryAndForeignIssuer_ReturnsTrue()
+    {
+        // The scheme shortcut returns true. Current behavior; PM-42283 changes this.
+        var (idpCertificate, spCertificate) = BuildCertificates();
+        var (testData, samlOptions, organizationId) =
+            await BuildSchemeAsync(idpCertificate, spCertificate, wantAssertionsSigned: true);
+        var context = BuildPostContext(testData,
+            SsoConfigurationData.BuildSaml2AcsUrl(null, organizationId), "SAMLResponse",
+            BuildResponseXml(BuildAssertionDocument().DocumentElement!.OuterXml, "https://other-idp.example.com"));
+        context.Request.QueryString = QueryString.Create("scheme", organizationId);
+
+        Assert.True(await samlOptions.CouldHandleAsync(organizationId, context));
+    }
+
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("POST")]
+    public async Task CouldHandleAsync_SchemeQueryAndNoSamlMessage_ReturnsTrue(string method)
+    {
+        // Metadata and login-initiation requests carry no SAML message.
+        var (idpCertificate, spCertificate) = BuildCertificates();
+        var (testData, samlOptions, organizationId) =
+            await BuildSchemeAsync(idpCertificate, spCertificate, wantAssertionsSigned: true);
+        var context = BuildNoMessageContext(testData, organizationId, method);
+        context.Request.QueryString = QueryString.Create("scheme", organizationId);
+
+        Assert.True(await samlOptions.CouldHandleAsync(organizationId, context));
+    }
+
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("POST")]
+    public async Task CouldHandleAsync_NoSchemeQueryAndNoSamlMessage_ReturnsFalse(string method)
+    {
+        var (idpCertificate, spCertificate) = BuildCertificates();
+        var (testData, samlOptions, organizationId) =
+            await BuildSchemeAsync(idpCertificate, spCertificate, wantAssertionsSigned: true);
+        var context = BuildNoMessageContext(testData, organizationId, method);
+
+        Assert.False(await samlOptions.CouldHandleAsync(organizationId, context));
+    }
+
+    private static HttpContext BuildNoMessageContext(SsoTestData testData, string organizationId, string method)
+    {
+        var context = new DefaultHttpContext
+        {
+            RequestServices = testData.Factory.Services.CreateScope().ServiceProvider,
+        };
+        context.Request.Path = SsoConfigurationData.BuildSaml2AcsUrl(null, organizationId);
+        context.Request.Method = method;
+        if (method == HttpMethods.Post)
+        {
+            context.Request.ContentType = "application/x-www-form-urlencoded";
+            context.Request.Form = new FormCollection(new Dictionary<string, StringValues>
+            {
+                ["RelayState"] = "unrelated",
+            });
+        }
+        return context;
+    }
+
     private static (X509Certificate2 IdpCertificate, X509Certificate2 SpCertificate) BuildCertificates() =>
         (CreateSelfSignedCertificate("CN=Test IdP"), CreateSelfSignedCertificate("CN=Test SP"));
 
@@ -431,9 +541,9 @@ public class Saml2WantAssertionsSignedTests
     // featureFlagEnabled: false.
     private static async Task<(SsoTestData TestData, Saml2Options SamlOptions, string OrganizationId)>
         BuildSchemeAsync(X509Certificate2 idpCertificate, X509Certificate2 spCertificate,
-            bool wantAssertionsSigned, bool featureFlagEnabled = true)
+            bool wantAssertionsSigned, bool featureFlagEnabled = true, int? rsa15EmailCooldownInDays = null)
     {
-        var testData = await new SsoTestDataBuilder()
+        var builder = new SsoTestDataBuilder()
             .WithSsoConfig(cfg => cfg!.SetData(new SsoConfigurationData
             {
                 ConfigType = SsoType.Saml2,
@@ -444,8 +554,12 @@ public class Saml2WantAssertionsSignedTests
                 SpWantAssertionsSigned = wantAssertionsSigned,
             }))
             .WithSamlSigningCertificate(spCertificate)
-            .WithPM42982WantAssertionsSignedFlag(featureFlagEnabled)
-            .BuildAsync();
+            .WithPM42982WantAssertionsSignedFlag(featureFlagEnabled);
+        if (rsa15EmailCooldownInDays.HasValue)
+        {
+            builder.WithRsa15DeprecationEmailCooldownInDays(rsa15EmailCooldownInDays.Value);
+        }
+        var testData = await builder.BuildAsync();
 
         var organizationId = testData.Organization!.Id.ToString();
         var scheme = await testData.Factory.Services.GetRequiredService<IAuthenticationSchemeProvider>()
@@ -574,7 +688,8 @@ public class Saml2WantAssertionsSignedTests
     // Sustainsys.Saml2 uses in production. The payload does not have to be one assertion.
     // Decryption moves every top-level node of the payload into the <EncryptedAssertion>.
     // A payload with more than one node, or with a nested assertion, tests those shapes.
-    private static string EncryptAssertion(string payloadXml, X509Certificate2 encryptionCertificate)
+    private static string EncryptAssertion(string payloadXml, X509Certificate2 encryptionCertificate,
+        string keyTransportAlgorithm = EncryptedXml.XmlEncRSAOAEPUrl)
     {
         var document = XmlHelpers.XmlDocumentFromString(
             "<saml:EncryptedAssertion xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\" />");
@@ -592,9 +707,10 @@ public class Saml2WantAssertionsSignedTests
         encryptedData.KeyInfo = new KeyInfo();
         var encryptedKey = new EncryptedKey
         {
-            EncryptionMethod = new EncryptionMethod(EncryptedXml.XmlEncRSAOAEPUrl),
+            EncryptionMethod = new EncryptionMethod(keyTransportAlgorithm),
             CipherData = new CipherData(
-                EncryptedXml.EncryptKey(contentKey.Key, encryptionCertificate.GetRSAPublicKey()!, useOAEP: true)),
+                EncryptedXml.EncryptKey(contentKey.Key, encryptionCertificate.GetRSAPublicKey()!,
+                    useOAEP: keyTransportAlgorithm != EncryptedXml.XmlEncRSA15Url)),
         };
         encryptedData.KeyInfo.AddClause(new KeyInfoEncryptedKey(encryptedKey));
 
