@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
@@ -19,13 +20,16 @@ using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bitwarden.Server.Sdk.Features;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
+using Stripe;
 using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Organizations.OrganizationSignUp;
 
 [SutProviderCustomize]
-public class CloudICloudOrganizationSignUpCommandTests
+public class CloudOrganizationSignUpCommandTests
 {
     [Theory]
     [BitAutoData(PlanType.FamiliesAnnually)]
@@ -497,4 +501,187 @@ public class CloudICloudOrganizationSignUpCommandTests
         await sutProvider.Sut.SignUpOrganizationAsync(signup);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task SignUpAsync_PrivilegedControls_PassesRequestedMinimumToPurchaseCommand(
+        OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        signup.Plan = PlanType.EnterpriseAnnually;
+        signup.AdditionalSeats = 10;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+        signup.UseSecretsManager = false;
+        signup.IsFromProvider = false;
+        signup.TrialLength = 7;
+        signup.UsePrivilegedControls = true;
+        signup.PamSeatMinimum = 6;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(true);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
+
+        sutProvider.GetDependency<ICreateOrganizationSubscriptionCommand>()
+            .Run(Arg.Any<Organization>(), Arg.Any<OrganizationSubscriptionCreation>())
+            .Returns(new Subscription());
+
+        await sutProvider.Sut.SignUpOrganizationAsync(signup);
+
+        // The signup only gates on the flag and passes the raw requested minimum; the command validates and resolves it.
+        await sutProvider.GetDependency<ICreateOrganizationSubscriptionCommand>().Received(1).Run(
+            Arg.Any<Organization>(),
+            Arg.Is<OrganizationSubscriptionCreation>(c =>
+                c.PlanType == PlanType.EnterpriseAnnually &&
+                c.SecretsManager == null &&
+                c.PrivilegedControls != null && c.PrivilegedControls.RequestedSeatMinimum == 6));
+        await sutProvider.GetDependency<IOrganizationBillingService>().DidNotReceive().Finalize(Arg.Any<OrganizationSale>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SignUpAsync_PrivilegedControls_FeatureFlagDisabled_DoesNotProvision(
+        OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        signup.Plan = PlanType.EnterpriseAnnually;
+        signup.AdditionalSeats = 10;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+        signup.UseSecretsManager = false;
+        signup.IsFromProvider = false;
+        signup.TrialLength = 7;
+        signup.UsePrivilegedControls = true;
+        signup.PamSeatMinimum = 6;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(false);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
+
+        await sutProvider.Sut.SignUpOrganizationAsync(signup);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).CreateAsync(
+            Arg.Is<Organization>(o => o.PamSeats == null && o.PamSeatMinimum == null && !o.UsePam));
+        await sutProvider.GetDependency<IOrganizationBillingService>().Received(1).Finalize(Arg.Any<OrganizationSale>());
+        await sutProvider.GetDependency<ICreateOrganizationSubscriptionCommand>().DidNotReceiveWithAnyArgs()
+            .Run(default!, default!);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    public async Task SignUpAsync_FlagEnabled_WithoutUsePrivilegedControls_UsesFinalize(
+        PlanType planType, OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        signup.Plan = planType;
+        signup.AdditionalSeats = 10;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+        signup.UseSecretsManager = false;
+        signup.IsFromProvider = false;
+        signup.TrialLength = null;
+        signup.UsePrivilegedControls = false;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(true);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
+
+        await sutProvider.Sut.SignUpOrganizationAsync(signup);
+
+        await sutProvider.GetDependency<IOrganizationBillingService>().Received(1).Finalize(Arg.Any<OrganizationSale>());
+        await sutProvider.GetDependency<ICreateOrganizationSubscriptionCommand>().DidNotReceiveWithAnyArgs()
+            .Run(default!, default!);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SignUpAsync_PrivilegedControls_MapsSignupOntoPurchase(
+        OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        signup.Plan = PlanType.EnterpriseAnnually;
+        signup.AdditionalSeats = 10;
+        signup.AdditionalStorageGb = 0;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+        signup.UseSecretsManager = false;
+        signup.IsFromProvider = false;
+        signup.TrialLength = 7;
+        signup.UsePrivilegedControls = true;
+        signup.PamSeatMinimum = 6;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(true);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
+        sutProvider.GetDependency<ICreateOrganizationSubscriptionCommand>()
+            .Run(Arg.Any<Organization>(), Arg.Any<OrganizationSubscriptionCreation>())
+            .Returns(new Subscription());
+
+        await sutProvider.Sut.SignUpOrganizationAsync(signup);
+
+        await sutProvider.GetDependency<ICreateOrganizationSubscriptionCommand>().Received(1).Run(
+            Arg.Any<Organization>(),
+            Arg.Is<OrganizationSubscriptionCreation>(c =>
+                c.PlanType == PlanType.EnterpriseAnnually &&
+                c.PasswordManager.Seats == signup.AdditionalSeats &&
+                !c.PasswordManager.PremiumAccess &&
+                c.SecretsManager == null &&
+                c.PrivilegedControls != null && c.PrivilegedControls.RequestedSeatMinimum == signup.PamSeatMinimum &&
+                c.Trial.Length == signup.TrialLength &&
+                c.Owner == signup.Owner &&
+                c.CustomerSetup != null && c.CustomerSetup.TokenizedPaymentSource != null &&
+                c.CustomerSetup.TokenizedPaymentSource.Token == signup.PaymentToken));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SignUpAsync_PrivilegedControls_CommandThrows_DoesNotPersistOrganization(
+        OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        signup.Plan = PlanType.EnterpriseAnnually;
+        signup.AdditionalSeats = 10;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+        signup.UseSecretsManager = false;
+        signup.IsFromProvider = false;
+        signup.TrialLength = 7;
+        signup.UsePrivilegedControls = true;
+        signup.PamSeatMinimum = 6;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(true);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
+        sutProvider.GetDependency<ICreateOrganizationSubscriptionCommand>()
+            .Run(Arg.Any<Organization>(), Arg.Any<OrganizationSubscriptionCreation>())
+            .ThrowsAsync(new BadRequestException("Invalid Privileged Controls plan selected."));
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpOrganizationAsync(signup));
+
+        await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceive().CreateAsync(Arg.Any<Organization>());
+    }
 }
