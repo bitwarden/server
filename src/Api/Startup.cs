@@ -14,7 +14,6 @@ using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core.Auth.Entities;
 using Bit.SharedWeb.Health;
-using Microsoft.OpenApi;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -336,64 +335,7 @@ public class Startup
                 config.RouteTemplate = "specs/{documentName}/swagger.json";
 
                 // Remove all Bitwarden cloud servers and only register the local server
-                config.PreSerializeFilters.Add((swaggerDoc, httpReq) =>
-                {
-                    swaggerDoc.Servers =
-                    [
-                        new()
-                        {
-                            Url = globalSettings.BaseServiceUri.Api,
-                        }
-                    ];
-
-                    swaggerDoc.Components ??= new OpenApiComponents();
-                    swaggerDoc.Components.SecuritySchemes = new Dictionary<string, IOpenApiSecurityScheme>
-                    {
-                        {
-                            "oauth2-client-credentials",
-                            new OpenApiSecurityScheme
-                            {
-                                Type = SecuritySchemeType.OAuth2,
-                                Flows = new OpenApiOAuthFlows
-                                {
-                                    ClientCredentials = new OpenApiOAuthFlow
-                                    {
-                                        TokenUrl = new Uri($"{globalSettings.BaseServiceUri.Identity}/connect/token"),
-                                        Scopes = new Dictionary<string, string>
-                                {
-                                    { ApiScopes.ApiOrganization, "Organization APIs" }
-                                }
-                                    }
-                                }
-                            }
-                        },
-                        {
-                            "send-access-bearer",
-                            new OpenApiSecurityScheme
-                            {
-                                Type = SecuritySchemeType.Http,
-                                Scheme = "bearer",
-                                BearerFormat = "JWT",
-                                Description = "Send access token obtained from /connect/token using the send_access grant.",
-                                Extensions = new Dictionary<string, IOpenApiExtension>
-                                {
-                                    { "x-explicit-bearer-token", new JsonNodeExtension(true) }
-                                }
-                            }
-                        }
-                    };
-
-                    swaggerDoc.Security =
-                    [
-                        new OpenApiSecurityRequirement
-                        {
-                            [new OpenApiSecuritySchemeReference("oauth2-client-credentials", swaggerDoc)] = [ApiScopes.ApiOrganization]
-                        },
-                    ];
-
-                    swaggerDoc.Workspace = new OpenApiWorkspace();
-                    swaggerDoc.RegisterComponents();
-                });
+                config.PreSerializeFilters.Add((swaggerDoc, _) => ServedSwaggerDocument.Configure(swaggerDoc, globalSettings));
             });
 
             // adds the middleware to display the web UI
