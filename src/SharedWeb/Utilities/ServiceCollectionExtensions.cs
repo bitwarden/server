@@ -450,8 +450,6 @@ public static class ServiceCollectionExtensions
             .AddTokenProvider<DataProtectorTokenProvider<User>>(TokenOptions.DefaultProvider)
             .AddTokenProvider<AuthenticatorTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Authenticator))
-            .AddTokenProvider<EmailTwoFactorTokenProvider>(
-                CoreHelpers.CustomProviderName(TwoFactorProviderType.Email))
             .AddTokenProvider<YubicoOtpTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.YubiKey))
             .AddTokenProvider<DuoUniversalTokenProvider>(

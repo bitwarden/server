@@ -1,18 +1,17 @@
-﻿using System.Security.Claims;
-using System.Text;
+﻿using System.Globalization;
+using System.Security.Claims;
 using System.Text.Json;
-using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -28,6 +27,7 @@ using Fido2NetLib;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using NSubstitute;
+using OtpNet;
 using Xunit;
 
 // #nullable enable
@@ -39,6 +39,9 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
     const string _organizationTwoFactor = """{"6":{"Enabled":true,"MetaData":{"ClientId":"DIEFB13LB49IEB3459N2","ClientSecret":"0ZnsZHav0KcNPBZTS6EOUwqLPoB0sfMd5aJeWExQ","Host":"api-example.duosecurity.com"}}}""";
     const string _testEmail = "test+2farequired@email.com";
     const string _testPassword = "master_password_hash";
+    const string _authenticatorKey = "JBSWY3DPEHPK3PXP";
+    const string _userAuthenticatorTwoFactor =
+        $$"""{"0": { "Enabled": true, "MetaData": { "Key": "{{_authenticatorKey}}" } } }""";
     const string _userEmailTwoFactor = """{"1": { "Enabled": true, "MetaData": { "Email": "test+2farequired@email.com"}}}""";
 
     // WebAuthn keys are persisted through JsonHelpers.LegacySerialize (Newtonsoft), which writes
@@ -152,14 +155,6 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         // Arrange
         var factory = new IdentityApplicationFactory();
 
-        // return specified email token from cache
-        var emailToken = "12345678";
-        factory.SubstituteService<IDistributedCache>(distCache =>
-        {
-            distCache.GetAsync(Arg.Is<string>(s => s.StartsWith("EmailToken_")))
-                .Returns(Task.FromResult(Encoding.UTF8.GetBytes(emailToken)));
-        });
-
         // Create Test User
         await CreateUserAsync(factory, _testEmail, _userEmailTwoFactor);
 
@@ -167,7 +162,8 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         var failedTokenContext = await factory.ContextFromPasswordAsync(_testEmail, _testPassword);
 
         Assert.Equal(StatusCodes.Status400BadRequest, failedTokenContext.Response.StatusCode);
-        Assert.NotNull(emailToken);
+        var emailToken = await EmailLoginCodeAsync(
+            factory, _testEmail, IdentityApplicationFactory.DefaultDeviceIdentifier);
 
         var twoFactorProvidedContext = await factory.ContextFromPasswordWithTwoFactorAsync(
             _testEmail,
@@ -203,6 +199,69 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
 
         var error = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
         Assert.Equal("invalid_username_or_password", error);
+    }
+
+    /// <summary>
+    /// A wrong email two-factor code is rejected, counts as a failed login, and emails the owner a failed-attempt
+    /// notice.
+    /// </summary>
+    [Fact]
+    public async Task TokenEndpoint_GrantTypePassword_InvalidEmailTwoFactorCode_FailedLoginCountedAndOwnerNotified()
+    {
+        // Arrange
+        var email = NewUniqueEmail();
+        await CreateUserAsync(_factory, email, BuildUserEmailTwoFactor(email));
+        var userRepository = _factory.GetService<IUserRepository>();
+        var failedLoginCountBefore = (await userRepository.GetByEmailAsync(email)).FailedLoginCount;
+
+        // Act
+        var context = await _factory.ContextFromPasswordWithTwoFactorAsync(email, _testPassword,
+            twoFactorProviderType: ProviderKey(TwoFactorProviderType.Email), twoFactorToken: "000000");
+
+        // Assert
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var errorModel = AssertHelper.AssertJsonProperty(body.RootElement, "ErrorModel", JsonValueKind.Object);
+        Assert.Equal("Two-step token is invalid. Try again.",
+            AssertHelper.AssertJsonProperty(errorModel, "Message", JsonValueKind.String).GetString());
+        Assert.Equal(failedLoginCountBefore + 1, (await userRepository.GetByEmailAsync(email)).FailedLoginCount);
+        await _factory.GetService<IMailService>().Received(1).SendFailedTwoFactorAttemptEmailAsync(
+            email, TwoFactorProviderType.Email, Arg.Any<DateTime>(), Arg.Any<string>());
+    }
+
+    /// <summary>
+    /// A token request without a device identifier fails two-factor even with the correct email code, and the code
+    /// still logs in the device it was issued to.
+    /// </summary>
+    [Fact]
+    public async Task TokenEndpoint_GrantTypePassword_EmailCodeWithoutDeviceIdentifier_TwoFactorRejected()
+    {
+        // Arrange
+        var email = NewUniqueEmail();
+        await CreateUserAsync(_factory, email, BuildUserEmailTwoFactor(email));
+        var code = await EmailLoginCodeAsync(_factory, email, IdentityApplicationFactory.DefaultDeviceIdentifier);
+
+        // Act
+        var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(
+            new Dictionary<string, string>
+            {
+                { "scope", "api offline_access" },
+                { "client_id", "web" },
+                { "grant_type", "password" },
+                { "username", email },
+                { "password", _testPassword },
+                { "TwoFactorToken", code },
+                { "TwoFactorProvider", ProviderKey(TwoFactorProviderType.Email) },
+            }));
+
+        // Assert
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var errorModel = AssertHelper.AssertJsonProperty(body.RootElement, "ErrorModel", JsonValueKind.Object);
+        Assert.Equal("Two-step token is invalid. Try again.",
+            AssertHelper.AssertJsonProperty(errorModel, "Message", JsonValueKind.String).GetString());
+        var issuedDeviceContext = await _factory.ContextFromPasswordWithTwoFactorAsync(email, _testPassword,
+            twoFactorProviderType: ProviderKey(TwoFactorProviderType.Email), twoFactorToken: code);
+        using var issuedDeviceBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(issuedDeviceContext);
+        AssertHelper.AssertJsonProperty(issuedDeviceBody.RootElement, "access_token", JsonValueKind.String);
     }
 
     [Theory, BitAutoData]
@@ -364,21 +423,6 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         // Arrange
         var localFactory = new IdentityApplicationFactory();
 
-        // return specified email token from cache
-        var emailToken = "12345678";
-        localFactory.SubstituteService<IDistributedCache>(distCache =>
-        {
-            distCache.GetAsync(Arg.Is<string>(s => s.StartsWith("EmailToken_")))
-                .Returns(Task.FromResult(Encoding.UTF8.GetBytes(emailToken)));
-        });
-
-        // Bypass the FusionCache-backed org abilities lookup. The above IDistributedCache substitution would cause a deserialization error.
-        localFactory.SubstituteService<IOrganizationAbilityCacheService>(svc =>
-        {
-            svc.GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
-                .Returns(new Dictionary<Guid, OrganizationAbility>());
-        });
-
         // Create Test User
         var challenge = new string('c', 50);
         var ssoConfigData = new SsoConfigurationData
@@ -403,7 +447,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         }));
 
         Assert.Equal(StatusCodes.Status400BadRequest, failedTokenContext.Response.StatusCode);
-        Assert.NotNull(emailToken);
+        var emailToken = await EmailLoginCodeAsync(localFactory, _testEmail, deviceId);
 
         var twoFactorProvidedContext = await localFactory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
@@ -464,6 +508,207 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         var error = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
         Assert.Equal("Two factor required.", error);
     }
+
+    /// <summary>
+    /// The email two-factor challenge returns the redacted two-factor email, the account email, and the session
+    /// token SSO clients use to request the emailed code.
+    /// </summary>
+    [Fact]
+    public async Task TokenEndpoint_GrantTypePassword_EmailTwoFactorRequired_ChallengeIncludesRedactedEmailAndSessionToken()
+    {
+        // Arrange
+        var email = NewUniqueEmail();
+        await CreateUserAsync(_factory, email, BuildUserEmailTwoFactor(email));
+
+        // Act
+        var context = await _factory.ContextFromPasswordAsync(email, _testPassword);
+
+        // Assert
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var root = body.RootElement;
+        var providers = AssertHelper.AssertJsonProperty(root, "TwoFactorProviders2", JsonValueKind.Object);
+        var emailProvider = AssertHelper.AssertJsonProperty(
+            providers, ProviderKey(TwoFactorProviderType.Email), JsonValueKind.Object);
+        Assert.Equal(CoreHelpers.RedactEmailAddress(email),
+            AssertHelper.AssertJsonProperty(emailProvider, "Email", JsonValueKind.String).GetString());
+        Assert.False(string.IsNullOrWhiteSpace(
+            AssertHelper.AssertJsonProperty(root, "SsoEmail2faSessionToken", JsonValueKind.String).GetString()));
+        Assert.Equal(email, AssertHelper.AssertJsonProperty(root, "Email", JsonValueKind.String).GetString());
+    }
+
+    /// <summary>
+    /// A disabled email provider does not count as two-factor, so the user logs in without a challenge.
+    /// </summary>
+    [Fact]
+    public async Task TokenEndpoint_GrantTypePassword_EmailTwoFactorDisabled_NoTwoFactorChallenge()
+    {
+        // Arrange
+        var email = NewUniqueEmail();
+        await CreateUserWithStoredTwoFactorProvidersAsync(email,
+            "{\"1\":{\"Enabled\":false,\"MetaData\":{\"Email\":\"" + email + "\"}}}");
+
+        // Act
+        var context = await _factory.ContextFromPasswordAsync(email, _testPassword);
+
+        // Assert
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        Assert.True(body.RootElement.TryGetProperty("access_token", out _), body.RootElement.ToString());
+    }
+
+    /// <summary>
+    /// The two-factor challenge issues no email code, in either the current or the previous cache format. The
+    /// client requests the code separately, and only then is one stored and emailed.
+    /// </summary>
+    [Fact]
+    public async Task TokenEndpoint_GrantTypePassword_EmailTwoFactorRequired_ChallengeIssuesNoEmailCode()
+    {
+        // Arrange
+        var email = NewUniqueEmail();
+        await CreateUserAsync(_factory, email, BuildUserEmailTwoFactor(email));
+        var user = await _factory.GetService<IUserRepository>().GetByEmailAsync(email);
+        var cache = _factory.Services.GetRequiredKeyedService<IDistributedCache>("persistent");
+
+        // Act
+        var context = await _factory.ContextFromPasswordAsync(email, _testPassword);
+
+        // Assert
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        Assert.Equal("Two factor required.",
+            AssertHelper.AssertJsonProperty(body.RootElement, "error_description", JsonValueKind.String).GetString());
+        Assert.Null(await cache.GetAsync($"EmailToken_{user.Id}_{user.SecurityStamp}_TwoFactor"));
+        Assert.Null(await cache.GetAsync($"TwoFactorEmail_LoginCode_{user.Id}_{user.SecurityStamp}"));
+        Assert.False(_factory.TwoFactorEmailCodes.ContainsKey(email));
+    }
+
+    /// <summary>
+    /// A user with both email and WebAuthn two-factor gets a challenge for each, including the WebAuthn
+    /// assertion options.
+    /// </summary>
+    [Fact]
+    public async Task TokenEndpoint_GrantTypePassword_EmailAndWebAuthnTwoFactorRequired_ChallengeIncludesBothProviders()
+    {
+        // Arrange
+        var email = NewUniqueEmail();
+        var emailAndWebAuthnTwoFactor = BuildUserEmailTwoFactor(email)[..^1] + "," + _userWebAuthnTwoFactor[1..];
+        await CreateUserAsync(_factory, email, emailAndWebAuthnTwoFactor);
+        var userRepository = _factory.GetService<IUserRepository>();
+        var user = await userRepository.GetByEmailAsync(email);
+        user.Premium = true;
+        await userRepository.ReplaceAsync(user);
+
+        // Act
+        var context = await _factory.ContextFromPasswordAsync(email, _testPassword);
+
+        // Assert
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var providers = AssertHelper.AssertJsonProperty(body.RootElement, "TwoFactorProviders2", JsonValueKind.Object);
+        AssertHelper.AssertJsonProperty(providers, ProviderKey(TwoFactorProviderType.Email), JsonValueKind.Object);
+        var webAuthn = AssertHelper.AssertJsonProperty(
+            providers, ProviderKey(TwoFactorProviderType.WebAuthn), JsonValueKind.Object);
+        AssertHelper.AssertJsonProperty(webAuthn, "challenge", JsonValueKind.String);
+    }
+
+    /// <summary>
+    /// A current authenticator app code completes two-factor login.
+    /// </summary>
+    [Fact]
+    public async Task TokenEndpoint_GrantTypePassword_ValidAuthenticatorCode_Success()
+    {
+        // Arrange
+        var email = NewUniqueEmail();
+        await CreateUserAsync(_factory, email, _userAuthenticatorTwoFactor);
+        var authenticatorCode = new Totp(Base32Encoding.ToBytes(_authenticatorKey)).ComputeTotp();
+
+        // Act
+        var context = await _factory.ContextFromPasswordWithTwoFactorAsync(email, _testPassword,
+            twoFactorProviderType: ProviderKey(TwoFactorProviderType.Authenticator), twoFactorToken: authenticatorCode);
+
+        // Assert
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        AssertHelper.AssertJsonProperty(body.RootElement, "access_token", JsonValueKind.String);
+    }
+
+    /// <summary>
+    /// The recovery code completes login and removes the user's two-factor providers.
+    /// </summary>
+    [Fact]
+    public async Task TokenEndpoint_GrantTypePassword_ValidRecoveryCode_SuccessAndTwoFactorRemoved()
+    {
+        // Arrange
+        const string recoveryCode = "abcdefghijklmnopqrstuvwxyz012345";
+        var email = NewUniqueEmail();
+        await CreateUserAsync(_factory, email, BuildUserEmailTwoFactor(email));
+        var userRepository = _factory.GetService<IUserRepository>();
+        var user = await userRepository.GetByEmailAsync(email);
+        user.TwoFactorRecoveryCode = recoveryCode;
+        await userRepository.ReplaceAsync(user);
+
+        // Act
+        var context = await _factory.ContextFromPasswordWithTwoFactorAsync(email, _testPassword,
+            twoFactorProviderType: ProviderKey(TwoFactorProviderType.RecoveryCode), twoFactorToken: recoveryCode);
+
+        // Assert
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        AssertHelper.AssertJsonProperty(body.RootElement, "access_token", JsonValueKind.String);
+        Assert.Null((await userRepository.GetByEmailAsync(email)).TwoFactorProviders);
+    }
+
+    /// <summary>
+    /// The remember-me token returned by an earlier two-factor login completes a later login on its own.
+    /// </summary>
+    [Fact]
+    public async Task TokenEndpoint_GrantTypePassword_ValidRememberToken_Success()
+    {
+        // Arrange
+        var email = NewUniqueEmail();
+        await CreateUserAsync(_factory, email, _userAuthenticatorTwoFactor);
+        var authenticatorCode = new Totp(Base32Encoding.ToBytes(_authenticatorKey)).ComputeTotp();
+        var firstLogin = await _factory.ContextFromPasswordWithTwoFactorAsync(email, _testPassword,
+            twoFactorProviderType: ProviderKey(TwoFactorProviderType.Authenticator), twoFactorToken: authenticatorCode);
+        using var firstLoginBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(firstLogin);
+        var rememberToken = AssertHelper.AssertJsonProperty(
+            firstLoginBody.RootElement, "TwoFactorToken", JsonValueKind.String).GetString();
+
+        // Act
+        var context = await _factory.ContextFromPasswordWithTwoFactorAsync(email, _testPassword,
+            twoFactorProviderType: ProviderKey(TwoFactorProviderType.Remember), twoFactorToken: rememberToken);
+
+        // Assert
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        AssertHelper.AssertJsonProperty(body.RootElement, "access_token", JsonValueKind.String);
+    }
+
+    /// <summary>
+    /// Emails a real login code for the given device through the Identity host's email service and returns it.
+    /// </summary>
+    private static async Task<string> EmailLoginCodeAsync(
+        IdentityApplicationFactory factory, string email, string deviceIdentifier)
+    {
+        var user = await factory.GetService<IUserRepository>().GetByEmailAsync(email);
+        await factory.GetService<ITwoFactorEmailService>().SendTwoFactorLoginEmailAsync(user, deviceIdentifier);
+        return factory.TwoFactorEmailCodes[email];
+    }
+
+    /// <summary>
+    /// Creates a user and stores the two-factor provider JSON exactly as given. <see cref="CreateUserAsync"/> saves
+    /// providers through the user service, which marks the provider enabled.
+    /// </summary>
+    private async Task CreateUserWithStoredTwoFactorProvidersAsync(string email, string twoFactorProvidersJson)
+    {
+        await CreateUserAsync(_factory, email);
+        var userRepository = _factory.GetService<IUserRepository>();
+        var user = await userRepository.GetByEmailAsync(email);
+        user.TwoFactorProviders = twoFactorProvidersJson;
+        await userRepository.ReplaceAsync(user);
+    }
+
+    private static string NewUniqueEmail() => $"two-factor-{Guid.NewGuid()}@bitwarden.com";
+
+    private static string BuildUserEmailTwoFactor(string email) =>
+        "{\"1\":{\"Enabled\":true,\"MetaData\":{\"Email\":\"" + email + "\"}}}";
+
+    private static string ProviderKey(TwoFactorProviderType providerType) =>
+        ((int)providerType).ToString(CultureInfo.InvariantCulture);
 
     private async Task CreateUserAsync(
         IdentityApplicationFactory factory,
