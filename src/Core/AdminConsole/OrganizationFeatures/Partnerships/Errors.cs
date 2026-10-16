@@ -75,6 +75,11 @@ public record InvalidReturnOrigin()
         "Each return origin must be an absolute https origin with no path, query, or fragment.",
         "registeredReturnOrigins", "invalid_return_origin");
 
+public record InvalidReturnUrl()
+    : PartnershipValidationError(
+        $"The return URL must be an absolute https URL of at most {CreatePartnershipActivationLinkRequest.ReturnUrlMaxLength} characters whose origin is registered for the partnership.",
+        "returnUrl", "invalid_return_url");
+
 public record EffectiveAtInFuture()
     : BadRequestError("effectiveAt cannot be in the future."), IPartnershipError
 {
