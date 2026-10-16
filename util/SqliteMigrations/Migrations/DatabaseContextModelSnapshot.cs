@@ -253,6 +253,10 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("OrganizationKeyId")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("OwnersNotifiedOfAutoscaling")
                         .HasColumnType("TEXT");
 

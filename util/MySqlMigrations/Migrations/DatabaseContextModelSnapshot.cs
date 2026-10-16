@@ -258,6 +258,10 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
 
+                    b.Property<string>("OrganizationKeyId")
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
                     b.Property<DateTime?>("OwnersNotifiedOfAutoscaling")
                         .HasColumnType("datetime(6)");
 
