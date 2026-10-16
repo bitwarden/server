@@ -101,6 +101,12 @@ public record EntitlementNotFound() : NotFoundError("Entitlement not found."), I
     public string Code => "not_found";
 }
 
+public record ReconciliationExportNotFound()
+    : NotFoundError("Reconciliation export not found."), IPartnershipError
+{
+    public string Code => "not_found";
+}
+
 public record PartnershipAlreadyExists()
     : ConflictError("This organization already has a partnership."), IPartnershipError
 {

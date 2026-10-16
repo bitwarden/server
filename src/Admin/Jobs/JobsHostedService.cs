@@ -88,6 +88,11 @@ public class JobsHostedService : BaseJobsHostedService
             .StartNow()
             .WithCronSchedule("0 30 * * * ?")
             .Build();
+        var processPartnershipReconciliationExportsTrigger = TriggerBuilder.Create()
+            .WithIdentity("ProcessPartnershipReconciliationExportsTrigger")
+            .StartNow()
+            .WithCronSchedule("0 * * * * ?")
+            .Build();
 
         var jobs = new List<Tuple<Type, ITrigger>>
         {
@@ -110,6 +115,8 @@ public class JobsHostedService : BaseJobsHostedService
         {
             jobs.Add(new Tuple<Type, ITrigger>(typeof(AliveJob), everyTopOfTheHourTrigger));
             jobs.Add(new Tuple<Type, ITrigger>(typeof(ExpirePartnershipResumeWindowsJob), expirePartnershipResumeWindowsTrigger));
+            jobs.Add(new Tuple<Type, ITrigger>(typeof(ProcessPartnershipReconciliationExportsJob),
+                processPartnershipReconciliationExportsTrigger));
         }
 
         Jobs = jobs;
@@ -122,6 +129,7 @@ public class JobsHostedService : BaseJobsHostedService
         {
             services.AddTransient<AliveJob>();
             services.AddTransient<ExpirePartnershipResumeWindowsJob>();
+            services.AddTransient<ProcessPartnershipReconciliationExportsJob>();
         }
         services.AddTransient<OrganizationDeleteTasksJob>();
         services.TryAddEnumerable(
