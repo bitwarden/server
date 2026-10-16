@@ -72,6 +72,13 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
     }
 
     /// <summary>
+    /// Builds BulkCopy options without a timeout. SqlBulkCopy's 30-second default is too short for large
+    /// presets against a remote database. Zero means no limit, which is acceptable for a dev CLI the
+    /// operator can cancel.
+    /// </summary>
+    private static BulkCopyOptions WithoutTimeout(string? tableName = null) => new() { TableName = tableName, BulkCopyTimeout = 0 };
+
+    /// <summary>
     /// Resolves the table name for an EF entity type from the EF Core model,
     /// falling back to the C# class name for SQL Server.
     /// </summary>
@@ -89,14 +96,7 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
 
         var mapped = entities.Select(e => mapper.Map<TEf>(e));
 
-        if (tableName is not null)
-        {
-            db.BulkCopy(new BulkCopyOptions { TableName = tableName }, mapped);
-        }
-        else
-        {
-            db.BulkCopy(mapped);
-        }
+        db.BulkCopy(WithoutTimeout(tableName), mapped);
 
         entities.Clear();
     }
@@ -109,7 +109,7 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
         }
 
         var mapped = mapper.Map<TEf>(entity);
-        db.BulkCopy(new[] { mapped });
+        db.BulkCopy(WithoutTimeout(), new[] { mapped });
     }
 
     private void CopyAndClear<T>(List<T> entities) where T : class
@@ -119,7 +119,7 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
             return;
         }
 
-        db.BulkCopy(entities);
+        db.BulkCopy(WithoutTimeout(), entities);
         entities.Clear();
     }
 
@@ -182,11 +182,7 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
             Key = c.Key,
         });
 
-        var options = tableName is not null
-            ? new BulkCopyOptions { TableName = tableName }
-            : new BulkCopyOptions();
-
-        db.BulkCopy(options, rows);
+        db.BulkCopy(WithoutTimeout(tableName), rows);
         ciphers.Clear();
     }
 
