@@ -31,16 +31,16 @@ public static class Saml2OptionsExtensions
         }
 
         var featureService = context.RequestServices.GetRequiredService<IFeatureService>();
-        var useHandlerBinding = featureService.IsEnabled(FeatureFlagKeys.PM42283_Rsa15Deprecation);
+        var enforceRsa15Deprecation = featureService.IsEnabled(FeatureFlagKeys.PM42283_Rsa15Deprecation);
         var schemeMatchesQuery = context.Request.Query["scheme"].FirstOrDefault() == scheme;
 
-        if (!useHandlerBinding && schemeMatchesQuery)
+        if (!enforceRsa15Deprecation && schemeMatchesQuery)
         {
             return true;
         }
 
         XmlElement envelope;
-        if (useHandlerBinding)
+        if (enforceRsa15Deprecation)
         {
             // The scheme query parameter identifies only a request without a SAML message, such as a metadata
             // or login-initiation request. A request with a message must pass the inspection below.
@@ -86,6 +86,12 @@ public static class Saml2OptionsExtensions
         // key transport algorithm. Any request, including a forged, unsigned, or improperly-constructed one 
         // that satisfies the notification criteria, should notify.
         NotifyWhenRsa15Deprecated(envelope, scheme, context);
+
+        // The signature check below decrypts. Reject an unaccepted key transport algorithm first.
+        if (enforceRsa15Deprecation)
+        {
+            Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope);
+        }
 
         if (options.SPOptions.WantAssertionsSigned)
         {

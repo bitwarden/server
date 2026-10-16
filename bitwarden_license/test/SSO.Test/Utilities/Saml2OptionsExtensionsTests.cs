@@ -27,6 +27,7 @@ public class Saml2OptionsExtensionsTests
     private static readonly string ModulePath = $"/saml2/{Scheme}";
     private const string IdpEntityId = "https://idp.example.com/metadata";
     private const string RsaPkcs1 = "http://www.w3.org/2001/04/xmlenc#rsa-1_5";
+    private const string RsaOaepMgf1p = "http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p";
     private const string RsaOaep = "http://www.w3.org/2009/xmlenc11#rsa-oaep";
     private const string PlaintextAssertion = "<saml:Assertion ID=\"_assertion\"><saml:Issuer>idp</saml:Issuer></saml:Assertion>";
 
@@ -386,11 +387,14 @@ public class Saml2OptionsExtensionsTests
         testContext.Notifier.Received(1).TryQueue(OrganizationId);
     }
 
-    [Fact]
-    public async Task CouldHandleAsync_Rsa15WithUnsignedAssertion_StillThrowsSignatureError()
+    [Theory]
+    [InlineData(false, "Cannot verify SAML assertion signature.")]
+    [InlineData(true, Saml2EncryptedAssertionInspector.KeyTransportAlgorithmNotAcceptedMessage)]
+    public async Task CouldHandleAsync_Rsa15WithUnsignedAssertion_ThrowsTheErrorOfTheFirstCheck(
+        bool rsa15DeprecationFlag, string expectedMessage)
     {
-        // The notice call precedes the signature check, so the notice is queued for the unsigned assertion,
-        // and the signature check then still throws.
+        // The notice call precedes the signature check, so the notice is queued for the unsigned assertion.
+        // With the flag on, the key transport gate precedes the signature check, which decrypts.
         var decryptionCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test SP");
         var options = BuildOptions(wantAssertionsSigned: true, decryptionCertificate);
 
@@ -399,11 +403,12 @@ public class Saml2OptionsExtensionsTests
             unsignedAssertion.OuterXml, decryptionCertificate, EncryptedXml.XmlEncRSA15Url);
 
         var testContext = BuildPostContext(
-            BuildResponseXml(encryptedAssertionXml), featureFlagEnabled: true);
+            BuildResponseXml(encryptedAssertionXml), featureFlagEnabled: true,
+            rsa15DeprecationFlag: rsa15DeprecationFlag);
 
         var exception = await Assert.ThrowsAsync<Exception>(
             () => options.CouldHandleAsync(Scheme, testContext.Context));
-        Assert.Equal("Cannot verify SAML assertion signature.", exception.Message);
+        Assert.Equal(expectedMessage, exception.Message);
         testContext.Notifier.Received(1).TryQueue(OrganizationId);
     }
 
@@ -431,7 +436,8 @@ public class Saml2OptionsExtensionsTests
         testContext.Context.Request.QueryString = QueryString.Create(
             "SAMLResponse", EncodeDeflatedBase64(BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1))));
 
-        Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
+        // The gate rejects the rsa-1_5 query message after the notice is queued.
+        await Assert.ThrowsAsync<Exception>(() => options.CouldHandleAsync(Scheme, testContext.Context));
 
         testContext.Notifier.Received(1).TryQueue(OrganizationId);
     }
@@ -503,7 +509,15 @@ public class Saml2OptionsExtensionsTests
             ["SAMLRequest"] = EncodeBase64(BuildResponseXml(PlaintextAssertion)),
         });
 
-        Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
+        if (rsa15DeprecationFlag)
+        {
+            // The gate rejects the rsa-1_5 message after the notice is queued.
+            await Assert.ThrowsAsync<Exception>(() => options.CouldHandleAsync(Scheme, testContext.Context));
+        }
+        else
+        {
+            Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
+        }
 
         testContext.Notifier.Received(1).TryQueue(OrganizationId);
     }
@@ -607,7 +621,15 @@ public class Saml2OptionsExtensionsTests
             rsa15DeprecationFlag: rsa15DeprecationFlag);
         testContext.Context.Request.QueryString = QueryString.Create("scheme", Scheme);
 
-        Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
+        if (rsa15DeprecationFlag)
+        {
+            // The gate rejects the rsa-1_5 message after the notice is queued.
+            await Assert.ThrowsAsync<Exception>(() => options.CouldHandleAsync(Scheme, testContext.Context));
+        }
+        else
+        {
+            Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
+        }
 
         testContext.Notifier.Received(expectedQueueCalls).TryQueue(OrganizationId);
     }
@@ -643,6 +665,148 @@ public class Saml2OptionsExtensionsTests
             rsa15DeprecationFlag: rsa15DeprecationFlag);
         testContext.Context.Request.Method = "post";
         testContext.Context.Request.QueryString = QueryString.Create("scheme", Scheme);
+
+        Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task CouldHandleAsync_Rsa15Assertion_ReturnsTrueWithFlagOffAndThrowsWithFlagOn(
+        bool rsa15DeprecationFlag, bool wantAssertionsSigned)
+    {
+        // A signed assertion decrypts inside the signature check. With the flag on, the gate rejects the
+        // key transport algorithm before that check decrypts anything.
+        var signingCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test IdP");
+        var decryptionCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test SP");
+        var options = BuildOptions(wantAssertionsSigned, decryptionCertificate, signingCertificate);
+        var encryptedAssertionXml = wantAssertionsSigned
+            ? Saml2TestXml.EncryptAssertion(
+                Saml2TestXml.BuildSignedAssertion(signingCertificate).OuterXml, decryptionCertificate, RsaPkcs1)
+            : BuildEncryptedAssertion(RsaPkcs1);
+        var testContext = BuildPostContext(BuildResponseXml(encryptedAssertionXml),
+            rsa15DeprecationFlag: rsa15DeprecationFlag);
+
+        if (rsa15DeprecationFlag)
+        {
+            var exception = await Assert.ThrowsAsync<Exception>(
+                () => options.CouldHandleAsync(Scheme, testContext.Context));
+            Assert.Equal(Saml2EncryptedAssertionInspector.KeyTransportAlgorithmNotAcceptedMessage, exception.Message);
+        }
+        else
+        {
+            Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
+        }
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_Rsa15AssertionAndRsa15DeprecationFlagOn_QueuesNoticeThenThrows()
+    {
+        var options = BuildOptions(wantAssertionsSigned: false);
+        var testContext = BuildPostContext(BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)),
+            rsa15DeprecationFlag: true);
+
+        await Assert.ThrowsAsync<Exception>(() => options.CouldHandleAsync(Scheme, testContext.Context));
+
+        testContext.Notifier.Received(1).TryQueue(OrganizationId);
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_Rsa15AssertionWithForeignIssuerAndRsa15DeprecationFlagOn_ReturnsFalseWithoutNotice()
+    {
+        var options = BuildOptions(wantAssertionsSigned: false);
+        var testContext = BuildPostContext(
+            BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1), "https://other-idp.example.com"),
+            rsa15DeprecationFlag: true);
+
+        Assert.False(await options.CouldHandleAsync(Scheme, testContext.Context));
+
+        testContext.Notifier.DidNotReceiveWithAnyArgs().TryQueue(default);
+    }
+
+    [Theory]
+    [InlineData(RsaOaepMgf1p)]
+    [InlineData(RsaOaep)]
+    public async Task CouldHandleAsync_AcceptedKeyTransportAndRsa15DeprecationFlagOn_ReturnsTrue(string algorithm)
+    {
+        var options = BuildOptions(wantAssertionsSigned: false);
+        var testContext = BuildPostContext(BuildResponseXml(BuildEncryptedAssertion(algorithm)),
+            rsa15DeprecationFlag: true);
+
+        Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
+
+        testContext.Notifier.DidNotReceiveWithAnyArgs().TryQueue(default);
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_SignedOaepAssertionAndRsa15DeprecationFlagOn_ReturnsTrue()
+    {
+        var signingCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test IdP");
+        var decryptionCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test SP");
+        var options = BuildOptions(wantAssertionsSigned: true, decryptionCertificate, signingCertificate);
+        var encryptedAssertionXml = Saml2TestXml.EncryptAssertion(
+            Saml2TestXml.BuildSignedAssertion(signingCertificate).OuterXml, decryptionCertificate);
+        var testContext = BuildPostContext(BuildResponseXml(encryptedAssertionXml), rsa15DeprecationFlag: true);
+
+        Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_PlaintextAssertionAndRsa15DeprecationFlagOn_ReturnsTrue()
+    {
+        var options = BuildOptions(wantAssertionsSigned: false);
+        var testContext = BuildPostContext(BuildResponseXml(PlaintextAssertion), rsa15DeprecationFlag: true);
+
+        Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_PostWithBenignFormAndRsa15QueryMessageAndRsa15DeprecationFlagOn_Throws()
+    {
+        // The redirect binding reads the query message, so the gate inspects it.
+        var options = BuildOptions(wantAssertionsSigned: false);
+        var testContext = BuildPostContext(BuildResponseXml(PlaintextAssertion), rsa15DeprecationFlag: true);
+        testContext.Context.Request.QueryString = QueryString.Create(
+            "SAMLResponse", EncodeDeflatedBase64(BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1))));
+
+        var exception = await Assert.ThrowsAsync<Exception>(
+            () => options.CouldHandleAsync(Scheme, testContext.Context));
+        Assert.Equal(Saml2EncryptedAssertionInspector.KeyTransportAlgorithmNotAcceptedMessage, exception.Message);
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_PostWithEmptyHostAndRsa15DeprecationFlagOn_ReturnsFalse()
+    {
+        // The Sustainsys.Saml2 request data cannot build a URL without a host, so the check fails closed.
+        var options = BuildOptions(wantAssertionsSigned: false);
+        var testContext = BuildPostContext(BuildResponseXml(PlaintextAssertion), rsa15DeprecationFlag: true);
+        testContext.Context.Request.Host = new HostString(string.Empty);
+
+        Assert.False(await options.CouldHandleAsync(Scheme, testContext.Context));
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_LogoutRequestWithRsa15EncryptedIdAndRsa15DeprecationFlagOn_ReturnsTrue()
+    {
+        // The gate covers only EncryptedAssertion elements. Sustainsys.Saml2 never decrypts an EncryptedID.
+        var options = BuildOptions(wantAssertionsSigned: false);
+        var testContext = BuildPostContext(BuildResponseXml(PlaintextAssertion), rsa15DeprecationFlag: true);
+        var logoutRequest =
+            "<samlp:LogoutRequest xmlns:samlp=\"urn:oasis:names:tc:SAML:2.0:protocol\" " +
+            "xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\" " +
+            "xmlns:xenc=\"http://www.w3.org/2001/04/xmlenc#\" " +
+            "ID=\"_logoutrequest\" Version=\"2.0\" IssueInstant=\"2026-01-01T00:00:00Z\">" +
+            $"<saml:Issuer>{IdpEntityId}</saml:Issuer>" +
+            "<saml:EncryptedID><xenc:EncryptedKey>" +
+            $"<xenc:EncryptionMethod Algorithm=\"{RsaPkcs1}\" />" +
+            "</xenc:EncryptedKey></saml:EncryptedID>" +
+            "</samlp:LogoutRequest>";
+        testContext.Context.Request.Form = new FormCollection(new Dictionary<string, StringValues>
+        {
+            ["SAMLRequest"] = EncodeBase64(logoutRequest),
+        });
 
         Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
     }

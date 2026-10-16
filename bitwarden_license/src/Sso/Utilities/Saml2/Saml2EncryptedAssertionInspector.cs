@@ -11,6 +11,9 @@ public static class Saml2EncryptedAssertionInspector
 {
     private const string _xencNamespace = "http://www.w3.org/2001/04/xmlenc#";
 
+    public const string KeyTransportAlgorithmNotAcceptedMessage =
+        "SAML encrypted assertion key transport algorithm is not accepted.";
+
     /// <summary>
     /// Determines whether any key of any encrypted assertion in the envelope uses the RSA 1.5 key transport algorithm.
     /// </summary>
@@ -39,15 +42,42 @@ public static class Saml2EncryptedAssertionInspector
         }
     }
 
+    /// <summary>
+    /// Throws when a top-level encrypted assertion has no xenc:EncryptedKey, or has any key whose
+    /// key transport algorithm is not in <see cref="Saml2KeyTransportEncryptionAlgorithms.Accepted"/>.
+    /// </summary>
+    /// <param name="envelope">The root element of a SAML response or request.</param>
+    /// <remarks>
+    /// This method never decrypts an assertion, and it must run before any decryption.
+    /// Only OAEP key transport is accepted.
+    /// This method does not catch exceptions, so an envelope it cannot read fails closed.
+    /// The exception message is constant. It never includes a value from the envelope.
+    /// </remarks>
+    public static void EnsureAcceptedKeyTransportAlgorithms(XmlElement envelope)
+    {
+        foreach (var encryptedAssertion in ReadEncryptedAssertions(envelope))
+        {
+            var algorithms = ReadKeyEncryptionAlgorithms(encryptedAssertion).ToArray();
+            if (algorithms.Length == 0 || algorithms.Any(a =>
+                    !Saml2KeyTransportEncryptionAlgorithms.Accepted.Contains(a, StringComparer.Ordinal)))
+            {
+                throw new Exception(KeyTransportAlgorithmNotAcceptedMessage);
+            }
+        }
+    }
+
     private static IEnumerable<string?> ReadEnvelopeKeyEncryptionAlgorithms(XmlElement envelope)
     {
+        return ReadEncryptedAssertions(envelope).SelectMany(ReadKeyEncryptionAlgorithms);
+    }
+
+    private static IEnumerable<XmlElement> ReadEncryptedAssertions(XmlElement envelope)
+    {
         // Only the first-child nodes are relevant. We don't need a recursive check.
-        var encryptedAssertions = envelope.ChildNodes
+        return envelope.ChildNodes
             .OfType<XmlElement>()
             .Where(e => e.LocalName == "EncryptedAssertion"
                 && e.NamespaceURI == Saml2Namespaces.Saml2Name);
-
-        return encryptedAssertions.SelectMany(ReadKeyEncryptionAlgorithms);
     }
 
     /// <summary>
