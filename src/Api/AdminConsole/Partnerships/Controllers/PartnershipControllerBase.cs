@@ -8,8 +8,8 @@ namespace Bit.Api.AdminConsole.Partnerships.Controllers;
 /// <summary>
 /// Base class for partner-facing controllers under <see cref="PartnershipRoutes.Prefix"/>. Deriving from it requires an
 /// organization API key token, applies <see cref="PartnershipAccessFilter"/> so only organizations with an active
-/// partnership get through, and applies <see cref="PartnershipErrorFilter"/> so every error uses the partnership
-/// envelope.
+/// partnership get through, applies <see cref="PartnershipRateLimitFilter"/> to limit requests per partnership, and
+/// applies <see cref="PartnershipErrorFilter"/> so every error uses the partnership envelope.
 /// </summary>
 [Authorize(Policies.Organization)]
 public abstract class PartnershipControllerBase : Controller
