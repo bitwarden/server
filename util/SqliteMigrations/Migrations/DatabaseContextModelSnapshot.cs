@@ -1573,6 +1573,12 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("AccessLeaseId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("AccessRequestId")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("ActingUserId")
                         .HasColumnType("TEXT");
 
@@ -2897,6 +2903,10 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("TargetSystemId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("WrappedKey")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CipherId")
@@ -2992,6 +3002,10 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<byte>("Status")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("WrappedKey")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 

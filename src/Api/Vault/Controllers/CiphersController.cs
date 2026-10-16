@@ -882,6 +882,9 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
+        // This writes straight to the repository, so the service-level gate does not cover it.
+        await _cipherLeaseGate.EnsureCanMutateAsync(user.Id, cipher);
+
         var folderId = string.IsNullOrWhiteSpace(model.FolderId) ? null : (Guid?)new Guid(model.FolderId);
         await _cipherRepository.UpdatePartialAsync(id, user.Id, folderId, model.Favorite);
 
@@ -1039,6 +1042,9 @@ public class CiphersController : Controller
         {
             throw new NotFoundException();
         }
+
+        // This writes straight to the repository, so the service-level gate does not cover it.
+        await _cipherLeaseGate.EnsureCanMutateManyAsync(userId, model.CipherIds.Select(id => new Cipher { Id = id }));
 
         if (model.RemoveCollections)
         {

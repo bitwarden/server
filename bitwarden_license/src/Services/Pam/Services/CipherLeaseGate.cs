@@ -14,14 +14,10 @@ using Bitwarden.Server.Sdk.Features;
 namespace Bit.Services.Pam.Services;
 
 /// <summary>
-/// The commercial <see cref="ICipherLeaseGate" />, replacing <c>UnrestrictedCipherLeaseGate</c> in builds that
-/// include this library.
+/// The commercial <see cref="ICipherLeaseGate" />. A lease releases a gated cipher's secrets to a single read only,
+/// since a bulk read would persist them on the client. Mutation follows the single read; its write-return follows the
+/// bulk read.
 /// </summary>
-/// <remarks>
-/// A single read releases a gated cipher's secrets to a caller holding a valid active lease; a bulk read never
-/// does, since a sync or list would persist the secret in the client's local store. Mutation follows the single
-/// read (a lease-holder may edit, delete, restore, or move), but a mutation's write-return follows the bulk read.
-/// </remarks>
 public class CipherLeaseGate : ICipherLeaseGate
 {
     private readonly IFeatureService _featureService;
@@ -92,9 +88,7 @@ public class CipherLeaseGate : ICipherLeaseGate
         return FullCipherAccess.ForCiphers(ciphers.Select(c => c.Id).Where(id => !gated.Contains(id)));
     }
 
-    /// <remarks>
-    /// Ignores leases: a lease does not unlock the echo of a mutation.
-    /// </remarks>
+    /// <remarks>Ignores leases: a lease does not unlock the echo of a mutation.</remarks>
     public async Task<FullCipherAccess?> AuthorizeWriteReturnAsync(Guid userId, Cipher cipher)
     {
         if (!Enabled)
@@ -234,9 +228,7 @@ public class CipherLeaseGate : ICipherLeaseGate
     private static bool IsGated(ICollection<Guid> collectionIds, ISet<Guid> leasingCollectionIds) =>
         collectionIds.Count > 0 && collectionIds.All(leasingCollectionIds.Contains);
 
-    /// <summary>
-    /// Authorizes the non-gated subset of <paramref name="ciphers" />, in-memory and ignoring leases.
-    /// </summary>
+    /// <summary>Authorizes the non-gated subset of <paramref name="ciphers" /> in memory, ignoring leases.</summary>
     private FullCipherAccess BuildBulkWitness(
         IEnumerable<Cipher> ciphers,
         IEnumerable<CollectionDetails>? collections,
@@ -247,9 +239,7 @@ public class CipherLeaseGate : ICipherLeaseGate
         return FullCipherAccess.ForCiphers(authorized);
     }
 
-    /// <summary>
-    /// <see cref="GetGatedCipherIds" /> over the caller's own collections and mappings, loaded in two queries.
-    /// </summary>
+    /// <summary><see cref="GetGatedCipherIds" /> over the caller's own collections and mappings.</summary>
     private async Task<ISet<Guid>> GetCallerGatedCipherIdsAsync(Guid userId)
     {
         var collections = await _collectionRepository.GetManyByUserIdAsync(userId);
@@ -258,14 +248,9 @@ public class CipherLeaseGate : ICipherLeaseGate
     }
 
     /// <summary>
-    /// The cipher ids reachable <em>only</em> through leasing-enabled collections, per
-    /// <see cref="CollectionDetails.HasEnabledAccessRule" />.
+    /// The cipher ids reachable only through collections with <see cref="CollectionDetails.HasEnabledAccessRule" />.
+    /// A collection read path that omits that column silently gates nothing, since Dapper does not error on it.
     /// </summary>
-    /// <remarks>
-    /// A user-owned cipher is never gated. A collection read path that omits <c>HasEnabledAccessRule</c> silently
-    /// gates nothing, since Dapper does not error on a missing column. A null <paramref name="collections" /> or
-    /// <paramref name="collectionCiphersByCipher" /> is treated as empty.
-    /// </remarks>
     private ISet<Guid> GetGatedCipherIds(
         IEnumerable<CollectionDetails>? collections,
         IDictionary<Guid, IGrouping<Guid, CollectionCipher>>? collectionCiphersByCipher)
@@ -296,9 +281,7 @@ public class CipherLeaseGate : ICipherLeaseGate
         return gated;
     }
 
-    /// <summary>
-    /// True if the cipher is leasing-gated for the caller and they hold no valid active lease.
-    /// </summary>
+    /// <summary>True if the cipher is leasing-gated for the caller and they hold no valid active lease.</summary>
     private async Task<bool> IsBlockedAsync(Guid userId, Guid cipherId, Guid? organizationId)
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
@@ -317,18 +300,13 @@ public class CipherLeaseGate : ICipherLeaseGate
     }
 
     /// <summary>
-    /// Whether a lease held in <paramref name="organizationId" /> still authorizes anything: whether the holder is
-    /// still licensed.
+    /// Whether a lease in <paramref name="organizationId" /> still authorizes anything, which requires the holder to be
+    /// licensed. Claims-based, so de-licensing takes effect at the member's next token refresh.
     /// </summary>
-    /// <remarks>
-    /// Claims-based, so a de-licensed member's leases stop working at their next token refresh.
-    /// </remarks>
     private bool LeaseCanRelease(Guid? organizationId) =>
         organizationId is { } id && _currentContext.AccessPam(id);
 
-    /// <summary>
-    /// Whether an enabled access rule governs the cipher for this caller.
-    /// </summary>
+    /// <summary>Whether an enabled access rule governs the cipher for this caller.</summary>
     private async Task<bool> IsGatedForCallerAsync(Guid userId, Guid cipherId, DateTime now)
     {
         var signals = AccessSignals.From(_currentContext.IpAddress, new DateTimeOffset(now, TimeSpan.Zero));

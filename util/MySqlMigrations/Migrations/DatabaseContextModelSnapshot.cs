@@ -1584,6 +1584,12 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid?>("AccessLeaseId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("AccessRequestId")
+                        .HasColumnType("char(36)");
+
                     b.Property<Guid?>("ActingUserId")
                         .HasColumnType("char(36)");
 
@@ -2908,6 +2914,10 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("TargetSystemId")
                         .HasColumnType("char(36)");
 
+                    b.Property<string>("WrappedKey")
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CipherId")
@@ -3003,6 +3013,10 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<byte>("Status")
                         .HasColumnType("tinyint unsigned");
+
+                    b.Property<string>("WrappedKey")
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
 
                     b.HasKey("Id");
 

@@ -1589,6 +1589,12 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("AccessLeaseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AccessRequestId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("ActingUserId")
                         .HasColumnType("uuid");
 
@@ -2914,6 +2920,10 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("TargetSystemId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("WrappedKey")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CipherId")
@@ -3009,6 +3019,10 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<byte>("Status")
                         .HasColumnType("smallint");
+
+                    b.Property<string>("WrappedKey")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
 
                     b.HasKey("Id");
 
