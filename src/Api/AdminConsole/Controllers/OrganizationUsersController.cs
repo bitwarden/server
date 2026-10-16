@@ -6,6 +6,7 @@ using System.Net;
 using Bit.Api.AdminConsole.Attributes;
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Collections;
+using Bit.Api.AdminConsole.Authorization.OrganizationUsers;
 using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
@@ -98,6 +99,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IGetActingUserForOrganizationQuery _getActingUserForOrganizationQuery;
     private readonly IGlobalSettings _globalSettings;
     private readonly IInviteStagedOrganizationUsersCommand _inviteStagedOrganizationUsersCommand;
+    private readonly IOrganizationUserAuthorizationService _organizationUserAuthorizationService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -135,7 +138,9 @@ public class OrganizationUsersController : BaseAdminConsoleController
         V2_UpdateUserCommand.IUpdateOrganizationUserCommand updateOrganizationUserCommandVNext,
         IGetActingUserForOrganizationQuery getActingUserForOrganizationQuery,
         IGlobalSettings globalSettings,
-        IInviteStagedOrganizationUsersCommand inviteStagedOrganizationUsersCommand)
+        IInviteStagedOrganizationUsersCommand inviteStagedOrganizationUsersCommand,
+        IOrganizationUserAuthorizationService organizationUserAuthorizationService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -174,6 +179,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _getActingUserForOrganizationQuery = getActingUserForOrganizationQuery;
         _globalSettings = globalSettings;
         _inviteStagedOrganizationUsersCommand = inviteStagedOrganizationUsersCommand;
+        _organizationUserAuthorizationService = organizationUserAuthorizationService;
+        _featureService = featureService;
     }
 
     [HttpGet("{id}")]
@@ -310,10 +317,24 @@ public class OrganizationUsersController : BaseAdminConsoleController
         // Check the user has permission to grant access to the collections for the new user
         if (model.Collections?.Any() == true)
         {
-            var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(a => a.Id));
-            var authorized =
-                (await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.ModifyUserAccess))
-                .Succeeded;
+            bool authorized;
+            if (_featureService.IsEnabled(FeatureFlagKeys.AuthorizationServices))
+            {
+                var authorizationResult = await _organizationUserAuthorizationService.AuthorizeSaveAsync(
+                    orgId,
+                    organizationUserId: null,
+                    model.Collections.Select(c => c.Id).ToList(),
+                    currentCollectionIds: []);
+                authorized = authorizationResult.UnauthorizedPostedCollectionIds.Count == 0;
+            }
+            else
+            {
+                var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(a => a.Id));
+                authorized =
+                    (await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.ModifyUserAccess))
+                    .Succeeded;
+            }
+
             if (!authorized)
             {
                 throw new NotFoundException();
@@ -475,14 +496,41 @@ public class OrganizationUsersController : BaseAdminConsoleController
         var userId = _userService.GetProperUserId(User)!.Value;
         var editingSelf = userId == organizationUser.UserId;
 
-        // Authorization check:
-        // If admins are not allowed access to all collections, you cannot add yourself to a group.
-        // No error is thrown for this, we just don't update groups.
-        var groupsToSave = editingSelf && !organization.AllowAdminAccessToAllCollectionItems
-            ? null
-            : model.Groups;
+        IEnumerable<Guid> groupsToSave;
+        List<CollectionAccessSelection> collectionAccessToSave;
+        if (_featureService.IsEnabled(FeatureFlagKeys.AuthorizationServices))
+        {
+            var authorizationResult = await _organizationUserAuthorizationService.AuthorizeSaveAsync(
+                organization.Id,
+                id,
+                model.Collections.Select(c => c.Id).ToList(),
+                currentAccess.Select(ca => ca.Id).ToList());
 
-        var collectionAccessToSave = await GetAuthorizedCollectionsToSaveAsync(model, currentAccess, editingSelf, organization);
+            if (!authorizationResult.CanAddSelfToCollection)
+            {
+                throw new BadRequestException("You cannot add yourself to a collection.");
+            }
+
+            if (authorizationResult.UnauthorizedPostedCollectionIds.Count > 0)
+            {
+                throw new NotFoundException();
+            }
+
+            // No error is thrown when the caller cannot edit their own groups, we just don't update groups.
+            groupsToSave = authorizationResult.CanEditOwnGroups ? model.Groups : null;
+            collectionAccessToSave = await BuildCollectionAccessToSaveAsync(
+                model, currentAccess, authorizationResult.UnauthorizedCurrentCollectionIds);
+        }
+        else
+        {
+            // Authorization check:
+            // If admins are not allowed access to all collections, you cannot add yourself to a group.
+            // No error is thrown for this, we just don't update groups.
+            groupsToSave = editingSelf && !organization.AllowAdminAccessToAllCollectionItems
+                ? null
+                : model.Groups;
+            collectionAccessToSave = await GetAuthorizedCollectionsToSaveAsync(model, currentAccess, editingSelf, organization);
+        }
 
         var request = new V2_UpdateUserCommand.UpdateOrganizationUserRequest(
             organizationUser,
@@ -500,6 +548,32 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
         var result = await _updateOrganizationUserCommandVNext.UpdateUserAsync(request);
         return Handle(result);
+    }
+
+    /// <summary>
+    /// Resolves the collection access to persist for an organization user update, keeping the collections the
+    /// saving user is not allowed to change.
+    /// </summary>
+    private async Task<List<CollectionAccessSelection>> BuildCollectionAccessToSaveAsync(
+        OrganizationUserUpdateRequestModel model,
+        ICollection<CollectionAccessSelection> currentAccess,
+        IReadOnlySet<Guid> readonlyCollectionIds)
+    {
+        // The collection entities are read here to find the default collections. That is a business rule rather
+        // than an authorization check, so it stays in the controller.
+        var postedCollections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(c => c.Id));
+        var currentCollections = await _collectionRepository.GetManyByManyIdsAsync(currentAccess.Select(cas => cas.Id));
+
+        var defaultCollectionIds = postedCollections
+            .Concat(currentCollections)
+            .Where(c => c.Type == CollectionType.DefaultUserCollection)
+            .Select(c => c.Id)
+            .ToHashSet();
+
+        return model.Collections.Select(c => c.ToSelectionReadOnly())
+            .Concat(currentAccess.Where(ca => readonlyCollectionIds.Contains(ca.Id)))
+            .Where(ac => !defaultCollectionIds.Contains(ac.Id)) // Remove default collections
+            .ToList();
     }
 
     /// <summary>
