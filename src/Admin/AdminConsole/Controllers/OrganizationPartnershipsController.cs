@@ -19,6 +19,7 @@ public class OrganizationPartnershipsController(
     IOrganizationRepository organizationRepository,
     IOrganizationPartnershipRepository organizationPartnershipRepository,
     ICreateOrganizationPartnershipCommand createOrganizationPartnershipCommand,
+    ISetOrganizationPartnershipStatusCommand setOrganizationPartnershipStatusCommand,
     Bitwarden.Server.Sdk.Features.IFeatureService featureService) : Controller
 {
     private const string _alreadyExistsMessage = "This organization already has a partnership.";
@@ -109,6 +110,37 @@ public class OrganizationPartnershipsController(
         };
         ModelState.AddModelError(key, message);
         return View(model);
+    }
+
+    [HttpPost("deactivate")]
+    [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Org_Plan_Edit)]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public Task<IActionResult> Deactivate([FromRoute] Guid organizationId) =>
+        SetStatusAsync(organizationId, PartnershipStatus.Inactive, "Partnership deactivated.");
+
+    [HttpPost("reactivate")]
+    [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Org_Plan_Edit)]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public Task<IActionResult> Reactivate([FromRoute] Guid organizationId) =>
+        SetStatusAsync(organizationId, PartnershipStatus.Active, "Partnership reactivated.");
+
+    private async Task<IActionResult> SetStatusAsync(Guid organizationId, PartnershipStatus status, string successMessage)
+    {
+        if (!FeatureEnabled())
+        {
+            return NotFound();
+        }
+
+        var result = await setOrganizationPartnershipStatusCommand.SetStatusAsync(organizationId, status);
+        if (!result.IsSuccess)
+        {
+            return NotFound();
+        }
+
+        TempData["Success"] = successMessage;
+        return RedirectToOrganization(organizationId);
     }
 
     private RedirectToActionResult RedirectToOrganization(Guid organizationId) =>

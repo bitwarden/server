@@ -1,9 +1,10 @@
 ﻿@using Bit.Admin.Enums
+@using Bit.Core.AdminConsole.Enums.Partnerships
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
 @inject Bit.Core.Settings.GlobalSettings GlobalSettings
 @model OrganizationViewModel
 @{
-    var canCreatePartnership = !GlobalSettings.SelfHosted
+    var canEditPartnership = !GlobalSettings.SelfHosted
                                && AccessControlService.UserHasPermission(Permission.Org_Plan_Edit);
 }
 
@@ -44,11 +45,29 @@
         <dt class="col-sm-4 col-lg-3">Created</dt>
         <dd id="partnership-creation-date" class="col-sm-8 col-lg-9">@Model.Partnership.CreationDate.ToString()</dd>
     </dl>
+    @if (canEditPartnership)
+    {
+        @if (Model.Partnership.Status == PartnershipStatus.Active)
+        {
+            <form asp-controller="OrganizationPartnerships" asp-action="Deactivate"
+                  asp-route-organizationId="@Model.Organization.Id" method="post" class="mb-3"
+                  onsubmit="return confirm('Deactivate this partnership? The partner will not be able to provision or change entitlements until it is reactivated.')">
+                <button id="partnership-deactivate" type="submit" class="btn btn-outline-danger">Deactivate partnership</button>
+            </form>
+        }
+        else
+        {
+            <form asp-controller="OrganizationPartnerships" asp-action="Reactivate"
+                  asp-route-organizationId="@Model.Organization.Id" method="post" class="mb-3">
+                <button id="partnership-reactivate" type="submit" class="btn btn-secondary">Reactivate partnership</button>
+            </form>
+        }
+    }
 }
 else
 {
     <p>This organization has no partnership.</p>
-    @if (canCreatePartnership)
+    @if (canEditPartnership)
     {
         <a asp-controller="OrganizationPartnerships" asp-action="Create"
            asp-route-organizationId="@Model.Organization.Id"
