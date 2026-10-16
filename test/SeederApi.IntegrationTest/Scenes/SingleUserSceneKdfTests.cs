@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Infrastructure.EntityFramework.Repositories;
