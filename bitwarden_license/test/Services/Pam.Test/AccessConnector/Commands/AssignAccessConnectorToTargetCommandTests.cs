@@ -1,4 +1,6 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
@@ -81,6 +83,30 @@ public class AssignAccessConnectorToTargetCommandTests
 
         await sutProvider.GetDependency<IPamAccessConnectorRepository>().DidNotReceiveWithAnyArgs()
             .CreateAssignmentAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AssignAsync_OrganizationWithoutPam_ThrowsBadRequest(Guid actingUserId, PamAccessConnector accessConnector, PamTargetSystem target)
+    {
+        var sutProvider = Setup();
+        accessConnector.Status = PamAccessConnectorStatus.Enabled;
+        target.OrganizationId = accessConnector.OrganizationId;
+        target.Method = PamTargetSystemMethod.Automatic;
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
+            .Returns(accessConnector);
+        sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(target.Id).Returns(target);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(accessConnector.OrganizationId)
+            .Returns(new OrganizationAbility { Id = accessConnector.OrganizationId, UsePam = false });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AssignAsync(
+                accessConnector.OrganizationId, actingUserId, accessConnector.Id, target.Id));
+
+        Assert.Equal("Your organization's plan does not include Privileged Controls.", exception.Message);
+        await sutProvider.GetDependency<IPamAccessConnectorRepository>().DidNotReceiveWithAnyArgs()
+            .CreateAssignmentAsync(default!);
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs().EmitAsync(default!);
     }
 
     [Theory, BitAutoData]
@@ -191,6 +217,9 @@ public class AssignAccessConnectorToTargetCommandTests
     {
         var sutProvider = new SutProvider<AssignAccessConnectorToTargetCommand>().WithFakeTimeProvider().Create();
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(Arg.Any<Guid>())
+            .Returns(call => new OrganizationAbility { Id = call.Arg<Guid>(), UsePam = true });
         return sutProvider;
     }
 }

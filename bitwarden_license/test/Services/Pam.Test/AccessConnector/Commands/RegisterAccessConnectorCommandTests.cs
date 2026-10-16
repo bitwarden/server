@@ -1,4 +1,6 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Pam.Entities;
@@ -32,6 +34,37 @@ public class RegisterAccessConnectorCommandTests
         await sutProvider.GetDependency<IApiKeyRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
         await sutProvider.GetDependency<IPamAccessConnectorRepository>()
             .DidNotReceiveWithAnyArgs().CreateAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RegisterAsync_OrganizationWithoutPam_ThrowsBadRequest(
+        Guid organizationId, Guid actingUserId, string name, string encryptedPayload, string key)
+    {
+        var sutProvider = Setup();
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { Id = organizationId, UsePam = false });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RegisterAsync(organizationId, actingUserId, name, encryptedPayload, key));
+
+        Assert.Equal("Your organization's plan does not include Privileged Controls.", exception.Message);
+        await AssertNothingWritten(sutProvider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RegisterAsync_OrganizationMissing_ThrowsBadRequest(
+        Guid organizationId, Guid actingUserId, string name, string encryptedPayload, string key)
+    {
+        var sutProvider = Setup();
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns((OrganizationAbility?)null);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RegisterAsync(organizationId, actingUserId, name, encryptedPayload, key));
+
+        await AssertNothingWritten(sutProvider);
     }
 
     [Theory, BitAutoData]
@@ -93,7 +126,18 @@ public class RegisterAccessConnectorCommandTests
     {
         var sutProvider = new SutProvider<RegisterAccessConnectorCommand>().WithFakeTimeProvider().Create();
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(Arg.Any<Guid>())
+            .Returns(call => new OrganizationAbility { Id = call.Arg<Guid>(), UsePam = true });
         return sutProvider;
+    }
+
+    private static async Task AssertNothingWritten(SutProvider<RegisterAccessConnectorCommand> sutProvider)
+    {
+        await sutProvider.GetDependency<IApiKeyRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
+        await sutProvider.GetDependency<IPamAccessConnectorRepository>()
+            .DidNotReceiveWithAnyArgs().CreateAsync(default!);
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs().EmitAsync(default!);
     }
 
     private static void SetupCreates(SutProvider<RegisterAccessConnectorCommand> sutProvider, Guid apiKeyId, Guid accessConnectorId)
