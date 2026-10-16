@@ -7,8 +7,10 @@ using System.Xml;
 using Bit.Core;
 using Bit.Core.Settings;
 using Bitwarden.Server.Sdk.Features;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Sustainsys.Saml2;
 using Sustainsys.Saml2.AspNetCore2;
+using Sustainsys.Saml2.WebSso;
 
 namespace Bit.Sso.Utilities.Saml2;
 
@@ -28,57 +30,44 @@ public static class Saml2OptionsExtensions
             return false;
         }
 
-        if (context.Request.Query["scheme"].FirstOrDefault() == scheme)
+        var featureService = context.RequestServices.GetRequiredService<IFeatureService>();
+        var useHandlerBinding = featureService.IsEnabled(FeatureFlagKeys.PM42283_Rsa15Deprecation);
+        var schemeMatchesQuery = context.Request.Query["scheme"].FirstOrDefault() == scheme;
+
+        if (!useHandlerBinding && schemeMatchesQuery)
         {
             return true;
         }
 
-        XmlElement envelope = null;
-        try
+        XmlElement envelope;
+        if (useHandlerBinding)
         {
-            if (string.Equals(context.Request.Method, "POST", StringComparison.OrdinalIgnoreCase) &&
-                context.Request.HasFormContentType)
+            // The scheme query parameter identifies only a request without a SAML message, such as a metadata
+            // or login-initiation request. A request with a message must pass the inspection below.
+            try
             {
-                string encodedMessage;
-                if (context.Request.Form.TryGetValue("SAMLResponse", out var response))
+                var requestData = context.ToHttpRequestData(new NoCookieManager(), _ => null);
+                var binding = options.Notifications.GetBinding(requestData);
+                if (binding == null)
                 {
-                    encodedMessage = response.FirstOrDefault();
+                    return schemeMatchesQuery;
                 }
-                else
-                {
-                    encodedMessage = context.Request.Form["SAMLRequest"];
-                }
-                if (string.IsNullOrWhiteSpace(encodedMessage))
+                // The middleware already rejects the artifact binding. Artifact resolution needs a call to the identity
+                // provider, which this check never makes.
+                if (binding is Saml2ArtifactBinding)
                 {
                     return false;
                 }
-                envelope = XmlHelpers.XmlDocumentFromString(
-                    Encoding.UTF8.GetString(Convert.FromBase64String(encodedMessage)))?.DocumentElement;
+                envelope = binding.Unbind(requestData, null).Data;
             }
-            else if (string.Equals(context.Request.Method, "GET", StringComparison.OrdinalIgnoreCase))
+            catch
             {
-                var encodedPayload = context.Request.Query["SAMLRequest"].FirstOrDefault() ??
-                    context.Request.Query["SAMLResponse"].FirstOrDefault();
-                try
-                {
-                    var payload = Convert.FromBase64String(encodedPayload);
-                    using var compressed = new MemoryStream(payload);
-                    using var decompressedStream = new DeflateStream(compressed, CompressionMode.Decompress, true);
-                    using var deCompressed = new MemoryStream();
-                    await decompressedStream.CopyToAsync(deCompressed);
-
-                    envelope = XmlHelpers.XmlDocumentFromString(
-                        Encoding.UTF8.GetString(deCompressed.GetBuffer(), 0, (int)deCompressed.Length))?.DocumentElement;
-                }
-                catch (FormatException ex)
-                {
-                    throw new FormatException($"\'{encodedPayload}\' is not a valid Base64 encoded string: {ex.Message}", ex);
-                }
+                return false;
             }
         }
-        catch
+        else
         {
-            return false;
+            envelope = await ReadEnvelopeLegacyAsync(context);
         }
 
         if (envelope == null)
@@ -100,7 +89,6 @@ public static class Saml2OptionsExtensions
 
         if (options.SPOptions.WantAssertionsSigned)
         {
-            var featureService = context.RequestServices.GetRequiredService<IFeatureService>();
             if (featureService.IsEnabled(FeatureFlagKeys.PM42982_WantAssertionsSigned))
             {
                 Saml2AssertionSignatureVerifier.EnsureAssertionsSigned(envelope, options, idp);
@@ -123,6 +111,74 @@ public static class Saml2OptionsExtensions
         }
 
         return true;
+    }
+
+    private static async Task<XmlElement> ReadEnvelopeLegacyAsync(HttpContext context)
+    {
+        try
+        {
+            if (string.Equals(context.Request.Method, "POST", StringComparison.OrdinalIgnoreCase) &&
+                context.Request.HasFormContentType)
+            {
+                string encodedMessage;
+                if (context.Request.Form.TryGetValue("SAMLResponse", out var response))
+                {
+                    encodedMessage = response.FirstOrDefault();
+                }
+                else
+                {
+                    encodedMessage = context.Request.Form["SAMLRequest"];
+                }
+                if (string.IsNullOrWhiteSpace(encodedMessage))
+                {
+                    return null;
+                }
+                return XmlHelpers.XmlDocumentFromString(
+                    Encoding.UTF8.GetString(Convert.FromBase64String(encodedMessage)))?.DocumentElement;
+            }
+
+            if (string.Equals(context.Request.Method, "GET", StringComparison.OrdinalIgnoreCase))
+            {
+                var encodedPayload = context.Request.Query["SAMLRequest"].FirstOrDefault() ??
+                    context.Request.Query["SAMLResponse"].FirstOrDefault();
+                try
+                {
+                    var payload = Convert.FromBase64String(encodedPayload);
+                    using var compressed = new MemoryStream(payload);
+                    using var decompressedStream = new DeflateStream(compressed, CompressionMode.Decompress, true);
+                    using var deCompressed = new MemoryStream();
+                    await decompressedStream.CopyToAsync(deCompressed);
+
+                    return XmlHelpers.XmlDocumentFromString(
+                        Encoding.UTF8.GetString(deCompressed.GetBuffer(), 0, (int)deCompressed.Length))?.DocumentElement;
+                }
+                catch (FormatException ex)
+                {
+                    throw new FormatException($"\'{encodedPayload}\' is not a valid Base64 encoded string: {ex.Message}", ex);
+                }
+            }
+        }
+        catch
+        {
+            return null;
+        }
+
+        return null;
+    }
+
+    // Reading the message needs no cookie. A cookie reader that finds none keeps Sustainsys.Saml2 from
+    // decrypting the RelayState cookie.
+    private sealed class NoCookieManager : ICookieManager
+    {
+        public string GetRequestCookie(HttpContext context, string key) => null;
+
+        public void AppendResponseCookie(HttpContext context, string key, string value, CookieOptions options)
+        {
+        }
+
+        public void DeleteCookie(HttpContext context, string key, CookieOptions options)
+        {
+        }
     }
 
     /// <summary>
