@@ -27,6 +27,7 @@ namespace Bit.Seeder.Pipeline;
 /// Most Core entities require AutoMapper conversion to their EF counterparts before insert;
 /// a few (CollectionCipher) share the same type across layers and copy directly.
 /// Cipher uses a seeder-internal <see cref="CipherBulkRow"/> projection — see <see cref="BulkInsertCiphers"/>.
+/// With data protection disabled, User uses <see cref="UserBulkRow"/> — see <see cref="BulkInsertUnprotectedUsers"/>.
 /// Each list is cleared after insert so the context is ready for the next pipeline run.
 ///
 /// CollectionUser and CollectionGroup require an explicit table name in BulkCopyOptions because
@@ -36,7 +37,7 @@ namespace Bit.Seeder.Pipeline;
 /// </remarks>
 /// <seealso cref="SeederContext"/>
 /// <seealso cref="RecipeExecutor"/>
-internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
+internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper, bool disableDataProtection)
 {
     internal void Commit(SeederContext context)
     {
@@ -48,7 +49,14 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
 
         CommitSsoConfigs(context.SsoConfigs);
 
-        MapCopyAndClear<Core.Entities.User, EfUser>(context.Users);
+        if (disableDataProtection)
+        {
+            BulkInsertUnprotectedUsers(context.Users);
+        }
+        else
+        {
+            MapCopyAndClear<Core.Entities.User, EfUser>(context.Users);
+        }
 
         MapCopyAndClear<Core.Entities.OrganizationUser, EfOrganizationUser>(context.OrganizationUsers);
 
@@ -148,6 +156,22 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
 
         db.SaveChanges();
         ssoConfigs.Clear();
+    }
+
+    /// <summary>
+    /// Bulk-inserts users via a <see cref="UserBulkRow"/> projection, which bypasses the EF
+    /// <c>DataProtectionConverter</c> on <c>Key</c> and <c>MasterPassword</c>.
+    /// The server reads unprefixed values as-is.
+    /// </summary>
+    private void BulkInsertUnprotectedUsers(List<Core.Entities.User> users)
+    {
+        if (users.Count is 0)
+        {
+            return;
+        }
+
+        db.BulkCopy(WithoutTimeout(GetTableName<EfUser>()), users.Select(UserBulkRow.From));
+        users.Clear();
     }
 
     /// <summary>

@@ -211,7 +211,8 @@ public sealed class RecipeExecutorPostCommitTests : IDisposable
 
         var committer = new BulkCommitter(
             _provider.GetRequiredService<DatabaseContext>(),
-            _provider.GetRequiredService<IMapper>());
+            _provider.GetRequiredService<IMapper>(),
+            disableDataProtection: false);
 
         return new RecipeExecutor(_recipe, _provider, committer);
     }
