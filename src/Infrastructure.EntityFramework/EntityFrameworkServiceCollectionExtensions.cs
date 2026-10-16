@@ -131,6 +131,7 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IOrganizationApplicationRepository, OrganizationApplicationRepository>();
         services.AddSingleton<IOrganizationMemberBaseDetailRepository, OrganizationMemberBaseDetailRepository>();
         services.AddSingleton<IOrganizationDeleteTaskRepository, OrganizationDeleteTaskRepository>();
+        services.AddSingleton<IMemberAdoptionReportRepository, MemberAdoptionReportRepository>();
 
         if (selfHosted)
         {
