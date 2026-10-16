@@ -17,6 +17,11 @@ public class CreateRotationConfigRequestModel
     [StringLength(10000)]
     public string SealedData { get; set; } = null!;
 
+    /// <summary>The content key of the sealed blob, wrapped by the organization key.</summary>
+    [Required]
+    [StringLength(2000)]
+    public string WrappedKey { get; set; } = null!;
+
     /// <summary>A Quartz 6-field cron expression evaluated in UTC. Null means no scheduled rotation.</summary>
     [StringLength(100)]
     public string? ScheduleCron { get; set; }
