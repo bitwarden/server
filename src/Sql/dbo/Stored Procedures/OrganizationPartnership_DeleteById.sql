@@ -8,6 +8,12 @@ BEGIN
 
     DELETE
     FROM
+        [dbo].[OrganizationPartnershipReconciliationExport]
+    WHERE
+        [OrganizationPartnershipId] = @Id
+
+    DELETE
+    FROM
         [dbo].[OrganizationPartnershipEntitlement]
     WHERE
         [OrganizationPartnershipId] = @Id

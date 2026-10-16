@@ -21,6 +21,13 @@ public interface IOrganizationPartnershipEntitlementRepository
     Task<ICollection<OrganizationPartnershipEntitlement>> GetManyCanceledWithExpiredResumeWindowAsync(DateTime asOf);
 
     /// <summary>
+    /// Up to <paramref name="pageSize"/> of the partnership's entitlements ordered by Id, starting after
+    /// <paramref name="afterId"/>. Pass the last Id of one page to read the next; a short page is the last.
+    /// </summary>
+    Task<ICollection<OrganizationPartnershipEntitlement>> GetPageByOrganizationPartnershipIdAsync(
+        Guid organizationPartnershipId, Guid? afterId, int pageSize);
+
+    /// <summary>
     /// Writes <paramref name="entitlement"/> only if the stored row's RevisionDate still equals
     /// <paramref name="expectedRevisionDate"/>, so a change made after it was read is never overwritten.
     /// </summary>

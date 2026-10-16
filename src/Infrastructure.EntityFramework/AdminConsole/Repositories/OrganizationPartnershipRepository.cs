@@ -32,6 +32,9 @@ public class OrganizationPartnershipRepository
         var dbContext = GetDatabaseContext(scope);
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
+        await dbContext.OrganizationPartnershipReconciliationExports
+            .Where(e => e.OrganizationPartnershipId == partnership.Id)
+            .ExecuteDeleteAsync();
         await dbContext.OrganizationPartnershipEntitlements
             .Where(e => e.OrganizationPartnershipId == partnership.Id)
             .ExecuteDeleteAsync();

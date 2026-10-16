@@ -159,6 +159,16 @@ BEGIN
     WHERE
         [OrganizationId] = @Id
 
+    -- Delete Organization Partnership Reconciliation Exports
+    DELETE
+        OPRE
+    FROM
+        [dbo].[OrganizationPartnershipReconciliationExport] OPRE
+    INNER JOIN
+        [dbo].[OrganizationPartnership] OP ON OP.[Id] = OPRE.[OrganizationPartnershipId]
+    WHERE
+        OP.[OrganizationId] = @Id
+
     -- Delete Organization Partnership Entitlements
     DELETE
         OPE

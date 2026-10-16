@@ -68,6 +68,26 @@ public class OrganizationPartnershipEntitlementRepository
         return entitlements;
     }
 
+    public async Task<ICollection<AdminConsoleEntities.OrganizationPartnershipEntitlement>>
+        GetPageByOrganizationPartnershipIdAsync(Guid organizationPartnershipId, Guid? afterId, int pageSize)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var query = dbContext.OrganizationPartnershipEntitlements
+            .Where(e => e.OrganizationPartnershipId == organizationPartnershipId);
+        if (afterId is { } after)
+        {
+            query = query.Where(e => e.Id > after);
+        }
+        var results = await query
+            .OrderBy(e => e.Id)
+            .Take(pageSize)
+            .ToListAsync();
+        var entitlements = Mapper.Map<List<AdminConsoleEntities.OrganizationPartnershipEntitlement>>(results);
+        entitlements.ForEach(UnprotectData);
+        return entitlements;
+    }
+
     public async Task<bool> ReplaceIfUnchangedAsync(
         AdminConsoleEntities.OrganizationPartnershipEntitlement entitlement, DateTime expectedRevisionDate)
     {

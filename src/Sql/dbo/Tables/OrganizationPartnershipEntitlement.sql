@@ -26,6 +26,10 @@ CREATE UNIQUE NONCLUSTERED INDEX [IX_OrganizationPartnershipEntitlement_Organiza
     ON [dbo].[OrganizationPartnershipEntitlement]([OrganizationPartnershipId] ASC, [ExternalIdHash] ASC);
 GO
 
+CREATE NONCLUSTERED INDEX [IX_OrganizationPartnershipEntitlement_OrganizationPartnershipId]
+    ON [dbo].[OrganizationPartnershipEntitlement]([OrganizationPartnershipId] ASC);
+GO
+
 CREATE NONCLUSTERED INDEX [IX_OrganizationPartnershipEntitlement_State_ResumeWindowExpirationDate]
     ON [dbo].[OrganizationPartnershipEntitlement]([State] ASC, [ResumeWindowExpirationDate] ASC)
     WHERE [UserId] IS NOT NULL;

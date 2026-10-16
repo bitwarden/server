@@ -233,6 +233,9 @@ public static class OrganizationServiceCollectionExtensions
         services.TryAddScoped<IGetPartnershipEntitlementByExternalIdQuery, GetPartnershipEntitlementByExternalIdQuery>();
         services.TryAddScoped<IExpirePartnershipResumeWindowsCommand, ExpirePartnershipResumeWindowsCommand>();
         services.TryAddScoped<ICreatePartnershipActivationLinkCommand, CreatePartnershipActivationLinkCommand>();
+        services.TryAddScoped<ICreatePartnershipReconciliationExportCommand, CreatePartnershipReconciliationExportCommand>();
+        services.TryAddScoped<IGetPartnershipReconciliationExportQuery, GetPartnershipReconciliationExportQuery>();
+        services.TryAddScoped<IProcessPartnershipReconciliationExportsCommand, ProcessPartnershipReconciliationExportsCommand>();
     }
 
     private static void AddOrganizationDomainCommandsQueries(this IServiceCollection services)
