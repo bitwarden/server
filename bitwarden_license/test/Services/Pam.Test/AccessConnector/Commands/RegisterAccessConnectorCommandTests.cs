@@ -76,10 +76,10 @@ public class RegisterAccessConnectorCommandTests
 
         var result = await sutProvider.Sut.RegisterAsync(organizationId, actingUserId, name, encryptedPayload, key);
 
-        // Not a Secrets Manager key, so it has no service account.
+        // Not a Secrets Manager key, so it has no service account. The name stays off the VARCHAR ApiKey row.
         await sutProvider.GetDependency<IApiKeyRepository>().Received(1).CreateAsync(Arg.Is<ApiKey>(k =>
             k.ServiceAccountId == null
-            && k.Name == name
+            && k.Name == "PAM access connector"
             && k.Scope == "[\"api.pam.rotation\"]"
             && k.EncryptedPayload == encryptedPayload
             && k.Key == key

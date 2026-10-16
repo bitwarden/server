@@ -21,6 +21,8 @@ public class RegisterAccessConnectorCommand : IRegisterAccessConnectorCommand
 {
     private const string AccessConnectorScope = "[\"api.pam.rotation\"]";
     private const int ClientSecretLength = 30;
+    // dbo.ApiKey.Name is VARCHAR, so a non-Latin connector name would not survive; the name lives on the connector.
+    private const string ApiKeyName = "PAM access connector";
 
     private readonly IApiKeyRepository _apiKeyRepository;
     private readonly IPamAccessConnectorRepository _accessConnectorRepository;
@@ -71,7 +73,7 @@ public class RegisterAccessConnectorCommand : IRegisterAccessConnectorCommand
         var apiKey = new ApiKey
         {
             ServiceAccountId = null,
-            Name = name,
+            Name = ApiKeyName,
             ClientSecretHash = Hash(clientSecret),
             Scope = AccessConnectorScope,
             EncryptedPayload = encryptedPayload,
