@@ -135,7 +135,7 @@ The Seeder uses the Rust SDK via FFI because it must behave like a real Bitwarde
 
 ## Server Data Protection
 
-`User.Key` and `User.MasterPassword` pass through the EF `DataProtectionConverter`, so a default seed stores `P|` values that only a server holding the seeding machine's data-protection keys can read. `--no-data-protection` (`SeederDependencies.DisableDataProtection`) inserts users through `Pipeline/UserBulkRow.cs` instead, which skips the converter; the server reads unprefixed values as-is and re-protects them on the next save. SQL Server only: `RecipeOrchestrator` throws on other providers.
+`User.Key` and `User.MasterPassword` pass through the EF `DataProtectionConverter`, so a default seed stores `P|` values that only a server holding the seeding machine's data-protection keys can read. `--no-data-protection` (`SeederDependencies.DisableDataProtection`) inserts users through `Pipeline/UserBulkRow.cs` instead, which skips the converter; the server reads unprefixed values as-is and re-protects them on the next save. SQL Server only: `RecipeOrchestrator` throws on other providers. Use it only against DEV/QA databases that hold seeded accounts.
 
 ## Data Flow
 
