@@ -8,6 +8,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -30,8 +31,12 @@ public class TwoFactorAuthenticationValidator(
     IOrganizationRepository organizationRepository,
     IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> ssoEmail2faSessionTokeFactory,
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+    IValidateTwoFactorRememberTokenQuery validateTwoFactorRememberTokenQuery,
     ICurrentContext currentContext) : ITwoFactorAuthenticationValidator
 {
+    private readonly IValidateTwoFactorRememberTokenQuery _validateTwoFactorRememberTokenQuery =
+        validateTwoFactorRememberTokenQuery;
+
     private readonly IUserService _userService = userService;
     private readonly UserManager<User> _userManager = userManager;
     private readonly IOrganizationDuoUniversalTokenProvider _organizationDuoUniversalTokenProvider = organizationDuoWebTokenProvider;
@@ -117,24 +122,26 @@ public class TwoFactorAuthenticationValidator(
         return twoFactorResultDict;
     }
 
-    public async Task<bool> VerifyTwoFactorAsync(
+    public async Task<TwoFactorVerificationResult> VerifyTwoFactorAsync(
         User user,
         Organization organization,
         TwoFactorProviderType type,
-        string token)
+        string token,
+        string deviceIdentifier)
     {
         if (organization != null && type == TwoFactorProviderType.OrganizationDuo)
         {
             if (organization.TwoFactorProviderIsEnabled(type))
             {
-                return await _organizationDuoUniversalTokenProvider.ValidateAsync(token, organization, user);
+                return new TwoFactorVerificationResult(
+                    await _organizationDuoUniversalTokenProvider.ValidateAsync(token, organization, user));
             }
-            return false;
+            return new TwoFactorVerificationResult(false);
         }
 
         if (type is TwoFactorProviderType.RecoveryCode)
         {
-            return await _userService.RecoverTwoFactorAsync(user, token);
+            return new TwoFactorVerificationResult(await _userService.RecoverTwoFactorAsync(user, token));
         }
 
         // These cases we want to always return false, U2f is deprecated and OrganizationDuo
@@ -143,25 +150,44 @@ public class TwoFactorAuthenticationValidator(
         // provider flow. See IOrganizationDuoUniversalTokenProvider.cs
         if (type is TwoFactorProviderType.U2f or TwoFactorProviderType.OrganizationDuo)
         {
-            return false;
+            return new TwoFactorVerificationResult(false);
+        }
+
+        // Remember is not a provider a user configures, so user.GetTwoFactorProvider(Remember) is always
+        // null and the lookup below would reject it. It is validated on its own terms here instead.
+        if (type is TwoFactorProviderType.Remember)
+        {
+            // TODO: PM-44171 - Remove the legacy token path. PM-40673 introduced a new remember token format and stopped
+            // issuing legacy format tokens. Legacy tokens have a 30 day expiration, so we must wait until more than 30 days
+            // have passed after the release of PM-40673 before we remove this legacy path.
+            var isLegacyFormat = token is null || !token.StartsWith(TwoFactorRememberTokenable.ClearTextPrefix, StringComparison.Ordinal);
+
+            if (isLegacyFormat)
+            {
+                var legacyTokenValid = await _userManager.VerifyTwoFactorTokenAsync(
+                    user, CoreHelpers.CustomProviderName(type), token);
+
+                // Accepting a legacy format token earns a replacement in the new format on this same response,
+                // so the device migrates over on this login rather than waiting out the legacy token's lifetime.
+                return new TwoFactorVerificationResult(legacyTokenValid, legacyTokenValid);
+            }
+
+            return new TwoFactorVerificationResult(
+                await _validateTwoFactorRememberTokenQuery.ValidateAsync(user, deviceIdentifier, token));
         }
 
         // Now we are concerning the rest of the Two Factor Provider Types
 
         // The intent of this check is to make sure that the user is using a 2FA provider that
         // is enabled and allowed by their premium status.
-        // The exception for Remember is because it is a "special" 2FA type that isn't ever explicitly
-        // enabled by a user, so we can't check the user's 2FA providers to see if they're
-        // enabled. We just have to check if the token is valid.
-        if (type != TwoFactorProviderType.Remember &&
-            user.GetTwoFactorProvider(type) == null)
+        if (user.GetTwoFactorProvider(type) == null)
         {
-            return false;
+            return new TwoFactorVerificationResult(false);
         }
 
         // Finally, verify the token based on the provider type.
-        return await _userManager.VerifyTwoFactorTokenAsync(
-            user, CoreHelpers.CustomProviderName(type), token);
+        return new TwoFactorVerificationResult(
+            await _userManager.VerifyTwoFactorTokenAsync(user, CoreHelpers.CustomProviderName(type), token));
     }
 
     private async Task<List<KeyValuePair<TwoFactorProviderType, TwoFactorProvider>>> GetEnabledTwoFactorProvidersAsync(
