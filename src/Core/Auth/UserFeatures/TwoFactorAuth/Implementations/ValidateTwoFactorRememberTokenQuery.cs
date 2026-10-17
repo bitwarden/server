@@ -1,7 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Auth.Models.Business.Tokenables;
+﻿using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
-using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Tokens;
 
@@ -10,10 +8,9 @@ namespace Bit.Core.Auth.UserFeatures.TwoFactorAuth.Implementations;
 public class ValidateTwoFactorRememberTokenQuery(
     ITwoFactorRememberTokenRepository twoFactorRememberTokenRepository,
     IDataProtectorTokenFactory<TwoFactorRememberTokenable> tokenFactory,
-    ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
     TimeProvider timeProvider) : IValidateTwoFactorRememberTokenQuery
 {
-    public async Task<bool> ValidateAsync(User user, Organization? organization, string deviceIdentifier, string token)
+    public async Task<bool> ValidateAsync(User user, string deviceIdentifier, string token)
     {
         if (TwoFactorRememberTokenable.ValidateTwoFactorRememberToken(tokenFactory, token, out var tokenable) != null
             || tokenable is null)
@@ -36,15 +33,6 @@ public class ValidateTwoFactorRememberTokenQuery(
         // value through a case-insensitive collation, and a stricter comparison here would reject a
         // token whose identifier still resolves to the same device row.
         if (!string.Equals(tokenable.DeviceIdentifier, deviceIdentifier, StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        // A remember token stands in for a second factor, so it cannot be honored by an account that
-        // has no 2FA configured, whether by the user or enforced by their organization. Ordered ahead
-        // of the row read because a user with no enabled providers resolves without a database call.
-        if (organization?.TwoFactorIsEnabled() != true &&
-            !await twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
         {
             return false;
         }
