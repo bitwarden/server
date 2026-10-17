@@ -5,9 +5,10 @@ namespace Bit.Admin;
 
 public class AdminSettings
 {
-    // Comma-separated allowlist of email addresses permitted to sign in to the Admin Portal.
-    // Authorization gate for both passwordless and SSO paths - authentication proves identity,
-    // this list decides who's an admin.
+    // Comma-separated allowlist of email addresses permitted to sign in to the Admin Portal
+    // via the passwordless email flow. Authentication proves identity, this list decides who
+    // is an admin on the passwordless path. The SSO path uses IdP group claims mapped via
+    // AdminSettings:Oidc:GroupPrefix instead, so this list does not gate SSO sign-in.
     public virtual string Admins { get; set; }
 
     // Retention window for soft-deleted items before the background cleanup job hard-deletes them.
@@ -74,5 +75,13 @@ public class AdminSettings
         // against IdPs that permit self-registration with unverified email addresses. Set to
         // false only for IdPs that don't emit the claim and are operator-controlled.
         public bool RequireEmailVerifiedClaim { get; set; } = true;
+
+        // Prefix the IdP uses on Admin Portal group names (e.g. `us-prd-cloud-adminportal-`).
+        // The suffix after the prefix is matched case-insensitively against the known role names
+        // in RolePermissionMapping (owner, admin, billing, cs, sales). A group that does not
+        // start with this prefix, or whose suffix is not a known role, is ignored. A principal
+        // with no mapped groups still signs in, but holds no role claims and therefore no
+        // permissions.
+        public string GroupPrefix { get; set; }
     }
 }

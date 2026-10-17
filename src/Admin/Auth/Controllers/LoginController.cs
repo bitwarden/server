@@ -5,6 +5,7 @@ using System.Security.Claims;
 using Bit.Admin.Auth.Filters;
 using Bit.Admin.Auth.IdentityServer;
 using Bit.Admin.Auth.Models;
+using Bit.Admin.Auth.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -16,19 +17,19 @@ namespace Bit.Admin.Auth.Controllers;
 public class LoginController : Controller
 {
     private readonly PasswordlessSignInManager<IdentityUser> _signInManager;
-    private readonly UserManager<IdentityUser> _userManager;
     private readonly AdminSettings _adminSettings;
+    private readonly ISsoSignInPrincipalBuilder _ssoSignInPrincipalBuilder;
     private readonly ILogger<LoginController> _logger;
 
     public LoginController(
         PasswordlessSignInManager<IdentityUser> signInManager,
-        UserManager<IdentityUser> userManager,
         IOptions<AdminSettings> adminSettings,
+        ISsoSignInPrincipalBuilder ssoSignInPrincipalBuilder,
         ILogger<LoginController> logger)
     {
         _signInManager = signInManager;
-        _userManager = userManager;
         _adminSettings = adminSettings.Value;
+        _ssoSignInPrincipalBuilder = ssoSignInPrincipalBuilder;
         _logger = logger;
     }
 
@@ -143,16 +144,6 @@ public class LoginController : Controller
             return RedirectToAction("Index", new { error = 5 });
         }
 
-        var user = await _userManager.FindByEmailAsync(email);
-        if (user == null)
-        {
-            // Same error code as other reject branches. Distinct codes would let any authenticated
-            // IdP user enumerate which emails are on the admin allowlist.
-            _logger.LogWarning("SSO sign-in rejected: principal not on admin allowlist.");
-            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
-            return RedirectToAction("Index", new { error = 5 });
-        }
-
         // Set IsPersistent = false, so SSO sessions die when the browser closes.
         // The passwordless flow uses IsPersistent = true and survives a browser restart.
         var props = new AuthenticationProperties { IsPersistent = false };
@@ -171,7 +162,14 @@ public class LoginController : Controller
             props.StoreTokens([new AuthenticationToken { Name = "id_token", Value = idToken }]);
         }
 
-        await _signInManager.SignInWithClaimsAsync(user, props, Array.Empty<Claim>());
+        // SSO signs in to its own dedicated cookie scheme with a hand-built principal rather
+        // than routing through SignInManager / UserManager. There's no local user record to
+        // look up and no SecurityStamp to track - the IdP owns identity, and session lifetime
+        // is bounded by the cookie expiry. A separate scheme (not the Identity application
+        // cookie) is required because Identity's SecurityStampValidator does a 30s re-fetch
+        // against the user store, which would reject the SSO principal within 30 seconds.
+        var principal = _ssoSignInPrincipalBuilder.Build(email, external.Principal);
+        await HttpContext.SignInAsync(AdminAuthenticationSchemes.SsoCookie, principal, props);
         await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
         _logger.LogInformation("SSO sign-in succeeded.");
 
@@ -187,12 +185,16 @@ public class LoginController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
-        // Presence of `id_token` on the app cookie means this is an SSO session (the
-        // passwordless flow never stores tokens), so it's both the "was SSO" signal and the
-        // value we need for id_token_hint. Read before SignOutAsync clears the cookie.
-        var idToken = await HttpContext.GetTokenAsync("id_token");
+        // Presence of `id_token` on the SSO cookie is both (a) the marker that this is an SSO
+        // session (the passwordless flow writes to a different cookie and stores no tokens)
+        // and (b) the value we need as id_token_hint on RP-initiated logout. Read before the
+        // sign-outs below clear the cookie.
+        var idToken = await HttpContext.GetTokenAsync(AdminAuthenticationSchemes.SsoCookie, "id_token");
 
+        // Sign out of both cookie schemes. SignOutAsync on a scheme the user isn't currently
+        // signed in to is a no-op, so this covers both passwordless and SSO sessions cleanly.
         await _signInManager.SignOutAsync();
+        await HttpContext.SignOutAsync(AdminAuthenticationSchemes.SsoCookie);
 
         var loggedOutRedirect = Url.Action(nameof(Index), "Login", new { success = 1 });
 

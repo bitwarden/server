@@ -3,6 +3,7 @@ using Bit.Admin;
 using Bit.Admin.Auth.Controllers;
 using Bit.Admin.Auth.IdentityServer;
 using Bit.Admin.Auth.Models;
+using Bit.Admin.Auth.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -122,9 +123,13 @@ public class LoginControllerTests
 
     private static void StubCurrentAuth(IAuthenticationService authService, AuthenticationProperties properties)
     {
+        // HttpContext.GetTokenAsync(scheme, name) under the hood calls
+        // IAuthenticationService.AuthenticateAsync(ctx, scheme). The Logout action reads the
+        // id_token from the SSO cookie scheme, so stub that scheme to return the ticket whose
+        // properties carry the token.
         var identity = new ClaimsIdentity(authenticationType: "TestAuth");
         var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), properties, "TestAuth");
-        authService.AuthenticateAsync(Arg.Any<HttpContext>(), null)
+        authService.AuthenticateAsync(Arg.Any<HttpContext>(), AdminAuthenticationSchemes.SsoCookie)
             .Returns(AuthenticateResult.Success(ticket));
     }
 
@@ -150,7 +155,7 @@ public class LoginControllerTests
     [Fact]
     public async Task SsoSignIn_RedirectsError5_WhenExternalAuthFails()
     {
-        var controller = BuildController(oidcEnabled: true, out _, out _);
+        var controller = BuildController(oidcEnabled: true, out _);
         var authService = AttachAuthenticationServices(controller);
         authService.AuthenticateAsync(Arg.Any<HttpContext>(), IdentityConstants.ExternalScheme)
             .Returns(AuthenticateResult.NoResult());
@@ -164,7 +169,7 @@ public class LoginControllerTests
     [Fact]
     public async Task SsoSignIn_RedirectsError5_WhenEmailClaimMissing()
     {
-        var controller = BuildController(oidcEnabled: true, out _, out _);
+        var controller = BuildController(oidcEnabled: true, out _);
         var authService = AttachAuthenticationServices(controller);
         StubExternalPrincipal(authService, new Claim("email_verified", "true"));
 
@@ -179,7 +184,7 @@ public class LoginControllerTests
     [Fact]
     public async Task SsoSignIn_RedirectsError5_WhenEmailVerifiedIsFalse()
     {
-        var controller = BuildController(oidcEnabled: true, out _, out _);
+        var controller = BuildController(oidcEnabled: true, out _);
         var authService = AttachAuthenticationServices(controller);
         StubExternalPrincipal(authService,
             new Claim("email", "you@example.com"),
@@ -194,7 +199,7 @@ public class LoginControllerTests
     [Fact]
     public async Task SsoSignIn_RedirectsError5_WhenEmailVerifiedMissingAndRequired()
     {
-        var controller = BuildController(oidcEnabled: true, out _, out _);
+        var controller = BuildController(oidcEnabled: true, out _);
         var authService = AttachAuthenticationServices(controller);
         StubExternalPrincipal(authService, new Claim("email", "you@example.com"));
 
@@ -210,18 +215,21 @@ public class LoginControllerTests
         // Verifies the security-weakening branch of IsEmailVerified: with
         // RequireEmailVerifiedClaim=false, an absent email_verified claim is allowed.
         // This is the only path where an operator flag reduces posture; pin the contract.
-        var controller = BuildController(oidcEnabled: true, out var signInManager, out var userManager,
+        var controller = BuildController(oidcEnabled: true, out var builder,
             requireEmailVerified: false);
         var authService = AttachAuthenticationServices(controller);
-        var user = new IdentityUser { Email = "you@example.com" };
         StubExternalPrincipal(authService, new Claim("email", "you@example.com"));
-        userManager.FindByEmailAsync("you@example.com").Returns(user);
+        var builtPrincipal = new ClaimsPrincipal(new ClaimsIdentity("test"));
+        builder.Build("you@example.com", Arg.Any<ClaimsPrincipal>()).Returns(builtPrincipal);
 
         var result = await controller.SsoSignIn();
 
         Assert.IsType<RedirectToActionResult>(result);
-        await signInManager.Received(1).SignInWithClaimsAsync(
-            user, Arg.Any<AuthenticationProperties>(), Arg.Any<IEnumerable<Claim>>());
+        await authService.Received(1).SignInAsync(
+            Arg.Any<HttpContext>(),
+            AdminAuthenticationSchemes.SsoCookie,
+            builtPrincipal,
+            Arg.Any<AuthenticationProperties>());
     }
 
     [Fact]
@@ -229,7 +237,7 @@ public class LoginControllerTests
     {
         // Fail-secure: RequireEmailVerifiedClaim=false relaxes only the *absent* case.
         // A claim present with value "false" (or any non-true) still rejects.
-        var controller = BuildController(oidcEnabled: true, out var signInManager, out _,
+        var controller = BuildController(oidcEnabled: true, out _,
             requireEmailVerified: false);
         var authService = AttachAuthenticationServices(controller);
         StubExternalPrincipal(authService,
@@ -240,26 +248,34 @@ public class LoginControllerTests
 
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal(5, redirect.RouteValues!["error"]);
-        await signInManager.DidNotReceive().SignInWithClaimsAsync(
-            Arg.Any<IdentityUser>(), Arg.Any<AuthenticationProperties>(), Arg.Any<IEnumerable<Claim>>());
+        await authService.DidNotReceive().SignInAsync(
+            Arg.Any<HttpContext>(),
+            AdminAuthenticationSchemes.SsoCookie,
+            Arg.Any<ClaimsPrincipal>(),
+            Arg.Any<AuthenticationProperties>());
     }
 
     [Fact]
-    public async Task SsoSignIn_RedirectsError5_WhenEmailNotOnAllowlist()
+    public async Task SsoSignIn_SignsInToApplicationCookie_WithBuiltPrincipal()
     {
-        var controller = BuildController(oidcEnabled: true, out var signInManager, out var userManager);
+        // Controller hands the external principal + email to the builder and signs in the
+        // returned principal directly to the application cookie. No SignInManager, no
+        // IdentityUser.
+        var controller = BuildController(oidcEnabled: true, out var builder);
         var authService = AttachAuthenticationServices(controller);
         StubExternalPrincipal(authService,
-            new Claim("email", "stranger@example.com"),
+            new Claim("email", "you@example.com"),
             new Claim("email_verified", "true"));
-        userManager.FindByEmailAsync("stranger@example.com").Returns((IdentityUser)null);
+        var builtPrincipal = new ClaimsPrincipal(new ClaimsIdentity("test"));
+        builder.Build("you@example.com", Arg.Any<ClaimsPrincipal>()).Returns(builtPrincipal);
 
-        var result = await controller.SsoSignIn();
+        await controller.SsoSignIn();
 
-        var redirect = Assert.IsType<RedirectToActionResult>(result);
-        Assert.Equal(5, redirect.RouteValues!["error"]);
-        await signInManager.DidNotReceive().SignInWithClaimsAsync(
-            Arg.Any<IdentityUser>(), Arg.Any<AuthenticationProperties>(), Arg.Any<IEnumerable<Claim>>());
+        await authService.Received(1).SignInAsync(
+            Arg.Any<HttpContext>(),
+            AdminAuthenticationSchemes.SsoCookie,
+            builtPrincipal,
+            Arg.Any<AuthenticationProperties>());
     }
 
     [Theory]
@@ -269,7 +285,7 @@ public class LoginControllerTests
     [InlineData("")]
     public async Task SsoSignIn_RedirectsError5_WhenEmailVerifiedIsNonBoolean(string value)
     {
-        var controller = BuildController(oidcEnabled: true, out _, out _);
+        var controller = BuildController(oidcEnabled: true, out _);
         var authService = AttachAuthenticationServices(controller);
         StubExternalPrincipal(authService,
             new Claim("email", "you@example.com"),
@@ -287,37 +303,38 @@ public class LoginControllerTests
         // Presence of id_token on the app cookie is both (a) the marker that this is an SSO
         // session, so Logout will trigger RP-initiated logout, and (b) the value used as
         // id_token_hint on the end-session request. Assert it lands on the sign-in props.
-        var controller = BuildController(oidcEnabled: true, out var signInManager, out var userManager);
+        var controller = BuildController(oidcEnabled: true, out var builder);
         var authService = AttachAuthenticationServices(controller);
-        var user = new IdentityUser { Email = "you@example.com" };
         StubExternalPrincipalWithTokens(authService,
             tokens: [new AuthenticationToken { Name = "id_token", Value = "the-id-token" }],
             claims: [
                 new Claim("email", "you@example.com"),
                 new Claim("email_verified", "true"),
             ]);
-        userManager.FindByEmailAsync("you@example.com").Returns(user);
+        builder.Build(Arg.Any<string>(), Arg.Any<ClaimsPrincipal>())
+            .Returns(new ClaimsPrincipal(new ClaimsIdentity("test")));
 
         var result = await controller.SsoSignIn();
 
         Assert.IsType<RedirectToActionResult>(result);
-        await signInManager.Received(1).SignInWithClaimsAsync(
-            user,
-            Arg.Is<AuthenticationProperties>(p => p.GetTokenValue("id_token") == "the-id-token"),
-            Arg.Any<IEnumerable<Claim>>());
+        await authService.Received(1).SignInAsync(
+            Arg.Any<HttpContext>(),
+            AdminAuthenticationSchemes.SsoCookie,
+            Arg.Any<ClaimsPrincipal>(),
+            Arg.Is<AuthenticationProperties>(p => p.GetTokenValue("id_token") == "the-id-token"));
     }
 
     [Fact]
     public async Task SsoSignIn_RedirectsToLocalReturnUrl_WhenLocal()
     {
-        var controller = BuildController(oidcEnabled: true, out _, out var userManager);
+        var controller = BuildController(oidcEnabled: true, out var builder);
         var authService = AttachAuthenticationServices(controller);
         controller.Url.IsLocalUrl("/dashboard").Returns(true);
-        var user = new IdentityUser { Email = "you@example.com" };
         StubExternalPrincipal(authService,
             new Claim("email", "you@example.com"),
             new Claim("email_verified", "true"));
-        userManager.FindByEmailAsync("you@example.com").Returns(user);
+        builder.Build(Arg.Any<string>(), Arg.Any<ClaimsPrincipal>())
+            .Returns(new ClaimsPrincipal(new ClaimsIdentity("test")));
 
         var result = await controller.SsoSignIn(returnUrl: "/dashboard");
 
@@ -341,14 +358,14 @@ public class LoginControllerTests
     [Fact]
     public async Task SsoSignIn_RedirectsToHome_WhenReturnUrlNotLocal()
     {
-        var controller = BuildController(oidcEnabled: true, out _, out var userManager);
+        var controller = BuildController(oidcEnabled: true, out var builder);
         var authService = AttachAuthenticationServices(controller);
         controller.Url.IsLocalUrl("https://evil.example.com").Returns(false);
-        var user = new IdentityUser { Email = "you@example.com" };
         StubExternalPrincipal(authService,
             new Claim("email", "you@example.com"),
             new Claim("email_verified", "true"));
-        userManager.FindByEmailAsync("you@example.com").Returns(user);
+        builder.Build(Arg.Any<string>(), Arg.Any<ClaimsPrincipal>())
+            .Returns(new ClaimsPrincipal(new ClaimsIdentity("test")));
 
         var result = await controller.SsoSignIn(returnUrl: "https://evil.example.com");
 
@@ -358,12 +375,11 @@ public class LoginControllerTests
     }
 
     private static LoginController BuildController(bool oidcEnabled) =>
-        BuildController(oidcEnabled, out _, out _);
+        BuildController(oidcEnabled, out _);
 
     private static LoginController BuildController(
         bool oidcEnabled,
-        out PasswordlessSignInManager<IdentityUser> signInManager,
-        out UserManager<IdentityUser> userManager,
+        out ISsoSignInPrincipalBuilder ssoSignInPrincipalBuilder,
         bool requireEmailVerified = true,
         bool enablePasswordlessLogin = true)
     {
@@ -376,13 +392,14 @@ public class LoginControllerTests
                     Authority = "https://idp.example.com",
                     ClientId = "admin-portal",
                     ClientSecret = "supersecret",
+                    GroupPrefix = "us-prd-cloud-adminportal-",
                     RequireEmailVerifiedClaim = requireEmailVerified,
                 }
                 : null,
         };
 
         var userStore = Substitute.For<IUserStore<IdentityUser>>();
-        userManager = Substitute.For<UserManager<IdentityUser>>(
+        var userManager = Substitute.For<UserManager<IdentityUser>>(
             userStore,
             Substitute.For<IOptions<IdentityOptions>>(),
             Substitute.For<IPasswordHasher<IdentityUser>>(),
@@ -393,7 +410,7 @@ public class LoginControllerTests
             Substitute.For<IServiceProvider>(),
             Substitute.For<ILogger<UserManager<IdentityUser>>>());
 
-        signInManager = Substitute.For<PasswordlessSignInManager<IdentityUser>>(
+        var signInManager = Substitute.For<PasswordlessSignInManager<IdentityUser>>(
             userManager,
             Substitute.For<IHttpContextAccessor>(),
             Substitute.For<IUserClaimsPrincipalFactory<IdentityUser>>(),
@@ -403,7 +420,9 @@ public class LoginControllerTests
             Substitute.For<IUserConfirmation<IdentityUser>>(),
             Substitute.For<Bit.Core.Services.IMailService>());
 
-        return new LoginController(signInManager, userManager, Options.Create(settings),
-            Substitute.For<ILogger<LoginController>>());
+        ssoSignInPrincipalBuilder = Substitute.For<ISsoSignInPrincipalBuilder>();
+
+        return new LoginController(signInManager, Options.Create(settings),
+            ssoSignInPrincipalBuilder, Substitute.For<ILogger<LoginController>>());
     }
 }
