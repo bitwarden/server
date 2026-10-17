@@ -206,9 +206,8 @@ public class RememberedDeviceLoginTests
     /// </summary>
     /// <remarks>
     /// The replay happens <em>after</em> two-factor is re-enabled, deliberately. While the account
-    /// has no second factor the token is refused for that reason alone, so a test that stopped at
-    /// the teardown would pass even with the revocation removed entirely — it would prove the
-    /// product behavior and nothing about the mechanism.
+    /// has no second factor, no challenge is issued at all and the replay would log in on the
+    /// password alone, so it would say nothing about whether the revocation worked.
     /// </remarks>
     [Fact]
     public async Task RecoveryCodeTeardown_RevokesRememberedDevices()
