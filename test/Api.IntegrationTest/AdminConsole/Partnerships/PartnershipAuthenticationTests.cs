@@ -64,8 +64,9 @@ public class PartnershipAuthenticationTests : IClassFixture<ApiApplicationFactor
     {
         using var client = (await PartnershipTestHelpers.CreateOrganizationClientAsync(_factory, status: null)).Client;
 
-        var response = await client.PostAsync("/partnerships/v1/envelope-test/model",
-            new StringContent("{}", System.Text.Encoding.UTF8, "application/json"));
+        using var content = new StringContent("{}", System.Text.Encoding.UTF8, "application/json");
+
+        var response = await client.PostAsync("/partnerships/v1/envelope-test/model", content);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         await AssertEnvelopeAsync(response, "not_found");
