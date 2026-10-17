@@ -1,0 +1,54 @@
+﻿@using Bit.Core.AdminConsole.Enums.Partnerships
+@using Bit.Core.AdminConsole.OrganizationFeatures.Partnerships
+@model CreateOrganizationPartnershipModel
+@{
+    ViewData["Title"] = "Create Partnership";
+}
+
+<h1>Create Partnership <small>@Model.OrganizationName</small></h1>
+
+<div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+<form method="post" asp-action="Create" asp-route-organizationId="@Model.OrganizationId">
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" maxlength="@CreateOrganizationPartnershipRequest.NameMaxLength" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+
+    <fieldset class="mb-3">
+        <legend class="form-label fs-6">@Html.DisplayNameFor(m => m.AllowedSponsoredPlanTypes)</legend>
+        @foreach (var planType in Enum.GetValues<SponsoredPlanType>())
+        {
+            var id = $"allowed-plan-type-{planType}";
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="@id" name="@nameof(Model.AllowedSponsoredPlanTypes)"
+                       value="@planType" checked="@Model.AllowedSponsoredPlanTypes.Contains(planType)" />
+                <label class="form-check-label" for="@id">@planType</label>
+            </div>
+        }
+        <span asp-validation-for="AllowedSponsoredPlanTypes" class="text-danger"></span>
+    </fieldset>
+
+    <div class="mb-3">
+        <label asp-for="BindingMode" class="form-label"></label>
+        <select asp-for="BindingMode" class="form-select">
+            <option value="@PartnershipBindingMode.Token">Token</option>
+        </select>
+        <span asp-validation-for="BindingMode" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="RegisteredReturnOrigins" class="form-label"></label>
+        <textarea asp-for="RegisteredReturnOrigins" class="form-control" rows="4"
+                  placeholder="https://partner.example.com"></textarea>
+        <span asp-validation-for="RegisteredReturnOrigins" class="text-danger"></span>
+        <div class="form-text">One https origin per line, without a path.</div>
+    </div>
+
+    <div class="d-flex">
+        <button type="submit" class="btn btn-primary">Create</button>
+        <a asp-controller="Organizations" asp-action="Edit" asp-route-id="@Model.OrganizationId"
+           class="btn btn-secondary ms-2">Cancel</a>
+    </div>
+</form>

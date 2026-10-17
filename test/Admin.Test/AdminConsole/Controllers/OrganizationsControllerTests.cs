@@ -2260,4 +2260,65 @@ public class OrganizationsControllerTests
 
         Assert.Null(model.Trial);
     }
+
+    [Theory, BitAutoData]
+    public async Task View_PartnershipsEnabled_LoadsPartnership(
+        Organization organization,
+        OrganizationPartnership partnership,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPartnerships(sutProvider, organization, partnership, enabled: true);
+
+        var result = await sutProvider.Sut.View(organization.Id);
+
+        var model = Assert.IsType<OrganizationViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.True(model.PartnershipsEnabled);
+        Assert.Same(partnership, model.Partnership);
+    }
+
+    [Theory, BitAutoData]
+    public async Task View_PartnershipsDisabled_DoesNotReadPartnership(
+        Organization organization,
+        OrganizationPartnership partnership,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPartnerships(sutProvider, organization, partnership, enabled: false);
+
+        var result = await sutProvider.Sut.View(organization.Id);
+
+        var model = Assert.IsType<OrganizationViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.False(model.PartnershipsEnabled);
+        Assert.Null(model.Partnership);
+        await sutProvider.GetDependency<IOrganizationPartnershipRepository>()
+            .DidNotReceiveWithAnyArgs().GetByOrganizationIdAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Edit_Get_PartnershipsEnabled_LoadsPartnership(
+        Organization organization,
+        OrganizationPartnership partnership,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPartnerships(sutProvider, organization, partnership, enabled: true);
+
+        var model = await GetEditModelAsync(sutProvider, organization);
+
+        Assert.True(model.PartnershipsEnabled);
+        Assert.Same(partnership, model.Partnership);
+    }
+
+    private static void StubPartnerships(
+        SutProvider<OrganizationsController> sutProvider,
+        Organization organization,
+        OrganizationPartnership partnership,
+        bool enabled)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(Bit.Core.FeatureFlagKeys.PartnerSponsorships)
+            .Returns(enabled);
+        sutProvider.GetDependency<IOrganizationPartnershipRepository>()
+            .GetByOrganizationIdAsync(organization.Id)
+            .Returns(partnership);
+    }
 }
