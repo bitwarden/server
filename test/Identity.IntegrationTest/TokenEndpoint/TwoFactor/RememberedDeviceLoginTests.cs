@@ -115,10 +115,13 @@ public class RememberedDeviceLoginTests
 
     /// <summary>
     /// A login that presents a remember token must not be issued another one, or an active user's
-    /// remember-me would renew forever.
+    /// remember-me would renew forever. Replayed with and without asking to be remembered again, since
+    /// a client can send <c>TwoFactorRemember=1</c> regardless.
     /// </summary>
-    [Fact]
-    public async Task RememberToken_ReplayedOnNextLogin_DoesNotIssueAnotherToken()
+    [Theory]
+    [InlineData("0")]
+    [InlineData("1")]
+    public async Task RememberToken_ReplayedOnNextLogin_DoesNotIssueAnotherToken(string twoFactorRemember)
     {
         var (factory, _) = await CreateFactoryWithTwoFactorUserAsync();
 
@@ -131,7 +134,7 @@ public class RememberedDeviceLoginTests
             _testPassword,
             twoFactorProviderType: _rememberProvider,
             twoFactorToken: rememberToken!,
-            twoFactorRemember: "0");
+            twoFactorRemember: twoFactorRemember);
 
         using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = body.RootElement;
