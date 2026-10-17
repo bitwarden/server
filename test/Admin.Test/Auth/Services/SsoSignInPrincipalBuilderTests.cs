@@ -1,24 +1,24 @@
 ﻿using System.Security.Claims;
 using Bit.Admin;
+using Bit.Admin.Auth.IdentityServer;
 using Bit.Admin.Auth.Services;
-using Microsoft.AspNetCore.Identity;
 
 namespace Admin.Test.Auth.Services;
 
 public class SsoSignInPrincipalBuilderTests
 {
     [Fact]
-    public void Build_PrincipalIsAuthenticated_WithApplicationSchemeAuthenticationType()
+    public void Build_PrincipalIsAuthenticated_WithSsoCookieAuthenticationType()
     {
-        // IsAuthenticated depends on AuthenticationType being non-null. The application cookie
-        // middleware expects any principal written via HttpContext.SignInAsync to resolve as
-        // authenticated.
+        // IsAuthenticated depends on AuthenticationType being non-null. The AuthenticationType
+        // must match the scheme the controller signs this principal into so middleware traces
+        // and anything keying off Identity.AuthenticationType report the actual scheme.
         var builder = BuildBuilder();
 
         var principal = builder.Build("you@example.com", PrincipalWithGroups());
 
         Assert.True(principal.Identity!.IsAuthenticated);
-        Assert.Equal(IdentityConstants.ApplicationScheme, principal.Identity.AuthenticationType);
+        Assert.Equal(AdminAuthenticationSchemes.SsoCookie, principal.Identity.AuthenticationType);
     }
 
     [Fact]

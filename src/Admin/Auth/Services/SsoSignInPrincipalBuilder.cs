@@ -2,7 +2,7 @@
 #nullable disable
 
 using System.Security.Claims;
-using Microsoft.AspNetCore.Identity;
+using Bit.Admin.Auth.IdentityServer;
 
 namespace Bit.Admin.Auth.Services;
 
@@ -33,9 +33,9 @@ public class SsoSignInPrincipalBuilder : ISsoSignInPrincipalBuilder
     public ClaimsPrincipal Build(string email, ClaimsPrincipal externalPrincipal)
     {
         // AuthenticationType is required for ClaimsIdentity.IsAuthenticated to return true.
-        // Using the application scheme name is conventional and makes the identity recognizable
-        // in middleware traces.
-        var identity = new ClaimsIdentity(IdentityConstants.ApplicationScheme);
+        // Match the scheme the controller signs this principal into so middleware traces and
+        // any code keying off Identity.AuthenticationType report the actual scheme.
+        var identity = new ClaimsIdentity(AdminAuthenticationSchemes.SsoCookie);
 
         identity.AddClaim(new Claim(ClaimTypes.Name, email));
         identity.AddClaim(new Claim(ClaimTypes.Email, email));
