@@ -150,7 +150,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             { "globalSettings:postgreSql:connectionString", "Host=localhost;Username=test;Password=test;Database=test" },
 
             // Clear the redis connection string for distributed caching, forcing an in-memory implementation
-            { "globalSettings:redis:connectionString", "" },
+            { "globalSettings:distributedCache:redis:connectionString", "" },
 
             // Clear Storage
             { "globalSettings:attachment:connectionString", null },

@@ -94,9 +94,10 @@ public static class ServiceCollectionExtension
             PrivateKey = globalSettings.Braintree.PrivateKey,
         });
 
-        // SubscriberService → PriceIncreaseScheduler has a hard constructor dependency on the obsolete
-        // IFeatureService. NoopFeatureService satisfies it without pulling in the LaunchDarkly-backed SDK.
-        services.TryAddSingleton<Bit.Core.Services.IFeatureService, NoopFeatureService>();
+        // SubscriberService → PriceIncreaseScheduler (and other billing services) have hard constructor
+        // dependencies on IFeatureService. NoopFeatureService satisfies it without pulling in the
+        // LaunchDarkly-backed SDK.
+        services.TryAddSingleton<Bitwarden.Server.Sdk.Features.IFeatureService, NoopFeatureService>();
 
         services.AddScoped<IStripeBillingInitializer, StripeBillingInitializer>();
 
