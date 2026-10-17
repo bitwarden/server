@@ -175,10 +175,8 @@ public class TwoFactorAuthenticationValidator(
                 return new TwoFactorVerificationResult(legacyTokenValid, legacyTokenValid);
             }
 
-            // The query checks that the user has a second factor, personal or enforced by their
-            // organization, so it needs the organization too.
             return new TwoFactorVerificationResult(
-                await _validateTwoFactorRememberTokenQuery.ValidateAsync(user, organization, deviceIdentifier, token));
+                await _validateTwoFactorRememberTokenQuery.ValidateAsync(user, deviceIdentifier, token));
         }
 
         // Now we are concerning the rest of the Two Factor Provider Types
