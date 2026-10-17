@@ -34,7 +34,7 @@ rather than a policy merely being "enabled".
 Policy enforcement generally depends on:
 
 - The user's role - Owners and Admins are exempt by default (but some policies override this).
-- The user's status - Invited and Revoked users are exempt by default.
+- The user's status - Staged, Invited and Revoked users are exempt by default.
 - Whether the user is a Provider user managing the organization - Providers are exempt by default.
 
 Individual policies can change these defaults. A user can also belong to several organizations, each with its own policies,
@@ -100,13 +100,16 @@ than `Enabled`.
 Each requirement has a factory that defines its filtering and combining rules. This keeps the business rules in one place,
 so consumers do not need to repeat them.
 
+**Note:** `IPolicyRequirementQuery` never returns `Staged` memberships, so a requirement cannot opt in to enforcing
+against `Staged` users by changing `ExemptStatuses`.
+
 See [policy requirements](PolicyRequirements/README.md).
 
 ### Pre-access enforcement
 
-Some flows need to check a target organization's policies against a user who is about to be given access to it, such as
-accepting an invite, confirming a member or restoring a revoked member. The user may not have an active membership yet, so
-the normal requirement query cannot answer the question.
+Some flows need to check a target organization's policies against a user who is about to be given access to it. The user
+may not have an active membership yet, so the normal requirement query cannot answer the question. See
+[enforcing policies before gaining access](#enforcing-policies-before-gaining-access).
 
 `IPreAccessEnforcerQuery` loads the target organization's policies and returns an `IPreAccessPolicyEnforcer`, which evaluates
 them against the role the user will hold. It reuses the role and provider exemptions defined by the policy requirement
@@ -127,3 +130,20 @@ Clients receive policies through sync and enforce many of them locally. There ar
    enforce complexity requirements, but the server calculates the requirements that apply to the user.
 
 **If the policy can be enforced by the server, it should be.** Never rely on simply hiding something in the UI.
+
+### Enforcing policies before gaining access
+
+There are two broad situations when policies are enforced:
+
+1. During normal application use.
+2. As a precondition to gaining access to an organization. This includes accepting an organization invite, being
+   confirmed by an admin, or being restored from a revoked status. This is called "pre-access" enforcement.
+
+Pre-access enforcement checks whether the user _would_ comply once the status change is made. The user's current status
+in the target organization is irrelevant, so status exemptions are not applied; only role and provider exemptions are.
+This is the special case that `IPreAccessEnforcerQuery` addresses. By contrast, `IPolicyRequirementQuery` enforces
+policies against the user's current memberships, with all exemptions applied.
+
+A pre-access flow may need both queries: `IPreAccessEnforcerQuery` for the target organization's policies, and
+`IPolicyRequirementQuery` for the policies of organizations the user already belongs to, if that could affect
+the flow (e.g. another organization's `SingleOrg` policy may prevent the user from joining).
