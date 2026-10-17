@@ -58,8 +58,8 @@ public class PartnershipErrorEnvelopeTests : IClassFixture<ApiApplicationFactory
     [Fact]
     public async Task InvalidModel_Returns400Envelope()
     {
-        var response = await _client.PostAsync("/partnerships/v1/envelope-test/model",
-            new StringContent("{}", System.Text.Encoding.UTF8, "application/json"));
+        using var content = new StringContent("{}", System.Text.Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync("/partnerships/v1/envelope-test/model", content);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var body = await ReadBodyAsync(response);
