@@ -282,6 +282,53 @@ public class UserServiceTests
     }
 
     /// <summary>
+    /// Removing the last provider also revokes the user from organizations that require two-step login.
+    /// That enforcement runs before the remember-token revoke, so a failing remember-token revoke cannot
+    /// skip it.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task DisableTwoFactorProviderAsync_LastProviderRemoved_RememberTokenRevocationFails_StillEnforcesPolicies(
+        SutProvider<UserService> sutProvider, User user, Organization organization, Guid organizationUserId)
+    {
+        // Arrange
+        user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+        {
+            [TwoFactorProviderType.Email] = new() { Enabled = true }
+        });
+        organization.Enabled = true;
+        organization.UseSso = true;
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
+            .Returns(new RequireTwoFactorPolicyRequirement(
+            [
+                new PolicyDetails
+                {
+                    OrganizationId = organization.Id,
+                    OrganizationUserId = organizationUserId,
+                    OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
+                    PolicyType = PolicyType.TwoFactorAuthentication
+                }
+            ]));
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetManyByIdsAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(organization.Id)))
+            .Returns(new[] { organization });
+        sutProvider.GetDependency<IRevokeTwoFactorRememberTokensCommand>()
+            .RevokeAllForUserAsync(user.Id)
+            .Returns(Task.FromException(new InvalidOperationException("database unavailable")));
+
+        // Act
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => sutProvider.Sut.DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Email));
+
+        // Assert
+        await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
+            .Received(1)
+            .RevokeNonCompliantOrganizationUsersAsync(
+                Arg.Is<RevokeOrganizationUsersRequest>(r => r.OrganizationId == organization.Id &&
+                    r.OrganizationUsers.First().Id == organizationUserId));
+    }
+
+    /// <summary>
     /// Going from several providers to fewer leaves working two-factor in place, so remembered
     /// devices stay trusted. Over-firing here would log people out of remember-me for no reason.
     /// </summary>
