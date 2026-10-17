@@ -483,7 +483,7 @@ public class TwoFactorAuthenticationValidatorTests
     {
         // Arrange
         var token = TwoFactorRememberTokenable.ClearTextPrefix + tokenBody;
-        _validateTwoFactorRememberTokenQuery.ValidateAsync(user, null, DeviceIdentifier, token).Returns(true);
+        _validateTwoFactorRememberTokenQuery.ValidateAsync(user, DeviceIdentifier, token).Returns(true);
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
@@ -491,28 +491,7 @@ public class TwoFactorAuthenticationValidatorTests
 
         // Assert
         Assert.True(result.Succeeded);
-        await _validateTwoFactorRememberTokenQuery.Received(1).ValidateAsync(user, null, DeviceIdentifier, token);
-    }
-
-    /// <summary>
-    /// The query decides whether the user, or their organization, supplies the second factor, so the
-    /// organization has to reach it.
-    /// </summary>
-    [Theory, BitAutoData]
-    public async void VerifyTwoFactorAsync_Remember_PassesOrganizationToRememberTokenQuery(
-        User user, Organization organization, string tokenBody)
-    {
-        // Arrange
-        var token = TwoFactorRememberTokenable.ClearTextPrefix + tokenBody;
-        _validateTwoFactorRememberTokenQuery.ValidateAsync(user, organization, DeviceIdentifier, token).Returns(true);
-
-        // Act
-        var result = await _sut.VerifyTwoFactorAsync(
-            user, organization, TwoFactorProviderType.Remember, token, DeviceIdentifier);
-
-        // Assert
-        Assert.True(result.Succeeded);
-        await _validateTwoFactorRememberTokenQuery.Received(1).ValidateAsync(user, organization, DeviceIdentifier, token);
+        await _validateTwoFactorRememberTokenQuery.Received(1).ValidateAsync(user, DeviceIdentifier, token);
     }
 
     // ---------------------------------------------------------------------------------------
@@ -596,7 +575,7 @@ public class TwoFactorAuthenticationValidatorTests
     {
         // Arrange
         var token = TwoFactorRememberTokenable.ClearTextPrefix + "current-format-token";
-        _validateTwoFactorRememberTokenQuery.ValidateAsync(user, null, DeviceIdentifier, token).Returns(true);
+        _validateTwoFactorRememberTokenQuery.ValidateAsync(user, DeviceIdentifier, token).Returns(true);
         _userManager.TWO_FACTOR_TOKEN_VERIFIED = false;
 
         // Act
@@ -613,7 +592,7 @@ public class TwoFactorAuthenticationValidatorTests
     {
         // Arrange
         var token = TwoFactorRememberTokenable.ClearTextPrefix + tokenBody;
-        _validateTwoFactorRememberTokenQuery.ValidateAsync(user, null, DeviceIdentifier, token).Returns(false);
+        _validateTwoFactorRememberTokenQuery.ValidateAsync(user, DeviceIdentifier, token).Returns(false);
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
