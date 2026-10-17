@@ -117,12 +117,19 @@ public class Startup
             });
         services.AddAuthorization(options =>
         {
-            // Try the Identity cookie first, then the SSO cookie. The PolicyEvaluator calls
-            // AuthenticateAsync on each listed scheme and sets HttpContext.User to the first
-            // successful result, so both passwordless and SSO sessions satisfy bare [Authorize]
-            // and are visible to AccessControlService. Each scheme is actually decrypted and
-            // validated - no cookie-name presence heuristic that would short-circuit a valid
-            // session when a stale cookie from the other scheme happens to be on the request.
+            // DefaultPolicy applies when [Authorize] is present without its own policy. Listing
+            // both schemes makes PolicyEvaluator call AuthenticateAsync on each one in order
+            // and set HttpContext.User to the first successful result, so both passwordless
+            // and SSO sessions satisfy bare [Authorize] and are visible to AccessControlService.
+            // Each scheme is actually decrypted and validated - no cookie-name presence
+            // heuristic that would short-circuit a valid session when a stale cookie from the
+            // other scheme is on the request.
+            //
+            // Deliberately NOT set as FallbackPolicy: a fallback would require auth on every
+            // endpoint without an explicit [Authorize]/[AllowAnonymous], locking out the login
+            // pages (LoginController.Index/Confirm), health probes (/alive), /error, and the
+            // version endpoint. Anonymous-by-default + opt-in [Authorize] on controllers is
+            // the Admin app's established posture.
             //
             // DefaultAuthenticateScheme / DefaultChallengeScheme stay at Identity's application
             // cookie (set by AddIdentity), so bare [Authorize] redirects to /login via Identity
@@ -132,7 +139,6 @@ public class Startup
                     AdminAuthenticationSchemes.SsoCookie)
                 .RequireAuthenticatedUser()
                 .Build();
-            options.FallbackPolicy = options.DefaultPolicy;
         });
         if (globalSettings.SelfHosted)
         {
