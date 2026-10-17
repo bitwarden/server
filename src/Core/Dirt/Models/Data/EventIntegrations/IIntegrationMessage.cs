@@ -8,6 +8,7 @@ public interface IIntegrationMessage
     string MessageId { get; set; }
     string? OrganizationId { get; set; }
     int RetryCount { get; }
+    Guid? ConfigurationId { get; }
     DateTime? DelayUntilDate { get; }
     void ApplyRetry(DateTime? handlerDelayUntilDate);
     string ToJson();

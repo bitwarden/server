@@ -247,4 +247,43 @@ public class OrganizationIntegrationControllerTests
 
         Assert.IsType<NotFoundResult>(response.Result);
     }
+
+    [Theory, BitAutoData]
+    public async Task EnableAsync_AllParamsProvided_ReturnsTheNumberReEnabled(
+        SutProvider<OrganizationIntegrationController> sutProvider,
+        Guid organizationId,
+        Guid integrationId)
+    {
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IEnableOrganizationIntegrationCommand>()
+            .EnableAsync(organizationId, integrationId)
+            .Returns(2);
+
+        var response = await sutProvider.Sut.EnableAsync(organizationId, integrationId);
+
+        var okResult = Assert.IsType<OkObjectResult>(response.Result);
+        Assert.Equal(2, okResult.Value);
+    }
+
+    [Theory, BitAutoData]
+    public async Task EnableAsync_UserIsNotOrganizationAdmin_ReturnsNotFound(
+        SutProvider<OrganizationIntegrationController> sutProvider,
+        Guid organizationId,
+        Guid integrationId)
+    {
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(false);
+
+        var response = await sutProvider.Sut.EnableAsync(organizationId, integrationId);
+
+        Assert.IsType<NotFoundResult>(response.Result);
+        await sutProvider.GetDependency<IEnableOrganizationIntegrationCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .EnableAsync(default, default);
+    }
 }

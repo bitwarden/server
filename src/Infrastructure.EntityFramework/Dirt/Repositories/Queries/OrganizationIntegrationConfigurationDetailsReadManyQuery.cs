@@ -21,7 +21,8 @@ public class OrganizationIntegrationConfigurationDetailsReadManyQuery : IQuery<O
                         Configuration = oic.Configuration,
                         Filters = oic.Filters,
                         IntegrationConfiguration = oi.Configuration,
-                        Template = oic.Template
+                        Template = oic.Template,
+                        DisabledDate = oic.DisabledDate
                     };
         return query;
     }

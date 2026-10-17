@@ -1346,6 +1346,12 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("DisabledDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DisabledReason")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("EventType")
                         .HasColumnType("integer");
 

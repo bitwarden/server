@@ -8,6 +8,8 @@ CREATE TABLE [dbo].[OrganizationIntegrationConfiguration]
     [CreationDate] DATETIME2 (7) NOT NULL,
     [RevisionDate] DATETIME2 (7) NOT NULL,
     [Filters] VARCHAR (MAX) NULL,
+    [DisabledDate] DATETIME2 (7) NULL,
+    [DisabledReason] INT NULL,
     CONSTRAINT [PK_OrganizationIntegrationConfiguration] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_OrganizationIntegrationConfiguration_OrganizationIntegration] FOREIGN KEY ([OrganizationIntegrationId]) REFERENCES [dbo].[OrganizationIntegration] ([Id]) ON DELETE CASCADE
 );
