@@ -85,9 +85,9 @@ public class PartnershipIdempotencyTests : IClassFixture<ApiApplicationFactory>,
         Assert.Equal("invalid_idempotency_key", body.GetProperty("code").GetString());
     }
 
-    private Task<HttpResponseMessage> PostAsync(string? key, string name)
+    private async Task<HttpResponseMessage> PostAsync(string? key, string name)
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, Path)
+        using var request = new HttpRequestMessage(HttpMethod.Post, Path)
         {
             Content = new StringContent(JsonSerializer.Serialize(new { name }), Encoding.UTF8, "application/json"),
         };
@@ -96,7 +96,7 @@ public class PartnershipIdempotencyTests : IClassFixture<ApiApplicationFactory>,
             request.Headers.Add(PartnershipIdempotencyFilter.HeaderName, key);
         }
 
-        return _client.SendAsync(request);
+        return await _client.SendAsync(request);
     }
 }
 

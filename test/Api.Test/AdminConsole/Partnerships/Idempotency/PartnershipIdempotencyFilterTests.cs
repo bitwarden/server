@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Bit.Api.Test.AdminConsole.Partnerships.Idempotency;
 
-public class PartnershipIdempotencyFilterTests
+public class PartnershipIdempotencyFilterTests : IDisposable
 {
     private const string Path = "/partnerships/v1/things";
     private const string Body = """{"name":"a"}""";
@@ -260,4 +260,6 @@ public class PartnershipIdempotencyFilterTests
             await context.HttpContext.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(body));
         }
     }
+
+    public void Dispose() => _test.Dispose();
 }

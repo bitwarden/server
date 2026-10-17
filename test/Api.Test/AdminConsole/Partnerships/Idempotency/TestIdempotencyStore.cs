@@ -13,12 +13,15 @@ namespace Bit.Api.Test.AdminConsole.Partnerships.Idempotency;
 /// A <see cref="PartnershipIdempotencyStore"/> over a real FusionCache configured like the Api registration, with a
 /// controllable memory cache clock and a distributed cache that records every value written to it.
 /// </summary>
-public sealed class TestIdempotencyStore
+public sealed class TestIdempotencyStore : IDisposable
 {
+    private readonly MemoryCache _memoryCache;
+    private readonly FusionCache _cache;
+
     public TestIdempotencyStore()
     {
-        var memoryCache = new MemoryCache(new MemoryCacheOptions { Clock = Clock });
-        var cache = new FusionCache(new FusionCacheOptions
+        _memoryCache = new MemoryCache(new MemoryCacheOptions { Clock = Clock });
+        _cache = new FusionCache(new FusionCacheOptions
         {
             DefaultEntryOptions = new FusionCacheEntryOptions
             {
@@ -28,9 +31,15 @@ public sealed class TestIdempotencyStore
                 AllowBackgroundDistributedCacheOperations = false,
                 JitterMaxDuration = TimeSpan.Zero,
             },
-        }, memoryCache);
-        cache.SetupDistributedCache(DistributedCache, new FusionCacheSystemTextJsonSerializer());
-        Store = new PartnershipIdempotencyStore(cache, new EphemeralDataProtectionProvider());
+        }, _memoryCache);
+        _cache.SetupDistributedCache(DistributedCache, new FusionCacheSystemTextJsonSerializer());
+        Store = new PartnershipIdempotencyStore(_cache, new EphemeralDataProtectionProvider());
+    }
+
+    public void Dispose()
+    {
+        _cache.Dispose();
+        _memoryCache.Dispose();
     }
 
     public TestClock Clock { get; } = new();

@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Bit.Api.Test.AdminConsole.Partnerships.Idempotency;
 
-public class PartnershipIdempotencyStoreTests
+public class PartnershipIdempotencyStoreTests : IDisposable
 {
     private const string Key = "key-1";
     private const string Hash = "hash-1";
@@ -137,4 +137,6 @@ public class PartnershipIdempotencyStoreTests
             Assert.DoesNotContain(idempotencyKey, entry.Key);
         });
     }
+
+    public void Dispose() => _test.Dispose();
 }
