@@ -158,7 +158,7 @@ public class TransitionPartnershipEntitlementCommand(
                 {
                     return new EntitlementNotProvisioned();
                 }
-                if (!IsWithinResumeWindow(entitlement, now))
+                if (!PartnershipEntitlementRules.IsWithinResumeWindow(entitlement, now))
                 {
                     return new EntitlementNotResumable();
                 }
@@ -193,7 +193,7 @@ public class TransitionPartnershipEntitlementCommand(
                 Rebind(entitlement);
                 return null;
             case PartnershipEntitlementState.Canceled:
-                if (!IsWithinResumeWindow(entitlement, now))
+                if (!PartnershipEntitlementRules.IsWithinResumeWindow(entitlement, now))
                 {
                     return new EntitlementNotResumable();
                 }
@@ -250,14 +250,6 @@ public class TransitionPartnershipEntitlementCommand(
         entitlement.CanceledDate = null;
         entitlement.ResumeWindowExpirationDate = null;
     }
-
-    /// <summary>
-    /// Measured against now rather than effectiveAt because the hold can be released once the window ends.
-    /// </summary>
-    private static bool IsWithinResumeWindow(OrganizationPartnershipEntitlement entitlement, DateTime now) =>
-        entitlement.UserId is not null &&
-        entitlement.ResumeWindowExpirationDate is { } expiration &&
-        now < expiration;
 
     private async Task<Error> BindingFailedAsync(OrganizationPartnership partnership, Error error, DateTime now)
     {

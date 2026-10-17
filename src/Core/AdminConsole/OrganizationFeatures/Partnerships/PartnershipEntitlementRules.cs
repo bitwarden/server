@@ -22,6 +22,15 @@ internal static class PartnershipEntitlementRules
         !externalId.StartsWith(Constants.DatabaseFieldProtectedPrefix, StringComparison.Ordinal);
 
     /// <summary>
+    /// Whether a canceled entitlement still holds its binding. Measured against now rather than effectiveAt because the
+    /// hold can be released once the window ends.
+    /// </summary>
+    public static bool IsWithinResumeWindow(OrganizationPartnershipEntitlement entitlement, DateTime now) =>
+        entitlement.UserId is not null &&
+        entitlement.ResumeWindowExpirationDate is { } expiration &&
+        now < expiration;
+
+    /// <summary>
     /// Only strictly older transitions are stale; one at the same instant as the last applied transition is applied.
     /// </summary>
     public static bool IsStale(OrganizationPartnershipEntitlement entitlement, DateTime effectiveAt) =>
