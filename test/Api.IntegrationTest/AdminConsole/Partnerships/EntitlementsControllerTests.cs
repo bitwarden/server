@@ -265,11 +265,11 @@ public class EntitlementsControllerTests : IClassFixture<ApiApplicationFactory>
         return (await _factory.GetService<IUserRepository>().GetByEmailAsync(email))!;
     }
 
-    private static Task<HttpResponseMessage> PostWithIdempotencyKeyAsync(HttpClient client, string key, object body)
+    private static async Task<HttpResponseMessage> PostWithIdempotencyKeyAsync(HttpClient client, string key, object body)
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, Path) { Content = JsonContent.Create(body) };
+        using var request = new HttpRequestMessage(HttpMethod.Post, Path) { Content = JsonContent.Create(body) };
         request.Headers.Add(PartnershipIdempotencyFilter.HeaderName, key);
-        return client.SendAsync(request);
+        return await client.SendAsync(request);
     }
 
     private static async Task<JsonElement> ReadBodyAsync(HttpResponseMessage response) =>

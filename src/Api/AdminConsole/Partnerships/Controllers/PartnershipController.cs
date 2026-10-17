@@ -1,9 +1,12 @@
 ﻿using Bit.Api.AdminConsole.Partnerships.Models.Response;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Settings;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.AdminConsole.Partnerships.Controllers;
 
+[Authorize(Policies.Organization)]
 [Route("partnerships/v1/partnership")]
 public class PartnershipController(
     IPartnershipRequestContext partnershipRequestContext,

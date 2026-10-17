@@ -5,10 +5,13 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Partnerships;
 using Bit.Core.AdminConsole.OrganizationFeatures.Partnerships;
 using Bit.Core.AdminConsole.OrganizationFeatures.Partnerships.Interfaces;
+using Bit.Core.Auth.Identity;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.AdminConsole.Partnerships.Controllers;
 
+[Authorize(Policies.Organization)]
 [Route("partnerships/v1/entitlements")]
 public class EntitlementsController(
     IPartnershipRequestContext partnershipRequestContext,
