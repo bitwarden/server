@@ -22,7 +22,7 @@ Three flows revoke, all of them teardowns that leave the account with no second 
 
 Removing one of several providers does **not** revoke: the user still has working 2FA, so their remembered devices stay trusted. Untrusting a device does not revoke either — that is a separate trusted-device concept.
 
-Two further properties hold without any explicit call. A password change or account key rotation rotates `User.SecurityStamp`, which remember tokens also carry and which is compared on every use. And a remember token is never honored while the account has no 2FA configured at all, whatever the row says — so a teardown that somehow failed to revoke still cannot let a stale token stand in as a second factor until a new provider is enrolled.
+Two further properties hold without any explicit call. A password change or account key rotation rotates `User.SecurityStamp`, which remember tokens also carry and which is compared on every use. And while the account has no 2FA at all, whether its own or enforced by its organization, no second factor is requested at login, so a remember token is not consulted.
 
 ## User Verification
 
