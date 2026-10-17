@@ -42,6 +42,15 @@ public class PartnershipEntitlementResponseModel : ResponseModel
         ActivationUrlExpiresAt = activationLink?.ExpiresAt;
     }
 
+    /// <param name="result">The suspend, resume, or cancel outcome.</param>
+    public PartnershipEntitlementResponseModel(PartnershipEntitlementTransitionResult result)
+        : this(result.Entitlement)
+    {
+        Applied = result.Applied;
+        AppliedReason = result.AppliedReason;
+        LastAppliedAt = result.LastAppliedAt;
+    }
+
     /// <summary>
     /// The partner's identifier for the customer.
     /// </summary>

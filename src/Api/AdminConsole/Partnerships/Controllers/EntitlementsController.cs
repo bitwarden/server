@@ -18,7 +18,8 @@ public class EntitlementsController(
     IProvisionPartnershipEntitlementCommand provisionPartnershipEntitlementCommand,
     IGetPartnershipEntitlementByExternalIdQuery getPartnershipEntitlementByExternalIdQuery,
     IListPartnershipEntitlementsQuery listPartnershipEntitlementsQuery,
-    ICreatePartnershipActivationLinkCommand createPartnershipActivationLinkCommand)
+    ICreatePartnershipActivationLinkCommand createPartnershipActivationLinkCommand,
+    ITransitionPartnershipEntitlementCommand transitionPartnershipEntitlementCommand)
     : PartnershipControllerBase
 {
     /// <summary>
@@ -77,6 +78,45 @@ public class EntitlementsController(
         return result.Match<ActionResult<PartnershipEntitlementResponseModel>>(
             error => PartnershipError(error),
             entitlement => new PartnershipEntitlementResponseModel(entitlement));
+    }
+
+    /// <summary>
+    /// Suspends an active entitlement.
+    /// </summary>
+    [HttpPost("{externalId}/suspend")]
+    [PartnershipIdempotent]
+    public Task<ActionResult<PartnershipEntitlementResponseModel>> SuspendAsync(string externalId,
+        [FromBody] TransitionEntitlementRequestModel model) =>
+        TransitionAsync(externalId, model, PartnershipEntitlementAction.Suspend);
+
+    /// <summary>
+    /// Returns a suspended entitlement, or a canceled one still inside its resume window, to active on its existing
+    /// binding.
+    /// </summary>
+    [HttpPost("{externalId}/resume")]
+    [PartnershipIdempotent]
+    public Task<ActionResult<PartnershipEntitlementResponseModel>> ResumeAsync(string externalId,
+        [FromBody] TransitionEntitlementRequestModel model) =>
+        TransitionAsync(externalId, model, PartnershipEntitlementAction.Resume);
+
+    /// <summary>
+    /// Cancels a provisioned, active, or suspended entitlement. A bound entitlement holds its binding until
+    /// <c>resumeWindowExpiresAt</c>.
+    /// </summary>
+    [HttpPost("{externalId}/cancel")]
+    [PartnershipIdempotent]
+    public Task<ActionResult<PartnershipEntitlementResponseModel>> CancelAsync(string externalId,
+        [FromBody] TransitionEntitlementRequestModel model) =>
+        TransitionAsync(externalId, model, PartnershipEntitlementAction.Cancel);
+
+    private async Task<ActionResult<PartnershipEntitlementResponseModel>> TransitionAsync(string externalId,
+        TransitionEntitlementRequestModel model, PartnershipEntitlementAction action)
+    {
+        var result = await transitionPartnershipEntitlementCommand.TransitionAsync(
+            model.ToRequest(partnershipRequestContext.Partnership.Id, externalId, action));
+        return result.Match<ActionResult<PartnershipEntitlementResponseModel>>(
+            error => PartnershipError(error),
+            transition => new PartnershipEntitlementResponseModel(transition));
     }
 
     /// <summary>
