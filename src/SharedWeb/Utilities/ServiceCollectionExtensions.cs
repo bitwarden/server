@@ -395,6 +395,17 @@ public static class ServiceCollectionExtensions
         {
             services.AddSingleton<IOrganizationReportStorageService, NoopOrganizationReportStorageService>();
         }
+
+        if (CoreHelpers.SettingHasValue(globalSettings.Partnerships.ReconciliationExportConnectionString))
+        {
+            services.AddSingleton<IPartnershipReconciliationExportStorageService,
+                AzurePartnershipReconciliationExportStorageService>();
+        }
+        else
+        {
+            services.AddSingleton<IPartnershipReconciliationExportStorageService,
+                NoopPartnershipReconciliationExportStorageService>();
+        }
     }
 
     public static void AddOosServices(this IServiceCollection services)

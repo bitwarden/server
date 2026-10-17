@@ -839,6 +839,18 @@ public class GlobalSettings : IGlobalSettings
         /// Length of the fixed window for <see cref="RateLimitRequests"/>.
         /// </summary>
         public TimeSpan RateLimitWindow { get; set; } = TimeSpan.FromMinutes(1);
+        /// <summary>
+        /// Azure Storage connection string for reconciliation export files. Unset disables storing them.
+        /// </summary>
+        public string ReconciliationExportConnectionString { get; set; }
+        /// <summary>
+        /// How long a reconciliation export download URL stays valid after it is issued.
+        /// </summary>
+        public TimeSpan ReconciliationExportDownloadUrlLifetime { get; set; } = TimeSpan.FromMinutes(15);
+        /// <summary>
+        /// How long a reconciliation export and its file are kept before deletion.
+        /// </summary>
+        public TimeSpan ReconciliationExportRetention { get; set; } = TimeSpan.FromHours(24);
 
         /// <exception cref="InvalidOperationException">The key is not configured.</exception>
         public byte[] GetExternalIdHashKey() =>
