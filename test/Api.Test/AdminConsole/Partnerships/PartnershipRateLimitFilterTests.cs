@@ -18,7 +18,7 @@ using Xunit;
 
 namespace Bit.Api.Test.AdminConsole.Partnerships;
 
-public class PartnershipRateLimitFilterTests
+public class PartnershipRateLimitFilterTests : IDisposable
 {
     private const int Limit = 2;
 
@@ -34,10 +34,15 @@ public class PartnershipRateLimitFilterTests
     // 15 seconds into a one-minute window.
     private readonly FakeTimeProvider _timeProvider = new(new DateTimeOffset(2026, 1, 1, 12, 0, 15, TimeSpan.Zero));
 
-    private IPartnershipRateLimitStore _store =
-        new MemoryPartnershipRateLimitStore(new MemoryCache(Options.Create(new MemoryCacheOptions())));
+    private readonly MemoryCache _memoryCache = new(Options.Create(new MemoryCacheOptions()));
+    private IPartnershipRateLimitStore _store;
 
     private readonly Guid _partnershipId = Guid.NewGuid();
+
+    public PartnershipRateLimitFilterTests()
+    {
+        _store = new MemoryPartnershipRateLimitStore(_memoryCache);
+    }
 
     [Fact]
     public async Task UnderLimit_Continues()
@@ -135,4 +140,6 @@ public class PartnershipRateLimitFilterTests
 
         return (context, () => called);
     }
+
+    public void Dispose() => _memoryCache.Dispose();
 }
