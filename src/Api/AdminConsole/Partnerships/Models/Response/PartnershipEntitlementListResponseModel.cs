@@ -9,6 +9,9 @@ namespace Bit.Api.AdminConsole.Partnerships.Models.Response;
 /// </summary>
 public class PartnershipEntitlementListResponseModel(PartnershipEntitlementPage page) : ResponseModel("list")
 {
+    /// <summary>
+    /// The entitlements on this page.
+    /// </summary>
     public IEnumerable<PartnershipEntitlementResponseModel> Data { get; } =
         page.Entitlements.Select(e => new PartnershipEntitlementResponseModel(e)).ToList();
 

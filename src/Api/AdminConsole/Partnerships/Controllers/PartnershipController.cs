@@ -17,6 +17,7 @@ public class PartnershipController(
     /// Reads the authenticated partner's partnership configuration and rate limit.
     /// </summary>
     [HttpGet("")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public ActionResult<PartnershipResponseModel> Get() =>
         new PartnershipResponseModel(partnershipRequestContext.Partnership, globalSettings.Partnerships);
 }
