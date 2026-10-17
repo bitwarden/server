@@ -1,5 +1,6 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.Tools.Authorization;
+using Bit.Core.AdminConsole.Enums.Partnerships;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Authorization.Ciphers;
@@ -49,6 +50,16 @@ public static class ServiceCollectionExtensions
 
             config.SwaggerDoc("internal", new OpenApiInfo { Title = "Bitwarden Internal API", Version = "latest" });
 
+            config.SwaggerDoc("partnerships", new OpenApiInfo
+            {
+                Title = "Bitwarden Partnership API",
+                Version = "v1",
+                Description = """
+                              Endpoints for partners to provision and manage entitlements for their customers.
+                              Authenticate with the partner organization's API key using the client credentials flow.
+                              """,
+            });
+
             // Configure Bitwarden cloud servers. These will appear in the swagger.json build artifact
             // used for our help center. These are overwritten with the local server when running in self-hosted
             // or dev mode (see Api Startup.cs).
@@ -75,6 +86,10 @@ public static class ServiceCollectionExtensions
                     { "x-explicit-bearer-token", new JsonNodeExtension(true) }
                 }
             });
+
+            // Partner models bind these enums as snake_case strings and reject integers; the property docs list the values.
+            config.MapType<SponsoredPlanType>(() => new OpenApiSchema { Type = JsonSchemaType.String });
+            config.MapType<PartnershipEntitlementReason>(() => new OpenApiSchema { Type = JsonSchemaType.String });
 
             config.DescribeAllParametersInCamelCase();
             // config.UseReferencedDefinitionsForEnums();

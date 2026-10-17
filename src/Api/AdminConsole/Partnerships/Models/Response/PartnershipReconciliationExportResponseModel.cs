@@ -6,6 +6,9 @@ using Bit.HttpExtensions;
 
 namespace Bit.Api.AdminConsole.Partnerships.Models.Response;
 
+/// <summary>
+/// An export of every entitlement in the partnership, one reconciliation record per line.
+/// </summary>
 public class PartnershipReconciliationExportResponseModel : ResponseModel
 {
     public PartnershipReconciliationExportResponseModel(PartnershipReconciliationExportDetails details)
@@ -26,11 +29,17 @@ public class PartnershipReconciliationExportResponseModel : ResponseModel
         }
     }
 
+    /// <summary>
+    /// The export's identifier, used to poll it.
+    /// </summary>
     public Guid Id { get; }
     /// <summary>
     /// One of <c>pending</c>, <c>running</c>, <c>completed</c>, or <c>failed</c>.
     /// </summary>
     public string Status { get; }
+    /// <summary>
+    /// The number of entitlements in the file. Present once the export has completed.
+    /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? RecordCount { get; }
     /// <summary>

@@ -73,10 +73,19 @@ public class PartnershipEntitlementResponseModel : ResponseModel
     /// The partner-supplied metadata from the last applied provisioning.
     /// </summary>
     public IDictionary<string, string> Metadata { get; }
+    /// <summary>
+    /// When the customer activated the entitlement on their account. Absent until then.
+    /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public DateTime? BoundAt { get; }
+    /// <summary>
+    /// The <c>effectiveAt</c> of the suspension. Cleared when the entitlement is resumed.
+    /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public DateTime? SuspendedAt { get; }
+    /// <summary>
+    /// The <c>effectiveAt</c> of the cancellation. Cleared when the entitlement is resumed or provisioned again.
+    /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public DateTime? CanceledAt { get; }
     /// <summary>
@@ -89,7 +98,13 @@ public class PartnershipEntitlementResponseModel : ResponseModel
     /// but not applied.
     /// </summary>
     public DateTime LastAppliedAt { get; }
+    /// <summary>
+    /// When the entitlement was first provisioned.
+    /// </summary>
     public DateTime CreatedAt { get; }
+    /// <summary>
+    /// When the entitlement last changed. Use with <c>revisedAfter</c> to sync changes.
+    /// </summary>
     public DateTime UpdatedAt { get; }
     /// <summary>
     /// Whether this request changed the entitlement. Only present on write responses.
@@ -109,7 +124,7 @@ public class PartnershipEntitlementResponseModel : ResponseModel
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ActivationUrl { get; }
     /// <summary>
-    /// When <see cref="ActivationUrl"/> expires.
+    /// When <c>activationUrl</c> expires.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public DateTime? ActivationUrlExpiresAt { get; }

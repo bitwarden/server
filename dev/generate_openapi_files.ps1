@@ -15,7 +15,7 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-# Api internal & public
+# Api internal, public & partnerships
 Set-Location "../../src/Api"
 dotnet build
 dotnet swagger tofile --output "../../api.json" "./bin/Debug/net10.0/Api.dll" "internal"
@@ -23,6 +23,10 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 dotnet swagger tofile --output "../../api.public.json" "./bin/Debug/net10.0/Api.dll" "public"
+if ($LASTEXITCODE -ne 0) {
+    exit $LASTEXITCODE
+}
+dotnet swagger tofile --output "../../api.partnerships.json" "./bin/Debug/net10.0/Api.dll" "partnerships"
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }

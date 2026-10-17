@@ -12,6 +12,9 @@ public class PartnershipResponseModel(
     OrganizationPartnership partnership,
     GlobalSettings.PartnershipSettings partnershipSettings) : ResponseModel("partnership")
 {
+    /// <summary>
+    /// The partnership's display name.
+    /// </summary>
     public string Name { get; } = partnership.Name;
     /// <summary>
     /// One of <c>active</c> or <c>inactive</c>.
@@ -30,6 +33,9 @@ public class PartnershipResponseModel(
     /// The origins an activation link's return URL may use.
     /// </summary>
     public IEnumerable<string> RegisteredReturnOrigins { get; } = partnership.GetRegisteredReturnOrigins().ToList();
+    /// <summary>
+    /// The request limit applied to the partnership.
+    /// </summary>
     public PartnershipRateLimitResponseModel RateLimit { get; } = new(partnershipSettings);
 
     private static string SnakeCase(string name) => JsonNamingPolicy.SnakeCaseLower.ConvertName(name);
