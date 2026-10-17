@@ -269,7 +269,7 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
     }
 
     /// <summary>
-    /// H9 — removing the user's last two-factor provider stops their remembered devices from being
+    /// Removing the user's last two-factor provider stops their remembered devices from being
     /// trusted. Email is the only provider in this fixture, so the real DELETE below is the
     /// last-provider path.
     /// </summary>
