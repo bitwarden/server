@@ -555,19 +555,44 @@ public static class RecipeBuilderExtensions
     /// Create a real Stripe test-environment customer and subscription for the organization after it commits.
     /// </summary>
     /// <param name="builder">The recipe builder</param>
-    /// <param name="options">Trial configuration for the subscription</param>
+    /// <param name="options">Trial configuration, test card, and billing address for the subscription</param>
     /// <returns>The builder for fluent chaining</returns>
     /// <remarks>
     /// Opt-in only. This step makes live network calls. <c>RecipeOrchestrator.ValidateBillingOptIn</c> still
     /// validates the host's Stripe configuration before any entity is created, for fast feedback — but
-    /// <see cref="IStripeBillingInitializer.InitializeOrganizationAsync"/> also self-validates, so a caller that
-    /// skips the pre-flight check fails before touching Stripe rather than after.
+    /// <see cref="IOrganizationStripeBillingService.CreateSubscriptionAsync"/> also self-validates, so a
+    /// caller that skips the pre-flight check fails before touching Stripe rather than after.
     /// </remarks>
-    public static RecipeBuilder WithStripeBilling(this RecipeBuilder builder, StripeBillingOptions options)
+    public static RecipeBuilder WithStripeOrganizationBilling(
+        this RecipeBuilder builder, StripeBillingOptions options)
     {
         builder.HasBilling = true;
-        builder.AddAsyncStep(sp => new FinalizeOrganizationBillingStep(
-            sp.GetRequiredService<IStripeBillingInitializer>(), options));
+        builder.AddAsyncStep(sp => new CreateOrganizationBillingStep(
+            sp.GetRequiredService<IOrganizationStripeBillingService>(), options));
+        return builder;
+    }
+
+    /// <summary>
+    /// Create a real Stripe test-environment customer and premium subscription for the individual user.
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <param name="profile">The test card and billing address the user pays with</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no individual user exists</exception>
+    /// <remarks>
+    /// Opt-in only. This step makes live network calls. Register it last, after every other pre-commit step,
+    /// so Stripe is called only once the rest of the seed has succeeded.
+    /// </remarks>
+    public static RecipeBuilder WithStripeUserBilling(this RecipeBuilder builder, StripeBillingProfile profile)
+    {
+        if (!builder.HasIndividualUser)
+        {
+            throw new InvalidOperationException(
+                "Stripe user billing requires an individual user. Call CreateIndividualUser() first.");
+        }
+
+        builder.AddAsyncStep(sp => new CreatePremiumSubscriptionStep(
+            sp.GetRequiredService<IUserStripeBillingService>(), profile));
         return builder;
     }
 
