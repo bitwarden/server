@@ -741,10 +741,14 @@ public class UserService : UserManager<User>, IUserService
         if (!await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
         {
             // Runs post-save because whether this was the last provider is only known once the
-            // remaining providers are known. Re-running the method cannot retry this: the provider
-            // is already gone, so the early return at the top takes over.
-            await _revokeTwoFactorRememberTokensCommand.RevokeAllForUserAsync(user.Id);
+            // remaining providers are known. Re-running the method cannot retry either step below:
+            // the provider is already gone, so the early return at the top takes over.
+
+            // When the last 2FA provider is removed, CheckPoliciesOnTwoFactorRemovalAsync revokes the
+            // user from organizations that require 2FA. This check goes before remember-token revocation
+            // so that a failing remember-token revoke cannot skip it.
             await CheckPoliciesOnTwoFactorRemovalAsync(user);
+            await _revokeTwoFactorRememberTokensCommand.RevokeAllForUserAsync(user.Id);
         }
     }
 
