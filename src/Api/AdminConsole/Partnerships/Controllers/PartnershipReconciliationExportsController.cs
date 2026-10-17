@@ -20,7 +20,9 @@ public class PartnershipReconciliationExportsController(
     /// </summary>
     [HttpPost("")]
     [PartnershipIdempotent]
-    [ProducesResponseType(StatusCodes.Status202Accepted)]
+    [ProducesResponseType(typeof(PartnershipReconciliationExportResponseModel), StatusCodes.Status202Accepted)]
+    [ProducesResponseType(typeof(PartnershipErrorResponseModel), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(PartnershipErrorResponseModel), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<PartnershipReconciliationExportResponseModel>> PostAsync()
     {
         var export = await createPartnershipReconciliationExportCommand.CreateAsync(
@@ -29,7 +31,11 @@ public class PartnershipReconciliationExportsController(
             new PartnershipReconciliationExportDetails(export, DownloadUrl: null)));
     }
 
+    /// <summary>
+    /// Reads an export's status. Includes a short-lived <c>downloadUrl</c> once it has completed, until it expires.
+    /// </summary>
     [HttpGet("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<PartnershipReconciliationExportResponseModel>> GetAsync(Guid id)
     {
         var result = await getPartnershipReconciliationExportQuery.GetAsync(

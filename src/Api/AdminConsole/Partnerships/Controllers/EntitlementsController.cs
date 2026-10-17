@@ -31,6 +31,9 @@ public class EntitlementsController(
     [PartnershipIdempotent]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PartnershipErrorResponseModel), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(PartnershipErrorResponseModel), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(PartnershipErrorResponseModel), StatusCodes.Status422UnprocessableEntity)]
     public async Task<ActionResult<PartnershipEntitlementResponseModel>> PostAsync(
         [FromBody] ProvisionEntitlementRequestModel model)
     {
@@ -52,6 +55,8 @@ public class EntitlementsController(
     /// with <c>revisedAfter</c>. Returns a <c>continuationToken</c> when another page follows.
     /// </summary>
     [HttpGet("")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PartnershipErrorResponseModel), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<PartnershipEntitlementListResponseModel>> ListAsync(
         [FromQuery] ListEntitlementsRequestModel model)
     {
@@ -71,6 +76,7 @@ public class EntitlementsController(
     /// Reads an entitlement by the partner's identifier for the customer.
     /// </summary>
     [HttpGet("{externalId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<PartnershipEntitlementResponseModel>> GetAsync(string externalId)
     {
         var result = await getPartnershipEntitlementByExternalIdQuery.GetAsync(
@@ -85,6 +91,10 @@ public class EntitlementsController(
     /// </summary>
     [HttpPost("{externalId}/suspend")]
     [PartnershipIdempotent]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PartnershipErrorResponseModel), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(PartnershipErrorResponseModel), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(PartnershipErrorResponseModel), StatusCodes.Status422UnprocessableEntity)]
     public Task<ActionResult<PartnershipEntitlementResponseModel>> SuspendAsync(string externalId,
         [FromBody] TransitionEntitlementRequestModel model) =>
         TransitionAsync(externalId, model, PartnershipEntitlementAction.Suspend);
@@ -95,6 +105,10 @@ public class EntitlementsController(
     /// </summary>
     [HttpPost("{externalId}/resume")]
     [PartnershipIdempotent]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PartnershipErrorResponseModel), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(PartnershipErrorResponseModel), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(PartnershipErrorResponseModel), StatusCodes.Status422UnprocessableEntity)]
     public Task<ActionResult<PartnershipEntitlementResponseModel>> ResumeAsync(string externalId,
         [FromBody] TransitionEntitlementRequestModel model) =>
         TransitionAsync(externalId, model, PartnershipEntitlementAction.Resume);
@@ -105,6 +119,10 @@ public class EntitlementsController(
     /// </summary>
     [HttpPost("{externalId}/cancel")]
     [PartnershipIdempotent]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PartnershipErrorResponseModel), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(PartnershipErrorResponseModel), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(PartnershipErrorResponseModel), StatusCodes.Status422UnprocessableEntity)]
     public Task<ActionResult<PartnershipEntitlementResponseModel>> CancelAsync(string externalId,
         [FromBody] TransitionEntitlementRequestModel model) =>
         TransitionAsync(externalId, model, PartnershipEntitlementAction.Cancel);

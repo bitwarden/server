@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Utilities.v2;
+﻿using Bit.Api.AdminConsole.Partnerships.Models.Response;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Auth.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,6 +13,10 @@ namespace Bit.Api.AdminConsole.Partnerships.Controllers;
 /// applies <see cref="PartnershipErrorFilter"/> so every error uses the partnership envelope.
 /// </summary>
 [Authorize(Policies.Organization)]
+[ProducesResponseType(typeof(PartnershipErrorResponseModel), StatusCodes.Status403Forbidden)]
+[ProducesResponseType(typeof(PartnershipErrorResponseModel), StatusCodes.Status404NotFound)]
+[ProducesResponseType(typeof(PartnershipErrorResponseModel), StatusCodes.Status429TooManyRequests)]
+[ProducesResponseType(typeof(PartnershipErrorResponseModel), StatusCodes.Status500InternalServerError)]
 public abstract class PartnershipControllerBase : Controller
 {
     /// <summary>
