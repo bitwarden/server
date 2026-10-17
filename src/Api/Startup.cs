@@ -95,6 +95,8 @@ public class Startup
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+        services.TryAddScoped<PartnershipRequestContext>();
+        services.TryAddScoped<IPartnershipRequestContext>(sp => sp.GetRequiredService<PartnershipRequestContext>());
 
         // Caching
         services.AddMemoryCache();
