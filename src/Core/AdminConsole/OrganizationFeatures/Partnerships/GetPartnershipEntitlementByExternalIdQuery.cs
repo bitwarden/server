@@ -12,6 +12,11 @@ public class GetPartnershipEntitlementByExternalIdQuery(
     public async Task<CommandResult<OrganizationPartnershipEntitlement>> GetAsync(
         Guid organizationPartnershipId, string externalId)
     {
+        if (!PartnershipEntitlementRules.IsValidExternalId(externalId))
+        {
+            return new InvalidExternalId();
+        }
+
         var entitlement = await organizationPartnershipEntitlementRepository
             .GetByExternalIdAsync(organizationPartnershipId, externalId);
         if (entitlement is null)
