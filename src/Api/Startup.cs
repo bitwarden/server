@@ -39,6 +39,8 @@ using Bit.Core.Enums;
 using Bit.HttpExtensions;
 using Bit.Subscriptions.Organization;
 using Bit.Subscriptions.User;
+using Microsoft.Extensions.Caching.Memory;
+using StackExchange.Redis;
 
 
 #if !OSS
@@ -118,6 +120,11 @@ public class Startup
         {
             services.AddIpRateLimiting(globalSettings);
         }
+
+        services.TryAddSingleton<IPartnershipRateLimitStore>(sp =>
+            sp.GetKeyedService<IConnectionMultiplexer>("rate-limiter") is { } redis
+                ? new RedisPartnershipRateLimitStore(redis)
+                : new MemoryPartnershipRateLimitStore(sp.GetRequiredService<IMemoryCache>()));
 
         // Identity
         services.AddCustomIdentityServices(globalSettings);
