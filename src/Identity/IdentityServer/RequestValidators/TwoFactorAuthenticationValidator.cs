@@ -160,23 +160,25 @@ public class TwoFactorAuthenticationValidator(
         // null and the lookup below would reject it. It is validated on its own terms here instead.
         if (type is TwoFactorProviderType.Remember)
         {
-            if (token?.StartsWith(TwoFactorRememberTokenable.ClearTextPrefix, StringComparison.Ordinal) == true)
+            // TODO: PM-44171 - Remove the legacy token path. PM-40673 introduced a new remember token format and stopped
+            // issuing legacy format tokens. Legacy tokens have a 30 day expiration, so we must wait until more than 30 days
+            // have passed after the release of PM-40673 before we remove this legacy path.
+            var isLegacyFormat = token is null || !token.StartsWith(TwoFactorRememberTokenable.ClearTextPrefix, StringComparison.Ordinal);
+
+            if (isLegacyFormat)
             {
-                // The query checks that the user has a second factor, personal or enforced by their
-                // organization, so it needs the organization too.
-                return new TwoFactorVerificationResult(
-                    await _validateTwoFactorRememberTokenQuery.ValidateAsync(user, organization, deviceIdentifier, token));
+                var legacyTokenValid = await _userManager.VerifyTwoFactorTokenAsync(
+                    user, CoreHelpers.CustomProviderName(type), token);
+
+                // Accepting a legacy format token earns a replacement in the new format on this same response,
+                // so the device migrates over on this login rather than waiting out the legacy token's lifetime.
+                return new TwoFactorVerificationResult(legacyTokenValid, legacyTokenValid);
             }
 
-            // TODO: PM-44171 - Remove the legacy token path below once every token issued before this
-            // release has expired. Both formats validate until then. The token lifespan bounds that at
-            // 30 days from the release date, so no token predating it can validate after that point.
-            var legacyTokenValid = await _userManager.VerifyTwoFactorTokenAsync(
-                user, CoreHelpers.CustomProviderName(type), token);
-
-            // Accepting one earns a replacement in the current format on this same response, so the
-            // device moves over on this login rather than waiting out the old token's lifetime.
-            return new TwoFactorVerificationResult(legacyTokenValid, legacyTokenValid);
+            // The query checks that the user has a second factor, personal or enforced by their
+            // organization, so it needs the organization too.
+            return new TwoFactorVerificationResult(
+                await _validateTwoFactorRememberTokenQuery.ValidateAsync(user, organization, deviceIdentifier, token));
         }
 
         // Now we are concerning the rest of the Two Factor Provider Types
