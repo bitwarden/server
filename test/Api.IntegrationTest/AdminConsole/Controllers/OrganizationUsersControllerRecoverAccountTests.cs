@@ -533,7 +533,7 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
         return targetCustomOrgUser;
     }
 
-    /// <summary
+    /// <summary>
     /// An administrator resetting only two-factor stops that member's remembered devices from
     /// being trusted. This flag combination had no coverage: every other recovery test here sets
     /// <c>ResetMasterPassword</c>, which is a different code path.
