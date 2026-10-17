@@ -2,13 +2,13 @@
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Auth.Services;
-using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
