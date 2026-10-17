@@ -47,6 +47,13 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
     /// </summary>
     public ConcurrentDictionary<string, string> TwoFactorEmailCodes { get; private set; } = new ConcurrentDictionary<string, string>();
 
+    /// <summary>
+    /// Codes captured from the Send access verification email, keyed by the email they were sent to.
+    /// Populated alongside <see cref="RegistrationTokens"/> for the same reason as
+    /// <see cref="TwoFactorEmailCodes"/>. The latest code for an email wins.
+    /// </summary>
+    public ConcurrentDictionary<string, string> SendAccessEmailOtpCodes { get; private set; } = new ConcurrentDictionary<string, string>();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         // This allows us to use the official registration flow
@@ -67,6 +74,10 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
                     Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TwoFactorEmailPurpose>())
                 .ReturnsForAnyArgs(Task.CompletedTask)
                 .AndDoes(call => TwoFactorEmailCodes[call.ArgAt<string>(1)] = call.ArgAt<string>(2));
+
+            service.SendSendEmailOtpEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+                .ReturnsForAnyArgs(Task.CompletedTask)
+                .AndDoes(call => SendAccessEmailOtpCodes[call.ArgAt<string>(0)] = call.ArgAt<string>(1));
         });
 
         if (UseMockClientVersionValidator)

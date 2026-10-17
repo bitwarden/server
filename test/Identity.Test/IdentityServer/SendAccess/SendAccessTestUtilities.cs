@@ -1,4 +1,7 @@
 ﻿using System.Collections.Specialized;
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
@@ -10,6 +13,16 @@ namespace Bit.Identity.Test.IdentityServer.SendAccess;
 
 public static class SendAccessTestUtilities
 {
+    /// <summary>
+    /// Builds the unique identifier the email OTP is cached under, independently of the validator, so an
+    /// unintended change to its format fails these tests instead of passing silently.
+    /// </summary>
+    public static string ExpectedOtpUniqueIdentifier(Guid sendId, string email, string deviceIdentifier)
+    {
+        var deviceIdentifierHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(deviceIdentifier)));
+        return string.Format(CultureInfo.InvariantCulture, "{0}_{1}_{2}", sendId, email, deviceIdentifierHash);
+    }
+
     public static NameValueCollection CreateValidatedTokenRequest(
         Guid sendId,
         string sendEmail = null,
