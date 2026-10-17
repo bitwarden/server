@@ -1,10 +1,13 @@
 ﻿using Bit.Api.AdminConsole.Partnerships.Idempotency;
 using Bit.Api.AdminConsole.Partnerships.Models.Response;
 using Bit.Core.AdminConsole.OrganizationFeatures.Partnerships.Interfaces;
+using Bit.Core.Auth.Identity;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.AdminConsole.Partnerships.Controllers;
 
+[Authorize(Policies.Organization)]
 [Route("partnerships/v1/reconciliation-exports")]
 public class PartnershipReconciliationExportsController(
     IPartnershipRequestContext partnershipRequestContext,
