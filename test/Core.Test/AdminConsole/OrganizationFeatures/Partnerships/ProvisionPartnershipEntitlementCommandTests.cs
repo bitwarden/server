@@ -147,6 +147,43 @@ public class ProvisionPartnershipEntitlementCommandTests
     }
 
     [Fact]
+    public async Task ProvisionAsync_ReprovisionAfterResumeWindowReleased_LetsDifferentUserActivate()
+    {
+        var provisionSut = CreateSutProvider();
+        var partnership = ArrangePartnership(provisionSut);
+        var entitlement = ArrangeExisting(provisionSut, partnership, PartnershipEntitlementState.Canceled);
+        // The state the expiry job leaves behind: still canceled, binding released, window passed.
+        entitlement.UserId = null;
+        entitlement.AccountRef = null;
+        entitlement.ResumeWindowExpirationDate = _now.AddDays(-1);
+        var transitionSut = new SutProvider<TransitionPartnershipEntitlementCommand>()
+            .SetDependency(new GlobalSettings())
+            .WithFakeTimeProvider()
+            .Create();
+        transitionSut.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
+        transitionSut.GetDependency<IOrganizationPartnershipRepository>().GetByIdAsync(partnership.Id).Returns(partnership);
+        transitionSut.GetDependency<IOrganizationPartnershipEntitlementRepository>()
+            .GetByExternalIdAsync(partnership.Id, entitlement.ExternalId).Returns(entitlement);
+        transitionSut.GetDependency<IOrganizationPartnershipEntitlementRepository>()
+            .ReplaceIfUnchangedAsync(Arg.Any<OrganizationPartnershipEntitlement>(), Arg.Any<DateTime>()).Returns(true);
+        var newUserId = Guid.NewGuid();
+
+        await provisionSut.Sut.ProvisionAsync(CreateRequest(partnership));
+        var result = await transitionSut.Sut.TransitionAsync(new TransitionPartnershipEntitlementRequest
+        {
+            OrganizationPartnershipId = partnership.Id,
+            ExternalId = entitlement.ExternalId,
+            Action = PartnershipEntitlementAction.Activate,
+            UserId = newUserId,
+        });
+
+        var activated = result.AsSuccess.Entitlement;
+        Assert.Equal(PartnershipEntitlementState.Active, activated.State);
+        Assert.Equal(newUserId, activated.UserId);
+        Assert.NotNull(activated.AccountRef);
+    }
+
+    [Fact]
     public async Task ProvisionAsync_ReprovisionWithStaleEffectiveAt_ReturnsNotApplied()
     {
         var sutProvider = CreateSutProvider();
