@@ -22,29 +22,22 @@ public class OrganizationUserValidationServiceTests
         _sut = new OrganizationUserValidationService(_organizationUserRepository);
     }
 
-    // NOTE: A null `performedBy` represents a non-member. Custom users are granted the ManageUsers permission by
-    // default, since that is the authority a Custom user needs to act on members.
-    private static OrganizationUser? ActingUser(OrganizationUserType? role, bool manageUsers = true)
+    // NOTE: A null `role` represents a caller who is neither a member nor a provider. Custom users are granted the
+    // ManageUsers permission by default, since that is the authority a Custom user needs to act on members.
+    private static IActingUser ActingUser(OrganizationUserType? role, bool manageUsers = true)
     {
-        if (role is null)
-        {
-            return null;
-        }
+        var permissions = role is OrganizationUserType.Custom
+            ? new Permissions { ManageUsers = manageUsers }
+            : null;
 
-        var actingUser = new OrganizationUser { Type = role.Value };
-        if (role is OrganizationUserType.Custom)
-        {
-            actingUser.SetPermissions(new Permissions { ManageUsers = manageUsers });
-        }
-
-        return actingUser;
+        return new StandardUser(Guid.NewGuid(), isProvider: false, role, permissions);
     }
 
     private static OrganizationUser TargetUser(OrganizationUserType role) =>
         new() { Type = role, OrganizationId = _organizationId };
 
     private static OrganizationUserRole NewRole(OrganizationUserType type, Permissions? permissions = null) =>
-        new(type, _organizationId, permissions);
+        new(type, permissions);
 
     [Theory]
     [InlineData(OrganizationUserType.Owner, OrganizationUserType.Owner)]
@@ -56,11 +49,11 @@ public class OrganizationUserValidationServiceTests
     [InlineData(OrganizationUserType.Admin, OrganizationUserType.Custom)]
     [InlineData(OrganizationUserType.Custom, OrganizationUserType.User)]
     [InlineData(OrganizationUserType.Custom, OrganizationUserType.Custom)]
-    public void CanManage_WhenTargetRoleWithinAuthority_ReturnsNull(
+    public void ValidateAuthorityOver_WhenTargetRoleWithinAuthority_ReturnsNull(
         OrganizationUserType actingRole,
         OrganizationUserType targetRole)
     {
-        var result = _sut.CanManage(ActingUser(actingRole), TargetUser(targetRole));
+        var result = _sut.ValidateAuthorityOver(ActingUser(actingRole), TargetUser(targetRole));
 
         Assert.Null(result);
     }
@@ -69,12 +62,12 @@ public class OrganizationUserValidationServiceTests
     [InlineData(OrganizationUserType.Admin, OrganizationUserType.Owner, typeof(OnlyOwnersCanManageOwners))]
     [InlineData(OrganizationUserType.Custom, OrganizationUserType.Owner, typeof(OnlyOwnersCanManageOwners))]
     [InlineData(OrganizationUserType.Custom, OrganizationUserType.Admin, typeof(CustomUsersCannotManageAdminsOrOwners))]
-    public void CanManage_WhenTargetRoleOutranksActingUser_ReturnsGranularError(
+    public void ValidateAuthorityOver_WhenTargetRoleOutranksActingUser_ReturnsGranularError(
         OrganizationUserType actingRole,
         OrganizationUserType targetRole,
         Type expectedError)
     {
-        var result = _sut.CanManage(ActingUser(actingRole), TargetUser(targetRole));
+        var result = _sut.ValidateAuthorityOver(ActingUser(actingRole), TargetUser(targetRole));
 
         Assert.IsType(expectedError, result);
     }
@@ -85,28 +78,29 @@ public class OrganizationUserValidationServiceTests
     [InlineData(OrganizationUserType.Admin, typeof(CustomUsersCannotManageAdminsOrOwners))]
     [InlineData(OrganizationUserType.User, typeof(CustomUsersCannotManageAdminsOrOwners))]
     [InlineData(OrganizationUserType.Custom, typeof(CustomUsersCannotManageAdminsOrOwners))]
-    public void CanManage_WhenActingUserIsRegularUser_ReturnsGranularError(
+    public void ValidateAuthorityOver_WhenActingUserIsRegularUser_ReturnsGranularError(
         OrganizationUserType targetRole,
         Type expectedError)
     {
-        var result = _sut.CanManage(ActingUser(OrganizationUserType.User), TargetUser(targetRole));
+        var result = _sut.ValidateAuthorityOver(ActingUser(OrganizationUserType.User), TargetUser(targetRole));
 
         Assert.IsType(expectedError, result);
     }
 
     [Theory]
-    // A non-member (null role) has no authority; provider authority is resolved upstream, not here.
-    [InlineData(OrganizationUserType.Owner, typeof(OnlyOwnersCanManageOwners))]
-    [InlineData(OrganizationUserType.Admin, typeof(CustomUsersCannotManageAdminsOrOwners))]
-    [InlineData(OrganizationUserType.User, typeof(CustomUsersCannotManageAdminsOrOwners))]
-    [InlineData(OrganizationUserType.Custom, typeof(CustomUsersCannotManageAdminsOrOwners))]
-    public void CanManage_WhenActingUserIsNonMember_ReturnsGranularError(
-        OrganizationUserType targetRole,
-        Type expectedError)
+    // A caller who is neither a member nor a provider has no standing to act on members, regardless of target role.
+    [InlineData(OrganizationUserType.Owner)]
+    [InlineData(OrganizationUserType.Admin)]
+    [InlineData(OrganizationUserType.User)]
+    [InlineData(OrganizationUserType.Custom)]
+    public void ValidateAuthorityOver_WhenActingUserIsNeitherMemberNorProvider_ReturnsActingUserMustBeMemberOrProvider(
+        OrganizationUserType targetRole)
     {
-        var result = _sut.CanManage(actingUser: null, TargetUser(targetRole));
+        var actingUser = new StandardUser(Guid.NewGuid(), isProvider: false);
 
-        Assert.IsType(expectedError, result);
+        var result = _sut.ValidateAuthorityOver(actingUser, TargetUser(targetRole));
+
+        Assert.IsType<ActingUserMustBeMemberOrProvider>(result);
     }
 
     [Theory]
@@ -114,98 +108,98 @@ public class OrganizationUserValidationServiceTests
     // otherwise act on by rank.
     [InlineData(OrganizationUserType.User)]
     [InlineData(OrganizationUserType.Custom)]
-    public void CanManage_WhenCustomUserLacksManageUsers_ReturnsCustomUsersCannotManageAdminsOrOwners(
+    public void ValidateAuthorityOver_WhenCustomUserLacksManageUsers_ReturnsCustomUsersCannotManageAdminsOrOwners(
         OrganizationUserType targetRole)
     {
         var actingUser = ActingUser(OrganizationUserType.Custom, manageUsers: false);
 
-        var result = _sut.CanManage(actingUser, TargetUser(targetRole));
+        var result = _sut.ValidateAuthorityOver(actingUser, TargetUser(targetRole));
 
         Assert.IsType<CustomUsersCannotManageAdminsOrOwners>(result);
     }
 
     [Fact]
-    public void CanManage_WhenDemotingOwner_RejectsViaCurrentRole()
+    public void ValidateAuthorityOver_WhenDemotingOwner_RejectsViaCurrentRole()
     {
         // An Admin demoting an Owner to User must be rejected. A member carrying the new role (User) is within
         // the Admin's authority, so escalation is only caught when the caller also checks the *current* member.
         var admin = ActingUser(OrganizationUserType.Admin);
 
-        var currentRoleResult = _sut.CanManage(admin, TargetUser(OrganizationUserType.Owner));
-        var newRoleResult = _sut.CanManage(admin, TargetUser(OrganizationUserType.User));
+        var currentRoleResult = _sut.ValidateAuthorityOver(admin, TargetUser(OrganizationUserType.Owner));
+        var newRoleResult = _sut.ValidateAuthorityOver(admin, TargetUser(OrganizationUserType.User));
 
         Assert.IsType<OnlyOwnersCanManageOwners>(currentRoleResult);
         Assert.Null(newRoleResult);
     }
 
     [Fact]
-    public void CanManageRoleChange_WhenActingUserCanManageBothRoles_ReturnsNull()
+    public void ValidateAuthorityForRoleChange_WhenActingUserCanManageBothRoles_ReturnsNull()
     {
         // An Admin promoting a User to Custom can manage both the current and new role.
-        var result = _sut.CanManageRoleChange(ActingUser(OrganizationUserType.Admin)!,
+        var result = _sut.ValidateAuthorityForRoleChange(ActingUser(OrganizationUserType.Admin)!,
             TargetUser(OrganizationUserType.User), NewRole(OrganizationUserType.Custom));
 
         Assert.Null(result);
     }
 
     [Fact]
-    public void CanManageRoleChange_WhenDeniedAndNoOwnerInvolved_ReturnsCustomUsersCannotManageAdminsOrOwners()
+    public void ValidateAuthorityForRoleChange_WhenDeniedAndNoOwnerInvolved_ReturnsCustomUsersCannotManageAdminsOrOwners()
     {
         // A Custom user can't promote a User to Admin. Neither role is Owner, so the denial maps to the custom-user error.
-        var result = _sut.CanManageRoleChange(ActingUser(OrganizationUserType.Custom)!,
+        var result = _sut.ValidateAuthorityForRoleChange(ActingUser(OrganizationUserType.Custom)!,
             TargetUser(OrganizationUserType.User), NewRole(OrganizationUserType.Admin));
 
         Assert.IsType<CustomUsersCannotManageAdminsOrOwners>(result);
     }
 
     [Fact]
-    public void CanManageRoleChange_WhenTargetIsOwner_ReturnsOnlyOwnersCanManageOwners()
+    public void ValidateAuthorityForRoleChange_WhenTargetIsOwner_ReturnsOnlyOwnersCanManageOwners()
     {
         // An Admin can't manage an Owner, so demoting one is rejected with the owner-specific error.
-        var result = _sut.CanManageRoleChange(ActingUser(OrganizationUserType.Admin)!,
+        var result = _sut.ValidateAuthorityForRoleChange(ActingUser(OrganizationUserType.Admin)!,
             TargetUser(OrganizationUserType.Owner), NewRole(OrganizationUserType.User));
 
         Assert.IsType<OnlyOwnersCanManageOwners>(result);
     }
 
     [Fact]
-    public void CanManageRoleChange_WhenPromotingToOwner_ReturnsOnlyOwnersCanManageOwners()
+    public void ValidateAuthorityForRoleChange_WhenPromotingToOwner_ReturnsOnlyOwnersCanManageOwners()
     {
         // An Admin can manage a User but can't promote them to Owner, so the new role maps to the owner-specific error.
-        var result = _sut.CanManageRoleChange(ActingUser(OrganizationUserType.Admin)!,
+        var result = _sut.ValidateAuthorityForRoleChange(ActingUser(OrganizationUserType.Admin)!,
             TargetUser(OrganizationUserType.User), NewRole(OrganizationUserType.Owner));
 
         Assert.IsType<OnlyOwnersCanManageOwners>(result);
     }
 
     [Fact]
-    public void CanManageRoleChange_WhenCustomActorGrantsPermissionTheyDoNotHold_ReturnsCustomUsersCanOnlyGrantOwnPermissions()
+    public void ValidateAuthorityForRoleChange_WhenCustomActorGrantsPermissionTheyDoNotHold_ReturnsCustomUsersCanOnlyGrantOwnPermissions()
     {
         // A Custom actor holding only ManageUsers can't grant ManageSso.
         var actingUser = CustomUser(new Permissions { ManageUsers = true });
 
-        var result = _sut.CanManageRoleChange(actingUser, TargetUser(OrganizationUserType.Custom),
+        var result = _sut.ValidateAuthorityForRoleChange(actingUser, TargetUser(OrganizationUserType.Custom),
             NewRole(OrganizationUserType.Custom, new Permissions { ManageSso = true }));
 
         Assert.IsType<CustomUsersCanOnlyGrantOwnPermissions>(result);
     }
 
     [Fact]
-    public void CanManageRoleChange_WhenCustomActorGrantsPermissionsTheyHold_ReturnsNull()
+    public void ValidateAuthorityForRoleChange_WhenCustomActorGrantsPermissionsTheyHold_ReturnsNull()
     {
         var actingUser = CustomUser(new Permissions { ManageUsers = true });
 
-        var result = _sut.CanManageRoleChange(actingUser, TargetUser(OrganizationUserType.Custom),
+        var result = _sut.ValidateAuthorityForRoleChange(actingUser, TargetUser(OrganizationUserType.Custom),
             NewRole(OrganizationUserType.Custom, new Permissions { ManageUsers = true }));
 
         Assert.Null(result);
     }
 
     [Fact]
-    public void CanManageRoleChange_WhenOwnerGrantsAnyPermission_ReturnsNull()
+    public void ValidateAuthorityForRoleChange_WhenOwnerGrantsAnyPermission_ReturnsNull()
     {
         // Owners are exempt from the grant-subset check.
-        var result = _sut.CanManageRoleChange(ActingUser(OrganizationUserType.Owner)!,
+        var result = _sut.ValidateAuthorityForRoleChange(ActingUser(OrganizationUserType.Owner)!,
             TargetUser(OrganizationUserType.Custom),
             NewRole(OrganizationUserType.Custom, new Permissions { ManageScim = true, ManageSso = true }));
 
@@ -213,59 +207,59 @@ public class OrganizationUserValidationServiceTests
     }
 
     [Fact]
-    public void CanManageRoleChange_ByActingUser_WhenPerformedBySystemUser_ReturnsNull()
+    public void ValidateAuthorityForRoleChange_ByActingUser_WhenPerformedBySystemUser_ReturnsNull()
     {
         // System users act outside the organization role hierarchy and skip the check.
         var performedBy = new SystemUser(EventSystemUser.SCIM);
 
-        var result = _sut.CanManageRoleChange(performedBy, TargetUser(OrganizationUserType.Owner),
+        var result = _sut.ValidateAuthorityForRoleChange(performedBy, TargetUser(OrganizationUserType.Owner),
             NewRole(OrganizationUserType.User));
 
         Assert.Null(result);
     }
 
     [Fact]
-    public void CanManageRoleChange_ByActingUser_WhenPerformedByProvider_ActsWithOwnerAuthority()
+    public void ValidateAuthorityForRoleChange_ByActingUser_WhenPerformedByProvider_ActsWithOwnerAuthority()
     {
         // A managing provider member holds Owner-level authority, so it can promote a User to Owner.
         var performedBy = new StandardUser(Guid.NewGuid(), isProvider: true);
 
-        var result = _sut.CanManageRoleChange(performedBy, TargetUser(OrganizationUserType.User),
+        var result = _sut.ValidateAuthorityForRoleChange(performedBy, TargetUser(OrganizationUserType.User),
             NewRole(OrganizationUserType.Owner));
 
         Assert.Null(result);
     }
 
     [Fact]
-    public void CanManageRoleChange_ByActingUser_WhenPerformedByProviderWhoIsAlsoMember_ActsWithOwnerAuthority()
+    public void ValidateAuthorityForRoleChange_ByActingUser_WhenPerformedByProviderWhoIsAlsoMember_ActsWithOwnerAuthority()
     {
         // Provider authority takes precedence over the caller's own membership role.
         var performedBy = new StandardUser(Guid.NewGuid(), isProvider: true, OrganizationUserType.Admin);
 
-        var result = _sut.CanManageRoleChange(performedBy, TargetUser(OrganizationUserType.User),
+        var result = _sut.ValidateAuthorityForRoleChange(performedBy, TargetUser(OrganizationUserType.User),
             NewRole(OrganizationUserType.Owner));
 
         Assert.Null(result);
     }
 
     [Fact]
-    public void CanManageRoleChange_ByActingUser_WhenPerformedByMember_UsesTheirRole()
+    public void ValidateAuthorityForRoleChange_ByActingUser_WhenPerformedByMember_UsesTheirRole()
     {
         // An Admin member can't promote a User to Owner.
         var performedBy = new StandardUser(Guid.NewGuid(), isProvider: false, OrganizationUserType.Admin);
 
-        var result = _sut.CanManageRoleChange(performedBy, TargetUser(OrganizationUserType.User),
+        var result = _sut.ValidateAuthorityForRoleChange(performedBy, TargetUser(OrganizationUserType.User),
             NewRole(OrganizationUserType.Owner));
 
         Assert.IsType<OnlyOwnersCanManageOwners>(result);
     }
 
     [Fact]
-    public void CanManageRoleChange_ByActingUser_WhenPerformedByNeitherMemberNorProvider_ReturnsActingUserMustBeMemberOrProvider()
+    public void ValidateAuthorityForRoleChange_ByActingUser_WhenPerformedByNeitherMemberNorProvider_ReturnsActingUserMustBeMemberOrProvider()
     {
         var performedBy = new StandardUser(Guid.NewGuid(), isProvider: false);
 
-        var result = _sut.CanManageRoleChange(performedBy, TargetUser(OrganizationUserType.User),
+        var result = _sut.ValidateAuthorityForRoleChange(performedBy, TargetUser(OrganizationUserType.User),
             NewRole(OrganizationUserType.Admin));
 
         Assert.IsType<ActingUserMustBeMemberOrProvider>(result);
@@ -340,10 +334,6 @@ public class OrganizationUserValidationServiceTests
         Assert.IsType<CannotBeAdminOfMultipleFreeOrganizations>(result);
     }
 
-    private static OrganizationUser CustomUser(Permissions permissions)
-    {
-        var user = new OrganizationUser { Type = OrganizationUserType.Custom, OrganizationId = _organizationId };
-        user.SetPermissions(permissions);
-        return user;
-    }
+    private static IActingUser CustomUser(Permissions permissions) =>
+        new StandardUser(Guid.NewGuid(), isProvider: false, OrganizationUserType.Custom, permissions);
 }
