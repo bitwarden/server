@@ -8,7 +8,40 @@
     "fixture": "starter-team"
   },
   "policies": {
-    "enableAll": true,
-    "except": ["requireSso", "require2fa"]
+    "enable": ["masterPassword", "passwordGenerator", "singleOrg", "sendOptions", "resetPassword", "maximumVaultTimeout", "disablePersonalVaultExport"],
+    "data": {
+      "masterPassword": {
+        "minComplexity": 3,
+        "minLength": 14,
+        "requireUpper": true,
+        "requireLower": true,
+        "requireNumbers": true,
+        "requireSpecial": false,
+        "enforceOnLogin": false
+      },
+      "passwordGenerator": {
+        "overridePasswordType": null,
+        "minLength": 14,
+        "useUpper": true,
+        "useLower": true,
+        "useNumbers": true,
+        "useSpecial": true,
+        "minNumbers": 1,
+        "minSpecial": 1,
+        "minNumberWords": 4,
+        "capitalize": true,
+        "includeNumber": true
+      },
+      "sendOptions": {
+        "disableHideEmail": true
+      },
+      "resetPassword": {
+        "autoEnrollEnabled": true
+      },
+      "maximumVaultTimeout": {
+        "minutes": 30,
+        "action": "lock"
+      }
+    }
   }
 }

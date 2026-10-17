@@ -85,6 +85,8 @@ dotnet run -- preset --name individual.premium --mangle
 
 Org presets accept `--mangle` (per-run unique IDs, emails, and identifiers, so you can seed the same preset repeatedly), `--org-name` (override the org display name), and `--owner-email` (override the owner login email). Both overrides compose with `--mangle`. Org presets also accept `--stripe-billing` — see below.
 
+Pass `--no-data-protection` (on `organization`, `individual` or `preset`; SQL Server only) when another server will read the database, for example a shared DEV environment. Without it, `User.Key` and `User.MasterPassword` are protected with this machine's data-protection keys, and the seeded users can't log in anywhere else.
+
 For the full preset catalog, see [presets.md](../Seeder/Seeds/docs/presets.md).
 
 ## Stripe billing

@@ -14,6 +14,9 @@ internal record SeedPreset
     public SeedPresetPersonalCiphers? PersonalCiphers { get; init; }
     public int? KdfIterations { get; init; }
     public SeedPresetDensity? Density { get; init; }
+    public SeedPresetAccessShape? AccessShape { get; init; }
+    public SeedPresetMyItems? MyItems { get; init; }
+    public SeedPresetPolicies? Policies { get; init; }
     public List<SeedCollectionAssignment>? CollectionAssignments { get; init; }
     public List<SeedFolderAssignment>? FolderAssignments { get; init; }
     public List<SeedFavoriteAssignment>? FavoriteAssignments { get; init; }
@@ -52,6 +55,8 @@ internal record SeedPresetUsers
 {
     public int Count { get; init; }
     public bool RealisticStatusMix { get; init; }
+    public SeedPresetStatusMix? StatusMix { get; init; }
+    public int AdminCount { get; init; }
 }
 
 internal record SeedPresetGroups

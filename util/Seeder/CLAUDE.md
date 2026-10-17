@@ -45,13 +45,13 @@ Need to create test data?
 - **SeederContext**: Shared mutable state bag (NOT thread-safe)
 - **RecipeExecutor**: Awaits steps sequentially, captures statistics, commits via BulkCommitter, then runs any post-commit steps
 - **RecipeOrchestrator**: Orchestrates recipe building and execution (from presets or options)
-- **SeederDependencies** (`Options/`): Bundles infrastructure services (`DatabaseContext`, `IMapper`, `IPasswordHasher<User>`, `IManglerService`, `Func<ILicensingService>` (a factory, because `LicensingService` throws on construction when the licensing certificate cannot be loaded), `IAttachmentStorageService`, `ISeederLicenseSigner`, `ILoggerFactory`) into a single record, plus two optional `init` properties — `Progress` and `Func<IStripeBillingInitializer>? BillingInitializer` (a factory, so the billing DI graph is only built by commands that opt in). Recipes and the Orchestrator accept this instead of loose parameters. The CLI utility builds it via `SeederServiceFactory.Create().ToDependencies()`. Add new optional services as `init` properties rather than growing the positional list.
+- **SeederDependencies** (`Options/`): Bundles infrastructure services (`DatabaseContext`, `IMapper`, `IPasswordHasher<User>`, `IManglerService`, `Func<ILicensingService>` (a factory, because `LicensingService` throws on construction when the licensing certificate cannot be loaded), `IAttachmentStorageService`, `ISeederLicenseSigner`, `ILoggerFactory`) into a single record, plus three optional `init` properties — `Progress`, `Func<IStripeBillingInitializer>? BillingInitializer` (a factory, so the billing DI graph is only built by commands that opt in) and `DisableDataProtection` (see Server Data Protection). Recipes and the Orchestrator accept this instead of loose parameters. The CLI utility builds it via `SeederServiceFactory.Create().ToDependencies()`. Add new optional services as `init` properties rather than growing the positional list.
 
 **Why two step interfaces, not one async contract?** Deliberate — don't unify. Collapsing to one `Task ExecuteAsync(SeederContext)` costs: rewrite every step class in `Steps/` plus the step test doubles in `test/SeederApi.IntegrationTest/`; force every `.Execute(context)` site in `test/SeederApi.IntegrationTest/Steps/` to `await`, their test methods to `async`; and `TreatWarningsAsErrors` is on repo-wide (`Directory.Build.props`), so CS1998 makes `async` without `await` a build error — every sync step needs `return Task.CompletedTask`. Permanent trap. The split costs less: two-arm union in `OrderedStep`, `object`-typed `Inner`, one duplicated `RecipeBuilder` registration. Diverges from `IScene`/`IQuery` — single `Task`-returning, no sync twin.
 
 **Fixture/preset separation**: Fixtures (organizations, rosters, ciphers) are independent and never reference each other. The preset is the only layer that composes fixtures and defines cross-cutting relationships (folder assignments, favorites). See `Seeds/docs/architecture.md`.
 
-**Phase order (org presets)**: Org → OrgApiKey → Roster → Owner (conditional) → Generator (conditional) → Users → Groups → Collections → Folders → Ciphers → CipherAttachments → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
+**Phase order (org presets)**: Org → OrgApiKey → Policies (conditional) → Roster → Owner (conditional) → Generator (conditional) → Users → Groups (or ShapedGroups) → Collections (or ShapedCollections) → Folders → Ciphers → CipherAttachments → CipherCollections → CipherFolders → CipherFavorites → MyItems (conditional) → PersonalCiphers
 **Phase order (individual presets)**: IndividualUser → SelfHostUserLicense (conditional) → NamedFolders → Generator → Folders → Ciphers → CipherAttachments → FolderAssignments → FavoriteAssignments
 
 **Individual user presets** use the Pipeline with `CreateIndividualUserStep` (no org, no groups, no collections). These presets live in `Seeds/fixtures/presets/individual/` and are identified by having a `"user"` key instead of `"organization"`. They support `folderNames`, `folderAssignments`, and `favoriteAssignments` for fixture-driven personal vault organization. See `Seeds/docs/presets.md` for the catalog.
@@ -96,6 +96,21 @@ Steps accept an optional `DensityProfile` that controls relationship patterns be
 
 **Preset JSON**: Add an optional `"density": { ... }` block. See `Seeds/schemas/preset.schema.json` for the full schema.
 
+## Access Shape
+
+A preset with an `accessShape` block (the `scale.*-migrated-*` presets) replaces the density group, collection and
+cipher-assignment algorithms with `CreateShapedGroupsStep` and `CreateShapedCollectionsStep`; `myItems` and `policies`
+add `CreateMyItemsStep` and `CreatePoliciesStep`. Rules `PresetValidator` enforces:
+
+- One model at a time: density settings `accessShape` would ignore (membership, fan-out, user collections, cipher skew
+  and multi-collection settings) are rejected. Cipher types, permissions and orphan/archive/delete rates still apply.
+- Presets without `accessShape` are unchanged.
+- Policy rows follow the server's rules: no enable/disable overlap, no data for unlisted types, `singleOrg` whenever a
+  policy requires it, no `enableAll`. `myItems` needs the `organizationDataOwnership` policy and an enterprise plan.
+- Shaped loops fail the run if they fall more than 1% short of a preset target (`ShapeTargets`).
+
+Design, knobs and calibration: `Seeds/docs/access-shape.md`.
+
 **Presets**: Organized into `dev/`, `features/`, `qa/`, `scale/`, `individual/`, `validation/` folders under `Seeds/fixtures/presets/`. See `Seeds/docs/presets.md` for the full catalog.
 
 **Verification**: SQL queries for validating density algorithms are in `Seeds/docs/verification.md`.
@@ -132,6 +147,10 @@ The Seeder uses the Rust SDK via FFI because it must behave like a real Bitwarde
 1. Generate encryption keys (like client account setup)
 2. Encrypt vault data client-side (same SDK as real clients)
 3. Store only encrypted result
+
+## Server Data Protection
+
+`User.Key` and `User.MasterPassword` pass through the EF `DataProtectionConverter`, so a default seed stores `P|` values that only a server holding the seeding machine's data-protection keys can read. `--no-data-protection` (`SeederDependencies.DisableDataProtection`) inserts users through `Pipeline/UserBulkRow.cs` instead, which skips the converter; the server reads unprefixed values as-is and re-protects them on the next save. SQL Server only: `RecipeOrchestrator` throws on other providers.
 
 ## Data Flow
 
@@ -175,6 +194,18 @@ Same domain = same seed = reproducible data:
 ```csharp
 var seed = options.Seed ?? DeriveStableSeed(options.Domain);
 ```
+
+**Distribution totals are explicit.** `Distribution<T>.Select(index, total)` throws unless `0 <= index < total`.
+`CipherComposer.Compose(index, total, ...)` takes the caller's own index-space size and selects password strength
+and username category at `index % total`. Don't derive the total from the generator: preset recipes build it
+without a cipher count, and a zero total once put every generated preset login in the last password bucket
+(24 distinct "very strong" passwords).
+
+**Login rates are calibrated to prod.** The `*Per100` constants in `CipherComposer` (URIs, notes, fields, TOTP, passkeys,
+password history, item keys, sites, unique passwords) apply to every preset that generates logins. They come from the
+DBOPS-257 measurement of a large EU org; values and sources are in [Data/README.md](Data/README.md#calibrated-login-rates).
+Re-measure before changing them. Every URI must carry `uriChecksum` (set in `LoginCipherSeeder`): the SDK silently drops
+URIs without a valid checksum from items that have their own key.
 
 ## Fixture Contract Sync
 

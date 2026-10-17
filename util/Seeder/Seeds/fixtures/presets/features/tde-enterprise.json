@@ -12,7 +12,7 @@
     "fixture": "enterprise-basic"
   },
   "policies": {
-    "enable": ["requireSso"]
+    "enable": ["singleOrg", "requireSso"]
   },
   "sso": {
     "identifier": "obsidian-labs",

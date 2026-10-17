@@ -1,8 +1,18 @@
-﻿using Bit.Core.Vault.Entities;
+﻿using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Enums;
+using Bit.Core.Vault.Models.Data;
+using Bit.RustSDK;
+using Bit.Seeder.Data;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
+using Bit.Seeder.Data.Generators;
 using Bit.Seeder.Data.Static;
 using Bit.Seeder.Factories;
+using Bit.Seeder.Options;
 using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest;
@@ -102,12 +112,154 @@ public class CipherComposerTests
     }
 
     [Fact]
-    public void BuildPasswordHistory_ZeroTotal_DoesNotThrow()
+    public void BuildPasswordHistory_ZeroTotal_Throws()
     {
-        var history = CipherComposer.BuildPasswordHistory(0, 1, 0, PasswordDistributions.Realistic);
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            CipherComposer.BuildPasswordHistory(0, 1, 0, PasswordDistributions.Realistic));
+    }
 
-        Assert.Single(history);
-        Assert.False(string.IsNullOrEmpty(history[0].Password));
+    [Fact]
+    public void Compose_PresetPathGenerator_LoginPasswordsFollowTheDistribution()
+    {
+        // Preset recipes build the generator without a cipher count. The composer must still spread logins across
+        // every strength bucket, instead of putting all of them in the last bucket, as a zero total once did.
+        const int total = 2000;
+        var generator = GeneratorContext.FromOptions(new OrganizationVaultOptions { Name = "preset", Domain = "preset.example", Users = 0 });
+        var orgKey = RustSdkService.GenerateOrganizationKeys().Key;
+
+        // Items with their own key can't be opened with the org key alone here; the rest show the password mix
+        var passwords = Enumerable.Range(0, total)
+            .Select(i => CipherComposer.Compose(i, total, CipherType.Login, orgKey, Companies.All, generator,
+                PasswordDistributions.Realistic, organizationId: Guid.NewGuid()))
+            .Where(c => c.Key is null)
+            .Select(c => RustSdkService.DecryptString(JsonSerializer.Deserialize<CipherLoginData>(c.Data)!.Password!, orgKey))
+            .ToList();
+
+        var pooled = passwords.Where(p => Array.IndexOf(Passwords.All, p) >= 0).ToList();
+        Assert.Equal(5, pooled.Select(ClassifyStrength).Distinct().Count());
+        Assert.InRange(pooled.Count, passwords.Count * 15 / 100, passwords.Count * 25 / 100);
+    }
+
+    [Fact]
+    public void Compose_Logins_MostPasswordsAreUnique()
+    {
+        // Breach checks run once per distinct password; four in five logins get their own
+        const int total = 1000;
+        var generator = GeneratorContext.FromOptions(new OrganizationVaultOptions { Name = "uniq", Domain = "uniq.example", Users = 0 });
+        var orgKey = RustSdkService.GenerateOrganizationKeys().Key;
+
+        var passwords = Enumerable.Range(0, total)
+            .Select(i => CipherComposer.Compose(i, total, CipherType.Login, orgKey, Companies.All, generator,
+                PasswordDistributions.Realistic, organizationId: Guid.NewGuid()))
+            .Where(c => c.Key is null)
+            .Select(c => RustSdkService.DecryptString(JsonSerializer.Deserialize<CipherLoginData>(c.Data)!.Password!, orgKey))
+            .ToList();
+
+        var generated = passwords.Where(p => Array.IndexOf(Passwords.All, p) < 0).ToList();
+        Assert.InRange(generated.Count, passwords.Count * 75 / 100, passwords.Count * 85 / 100);
+        Assert.Equal(generated.Count, generated.Distinct().Count());
+    }
+
+    [Theory]
+    [InlineData(PasswordStrength.VeryWeak)]
+    [InlineData(PasswordStrength.Weak)]
+    [InlineData(PasswordStrength.Fair)]
+    [InlineData(PasswordStrength.Strong)]
+    [InlineData(PasswordStrength.VeryStrong)]
+    public void UniquePasswordGenerator_IsDeterministicAndRarelyRepeats(PasswordStrength strength)
+    {
+        var first = Enumerable.Range(0, 20_000).Select(i => UniquePasswordGenerator.Generate(i, strength)).ToList();
+        var again = Enumerable.Range(0, 20_000).Select(i => UniquePasswordGenerator.Generate(i, strength)).ToList();
+
+        Assert.Equal(first, again);
+        Assert.True(first.Distinct().Count() >= 19_900, $"{strength}: {first.Distinct().Count()} distinct of 20,000.");
+    }
+
+    [Fact]
+    public void Compose_ItemShapeRates_MatchProdCalibration()
+    {
+        // Same tests as the prod measurement (EU, 2026-10-11): passkeys ~1% of logins, history ~6%, item keys 55%
+        const int total = 1000;
+        var generator = GeneratorContext.FromOptions(new OrganizationVaultOptions { Name = "rates", Domain = "rates.example", Users = 0 });
+        var orgKey = RustSdkService.GenerateOrganizationKeys().Key;
+
+        var ciphers = Enumerable.Range(0, total)
+            .Select(i => CipherComposer.Compose(i, total, CipherType.Login, orgKey, Companies.All, generator,
+                PasswordDistributions.Realistic, organizationId: Guid.NewGuid()))
+            .ToList();
+
+        Assert.Equal(CipherComposer.PasskeysPer100Logins * total / 100, ciphers.Count(c => c.Data!.Contains("\"Fido2Credentials\":[{")));
+        Assert.Equal(CipherComposer.PasswordHistoryPer100Logins * total / 100, ciphers.Count(c => c.Data!.Contains("\"PasswordHistory\":[{")));
+        Assert.Equal(CipherComposer.ItemKeysPer100 * total / 100, ciphers.Count(c => c.Key is not null));
+        Assert.Equal(CipherComposer.UriPer100Logins * total / 100, ciphers.Count(c => c.Data!.Contains("\"Uris\":[{")));
+        Assert.Equal(CipherComposer.MultiUriPer100Logins * total / 100, ciphers.Count(c => c.Data!.Contains("},{\"Uri\":")));
+        Assert.Equal(CipherComposer.NotesPer100Logins * total / 100, ciphers.Count(c => c.Data!.Contains("\"Notes\":\"2.")));
+        Assert.Equal(CipherComposer.FieldsPer100Logins * total / 100, ciphers.Count(c => c.Data!.Contains("\"Fields\":[{")));
+        Assert.Equal(CipherComposer.TotpPer100Logins * total / 100, ciphers.Count(c => c.Data!.Contains("\"Totp\":\"2.")));
+    }
+
+    [Fact]
+    public void Compose_Login_StoresUrisWithoutTheLegacyTopLevelUri()
+    {
+        // Matches what the API stores: CipherRequestModel drops the top-level Uri, which only repeats Uris[0]
+        var generator = GeneratorContext.FromOptions(new OrganizationVaultOptions { Name = "uri", Domain = "uri.example", Users = 0 });
+        var orgKey = RustSdkService.GenerateOrganizationKeys().Key;
+
+        var withUris = Enumerable.Range(0, 100)
+            .Select(i => CipherComposer.Compose(i, 100, CipherType.Login, orgKey, Companies.All, generator,
+                PasswordDistributions.Realistic, organizationId: Guid.NewGuid()))
+            .Select(c => JsonNode.Parse(c.Data!)!.AsObject())
+            .Where(data => data["Uris"] is not null)
+            .ToList();
+
+        Assert.NotEmpty(withUris);
+        Assert.All(withUris, data => Assert.False(data.ContainsKey("Uri")));
+    }
+
+    [Fact]
+    public void Compose_LoginUris_CarryTheChecksumClientsRequireOnKeyedItems()
+    {
+        // The SDK drops URIs without a valid checksum from items that have their own key
+        var generator = GeneratorContext.FromOptions(new OrganizationVaultOptions { Name = "sum", Domain = "sum.example", Users = 0 });
+        var orgKey = RustSdkService.GenerateOrganizationKeys().Key;
+
+        var withUris = Enumerable.Range(0, 200)
+            .Select(i => CipherComposer.Compose(i, 200, CipherType.Login, orgKey, Companies.All, generator,
+                PasswordDistributions.Realistic, organizationId: Guid.NewGuid()))
+            .Select(c => (c.Key, Data: JsonSerializer.Deserialize<CipherLoginData>(c.Data)!))
+            .Where(c => c.Data.Uris?.Any() == true)
+            .ToList();
+
+        Assert.Contains(withUris, c => c.Key is not null);
+        Assert.All(withUris.SelectMany(c => c.Data.Uris!), u => Assert.StartsWith("2.", u.UriChecksum));
+        Assert.All(withUris.Where(c => c.Key is null).SelectMany(c => c.Data.Uris!), u =>
+        {
+            var uri = RustSdkService.DecryptString(u.Uri!, orgKey);
+            var expected = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(uri)));
+            Assert.Equal(expected, RustSdkService.DecryptString(u.UriChecksum!, orgKey));
+        });
+    }
+
+    [Fact]
+    public void Compose_LargeVault_SpreadsLoginsOverMoreSitesThanTheCompanyList()
+    {
+        // Access Intelligence groups logins by domain; a fixed company list would cap applications at its length
+        const int total = 20_000;
+        var generator = GeneratorContext.FromOptions(new OrganizationVaultOptions { Name = "apps", Domain = "apps.example", Users = 0 });
+        var orgKey = RustSdkService.GenerateOrganizationKeys().Key;
+
+        var domains = Enumerable.Range(0, total)
+            .Select(i => CipherComposer.Compose(i, total, CipherType.Login, orgKey, Companies.All, generator,
+                PasswordDistributions.Realistic, organizationId: Guid.NewGuid()))
+            .Where(c => c.Key is null)
+            .Select(c => JsonSerializer.Deserialize<CipherLoginData>(c.Data)!.Uris?.FirstOrDefault()?.Uri)
+            .Where(u => u is not null)
+            .Select(u => new Uri(RustSdkService.DecryptString(u!, orgKey)).Host)
+            .Distinct()
+            .Count();
+
+        Assert.True(domains > Companies.All.Length * 3,
+            $"Expected well over {Companies.All.Length} distinct sites for {total} logins; got {domains}.");
     }
 
     [Fact]

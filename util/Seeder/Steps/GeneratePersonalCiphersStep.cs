@@ -119,7 +119,7 @@ internal sealed class GeneratePersonalCiphersStep(
                     var reprompt = repromptEveryNthCipher > 0 && globalIndex % repromptEveryNthCipher == 0
                         ? CipherRepromptType.Password
                         : CipherRepromptType.None;
-                    var cipher = CipherComposer.Compose(globalIndex, cipherType, userDigest.SymmetricKey, companies, generator, passwordDistribution, userId: userDigest.UserId, reprompt: reprompt);
+                    var cipher = CipherComposer.Compose(globalIndex, expectedTotal, cipherType, userDigest.SymmetricKey, companies, generator, passwordDistribution, userId: userDigest.UserId, reprompt: reprompt);
 
                     CipherComposer.AssignFolder(cipher, userDigest.UserId, i, userFolderIds);
 

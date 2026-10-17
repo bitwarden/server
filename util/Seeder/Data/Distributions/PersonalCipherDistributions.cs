@@ -26,6 +26,20 @@ public static class PersonalCipherDistributions
     );
 
     /// <summary>
+    /// A large org part-way through the Organization Data Ownership migration: personal items still waiting for
+    /// members who have not logged in since the policy was enabled. ~80% have none and a few hold over a thousand,
+    /// about 6 per confirmed member overall (prod: 22.6k across 718 of 3,644 confirmed members).
+    /// </summary>
+    public static Distribution<(int Min, int Max)> PendingMigration { get; } = new(
+        ((0, 0), 0.8026),
+        ((1, 10), 0.129),
+        ((11, 40), 0.042),
+        ((51, 150), 0.022),
+        ((201, 480), 0.0036),
+        ((1001, 2000), 0.0008)
+    );
+
+    /// <summary>
     /// Heavy usage: power users dominate, everyone has personal items.
     /// </summary>
     public static Distribution<(int Min, int Max)> HeavyUsage { get; } = new(

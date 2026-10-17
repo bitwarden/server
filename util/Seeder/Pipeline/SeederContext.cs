@@ -84,6 +84,8 @@ public sealed class SeederContext(IServiceProvider services)
 
     internal List<Folder> Folders { get; } = [];
 
+    internal List<Policy> Policies { get; } = [];
+
     internal EntityRegistry Registry { get; } = new();
 
     internal GeneratorContext? Generator { get; set; }

@@ -26,6 +26,9 @@ public class PresetArgs : IArgumentModel
     [Option("mangle", Description = "Enable mangling for test isolation")]
     public bool Mangle { get; set; }
 
+    [Option("no-data-protection", Description = "Write User.Key and User.MasterPassword without the server's data protection, so a server with different data-protection keys can read them")]
+    public bool NoDataProtection { get; set; }
+
     [Option("password", Description = "Password for all seeded accounts (default: asdfasdfasdf)")]
     public string? Password { get; set; }
 

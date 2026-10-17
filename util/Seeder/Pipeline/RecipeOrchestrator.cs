@@ -3,6 +3,7 @@ using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Options;
 using Bit.Seeder.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Seeder.Pipeline;
@@ -206,8 +207,14 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
 
     private async Task<PipelineExecutionResult> BuildAndExecuteAsync(string recipeName, ServiceCollection services)
     {
+        if (deps.DisableDataProtection && !deps.Db.Database.IsSqlServer())
+        {
+            throw new InvalidOperationException(
+                "Disabling data protection (--no-data-protection) is only supported on SQL Server.");
+        }
+
         await using var serviceProvider = services.BuildServiceProvider();
-        var committer = new BulkCommitter(deps.Db, deps.Mapper);
+        var committer = new BulkCommitter(deps.Db, deps.Mapper, deps.DisableDataProtection);
         var executor = new RecipeExecutor(recipeName, serviceProvider, committer);
         return await executor.ExecuteAsync();
     }
