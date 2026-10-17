@@ -1,4 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums.Partnerships;
+using Bit.Core.AdminConsole.OrganizationFeatures.Partnerships;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.AdminConsole.Repositories;
@@ -26,6 +28,15 @@ public interface IOrganizationPartnershipEntitlementRepository
     /// </summary>
     Task<ICollection<OrganizationPartnershipEntitlement>> GetPageByOrganizationPartnershipIdAsync(
         Guid organizationPartnershipId, Guid? afterId, int pageSize);
+
+    /// <summary>
+    /// Up to <paramref name="pageSize"/> of the partnership's entitlements ordered by RevisionDate then Id, optionally
+    /// only those in <paramref name="state"/> and revised strictly after <paramref name="revisedAfter"/>, starting
+    /// after <paramref name="after"/>.
+    /// </summary>
+    Task<ICollection<OrganizationPartnershipEntitlement>> GetPageByRevisionDateAsync(
+        Guid organizationPartnershipId, PartnershipEntitlementState? state, DateTime? revisedAfter,
+        PartnershipEntitlementKeyset? after, int pageSize);
 
     /// <summary>
     /// Writes <paramref name="entitlement"/> only if the stored row's RevisionDate still equals
