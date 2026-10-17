@@ -4,6 +4,12 @@
   <PropertyGroup>
     <!-- These opt outs should be removed when all warnings are addressed -->
     <WarningsNotAsErrors>$(WarningsNotAsErrors);CA1304</WarningsNotAsErrors>
+    <!--
+      Pinned to 0.0.1: this project is only consumed as a library, so its assembly version is never
+      reported anywhere. Keeping it fixed avoids regenerating every consumer's packages.lock.json
+      on each service version bump.
+    -->
+    <Version>0.0.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
