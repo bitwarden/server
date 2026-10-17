@@ -1,15 +1,14 @@
 # Organization Policies
 
+## Purpose
+
 This directory contains the server-side policies domain: how organization policies are configured, stored and enforced.
 This README gives a high-level overview of the domain. Implementation details are documented in the READMEs of the
 relevant sub-folders.
 
-## We're here to help!
+## Key concepts
 
-If you have any questions about policies, or the existing policy frameworks do not meet your needs, please reach out to
-the Admin Console Team. These are widely-used cross-team interfaces and we want to make them great for everyone.
-
-## What is a policy?
+### What is a policy?
 
 A policy is a setting that an organization admin turns on to govern the behavior of the organization's members, or to change
 how the organization itself behaves. For example:
@@ -44,7 +43,7 @@ so the policies that apply to them must be combined into a single answer.
 For these reasons, code outside this domain should never read the `Policy` entity directly to make an enforcement decision.
 Instead, use the higher level queries described below.
 
-## Ownership
+### Ownership
 
 The foundational rule of the policy domain is that **core logic is policy-agnostic**. Policies span many different
 business domains and teams; the policy domain must serve all of them equally, without accumulating ad-hoc customizations
@@ -59,35 +58,31 @@ Therefore:
   defining new policies, but not any specific policy.
 - Other teams use this framework to define how their policies are validated and enforced.
 
-## Architecture
+## Usage
 
+```mermaid
+flowchart TD
+    admin([Admin configures a policy]) --> save[ISavePolicyCommand]
+    save --> handlers[Policy event handlers<br/>validation, dependencies, side effects]
+    save --> table[(Policy table)]
+    table --> policyQuery["IPolicyQuery<br/>organization's view of a policy"]
+    table --> requirementQuery["IPolicyRequirementQuery<br/>enforce against a user's existing memberships"]
+    table --> preAccessQuery["IPreAccessEnforcerQuery<br/>enforce a target organization's policies before a user gets access"]
 ```
-Admin configures a policy
-        │
-        ▼
-ISavePolicyCommand ──▶ policy event handlers (validation, dependencies, side effects)
-        │
-        ▼
-   Policy table
-        │
-        ├──────────────────────────────┬──────────────────────────────────┐
-        ▼                              ▼                                  ▼
-  IPolicyQuery                  IPolicyRequirementQuery            IPreAccessEnforcerQuery
-  organization's view           enforce against a user's           enforce a target organization's
-  of a policy                   existing memberships               policies before a user gets access
-```
+
+> _Audience: engineers working with policies for the first time. Intent: which entry point to use for writing, reading
+> and enforcing policies. Scope: entry points in this directory only; omits repositories, sync and API controllers._
 
 ### Administration
 
-`ISavePolicyCommand` is the single entry point for creating or updating a policy. It runs an ordered workflow: check that the
-organization can use policies, check policy dependencies, run policy-specific validation, run side effects, save the policy
-and log an event.
+`ISavePolicyCommand` is the single entry point for creating or updating a policy. It validates the change, runs any side
+effects, saves the policy and logs an event.
 
 Policies hook into this workflow by implementing policy update event interfaces. For example, a policy can require another
 policy to be enabled first, or revoke non-compliant members when it is turned on. Policies that need no special behavior
 need no handler at all. Handlers live in `PolicyEventHandlers/`.
 
-See [PolicyUpdateEvents/README.md](PolicyUpdateEvents/README.md).
+See [the policy save workflow](PolicyUpdateEvents/README.md).
 
 ### Reading organization state
 
@@ -105,7 +100,7 @@ than `Enabled`.
 Each requirement has a factory that defines its filtering and combining rules. This keeps the business rules in one place,
 so consumers do not need to repeat them.
 
-See [PolicyRequirements/README.md](PolicyRequirements/README.md).
+See [policy requirements](PolicyRequirements/README.md).
 
 ### Pre-access enforcement
 
@@ -118,7 +113,9 @@ them against the role the user will hold. It reuses the role and provider exempt
 factories (`IPreAccessPolicyRequirementFactory`), so the rules are consistent with ordinary enforcement. It only covers the
 target organization; use `IPolicyRequirementQuery` for policies from organizations the user already belongs to.
 
-## Client and server enforcement
+## Gotchas / constraints
+
+### Client and server enforcement
 
 Clients receive policies through sync and enforce many of them locally. There are two use cases for this:
 
