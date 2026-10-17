@@ -123,9 +123,13 @@ public class LoginControllerTests
 
     private static void StubCurrentAuth(IAuthenticationService authService, AuthenticationProperties properties)
     {
+        // HttpContext.GetTokenAsync(scheme, name) under the hood calls
+        // IAuthenticationService.AuthenticateAsync(ctx, scheme). The Logout action reads the
+        // id_token from the SSO cookie scheme, so stub that scheme to return the ticket whose
+        // properties carry the token.
         var identity = new ClaimsIdentity(authenticationType: "TestAuth");
         var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), properties, "TestAuth");
-        authService.AuthenticateAsync(Arg.Any<HttpContext>(), null)
+        authService.AuthenticateAsync(Arg.Any<HttpContext>(), AdminAuthenticationSchemes.SsoCookie)
             .Returns(AuthenticateResult.Success(ticket));
     }
 
@@ -223,7 +227,7 @@ public class LoginControllerTests
         Assert.IsType<RedirectToActionResult>(result);
         await authService.Received(1).SignInAsync(
             Arg.Any<HttpContext>(),
-            IdentityConstants.ApplicationScheme,
+            AdminAuthenticationSchemes.SsoCookie,
             builtPrincipal,
             Arg.Any<AuthenticationProperties>());
     }
@@ -246,7 +250,7 @@ public class LoginControllerTests
         Assert.Equal(5, redirect.RouteValues!["error"]);
         await authService.DidNotReceive().SignInAsync(
             Arg.Any<HttpContext>(),
-            IdentityConstants.ApplicationScheme,
+            AdminAuthenticationSchemes.SsoCookie,
             Arg.Any<ClaimsPrincipal>(),
             Arg.Any<AuthenticationProperties>());
     }
@@ -269,7 +273,7 @@ public class LoginControllerTests
 
         await authService.Received(1).SignInAsync(
             Arg.Any<HttpContext>(),
-            IdentityConstants.ApplicationScheme,
+            AdminAuthenticationSchemes.SsoCookie,
             builtPrincipal,
             Arg.Any<AuthenticationProperties>());
     }
@@ -315,7 +319,7 @@ public class LoginControllerTests
         Assert.IsType<RedirectToActionResult>(result);
         await authService.Received(1).SignInAsync(
             Arg.Any<HttpContext>(),
-            IdentityConstants.ApplicationScheme,
+            AdminAuthenticationSchemes.SsoCookie,
             Arg.Any<ClaimsPrincipal>(),
             Arg.Is<AuthenticationProperties>(p => p.GetTokenValue("id_token") == "the-id-token"));
     }

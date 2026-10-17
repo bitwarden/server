@@ -6,14 +6,16 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Admin.Auth.Services;
 
-// Assembles the ClaimsPrincipal that gets written to the Admin Portal application cookie on
-// SSO sign-in. The caller hands over the verified external principal and the email, and gets back a
+// Assembles the ClaimsPrincipal that gets written to the Admin Portal SSO cookie on sign-in.
+// The caller hands over the verified external principal and the email, and gets back a
 // principal ready for HttpContext.SignInAsync.
 //
 // Deliberately bypasses SignInManager / UserManager so the SSO path does not need a backing
-// user store entry and does not stamp a SecurityStamp claim. Without the stamp claim, the
-// SecurityStampValidator skips its periodic re-fetch, which is what we want for a session
-// whose source of truth is the IdP, not local config.
+// user store entry and does not stamp a SecurityStamp claim. The companion to that choice is
+// that the controller signs the result into the dedicated AdminAuthenticationSchemes.SsoCookie
+// scheme (not Identity's application cookie); the Identity cookie's SecurityStampValidator
+// would otherwise reject this principal within 30 seconds because no matching user exists in
+// the store.
 public interface ISsoSignInPrincipalBuilder
 {
     ClaimsPrincipal Build(string email, ClaimsPrincipal externalPrincipal);

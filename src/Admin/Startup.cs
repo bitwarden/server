@@ -1,9 +1,12 @@
 ﻿using System.Globalization;
+using Bit.Admin.Auth.IdentityServer;
 using Bit.Admin.IdentityServer;
 using Bit.Core.Context;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Stripe;
 using Microsoft.AspNetCore.Mvc.Razor;
@@ -80,13 +83,64 @@ public class Startup
         services.AddAdminUpstreamOidc(adminSettings);
         services.Configure<SecurityStampValidatorOptions>(options =>
         {
-            // This interval defines the maximum delay in access changes 
-            // being reflected in the application.
+            // This interval defines the maximum delay in access changes
+            // being reflected in the application. Applies to the Identity application cookie
+            // (used by the passwordless-email path), which has a backing user store with a
+            // SecurityStamp to validate. The SSO cookie added below has no backing store,
+            // so this validator is not wired to it.
             options.ValidationInterval = TimeSpan.FromSeconds(30);
+        });
+        services.AddAuthentication()
+            .AddCookie(AdminAuthenticationSchemes.SsoCookie, options =>
+            {
+                // Shared with the Identity cookie so a session timeout on either lands on the
+                // same login page.
+                options.LoginPath = "/login";
+                options.AccessDeniedPath = "/login?accessDenied=true";
+                options.Cookie.Name = $"Bitwarden_{globalSettings.ProjectName}.SSO";
+                options.Cookie.HttpOnly = true;
+                // Secure=Always is safe here because this cookie is only ever issued at the end
+                // of an SSO sign-in, and SSO already requires HTTPS end-to-end (the OIDC
+                // handler sets RequireHttpsMetadata=true and its correlation/nonce cookies are
+                // SameSite=None, which browsers only honor over HTTPS).
+                options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                // Lax matches the Identity cookie: required so the cookie is sent on the
+                // top-level GET redirect back from the OIDC callback.
+                options.Cookie.SameSite = SameSiteMode.Lax;
+                options.ExpireTimeSpan = TimeSpan.FromDays(2);
+                options.SlidingExpiration = true;
+                options.ReturnUrlParameter = "returnUrl";
+                // Deliberately NO SecurityStampValidator wired to this scheme. The IdP owns
+                // identity, there is no local user record, and no stamp to compare against.
+                // Session lifetime is bounded by the cookie expiry above and by RP-initiated
+                // logout on sign-out.
+            });
+        services.AddAuthorization(options =>
+        {
+            // Try the Identity cookie first, then the SSO cookie. The PolicyEvaluator calls
+            // AuthenticateAsync on each listed scheme and sets HttpContext.User to the first
+            // successful result, so both passwordless and SSO sessions satisfy bare [Authorize]
+            // and are visible to AccessControlService. Each scheme is actually decrypted and
+            // validated - no cookie-name presence heuristic that would short-circuit a valid
+            // session when a stale cookie from the other scheme happens to be on the request.
+            //
+            // DefaultAuthenticateScheme / DefaultChallengeScheme stay at Identity's application
+            // cookie (set by AddIdentity), so bare [Authorize] redirects to /login via Identity
+            // and SignInManager still writes to the Identity cookie.
+            options.DefaultPolicy = new AuthorizationPolicyBuilder(
+                    IdentityConstants.ApplicationScheme,
+                    AdminAuthenticationSchemes.SsoCookie)
+                .RequireAuthenticatedUser()
+                .Build();
+            options.FallbackPolicy = options.DefaultPolicy;
         });
         if (globalSettings.SelfHosted)
         {
             services.ConfigureApplicationCookie(options =>
+            {
+                options.Cookie.Path = "/admin";
+            });
+            services.Configure<CookieAuthenticationOptions>(AdminAuthenticationSchemes.SsoCookie, options =>
             {
                 options.Cookie.Path = "/admin";
             });

@@ -162,12 +162,14 @@ public class LoginController : Controller
             props.StoreTokens([new AuthenticationToken { Name = "id_token", Value = idToken }]);
         }
 
-        // SSO signs in directly to the application cookie with a hand-built principal rather
+        // SSO signs in to its own dedicated cookie scheme with a hand-built principal rather
         // than routing through SignInManager / UserManager. There's no local user record to
         // look up and no SecurityStamp to track - the IdP owns identity, and session lifetime
-        // is bounded by the cookie expiry.
+        // is bounded by the cookie expiry. A separate scheme (not the Identity application
+        // cookie) is required because Identity's SecurityStampValidator does a 30s re-fetch
+        // against the user store, which would reject the SSO principal within 30 seconds.
         var principal = _ssoSignInPrincipalBuilder.Build(email, external.Principal);
-        await HttpContext.SignInAsync(IdentityConstants.ApplicationScheme, principal, props);
+        await HttpContext.SignInAsync(AdminAuthenticationSchemes.SsoCookie, principal, props);
         await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
         _logger.LogInformation("SSO sign-in succeeded.");
 
@@ -183,12 +185,16 @@ public class LoginController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
-        // Presence of `id_token` on the app cookie means this is an SSO session (the
-        // passwordless flow never stores tokens), so it's both the "was SSO" signal and the
-        // value we need for id_token_hint. Read before SignOutAsync clears the cookie.
-        var idToken = await HttpContext.GetTokenAsync("id_token");
+        // Presence of `id_token` on the SSO cookie is both (a) the marker that this is an SSO
+        // session (the passwordless flow writes to a different cookie and stores no tokens)
+        // and (b) the value we need as id_token_hint on RP-initiated logout. Read before the
+        // sign-outs below clear the cookie.
+        var idToken = await HttpContext.GetTokenAsync(AdminAuthenticationSchemes.SsoCookie, "id_token");
 
+        // Sign out of both cookie schemes. SignOutAsync on a scheme the user isn't currently
+        // signed in to is a no-op, so this covers both passwordless and SSO sessions cleanly.
         await _signInManager.SignOutAsync();
+        await HttpContext.SignOutAsync(AdminAuthenticationSchemes.SsoCookie);
 
         var loggedOutRedirect = Url.Action(nameof(Index), "Login", new { success = 1 });
 
