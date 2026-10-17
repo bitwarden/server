@@ -219,7 +219,7 @@ public class LoginControllerTests
             requireEmailVerified: false);
         var authService = AttachAuthenticationServices(controller);
         StubExternalPrincipal(authService, new Claim("email", "you@example.com"));
-        var builtPrincipal = new ClaimsPrincipal(new ClaimsIdentity("test"));
+        var builtPrincipal = PrincipalWithRole("owner");
         builder.Build("you@example.com", Arg.Any<ClaimsPrincipal>()).Returns(builtPrincipal);
 
         var result = await controller.SsoSignIn();
@@ -266,7 +266,7 @@ public class LoginControllerTests
         StubExternalPrincipal(authService,
             new Claim("email", "you@example.com"),
             new Claim("email_verified", "true"));
-        var builtPrincipal = new ClaimsPrincipal(new ClaimsIdentity("test"));
+        var builtPrincipal = PrincipalWithRole("owner");
         builder.Build("you@example.com", Arg.Any<ClaimsPrincipal>()).Returns(builtPrincipal);
 
         await controller.SsoSignIn();
@@ -275,6 +275,35 @@ public class LoginControllerTests
             Arg.Any<HttpContext>(),
             AdminAuthenticationSchemes.SsoCookie,
             builtPrincipal,
+            Arg.Any<AuthenticationProperties>());
+    }
+
+    [Fact]
+    public async Task SsoSignIn_RedirectsError5_WhenPrincipalHasNoRoleClaims()
+    {
+        // Tenancy gate. An IdP-authenticated principal with no mapped admin role must be
+        // rejected at sign-in; without this gate the principal could reach any [Authorize]
+        // action that isn't additionally gated by [RequirePermission]. See src/Admin/Auth/SSO.md.
+        var controller = BuildController(oidcEnabled: true, out var builder);
+        var authService = AttachAuthenticationServices(controller);
+        StubExternalPrincipal(authService,
+            new Claim("email", "you@example.com"),
+            new Claim("email_verified", "true"));
+        builder.Build(Arg.Any<string>(), Arg.Any<ClaimsPrincipal>())
+            .Returns(new ClaimsPrincipal(new ClaimsIdentity(authenticationType: "test")));
+
+        var result = await controller.SsoSignIn();
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(5, redirect.RouteValues!["error"]);
+        await authService.DidNotReceive().SignInAsync(
+            Arg.Any<HttpContext>(),
+            AdminAuthenticationSchemes.SsoCookie,
+            Arg.Any<ClaimsPrincipal>(),
+            Arg.Any<AuthenticationProperties>());
+        await authService.Received(1).SignOutAsync(
+            Arg.Any<HttpContext>(),
+            IdentityConstants.ExternalScheme,
             Arg.Any<AuthenticationProperties>());
     }
 
@@ -312,7 +341,7 @@ public class LoginControllerTests
                 new Claim("email_verified", "true"),
             ]);
         builder.Build(Arg.Any<string>(), Arg.Any<ClaimsPrincipal>())
-            .Returns(new ClaimsPrincipal(new ClaimsIdentity("test")));
+            .Returns(PrincipalWithRole("owner"));
 
         var result = await controller.SsoSignIn();
 
@@ -334,7 +363,7 @@ public class LoginControllerTests
             new Claim("email", "you@example.com"),
             new Claim("email_verified", "true"));
         builder.Build(Arg.Any<string>(), Arg.Any<ClaimsPrincipal>())
-            .Returns(new ClaimsPrincipal(new ClaimsIdentity("test")));
+            .Returns(PrincipalWithRole("owner"));
 
         var result = await controller.SsoSignIn(returnUrl: "/dashboard");
 
@@ -365,7 +394,7 @@ public class LoginControllerTests
             new Claim("email", "you@example.com"),
             new Claim("email_verified", "true"));
         builder.Build(Arg.Any<string>(), Arg.Any<ClaimsPrincipal>())
-            .Returns(new ClaimsPrincipal(new ClaimsIdentity("test")));
+            .Returns(PrincipalWithRole("owner"));
 
         var result = await controller.SsoSignIn(returnUrl: "https://evil.example.com");
 
@@ -373,6 +402,11 @@ public class LoginControllerTests
         Assert.Equal("Index", redirect.ActionName);
         Assert.Equal("Home", redirect.ControllerName);
     }
+
+    private static ClaimsPrincipal PrincipalWithRole(string role) =>
+        new(new ClaimsIdentity(
+            new[] { new Claim(ClaimTypes.Role, role) },
+            authenticationType: "test"));
 
     private static LoginController BuildController(bool oidcEnabled) =>
         BuildController(oidcEnabled, out _);

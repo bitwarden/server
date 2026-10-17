@@ -169,6 +169,21 @@ public class LoginController : Controller
         // cookie) is required because Identity's SecurityStampValidator does a 30s re-fetch
         // against the user store, which would reject the SSO principal within 30 seconds.
         var principal = _ssoSignInPrincipalBuilder.Build(email, external.Principal);
+
+        // Tenancy gate. This PR removed the AdminSettings:Admins allowlist from the SSO path,
+        // so the only membership signal is "does this user map to at least one admin role".
+        // Without this gate, an IdP-authenticated user with no mapped group would receive a
+        // cookie and reach any [Authorize] action that is not additionally gated by
+        // [RequirePermission] - e.g. UsersController.View/Edit, OrganizationsController.View/
+        // Edit/TriggerBillingSync/ResendOwnerInvite. See src/Admin/Auth/SSO.md.
+        if (!principal.FindAll(ClaimTypes.Role).Any())
+        {
+            _logger.LogWarning(
+                "SSO sign-in rejected: authenticated principal has no mapped admin role.");
+            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+            return RedirectToAction("Index", new { error = 5 });
+        }
+
         await HttpContext.SignInAsync(AdminAuthenticationSchemes.SsoCookie, principal, props);
         await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
         _logger.LogInformation("SSO sign-in succeeded.");
