@@ -11,13 +11,14 @@ internal static class PartnershipEntitlementRules
     public const string ExternalIdPunctuation = "-._~:@";
 
     /// <remarks>
-    /// Also rejects the database field protection prefix, which the repositories would otherwise mistake for an
-    /// already-protected value.
+    /// Also rejects <c>.</c> and <c>..</c>, which URL path normalization removes, and the database field protection
+    /// prefix, which the repositories would otherwise mistake for an already-protected value.
     /// </remarks>
     public static bool IsValidExternalId(string? externalId) =>
         !string.IsNullOrEmpty(externalId) &&
         externalId.Length <= OrganizationPartnershipEntitlement.ExternalIdMaxLength &&
         externalId.All(c => char.IsAsciiLetterOrDigit(c) || ExternalIdPunctuation.Contains(c)) &&
+        externalId is not ("." or "..") &&
         !externalId.StartsWith(Constants.DatabaseFieldProtectedPrefix, StringComparison.Ordinal);
 
     /// <summary>

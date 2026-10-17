@@ -243,6 +243,8 @@ public class ProvisionPartnershipEntitlementCommandTests
     [InlineData("a#b")]
     [InlineData("a%2Fb")]
     [InlineData("caf\u00e9")]
+    [InlineData(".")]
+    [InlineData("..")]
     public async Task ProvisionAsync_ExternalIdWithCharacterUnsafeInUrlPath_ReturnsValidationError(string externalId)
     {
         var sutProvider = CreateSutProvider();

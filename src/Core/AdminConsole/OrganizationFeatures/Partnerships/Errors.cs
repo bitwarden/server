@@ -29,7 +29,7 @@ public abstract record PartnershipValidationError(string Message, string Propert
 
 public record InvalidExternalId()
     : PartnershipValidationError(
-        $"External ID is required, must be at most {OrganizationPartnershipEntitlement.ExternalIdMaxLength} characters, and may contain only ASCII letters, digits, and \"{PartnershipEntitlementRules.ExternalIdPunctuation}\".",
+        $"External ID is required, must be at most {OrganizationPartnershipEntitlement.ExternalIdMaxLength} characters, may contain only ASCII letters, digits, and \"{PartnershipEntitlementRules.ExternalIdPunctuation}\", and can't be \".\" or \"..\".",
         "externalId", "invalid_external_id");
 
 public record TooManyMetadataKeys()
