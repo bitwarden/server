@@ -1,6 +1,7 @@
 ﻿using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Partnerships;
+using Bit.Core.AdminConsole.OrganizationFeatures.Partnerships;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -745,6 +746,119 @@ public class OrganizationPartnershipEntitlementRepositoryTests
         var page = await repository.GetPageByOrganizationPartnershipIdAsync(partnership.Id, null, 10);
 
         Assert.Equal("customer-1", Assert.Single(page).ExternalId);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetPageByRevisionDateAsync_WalksEveryEntitlementOnceInRevisionOrder_AcrossTies(
+        IOrganizationPartnershipEntitlementRepository repository,
+        IOrganizationPartnershipRepository partnershipRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        var partnership = await CreatePartnershipAsync(partnershipRepository, organizationRepository);
+        // Sub-millisecond ticks exercise round-tripping the stored value through the keyset.
+        var tied = new DateTime(2026, 3, 4, 5, 6, 7, DateTimeKind.Utc).AddTicks(1234567);
+        var revisionDates = new[] { tied.AddMinutes(1), tied, tied, tied, tied.AddMinutes(-1), tied.AddMinutes(2) };
+        var created = new List<Guid>();
+        for (var i = 0; i < revisionDates.Length; i++)
+        {
+            created.Add((await CreateWithRevisionDateAsync(
+                repository, partnership, $"customer-{i}", PartnershipEntitlementState.Provisioned,
+                revisionDates[i])).Id);
+        }
+
+        var read = new List<OrganizationPartnershipEntitlement>();
+        PartnershipEntitlementKeyset? after = null;
+        ICollection<OrganizationPartnershipEntitlement> page;
+        do
+        {
+            page = await repository.GetPageByRevisionDateAsync(partnership.Id, null, null, after, 2);
+            read.AddRange(page);
+            after = page.Count > 0 ? new PartnershipEntitlementKeyset(page.Last().RevisionDate, page.Last().Id) : null;
+        } while (page.Count == 2);
+
+        Assert.Equal(created.Order(), read.Select(e => e.Id).Order());
+        Assert.Equal(read.Count, read.Select(e => e.Id).Distinct().Count());
+        Assert.Equal(read.OrderBy(e => e.RevisionDate).Select(e => e.Id), read.Select(e => e.Id));
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetPageByRevisionDateAsync_StateFilter_ReturnsOnlyThatState(
+        IOrganizationPartnershipEntitlementRepository repository,
+        IOrganizationPartnershipRepository partnershipRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        var partnership = await CreatePartnershipAsync(partnershipRepository, organizationRepository);
+        var canceled = await CreateWithRevisionDateAsync(repository, partnership, "customer-1",
+            PartnershipEntitlementState.Canceled, _asOf);
+        await CreateWithRevisionDateAsync(repository, partnership, "customer-2",
+            PartnershipEntitlementState.Provisioned, _asOf);
+
+        var page = await repository.GetPageByRevisionDateAsync(
+            partnership.Id, PartnershipEntitlementState.Canceled, null, null, 10);
+
+        Assert.Equal([canceled.Id], page.Select(e => e.Id));
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetPageByRevisionDateAsync_RevisedAfter_IsExclusive(
+        IOrganizationPartnershipEntitlementRepository repository,
+        IOrganizationPartnershipRepository partnershipRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        var partnership = await CreatePartnershipAsync(partnershipRepository, organizationRepository);
+        await CreateWithRevisionDateAsync(repository, partnership, "customer-1",
+            PartnershipEntitlementState.Provisioned, _asOf.AddSeconds(-1));
+        await CreateWithRevisionDateAsync(repository, partnership, "customer-2",
+            PartnershipEntitlementState.Provisioned, _asOf);
+        var later = await CreateWithRevisionDateAsync(repository, partnership, "customer-3",
+            PartnershipEntitlementState.Provisioned, _asOf.AddSeconds(1));
+
+        var page = await repository.GetPageByRevisionDateAsync(partnership.Id, null, _asOf, null, 10);
+
+        Assert.Equal([later.Id], page.Select(e => e.Id));
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetPageByRevisionDateAsync_ExcludesOtherPartnerships(
+        IOrganizationPartnershipEntitlementRepository repository,
+        IOrganizationPartnershipRepository partnershipRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        var partnership = await CreatePartnershipAsync(partnershipRepository, organizationRepository);
+        var otherPartnership = await CreatePartnershipAsync(partnershipRepository, organizationRepository);
+        var entitlement = await CreateWithRevisionDateAsync(repository, partnership, "customer-1",
+            PartnershipEntitlementState.Provisioned, _asOf);
+        await CreateWithRevisionDateAsync(repository, otherPartnership, "customer-1",
+            PartnershipEntitlementState.Provisioned, _asOf);
+
+        var page = await repository.GetPageByRevisionDateAsync(partnership.Id, null, null, null, 10);
+
+        Assert.Equal([entitlement.Id], page.Select(e => e.Id));
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetPageByRevisionDateAsync_ReturnsDecryptedExternalIds(
+        IOrganizationPartnershipEntitlementRepository repository,
+        IOrganizationPartnershipRepository partnershipRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        var partnership = await CreatePartnershipAsync(partnershipRepository, organizationRepository);
+        await CreateWithRevisionDateAsync(repository, partnership, "customer-1",
+            PartnershipEntitlementState.Provisioned, _asOf);
+
+        var page = await repository.GetPageByRevisionDateAsync(partnership.Id, null, null, null, 10);
+
+        Assert.Equal("customer-1", Assert.Single(page).ExternalId);
+    }
+
+    private static Task<OrganizationPartnershipEntitlement> CreateWithRevisionDateAsync(
+        IOrganizationPartnershipEntitlementRepository repository, OrganizationPartnership partnership,
+        string externalId, PartnershipEntitlementState state, DateTime revisionDate)
+    {
+        var entitlement = NewEntitlement(partnership, externalId);
+        entitlement.State = state;
+        entitlement.RevisionDate = revisionDate;
+        return repository.CreateAsync(entitlement);
     }
 
     private static async Task<OrganizationPartnership> CreatePartnershipAsync(

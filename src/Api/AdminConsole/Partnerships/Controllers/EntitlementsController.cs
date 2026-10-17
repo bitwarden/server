@@ -17,6 +17,7 @@ public class EntitlementsController(
     IPartnershipRequestContext partnershipRequestContext,
     IProvisionPartnershipEntitlementCommand provisionPartnershipEntitlementCommand,
     IGetPartnershipEntitlementByExternalIdQuery getPartnershipEntitlementByExternalIdQuery,
+    IListPartnershipEntitlementsQuery listPartnershipEntitlementsQuery,
     ICreatePartnershipActivationLinkCommand createPartnershipActivationLinkCommand)
     : PartnershipControllerBase
 {
@@ -43,6 +44,26 @@ public class EntitlementsController(
                 var response = new PartnershipEntitlementResponseModel(provisioned, activationLink);
                 return provisioned.Created ? StatusCode(StatusCodes.Status201Created, response) : Ok(response);
             });
+    }
+
+    /// <summary>
+    /// Lists the partnership's entitlements by when they were last updated, oldest first, so a partner can sync changes
+    /// with <c>revisedAfter</c>. Returns a <c>continuationToken</c> when another page follows.
+    /// </summary>
+    [HttpGet("")]
+    public async Task<ActionResult<PartnershipEntitlementListResponseModel>> ListAsync(
+        [FromQuery] ListEntitlementsRequestModel model)
+    {
+        var request = model.ToRequest(partnershipRequestContext.Partnership.Id);
+        if (request.IsError)
+        {
+            return PartnershipError(request.AsError);
+        }
+
+        var result = await listPartnershipEntitlementsQuery.ListAsync(request.AsSuccess);
+        return result.Match<ActionResult<PartnershipEntitlementListResponseModel>>(
+            error => PartnershipError(error),
+            page => new PartnershipEntitlementListResponseModel(page));
     }
 
     /// <summary>

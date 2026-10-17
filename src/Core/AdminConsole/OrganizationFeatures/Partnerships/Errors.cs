@@ -80,6 +80,18 @@ public record InvalidReturnUrl()
         $"The return URL must be an absolute https URL of at most {CreatePartnershipActivationLinkRequest.ReturnUrlMaxLength} characters whose origin is registered for the partnership.",
         "returnUrl", "invalid_return_url");
 
+public record InvalidEntitlementStateFilter()
+    : PartnershipValidationError(
+        "State must be one of provisioned, active, suspended, or canceled.", "state", "invalid_request");
+
+public record InvalidRevisedAfter()
+    : PartnershipValidationError("revisedAfter must be an ISO 8601 timestamp.", "revisedAfter", "invalid_request");
+
+public record InvalidContinuationToken()
+    : PartnershipValidationError(
+        "The continuation token is invalid or was issued for different filters.", "continuationToken",
+        "invalid_continuation_token");
+
 public record EffectiveAtInFuture()
     : BadRequestError("effectiveAt cannot be in the future."), IPartnershipError
 {

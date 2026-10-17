@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums.Partnerships;
+using Bit.Core.AdminConsole.OrganizationFeatures.Partnerships;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -81,6 +82,40 @@ public class OrganizationPartnershipEntitlementRepository
         }
         var results = await query
             .OrderBy(e => e.Id)
+            .Take(pageSize)
+            .ToListAsync();
+        var entitlements = Mapper.Map<List<AdminConsoleEntities.OrganizationPartnershipEntitlement>>(results);
+        entitlements.ForEach(UnprotectData);
+        return entitlements;
+    }
+
+    public async Task<ICollection<AdminConsoleEntities.OrganizationPartnershipEntitlement>> GetPageByRevisionDateAsync(
+        Guid organizationPartnershipId, PartnershipEntitlementState? state, DateTime? revisedAfter,
+        PartnershipEntitlementKeyset? after, int pageSize)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var query = dbContext.OrganizationPartnershipEntitlements
+            .Where(e => e.OrganizationPartnershipId == organizationPartnershipId);
+        if (state is { } stateFilter)
+        {
+            query = query.Where(e => e.State == stateFilter);
+        }
+        if (revisedAfter is { } revisedAfterFilter)
+        {
+            query = query.Where(e => e.RevisionDate > revisedAfterFilter);
+        }
+        if (after is { } keyset)
+        {
+            var afterRevisionDate = keyset.RevisionDate;
+            var afterId = keyset.Id;
+            query = query.Where(e =>
+                e.RevisionDate > afterRevisionDate ||
+                (e.RevisionDate == afterRevisionDate && e.Id > afterId));
+        }
+        var results = await query
+            .OrderBy(e => e.RevisionDate)
+            .ThenBy(e => e.Id)
             .Take(pageSize)
             .ToListAsync();
         var entitlements = Mapper.Map<List<AdminConsoleEntities.OrganizationPartnershipEntitlement>>(results);
