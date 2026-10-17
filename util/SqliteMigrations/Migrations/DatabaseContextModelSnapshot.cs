@@ -540,6 +540,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasIndex("State", "ResumeWindowExpirationDate")
                         .HasAnnotation("SqlServer:Clustered", false);
 
+                    b.HasIndex("OrganizationPartnershipId", "RevisionDate", "Id")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
                     b.ToTable("OrganizationPartnershipEntitlement", (string)null);
                 });
 

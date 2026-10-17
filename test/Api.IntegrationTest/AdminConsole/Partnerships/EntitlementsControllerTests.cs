@@ -4,6 +4,8 @@ using Bit.Api.AdminConsole.Partnerships.Idempotency;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Partnerships;
+using Bit.Core.AdminConsole.OrganizationFeatures.Partnerships;
+using Bit.Core.AdminConsole.OrganizationFeatures.Partnerships.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
@@ -222,6 +224,147 @@ public class EntitlementsControllerTests : IClassFixture<ApiApplicationFactory>
         Assert.Contains(entitlement.AccountRef!.Value.ToString(), json, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task List_MoreThanOnePage_WalksEveryEntitlementOnce()
+    {
+        var (client, partnership) = await CreatePartnerClientAsync();
+        // All rows share one RevisionDate, so paging relies on the Id tiebreak.
+        var revisionDate = DateTime.UtcNow.AddMinutes(-1);
+        var count = ListPartnershipEntitlementsQuery.PageSize + 1;
+        for (var i = 0; i < count; i++)
+        {
+            await CreateEntitlementAsync(partnership, $"customer-{i}", PartnershipEntitlementState.Provisioned,
+                revisionDate: revisionDate);
+        }
+
+        var first = await ReadBodyAsync(await client.GetAsync(Path));
+        var token = first.GetProperty("continuationToken").GetString();
+        var secondResponse = await client.GetAsync($"{Path}?continuationToken={Uri.EscapeDataString(token!)}");
+
+        Assert.Equal(HttpStatusCode.OK, secondResponse.StatusCode);
+        var second = await ReadBodyAsync(secondResponse);
+        Assert.Equal("list", first.GetProperty("object").GetString());
+        Assert.Equal(ListPartnershipEntitlementsQuery.PageSize, first.GetProperty("data").GetArrayLength());
+        Assert.Equal(1, second.GetProperty("data").GetArrayLength());
+        Assert.False(second.TryGetProperty("continuationToken", out _));
+        var externalIds = ExternalIds(first).Concat(ExternalIds(second)).ToList();
+        Assert.Equal(Enumerable.Range(0, count).Select(i => $"customer-{i}").Order(), externalIds.Order());
+    }
+
+    [Fact]
+    public async Task List_StateFilter_ReturnsOnlyThatState()
+    {
+        var (client, partnership) = await CreatePartnerClientAsync();
+        await CreateEntitlementAsync(partnership, "customer-1", PartnershipEntitlementState.Provisioned);
+        await CreateEntitlementAsync(partnership, "customer-2", PartnershipEntitlementState.Canceled,
+            canceledDate: DateTime.UtcNow.AddDays(-1));
+
+        var response = await client.GetAsync($"{Path}?state=canceled");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await ReadBodyAsync(response);
+        Assert.Equal(["customer-2"], ExternalIds(body));
+        Assert.Equal("canceled", body.GetProperty("data")[0].GetProperty("state").GetString());
+    }
+
+    [Fact]
+    public async Task List_RevisedAfter_ReturnsOnlyLaterRevisionsInOrder()
+    {
+        var (client, partnership) = await CreatePartnerClientAsync();
+        var cutoff = new DateTime(2026, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+        await CreateEntitlementAsync(partnership, "at-cutoff", PartnershipEntitlementState.Provisioned,
+            revisionDate: cutoff);
+        await CreateEntitlementAsync(partnership, "latest", PartnershipEntitlementState.Provisioned,
+            revisionDate: cutoff.AddHours(2));
+        await CreateEntitlementAsync(partnership, "later", PartnershipEntitlementState.Provisioned,
+            revisionDate: cutoff.AddHours(1));
+
+        // 08:00 at -04:00 is the cutoff in UTC.
+        var response = await client.GetAsync($"{Path}?revisedAfter={Uri.EscapeDataString("2026-06-01T08:00:00-04:00")}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(["later", "latest"], ExternalIds(await ReadBodyAsync(response)));
+    }
+
+    [Fact]
+    public async Task List_UnknownState_Returns400()
+    {
+        var (client, _) = await CreatePartnerClientAsync();
+
+        var response = await client.GetAsync($"{Path}?state=pending");
+
+        await AssertErrorAsync(response, HttpStatusCode.BadRequest, "invalid_request");
+    }
+
+    [Fact]
+    public async Task List_InvalidRevisedAfter_Returns400()
+    {
+        var (client, _) = await CreatePartnerClientAsync();
+
+        var response = await client.GetAsync($"{Path}?revisedAfter=yesterday");
+
+        await AssertErrorAsync(response, HttpStatusCode.BadRequest, "invalid_request");
+    }
+
+    [Fact]
+    public async Task List_TamperedToken_Returns400()
+    {
+        var (client, partnership) = await CreatePartnerClientAsync();
+        var token = IssueToken(partnership.Id);
+        var tampered = token[..^2] + (token[^2] == 'A' ? 'B' : 'A') + token[^1];
+
+        var response = await client.GetAsync($"{Path}?continuationToken={tampered}");
+
+        await AssertErrorAsync(response, HttpStatusCode.BadRequest, "invalid_continuation_token");
+    }
+
+    [Fact]
+    public async Task List_TokenFromAnotherPartnership_Returns400()
+    {
+        var (_, otherPartnership) = await CreatePartnerClientAsync();
+        var (client, _) = await CreatePartnerClientAsync();
+
+        var response = await client.GetAsync($"{Path}?continuationToken={IssueToken(otherPartnership.Id)}");
+
+        await AssertErrorAsync(response, HttpStatusCode.BadRequest, "invalid_continuation_token");
+    }
+
+    [Fact]
+    public async Task List_TokenSentWithDifferentFilters_Returns400()
+    {
+        var (client, partnership) = await CreatePartnerClientAsync();
+
+        var response = await client.GetAsync($"{Path}?state=active&continuationToken={IssueToken(partnership.Id)}");
+
+        await AssertErrorAsync(response, HttpStatusCode.BadRequest, "invalid_continuation_token");
+    }
+
+    [Fact]
+    public async Task List_BoundEntitlement_NeverExposesTheAccount()
+    {
+        var (client, partnership) = await CreatePartnerClientAsync();
+        var user = await CreateUserAsync();
+        var entitlement = await CreateEntitlementAsync(partnership, "customer-1", PartnershipEntitlementState.Active,
+            user.Id);
+
+        var response = await client.GetAsync(Path);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("userId", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(user.Id.ToString(), json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(user.Email, json, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(entitlement.AccountRef!.Value.ToString(), json, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string IssueToken(Guid organizationPartnershipId) =>
+        _factory.GetService<IPartnershipEntitlementContinuationTokenProtector>().Protect(
+            new ListPartnershipEntitlementsRequest { OrganizationPartnershipId = organizationPartnershipId },
+            new PartnershipEntitlementKeyset(DateTime.UtcNow, Guid.NewGuid()));
+
+    private static List<string> ExternalIds(JsonElement listBody) =>
+        listBody.GetProperty("data").EnumerateArray().Select(e => e.GetProperty("externalId").GetString()!).ToList();
+
     private async Task<(HttpClient Client, OrganizationPartnership Partnership)> CreatePartnerClientAsync(
         IEnumerable<SponsoredPlanType>? allowedPlanTypes = null)
     {
@@ -234,7 +377,7 @@ public class EntitlementsControllerTests : IClassFixture<ApiApplicationFactory>
 
     private async Task<OrganizationPartnershipEntitlement> CreateEntitlementAsync(
         OrganizationPartnership partnership, string externalId, PartnershipEntitlementState state,
-        Guid? userId = null, DateTime? canceledDate = null)
+        Guid? userId = null, DateTime? canceledDate = null, DateTime? revisionDate = null)
     {
         var now = DateTime.UtcNow;
         var entitlement = new OrganizationPartnershipEntitlement
@@ -247,7 +390,7 @@ public class EntitlementsControllerTests : IClassFixture<ApiApplicationFactory>
             CanceledDate = canceledDate,
             LastAppliedEffectiveDate = canceledDate ?? now,
             CreationDate = now,
-            RevisionDate = now,
+            RevisionDate = revisionDate ?? now,
         };
         if (userId is not null)
         {

@@ -548,6 +548,10 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasIndex("State", "ResumeWindowExpirationDate")
                         .HasAnnotation("SqlServer:Clustered", false);
 
+                    b.HasIndex("OrganizationPartnershipId", "RevisionDate", "Id")
+                        .HasDatabaseName("IX_OrganizationPartnershipEntitlement_OrganizationPartnership~1")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
                     b.ToTable("OrganizationPartnershipEntitlement", (string)null);
                 });
 
