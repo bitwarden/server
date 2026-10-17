@@ -3,10 +3,13 @@ using Bit.Api.AdminConsole.Partnerships.Models.Request;
 using Bit.Api.AdminConsole.Partnerships.Models.Response;
 using Bit.Core.AdminConsole.OrganizationFeatures.Partnerships;
 using Bit.Core.AdminConsole.OrganizationFeatures.Partnerships.Interfaces;
+using Bit.Core.Auth.Identity;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.AdminConsole.Partnerships.Controllers;
 
+[Authorize(Policies.Organization)]
 [Route("partnerships/v1/activation-links")]
 public class ActivationLinksController(
     IPartnershipRequestContext partnershipRequestContext,
