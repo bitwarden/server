@@ -1246,6 +1246,13 @@
       "data": {
         "type": "Project"
       },
+      "datamigrations": {
+        "type": "Project",
+        "dependencies": {
+          "Data": "[0.0.1, )",
+          "Microsoft.EntityFrameworkCore.Relational": "[8.0.11, 8.0.11]"
+        }
+      },
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
@@ -1268,6 +1275,7 @@
         "dependencies": {
           "AutoMapper": "[14.0.0, 14.0.0]",
           "Core": "[2026.10.0, )",
+          "DataMigrations": "[0.0.1, )",
           "Microsoft.EntityFrameworkCore.Relational": "[8.0.11, 8.0.11]",
           "Microsoft.EntityFrameworkCore.SqlServer": "[8.0.11, 8.0.11]",
           "Microsoft.EntityFrameworkCore.Sqlite": "[8.0.11, 8.0.11]",
