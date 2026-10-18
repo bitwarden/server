@@ -90,7 +90,7 @@ public static class ServiceCollectionExtensions
         // Fail-loud when the tenancy signal required by the deployment type is missing.
         // Self-hosted uses AdminSettings:Admins as the sign-in gate; cloud uses the
         // "has at least one mapped role" gate, which requires AdminSettings:Oidc:GroupPrefix.
-        // See src/Admin/Auth/SSO.md.
+        // See src/Admin/Auth/README.md.
         if (globalSettings.SelfHosted && string.IsNullOrWhiteSpace(adminSettings.Admins))
         {
             throw new InvalidOperationException(

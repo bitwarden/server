@@ -180,7 +180,7 @@ public class LoginController : Controller
         //     claims are irrelevant.
         //   - Cloud: principal must carry at least one role claim. RBAC drives authorization
         //     downstream via RolePermissionMapping.
-        // See src/Admin/Auth/SSO.md.
+        // See src/Admin/Auth/README.md.
         if (_globalSettings.SelfHosted)
         {
             if (!IsOnAdminAllowlist(email))

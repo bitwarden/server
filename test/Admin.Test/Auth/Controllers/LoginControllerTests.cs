@@ -283,7 +283,7 @@ public class LoginControllerTests
     public async Task SsoSignIn_Cloud_RedirectsError5_WhenPrincipalHasNoRoleClaims()
     {
         // Cloud tenancy gate: principal must have at least one mapped admin role.
-        // See src/Admin/Auth/SSO.md.
+        // See src/Admin/Auth/README.md.
         var controller = BuildController(oidcEnabled: true, out var builder, selfHosted: false);
         var authService = AttachAuthenticationServices(controller);
         StubExternalPrincipal(authService,
