@@ -4,6 +4,7 @@ using Bit.Admin.Auth.Controllers;
 using Bit.Admin.Auth.IdentityServer;
 using Bit.Admin.Auth.Models;
 using Bit.Admin.Auth.Services;
+using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -279,11 +280,11 @@ public class LoginControllerTests
     }
 
     [Fact]
-    public async Task SsoSignIn_RedirectsError5_WhenGroupPrefixConfiguredAndPrincipalHasNoRoleClaims()
+    public async Task SsoSignIn_Cloud_RedirectsError5_WhenPrincipalHasNoRoleClaims()
     {
-        // Tenancy gate (groups-only configuration): principal must have at least one mapped
-        // admin role. See src/Admin/Auth/SSO.md.
-        var controller = BuildController(oidcEnabled: true, out var builder);
+        // Cloud tenancy gate: principal must have at least one mapped admin role.
+        // See src/Admin/Auth/SSO.md.
+        var controller = BuildController(oidcEnabled: true, out var builder, selfHosted: false);
         var authService = AttachAuthenticationServices(controller);
         StubExternalPrincipal(authService,
             new Claim("email", "you@example.com"),
@@ -307,11 +308,33 @@ public class LoginControllerTests
     }
 
     [Fact]
-    public async Task SsoSignIn_RedirectsError5_WhenAdminsConfiguredAndEmailNotOnList()
+    public async Task SsoSignIn_Cloud_SignsIn_WhenPrincipalHasRoleClaim_RegardlessOfAdmins()
     {
-        // Tenancy gate (CSV-only configuration): email must be on AdminSettings:Admins.
+        // Cloud ignores AdminSettings:Admins: tenancy is role-presence.
         var controller = BuildController(oidcEnabled: true, out var builder,
-            adminsAllowlist: "admin@example.com", groupPrefix: null);
+            adminsAllowlist: null, selfHosted: false);
+        var authService = AttachAuthenticationServices(controller);
+        StubExternalPrincipal(authService,
+            new Claim("email", "stranger@example.com"),
+            new Claim("email_verified", "true"));
+        var builtPrincipal = PrincipalWithRole("owner");
+        builder.Build(Arg.Any<string>(), Arg.Any<ClaimsPrincipal>()).Returns(builtPrincipal);
+
+        await controller.SsoSignIn();
+
+        await authService.Received(1).SignInAsync(
+            Arg.Any<HttpContext>(),
+            AdminAuthenticationSchemes.SsoCookie,
+            builtPrincipal,
+            Arg.Any<AuthenticationProperties>());
+    }
+
+    [Fact]
+    public async Task SsoSignIn_SelfHosted_RedirectsError5_WhenEmailNotOnAdmins()
+    {
+        // Self-hosted tenancy gate: email must be on AdminSettings:Admins.
+        var controller = BuildController(oidcEnabled: true, out var builder,
+            adminsAllowlist: "admin@example.com", selfHosted: true);
         var authService = AttachAuthenticationServices(controller);
         StubExternalPrincipal(authService,
             new Claim("email", "stranger@example.com"),
@@ -331,12 +354,12 @@ public class LoginControllerTests
     }
 
     [Fact]
-    public async Task SsoSignIn_SignsIn_WhenOnlyAdminsConfiguredAndEmailOnList_EvenWithoutRoleClaims()
+    public async Task SsoSignIn_SelfHosted_SignsIn_WhenEmailOnAdmins_RegardlessOfRoleClaims()
     {
-        // CSV-only mode: with GroupPrefix unset, groups gate is skipped. A principal with no
-        // role claims is admitted as long as the email is on the Admins allowlist.
+        // Self-hosted ignores role claims: tenancy is Admins CSV, authz is the SelfHosted
+        // short-circuit in AccessControlService.
         var controller = BuildController(oidcEnabled: true, out var builder,
-            adminsAllowlist: "you@example.com", groupPrefix: null);
+            adminsAllowlist: "you@example.com", selfHosted: true);
         var authService = AttachAuthenticationServices(controller);
         StubExternalPrincipal(authService,
             new Claim("email", "you@example.com"),
@@ -354,77 +377,12 @@ public class LoginControllerTests
     }
 
     [Fact]
-    public async Task SsoSignIn_RedirectsError5_WhenBothConfigured_AndEmailOnListButNoRole()
+    public async Task SsoSignIn_SelfHosted_SignsIn_WhenAdminsEntryIncludesStampSuffix()
     {
-        // Both gates configured: both must admit. CSV passes but groups does not.
+        // AdminSettings:Admins supports "email:stamp" entries (used by the passwordless user
+        // store). The CSV gate matches on the email prefix only.
         var controller = BuildController(oidcEnabled: true, out var builder,
-            adminsAllowlist: "you@example.com");
-        var authService = AttachAuthenticationServices(controller);
-        StubExternalPrincipal(authService,
-            new Claim("email", "you@example.com"),
-            new Claim("email_verified", "true"));
-        builder.Build(Arg.Any<string>(), Arg.Any<ClaimsPrincipal>())
-            .Returns(new ClaimsPrincipal(new ClaimsIdentity(authenticationType: "test")));
-
-        var result = await controller.SsoSignIn();
-
-        var redirect = Assert.IsType<RedirectToActionResult>(result);
-        Assert.Equal(5, redirect.RouteValues!["error"]);
-        await authService.DidNotReceive().SignInAsync(
-            Arg.Any<HttpContext>(),
-            AdminAuthenticationSchemes.SsoCookie,
-            Arg.Any<ClaimsPrincipal>(),
-            Arg.Any<AuthenticationProperties>());
-    }
-
-    [Fact]
-    public async Task SsoSignIn_RedirectsError5_WhenBothConfigured_AndRolePresentButEmailNotOnList()
-    {
-        // Both gates configured: both must admit. Groups passes but CSV does not.
-        var controller = BuildController(oidcEnabled: true, out var builder,
-            adminsAllowlist: "admin@example.com");
-        var authService = AttachAuthenticationServices(controller);
-        StubExternalPrincipal(authService,
-            new Claim("email", "stranger@example.com"),
-            new Claim("email_verified", "true"));
-        builder.Build(Arg.Any<string>(), Arg.Any<ClaimsPrincipal>())
-            .Returns(PrincipalWithRole("owner"));
-
-        var result = await controller.SsoSignIn();
-
-        var redirect = Assert.IsType<RedirectToActionResult>(result);
-        Assert.Equal(5, redirect.RouteValues!["error"]);
-    }
-
-    [Fact]
-    public async Task SsoSignIn_SignsIn_WhenBothConfigured_AndBothGatesPass()
-    {
-        // Both gates configured: both admit.
-        var controller = BuildController(oidcEnabled: true, out var builder,
-            adminsAllowlist: "you@example.com");
-        var authService = AttachAuthenticationServices(controller);
-        StubExternalPrincipal(authService,
-            new Claim("email", "you@example.com"),
-            new Claim("email_verified", "true"));
-        var builtPrincipal = PrincipalWithRole("owner");
-        builder.Build(Arg.Any<string>(), Arg.Any<ClaimsPrincipal>()).Returns(builtPrincipal);
-
-        await controller.SsoSignIn();
-
-        await authService.Received(1).SignInAsync(
-            Arg.Any<HttpContext>(),
-            AdminAuthenticationSchemes.SsoCookie,
-            builtPrincipal,
-            Arg.Any<AuthenticationProperties>());
-    }
-
-    [Fact]
-    public async Task SsoSignIn_SignsIn_WhenAdminsCsvEntryIncludesStampSuffix()
-    {
-        // AdminSettings:Admins supports "email:stamp" entries (used by the passwordless
-        // user store). The CSV gate matches on the email prefix only.
-        var controller = BuildController(oidcEnabled: true, out var builder,
-            adminsAllowlist: "you@example.com:abc123", groupPrefix: null);
+            adminsAllowlist: "you@example.com:abc123", selfHosted: true);
         var authService = AttachAuthenticationServices(controller);
         StubExternalPrincipal(authService,
             new Claim("email", "you@example.com"),
@@ -551,7 +509,8 @@ public class LoginControllerTests
         bool requireEmailVerified = true,
         bool enablePasswordlessLogin = true,
         string adminsAllowlist = null,
-        string groupPrefix = "us-prd-cloud-adminportal-")
+        string groupPrefix = "us-prd-cloud-adminportal-",
+        bool selfHosted = false)
     {
         var settings = new AdminSettings
         {
@@ -568,6 +527,7 @@ public class LoginControllerTests
                 }
                 : null,
         };
+        var globalSettings = new GlobalSettings { SelfHosted = selfHosted };
 
         var userStore = Substitute.For<IUserStore<IdentityUser>>();
         var userManager = Substitute.For<UserManager<IdentityUser>>(
@@ -593,7 +553,7 @@ public class LoginControllerTests
 
         ssoSignInPrincipalBuilder = Substitute.For<ISsoSignInPrincipalBuilder>();
 
-        return new LoginController(signInManager, Options.Create(settings),
+        return new LoginController(signInManager, Options.Create(settings), globalSettings,
             ssoSignInPrincipalBuilder, Substitute.For<ILogger<LoginController>>());
     }
 }

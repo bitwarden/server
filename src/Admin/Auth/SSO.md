@@ -8,47 +8,27 @@ operators provisioning Admin Portal access through an IdP.
 
 The Admin Portal supports two sign-in paths. An operator can enable either or both.
 
-| Path | Enabled by | Membership gate | Role claims come from |
-|---|---|---|---|
-| Passwordless email | `AdminSettings:EnablePasswordlessLogin = true` (default) | Email must be on `AdminSettings:Admins` | `adminSettings:role:{roleName}` CSV sub-config, matched against the authenticated email |
-| Upstream OIDC SSO | `AdminSettings:Oidc:*` configured | Every configured SSO tenancy gate must admit the user (see below) | `GroupClaimRoleMapper` maps the IdP `groups` claim via `AdminSettings:Oidc:GroupPrefix` |
+| Path | Enabled by |
+|---|---|
+| Passwordless email | `AdminSettings:EnablePasswordlessLogin = true` (default) |
+| Upstream OIDC SSO | `AdminSettings:Oidc:*` configured |
 
 Everything below describes the SSO path.
 
-## SSO tenancy gates
+## Deployment-driven tenancy and authorization
 
-The SSO path has two independent tenancy signals. Operators configure one or both. Every signal
-that is configured must admit the user; signals that are not configured are skipped.
+The SSO sign-in gate and the authorization model are determined by deployment type. Operators do
+not choose between them.
 
-| Signal | Configured when | Admits a user when |
+| | Cloud | Self-hosted |
 |---|---|---|
-| `AdminSettings:Admins` (CSV allowlist) | `AdminSettings:Admins` is non-empty | The authenticated email appears in the CSV (case-insensitive, matches the email prefix of each `email` or `email:stamp` entry) |
-| `AdminSettings:Oidc:GroupPrefix` (IdP group mapping) | `AdminSettings:Oidc:GroupPrefix` is non-empty | `SsoSignInPrincipalBuilder` produces a principal with at least one `ClaimTypes.Role` claim (i.e. at least one of the user's IdP groups has the configured prefix and a suffix matching a known role) |
+| **Tenancy gate** (admits sign-in) | Principal has at least one `ClaimTypes.Role` claim | Authenticated email is on `AdminSettings:Admins` |
+| **Authorization** (what the admitted user can do) | Union of permissions across role claims, via `RolePermissionMapping` | Full access (`AccessControlService.UserHasPermission` short-circuits on `_globalSettings.SelfHosted`) |
+| **Role claims come from** | `AdminSettings:Oidc:GroupPrefix` → `GroupClaimRoleMapper` maps IdP `groups` claim to roles | n/a — role claims are irrelevant on self-hosted |
+| **Boot-time required config** | `AdminSettings:Oidc:GroupPrefix` must be set | `AdminSettings:Admins` must be set |
 
-`AddAdminUpstreamOidc` fails loud at boot if SSO is enabled with neither `Admins` nor `GroupPrefix`
-configured, because every SSO sign-in would otherwise fail the gates.
-
-### Configuration matrix
-
-The three valid SSO configurations and what they mean for sign-in and authorization:
-
-| `Admins` | `GroupPrefix` | SSO sign-in admits | Role claims on the principal | Cloud authorization | Self-hosted authorization |
-|---|---|---|---|---|---|
-| set | unset | Users whose email is on `Admins` | None | No permissions (`AccessControlService.UserHasPermission` returns `false`) | Full access (`SelfHosted` short-circuit) |
-| unset | set | Users whose IdP groups map to at least one role | The mapped roles | Union of permissions across mapped roles | Full access |
-| set | set | Users whose email is on `Admins` AND whose IdP groups map to at least one role | The mapped roles | Union of permissions across mapped roles | Full access |
-
-The `Admins`-only configuration suits operators who already use an IdP for authentication but
-prefer to manage the admin list in config rather than in IdP groups. On cloud, those operators
-also need to populate `adminSettings:role:{roleName}` entries if they want anyone to have
-permissions.
-
-The `GroupPrefix`-only configuration suits operators who manage admin membership through IdP
-groups and want a single source of truth.
-
-The combined configuration is the tightest posture — a user must satisfy both the local allowlist
-and the IdP group mapping. Appropriate when the two mechanisms are managed by different teams and
-both approvals are required.
+`AddAdminUpstreamOidc` fails loud at boot when the required config for the deployment type is
+missing.
 
 ## SSO sign-in flow
 
@@ -66,7 +46,7 @@ both approvals are required.
    - Calls `SsoSignInPrincipalBuilder.Build(email, external.Principal)`, which stamps
      `ClaimTypes.Name` / `ClaimTypes.Email` / `ClaimTypes.NameIdentifier` claims and asks
      `GroupClaimRoleMapper` to translate the IdP's `groups` claim into `ClaimTypes.Role` claims.
-   - Applies each configured tenancy gate (see above). Admits only if every configured gate passes.
+   - Applies the deployment-specific tenancy gate (see table above).
    - Signs the principal into `AdminAuthenticationSchemes.SsoCookie` with
      `IsPersistent = false` and the `id_token` stored on the auth properties (used later as
      `id_token_hint` on RP-initiated logout).
@@ -84,10 +64,11 @@ The SSO path keeps three concerns distinct:
 - **Authentication** — the IdP proves the user owns the claimed email. Enforced by the OIDC handler
   plus the email-verified check in `LoginController.SsoSignIn`.
 - **Tenancy** — whether the authenticated user is a user of the Admin Portal. Enforced by the
-  configured tenancy gates in `LoginController.SsoSignIn`.
-- **Authorization** — what capabilities the authenticated member has. Enforced by
-  `AccessControlService.UserHasPermission` against the role claims on the principal, using
-  `RolePermissionMapping`.
+  deployment-driven gate in `LoginController.SsoSignIn`.
+- **Authorization** — what capabilities the authenticated member has. On cloud, enforced by
+  `AccessControlService.UserHasPermission` against the role claims on the principal using
+  `RolePermissionMapping`. On self-hosted, the same method short-circuits to `true` on
+  `_globalSettings.SelfHosted`.
 
 ## Cookie schemes
 
@@ -116,25 +97,38 @@ as `id_token_hint`, so the upstream IdP can honor the app-level Allowed Logout U
 
 ## Operator configuration
 
-Minimum settings for SSO. Supply at least one of `AdminSettings:Admins` or
-`AdminSettings:Oidc:GroupPrefix`.
+Required settings depend on deployment.
+
+### Cloud
 
 ```jsonc
 "AdminSettings": {
-  // Required when choosing the CSV allowlist as a tenancy signal. Comma-separated email
-  // addresses. Entries may be "email" or "email:stamp".
-  "Admins": "admin@example.com,another@example.com",
-
   "Oidc": {
     "Authority":   "https://idp.example.com",
     "ClientId":    "admin-portal",
     "ClientSecret": "...",
-
-    // Required when choosing IdP group mapping as a tenancy signal. IdP groups must be named
-    // <GroupPrefix><role> where <role> is one of owner, admin, billing, cs, or sales (the keys
-    // of RolePermissionMapping.RolePermissions). Case is insensitive. A principal in multiple
-    // matching groups receives the union of their permissions.
     "GroupPrefix": "us-prd-cloud-adminportal-"
   }
 }
 ```
+
+IdP groups must be named `<GroupPrefix><role>` where `<role>` is one of `owner`, `admin`, `billing`,
+`cs`, or `sales` (the keys of `RolePermissionMapping.RolePermissions`). Case is insensitive. A
+principal in multiple matching groups receives the union of their permissions.
+
+### Self-hosted
+
+```jsonc
+"AdminSettings": {
+  "Admins": "admin@example.com,another@example.com",
+  "Oidc": {
+    "Authority":   "https://idp.example.com",
+    "ClientId":    "admin-portal",
+    "ClientSecret": "..."
+  }
+}
+```
+
+`AdminSettings:Admins` is a comma-separated list where each entry is either `email` or
+`email:stamp`. The SSO sign-in gate matches on the email prefix of each entry, case-insensitive.
+`AdminSettings:Oidc:GroupPrefix` is not required on self-hosted; role claims are not consulted.

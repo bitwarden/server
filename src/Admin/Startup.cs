@@ -80,7 +80,7 @@ public class Startup
 
         // Identity
         services.AddPasswordlessIdentityServices<ReadOnlyEnvIdentityUserStore>(globalSettings, adminSettings);
-        services.AddAdminUpstreamOidc(adminSettings);
+        services.AddAdminUpstreamOidc(adminSettings, globalSettings);
         services.Configure<SecurityStampValidatorOptions>(options =>
         {
             // This interval defines the maximum delay in access changes

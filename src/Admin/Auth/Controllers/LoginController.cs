@@ -6,6 +6,7 @@ using Bit.Admin.Auth.Filters;
 using Bit.Admin.Auth.IdentityServer;
 using Bit.Admin.Auth.Models;
 using Bit.Admin.Auth.Services;
+using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -18,17 +19,20 @@ public class LoginController : Controller
 {
     private readonly PasswordlessSignInManager<IdentityUser> _signInManager;
     private readonly AdminSettings _adminSettings;
+    private readonly IGlobalSettings _globalSettings;
     private readonly ISsoSignInPrincipalBuilder _ssoSignInPrincipalBuilder;
     private readonly ILogger<LoginController> _logger;
 
     public LoginController(
         PasswordlessSignInManager<IdentityUser> signInManager,
         IOptions<AdminSettings> adminSettings,
+        IGlobalSettings globalSettings,
         ISsoSignInPrincipalBuilder ssoSignInPrincipalBuilder,
         ILogger<LoginController> logger)
     {
         _signInManager = signInManager;
         _adminSettings = adminSettings.Value;
+        _globalSettings = globalSettings;
         _ssoSignInPrincipalBuilder = ssoSignInPrincipalBuilder;
         _logger = logger;
     }
@@ -170,24 +174,32 @@ public class LoginController : Controller
         // local user store.
         var principal = _ssoSignInPrincipalBuilder.Build(email, external.Principal);
 
-        // Tenancy gates. Each configured signal must admit the user. See src/Admin/Auth/SSO.md.
-        var allowlistConfigured = !string.IsNullOrWhiteSpace(_adminSettings.Admins);
-        var groupMappingConfigured = !string.IsNullOrWhiteSpace(_adminSettings.Oidc.GroupPrefix);
-
-        if (allowlistConfigured && !IsOnAdminAllowlist(email))
+        // Tenancy gate. The signal depends on deployment:
+        //   - Self-hosted: email must be on AdminSettings:Admins. No RBAC runs on self-hosted
+        //     (AccessControlService.UserHasPermission short-circuits on SelfHosted), so role
+        //     claims are irrelevant.
+        //   - Cloud: principal must carry at least one role claim. RBAC drives authorization
+        //     downstream via RolePermissionMapping.
+        // See src/Admin/Auth/SSO.md.
+        if (_globalSettings.SelfHosted)
         {
-            _logger.LogWarning(
-                "SSO sign-in rejected: email not on AdminSettings:Admins allowlist.");
-            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
-            return RedirectToAction("Index", new { error = 5 });
+            if (!IsOnAdminAllowlist(email))
+            {
+                _logger.LogWarning(
+                    "SSO sign-in rejected: email not on AdminSettings:Admins allowlist.");
+                await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+                return RedirectToAction("Index", new { error = 5 });
+            }
         }
-
-        if (groupMappingConfigured && !principal.FindAll(ClaimTypes.Role).Any())
+        else
         {
-            _logger.LogWarning(
-                "SSO sign-in rejected: authenticated principal has no mapped admin role.");
-            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
-            return RedirectToAction("Index", new { error = 5 });
+            if (!principal.FindAll(ClaimTypes.Role).Any())
+            {
+                _logger.LogWarning(
+                    "SSO sign-in rejected: authenticated principal has no mapped admin role.");
+                await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+                return RedirectToAction("Index", new { error = 5 });
+            }
         }
 
         await HttpContext.SignInAsync(AdminAuthenticationSchemes.SsoCookie, principal, props);
