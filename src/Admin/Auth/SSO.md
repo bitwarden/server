@@ -1,154 +1,133 @@
----
-status: Accepted
-date: 2026-10-17
-tags: [server, admin, sso]
----
+# Admin Portal SSO sign-in
 
-# Admin Portal SSO sign-in design
+How the Admin Portal admits users signing in through upstream OIDC, and how it keeps authentication,
+tenancy, and authorization distinct. Audience: engineers modifying `LoginController`,
+`SsoSignInPrincipalBuilder`, `GroupClaimRoleMapper`, or `AdminSettings:Oidc:*`; operators
+provisioning Admin Portal access through an IdP.
 
-Design and rationale for how the Admin Portal admits users signing in via upstream OIDC
-(`AdminAuthenticationSchemes.UpstreamOidc`). Audience: engineers modifying `LoginController`,
-`SsoSignInPrincipalBuilder`, `GroupClaimRoleMapper`, or the `AdminSettings:Oidc:*` configuration
-surface; operators evaluating how to provision Admin Portal access through an IdP.
+## Sign-in paths
 
-## Context and problem statement
+The Admin Portal supports two sign-in paths. An operator can enable either or both.
 
-The Admin Portal has two sign-in paths:
+| Path | Enabled by | Who signs in | Who gets admin capability |
+|---|---|---|---|
+| Passwordless email | `AdminSettings:EnablePasswordlessLogin = true` (default) | Emails on the `AdminSettings:Admins` CSV allowlist | On self-hosted: everyone signed in (`SelfHosted` short-circuit). On cloud: users whose email appears in `adminSettings:role:{roleName}` CSV sub-config. |
+| Upstream OIDC SSO | `AdminSettings:Oidc:*` configured | IdP-authenticated users whose `groups` claim maps to at least one Admin Portal role via `AdminSettings:Oidc:GroupPrefix` | On self-hosted: everyone signed in (`SelfHosted` short-circuit). On cloud: the union of permissions across every mapped role. |
 
-- **Passwordless email** (self-hosted default). `AdminSettings:Admins` is a CSV allowlist that
-  gates sign-in by email. Permissions on cloud come from `adminSettings:role:{roleName}` CSV
-  sub-config; on self-hosted, `AccessControlService.UserHasPermission` short-circuits to `true` on
-  `_globalSettings.SelfHosted`.
-- **Upstream OIDC SSO** (added in PR #8508 and extended here). The IdP authenticates the user,
-  and `GroupClaimRoleMapper` maps the IdP's `groups` claim to Admin Portal role names using the
-  configured `AdminSettings:Oidc:GroupPrefix`.
+The passwordless path is unchanged by this work. Everything below describes the SSO path.
 
-The SSO path removed the `AdminSettings:Admins` allowlist check that the passwordless path still
-uses, replacing membership with "has at least one mapped admin role." This introduces a tenancy
-question: what signal admits an IdP-authenticated user as a member of the Admin Portal?
+## SSO sign-in flow
 
-Several controller actions carry only bare `[Authorize]` and are not additionally gated by
-`[RequirePermission]`:
+1. The user hits `GET /login/sso` (`LoginController.Sso`). The controller issues a challenge against
+   `AdminAuthenticationSchemes.UpstreamOidc` (the OpenID Connect handler registered by
+   `AddAdminUpstreamOidc`). The browser is redirected to the IdP's authorize endpoint with
+   `response_type=code`, `prompt=login`, `max_age=0`, and PKCE.
+2. The IdP authenticates the user and redirects back to the configured callback. The OIDC handler
+   validates the ID token (issuer, audience, signature, lifetime, and `auth_time` via
+   `OnTokenValidated`) and stages the resulting principal into `IdentityConstants.ExternalScheme`.
+3. The browser follows to `GET /login/sso-signin` (`LoginController.SsoSignIn`). The controller:
+   - Reads the external principal from `IdentityConstants.ExternalScheme`.
+   - Verifies the email claim is present and (unless `RequireEmailVerifiedClaim = false`) the
+     `email_verified` claim is `true`.
+   - Calls `SsoSignInPrincipalBuilder.Build(email, external.Principal)`, which stamps
+     `ClaimTypes.Name` / `ClaimTypes.Email` / `ClaimTypes.NameIdentifier` claims and asks
+     `GroupClaimRoleMapper` to translate the IdP's `groups` claim into `ClaimTypes.Role` claims.
+   - Applies the **tenancy gate** below.
+   - Signs the principal into `AdminAuthenticationSchemes.SsoCookie` with
+     `IsPersistent = false` and the `id_token` stored on the auth properties (used later as
+     `id_token_hint` on RP-initiated logout).
+   - Signs out of `IdentityConstants.ExternalScheme`.
 
-- `UsersController.View`, `UsersController.Edit` (GET + POST)
-- `OrganizationsController.View`, `OrganizationsController.Edit` (GET + POST),
-  `TriggerBillingSync`, `ResendOwnerInvite`
+Any failure in steps 1-3 logs a warning and redirects to `GET /login?error=5`, which renders the
+generic "SSO sign-in failed. Try again or use the email link." message. The error message is
+deliberately generic so unsuccessful attempts cannot distinguish between "no such user", "wrong
+group", and "IdP returned an error."
 
-These actions are reachable by any authenticated principal. Without a tenancy signal applied at
-sign-in, an IdP-authenticated email whose groups do not map to any admin role would receive an
-application cookie and could invoke these actions on cloud. On self-hosted the exposure is bounded
-by the operator-controlled IdP app assignment, which is the first tenancy filter.
+## Tenancy gate
 
-### Terminology
+After `SsoSignInPrincipalBuilder.Build(...)` returns, `LoginController.SsoSignIn` checks whether the
+built principal carries at least one `ClaimTypes.Role` claim. If it does not, the sign-in is
+rejected.
 
-- **Authentication** — the IdP proving the user owns the claimed email.
-- **Tenancy / membership** — whether an authenticated user is a user of *this* app at all.
-- **Authorization** — what capabilities a member has within the app.
+This gate exists because the SSO path does not consult `AdminSettings:Admins`. The passwordless
+path uses that CSV as its membership check. The SSO path uses "has at least one mapped admin role"
+as its membership check instead. Without this gate, an IdP-authenticated user whose groups do not
+map to any admin role would receive an application cookie and could reach controller actions
+decorated with bare `[Authorize]` but no `[RequirePermission]` - specifically `UsersController.
+View/Edit` and `OrganizationsController.View/Edit/TriggerBillingSync/ResendOwnerInvite`.
 
-The three are distinct. Historically the passwordless path collapsed authentication and tenancy
-into one step: `UserManager.FindByEmailAsync` against `AdminSettings:Admins`. The SSO path keeps
-them separate: the IdP handles authentication, and this document is about how tenancy is enforced.
+Pinned by `LoginControllerTests.SsoSignIn_RedirectsError5_WhenPrincipalHasNoRoleClaims`.
 
-## Considered options
+Adding `[RequirePermission(...)]` to the bare `[Authorize]` actions is a desirable defense-in-depth
+follow-up but is not a prerequisite - the tenancy gate makes them unreachable to role-less
+principals regardless.
 
-### Option 1 — No tenancy check; rely on per-action `[RequirePermission]`
+## Authentication, tenancy, and authorization
 
-Admit every IdP-authenticated principal and depend on `AccessControlService.UserHasPermission`
-returning `false` to block the ungated actions.
+These three concerns are kept distinct on the SSO path:
 
-#### Advantages
+- **Authentication** is the IdP proving the user owns the claimed email. Enforced by the OIDC
+  handler plus the email-verified check in `LoginController.SsoSignIn`.
+- **Tenancy** is whether the authenticated user is a user of this app at all. Enforced by the
+  role-presence check in `LoginController.SsoSignIn`.
+- **Authorization** is what capabilities the authenticated member has. Enforced by
+  `AccessControlService.UserHasPermission` against the role claims on the principal, using
+  `RolePermissionMapping`.
 
-- Clean separation of concerns: authn at the door, authz at each action.
-- No per-request tenancy work.
+The role mapping configuration serves both tenancy and authorization: "has any mapped role" is the
+tenancy signal, "which permissions those roles grant" is the authorization decision. The two use
+the same data source but answer different questions.
 
-#### Disadvantages
+## Cookie schemes
 
-- Does not address the actual exposure: bare `[Authorize]` actions have no permission check and
-  remain reachable by any authenticated principal.
-- Fragile — every new ungated action adds a new exposure. Review discipline alone is not a
-  structural guard.
-- Issues cookies to principals who have no business holding them, enlarging the attack surface of
-  the cookie itself.
+The Admin app registers two cookie schemes. Both coexist so the two sign-in paths can carry
+independent session rules.
 
-### Option 2 — Add `[RequirePermission]` to every bare `[Authorize]` action
+| Scheme | Set by | SecurityStampValidator |
+|---|---|---|
+| `IdentityConstants.ApplicationScheme` | Passwordless path (`SignInManager`) | Yes, 30s re-check against the backing `ReadOnlyEnvIdentityUserStore` |
+| `AdminAuthenticationSchemes.SsoCookie` | SSO path (`HttpContext.SignInAsync` in `LoginController.SsoSignIn`) | No - the SSO principal has no backing user record to re-fetch |
 
-Decorate every consequential controller action with a permission requirement, then rely on
-`AccessControlService` to reject role-less principals at each action.
+The two schemes exist because the Identity cookie's `SecurityStampValidator` re-fetches the user
+from `IUserStore` every 30 seconds. The SSO principal has no corresponding row in that store, so
+routing it through the Identity cookie would eject the session on the first re-check.
 
-#### Advantages
+Bare `[Authorize]` works for either path because the authorization `DefaultPolicy` lists both
+schemes. ASP.NET Core's `PolicyEvaluator` calls `AuthenticateAsync` on each scheme and sets
+`HttpContext.User` to the first successful result. `DefaultAuthenticateScheme` and
+`DefaultChallengeScheme` stay at Identity's defaults, so bare `[Authorize]` still redirects to
+`/login` and `SignInManager` still writes to the Identity cookie.
 
-- Pins per-action authorization explicitly, independent of upstream tenancy state.
-- Catches the same class of regression (new ungated action) locally where the action is defined.
+`FallbackPolicy` is deliberately not set, so endpoints without `[Authorize]` stay anonymous. This
+keeps the login pages, `/alive`, `/error`, and the version endpoint reachable without a cookie.
 
-#### Disadvantages
+## Logout
 
-- Cross-cutting work across six-plus actions in two controllers; each action requires a decision
-  about which permission to require.
-- Still issues cookies to role-less principals; defense in depth at the sign-in boundary is
-  cheaper and more complete.
-- Does not change the fact that any new ungated action reintroduces exposure.
+`LoginController.Logout` reads `id_token` from `AdminAuthenticationSchemes.SsoCookie` before signing
+out, then signs out of both cookie schemes (sign-out against a scheme the user is not currently
+signed into is a no-op). If `id_token` was present and `OidcEnabled` is true, it triggers
+RP-initiated logout against `AdminAuthenticationSchemes.UpstreamOidc` with the saved token as
+`id_token_hint`, so the upstream IdP can honor the app-level Allowed Logout URLs list.
 
-### Option 3 — Tenancy gate at sign-in: reject when the principal has no mapped role
+## Operator configuration
 
-After `SsoSignInPrincipalBuilder.Build(...)` returns, verify the principal carries at least one
-`ClaimTypes.Role` claim. If none, sign the external principal out and redirect to the generic SSO
-failure message.
+Minimum settings for SSO:
 
-#### Advantages
+```jsonc
+"AdminSettings": {
+  "Oidc": {
+    "Authority":   "https://idp.example.com",
+    "ClientId":    "admin-portal",
+    "ClientSecret": "...",
+    "GroupPrefix": "us-prd-cloud-adminportal-"
+  }
+}
+```
 
-- Addresses the exposure at the correct layer: a non-member never gets a cookie.
-- Defense in depth remains possible — adding `[RequirePermission]` to ungated actions is a
-  compatible follow-up, not a prerequisite.
-- Honest about the Admin Portal model: there is no legitimate "authenticated but no capability"
-  user. Every page is admin-only.
-- Mirrors the role of `AdminSettings:Admins` on the passwordless path: a membership gate at the
-  door, decoupled from per-action authz.
+`AddAdminUpstreamOidc` fails loud at boot if `GroupPrefix` is empty while OIDC is enabled, because
+without it `GroupClaimRoleMapper` would match no groups and every SSO sign-in would fail the tenancy
+gate.
 
-#### Disadvantages
-
-- Admits an argument that authn and authz are being conflated. The rebuttal: the check is a
-  *tenancy* gate, not an authz check, and groups happen to be the only tenancy signal the SSO
-  path consumes today.
-- Operators who want SSO without configuring IdP groups cannot use the SSO path yet. The
-  `AdminSettings:Oidc:GroupPrefix` setting is already required at boot by `AddAdminUpstreamOidc`,
-  so this is not a regression from the broader SSO work.
-
-## Decision outcome
-
-Chosen option: **option 3, tenancy gate at sign-in**.
-
-`LoginController.SsoSignIn` evaluates `principal.FindAll(ClaimTypes.Role).Any()` after building
-the principal. If false, the controller logs a warning, signs out
-`IdentityConstants.ExternalScheme`, and redirects to the generic SSO-failed error. The gate is
-test-pinned by `LoginControllerTests.SsoSignIn_RedirectsError5_WhenPrincipalHasNoRoleClaims`.
-
-### Positive consequences
-
-- Cloud SSO users whose IdP groups do not map to an admin role never receive a session, closing
-  the exposure flagged by code review on the bare `[Authorize]` actions.
-- The authn/authz/tenancy separation is honest at every boundary: the IdP handles authn, this
-  gate handles tenancy, `AccessControlService` handles authz.
-- Future SSO sign-in paths (e.g., adding CSV-based tenancy for operators who prefer "IdP as
-  authn only") can be layered as additional tenancy signals under an all-gates-must-pass rule
-  without changing the authz model.
-
-### Negative consequences
-
-- Operators enabling Admin Portal SSO must provision at least one IdP group matching
-  `AdminSettings:Oidc:GroupPrefix` for intended admins. There is no "SSO without groups" path in
-  the current PR.
-- The bare `[Authorize]` actions on `UsersController` and `OrganizationsController` remain latent
-  risks if a future change weakens the tenancy gate or introduces a new sign-in path. The
-  follow-up to add `[RequirePermission]` to those actions is tracked separately.
-
-### Plan
-
-- Ship the tenancy gate in the SSO sign-in path and the matching unit test as part of
-  PR #8587.
-- Track as follow-up work: audit every `[Authorize]`-only action in `src/Admin` and either add
-  `[RequirePermission(...)]` or document why no permission applies. This is defense in depth
-  against future tenancy-gate regressions.
-- Track as follow-up work: evaluate operator demand for CSV-based tenancy on the SSO path (where
-  `AdminSettings:Admins` acts as the tenancy signal and `AdminSettings:Oidc:GroupPrefix` becomes
-  optional). The all-gates-must-pass rule discussed in design review generalizes cleanly if
-  demand materializes.
+IdP groups are expected to be named `<GroupPrefix><role>` where `<role>` is one of `owner`, `admin`,
+`billing`, `cs`, or `sales` (the keys of `RolePermissionMapping.RolePermissions`). Case is
+insensitive. A principal in multiple matching groups receives the union of their permissions.
