@@ -36,14 +36,16 @@ public class ServiceCollectionExtensionsTests
     }
 
     [Fact]
-    public void AddAdminUpstreamOidc_ThrowsWhenGroupPrefixIsNull()
+    public void AddAdminUpstreamOidc_ThrowsWhenNoTenancySignalConfigured()
     {
-        // GroupPrefix is the key the groups-to-roles mapper strips off every IdP group name.
-        // Without it, every SSO sign-in would be rejected as "no mapped group" - safer to
-        // fail boot loudly than let the operator discover it the first time anyone tries SSO.
+        // The sign-in tenancy gate requires at least one of AdminSettings:Admins or
+        // AdminSettings:Oidc:GroupPrefix. With neither set, every SSO sign-in would be rejected
+        // at the gate - fail boot loudly rather than let the operator discover it the first
+        // time anyone tries SSO.
         var services = new ServiceCollection();
         var adminSettings = new AdminSettings
         {
+            Admins = null,
             Oidc = new AdminSettings.OidcSettings
             {
                 Authority = "https://idp.example.com",
@@ -56,7 +58,29 @@ public class ServiceCollectionExtensionsTests
         var ex = Assert.Throws<InvalidOperationException>(() =>
             services.AddAdminUpstreamOidc(adminSettings));
 
+        Assert.Contains("Admins", ex.Message);
         Assert.Contains("GroupPrefix", ex.Message);
+    }
+
+    [Fact]
+    public void AddAdminUpstreamOidc_Succeeds_WhenOnlyAdminsConfigured()
+    {
+        // CSV-only mode: AdminSettings:Admins is the tenancy signal, no group mapping needed.
+        var services = new ServiceCollection();
+        services.AddLogging();
+        var adminSettings = new AdminSettings
+        {
+            Admins = "admin@example.com",
+            Oidc = new AdminSettings.OidcSettings
+            {
+                Authority = "https://idp.example.com",
+                ClientId = "id",
+                ClientSecret = "secret",
+                GroupPrefix = null,
+            }
+        };
+
+        services.AddAdminUpstreamOidc(adminSettings);
     }
 
     [Fact]

@@ -279,11 +279,10 @@ public class LoginControllerTests
     }
 
     [Fact]
-    public async Task SsoSignIn_RedirectsError5_WhenPrincipalHasNoRoleClaims()
+    public async Task SsoSignIn_RedirectsError5_WhenGroupPrefixConfiguredAndPrincipalHasNoRoleClaims()
     {
-        // Tenancy gate. An IdP-authenticated principal with no mapped admin role must be
-        // rejected at sign-in; without this gate the principal could reach any [Authorize]
-        // action that isn't additionally gated by [RequirePermission]. See src/Admin/Auth/SSO.md.
+        // Tenancy gate (groups-only configuration): principal must have at least one mapped
+        // admin role. See src/Admin/Auth/SSO.md.
         var controller = BuildController(oidcEnabled: true, out var builder);
         var authService = AttachAuthenticationServices(controller);
         StubExternalPrincipal(authService,
@@ -304,6 +303,141 @@ public class LoginControllerTests
         await authService.Received(1).SignOutAsync(
             Arg.Any<HttpContext>(),
             IdentityConstants.ExternalScheme,
+            Arg.Any<AuthenticationProperties>());
+    }
+
+    [Fact]
+    public async Task SsoSignIn_RedirectsError5_WhenAdminsConfiguredAndEmailNotOnList()
+    {
+        // Tenancy gate (CSV-only configuration): email must be on AdminSettings:Admins.
+        var controller = BuildController(oidcEnabled: true, out var builder,
+            adminsAllowlist: "admin@example.com", groupPrefix: null);
+        var authService = AttachAuthenticationServices(controller);
+        StubExternalPrincipal(authService,
+            new Claim("email", "stranger@example.com"),
+            new Claim("email_verified", "true"));
+        builder.Build(Arg.Any<string>(), Arg.Any<ClaimsPrincipal>())
+            .Returns(PrincipalWithRole("owner"));
+
+        var result = await controller.SsoSignIn();
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(5, redirect.RouteValues!["error"]);
+        await authService.DidNotReceive().SignInAsync(
+            Arg.Any<HttpContext>(),
+            AdminAuthenticationSchemes.SsoCookie,
+            Arg.Any<ClaimsPrincipal>(),
+            Arg.Any<AuthenticationProperties>());
+    }
+
+    [Fact]
+    public async Task SsoSignIn_SignsIn_WhenOnlyAdminsConfiguredAndEmailOnList_EvenWithoutRoleClaims()
+    {
+        // CSV-only mode: with GroupPrefix unset, groups gate is skipped. A principal with no
+        // role claims is admitted as long as the email is on the Admins allowlist.
+        var controller = BuildController(oidcEnabled: true, out var builder,
+            adminsAllowlist: "you@example.com", groupPrefix: null);
+        var authService = AttachAuthenticationServices(controller);
+        StubExternalPrincipal(authService,
+            new Claim("email", "you@example.com"),
+            new Claim("email_verified", "true"));
+        var builtPrincipal = new ClaimsPrincipal(new ClaimsIdentity(authenticationType: "test"));
+        builder.Build(Arg.Any<string>(), Arg.Any<ClaimsPrincipal>()).Returns(builtPrincipal);
+
+        await controller.SsoSignIn();
+
+        await authService.Received(1).SignInAsync(
+            Arg.Any<HttpContext>(),
+            AdminAuthenticationSchemes.SsoCookie,
+            builtPrincipal,
+            Arg.Any<AuthenticationProperties>());
+    }
+
+    [Fact]
+    public async Task SsoSignIn_RedirectsError5_WhenBothConfigured_AndEmailOnListButNoRole()
+    {
+        // Both gates configured: both must admit. CSV passes but groups does not.
+        var controller = BuildController(oidcEnabled: true, out var builder,
+            adminsAllowlist: "you@example.com");
+        var authService = AttachAuthenticationServices(controller);
+        StubExternalPrincipal(authService,
+            new Claim("email", "you@example.com"),
+            new Claim("email_verified", "true"));
+        builder.Build(Arg.Any<string>(), Arg.Any<ClaimsPrincipal>())
+            .Returns(new ClaimsPrincipal(new ClaimsIdentity(authenticationType: "test")));
+
+        var result = await controller.SsoSignIn();
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(5, redirect.RouteValues!["error"]);
+        await authService.DidNotReceive().SignInAsync(
+            Arg.Any<HttpContext>(),
+            AdminAuthenticationSchemes.SsoCookie,
+            Arg.Any<ClaimsPrincipal>(),
+            Arg.Any<AuthenticationProperties>());
+    }
+
+    [Fact]
+    public async Task SsoSignIn_RedirectsError5_WhenBothConfigured_AndRolePresentButEmailNotOnList()
+    {
+        // Both gates configured: both must admit. Groups passes but CSV does not.
+        var controller = BuildController(oidcEnabled: true, out var builder,
+            adminsAllowlist: "admin@example.com");
+        var authService = AttachAuthenticationServices(controller);
+        StubExternalPrincipal(authService,
+            new Claim("email", "stranger@example.com"),
+            new Claim("email_verified", "true"));
+        builder.Build(Arg.Any<string>(), Arg.Any<ClaimsPrincipal>())
+            .Returns(PrincipalWithRole("owner"));
+
+        var result = await controller.SsoSignIn();
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(5, redirect.RouteValues!["error"]);
+    }
+
+    [Fact]
+    public async Task SsoSignIn_SignsIn_WhenBothConfigured_AndBothGatesPass()
+    {
+        // Both gates configured: both admit.
+        var controller = BuildController(oidcEnabled: true, out var builder,
+            adminsAllowlist: "you@example.com");
+        var authService = AttachAuthenticationServices(controller);
+        StubExternalPrincipal(authService,
+            new Claim("email", "you@example.com"),
+            new Claim("email_verified", "true"));
+        var builtPrincipal = PrincipalWithRole("owner");
+        builder.Build(Arg.Any<string>(), Arg.Any<ClaimsPrincipal>()).Returns(builtPrincipal);
+
+        await controller.SsoSignIn();
+
+        await authService.Received(1).SignInAsync(
+            Arg.Any<HttpContext>(),
+            AdminAuthenticationSchemes.SsoCookie,
+            builtPrincipal,
+            Arg.Any<AuthenticationProperties>());
+    }
+
+    [Fact]
+    public async Task SsoSignIn_SignsIn_WhenAdminsCsvEntryIncludesStampSuffix()
+    {
+        // AdminSettings:Admins supports "email:stamp" entries (used by the passwordless
+        // user store). The CSV gate matches on the email prefix only.
+        var controller = BuildController(oidcEnabled: true, out var builder,
+            adminsAllowlist: "you@example.com:abc123", groupPrefix: null);
+        var authService = AttachAuthenticationServices(controller);
+        StubExternalPrincipal(authService,
+            new Claim("email", "you@example.com"),
+            new Claim("email_verified", "true"));
+        var builtPrincipal = new ClaimsPrincipal(new ClaimsIdentity(authenticationType: "test"));
+        builder.Build(Arg.Any<string>(), Arg.Any<ClaimsPrincipal>()).Returns(builtPrincipal);
+
+        await controller.SsoSignIn();
+
+        await authService.Received(1).SignInAsync(
+            Arg.Any<HttpContext>(),
+            AdminAuthenticationSchemes.SsoCookie,
+            builtPrincipal,
             Arg.Any<AuthenticationProperties>());
     }
 
@@ -415,18 +549,21 @@ public class LoginControllerTests
         bool oidcEnabled,
         out ISsoSignInPrincipalBuilder ssoSignInPrincipalBuilder,
         bool requireEmailVerified = true,
-        bool enablePasswordlessLogin = true)
+        bool enablePasswordlessLogin = true,
+        string adminsAllowlist = null,
+        string groupPrefix = "us-prd-cloud-adminportal-")
     {
         var settings = new AdminSettings
         {
             EnablePasswordlessLogin = enablePasswordlessLogin,
+            Admins = adminsAllowlist,
             Oidc = oidcEnabled
                 ? new AdminSettings.OidcSettings
                 {
                     Authority = "https://idp.example.com",
                     ClientId = "admin-portal",
                     ClientSecret = "supersecret",
-                    GroupPrefix = "us-prd-cloud-adminportal-",
+                    GroupPrefix = groupPrefix,
                     RequireEmailVerifiedClaim = requireEmailVerified,
                 }
                 : null,

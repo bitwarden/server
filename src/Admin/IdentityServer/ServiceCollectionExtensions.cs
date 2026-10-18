@@ -85,13 +85,16 @@ public static class ServiceCollectionExtensions
                 "AdminSettings:Oidc:EmailClaimType must not be null or empty when SSO is enabled.");
         }
 
-        // Fail-loud when the operator enables SSO but never set the group prefix. Without it
-        // the groups-to-roles mapper would match nothing and every SSO sign-in would be rejected
-        // as "no mapped group" - better to refuse to boot than to silently lock everyone out.
-        if (string.IsNullOrWhiteSpace(oidc.GroupPrefix))
+        // Fail-loud when SSO is enabled but no tenancy signal is configured. The sign-in
+        // tenancy gate requires at least one of: AdminSettings:Admins (CSV allowlist) or
+        // AdminSettings:Oidc:GroupPrefix (IdP groups → roles). Without either, every SSO
+        // sign-in would be rejected at the gate.
+        if (string.IsNullOrWhiteSpace(adminSettings.Admins) &&
+            string.IsNullOrWhiteSpace(oidc.GroupPrefix))
         {
             throw new InvalidOperationException(
-                "AdminSettings:Oidc:GroupPrefix must not be null or empty when SSO is enabled.");
+                "At least one of AdminSettings:Admins or AdminSettings:Oidc:GroupPrefix " +
+                "must be set when SSO is enabled.");
         }
 
         services.AddAuthentication()

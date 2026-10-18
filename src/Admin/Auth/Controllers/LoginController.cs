@@ -170,9 +170,19 @@ public class LoginController : Controller
         // local user store.
         var principal = _ssoSignInPrincipalBuilder.Build(email, external.Principal);
 
-        // Tenancy gate. SSO membership requires at least one mapped admin role.
-        // See src/Admin/Auth/SSO.md.
-        if (!principal.FindAll(ClaimTypes.Role).Any())
+        // Tenancy gates. Each configured signal must admit the user. See src/Admin/Auth/SSO.md.
+        var allowlistConfigured = !string.IsNullOrWhiteSpace(_adminSettings.Admins);
+        var groupMappingConfigured = !string.IsNullOrWhiteSpace(_adminSettings.Oidc.GroupPrefix);
+
+        if (allowlistConfigured && !IsOnAdminAllowlist(email))
+        {
+            _logger.LogWarning(
+                "SSO sign-in rejected: email not on AdminSettings:Admins allowlist.");
+            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+            return RedirectToAction("Index", new { error = 5 });
+        }
+
+        if (groupMappingConfigured && !principal.FindAll(ClaimTypes.Role).Any())
         {
             _logger.LogWarning(
                 "SSO sign-in rejected: authenticated principal has no mapped admin role.");
@@ -220,6 +230,23 @@ public class LoginController : Controller
         }
 
         return Redirect(loggedOutRedirect);
+    }
+
+    // AdminSettings:Admins is a comma-separated list where each entry is either "email" or
+    // "email:stamp" (the optional stamp is used by the passwordless path's user store).
+    // Match the email prefix of each entry, case-insensitive.
+    private bool IsOnAdminAllowlist(string email)
+    {
+        var csv = _adminSettings.Admins;
+        if (string.IsNullOrWhiteSpace(csv))
+        {
+            return false;
+        }
+        var normalized = email.Trim().ToLowerInvariant();
+        return csv.ToLowerInvariant()
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(entry => entry.Split(':', 2)[0].Trim())
+            .Any(e => e == normalized);
     }
 
     private bool IsEmailVerified(ClaimsPrincipal principal)

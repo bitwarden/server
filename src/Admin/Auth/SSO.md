@@ -8,12 +8,47 @@ operators provisioning Admin Portal access through an IdP.
 
 The Admin Portal supports two sign-in paths. An operator can enable either or both.
 
-| Path | Enabled by | Who signs in | Who gets admin capability |
+| Path | Enabled by | Membership gate | Role claims come from |
 |---|---|---|---|
-| Passwordless email | `AdminSettings:EnablePasswordlessLogin = true` (default) | Emails on the `AdminSettings:Admins` CSV allowlist | On self-hosted: everyone signed in. On cloud: users whose email appears in `adminSettings:role:{roleName}` CSV sub-config. |
-| Upstream OIDC SSO | `AdminSettings:Oidc:*` configured | IdP-authenticated users whose `groups` claim maps to at least one Admin Portal role via `AdminSettings:Oidc:GroupPrefix` | On self-hosted: everyone signed in. On cloud: the union of permissions across every mapped role. |
+| Passwordless email | `AdminSettings:EnablePasswordlessLogin = true` (default) | Email must be on `AdminSettings:Admins` | `adminSettings:role:{roleName}` CSV sub-config, matched against the authenticated email |
+| Upstream OIDC SSO | `AdminSettings:Oidc:*` configured | Every configured SSO tenancy gate must admit the user (see below) | `GroupClaimRoleMapper` maps the IdP `groups` claim via `AdminSettings:Oidc:GroupPrefix` |
 
 Everything below describes the SSO path.
+
+## SSO tenancy gates
+
+The SSO path has two independent tenancy signals. Operators configure one or both. Every signal
+that is configured must admit the user; signals that are not configured are skipped.
+
+| Signal | Configured when | Admits a user when |
+|---|---|---|
+| `AdminSettings:Admins` (CSV allowlist) | `AdminSettings:Admins` is non-empty | The authenticated email appears in the CSV (case-insensitive, matches the email prefix of each `email` or `email:stamp` entry) |
+| `AdminSettings:Oidc:GroupPrefix` (IdP group mapping) | `AdminSettings:Oidc:GroupPrefix` is non-empty | `SsoSignInPrincipalBuilder` produces a principal with at least one `ClaimTypes.Role` claim (i.e. at least one of the user's IdP groups has the configured prefix and a suffix matching a known role) |
+
+`AddAdminUpstreamOidc` fails loud at boot if SSO is enabled with neither `Admins` nor `GroupPrefix`
+configured, because every SSO sign-in would otherwise fail the gates.
+
+### Configuration matrix
+
+The three valid SSO configurations and what they mean for sign-in and authorization:
+
+| `Admins` | `GroupPrefix` | SSO sign-in admits | Role claims on the principal | Cloud authorization | Self-hosted authorization |
+|---|---|---|---|---|---|
+| set | unset | Users whose email is on `Admins` | None | No permissions (`AccessControlService.UserHasPermission` returns `false`) | Full access (`SelfHosted` short-circuit) |
+| unset | set | Users whose IdP groups map to at least one role | The mapped roles | Union of permissions across mapped roles | Full access |
+| set | set | Users whose email is on `Admins` AND whose IdP groups map to at least one role | The mapped roles | Union of permissions across mapped roles | Full access |
+
+The `Admins`-only configuration suits operators who already use an IdP for authentication but
+prefer to manage the admin list in config rather than in IdP groups. On cloud, those operators
+also need to populate `adminSettings:role:{roleName}` entries if they want anyone to have
+permissions.
+
+The `GroupPrefix`-only configuration suits operators who manage admin membership through IdP
+groups and want a single source of truth.
+
+The combined configuration is the tightest posture — a user must satisfy both the local allowlist
+and the IdP group mapping. Appropriate when the two mechanisms are managed by different teams and
+both approvals are required.
 
 ## SSO sign-in flow
 
@@ -31,7 +66,7 @@ Everything below describes the SSO path.
    - Calls `SsoSignInPrincipalBuilder.Build(email, external.Principal)`, which stamps
      `ClaimTypes.Name` / `ClaimTypes.Email` / `ClaimTypes.NameIdentifier` claims and asks
      `GroupClaimRoleMapper` to translate the IdP's `groups` claim into `ClaimTypes.Role` claims.
-   - Applies the tenancy gate described below.
+   - Applies each configured tenancy gate (see above). Admits only if every configured gate passes.
    - Signs the principal into `AdminAuthenticationSchemes.SsoCookie` with
      `IsPersistent = false` and the `id_token` stored on the auth properties (used later as
      `id_token_hint` on RP-initiated logout).
@@ -40,16 +75,7 @@ Everything below describes the SSO path.
 Any failure in steps 1-3 logs a warning and redirects to `GET /login?error=5`, which renders the
 generic "SSO sign-in failed. Try again or use the email link." message. The error message is
 intentionally generic: unsuccessful attempts cannot distinguish between "no such user", "wrong
-group", and "IdP returned an error."
-
-## Tenancy gate
-
-After `SsoSignInPrincipalBuilder.Build(...)` returns, `LoginController.SsoSignIn` requires the built
-principal to carry at least one `ClaimTypes.Role` claim. A principal with zero role claims is
-rejected: the controller logs a warning, signs out of `IdentityConstants.ExternalScheme`, and
-redirects to `GET /login?error=5`.
-
-Pinned by `LoginControllerTests.SsoSignIn_RedirectsError5_WhenPrincipalHasNoRoleClaims`.
+group", "email not on allowlist", and "IdP returned an error."
 
 ## Authentication, tenancy, and authorization
 
@@ -58,14 +84,10 @@ The SSO path keeps three concerns distinct:
 - **Authentication** — the IdP proves the user owns the claimed email. Enforced by the OIDC handler
   plus the email-verified check in `LoginController.SsoSignIn`.
 - **Tenancy** — whether the authenticated user is a user of the Admin Portal. Enforced by the
-  role-presence check in `LoginController.SsoSignIn`.
+  configured tenancy gates in `LoginController.SsoSignIn`.
 - **Authorization** — what capabilities the authenticated member has. Enforced by
   `AccessControlService.UserHasPermission` against the role claims on the principal, using
   `RolePermissionMapping`.
-
-The role mapping serves both tenancy and authorization: "has any mapped role" is the tenancy
-signal; "which permissions those roles grant" is the authorization decision. Same data source, two
-questions.
 
 ## Cookie schemes
 
@@ -94,21 +116,25 @@ as `id_token_hint`, so the upstream IdP can honor the app-level Allowed Logout U
 
 ## Operator configuration
 
-Minimum settings for SSO:
+Minimum settings for SSO. Supply at least one of `AdminSettings:Admins` or
+`AdminSettings:Oidc:GroupPrefix`.
 
 ```jsonc
 "AdminSettings": {
+  // Required when choosing the CSV allowlist as a tenancy signal. Comma-separated email
+  // addresses. Entries may be "email" or "email:stamp".
+  "Admins": "admin@example.com,another@example.com",
+
   "Oidc": {
     "Authority":   "https://idp.example.com",
     "ClientId":    "admin-portal",
     "ClientSecret": "...",
+
+    // Required when choosing IdP group mapping as a tenancy signal. IdP groups must be named
+    // <GroupPrefix><role> where <role> is one of owner, admin, billing, cs, or sales (the keys
+    // of RolePermissionMapping.RolePermissions). Case is insensitive. A principal in multiple
+    // matching groups receives the union of their permissions.
     "GroupPrefix": "us-prd-cloud-adminportal-"
   }
 }
 ```
-
-`AddAdminUpstreamOidc` fails loud at boot if `GroupPrefix` is empty while OIDC is enabled.
-
-IdP groups are expected to be named `<GroupPrefix><role>` where `<role>` is one of `owner`, `admin`,
-`billing`, `cs`, or `sales` (the keys of `RolePermissionMapping.RolePermissions`). Case is
-insensitive. A principal in multiple matching groups receives the union of their permissions.
