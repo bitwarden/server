@@ -162,20 +162,16 @@ public class LoginController : Controller
             props.StoreTokens([new AuthenticationToken { Name = "id_token", Value = idToken }]);
         }
 
-        // SSO signs in to its own dedicated cookie scheme with a hand-built principal rather
-        // than routing through SignInManager / UserManager. There's no local user record to
-        // look up and no SecurityStamp to track - the IdP owns identity, and session lifetime
-        // is bounded by the cookie expiry. A separate scheme (not the Identity application
-        // cookie) is required because Identity's SecurityStampValidator does a 30s re-fetch
-        // against the user store, which would reject the SSO principal within 30 seconds.
+        // SSO signs in to its own dedicated cookie scheme with a hand-built principal.
+        // There's no local user record to look up and no SecurityStamp to track - the IdP owns
+        // identity, and session lifetime  is bounded by the cookie expiry. 
+        // A separate scheme (not the Identity application cookie) is required because 
+        // Identity's SecurityStampValidator enforces security stamp consistency for the
+        // local user store.
         var principal = _ssoSignInPrincipalBuilder.Build(email, external.Principal);
 
-        // Tenancy gate. This PR removed the AdminSettings:Admins allowlist from the SSO path,
-        // so the only membership signal is "does this user map to at least one admin role".
-        // Without this gate, an IdP-authenticated user with no mapped group would receive a
-        // cookie and reach any [Authorize] action that is not additionally gated by
-        // [RequirePermission] - e.g. UsersController.View/Edit, OrganizationsController.View/
-        // Edit/TriggerBillingSync/ResendOwnerInvite. See src/Admin/Auth/SSO.md.
+        // Tenancy gate. SSO membership requires at least one mapped admin role.
+        // See src/Admin/Auth/SSO.md.
         if (!principal.FindAll(ClaimTypes.Role).Any())
         {
             _logger.LogWarning(
