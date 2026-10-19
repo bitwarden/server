@@ -8,7 +8,7 @@ A user completing 2FA can ask for the device to be remembered. The server record
 
 ### Revocation
 
-The token is only honored while the stamp it carries still matches the row's. `IRevokeTwoFactorRememberTokensCommand.RevokeAllForUserAsync` writes a new stamp to every row for a user, which stops all of their remember tokens being honored at once. The rows are kept, so `CreationDate` still records when each device was first remembered and `RevisionDate` records when it was cut off.
+The token is only honored while the stamp it carries still matches the row's. `IRevokeTwoFactorRememberTokensCommand.RevokeAllForUserAsync` writes a new stamp to every row for a user, which stops every remember token recorded in those rows from being honored at once. The rows are kept, so `CreationDate` still records when each device was first remembered and `RevisionDate` records when it was cut off.
 
 Revocation is deliberately narrow. It affects remember-me only — access tokens, refresh tokens, and live sessions are untouched, so it does not sign the user out anywhere. Their devices simply have to complete 2FA again on the next login.
 
