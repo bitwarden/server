@@ -24,10 +24,13 @@ internal sealed class PurchasePrivilegedControlsHandler(
         var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
         // The trial check runs first because a sales-initiated trial organization may have no Stripe subscription,
-        // and the checks below would otherwise hide the representative message.
-        var subscriptionInfo = string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId)
-            ? null
-            : await paymentService.GetSubscriptionAsync(organization);
+        // and the checks below would otherwise hide the representative message. The subscription only changes the
+        // trial rule's outcome when the plan supports Privileged Controls and Privileged Controls is on.
+        var subscriptionInfo =
+            plan.SupportsPrivilegedControls && organization.UsePam &&
+            !string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId)
+                ? await paymentService.GetSubscriptionAsync(organization)
+                : null;
 
         if (PrivilegedControlsTrial.IsSalesInitiated(organization, plan, subscriptionInfo))
         {

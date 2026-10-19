@@ -71,6 +71,7 @@ public class PurchasePrivilegedControlsHandlerTests
         await Assert.ThrowsAsync<BadRequestException>(() => _sut.HandleAsync(organization.Id, Request()));
 
         Assert.False(_command.WasCalled);
+        await _paymentService.DidNotReceive().GetSubscriptionAsync(Arg.Any<ISubscriber>());
     }
 
     [Fact]
@@ -105,6 +106,16 @@ public class PurchasePrivilegedControlsHandlerTests
         Assert.Same(organization, _command.ReceivedOrganization);
         Assert.Equal(10, _command.ReceivedSeats);
         Assert.Equal(20, _command.ReceivedMaxAutoscaleSeats);
+    }
+
+    [Fact]
+    public async Task HandleAsync_ValidOrganizationWithPamOff_DoesNotFetchSubscriptionFromStripe()
+    {
+        var organization = Arrange(CreateOrganization(usePam: false));
+
+        await _sut.HandleAsync(organization.Id, Request());
+
+        await _paymentService.DidNotReceive().GetSubscriptionAsync(Arg.Any<ISubscriber>());
     }
 
     [Fact]
