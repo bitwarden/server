@@ -238,6 +238,53 @@ public class OrganizationSponsorshipsControllerTests : IClassFixture<ApiApplicat
         Assert.False(stillExists.ToDelete, "Sponsorship should not have been marked for deletion.");
     }
 
+    [Fact]
+    public async Task ResendOwnSponsorshipOffer_AsRegularMember_Succeeds()
+    {
+        // Arrange
+        var (memberEmail, memberOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+
+        var sponsorship = new OrganizationSponsorship
+        {
+            SponsoringOrganizationId = _organization.Id,
+            SponsoringOrganizationUserId = memberOrgUser.Id,
+            FriendlyName = "resend-self-family@example.com",
+            OfferedToEmail = "resend-self-family@example.com",
+            PlanSponsorshipType = PlanSponsorshipType.FamiliesForEnterprise,
+            IsAdminInitiated = false,
+        };
+        sponsorship.SetNewId();
+        await _factory.GetService<IOrganizationSponsorshipRepository>().CreateAsync(sponsorship);
+
+        await _loginHelper.LoginAsync(memberEmail);
+
+        // Act
+        var response = await _client.PostAsync(
+            $"organization/sponsorship/{_organization.Id}/families-for-enterprise/resend-self", null);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ResendOwnSponsorshipOffer_AsNonMember_ReturnsForbidden()
+    {
+        // Arrange
+        var attackerEmail = $"resend-self-attacker-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(attackerEmail);
+        await _loginHelper.LoginAsync(attackerEmail);
+
+        // Act
+        var response = await _client.PostAsync(
+            $"organization/sponsorship/{_organization.Id}/families-for-enterprise/resend-self", null);
+
+        // Assert
+        Assert.True(
+            response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.Unauthorized,
+            $"Expected 401 or 403 but got {(int)response.StatusCode} {response.StatusCode}.");
+    }
+
     #region ResendSponsorshipOffer authorization tests
 
     /// <summary>
