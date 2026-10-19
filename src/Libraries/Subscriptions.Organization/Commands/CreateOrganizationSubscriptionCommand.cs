@@ -84,9 +84,8 @@ internal sealed class CreateOrganizationSubscriptionCommand(
         }
 
         var discountCoupons =
-            customerSetup
-                .DiscountCoupons?
-                .Where(c => !string.IsNullOrWhiteSpace(c)).Select(c => c.Trim()).ToList() ?? [];
+            customerSetup.DiscountCoupons
+                .Where(c => !string.IsNullOrWhiteSpace(c)).Select(c => c.Trim()).ToList();
 
         if (!await subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(owner, discountCoupons,
                 DiscountTierType.Families))
@@ -120,7 +119,7 @@ internal sealed class CreateOrganizationSubscriptionCommand(
     {
         var customerCreateOptions = new CustomerCreateOptions
         {
-            Description = organization.DisplayBusinessName(),
+            Description = organization.DisplayName(),
             Email = organization.BillingEmail,
             Expand = ["tax", "tax_ids"],
             InvoiceSettings = new CustomerInvoiceSettingsOptions
