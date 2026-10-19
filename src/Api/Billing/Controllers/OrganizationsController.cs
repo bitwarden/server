@@ -13,6 +13,7 @@ using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Entities;
+using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Organizations.Repositories;
@@ -22,8 +23,6 @@ using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business;
-using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -86,7 +85,7 @@ public class OrganizationsController(
         if (string.IsNullOrEmpty(organization.GatewaySubscriptionId))
         {
             return new OrganizationSubscriptionResponseModel(
-                organization, plan, occupiedPamSeats, IsOnPamSalesInitiatedTrial(organization, plan));
+                organization, plan, occupiedPamSeats, PrivilegedControlsTrial.IsSalesInitiated(organization, plan));
         }
 
         var subscriptionInfo = await paymentService.GetSubscriptionAsync(organization);
@@ -105,7 +104,7 @@ public class OrganizationsController(
 
         return new OrganizationSubscriptionResponseModel(
             organization, subscriptionInfo, plan, hideSensitiveData, pendingAnnualUpgrade, occupiedPamSeats,
-            IsOnPamSalesInitiatedTrial(organization, plan, subscriptionInfo));
+            PrivilegedControlsTrial.IsSalesInitiated(organization, plan, subscriptionInfo));
     }
 
     [HttpGet("{id:guid}/license")]
@@ -351,16 +350,4 @@ public class OrganizationsController(
 
         return new ProfileOrganizationResponseModel(organizationUserDetails, organizationIdsClaimingActiveUser);
     }
-
-    /// <summary>
-    /// An organization is on a sales-initiated Privileged Controls trial when its plan supports Privileged Controls,
-    /// Privileged Controls is on, and its subscription (if it has one) carries no Privileged Controls seat line.
-    /// </summary>
-    private static bool IsOnPamSalesInitiatedTrial(
-        Organization organization,
-        Plan plan,
-        SubscriptionInfo subscriptionInfo = null) =>
-        plan.SupportsPrivilegedControls &&
-        organization.UsePam &&
-        subscriptionInfo?.Subscription?.HasPrivilegedControlsSeats != true;
 }
