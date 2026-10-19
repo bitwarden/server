@@ -9,6 +9,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.Settings;
+using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Options;
 
 namespace Bit.Seeder.Services;
@@ -22,48 +23,17 @@ namespace Bit.Seeder.Services;
 /// internal to <c>Bit.Core</c>, so <c>From</c> is the only way to build one, and going through it means seeded
 /// orgs get the same customer, subscription, and trial shape a real signup does.
 /// </remarks>
-public sealed class StripeBillingInitializer(
+public sealed class OrganizationStripeBillingService(
     GlobalSettings globalSettings,
     IOrganizationBillingService organizationBillingService,
-    IPricingClient pricingClient) : IStripeBillingInitializer
+    IPricingClient pricingClient) : IOrganizationStripeBillingService
 {
-    /// <summary>Only a test-mode secret key is ever acceptable — this tool must not touch live billing.</summary>
-    public const string TestKeyPrefix = "sk_test_";
-
+    /// <summary>
+    /// Throws when the host is not configured for Stripe test-mode billing or the plan cannot be billed.
+    /// </summary>
     public void ValidateConfiguration(PlanType planType)
     {
-        var apiKey = globalSettings.Stripe?.ApiKey;
-
-        if (string.IsNullOrWhiteSpace(apiKey))
-        {
-            throw new InvalidOperationException(
-                "Stripe billing was requested but no Stripe API key is configured. Set " +
-                $"'globalSettings:stripe:apiKey' to a test-mode key ('{TestKeyPrefix}…') in the " +
-                "'bitwarden-seeder-utility' user secrets.");
-        }
-
-        if (!apiKey.StartsWith(TestKeyPrefix, StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException(
-                $"Stripe billing requires a test-mode API key starting with '{TestKeyPrefix}'. The configured " +
-                "key is not one, and the Seeder refuses to create billing against a live Stripe account.");
-        }
-
-        if (string.IsNullOrWhiteSpace(globalSettings.PricingUri))
-        {
-            throw new InvalidOperationException(
-                "Stripe billing requires 'globalSettings:pricingUri' so plan pricing can be resolved. " +
-                "Run the CLI with ASPNETCORE_ENVIRONMENT=Development to pick up " +
-                "'util/SeederUtility/appsettings.Development.json', or set the value in user secrets.");
-        }
-
-        if (globalSettings.SelfHosted)
-        {
-            throw new InvalidOperationException(
-                "Stripe billing requires cloud mode, but 'globalSettings:selfHosted' is true — the Pricing " +
-                "Service is never called in self-hosted mode, so no plan can be resolved. Run this command " +
-                "with 'globalSettings__selfHosted=false' in the environment.");
-        }
+        StripeSettingValidator.Validate(globalSettings);
 
         if (planType == PlanType.Free)
         {
@@ -73,7 +43,10 @@ public sealed class StripeBillingInitializer(
         }
     }
 
-    public async Task InitializeOrganizationAsync(Organization organization, StripeBillingOptions options)
+    /// <summary>
+    /// Creates the organization's Stripe customer and subscription through the production billing service.
+    /// </summary>
+    public async Task CreateSubscriptionAsync(Organization organization, StripeBillingOptions options)
     {
         ValidateConfiguration(organization.PlanType);
 
@@ -105,6 +78,11 @@ public sealed class StripeBillingInitializer(
     /// back-computation, clamped at zero so a plan whose base exceeds the seeded total never bills negative.
     /// </para>
     /// <para>
+    /// The card, country, postal code, and tax ID come from <see cref="StripeBillingOptions.Profile"/>.
+    /// <c>TaxIdType</c> stays unset because Core never reads it: it infers the type from the country and
+    /// <c>TaxIdNumber</c>, and rejects a number it can't infer before calling Stripe.
+    /// </para>
+    /// <para>
     /// Secrets Manager is included only when <see cref="Organization.SmSeats"/> has a value. Seeded Teams and
     /// Enterprise orgs carry <c>UseSecretsManager = true</c> with <c>SmSeats</c> NULL (the plan sets the flag;
     /// provisioning sets the seats), and inventing a quantity from NULL would bill for seats nobody asked for.
@@ -114,17 +92,19 @@ public sealed class StripeBillingInitializer(
     /// </remarks>
     internal static OrganizationSignup BuildSignup(Organization organization, Plan plan, StripeBillingOptions options)
     {
+        var address = options.Profile.Address;
         var signup = new OrganizationSignup
         {
             Plan = organization.PlanType,
             AdditionalSeats = AdditionalOver(organization.Seats, plan.PasswordManager.BaseSeats),
             AdditionalStorageGb = (short)AdditionalOver(organization.MaxStorageGb, plan.PasswordManager.BaseStorageGb),
             PaymentMethodType = PaymentMethodType.Card,
-            PaymentToken = "pm_card_visa",
+            PaymentToken = options.Profile.Card.PaymentMethodId,
             TaxInfo = new TaxInfo
             {
-                BillingAddressCountry = "US",
-                BillingAddressPostalCode = "43432",
+                BillingAddressCountry = address.Country,
+                BillingAddressPostalCode = address.PostalCode,
+                TaxIdNumber = address.TaxId,
             },
             InitiationPath = "Seeder",
             SkipTrial = options.SkipTrial,

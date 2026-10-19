@@ -29,7 +29,8 @@ public class PresetCommand
                 {
                     throw new ArgumentException(
                         $"--stripe-billing is not supported for individual preset '{args.Name}'. " +
-                        "Only organization presets can be billed today; premium billing is a separate task.");
+                        "Only organization presets can be billed; for a billed premium user, run " +
+                        "'individual --subscription premium --stripe-billing'.");
                 }
 
                 await RunIndividualPresetAsync(args);

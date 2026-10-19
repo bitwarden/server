@@ -32,10 +32,17 @@ public sealed record SeederDependencies(
     public IProgress<SeederProgressEvent>? Progress { get; init; }
 
     /// <summary>
-    /// Optional factory for the Stripe billing initializer. Required only by callers that opt into Stripe
-    /// billing; when null, any billing opt-in fails fast rather than seeding an org with no subscription.
+    /// Optional factory for the organization Stripe billing service. Required only by callers that opt into
+    /// Stripe billing; when null, any billing opt-in fails fast rather than seeding an org with no subscription.
     /// A factory rather than a resolved instance so the billing DI graph is only constructed when a
     /// command actually opts in, instead of on every command.
     /// </summary>
-    public Func<IStripeBillingInitializer>? BillingInitializer { get; init; }
+    public Func<IOrganizationStripeBillingService>? OrganizationStripeBillingService { get; init; }
+
+    /// <summary>
+    /// Optional factory for the user Stripe billing service. Required only by callers that opt an individual
+    /// user into Stripe billing; when null, that opt-in fails fast. A factory for the same reason as
+    /// <see cref="OrganizationStripeBillingService"/>.
+    /// </summary>
+    public Func<IUserStripeBillingService>? UserStripeBillingService { get; init; }
 }
