@@ -3,9 +3,9 @@ using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -24,8 +24,8 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 /// </summary>
 /// <remarks>
 /// Eligibility is delegated to <see cref="IConfirmOrganizationInviteLinkValidator"/>, which performs the
-/// read-only prechecks. This command owns the write side effects: creating the membership when needed,
-/// confirming it with the organization key, and running the policy-driven follow-ups.
+/// read-only prechecks, including all policy checks. This command owns the writes: creating the membership when
+/// needed, confirming it with the organization key, and running the post-confirm side effects.
 /// </remarks>
 public class ConfirmOrganizationInviteLinkCommand(
     IConfirmOrganizationInviteLinkValidator confirmOrganizationInviteLinkValidator,
@@ -36,6 +36,7 @@ public class ConfirmOrganizationInviteLinkCommand(
     IOrganizationService organizationService,
     IStripePaymentService stripePaymentService,
     IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand,
+    IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand,
     IPushNotificationService pushNotificationService,
     IEventService eventService,
     ILogger<ConfirmOrganizationInviteLinkCommand> logger)
@@ -43,65 +44,67 @@ public class ConfirmOrganizationInviteLinkCommand(
 {
     public async Task<CommandResult> ConfirmAsync(ConfirmOrganizationInviteLinkRequest request)
     {
-        var user = request.User;
-
         var validationResult = await confirmOrganizationInviteLinkValidator.ValidateAsync(
             new ConfirmOrganizationInviteLinkValidationRequest
             {
                 OrganizationId = request.OrganizationId,
                 Code = request.Code,
-                User = user,
+                User = request.User,
+                ResetPasswordKey = request.ResetPasswordKey,
             });
         if (validationResult.IsError)
         {
             return validationResult.AsError;
         }
 
-        var organization = validationResult.AsSuccess.Organization;
-        var existingOrganizationUser = validationResult.AsSuccess.ExistingOrganizationUser;
+        var validated = validationResult.AsSuccess;
 
-        // Account recovery enrollment is validated before any writes so a missing key fails the request
-        // without leaving a partially confirmed membership behind.
-        var resetPasswordRequirement = await policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id);
-        var autoEnrollEnabled = resetPasswordRequirement.AutoEnrollEnabled(organization.Id);
-        if (autoEnrollEnabled && !OrganizationUser.IsValidResetPasswordKey(request.ResetPasswordKey))
-        {
-            return new ConfirmResetPasswordKeyRequired();
-        }
-
-        var membershipResult = await AddUserToOrganizationAsync(request, existingOrganizationUser, user, organization);
+        var membershipResult = await AddUserToOrganizationAsync(request, validated);
         if (membershipResult.IsError)
         {
             return membershipResult.AsError;
         }
 
-        var organizationUser = membershipResult.AsSuccess;
+        await PerformPostConfirmSideEffectsAsync(request, validated, membershipResult.AsSuccess);
+
+        return new None();
+    }
+
+    private async Task<CommandResult<OrganizationUser>> AddUserToOrganizationAsync(
+        ConfirmOrganizationInviteLinkRequest request, ConfirmOrganizationInviteLinkValidationResult validated)
+    {
+        if (validated.ExistingOrganizationUser is not null)
+        {
+            return await ConfirmExistingMembershipAsync(validated.Organization, validated.ExistingOrganizationUser,
+                request.User, request.OrgUserKey);
+        }
+
+        return await CreateConfirmedMembershipAsync(validated.Organization, request.User, request.OrgUserKey);
+    }
+
+    private async Task PerformPostConfirmSideEffectsAsync(ConfirmOrganizationInviteLinkRequest request,
+        ConfirmOrganizationInviteLinkValidationResult validated, OrganizationUser organizationUser)
+    {
+        var user = request.User;
+        var organization = validated.Organization;
 
         await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_InviteLinkConfirmed);
 
         await CreateDefaultCollectionAsync(organization, organizationUser, request.DefaultUserCollectionName);
 
-        if (autoEnrollEnabled)
+        if (validated.AccountRecoveryAutoEnrollEnabled)
         {
             await updateUserResetPasswordEnrollmentCommand.UpdateUserResetPasswordEnrollmentAsync(
                 organization.Id, user.Id, request.ResetPasswordKey, user.Id);
         }
 
-        // The membership now carries the organization key, so notify the user's other devices to sync it.
-        await pushNotificationService.PushSyncOrgKeysAsync(user.Id);
-
-        return new None();
-    }
-
-    private async Task<CommandResult<OrganizationUser>> AddUserToOrganizationAsync(ConfirmOrganizationInviteLinkRequest request,
-        OrganizationUser? existingOrganizationUser, User user, Organization organization)
-    {
-        if (existingOrganizationUser is not null)
+        if (validated.AutoConfirmPolicyEnabled)
         {
-            return await ConfirmExistingMembershipAsync(organization, existingOrganizationUser, user, request.OrgUserKey);
+            await deleteEmergencyAccessCommand.DeleteAllByUserIdAsync(user.Id);
         }
 
-        return await CreateConfirmedMembershipAsync(organization, user, request.OrgUserKey);
+        // The membership now carries the organization key, so notify the user's other devices to sync it.
+        await pushNotificationService.PushSyncOrgKeysAsync(user.Id);
     }
 
     /// <summary>
@@ -136,7 +139,7 @@ public class ConfirmOrganizationInviteLinkCommand(
     /// <summary>
     /// Creates a new membership for the user directly in <see cref="OrganizationUserStatusType.Confirmed"/>
     /// status with the org key, expanding the organization's seats first so a billing or persistence failure
-    /// leaves no orphaned seat. The validator has already confirmed the plan permits an additional seat.
+    /// leaves no orphaned seat.
     /// </summary>
     private async Task<CommandResult<OrganizationUser>> CreateConfirmedMembershipAsync(
         Organization organization, User user, string orgUserKey)
@@ -165,26 +168,12 @@ public class ConfirmOrganizationInviteLinkCommand(
     }
 
     /// <summary>
-    /// Reserves capacity for one more seat-occupying member. Runs before the membership is written so that a
-    /// billing or persistence failure leaves no orphaned seat. The seat count is re-read here because it may
-    /// have changed since the validator ran.
+    /// Auto-adds a seat if the organization is at capacity. Runs before the membership is written so that a
+    /// billing or persistence failure leaves no orphaned seat.
     /// </summary>
     private async Task<Error?> ReserveSeatAsync(Organization organization)
     {
         var occupiedSeatCount = (await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)).Total;
-        if (!OrganizationSeatAvailability.HasAvailableSeats(organization, occupiedSeatCount))
-        {
-            return new ConfirmOrganizationHasNoAvailableSeats(organization.DisplayName());
-        }
-
-        return await TryExpandSeatsAsync(organization, occupiedSeatCount);
-    }
-
-    /// <summary>
-    /// Only auto-adds when the organization is already at capacity.
-    /// </summary>
-    private async Task<Error?> TryExpandSeatsAsync(Organization organization, int occupiedSeatCount)
-    {
         if (!organization.Seats.HasValue || occupiedSeatCount < organization.Seats.Value)
         {
             return null;
