@@ -21,4 +21,9 @@ public sealed record StripeBillingOptions
     /// <c>IOrganizationBillingService.Finalize</c> does not.
     /// </summary>
     public int TrialDays { get; init; } = 30;
+
+    /// <summary>
+    /// The test card and billing address. Defaults to Visa at a US address.
+    /// </summary>
+    public StripeBillingProfile Profile { get; init; } = new();
 }

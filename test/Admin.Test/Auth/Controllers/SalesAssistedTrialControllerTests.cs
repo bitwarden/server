@@ -26,7 +26,7 @@ public class SalesAssistedTrialControllerTests
         Email = "prospect@example.com",
         Name = "Prospect Company",
         ProductTier = ProductTierType.Enterprise,
-        Product = ProductType.PasswordManager,
+        Products = [ProductType.PasswordManager],
         TrialLength = 14
     };
 
@@ -52,7 +52,7 @@ public class SalesAssistedTrialControllerTests
         var viewResult = Assert.IsType<ViewResult>(result);
         var model = Assert.IsType<SalesAssistedTrialInviteModel>(viewResult.Model);
         Assert.Equal(ProductTierType.Enterprise, model.ProductTier);
-        Assert.Equal(ProductType.PasswordManager, model.Product);
+        Assert.Equal([ProductType.PasswordManager], model.Products);
         Assert.Equal(30, model.TrialLength);
     }
 
@@ -76,7 +76,29 @@ public class SalesAssistedTrialControllerTests
                 model.Name,
                 SenderEmail,
                 model.ProductTier,
-                Arg.Is<IEnumerable<ProductType>>(products => products.SequenceEqual(new[] { model.Product })),
+                Arg.Is<IEnumerable<ProductType>>(products => products.SequenceEqual(model.Products)),
+                model.TrialLength);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Index_Post_PasswordManagerAndPrivilegedControls_PassesBothProductsThrough(
+        SutProvider<SalesAssistedTrialController> sutProvider)
+    {
+        var model = BuildValidModel();
+        model.Products = [ProductType.PasswordManager, ProductType.PrivilegedControls];
+        SetUpAuthenticatedSender(sutProvider);
+
+        await sutProvider.Sut.Index(model);
+
+        await sutProvider.GetDependency<ISendSalesAssistedTrialInvitationCommand>()
+            .Received(1)
+            .HandleAsync(
+                model.Email,
+                model.Name,
+                SenderEmail,
+                model.ProductTier,
+                Arg.Is<IEnumerable<ProductType>>(products =>
+                    products.SequenceEqual(new[] { ProductType.PasswordManager, ProductType.PrivilegedControls })),
                 model.TrialLength);
     }
 
@@ -106,7 +128,7 @@ public class SalesAssistedTrialControllerTests
         SutProvider<SalesAssistedTrialController> sutProvider)
     {
         var model = BuildValidModel();
-        model.Product = ProductType.SecretsManager;
+        model.Products = [ProductType.SecretsManager];
         SetUpAuthenticatedSender(sutProvider);
         sutProvider.Sut.ModelState.AddModelError(nameof(model.Email), "The Email field is required.");
 
@@ -116,7 +138,7 @@ public class SalesAssistedTrialControllerTests
         // Ensure when a model is returned to the view for validation errors (POST round-trip)
         // that user's choices are persisted; the defaults do not change their prior selections.
         var redisplayedModel = Assert.IsType<SalesAssistedTrialInviteModel>(viewResult.Model);
-        Assert.Equal(model.Product, redisplayedModel.Product);
+        Assert.Equal(model.Products, redisplayedModel.Products);
 
         await sutProvider.GetDependency<ISendSalesAssistedTrialInvitationCommand>()
             .DidNotReceiveWithAnyArgs()

@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Billing.Enums;
+using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Options;
@@ -65,7 +66,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         }
         if (stripeBilling is not null)
         {
-            services.AddSingleton(deps.BillingInitializer!());
+            services.AddSingleton(deps.OrganizationStripeBillingService!());
         }
 
         PresetLoader.RegisterRecipe(presetName, reader, services, stripeBilling);
@@ -105,7 +106,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         }
         if (options.StripeBilling is not null)
         {
-            services.AddSingleton(deps.BillingInitializer!());
+            services.AddSingleton(deps.OrganizationStripeBillingService!());
         }
 
         var recipeName = "from-options";
@@ -149,7 +150,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
 
         if (options.StripeBilling is not null)
         {
-            builder.WithStripeBilling(options.StripeBilling);
+            builder.WithStripeOrganizationBilling(options.StripeBilling);
         }
 
         builder.Validate();
@@ -169,6 +170,28 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         var premium = options.Premium;
         var maxStorageGb = premium ? (short)1 : (short)0;
 
+        if (options.StripeBilling is not null)
+        {
+            var address = options.StripeBilling.Address;
+            if (address.TaxId is not null)
+            {
+                var withoutTaxId = Enum.GetValues<StripeTestAddress>().Where(a => a.TaxId is null).Select(a => a.Name);
+                throw new InvalidOperationException(
+                    $"The '{address.Name}' test address carries a tax ID, and a premium user's personal account " +
+                    $"takes none. Use one of: {string.Join(", ", withoutTaxId)}.");
+            }
+
+            RequireBillingService(deps.UserStripeBillingService).ValidateConfiguration();
+
+            if (!deps.ManglerService.IsEnabled && deps.Db.Users.Any(u => u.Email == email))
+            {
+                throw new InvalidOperationException(
+                    $"A User with email '{email}' already exists in the database. Stripe billing runs before the " +
+                    "commit, so the duplicate would only fail the commit after Stripe had already billed a new " +
+                    "customer. Choose a different --email or add --mangle for test isolation.");
+            }
+        }
+
         var services = new ServiceCollection();
         services.AddSingleton(deps.LoggerFactory);
         services.AddLogging();
@@ -181,6 +204,10 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         if (deps.Progress is not null)
         {
             services.AddSingleton(deps.Progress);
+        }
+        if (options.StripeBilling is not null)
+        {
+            services.AddSingleton(deps.UserStripeBillingService!());
         }
 
         var recipeName = "individual-from-options";
@@ -197,6 +224,11 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         {
             builder.AddNamedFolders(["Social", "Finance", "Work", "Shopping", "Entertainment"]);
             builder.AddPersonalCiphers(75);
+        }
+
+        if (options.StripeBilling is not null)
+        {
+            builder.WithStripeUserBilling(options.StripeBilling);
         }
 
         builder.Validate();
@@ -219,16 +251,19 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
     /// Billing runs in a post-commit step, so without this gate an unusable Stripe configuration would only
     /// surface after the organization and its users were already written to the database.
     /// </remarks>
-    private void ValidateBillingOptIn(PlanType planType)
+    private void ValidateBillingOptIn(PlanType planType) =>
+        RequireBillingService(deps.OrganizationStripeBillingService).ValidateConfiguration(planType);
+
+    private static T RequireBillingService<T>(Func<T>? factory)
     {
-        if (deps.BillingInitializer is null)
+        if (factory is null)
         {
             throw new InvalidOperationException(
-                "Stripe billing was requested but no IStripeBillingInitializer was supplied on " +
+                $"Stripe billing was requested but no {typeof(T).Name} was supplied on " +
                 "SeederDependencies. The host has to register the billing services before opting in.");
         }
 
-        deps.BillingInitializer().ValidateConfiguration(planType);
+        return factory();
     }
 
     /// <summary>
