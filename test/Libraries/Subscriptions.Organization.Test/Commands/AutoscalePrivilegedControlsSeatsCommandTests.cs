@@ -1,13 +1,17 @@
 ﻿using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models.Mail.Mailer;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Bit.Subscriptions.Organization.Commands;
 using Bitwarden.Server.Sdk.Environment;
 using NSubstitute;
@@ -31,7 +35,8 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
     private readonly IOrganizationService _organizationService = Substitute.For<IOrganizationService>();
     private readonly IOrganizationUserRepository _organizationUserRepository =
         Substitute.For<IOrganizationUserRepository>();
-    private readonly IMailService _mailService = Substitute.For<IMailService>();
+    private readonly IMailer _mailer = Substitute.For<IMailer>();
+    private readonly GlobalSettings _globalSettings = new();
     private readonly IBitwardenEnvironment _environment = Substitute.For<IBitwardenEnvironment>();
     private readonly AutoscalePrivilegedControlsSeatsCommand _sut;
 
@@ -41,7 +46,8 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
             _updateOrganizationSubscriptionCommand,
             _organizationService,
             _organizationUserRepository,
-            _mailService,
+            _mailer,
+            _globalSettings,
             _environment,
             new RecordingLogger<AutoscalePrivilegedControlsSeatsCommand>());
 
@@ -200,8 +206,7 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
 
         await _sut.Run(organization, 5);
 
-        await _mailService.DidNotReceive().SendPrivilegedControlsMaxSeatLimitReachedEmailAsync(
-            Arg.Any<OrganizationEntity>(), Arg.Any<int>(), Arg.Any<IEnumerable<string>>());
+        await _mailer.DidNotReceive().SendEmail(Arg.Any<PrivilegedControlsSeatLimitReachedMail>());
     }
 
     [Fact]
@@ -230,8 +235,7 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
             .Run(Arg.Any<OrganizationEntity>(), Arg.Any<OrganizationSubscriptionChangeSet>(), Arg.Any<Subscription?>());
         await _organizationService.DidNotReceive()
             .ReplaceAndUpdateCacheAsync(Arg.Any<OrganizationEntity>(), Arg.Any<EventType?>());
-        await _mailService.DidNotReceive().SendPrivilegedControlsMaxSeatLimitReachedEmailAsync(
-            Arg.Any<OrganizationEntity>(), Arg.Any<int>(), Arg.Any<IEnumerable<string>>());
+        await _mailer.DidNotReceive().SendEmail(Arg.Any<PrivilegedControlsSeatLimitReachedMail>());
     }
 
     [Fact]
@@ -244,8 +248,12 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
         var result = await _sut.Run(organization, 5);
 
         Assert.True(result.Success);
-        await _mailService.Received(1).SendPrivilegedControlsMaxSeatLimitReachedEmailAsync(
-            organization, 15, Arg.Is<IEnumerable<string>>(emails => emails.Single() == _ownerEmail));
+        await _mailer.Received(1).SendEmail(Arg.Is<PrivilegedControlsSeatLimitReachedMail>(mail =>
+            mail.ToEmails.Single() == _ownerEmail &&
+            mail.Subject == "Acme.Corp Privileged Controls seat limit reached" &&
+            mail.View.OrganizationId == organization.Id &&
+            mail.View.OrganizationName == CoreHelpers.PreventEmailAutoLinking("Acme.Corp") &&
+            mail.View.MaxSeatCount == 15));
     }
 
     [Fact]
@@ -258,8 +266,8 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
 
         Assert.True(result.Success);
         await _seatChangeSetFactory.DidNotReceive().CreateAsync(Arg.Any<OrganizationEntity>(), Arg.Any<int>());
-        await _mailService.Received(1).SendPrivilegedControlsMaxSeatLimitReachedEmailAsync(
-            organization, 12, Arg.Any<IEnumerable<string>>());
+        await _mailer.Received(1).SendEmail(Arg.Is<PrivilegedControlsSeatLimitReachedMail>(mail =>
+            mail.View.MaxSeatCount == 12));
     }
 
     [Fact]
@@ -271,8 +279,7 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
 
         await _sut.Run(organization, 5);
 
-        await _mailService.DidNotReceive().SendPrivilegedControlsMaxSeatLimitReachedEmailAsync(
-            Arg.Any<OrganizationEntity>(), Arg.Any<int>(), Arg.Any<IEnumerable<string>>());
+        await _mailer.DidNotReceive().SendEmail(Arg.Any<PrivilegedControlsSeatLimitReachedMail>());
     }
 
     [Fact]
@@ -281,8 +288,7 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
         var organization = CreateOrganization(maxAutoscalePamSeats: 15);
         SetSeatsInUse(organization, _seatsInUse);
         SucceedWith();
-        _mailService.SendPrivilegedControlsMaxSeatLimitReachedEmailAsync(
-                Arg.Any<OrganizationEntity>(), Arg.Any<int>(), Arg.Any<IEnumerable<string>>())
+        _mailer.SendEmail(Arg.Any<PrivilegedControlsSeatLimitReachedMail>())
             .ThrowsAsync(new InvalidOperationException("Mail is down."));
 
         var result = await _sut.Run(organization, 5);
@@ -323,8 +329,7 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
         Assert.Equal(_boughtSeats, organization.PamSeats);
         await _organizationService.DidNotReceive()
             .ReplaceAndUpdateCacheAsync(Arg.Any<OrganizationEntity>(), Arg.Any<EventType?>());
-        await _mailService.DidNotReceive().SendPrivilegedControlsMaxSeatLimitReachedEmailAsync(
-            Arg.Any<OrganizationEntity>(), Arg.Any<int>(), Arg.Any<IEnumerable<string>>());
+        await _mailer.DidNotReceive().SendEmail(Arg.Any<PrivilegedControlsSeatLimitReachedMail>());
     }
 
     private void SetSeatsInUse(OrganizationEntity organization, int seatsInUse)
@@ -357,6 +362,7 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
         string? gatewaySubscriptionId = "sub_123") => new()
         {
             Id = Guid.NewGuid(),
+            Name = "Acme.Corp",
             PlanType = PlanType.EnterpriseAnnually,
             UsePam = usePam,
             PamSeats = pamSeats,

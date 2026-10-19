@@ -1,10 +1,14 @@
-﻿using Bit.Core.Billing.Organizations.Commands;
+﻿using Bit.Core.Billing.Models.Mail.Mailer;
+using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Bitwarden.Server.Sdk.Environment;
 using Microsoft.Extensions.Logging;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
@@ -16,7 +20,8 @@ internal sealed class AutoscalePrivilegedControlsSeatsCommand(
     IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
     IOrganizationService organizationService,
     IOrganizationUserRepository organizationUserRepository,
-    IMailService mailService,
+    IMailer mailer,
+    IGlobalSettings globalSettings,
     IBitwardenEnvironment environment,
     ILogger<AutoscalePrivilegedControlsSeatsCommand> logger) : IAutoscalePrivilegedControlsSeatsCommand
 {
@@ -81,7 +86,17 @@ internal sealed class AutoscalePrivilegedControlsSeatsCommand(
                 .Select(u => u.Email)
                 .Distinct();
 
-            await mailService.SendPrivilegedControlsMaxSeatLimitReachedEmailAsync(organization, maxSeatCount, ownerEmails);
+            await mailer.SendEmail(new PrivilegedControlsSeatLimitReachedMail
+            {
+                ToEmails = ownerEmails,
+                Subject = $"{organization.DisplayName()} Privileged Controls seat limit reached",
+                View = new PrivilegedControlsSeatLimitReachedView(globalSettings)
+                {
+                    OrganizationId = organization.Id,
+                    OrganizationName = CoreHelpers.PreventEmailAutoLinking(organization.DisplayName()),
+                    MaxSeatCount = maxSeatCount
+                }
+            });
         }
         catch (Exception e)
         {

@@ -1534,22 +1534,6 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendPrivilegedControlsMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount,
-        IEnumerable<string> ownerEmails)
-    {
-        var message = CreateDefaultMessage($"{organization.DisplayName()} Privileged Controls seat limit reached", ownerEmails);
-        var model = new OrganizationSeatsMaxReachedViewModel
-        {
-            MaxSeatCount = maxSeatCount,
-            VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id),
-            OrganizationName = CoreHelpers.PreventEmailAutoLinking(organization.DisplayName())
-        };
-
-        await AddMessageContentAsync(message, "OrganizationPamSeatsMaxReached", model);
-        message.Category = "OrganizationPamSeatsMaxReached";
-        await _mailDeliveryService.SendEmailAsync(message);
-    }
-
     public async Task SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(Organization organization, int maxSeatCount,
         IEnumerable<string> ownerEmails)
     {

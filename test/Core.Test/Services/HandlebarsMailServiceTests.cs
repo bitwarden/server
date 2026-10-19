@@ -389,24 +389,6 @@ public class HandlebarsMailServiceTests
     }
 
     [Fact]
-    public async Task SendPrivilegedControlsMaxSeatLimitReachedEmailAsync_RendersOrganizationName()
-    {
-        // Arrange
-        var organization = new Organization { Id = Guid.NewGuid(), Name = "Acme.Corp" };
-
-        // Act
-        await _sut.SendPrivilegedControlsMaxSeatLimitReachedEmailAsync(organization, 5, new[] { "owner@example.com" });
-
-        // Assert
-        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
-            m.Subject == "Acme.Corp Privileged Controls seat limit reached" &&
-            m.HtmlContent.Contains("Acme.&#8204;Corp has reached the Privileged Controls seat limit of 5") &&
-            m.TextContent.Contains($"Acme.{ZeroWidthNonJoiner}Corp has reached the Privileged Controls seat limit of 5") &&
-            !m.HtmlContent.Contains("[dot]") &&
-            m.Category == "OrganizationPamSeatsMaxReached"));
-    }
-
-    [Fact]
     public async Task SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync_RendersOrganizationName()
     {
         // Arrange

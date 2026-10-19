@@ -1,0 +1,58 @@
+<mjml>
+  <mj-head>
+    <mj-include path="../../components/head.mjml" />
+  </mj-head>
+  <mj-body>
+    <!-- Blue Header Section -->
+    <mj-wrapper css-class="border-fix" padding="20px 24px 0px 24px">
+      <mj-bw-simple-hero />
+    </mj-wrapper>
+
+    <!-- Main Content -->
+    <mj-wrapper padding="0px 25px">
+      <mj-section background-color="#fff" padding="24px 0px">
+        <mj-column padding="0px 25px">
+          <mj-text
+            padding="0px 0px 16px 0px"
+            font-weight="600"
+            font-size="18px"
+            line-height="28px"
+          >
+            Privileged Controls seat limit reached
+          </mj-text>
+          <mj-text
+            padding="0px 0px 16px 0px"
+            font-weight="400"
+            line-height="24px"
+          >
+            <b>{{ OrganizationName }}</b> has reached the Privileged Controls
+            seat limit of {{ MaxSeatCount }}, and Privileged Controls access
+            cannot be granted to additional members.
+          </mj-text>
+          <mj-text
+            padding="0px 0px 24px 0px"
+            font-weight="400"
+            line-height="24px"
+          >
+            To allow more seats, an owner can raise the limit in the
+            organization's subscription settings.
+          </mj-text>
+          <mj-button
+            padding="0px"
+            inner-padding="12px 24px"
+            border-radius="20px"
+            font-weight="600"
+            align="left"
+            href="{{VaultSubscriptionUrl}}"
+            >Manage subscription</mj-button
+          >
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+
+    <!-- Footer -->
+    <mj-wrapper padding-top="15px">
+      <mj-include path="../../components/footer.mjml" />
+    </mj-wrapper>
+  </mj-body>
+</mjml>
