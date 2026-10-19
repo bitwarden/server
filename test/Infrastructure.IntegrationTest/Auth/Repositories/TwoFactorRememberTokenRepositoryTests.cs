@@ -100,7 +100,7 @@ public class TwoFactorRememberTokenRepositoryTests
 
         Assert.NotNull(updated);
         Assert.Equal("stamp-two", updated.Stamp);
-        // Same row rather than a second one, and the row remembers when the device was first trusted.
+        // Same row rather than a second one, and the row still records when the device was first remembered.
         Assert.Equal(inserted.Id, updated.Id);
         Assert.Equal(inserted.CreationDate, updated.CreationDate);
         Assert.True(updated.RevisionDate >= inserted.RevisionDate);
