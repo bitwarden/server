@@ -10,11 +10,7 @@ using Bit.Services.Pam.Api.Endpoints.Filters;
 
 namespace Bit.Services.Pam.Api.Endpoints;
 
-/// <summary>
-/// Maps the PAM HTTP surface as Minimal API endpoint groups. Each resource group shares the same cross-cutting
-/// chain — authorization, exception → <c>ErrorResponseModel</c> translation, the PAM feature gate, and request-model
-/// validation.
-/// </summary>
+/// <summary>Maps the PAM HTTP surface as Minimal API endpoint groups.</summary>
 public static class PamEndpointsExtensions
 {
     public static void MapPamEndpoints(this IEndpointRouteBuilder endpoints)
@@ -25,22 +21,17 @@ public static class PamEndpointsExtensions
         endpoints.MapGroup("/organizations/{orgId:guid}/access-rules").WithPamDefaults().MapAccessRuleEndpoints();
         endpoints.MapGroup("/leases/ciphers/{id:guid}").WithPamDefaults().MapCipherLeaseEndpoints();
 
-        // Access connectors -- the admin surface. The connector fleet sits at the group root; rotation -- the target
-        // systems credentials are rotated on, and the per-credential configs -- hangs beneath it.
         var connectorAdmin = endpoints.MapGroup("/organizations/{orgId:guid}/access-connectors")
             .WithPamAccessConnectorAdminDefaults();
         connectorAdmin.MapAccessConnectorEndpoints();
         connectorAdmin.MapGroup("/rotation/target-systems").MapTargetSystemEndpoints();
         connectorAdmin.MapGroup("/rotation/configs").MapRotationConfigEndpoints();
 
-        // Access connectors -- the connector-facing surface, reached by a machine credential rather than a user's.
         var connector = endpoints.MapGroup("/access-connectors").WithPamAccessConnectorMachineDefaults();
         connector.MapGroup("/rotation/jobs").MapRotationJobEndpoints();
         connector.MapGroup("/rotation/attempts").MapRotationAttemptEndpoints();
     }
 
-    /// <summary>Applies the shared PAM endpoint chain with the surface's usual authorization policy and feature
-    /// flag.</summary>
     private static RouteGroupBuilder WithPamDefaults(this RouteGroupBuilder group) =>
         group.WithPamDefaults(Policies.Application, FeatureFlagKeys.Pam);
 
@@ -70,11 +61,8 @@ public static class PamEndpointsExtensions
             .AddEndpointFilter<AccessConnectorHeartbeatEndpointFilter>();
 
     /// <summary>
-    /// Applies the shared PAM endpoint chain to a group for the given authorization policy and feature flag. Order
-    /// matters: the exception filter is outermost so it translates throws from the feature filter, the validation
-    /// filter, and the handlers into the <c>ErrorResponseModel</c> contract. The zero-argument
-    /// <see cref="WithPamDefaults(RouteGroupBuilder)"/> overload delegates here with the original policy/flag, so
-    /// every pre-existing group is unaffected.
+    /// The exception filter is added before the others, so it also translates throws from the feature gate and the
+    /// validation filter into <c>ErrorResponseModel</c>.
     /// </summary>
     private static RouteGroupBuilder WithPamDefaults(this RouteGroupBuilder group, string policy, string featureFlagKey)
     {
