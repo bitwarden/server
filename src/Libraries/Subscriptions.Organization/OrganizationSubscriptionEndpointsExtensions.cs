@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Identity;
+﻿using Bit.Core;
+using Bit.Core.Auth.Identity;
 using Bit.ExceptionHandling;
 using Bit.Invoicing;
 using Bit.OrganizationAuthorization;
@@ -56,6 +57,18 @@ public static class OrganizationSubscriptionEndpointsExtensions
                         [FromServices] PreviewOrganizationRestartHandler handler) => await handler.HandleAsync(organizationId, request))
             .WithName("PreviewOrganizationRestart")
             .WithDescription("Previews the cost of restarting the organization's canceled subscription.");
+
+        group.MapPost("privileged-controls/purchase",
+                async ([FromRoute] Guid organizationId, [FromBody] PurchasePrivilegedControlsRequest request,
+                        [FromServices] PurchasePrivilegedControlsHandler handler) =>
+                {
+                    await handler.HandleAsync(organizationId, request);
+                    return Results.NoContent();
+                })
+            .RequireAuthorization(new AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>())
+            .RequireFeature(FeatureFlagKeys.PM39883_Pam_Billing_Support)
+            .WithName("PurchasePrivilegedControls")
+            .WithDescription("Purchases Privileged Controls seats for an organization that does not have them yet.");
 
         return group;
     }

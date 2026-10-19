@@ -25,6 +25,7 @@ public static class SubscriptionsOrganizationServiceCollectionExtensions
         services.TryAddScoped<IPreviewOrganizationSubscriptionPurchaseQuery, PreviewOrganizationSubscriptionPurchaseQuery>();
         services.TryAddScoped<PreviewOrganizationSubscriptionPurchaseHandler>();
         services.TryAddScoped<PreviewOrganizationPlanChangeHandler>();
+        services.TryAddScoped<PurchasePrivilegedControlsHandler>();
         services.TryAddScoped<IPreviewOrganizationPlanChangeCommand, PreviewOrganizationPlanChangeCommand>();
         services.TryAddScoped<PreviewOrganizationRestartHandler>();
         services.TryAddScoped<IPreviewOrganizationRestartCommand, PreviewOrganizationRestartCommand>();

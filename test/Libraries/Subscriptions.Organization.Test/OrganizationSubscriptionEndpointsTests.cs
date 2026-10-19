@@ -117,4 +117,35 @@ public class OrganizationSubscriptionEndpointsTests
         Assert.NotNull(name);
         Assert.Equal("PreviewOrganizationRestart", name!.EndpointName);
     }
+
+    [Fact]
+    public void MapOrganizationSubscriptionEndpoints_PurchasePrivilegedControlsIsPostRequiresStandaloneOwnerAndPamFlag()
+    {
+        var app = WebApplication.CreateBuilder().Build();
+
+        var group = app.MapGroup("/{organizationId:guid}")
+            .MapOrganizationSubscriptionEndpoints();
+
+        var endpoints = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(dataSource => dataSource.Endpoints)
+            .OfType<RouteEndpoint>()
+            .ToList();
+        var purchase = endpoints.Single(e => e.RoutePattern.RawText!.Contains("privileged-controls/purchase"));
+        var preview = endpoints.Single(e => e.RoutePattern.RawText!.EndsWith("/preview")
+                                            && !e.RoutePattern.RawText!.Contains("plan-change")
+                                            && !e.RoutePattern.RawText!.Contains("restart"));
+
+        var methods = purchase.Metadata.GetMetadata<IHttpMethodMetadata>();
+        Assert.NotNull(methods);
+        Assert.Contains("POST", methods!.HttpMethods);
+
+        var authorizeAttributes = purchase.Metadata.GetOrderedMetadata<AuthorizeAttribute>();
+        Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<OrganizationBillingRequirement>);
+        Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>);
+
+        // The group's flag applies to every endpoint; the purchase endpoint adds the Privileged Controls flag on top.
+        Assert.Equal(
+            preview.Metadata.GetOrderedMetadata<IFeatureMetadata>().Count + 1,
+            purchase.Metadata.GetOrderedMetadata<IFeatureMetadata>().Count);
+    }
 }

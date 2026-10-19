@@ -1,6 +1,8 @@
 ﻿using System.Net;
 using System.Text;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
 using Bit.Invoicing.InvoicePreviews.Models;
 using Bit.Subscriptions.Organization.Commands;
@@ -14,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Xunit;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
+using PlanFeatures = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Subscriptions.Organization.Test;
 
@@ -84,6 +87,72 @@ public class OrganizationSubscriptionEndpointsRequestBindingTests
         Assert.Equal("12345", command.ReceivedRequest.BillingAddress.PostalCode);
         Assert.Equal("eu_vat", command.ReceivedRequest.BillingAddress.TaxId!.Code);
         Assert.Equal("DE123", command.ReceivedRequest.BillingAddress.TaxId.Value);
+    }
+
+    [Fact]
+    public async Task PurchasePrivilegedControls_BindsSeatsAndMaxAutoscaleSeatsFromJsonBody()
+    {
+        var command = new FakeAddPrivilegedControlsCommand();
+
+        var context = await InvokePurchaseAsync(command, """{"seats":10,"maxAutoscaleSeats":20}""");
+
+        Assert.Equal((int)HttpStatusCode.NoContent, context.Response.StatusCode);
+        Assert.Equal(10, command.ReceivedSeats);
+        Assert.Equal(20, command.ReceivedMaxAutoscaleSeats);
+    }
+
+    [Fact]
+    public async Task PurchasePrivilegedControls_MissingSeats_ReturnsBadRequestWithoutCallingCommand()
+    {
+        var command = new FakeAddPrivilegedControlsCommand();
+
+        // seats is a required member, so an omitted one fails binding with a 400 rather than defaulting to zero.
+        var context = await InvokePurchaseAsync(command, """{"maxAutoscaleSeats":20}""");
+
+        Assert.Equal((int)HttpStatusCode.BadRequest, context.Response.StatusCode);
+        Assert.False(command.WasCalled);
+    }
+
+    private async Task<HttpContext> InvokePurchaseAsync(FakeAddPrivilegedControlsCommand command, string json)
+    {
+        var organizationId = Guid.NewGuid();
+        _organizationRepository.GetByIdAsync(organizationId).Returns(new OrganizationEntity
+        {
+            Id = organizationId,
+            PlanType = PlanType.EnterpriseAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        });
+        var pricingClient = Substitute.For<IPricingClient>();
+        pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(new EnterpriseWithPrivilegedControlsPlan());
+
+        var builder = WebApplication.CreateBuilder();
+        builder.Services.AddSingleton(_organizationRepository);
+        builder.Services.AddSingleton(pricingClient);
+        builder.Services.AddSingleton(Substitute.For<IStripePaymentService>());
+        builder.Services.AddSingleton<IAddPrivilegedControlsToExistingSubscriptionCommand>(command);
+        builder.Services.AddScoped<PurchasePrivilegedControlsHandler>();
+        var app = builder.Build();
+        app.MapGroup("/{organizationId:guid}").MapOrganizationSubscriptionEndpoints();
+
+        var endpoint = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(dataSource => dataSource.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Single(e => e.RoutePattern.RawText!.Contains("privileged-controls/purchase", StringComparison.Ordinal));
+
+        using var scope = app.Services.CreateScope();
+        var body = Encoding.UTF8.GetBytes(json);
+        var context = new DefaultHttpContext { RequestServices = scope.ServiceProvider };
+        context.Features.Set<IHttpRequestBodyDetectionFeature>(new BodyDetectionFeature(canHaveBody: true));
+        context.Request.Method = HttpMethods.Post;
+        context.Request.RouteValues["organizationId"] = organizationId.ToString();
+        context.Request.ContentType = "application/json";
+        context.Request.Body = new MemoryStream(body);
+        context.Request.ContentLength = body.Length;
+        context.Response.Body = new MemoryStream();
+
+        await endpoint.RequestDelegate!(context);
+        return context;
     }
 
     private async Task<HttpContext> InvokeAsync(
@@ -180,6 +249,34 @@ public class OrganizationSubscriptionEndpointsRequestBindingTests
         {
             ReceivedRequest = request;
             return Task.FromResult(Result);
+        }
+    }
+
+    private sealed class FakeAddPrivilegedControlsCommand : IAddPrivilegedControlsToExistingSubscriptionCommand
+    {
+        public bool WasCalled { get; private set; }
+        public int ReceivedSeats { get; private set; }
+        public int? ReceivedMaxAutoscaleSeats { get; private set; }
+
+        public Task Run(OrganizationEntity organization, int seats, int? maxAutoscaleSeats)
+        {
+            WasCalled = true;
+            ReceivedSeats = seats;
+            ReceivedMaxAutoscaleSeats = maxAutoscaleSeats;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed record EnterpriseWithPrivilegedControlsPlan : PlanFeatures
+    {
+        public EnterpriseWithPrivilegedControlsPlan()
+        {
+            ProductTier = ProductTierType.Enterprise;
+            PrivilegedControls = new PrivilegedControlsPlanFeatures
+            {
+                StripeSeatPlanId = "privileged-controls-enterprise-seat-annually",
+                DefaultSeatMinimum = 10
+            };
         }
     }
 
