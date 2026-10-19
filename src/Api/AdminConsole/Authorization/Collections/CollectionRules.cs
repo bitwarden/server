@@ -42,6 +42,9 @@ public static class CollectionRules
     /// that the caller is not assigned to. A false result does not deny the operation. The caller can still be
     /// authorized for one collection by <see cref="CollectionAssignment.CanManage"/>.
     /// </summary>
+    /// <remarks>
+    /// These rules apply to the collection itself, not to its items, including the items in a default user collection.
+    /// </remarks>
     public static class OrganizationRole
     {
         /// <summary>
