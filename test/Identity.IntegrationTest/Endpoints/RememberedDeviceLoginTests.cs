@@ -208,8 +208,8 @@ public class RememberedDeviceLoginTests
     }
 
     /// <summary>
-    /// Using a recovery code tears two-factor down, and the devices trusted under the old
-    /// configuration stop being trusted with it.
+    /// Using a recovery code tears two-factor down, and the user's remembered devices
+    /// stop being remembered with it.
     /// </summary>
     /// <remarks>
     /// The replay happens <em>after</em> two-factor is re-enabled, deliberately. While the account
@@ -299,7 +299,7 @@ public class RememberedDeviceLoginTests
         var root = body.RootElement;
 
         // A refused remember token falls back to a challenge rather than a generic auth failure:
-        // the password was fine, the device just is not trusted.
+        // the password was fine, the device just is not remembered.
         Assert.False(root.TryGetProperty("access_token", out _));
         var error = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
         Assert.Equal("Two factor required.", error);
