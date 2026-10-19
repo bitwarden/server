@@ -257,7 +257,7 @@ public class UserServiceTests
 
     /// <summary>
     /// Removing the last provider leaves the account with no second factor, so the devices that were
-    /// trusted under the old one should stop being trusted.
+    /// remembered under the old one should stop being remembered.
     /// </summary>
     [Theory, BitAutoData]
     public async Task DisableTwoFactorProviderAsync_LastProviderRemoved_RevokesRememberedDevices(
@@ -330,7 +330,7 @@ public class UserServiceTests
 
     /// <summary>
     /// Going from several providers to fewer leaves working two-factor in place, so remembered
-    /// devices stay trusted. Over-firing here would log people out of remember-me for no reason.
+    /// devices stay remembered. Over-firing here would log people out of remember-me for no reason.
     /// </summary>
     [Theory, BitAutoData]
     public async Task DisableTwoFactorProviderAsync_OtherProvidersRemain_DoesNotRevoke(
