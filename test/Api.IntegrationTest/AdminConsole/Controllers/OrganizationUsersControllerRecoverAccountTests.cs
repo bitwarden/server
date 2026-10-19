@@ -533,16 +533,6 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
         return targetCustomOrgUser;
     }
 
-    /// <summary>
-    /// An administrator resetting only two-factor stops that member's remembered devices from
-    /// being remembered. This flag combination had no coverage: every other recovery test here sets
-    /// <c>ResetMasterPassword</c>, which is a different code path.
-    /// </summary>
-    /// <remarks>
-    /// Asserted on the stored stamp, which is the value a presented token is compared against, so a
-    /// changed stamp is what "the previously issued tokens no longer work" means. The end-to-end
-    /// replay is covered in the Identity integration tests.
-    /// </remarks>
     [Fact]
     public async Task RecoverAccount_ResetTwoFactorOnly_RevokesRememberedDevices()
     {
