@@ -42,7 +42,6 @@ internal sealed class CreateOrganizationSubscriptionCommand(
 
         var customerSetup = purchase.CustomerSetup;
 
-        // A net-new purchase always carries a CustomerSetup
         ArgumentNullException.ThrowIfNull(customerSetup);
 
         if (customerSetup is { SystemCoupons.Length: > 0, DiscountCoupons.Length: > 0 })
@@ -56,12 +55,8 @@ internal sealed class CreateOrganizationSubscriptionCommand(
 
         var customer = await CreateCustomerAsync(organization, customerSetup, purchase.CloudRegion);
 
-        // Net-new: a payment method is attached exactly when the setup is billable (card/bank/PayPal each attach one;
-        // payment-optional trials don't). Existing-customer purchases do the real check in their own command.
-        var hasPaymentMethod = customerSetup.IsBillable;
-
         var subscription = await CreateSubscriptionAsync(organization, customer, purchase, plan, coupons,
-            privilegedControlsSeatsMinimum, hasPaymentMethod);
+            privilegedControlsSeatsMinimum);
 
         ApplyResultsToOrganization(organization, customer, subscription, privilegedControlsSeatsMinimum);
 
@@ -304,11 +299,10 @@ internal sealed class CreateOrganizationSubscriptionCommand(
         OrganizationSubscriptionCreation purchase,
         Plan plan,
         IReadOnlyList<string> coupons,
-        int? privilegedControlsSeatsMinimum,
-        bool hasPaymentMethod)
+        int? privilegedControlsSeatsMinimum)
     {
         var subscriptionCreateOptions = BuildSubscriptionCreateOptions(organization, customer, purchase, plan,
-            coupons, privilegedControlsSeatsMinimum, hasPaymentMethod);
+            coupons, privilegedControlsSeatsMinimum);
 
         return await stripeAdapter.CreateSubscriptionAsync(subscriptionCreateOptions);
     }
@@ -319,8 +313,7 @@ internal sealed class CreateOrganizationSubscriptionCommand(
         OrganizationSubscriptionCreation purchase,
         Plan plan,
         IReadOnlyList<string> coupons,
-        int? privilegedControlsSeatsMinimum,
-        bool hasPaymentMethod)
+        int? privilegedControlsSeatsMinimum)
     {
         var passwordManager = purchase.PasswordManager;
 
@@ -407,6 +400,10 @@ internal sealed class CreateOrganizationSubscriptionCommand(
                 .Select(c => new SubscriptionDiscountOptions { Coupon = c })
                 .ToList();
         }
+
+        // This command is only used for creating new subscriptions, so we can assume that the subscription is being created for the first time.
+        // The attached method would be the first payment method for the customer, so an additional query is not required.
+        var hasPaymentMethod = purchase.CustomerSetup!.IsBillable;
 
         // Only set trial_settings.end_behavior.missing_payment_method to "cancel"
         // if there is no payment method AND there's an actual trial period.
