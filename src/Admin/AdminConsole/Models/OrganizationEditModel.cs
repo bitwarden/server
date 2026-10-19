@@ -247,6 +247,14 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
     /// </summary>
     public OrganizationTrial Trial { get; set; }
 
+    /// <summary>
+    /// Quantity of the Stripe subscription's Privileged Controls seat line; null when there is no line or it could not
+    /// be loaded.
+    /// </summary>
+    public int? PrivilegedControlsStripeSeats { get; set; }
+
+    public int OccupiedPamSeatsCount { get; set; }
+
     /**
      * Creates a Plan[] object for use in Javascript
      * This is mapped manually below to provide some type safety in case the plan objects change

@@ -2520,4 +2520,182 @@ public class OrganizationsControllerTests
 
         Assert.Null(model.Trial);
     }
+
+    private static Subscription PrivilegedControlsSubscription(bool includePrivilegedControlsLine = true)
+    {
+        var items = new List<SubscriptionItem>
+        {
+            new() { Quantity = 5, Price = new Price { Metadata = new Dictionary<string, string>() } }
+        };
+        if (includePrivilegedControlsLine)
+        {
+            items.Add(new SubscriptionItem
+            {
+                Quantity = 20,
+                Price = new Price
+                {
+                    Metadata = new Dictionary<string, string>
+                    {
+                        [StripeConstants.MetadataKeys.PurchasableReference] =
+                            StripeConstants.PurchasableReferences.PrivilegedControlsSeat
+                    }
+                }
+            });
+        }
+
+        return new Subscription { Items = new StripeList<SubscriptionItem> { Data = items } };
+    }
+
+    private static void StubPrivilegedControlsGet(
+        SutProvider<OrganizationsController> sutProvider,
+        Organization organization,
+        bool flagEnabled = true,
+        Provider provider = null)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(Bit.Core.FeatureFlagKeys.PM39883_Pam_Billing_Support)
+            .Returns(flagEnabled);
+        sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).Returns(provider);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_PrivilegedControls_StripeLine_SetsStripeSeats(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsGet(sutProvider, organization);
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(PrivilegedControlsSubscription());
+
+        var model = await GetEditModelAsync(sutProvider, organization);
+
+        Assert.Equal(20, model.PrivilegedControlsStripeSeats);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_PrivilegedControls_NoStripeLine_StripeSeatsNull(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsGet(sutProvider, organization);
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(PrivilegedControlsSubscription(includePrivilegedControlsLine: false));
+
+        var model = await GetEditModelAsync(sutProvider, organization);
+
+        Assert.Null(model.PrivilegedControlsStripeSeats);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_PrivilegedControls_NoSubscriptionId_DoesNotCallStripe(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        organization.GatewaySubscriptionId = null;
+        StubPrivilegedControlsGet(sutProvider, organization);
+
+        var model = await GetEditModelAsync(sutProvider, organization);
+
+        Assert.Null(model.PrivilegedControlsStripeSeats);
+        await sutProvider.GetDependency<IStripeAdapter>().DidNotReceiveWithAnyArgs()
+            .GetSubscriptionAsync(default, default);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_PrivilegedControls_SubscriptionMissing_StripeSeatsNull(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsGet(sutProvider, organization);
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .ThrowsAsync(new StripeException
+            {
+                StripeError = new StripeError { Code = StripeConstants.ErrorCodes.ResourceMissing }
+            });
+
+        var model = await GetEditModelAsync(sutProvider, organization);
+
+        Assert.Null(model.PrivilegedControlsStripeSeats);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_PrivilegedControls_StripeFails_StillLoads(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsGet(sutProvider, organization);
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .ThrowsAsync(new StripeException());
+
+        var model = await GetEditModelAsync(sutProvider, organization);
+
+        Assert.Null(model.PrivilegedControlsStripeSeats);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_PrivilegedControls_FlagOff_DoesNotCallStripe(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsGet(sutProvider, organization, flagEnabled: false);
+
+        var model = await GetEditModelAsync(sutProvider, organization);
+
+        Assert.Null(model.PrivilegedControlsStripeSeats);
+        await sutProvider.GetDependency<IStripeAdapter>().DidNotReceiveWithAnyArgs()
+            .GetSubscriptionAsync(default, default);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
+            .GetOccupiedPamSeatCountByOrganizationIdAsync(default);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_PrivilegedControls_ProviderManaged_DoesNotCallStripe(
+        Organization organization,
+        Provider provider,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsGet(sutProvider, organization, provider: provider);
+
+        var model = await GetEditModelAsync(sutProvider, organization);
+
+        Assert.Null(model.PrivilegedControlsStripeSeats);
+        await sutProvider.GetDependency<IStripeAdapter>().DidNotReceiveWithAnyArgs()
+            .GetSubscriptionAsync(default, default);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_PrivilegedControls_SetsOccupiedSeats(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsGet(sutProvider, organization);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(7);
+
+        var model = await GetEditModelAsync(sutProvider, organization);
+
+        Assert.Equal(7, model.OccupiedPamSeatsCount);
+    }
 }
