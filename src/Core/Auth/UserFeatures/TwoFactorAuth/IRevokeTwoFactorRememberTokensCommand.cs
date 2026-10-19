@@ -3,7 +3,7 @@
 public interface IRevokeTwoFactorRememberTokensCommand
 {
     /// <summary>
-    /// Stops every remember token this user holds from being honored, on all of their devices.
+    /// Stops every remember token recorded for this user from being honored, on all of their devices.
     /// </summary>
     /// <remarks>
     /// Scoped to remember-me only: access tokens, refresh tokens, and live sessions are unaffected,
