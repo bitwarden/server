@@ -255,10 +255,6 @@ public class UserServiceTests
         Assert.False(result);
     }
 
-    /// <summary>
-    /// Removing the last provider leaves the account with no second factor, so the devices that were
-    /// remembered under the old one should stop being remembered.
-    /// </summary>
     [Theory, BitAutoData]
     public async Task DisableTwoFactorProviderAsync_LastProviderRemoved_RevokesRememberedDevices(
         SutProvider<UserService> sutProvider, User user)
@@ -282,36 +278,19 @@ public class UserServiceTests
     }
 
     /// <summary>
-    /// Removing the last provider also revokes the user from organizations that require two-step login.
-    /// That enforcement runs before the remember-token revoke, so a failing remember-token revoke cannot
-    /// skip it.
+    /// Removing the last provider revokes the remember tokens before anything is saved. If token revocation
+    /// fails, the removal is not persisted, so the user can simply retry instead of being left with no
+    /// two-factor and remember tokens that would still validate upon re-enabling 2FA.
     /// </summary>
     [Theory, BitAutoData]
-    public async Task DisableTwoFactorProviderAsync_LastProviderRemoved_RememberTokenRevocationFails_StillEnforcesPolicies(
-        SutProvider<UserService> sutProvider, User user, Organization organization, Guid organizationUserId)
+    public async Task DisableTwoFactorProviderAsync_LastProviderRemoved_RememberTokenRevocationFails_DoesNotSaveRemoval(
+        SutProvider<UserService> sutProvider, User user)
     {
         // Arrange
         user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
         {
             [TwoFactorProviderType.Email] = new() { Enabled = true }
         });
-        organization.Enabled = true;
-        organization.UseSso = true;
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
-            .Returns(new RequireTwoFactorPolicyRequirement(
-            [
-                new PolicyDetails
-                {
-                    OrganizationId = organization.Id,
-                    OrganizationUserId = organizationUserId,
-                    OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
-                    PolicyType = PolicyType.TwoFactorAuthentication
-                }
-            ]));
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetManyByIdsAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(organization.Id)))
-            .Returns(new[] { organization });
         sutProvider.GetDependency<IRevokeTwoFactorRememberTokensCommand>()
             .RevokeAllForUserAsync(user.Id)
             .Returns(Task.FromException(new InvalidOperationException("database unavailable")));
@@ -321,17 +300,14 @@ public class UserServiceTests
             () => sutProvider.Sut.DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Email));
 
         // Assert
+        await sutProvider.GetDependency<IUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default!);
         await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
-            .Received(1)
-            .RevokeNonCompliantOrganizationUsersAsync(
-                Arg.Is<RevokeOrganizationUsersRequest>(r => r.OrganizationId == organization.Id &&
-                    r.OrganizationUsers.First().Id == organizationUserId));
+            .DidNotReceiveWithAnyArgs()
+            .RevokeNonCompliantOrganizationUsersAsync(default!);
     }
 
-    /// <summary>
-    /// Going from several providers to fewer leaves working two-factor in place, so remembered
-    /// devices stay remembered. Over-firing here would log people out of remember-me for no reason.
-    /// </summary>
     [Theory, BitAutoData]
     public async Task DisableTwoFactorProviderAsync_OtherProvidersRemain_DoesNotRevoke(
         SutProvider<UserService> sutProvider, User user)
@@ -600,10 +576,6 @@ public class UserServiceTests
             .RevokeAllForUserAsync(user.Id);
     }
 
-    /// <summary>
-    /// An unverified request must not be able to rotate anything, so revocation sits after the
-    /// recovery-code comparison.
-    /// </summary>
     [Theory, BitAutoData]
     public async Task RecoverTwoFactorAsync_IncorrectCode_DoesNotRevoke(
         User user, SutProvider<UserService> sutProvider)

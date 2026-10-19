@@ -268,16 +268,6 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    /// <summary>
-    /// Removing the user's last two-factor provider stops their remembered devices from
-    /// being remembered. Email is the only provider in this fixture, so the real DELETE below is the
-    /// last-provider path.
-    /// </summary>
-    /// <remarks>
-    /// Asserted on the stored stamp rather than by replaying a token: the stamp is the value a
-    /// presented token is compared against, so a changed stamp is exactly what "the previously
-    /// issued tokens no longer work" means. Replaying end-to-end is covered in the Identity tests.
-    /// </remarks>
     [Fact]
     public async Task DeleteEmail_RemovesLastProvider_RevokesRememberedDevices()
     {
