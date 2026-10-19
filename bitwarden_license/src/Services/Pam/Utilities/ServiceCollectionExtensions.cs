@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Pam.Services;
 using Bit.HttpExtensions;
+using Bit.Services.Pam.AccessConnector;
 using Bit.Services.Pam.AccessConnector.Api.Endpoints.Filters;
 using Bit.Services.Pam.AccessConnector.Api.Endpoints.Handlers;
 using Bit.Services.Pam.AccessConnector.Commands;
@@ -91,18 +92,42 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers credential rotation. The host registers the repositories and binds <c>PamRotationOptions</c>.
+    /// Registers credential rotation. The host registers the sweep jobs (<c>AddPamJobServices</c>) and the
+    /// repositories, and binds <c>PamRotationOptions</c>.
     /// </summary>
     private static IServiceCollection AddPamRotationServices(this IServiceCollection services)
     {
+        // Stateless, so a singleton is safe.
+        services.AddSingleton<IRotationScheduleCalculator, RotationScheduleCalculator>();
+
         services.AddScoped<IRegisterAccessConnectorCommand, RegisterAccessConnectorCommand>();
         services.AddScoped<ISetAccessConnectorStatusCommand, SetAccessConnectorStatusCommand>();
         services.AddScoped<IDeleteAccessConnectorCommand, DeleteAccessConnectorCommand>();
         services.AddScoped<IAssignAccessConnectorToTargetCommand, AssignAccessConnectorToTargetCommand>();
         services.AddScoped<IUnassignAccessConnectorFromTargetCommand, UnassignAccessConnectorFromTargetCommand>();
+        services.AddScoped<IRegisterTargetSystemCommand, RegisterTargetSystemCommand>();
+        services.AddScoped<ISetTargetSystemStatusCommand, SetTargetSystemStatusCommand>();
+        services.AddScoped<IUpdateTargetSystemCommand, UpdateTargetSystemCommand>();
+        services.AddScoped<IDeleteTargetSystemCommand, DeleteTargetSystemCommand>();
+        services.AddScoped<ICreateRotationConfigCommand, CreateRotationConfigCommand>();
+        services.AddScoped<IUpdateRotationConfigCommand, UpdateRotationConfigCommand>();
+        services.AddScoped<IPauseRotationCommand, PauseRotationCommand>();
+        services.AddScoped<IResumeRotationCommand, ResumeRotationCommand>();
+        services.AddScoped<IDeleteRotationConfigCommand, DeleteRotationConfigCommand>();
+        services.AddScoped<ITriggerRotationCommand, TriggerRotationCommand>();
+        services.AddScoped<IRecordManualRotationCommand, RecordManualRotationCommand>();
 
+        services.AddScoped<IOfferRotationCommand, OfferRotationCommand>();
+        services.AddScoped<IHandleAccessGrantEndedCommand, HandleAccessGrantEndedCommand>();
+        services.AddScoped<IClaimRotationJobCommand, ClaimRotationJobCommand>();
+        services.AddScoped<IReportRotationSucceededCommand, ReportRotationSucceededCommand>();
+        services.AddScoped<IReportRotationFailedCommand, ReportRotationFailedCommand>();
+        services.AddScoped<ISubmitCipherUpdateCommand, SubmitCipherUpdateCommand>();
+
+        services.AddScoped<IGetRotationConfigDetailsQuery, GetRotationConfigDetailsQuery>();
         services.AddScoped<IListAccessConnectorsQuery, ListAccessConnectorsQuery>();
         services.AddScoped<IGetAccessConnectorDetailsQuery, GetAccessConnectorDetailsQuery>();
+        services.AddScoped<IGetRotationCipherQuery, GetRotationCipherQuery>();
         services.AddScoped<ICanEditRotationCiphersQuery, CanEditRotationCiphersQuery>();
 
         return services;
