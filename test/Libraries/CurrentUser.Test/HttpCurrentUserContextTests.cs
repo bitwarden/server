@@ -48,6 +48,51 @@ public class HttpCurrentUserContextTests
         Assert.Throws<InvalidOperationException>(() => sut.UserId);
     }
 
+    [Fact]
+    public void TryGetUserId_ReturnsTrueAndGuid_WhenSubClaimIsValid()
+    {
+        var expected = Guid.NewGuid();
+        var sut = Resolve(new Claim("sub", expected.ToString()));
+
+        Assert.True(sut.TryGetUserId(out var userId));
+        Assert.Equal(expected, userId);
+    }
+
+    [Fact]
+    public void TryGetUserId_ReturnsFalse_WhenSubClaimIsMissing()
+    {
+        var sut = Resolve();
+
+        Assert.False(sut.TryGetUserId(out var userId));
+        Assert.Equal(Guid.Empty, userId);
+    }
+
+    [Fact]
+    public void TryGetUserId_ReturnsFalse_WhenSubClaimIsNotAGuid()
+    {
+        var sut = Resolve(new Claim("sub", "not-a-guid"));
+
+        Assert.False(sut.TryGetUserId(out var userId));
+        Assert.Equal(Guid.Empty, userId);
+    }
+
+    [Fact]
+    public void TryGetUserId_ReturnsFalse_WhenNoHttpRequestIsInScope()
+    {
+        var sut = Resolve(new HttpContextAccessor());
+
+        Assert.False(sut.TryGetUserId(out var userId));
+        Assert.Equal(Guid.Empty, userId);
+    }
+
+    [Fact]
+    public void TryGetUserId_IgnoresNameIdentifierClaim()
+    {
+        var sut = Resolve(new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()));
+
+        Assert.False(sut.TryGetUserId(out _));
+    }
+
     private static ICurrentUserContext Resolve(params Claim[] claims)
     {
         var httpContext = new DefaultHttpContext

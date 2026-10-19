@@ -11,16 +11,12 @@ internal sealed class HttpCurrentUserContext(IHttpContextAccessor httpContextAcc
     /// </remarks>
     private const string _userIdClaimType = "sub";
 
-    public Guid UserId
-    {
-        get
-        {
-            var principal = httpContextAccessor.HttpContext?.User
-                ?? throw new InvalidOperationException("No HTTP request is in scope.");
+    public Guid UserId =>
+        TryGetUserId(out var userId)
+            ? userId
+            : throw new InvalidOperationException(
+                "No HTTP request is in scope, or the current principal does not contain a valid user id claim.");
 
-            return Guid.TryParse(principal.FindFirstValue(_userIdClaimType), out var userId)
-                ? userId
-                : throw new InvalidOperationException("The current principal does not contain a valid user id claim.");
-        }
-    }
+    public bool TryGetUserId(out Guid userId) =>
+        Guid.TryParse(httpContextAccessor.HttpContext?.User.FindFirstValue(_userIdClaimType), out userId);
 }

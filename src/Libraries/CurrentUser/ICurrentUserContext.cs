@@ -12,4 +12,13 @@ public interface ICurrentUserContext
     /// principal carries no valid user id. Consume only behind a policy that requires a user.
     /// </summary>
     Guid UserId { get; }
+
+    /// <summary>
+    /// Reads the caller's user id from the token's <c>sub</c> claim without throwing.
+    /// Returns <see langword="false"/> when no HTTP request is in scope or the principal carries
+    /// no valid user id, as in a background job. Use where the user is optional.
+    /// A <see langword="false"/> result is not an authorization decision; enforce access with a policy.
+    /// </summary>
+    /// <param name="userId">The caller's user id when found; otherwise <see cref="Guid.Empty"/>.</param>
+    bool TryGetUserId(out Guid userId);
 }
