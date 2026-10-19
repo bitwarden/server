@@ -8,12 +8,13 @@ namespace Bit.Seeder.Services;
 /// Creates real Stripe test-environment billing (customer + subscription) for a seeded organization.
 /// </summary>
 /// <remarks>
-/// An interface rather than logic inlined into <see cref="Steps.FinalizeOrganizationBillingStep"/> for two
+/// An interface rather than logic inlined into <see cref="Steps.CreateOrganizationBillingStep"/> for two
 /// reasons: it gives that step and <see cref="Pipeline.RecipeOrchestrator"/>'s pre-flight validation a
-/// mockable seam for tests, and it lets <c>SeederDependencies.BillingInitializer</c> stay an optional
-/// capability — a host that doesn't want to compose the full Core billing DI graph can simply leave it null.
+/// mockable seam for tests, and it lets <c>SeederDependencies.OrganizationStripeBillingService</c> stay an
+/// optional capability — a host that doesn't want to compose the full Core billing DI graph can simply leave
+/// it null.
 /// </remarks>
-public interface IStripeBillingInitializer
+public interface IOrganizationStripeBillingService
 {
     /// <summary>
     /// Fails fast when the host is not configured for Stripe test-mode billing, or when the requested plan
@@ -34,5 +35,5 @@ public interface IStripeBillingInitializer
     /// itself before doing anything else, so a caller that skips the pre-flight check still fails fast
     /// rather than reaching Stripe with bad configuration.
     /// </remarks>
-    Task InitializeOrganizationAsync(Organization organization, StripeBillingOptions options);
+    Task CreateSubscriptionAsync(Organization organization, StripeBillingOptions options);
 }
