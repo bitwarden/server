@@ -215,9 +215,15 @@ public class RememberedDeviceLoginTests
     /// The replay happens <em>after</em> two-factor is re-enabled, deliberately. While the account
     /// has no second factor, no challenge is issued at all and the replay would log in on the
     /// password alone, so it would say nothing about whether the revocation worked.
+    /// <para>
+    /// The recovery login is sent with and without asking to be remembered. Either way it must not
+    /// come back with a new remember token, which would undo the revocation for that device.
+    /// </para>
     /// </remarks>
-    [Fact]
-    public async Task RecoveryCodeTeardown_RevokesRememberedDevices()
+    [Theory]
+    [InlineData("0")]
+    [InlineData("1")]
+    public async Task RecoveryCodeTeardown_RevokesRememberedDevices(string twoFactorRemember)
     {
         var (factory, user) = await CreateFactoryWithTwoFactorUserAsync();
         var userRepository = factory.Services.GetRequiredService<IUserRepository>();
@@ -237,10 +243,11 @@ public class RememberedDeviceLoginTests
             _testPassword,
             twoFactorProviderType: _recoveryCodeProvider,
             twoFactorToken: recoveryCode,
-            twoFactorRemember: "0");
+            twoFactorRemember: twoFactorRemember);
         using (var teardownBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(teardown))
         {
             AssertHelper.AssertJsonProperty(teardownBody.RootElement, "access_token", JsonValueKind.String);
+            Assert.False(teardownBody.RootElement.TryGetProperty("TwoFactorToken", out _));
         }
 
         // Put a second factor back, so the replay below is decided by the remembered-device state

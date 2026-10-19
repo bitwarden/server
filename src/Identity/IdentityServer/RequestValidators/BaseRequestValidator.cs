@@ -372,8 +372,9 @@ public abstract class BaseRequestValidator<T> where T : class
         var twoFactorRemember = request.Raw["TwoFactorRemember"] == "1";
         // Check if the user wants a rememberMe token.
         if (twoFactorRemember
-            // if the 2FA auth was rememberMe do not send another token.
-            && twoFactorProviderType != TwoFactorProviderType.Remember)
+            // If the 2FA auth was rememberMe do not send another token; a remember login must not renew itself.
+            // A recovery-code login removes 2FA, so don't mint a new token.
+            && twoFactorProviderType is not (TwoFactorProviderType.Remember or TwoFactorProviderType.RecoveryCode))
         {
             validatorContext.RememberMeRequested = true;
         }
