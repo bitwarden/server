@@ -5,10 +5,16 @@ namespace Bit.Admin;
 
 public class AdminSettings
 {
-    // Comma-separated allowlist of email addresses permitted to sign in to the Admin Portal
-    // via the passwordless email flow. Authentication proves identity, this list decides who
-    // is an admin on the passwordless path. The SSO path uses IdP group claims mapped via
-    // AdminSettings:Oidc:GroupPrefix instead, so this list does not gate SSO sign-in.
+    // Comma-separated allowlist of email addresses permitted to sign in to the Admin Portal.
+    // Entries are "email" or "email:stamp" (the optional stamp populates IdentityUser
+    // .SecurityStamp for the passwordless user store).
+    //
+    // Used by:
+    //   - Passwordless sign-in (both deployments) - tenancy gate.
+    //   - SSO sign-in on self-hosted - tenancy gate.
+    //
+    // Not consulted on cloud SSO, where tenancy comes from AdminSettings:Oidc:GroupPrefix
+    // mapped role claims. See src/Admin/Auth/README.md.
     public virtual string Admins { get; set; }
 
     // Retention window for soft-deleted items before the background cleanup job hard-deletes them.
@@ -79,9 +85,10 @@ public class AdminSettings
         // Prefix the IdP uses on Admin Portal group names (e.g. `us-prd-cloud-adminportal-`).
         // The suffix after the prefix is matched case-insensitively against the known role names
         // in RolePermissionMapping (owner, admin, billing, cs, sales). A group that does not
-        // start with this prefix, or whose suffix is not a known role, is ignored. A principal
-        // with no mapped groups still signs in, but holds no role claims and therefore no
-        // permissions.
+        // start with this prefix, or whose suffix is not a known role, is ignored.
+        //
+        // Required at boot when SSO is enabled on cloud, where "has at least one mapped role"
+        // is the tenancy gate. Not required on self-hosted. See src/Admin/Auth/README.md.
         public string GroupPrefix { get; set; }
     }
 }

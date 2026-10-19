@@ -27,9 +27,10 @@ public class GroupClaimRoleMapper : IGroupClaimRoleMapper
 
     public GroupClaimRoleMapper(AdminSettings adminSettings)
     {
-        // Tolerant of an unset prefix so the type can be registered unconditionally. The SSO path
-        // is the only caller; when OIDC is enabled, AddAdminUpstreamOidc fail-louds on an empty
-        // prefix at startup, so a null here means OIDC is off and the mapper will never be hit.
+        // Tolerant of an unset prefix so the type can be registered unconditionally. On cloud
+        // SSO, AddAdminUpstreamOidc fail-louds at boot when GroupPrefix is unset. On self-hosted
+        // SSO, GroupPrefix is optional - role claims are not consulted for authorization and
+        // MapRoles returns an empty set when the prefix is null.
         _groupPrefix = adminSettings?.Oidc?.GroupPrefix;
     }
 
