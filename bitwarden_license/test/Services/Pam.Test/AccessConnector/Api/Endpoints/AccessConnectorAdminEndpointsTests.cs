@@ -20,11 +20,8 @@ using Xunit;
 namespace Bit.Services.Pam.Test.AccessConnector.Api.Endpoints;
 
 /// <summary>
-/// Locks the rotation admin wire contract — fleet, target-system, and config management — that the generated OpenAPI
-/// spec and the client bindings built from it depend on. The endpoint bodies are scaffold stubs; the contract
-/// (routes, names, methods, return types) and the authorization the group carries are the things under test.
-/// Endpoints are materialized by mapping them onto a minimal host and reading its <see cref="EndpointDataSource"/> —
-/// the same metadata the offline OpenAPI generator inspects.
+/// Locks the rotation admin wire contract (routes, names, methods, return types) the OpenAPI spec depends on, and the
+/// authorization the group carries.
 /// </summary>
 public class AccessConnectorAdminEndpointsTests
 {
@@ -33,9 +30,7 @@ public class AccessConnectorAdminEndpointsTests
     private static List<RouteEndpoint> MaterializeEndpoints()
     {
         var builder = WebApplication.CreateSlimBuilder();
-        // The handlers must be known services so Minimal API binding treats the handler parameter as injected
-        // (not an inferred request body) — the same registration AddPamServices performs in the app.
-        // MapPamEndpoints maps every PAM group, so each group's handler has to be resolvable here.
+        // Unregistered handlers would bind as a request body.
         builder.Services.AddScoped<LeaseEndpointsHandler>();
         builder.Services.AddScoped<AccessRequestEndpointsHandler>();
         builder.Services.AddScoped<AccessRuleEndpointsHandler>();
@@ -50,20 +45,14 @@ public class AccessConnectorAdminEndpointsTests
         var app = builder.Build();
         app.MapPamEndpoints();
 
-        // Enumerating the data sources builds the endpoints — applying the route group's prefix, metadata, and
-        // conventions — without starting the request pipeline, the same set the OpenAPI generator discovers.
+        // Builds the endpoints without starting the request pipeline.
         return ((IEndpointRouteBuilder)app).DataSources
             .SelectMany(dataSource => dataSource.Endpoints)
             .OfType<RouteEndpoint>()
             .ToList();
     }
 
-    /// <summary>
-    /// Collects the authorization requirements an endpoint carries. They arrive as two shapes of metadata:
-    /// <c>AuthorizeAttribute&lt;T&gt;</c> contributes <see cref="IAuthorizationRequirementData"/>, while a policy
-    /// built inline contributes an <see cref="AuthorizationPolicy"/>. AuthorizationMiddleware combines both, so a
-    /// test asking "what must this endpoint satisfy" has to read both.
-    /// </summary>
+    /// <summary>AuthorizationMiddleware combines both metadata shapes, so both are read.</summary>
     private static List<IAuthorizationRequirement> RequirementsFor(Endpoint endpoint) =>
     [
         .. endpoint.Metadata.GetOrderedMetadata<AuthorizationPolicy>().SelectMany(policy => policy.Requirements),
@@ -117,8 +106,7 @@ public class AccessConnectorAdminEndpointsTests
         var endpoint = Assert.Single(
             endpoints,
             e => e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == name);
-        // Trim slashes: the raw pattern carries routing's leading/trailing slashes that the generated spec path
-        // does not.
+        // The raw pattern carries leading and trailing slashes.
         Assert.Equal($"{AdminRoutePrefix}/{route}".Trim('/'), endpoint.RoutePattern.RawText?.Trim('/'));
         Assert.Contains(method, endpoint.Metadata.GetMetadata<HttpMethodMetadata>()!.HttpMethods);
     }
@@ -126,8 +114,7 @@ public class AccessConnectorAdminEndpointsTests
     [Fact]
     public void MapPamEndpoints_GatesEveryRotationAdminRouteOnManageRotationRequirement()
     {
-        // Matching on the route prefix rather than the group's tags is deliberate: it also catches a rotation admin
-        // route mapped outside the group that WithPamAccessConnectorAdminDefaults gates.
+        // Matched by route prefix rather than tags, so an admin route mapped outside the gated group is caught too.
         var endpoints = AdminEndpoints();
 
         Assert.NotEmpty(endpoints);
@@ -144,8 +131,7 @@ public class AccessConnectorAdminEndpointsTests
     [Fact]
     public void MapPamEndpoints_RotationAdminRoutesNeverAuthorizeProvidersByMembership()
     {
-        // An access connector registered here is handed the organization key, which is not a provider's to hold.
-        // MemberOrProviderRequirement would let them in, so no rotation admin route may carry it.
+        // A registered access connector is handed the organization key, which is not a provider's to hold.
         Assert.All(AdminEndpoints(), endpoint =>
         {
             var requirements = RequirementsFor(endpoint);
