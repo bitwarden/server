@@ -229,8 +229,8 @@ public class RememberedDeviceLoginTests
             _testEmail, _testPassword, twoFactorProviderType: _emailProvider, twoFactorToken: _emailToken);
         Assert.False(string.IsNullOrEmpty(rememberToken));
 
-        // Tear down two-factor with the recovery code. Provider sent as a number, per the validator
-        // ordering note on the factory helper.
+        // Tear down two-factor with the recovery code. The provider is sent as its numeric value because
+        // BaseRequestValidator.DetermineValidationOrder only recognises a recovery-code request via int.TryParse.
         var teardown = await factory.ContextFromPasswordWithTwoFactorAsync(
             _testEmail,
             _testPassword,

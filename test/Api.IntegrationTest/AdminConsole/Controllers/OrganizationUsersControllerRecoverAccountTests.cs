@@ -522,8 +522,8 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
 
     /// <summary>
     /// The two flags are independent. A password-only recovery is not a two-factor teardown, so it
-    /// must leave remembered devices alone — over-firing would sign people out of remember-me for
-    /// no reason.
+    /// does not rotate the remember-token rows. (The password change itself still invalidates
+    /// existing remember tokens through the security stamp.)
     /// </summary>
     [Fact]
     public async Task RecoverAccount_ResetMasterPasswordOnly_LeavesRememberedDevicesAlone()
