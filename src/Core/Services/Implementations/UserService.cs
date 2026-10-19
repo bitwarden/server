@@ -735,20 +735,23 @@ public class UserService : UserManager<User>, IUserService
 
         providers.Remove(type);
         user.SetTwoFactorProviders(providers);
+
+        // Evaluated before the save, against the in-memory user that no longer has the provider.
+        // Revoking before the save means a failed revoke leaves the provider in place, so the user can
+        // simply retry. If evaluated after the save, the early return at the top would block any retry.
+        var removedLastProvider = !await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
+        if (removedLastProvider)
+        {
+            await _revokeTwoFactorRememberTokensCommand.RevokeAllForUserAsync(user.Id);
+        }
+
         await SaveUserAsync(user);
         await _eventService.LogUserEventAsync(user.Id, EventType.User_Disabled2fa);
 
-        if (!await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
+        if (removedLastProvider)
         {
-            // Runs post-save because whether this was the last provider is only known once the
-            // remaining providers are known. Re-running the method cannot retry either step below:
-            // the provider is already gone, so the early return at the top takes over.
-
-            // When the last 2FA provider is removed, CheckPoliciesOnTwoFactorRemovalAsync revokes the
-            // user from organizations that require 2FA. This check goes before remember-token revocation
-            // so that a failing remember-token revoke cannot skip it.
+            // Revokes the user from organizations that require 2FA.
             await CheckPoliciesOnTwoFactorRemovalAsync(user);
-            await _revokeTwoFactorRememberTokensCommand.RevokeAllForUserAsync(user.Id);
         }
     }
 
