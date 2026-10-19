@@ -69,6 +69,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
+    private readonly ICountNewPamSeatsRequiredQuery _countNewPamSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IAuthorizationService _authorizationService;
@@ -107,6 +108,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IUserService userService,
         ICurrentContext currentContext,
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
+        ICountNewPamSeatsRequiredQuery countNewPamSeatsRequiredQuery,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IAuthorizationService authorizationService,
@@ -145,6 +147,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _userService = userService;
         _currentContext = currentContext;
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
+        _countNewPamSeatsRequiredQuery = countNewPamSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _acceptOrgUserCommand = acceptOrgUserCommand;
         _authorizationService = authorizationService;
@@ -776,8 +779,9 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
     /// <summary>
-    /// Grants PAM access to the specified members. A plain field write: PAM has no seats, so there is no
-    /// autoscale or billing step. Members who already have access are skipped.
+    /// Grants PAM access to the specified members. Members who already have access are skipped. A self-hosted
+    /// instance cannot add seats, so the grant is rejected there when it would exceed the organization's Privileged
+    /// Controls seats.
     /// </summary>
     [HttpPut("enable-pam")]
     [Authorize<ManageUsersRequirement>]
@@ -797,6 +801,13 @@ public class OrganizationUsersController : BaseAdminConsoleController
         if (organization is not { UsePam: true })
         {
             throw new BadRequestException(new V2_UpdateUserCommand.PamNotEnabled().Message);
+        }
+
+        var additionalPamSeatsRequired =
+            await _countNewPamSeatsRequiredQuery.CountNewPamSeatsRequiredAsync(organization, orgUsers.Count);
+        if (additionalPamSeatsRequired > 0 && _globalSettings.SelfHosted)
+        {
+            throw new BadRequestException(new V2_UpdateUserCommand.CannotAutoscalePamSeatsOnSelfHost().Message);
         }
 
         foreach (var orgUser in orgUsers)

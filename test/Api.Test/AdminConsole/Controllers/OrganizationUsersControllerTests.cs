@@ -28,6 +28,7 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -97,6 +98,89 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
+    public async Task BulkEnablePam_WhenSelfHostedAndSeatsRequired_Throws(Guid orgId,
+        OrganizationUserBulkRequestModel model, Organization organization, List<OrganizationUser> orgUsers,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        organization.UsePam = true;
+        foreach (var orgUser in orgUsers)
+        {
+            orgUser.OrganizationId = orgId;
+            orgUser.AccessPam = false;
+        }
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(model.Ids).Returns(orgUsers);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(organization);
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted = true;
+        sutProvider.GetDependency<ICountNewPamSeatsRequiredQuery>()
+            .CountNewPamSeatsRequiredAsync(organization, orgUsers.Count)
+            .Returns(1);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.BulkEnablePamAsync(orgId, model));
+
+        Assert.Equal(new V2_UpdateUserCommand.CannotAutoscalePamSeatsOnSelfHost().Message, exception.Message);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceManyAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task BulkEnablePam_WhenCloudAndSeatsRequired_Grants(Guid orgId,
+        OrganizationUserBulkRequestModel model, Organization organization, List<OrganizationUser> orgUsers,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        organization.UsePam = true;
+        foreach (var orgUser in orgUsers)
+        {
+            orgUser.OrganizationId = orgId;
+            orgUser.AccessPam = false;
+        }
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(model.Ids).Returns(orgUsers);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(organization);
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted = false;
+        sutProvider.GetDependency<ICountNewPamSeatsRequiredQuery>()
+            .CountNewPamSeatsRequiredAsync(organization, orgUsers.Count)
+            .Returns(1);
+
+        await sutProvider.Sut.BulkEnablePamAsync(orgId, model);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.All(u => u.AccessPam)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task BulkEnablePam_WhenSelfHostedAndNoSeatsRequired_Grants(Guid orgId,
+        OrganizationUserBulkRequestModel model, Organization organization, List<OrganizationUser> orgUsers,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        organization.UsePam = true;
+        foreach (var orgUser in orgUsers)
+        {
+            orgUser.OrganizationId = orgId;
+            orgUser.AccessPam = false;
+        }
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(model.Ids).Returns(orgUsers);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(organization);
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted = true;
+        sutProvider.GetDependency<ICountNewPamSeatsRequiredQuery>()
+            .CountNewPamSeatsRequiredAsync(organization, orgUsers.Count)
+            .Returns(0);
+
+        await sutProvider.Sut.BulkEnablePamAsync(orgId, model);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.All(u => u.AccessPam)));
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task BulkEnablePam_WhenOrganizationDoesNotUsePam_Throws(Guid orgId,
         OrganizationUserBulkRequestModel model, Organization organization, List<OrganizationUser> orgUsers,
         SutProvider<OrganizationUsersController> sutProvider)
@@ -118,6 +202,9 @@ public class OrganizationUsersControllerTests
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .ReplaceManyAsync(default);
+        await sutProvider.GetDependency<ICountNewPamSeatsRequiredQuery>()
+            .DidNotReceiveWithAnyArgs()
+            .CountNewPamSeatsRequiredAsync(default!, default);
     }
 
     [Theory]

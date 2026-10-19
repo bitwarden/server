@@ -9,6 +9,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Xunit;
 using V1_RestoreUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 
@@ -23,6 +24,7 @@ public class OrganizationUsersControllerBulkEnablePamTests
 
     private Organization _organization = null!;
     private string _ownerEmail = null!;
+    private GlobalSettings _globalSettings = null!;
 
     public OrganizationUsersControllerBulkEnablePamTests(ApiApplicationFactory apiFactory)
     {
@@ -33,6 +35,9 @@ public class OrganizationUsersControllerBulkEnablePamTests
 
     public async Task InitializeAsync()
     {
+        _globalSettings = _factory.GetService<GlobalSettings>();
+        _globalSettings.SelfHosted = false;
+
         _ownerEmail = $"bulk-enable-pam-{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(_ownerEmail);
         (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually,
@@ -41,6 +46,7 @@ public class OrganizationUsersControllerBulkEnablePamTests
 
     public Task DisposeAsync()
     {
+        _globalSettings.SelfHosted = false;
         _client.Dispose();
         return Task.CompletedTask;
     }
@@ -165,6 +171,48 @@ public class OrganizationUsersControllerBulkEnablePamTests
         Assert.Contains("model state is invalid", await response.Content.ReadAsStringAsync());
     }
 
+    [Fact]
+    public async Task BulkEnablePam_WhenSelfHostedAndSeatsInsufficient_DoesNotGrant()
+    {
+        await SetPamSeatsAsync(1);
+        await SetUsePamAsync(true);
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var seatHolder = await CreateMemberAsync();
+        await GrantPamAsync(seatHolder);
+        var member = await CreateMemberAsync();
+
+        _globalSettings.SelfHosted = true;
+
+        var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/enable-pam",
+            new OrganizationUserBulkRequestModel { Ids = [member.Id] });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Cannot autoscale Privileged Controls seats on a self-hosted instance.",
+            await response.Content.ReadAsStringAsync());
+        await AssertAccessPamAsync(member, false);
+    }
+
+    [Fact]
+    public async Task BulkEnablePam_WhenCloudAndSeatsInsufficient_Grants()
+    {
+        await SetPamSeatsAsync(1);
+        await SetUsePamAsync(true);
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var seatHolder = await CreateMemberAsync();
+        await GrantPamAsync(seatHolder);
+        var member = await CreateMemberAsync();
+
+        _globalSettings.SelfHosted = false;
+
+        var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/enable-pam",
+            new OrganizationUserBulkRequestModel { Ids = [member.Id] });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await AssertAccessPamAsync(member, true);
+    }
+
     [Theory]
     [InlineData(OrganizationUserType.User)]
     [InlineData(OrganizationUserType.Custom)]
@@ -197,6 +245,12 @@ public class OrganizationUsersControllerBulkEnablePamTests
     private async Task SetUsePamAsync(bool value)
     {
         _organization.UsePam = value;
+        await _factory.GetService<IOrganizationRepository>().ReplaceAsync(_organization);
+    }
+
+    private async Task SetPamSeatsAsync(int? value)
+    {
+        _organization.PamSeats = value;
         await _factory.GetService<IOrganizationRepository>().ReplaceAsync(_organization);
     }
 

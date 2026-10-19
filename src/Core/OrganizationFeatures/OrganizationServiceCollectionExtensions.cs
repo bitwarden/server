@@ -239,6 +239,7 @@ public static class OrganizationServiceCollectionExtensions
     private static void AddOrganizationUserCommandsQueries(this IServiceCollection services)
     {
         services.AddScoped<ICountNewSmSeatsRequiredQuery, CountNewSmSeatsRequiredQuery>();
+        services.TryAddScoped<ICountNewPamSeatsRequiredQuery, CountNewPamSeatsRequiredQuery>();
         services.AddScoped<IAcceptOrgUserCommand, AcceptOrgUserCommand>();
         services.TryAddScoped<IAcceptOrganizationMembershipValidator, AcceptOrganizationMembershipValidator>();
         services.AddScoped<IPushAutoConfirmNotificationCommand, PushAutoConfirmNotificationCommand>();

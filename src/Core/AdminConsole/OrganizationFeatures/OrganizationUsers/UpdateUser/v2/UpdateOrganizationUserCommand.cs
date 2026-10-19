@@ -26,6 +26,7 @@ public class UpdateOrganizationUserCommand(
     IOrganizationUserRepository organizationUserRepository,
     IUpdateOrganizationUserValidator validator,
     ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
+    ICountNewPamSeatsRequiredQuery countNewPamSeatsRequiredQuery,
     IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
     IPricingClient pricingClient,
     IEventService eventService,
@@ -60,6 +61,15 @@ public class UpdateOrganizationUserCommand(
         if (request.IsEnablingSecretsManager())
         {
             var commandError = await TryEnablingSecretsManagerAsync(request);
+            if (commandError is not null)
+            {
+                return commandError;
+            }
+        }
+
+        if (request.IsEnablingPam())
+        {
+            var commandError = await TryEnablingPamAsync(request);
             if (commandError is not null)
             {
                 return commandError;
@@ -186,6 +196,19 @@ public class UpdateOrganizationUserCommand(
             {
                 return new CouldNotIncreaseSeatsOfSecretManager(ex.Message);
             }
+        }
+
+        return null;
+    }
+
+    private async Task<CommandError?> TryEnablingPamAsync(UpdateOrganizationUserRequest request)
+    {
+        var additionalPamSeatsRequired =
+            await countNewPamSeatsRequiredQuery.CountNewPamSeatsRequiredAsync(request.Organization, 1);
+        // Only self-hosted instances are limited here: they cannot change their subscription. Cloud grants are not seat-limited by this command.
+        if (additionalPamSeatsRequired > 0 && globalSettings.SelfHosted)
+        {
+            return new CannotAutoscalePamSeatsOnSelfHost();
         }
 
         return null;

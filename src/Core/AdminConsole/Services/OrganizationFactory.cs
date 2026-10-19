@@ -56,6 +56,7 @@ public static class OrganizationFactory
             UseSecretsManager = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseSecretsManager),
             SmSeats = claimsPrincipal.GetValue<int?>(OrganizationLicenseConstants.SmSeats),
             SmServiceAccounts = claimsPrincipal.GetValue<int?>(OrganizationLicenseConstants.SmServiceAccounts),
+            PamSeats = claimsPrincipal.GetValue<int?>(OrganizationLicenseConstants.PamSeats),
             UseRiskInsights = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseRiskInsights),
             UseOrganizationDomains =
             claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseOrganizationDomains),
@@ -123,5 +124,6 @@ public static class OrganizationFactory
             UseMyItems = license.UseMyItems,
             UseInviteLinks = license.UseInviteLinks,
             UsePam = license.UsePam,
+            // PamSeats is intentionally left unset: it is only trusted from the signed token (PM-44602).
         };
 }
