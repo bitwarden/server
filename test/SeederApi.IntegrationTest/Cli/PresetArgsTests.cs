@@ -1,4 +1,6 @@
-﻿using Bit.SeederUtility.Commands;
+﻿using Bit.Seeder.Data.Enums;
+using Bit.Seeder.Options;
+using Bit.SeederUtility.Commands;
 using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest.Cli;
@@ -112,5 +114,39 @@ public class PresetArgsTests
 
         Assert.NotNull(options);
         Assert.True(options.SkipTrial);
+    }
+
+    [Theory]
+    [InlineData("visa", null)]
+    [InlineData(null, "de")]
+    public void Validate_CardOrAddressWithoutStripeBilling_Throws(string? card, string? address)
+    {
+        var args = new PresetArgs { Name = "any", StripeCard = card, StripeAddress = address };
+
+        var ex = Assert.Throws<ArgumentException>(args.Validate);
+        Assert.Contains("--stripe-billing", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("bogus", null)]
+    [InlineData(null, "bogus")]
+    public void Validate_UnknownCardOrAddress_Throws(string? card, string? address)
+    {
+        var args = new PresetArgs { Name = "any", StripeBilling = true, StripeCard = card, StripeAddress = address };
+
+        var ex = Assert.Throws<ArgumentException>(args.Validate);
+        Assert.Contains("'bogus'", ex.Message);
+    }
+
+    [Fact]
+    public void ToStripeBillingOptions_CardAndAddress_MapIntoTheProfile()
+    {
+        var options = new PresetArgs { Name = "any", StripeBilling = true, StripeCard = "amex", StripeAddress = "us-alaska" }
+            .ToStripeBillingOptions();
+
+        Assert.NotNull(options);
+        Assert.Equal(
+            new StripeBillingProfile { Card = StripeTestCard.AmericanExpress, Address = StripeTestAddress.Alaska },
+            options.Profile);
     }
 }
