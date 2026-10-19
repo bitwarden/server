@@ -114,6 +114,8 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
         UseMyItems = org.UseMyItems;
         UseInviteLinks = org.UseInviteLinks;
         UsePam = org.UsePam;
+        PamSeats = org.PamSeats;
+        MaxAutoscalePamSeats = org.MaxAutoscalePamSeats;
         ExemptFromBillingAutomation = org.ExemptFromBillingAutomation;
 
         _plans = plans;
@@ -214,6 +216,10 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
     public bool UseInviteLinks { get; set; }
     [Display(Name = "Use PAM")]
     public bool UsePam { get; set; }
+    [Display(Name = "Seats")]
+    public int? PamSeats { get; set; }
+    [Display(Name = "Max Autoscale Seats")]
+    public int? MaxAutoscalePamSeats { get; set; }
     [Display(Name = "Exempt From Billing Automation")]
     public bool ExemptFromBillingAutomation { get; set; }
 

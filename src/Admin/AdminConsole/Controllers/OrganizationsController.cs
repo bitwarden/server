@@ -446,6 +446,14 @@ public class OrganizationsController : Controller
             return RedirectToAction("Edit", new { id });
         }
 
+        if (_featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support)
+            && _accessControlService.UserHasPermission(Permission.Org_Plan_Edit)
+            && await ValidatePrivilegedControlsAsync(organization, plan) is { } privilegedControlsError)
+        {
+            TempData["Error"] = privilegedControlsError;
+            return RedirectToAction("Edit", new { id });
+        }
+
         if (await CheckOrganizationPolicyComplianceAsync(existingOrganizationData, organization) is { } error)
         {
             TempData["Error"] = error.Message;
@@ -806,6 +814,36 @@ public class OrganizationsController : Controller
         return new MigrationCohortAssignmentChange(assignmentToReplace, cohortToAssign, true, null);
     }
 
+    private async Task<string> ValidatePrivilegedControlsAsync(Organization organization, Bit.Core.Models.StaticStore.Plan plan)
+    {
+        if (!organization.UsePam)
+        {
+            return null;
+        }
+
+        if (await _providerRepository.GetByOrganizationIdAsync(organization.Id) != null)
+        {
+            return "Organizations managed by a provider can't use Privileged Access Management";
+        }
+
+        if (!plan.SupportsPrivilegedControls)
+        {
+            return "Plan does not support Privileged Access Management";
+        }
+
+        if (organization.PamSeats is null or < 1)
+        {
+            return "Privileged Access Management seats must be at least 1";
+        }
+
+        if (organization.MaxAutoscalePamSeats < organization.PamSeats)
+        {
+            return "Privileged Access Management max autoscale seats can't be lower than seats";
+        }
+
+        return null;
+    }
+
     private void UpdateOrganization(Organization organization, OrganizationEditModel model)
     {
         if (_accessControlService.UserHasPermission(Permission.Org_Name_Edit))
@@ -858,6 +896,12 @@ public class OrganizationsController : Controller
             organization.MaxAutoscaleSmSeats = model.MaxAutoscaleSmSeats;
             organization.SmServiceAccounts = model.SmServiceAccounts;
             organization.MaxAutoscaleSmServiceAccounts = model.MaxAutoscaleSmServiceAccounts;
+
+            if (_featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support))
+            {
+                organization.PamSeats = model.UsePam ? model.PamSeats : null;
+                organization.MaxAutoscalePamSeats = model.UsePam ? model.MaxAutoscalePamSeats : null;
+            }
         }
 
         if (_accessControlService.UserHasPermission(Permission.Org_Licensing_Edit))
