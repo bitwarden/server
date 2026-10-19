@@ -20,7 +20,7 @@ Three flows revoke, all of them teardowns that leave the account with no second 
 | A user disables 2FA with a recovery code | `UserService.RecoverTwoFactorAsync` |
 | A user removes their **last** 2FA provider | `UserService.DisableTwoFactorProviderAsync` |
 
-Removing one of several providers does **not** revoke: the user still has working 2FA, so their remembered devices stay trusted. Untrusting a device does not revoke either — that is a separate trusted-device concept.
+Removing one of several providers does **not** revoke: the user still has working 2FA, so their devices stay remembered. Untrusting a device (Trusted Device Encryption) does not revoke either — that is a separate mechanism.
 
 Two further properties hold without any explicit call. A password change or account key rotation rotates `User.SecurityStamp`, which remember tokens also carry and which is compared on every use. And while the account has no 2FA at all, whether its own or enforced by its organization, no second factor is requested at login, so a remember token is not consulted.
 
