@@ -115,7 +115,7 @@ public class ProviderService : IProviderService
         }
 
         if (!CoreHelpers.TokenIsValid("ProviderSetupInvite", _dataProtector, token, owner.Email, provider.Id,
-            _globalSettings.OrganizationInviteExpirationHours))
+            _globalSettings.ProviderInviteExpirationHours))
         {
             throw new BadRequestException("Invalid token.");
         }
@@ -256,7 +256,7 @@ public class ProviderService : IProviderService
         }
 
         if (!CoreHelpers.TokenIsValid("ProviderUserInvite", _dataProtector, token, user.Email, providerUser.Id,
-            _globalSettings.OrganizationInviteExpirationHours))
+            _globalSettings.ProviderInviteExpirationHours))
         {
             throw new BadRequestException("Invalid token.");
         }

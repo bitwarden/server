@@ -65,6 +65,30 @@ public class ProviderServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task CompleteSetupAsync_TokenExpiredForProviderLifetime_Throws(User user, Provider provider,
+        SutProvider<ProviderService> sutProvider)
+    {
+        provider.Status = ProviderStatusType.Pending;
+        sutProvider.GetDependency<IUserService>().GetUserByIdAsync(user.Id).Returns(user);
+
+        var globalSettings = sutProvider.GetDependency<Bit.Core.Settings.GlobalSettings>();
+        globalSettings.ProviderInviteExpirationHours = 1;
+        globalSettings.OrganizationInviteExpirationHours = 168;
+
+        var dataProtectionProvider = DataProtectionProvider.Create("ApplicationName");
+        var protector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
+        sutProvider.GetDependency<IDataProtectionProvider>().CreateProtector("ProviderServiceDataProtector")
+            .Returns(protector);
+        sutProvider.Create();
+
+        var token = protector.Protect($"ProviderSetupInvite {provider.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow.AddHours(-2))}");
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.CompleteSetupAsync(provider, user.Id, token, default, null, null));
+        Assert.Contains("Invalid token.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
     public async Task CompleteSetupAsync_Success(User user, Provider provider, string key, TokenizedPaymentMethod tokenizedPaymentMethod, BillingAddress billingAddress,
             [ProviderUser] ProviderUser providerUser,
             SutProvider<ProviderService> sutProvider)
@@ -589,6 +613,30 @@ public class ProviderServiceTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.AcceptUserAsync(providerUser.Id, user, default));
+        Assert.Equal("Invalid token.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AcceptUserAsync_TokenExpiredForProviderLifetime_Throws(
+        [ProviderUser(ProviderUserStatusType.Invited)] ProviderUser providerUser, User user,
+        SutProvider<ProviderService> sutProvider)
+    {
+        sutProvider.GetDependency<IProviderUserRepository>().GetByIdAsync(providerUser.Id).Returns(providerUser);
+
+        var globalSettings = sutProvider.GetDependency<Bit.Core.Settings.GlobalSettings>();
+        globalSettings.ProviderInviteExpirationHours = 1;
+        globalSettings.OrganizationInviteExpirationHours = 168;
+
+        var dataProtectionProvider = DataProtectionProvider.Create("ApplicationName");
+        var protector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
+        sutProvider.GetDependency<IDataProtectionProvider>().CreateProtector("ProviderServiceDataProtector")
+            .Returns(protector);
+        sutProvider.Create();
+
+        var token = protector.Protect($"ProviderUserInvite {providerUser.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow.AddHours(-2))}");
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AcceptUserAsync(providerUser.Id, user, token));
         Assert.Equal("Invalid token.", exception.Message);
     }
 

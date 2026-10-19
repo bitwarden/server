@@ -1256,7 +1256,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
 
         // As token contains now milliseconds for when it was created, create 1k year timespan for expiration
         // to ensure token is valid for a good long while.
-        localFactory.UpdateConfiguration("globalSettings:OrganizationInviteExpirationHours", "8760000");
+        localFactory.UpdateConfiguration("globalSettings:ProviderInviteExpirationHours", "8760000");
 
         var registerFinishReqModel = new RegisterFinishRequestModel
         {

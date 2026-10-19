@@ -50,6 +50,8 @@ public class GlobalSettings : IGlobalSettings
     public virtual bool EnableNewDeviceVerification { get; set; }
     public virtual bool EnableCloudCommunication { get; set; } = false;
     public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
+    public virtual int EmergencyAccessInviteExpirationHours { get; set; } = 120; // 5 days
+    public virtual int ProviderInviteExpirationHours { get; set; } = 120; // 5 days
     public virtual int TwoFactorUserVerificationTokenLifetimeInMinutes { get; set; } = 30;
     public virtual int DeviceLastActivityCacheTtlHours { get; set; } = 120; // 5 days
     public virtual string EventGridKey { get; set; }
