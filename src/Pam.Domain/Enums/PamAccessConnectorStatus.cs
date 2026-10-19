@@ -2,9 +2,7 @@
 
 /// <summary>
 /// Lifecycle of a <see cref="Entities.PamAccessConnector"/>. Only an <see cref="Enabled"/> access connector may
-/// authenticate, poll, or claim jobs. <see cref="Disabled"/> is a reversible pause — the access connector keeps its
-/// credential and can be re-enabled; permanently removing an access connector (and invalidating its credential) is a
-/// separate delete, not a status.
+/// authenticate, poll, or claim jobs; a <see cref="Disabled"/> one keeps its credential and can be re-enabled.
 /// </summary>
 public enum PamAccessConnectorStatus : byte
 {

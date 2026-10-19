@@ -152,7 +152,7 @@ public class RecipeBuilderValidationTests
         var builder = services.AddRecipe("test");
 
         builder.CreateIndividualUser("solo@bw.example", premium: true, maxStorageGb: 1);
-        builder.WithStripeBilling(new StripeBillingOptions());
+        builder.WithStripeOrganizationBilling(new StripeBillingOptions());
 
         var ex = Assert.Throws<InvalidOperationException>(() => builder.Validate());
         Assert.Contains("Stripe billing requires an organization", ex.Message);
@@ -166,9 +166,24 @@ public class RecipeBuilderValidationTests
 
         builder.UseOrganization("test");
         builder.AddOwner();
-        builder.WithStripeBilling(new StripeBillingOptions());
+        builder.WithStripeOrganizationBilling(new StripeBillingOptions());
 
         builder.Validate();
+    }
+
+    [Fact]
+    public void WithStripeUserBilling_WithoutIndividualUser_Throws()
+    {
+        // The user billing step reads context.Owner, which an organization recipe also sets, so without this
+        // guard an org recipe could bill its owner as an individual user.
+        var services = new ServiceCollection();
+        var builder = services.AddRecipe("test");
+
+        builder.UseOrganization("test");
+        builder.AddOwner();
+
+        var ex = Assert.Throws<InvalidOperationException>(() => builder.WithStripeUserBilling(new StripeBillingProfile()));
+        Assert.Contains("requires an individual user", ex.Message);
     }
 
     [Fact]
