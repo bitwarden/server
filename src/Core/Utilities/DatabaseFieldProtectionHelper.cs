@@ -38,7 +38,7 @@ public static class DatabaseFieldProtectionHelper
 
     public static string? Unprotect(IDataProtector dataProtector, string? value)
     {
-        if (value == null || !value.StartsWith(Constants.DatabaseFieldProtectedPrefix))
+        if (value == null || !value.StartsWith(Constants.DatabaseFieldProtectedPrefix, StringComparison.Ordinal))
         {
             return value;
         }
