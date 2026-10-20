@@ -1,11 +1,11 @@
 ﻿using Bit.Commercial.Core.AdminConsole.Providers;
-using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.Providers.Entities;
+using Bit.Core.Providers.Enums;
+using Bit.Core.Providers.Repositories;
+using Bit.Core.Providers.Services;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;

@@ -1,8 +1,8 @@
 ﻿using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Providers;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
+using Bit.Core.Providers.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;

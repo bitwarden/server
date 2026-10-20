@@ -1,9 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Payment.Clients;
 using Bit.Core.Entities;
+using Bit.Core.Providers.Entities;
 using Bit.Core.Settings;
 using BitPayLight.Models.Invoice;
 using Microsoft.Extensions.Logging;

@@ -1,11 +1,11 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Interfaces;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Providers.Entities;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;

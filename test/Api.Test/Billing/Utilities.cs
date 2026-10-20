@@ -1,9 +1,9 @@
 ﻿using Bit.Api.Billing.Controllers;
-using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Models.Api;
+using Bit.Core.Providers.Entities;
+using Bit.Core.Providers.Enums;
+using Bit.Core.Providers.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;

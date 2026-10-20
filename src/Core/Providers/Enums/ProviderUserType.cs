@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.AdminConsole.Enums.Provider;
+﻿namespace Bit.Core.Providers.Enums;
 
 public enum ProviderUserType : byte
 {

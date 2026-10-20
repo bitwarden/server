@@ -1,10 +1,10 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.Billing.Enums;
+﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Tax.Models;
+using Bit.Core.Providers.Entities;
+using Bit.Core.Providers.Enums;
 using Stripe;
 
 namespace Bit.Api.Billing.Models.Responses;

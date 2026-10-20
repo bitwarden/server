@@ -2,14 +2,14 @@
 using System.Security.Claims;
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Core.AdminConsole.AbilitiesCache;
-using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.Models.Data.Provider;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Providers.Enums;
+using Bit.Core.Providers.Models.Data;
+using Bit.Core.Providers.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;

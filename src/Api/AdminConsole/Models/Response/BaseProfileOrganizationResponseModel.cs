@@ -1,5 +1,4 @@
 ﻿using System.Text.Json.Serialization;
-using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
@@ -9,6 +8,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
+using Bit.Core.Providers.Enums;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.AdminConsole.Models.Response;

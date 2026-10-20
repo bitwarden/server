@@ -4,7 +4,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using Bit.Api.Billing.Models.Requests.Payment;
-using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.Providers.Entities;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.AdminConsole.Models.Request.Providers;

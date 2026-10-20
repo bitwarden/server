@@ -7,7 +7,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.AdminConsole.Models.Data.Provider;
+namespace Bit.Core.Providers.Models.Data;
 
 public class ProviderOrganizationOrganizationDetails
 {

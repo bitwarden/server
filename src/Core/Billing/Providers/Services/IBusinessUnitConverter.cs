@@ -1,6 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Providers.Entities;
+using Bit.Core.Providers.Enums;
 using OneOf;
 
 namespace Bit.Core.Billing.Providers.Services;

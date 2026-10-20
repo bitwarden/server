@@ -1,6 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
-using Provider = Bit.Core.AdminConsole.Entities.Provider.Provider;
+using Provider = Bit.Core.Providers.Entities.Provider;
 
 namespace Bit.Core.Services;
 

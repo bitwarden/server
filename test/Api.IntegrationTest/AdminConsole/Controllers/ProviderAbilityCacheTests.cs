@@ -2,10 +2,10 @@
 using Bit.Api.AdminConsole.Models.Request.Providers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
-using Bit.Core.AdminConsole.AbilitiesCache;
-using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Providers.AbilitiesCache;
+using Bit.Core.Providers.Entities;
+using Bit.Core.Providers.Enums;
+using Bit.Core.Providers.Repositories;
 using Bit.Core.Repositories;
 using Xunit;
 

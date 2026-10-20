@@ -1,8 +1,8 @@
 ﻿using System.Security.Claims;
-using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.Models.Data.Provider;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
+using Bit.Core.Providers.Enums;
+using Bit.Core.Providers.Models.Data;
+using Bit.Core.Providers.Repositories;
 using Bit.Core.Services;
 
 // Note: do not move this into Core! See remarks below.

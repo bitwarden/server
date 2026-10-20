@@ -2,7 +2,6 @@
 #nullable disable
 
 using Bit.Api.Billing.Models.Responses;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Providers.Repositories;
@@ -10,11 +9,11 @@ using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Models.BitStripe;
+using Bit.Core.Providers.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Stripe;
-
 using static Bit.Core.Billing.Utilities;
 
 namespace Bit.Api.Billing.Controllers;

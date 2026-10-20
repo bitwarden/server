@@ -7,7 +7,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
-using Provider = Bit.Core.AdminConsole.Entities.Provider.Provider;
+using Provider = Bit.Core.Providers.Entities.Provider;
 
 namespace Bit.Core.Test.Services;
 

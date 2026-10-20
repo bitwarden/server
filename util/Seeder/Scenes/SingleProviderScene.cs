@@ -1,9 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Providers.Repositories;
+using Bit.Core.Providers.Entities;
+using Bit.Core.Providers.Enums;
+using Bit.Core.Providers.Repositories;
 using Bit.Core.Repositories;
 using Bit.RustSDK;
 using Bit.Seeder.Factories;

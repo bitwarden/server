@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.AdminConsole.Entities.Provider;
+namespace Bit.Core.Providers.Entities;
 
 /// <summary>
 /// A join record linking a <see cref="Provider"/> to a client <see cref="Bit.Core.AdminConsole.Entities.Organization"/>

@@ -1,11 +1,11 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Net;
-using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Providers.Enums;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.AdminConsole.Entities.Provider;
+namespace Bit.Core.Providers.Entities;
 
 /// <summary>
 /// An entity that can manage multiple client organizations on behalf of their owners - for example, an IT

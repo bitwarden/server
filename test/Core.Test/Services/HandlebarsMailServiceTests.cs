@@ -1,6 +1,5 @@
 ﻿using System.Reflection;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business;
@@ -8,6 +7,7 @@ using Bit.Core.Entities;
 using Bit.Core.Models.Mail;
 using Bit.Core.Platform.Mail.Delivery;
 using Bit.Core.Platform.Mail.Enqueuing;
+using Bit.Core.Providers.Entities;
 using Bit.Core.Services;
 using Bit.Core.Services.Mail;
 using Bit.Core.Settings;

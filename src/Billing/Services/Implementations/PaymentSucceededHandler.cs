@@ -1,10 +1,10 @@
 ﻿using Bit.Billing.Constants;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Providers.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Event = Stripe.Event;

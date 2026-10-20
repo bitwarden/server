@@ -1,7 +1,8 @@
 ﻿using Bit.Core.AdminConsole.AbilitiesCache;
-using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Providers.Enums;
+using Bit.Core.Providers.Repositories;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PreAccess;
 

@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.Context;
+﻿using Bit.Core.Providers.Context;
 
 namespace Bit.Api.AdminConsole.Authorization.Providers.Requirements;
 

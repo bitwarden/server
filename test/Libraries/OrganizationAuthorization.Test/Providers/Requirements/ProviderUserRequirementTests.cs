@@ -1,6 +1,6 @@
 ﻿using Bit.Api.AdminConsole.Authorization.Providers.Requirements;
-using Bit.Core.AdminConsole.Context;
-using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Providers.Context;
+using Bit.Core.Providers.Enums;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;

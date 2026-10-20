@@ -1,8 +1,8 @@
-﻿using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
+using Bit.Core.Providers.Enums;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.AdminConsole.Entities.Provider;
+namespace Bit.Core.Providers.Entities;
 
 /// <summary>
 /// Represents a user's membership in a <see cref="Provider"/>, including their role and status.

@@ -1,13 +1,13 @@
 ﻿#nullable enable
 
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;
+using Bit.Core.Providers.Entities;
 using Bit.Core.Vault.Models.Data;
 using Core.Auth.Enums;
 

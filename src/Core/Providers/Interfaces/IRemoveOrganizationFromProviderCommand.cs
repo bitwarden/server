@@ -1,7 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.Providers.Entities;
 
-namespace Bit.Core.AdminConsole.Providers.Interfaces;
+namespace Bit.Core.Providers.Interfaces;
 
 public interface IRemoveOrganizationFromProviderCommand
 {

@@ -1,7 +1,7 @@
 ﻿using System.Reflection;
 using AutoFixture;
 using AutoFixture.Xunit2;
-using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Providers.Enums;
 
 namespace Bit.Commercial.Core.Test.AdminConsole.AutoFixture;
 
@@ -18,7 +18,7 @@ internal class ProviderUser : ICustomization
 
     public void Customize(IFixture fixture)
     {
-        fixture.Customize<Bit.Core.AdminConsole.Entities.Provider.ProviderUser>(composer => composer
+        fixture.Customize<Bit.Core.Providers.Entities.ProviderUser>(composer => composer
             .With(o => o.Type, Type)
             .With(o => o.Status, Status));
     }

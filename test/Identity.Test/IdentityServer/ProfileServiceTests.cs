@@ -1,12 +1,12 @@
 ﻿using System.Security.Claims;
-using Bit.Core.AdminConsole.Context;
-using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Providers.Context;
+using Bit.Core.Providers.Enums;
+using Bit.Core.Providers.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Identity.IdentityServer;

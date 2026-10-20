@@ -1,13 +1,13 @@
 ﻿using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Models.Data.Provider;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Enums;
+using Bit.Core.Providers.Models.Data;
+using Bit.Core.Providers.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Test.Billing.Mocks;
 using NSubstitute;

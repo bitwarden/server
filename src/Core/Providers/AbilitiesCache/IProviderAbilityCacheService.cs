@@ -1,7 +1,7 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Models.Data.Provider;
+﻿using Bit.Core.Providers.Entities;
+using Bit.Core.Providers.Models.Data;
 
-namespace Bit.Core.AdminConsole.AbilitiesCache;
+namespace Bit.Core.Providers.AbilitiesCache;
 
 public interface IProviderAbilityCacheService
 {

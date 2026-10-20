@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Settings;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Core.AdminConsole.AbilitiesCache;
+namespace Bit.Core.Providers.AbilitiesCache;
 
 public static class ProviderAbilityServiceCollectionsExtension
 {

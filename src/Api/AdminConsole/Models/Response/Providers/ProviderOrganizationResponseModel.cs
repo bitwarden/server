@@ -2,9 +2,9 @@
 #nullable disable
 
 using System.Text.Json.Serialization;
-using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Models.Api;
+using Bit.Core.Providers.Entities;
+using Bit.Core.Providers.Models.Data;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.AdminConsole.Models.Response.Providers;

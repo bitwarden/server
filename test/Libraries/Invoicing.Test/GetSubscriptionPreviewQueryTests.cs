@@ -1,10 +1,10 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
+using Bit.Core.Providers.Entities;
 using Bit.Invoicing.InvoicePreviews;
 using Bit.Invoicing.InvoicePreviews.Models;
 using Bit.Invoicing.InvoicePreviews.Queries;

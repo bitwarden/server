@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.Enums.Provider;
+﻿using Bit.Core.Providers.Enums;
 
 namespace Bit.Admin.AdminConsole.Models;
 

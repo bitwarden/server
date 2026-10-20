@@ -67,13 +67,13 @@ prioritised for extraction. This library sits *above* Core rather than below it,
 | From Core | Used for |
 | --- | --- |
 | `Bit.Core.Context.CurrentContextOrganization` | The shape handed to `IOrganizationRequirement` |
-| `Bit.Core.AdminConsole.Context.CurrentContextProvider` | The shape handed to `IProviderRequirement` |
+| `Bit.Core.Providers.Context.CurrentContextProvider` | The shape handed to `IProviderRequirement` |
 | `Bit.Core.Enums.OrganizationUserType` | Role comparisons in the requirements |
 | `Bit.Core.Models.Data.Permissions` | Custom-permission comparisons in `BasePermissionRequirement` |
 | `Bit.Core.Auth.Identity.Claims` | Claim type constants for parsing organization and provider claims |
-| `Bit.Core.AdminConsole.Repositories.IProviderUserRepository` | The provider-for-organization database check |
-| `Bit.Core.AdminConsole.Models.Data.Provider.ProviderUserOrganizationDetails` | Result of that check |
-| `Bit.Core.AdminConsole.Enums.Provider.ProviderUserStatusType` | Filtering that check to confirmed provider users |
+| `Bit.Core.Providers.Repositories.IProviderUserRepository` | The provider-for-organization database check |
+| `Bit.Core.Providers.Models.Data.ProviderUserOrganizationDetails` | Result of that check |
+| `Bit.Core.Providers.Enums.ProviderUserStatusType` | Filtering that check to confirmed provider users |
 | `Bit.Core.Services.IUserService` | Reading the authenticated user's ID out of their claims |
 
 Depending on Core is fine for now: unwinding it would mean extracting the Admin Console data models,

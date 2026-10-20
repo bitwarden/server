@@ -1,9 +1,9 @@
 ﻿using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Services;
+using Bit.Core.Providers.Entities;
+using Bit.Core.Providers.Repositories;
 using Bit.Core.Repositories;
 using Microsoft.Extensions.Logging;
 using NSubstitute;

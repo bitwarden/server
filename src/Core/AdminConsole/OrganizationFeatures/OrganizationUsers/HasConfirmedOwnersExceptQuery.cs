@@ -1,8 +1,8 @@
-﻿using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
-using Bit.Core.AdminConsole.Repositories;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Providers.Enums;
+using Bit.Core.Providers.Repositories;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;

@@ -2,7 +2,7 @@
 #nullable disable
 
 using Bit.Admin.Models;
-using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.Providers.Entities;
 
 namespace Bit.Admin.AdminConsole.Models;
 

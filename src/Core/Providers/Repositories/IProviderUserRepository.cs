@@ -1,11 +1,11 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.Models.Data.Provider;
+﻿using Bit.Core.Providers.Entities;
+using Bit.Core.Providers.Enums;
+using Bit.Core.Providers.Models.Data;
 using Bit.Core.Repositories;
 
 #nullable enable
 
-namespace Bit.Core.AdminConsole.Repositories;
+namespace Bit.Core.Providers.Repositories;
 
 public interface IProviderUserRepository : IRepository<ProviderUser, Guid>
 {

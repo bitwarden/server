@@ -5,10 +5,10 @@ using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Request;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Providers.Enums;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;

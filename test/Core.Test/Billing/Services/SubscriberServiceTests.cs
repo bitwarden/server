@@ -1,11 +1,11 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Enums;
+using Bit.Core.Providers.Entities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Braintree;
@@ -14,7 +14,6 @@ using NSubstitute.ExceptionExtensions;
 using NSubstitute.ReturnsExtensions;
 using Stripe;
 using Xunit;
-
 using static Bit.Core.Test.Billing.Utilities;
 using Customer = Stripe.Customer;
 using PaymentMethod = Stripe.PaymentMethod;

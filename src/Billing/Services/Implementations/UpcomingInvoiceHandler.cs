@@ -1,8 +1,6 @@
 ﻿using System.Globalization;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
@@ -17,6 +15,8 @@ using Bit.Core.Models.Mail.Billing.Renewal.Families2020Renewal;
 using Bit.Core.Models.Mail.Billing.Renewal.Premium;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Platform.Mail.Mailer;
+using Bit.Core.Providers.Entities;
+using Bit.Core.Providers.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Stripe;

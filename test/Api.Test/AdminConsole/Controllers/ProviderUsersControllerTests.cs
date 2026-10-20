@@ -1,7 +1,7 @@
 ﻿using Bit.Api.AdminConsole.Controllers;
-using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Exceptions;
+using Bit.Core.Providers.Entities;
+using Bit.Core.Providers.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;

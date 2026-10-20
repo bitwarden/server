@@ -2,14 +2,14 @@
 using Bit.Billing.Jobs;
 using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
-using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
-using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Models.BitStripe;
+using Bit.Core.Providers.Entities;
+using Bit.Core.Providers.Repositories;
+using Bit.Core.Providers.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
