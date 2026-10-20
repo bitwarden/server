@@ -7,7 +7,6 @@ using Bit.Pam.Repositories;
 using Bit.Services.Pam.AccessConnector;
 using Bit.Services.Pam.AccessConnector.Api.Endpoints.Handlers;
 using Bit.Services.Pam.AccessConnector.Commands.Interfaces;
-using Bit.Services.Pam.AccessConnector.Queries.Interfaces;
 using Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints.Handlers;
 using Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 using Bit.Services.Pam.Api.Endpoints;
@@ -150,8 +149,6 @@ public class AccessConnectorMachineEndpointsTests
         services.AddSingleton(Substitute.For<IPamAccessConnectorRepository>());
         services.AddSingleton(Substitute.For<IPamRotationJobRepository>());
         services.AddSingleton(Substitute.For<IClaimRotationJobCommand>());
-        services.AddSingleton(Substitute.For<IGetRotationCipherQuery>());
-        services.AddSingleton(Substitute.For<ISubmitCipherUpdateCommand>());
         services.AddSingleton(Substitute.For<IReportRotationSucceededCommand>());
         services.AddSingleton(Substitute.For<IReportRotationFailedCommand>());
         services.AddSingleton(Options.Create(new PamRotationOptions()));

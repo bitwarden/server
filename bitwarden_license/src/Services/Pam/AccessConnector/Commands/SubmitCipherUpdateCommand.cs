@@ -1,10 +1,10 @@
 ﻿using Bit.Core.Exceptions;
+using Bit.Core.Pam.AccessConnector.Commands;
 using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
-using Bit.Services.Pam.AccessConnector.Commands.Interfaces;
 using Bit.Services.Pam.Services;
 
 namespace Bit.Services.Pam.AccessConnector.Commands;
