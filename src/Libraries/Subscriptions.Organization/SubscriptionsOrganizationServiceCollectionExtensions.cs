@@ -25,6 +25,8 @@ public static class SubscriptionsOrganizationServiceCollectionExtensions
         services.TryAddScoped<PreviewOrganizationSubscriptionPurchaseHandler>();
         services.TryAddScoped<PreviewOrganizationPlanChangeHandler>();
         services.TryAddScoped<IPreviewOrganizationPlanChangeCommand, PreviewOrganizationPlanChangeCommand>();
+        services.TryAddScoped<PreviewOrganizationRestartHandler>();
+        services.TryAddScoped<IPreviewOrganizationRestartCommand, PreviewOrganizationRestartCommand>();
         services.TryAddScoped<IPrivilegedControlsSeatChangeSetFactory, PrivilegedControlsSeatChangeSetFactory>();
         services.TryAddScoped<IAddPrivilegedControlsToExistingSubscriptionCommand, AddPrivilegedControlsToExistingSubscriptionCommand>();
         services.TryAddScoped<IChangePrivilegedControlsSeatsCommand, ChangePrivilegedControlsSeatsCommand>();

@@ -1,7 +1,10 @@
-﻿using Bit.Admin.Providers.Controllers;
+﻿using Bit.Admin.AdminConsole.Models;
+using Bit.Admin.Providers.Controllers;
 using Bit.Admin.Providers.Models;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
@@ -226,4 +229,61 @@ public class ProvidersControllerTests
             (string)sutProvider.Sut.TempData["Warning"]);
     }
     #endregion
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task CreateOrganization_PrivilegedControlsOn_FlagOn_Rejects(
+        Provider provider,
+        SutProvider<ProvidersController> sutProvider)
+    {
+        provider.Type = ProviderType.Reseller;
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(Bit.Core.FeatureFlagKeys.PM39883_Pam_Billing_Support)
+            .Returns(true);
+        sutProvider.Sut.TempData =
+            new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.CreateOrganization(provider.Id, new OrganizationEditModel { UsePam = true });
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal("CreateOrganization", redirect.ActionName);
+        Assert.Equal(provider.Id, redirect.RouteValues!["providerId"]);
+        await sutProvider.GetDependency<IResellerClientOrganizationSignUpCommand>().DidNotReceiveWithAnyArgs()
+            .SignUpResellerClientAsync(default, default);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task CreateOrganization_PrivilegedControlsOn_FlagOff_Creates(
+        Provider provider,
+        SutProvider<ProvidersController> sutProvider)
+    {
+        provider.Type = ProviderType.Reseller;
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(Bit.Core.FeatureFlagKeys.PM39883_Pam_Billing_Support)
+            .Returns(false);
+        var model = new OrganizationEditModel
+        {
+            Name = "Reseller client",
+            PlanType = PlanType.EnterpriseAnnually,
+            Plan = "Enterprise (Annually)",
+            UsePam = true,
+            Owners = "owner@example.com"
+        };
+
+        await sutProvider.Sut.CreateOrganization(provider.Id, model);
+
+        await sutProvider.GetDependency<IResellerClientOrganizationSignUpCommand>().Received(1)
+            .SignUpResellerClientAsync(
+                Arg.Is<Organization>(o =>
+                    o.Name == "Reseller client" &&
+                    o.PlanType == PlanType.EnterpriseAnnually &&
+                    o.Plan == "Enterprise (Annually)" &&
+                    o.UsePam),
+                "owner@example.com");
+    }
 }
