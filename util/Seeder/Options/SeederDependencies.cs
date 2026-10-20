@@ -45,4 +45,10 @@ public sealed record SeederDependencies(
     /// <see cref="OrganizationStripeBillingService"/>.
     /// </summary>
     public Func<IUserStripeBillingService>? UserStripeBillingService { get; init; }
+
+    /// <summary>
+    /// When true, <c>User.Key</c> and <c>User.MasterPassword</c> are written without the <c>P|</c> data protection,
+    /// so a server holding different data-protection keys can still read them.
+    /// </summary>
+    public bool DisableDataProtection { get; init; }
 }
