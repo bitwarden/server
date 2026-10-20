@@ -3,7 +3,7 @@ using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
