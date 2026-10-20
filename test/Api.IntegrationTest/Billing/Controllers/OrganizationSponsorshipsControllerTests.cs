@@ -57,6 +57,57 @@ public class OrganizationSponsorshipsControllerTests : IClassFixture<ApiApplicat
         return Task.CompletedTask;
     }
 
+    [Fact]
+    public async Task RevokeSponsorship_AsMember_RevokesOwnSponsorship()
+    {
+        // Arrange
+        var (memberEmail, memberOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+
+        var sponsorshipRepository = _factory.GetService<IOrganizationSponsorshipRepository>();
+        var sponsorship = new OrganizationSponsorship
+        {
+            SponsoringOrganizationId = _organization.Id,
+            SponsoringOrganizationUserId = memberOrgUser.Id,
+            FriendlyName = "member-revoke-family@example.com",
+            OfferedToEmail = "member-revoke-family@example.com",
+            PlanSponsorshipType = PlanSponsorshipType.FamiliesForEnterprise,
+            IsAdminInitiated = false,
+        };
+        sponsorship.SetNewId();
+        await sponsorshipRepository.CreateAsync(sponsorship);
+
+        await _loginHelper.LoginAsync(memberEmail);
+
+        // Act
+        var response = await _client.DeleteAsync($"organization/sponsorship/{_organization.Id}");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Null(await sponsorshipRepository.GetByIdAsync(sponsorship.Id));
+    }
+
+    [Theory]
+    [InlineData("DELETE", "")]
+    [InlineData("POST", "/delete")]
+    public async Task RevokeSponsorship_AsNonMember_ReturnsForbidden(string method, string suffix)
+    {
+        // Arrange
+        var attackerEmail = $"member-revoke-attacker-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(attackerEmail);
+        await _loginHelper.LoginAsync(attackerEmail);
+
+        // Act
+        using var message = new HttpRequestMessage(
+            new HttpMethod(method), $"organization/sponsorship/{_organization.Id}{suffix}");
+        var response = await _client.SendAsync(message);
+
+        // Assert
+        Assert.True(
+            response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.Unauthorized,
+            $"Expected 401 or 403 but got {(int)response.StatusCode} {response.StatusCode}.");
+    }
+
     /// <summary>
     /// Reproduces VULN-441: Any authenticated user (not a member of the org) can revoke
     /// admin-initiated sponsorships by calling DELETE /{sponsoringOrgId}/{friendlyName}/revoke.
@@ -238,6 +289,53 @@ public class OrganizationSponsorshipsControllerTests : IClassFixture<ApiApplicat
         Assert.False(stillExists.ToDelete, "Sponsorship should not have been marked for deletion.");
     }
 
+    [Fact]
+    public async Task ResendOwnSponsorshipOffer_AsRegularMember_Succeeds()
+    {
+        // Arrange
+        var (memberEmail, memberOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+
+        var sponsorship = new OrganizationSponsorship
+        {
+            SponsoringOrganizationId = _organization.Id,
+            SponsoringOrganizationUserId = memberOrgUser.Id,
+            FriendlyName = "resend-self-family@example.com",
+            OfferedToEmail = "resend-self-family@example.com",
+            PlanSponsorshipType = PlanSponsorshipType.FamiliesForEnterprise,
+            IsAdminInitiated = false,
+        };
+        sponsorship.SetNewId();
+        await _factory.GetService<IOrganizationSponsorshipRepository>().CreateAsync(sponsorship);
+
+        await _loginHelper.LoginAsync(memberEmail);
+
+        // Act
+        var response = await _client.PostAsync(
+            $"organization/sponsorship/{_organization.Id}/families-for-enterprise/resend-self", null);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ResendOwnSponsorshipOffer_AsNonMember_ReturnsForbidden()
+    {
+        // Arrange
+        var attackerEmail = $"resend-self-attacker-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(attackerEmail);
+        await _loginHelper.LoginAsync(attackerEmail);
+
+        // Act
+        var response = await _client.PostAsync(
+            $"organization/sponsorship/{_organization.Id}/families-for-enterprise/resend-self", null);
+
+        // Assert
+        Assert.True(
+            response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.Unauthorized,
+            $"Expected 401 or 403 but got {(int)response.StatusCode} {response.StatusCode}.");
+    }
+
     #region ResendSponsorshipOffer authorization tests
 
     /// <summary>
@@ -413,11 +511,49 @@ public class OrganizationSponsorshipsControllerTests : IClassFixture<ApiApplicat
     #endregion
 
     /// <summary>
+    /// A Custom member holding only manageUsers cannot revoke a colleague's member-initiated
+    /// sponsorship, and gets the same 400 as for an unknown friendly name.
+    /// </summary>
+    [Fact]
+    public async Task AdminInitiatedRevokeSponsorship_MemberInitiatedSponsorship_IsNotRevoked()
+    {
+        // Arrange: a plain member creates their own personal Families sponsorship
+        var (_, memberOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+
+        var sponsorship = await CreateSponsorshipAsync(
+            _organization.Id, memberOrgUser.Id, "personal-family@example.com", isAdminInitiated: false);
+
+        // Another member holds manageUsers and nothing else
+        var (manageUsersEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.Custom,
+            permissions: new Permissions { ManageUsers = true });
+
+        await _loginHelper.LoginAsync(manageUsersEmail);
+
+        // Act
+        var response = await _client.DeleteAsync(
+            $"organization/sponsorship/{_organization.Id}/{Uri.EscapeDataString(sponsorship.FriendlyName!)}/revoke");
+
+        // Assert: same answer as an unknown friendly name, and the row survives untouched
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var sponsorshipRepository = _factory.GetService<IOrganizationSponsorshipRepository>();
+        var stillExists = await sponsorshipRepository.GetByIdAsync(sponsorship.Id);
+        Assert.NotNull(stillExists);
+        Assert.False(stillExists.ToDelete, "Member-initiated sponsorship should not have been marked for deletion.");
+    }
+
+    /// <summary>
     /// Helper to create an admin-initiated sponsorship directly in the DB,
     /// bypassing the command layer (which has its own auth checks).
     /// </summary>
-    private async Task<OrganizationSponsorship> CreateAdminInitiatedSponsorshipAsync(
-        Guid sponsoringOrgId, Guid sponsoringOrgUserId, string friendlyName)
+    private Task<OrganizationSponsorship> CreateAdminInitiatedSponsorshipAsync(
+        Guid sponsoringOrgId, Guid sponsoringOrgUserId, string friendlyName) =>
+        CreateSponsorshipAsync(sponsoringOrgId, sponsoringOrgUserId, friendlyName, isAdminInitiated: true);
+
+    private async Task<OrganizationSponsorship> CreateSponsorshipAsync(
+        Guid sponsoringOrgId, Guid sponsoringOrgUserId, string friendlyName, bool isAdminInitiated)
     {
         var sponsorshipRepository = _factory.GetService<IOrganizationSponsorshipRepository>();
 
@@ -428,7 +564,7 @@ public class OrganizationSponsorshipsControllerTests : IClassFixture<ApiApplicat
             FriendlyName = friendlyName,
             OfferedToEmail = friendlyName,
             PlanSponsorshipType = PlanSponsorshipType.FamiliesForEnterprise,
-            IsAdminInitiated = true,
+            IsAdminInitiated = isAdminInitiated,
             ToDelete = false,
         };
         sponsorship.SetNewId();

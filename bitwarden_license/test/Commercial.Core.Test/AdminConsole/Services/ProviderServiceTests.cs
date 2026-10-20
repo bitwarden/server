@@ -927,10 +927,13 @@ public class ProviderServiceTests
         Assert.Equal("Organization already belongs to a provider.", exception.Message);
     }
 
-    [Theory, BitAutoData]
-    public async Task AddOrganization_OrganizationHasSecretsManager_Throws(Provider provider, Organization organization, string key,
-        SutProvider<ProviderService> sutProvider)
+    [Theory]
+    [BitAutoData(ProviderType.Msp)]
+    [BitAutoData(ProviderType.BusinessUnit)]
+    public async Task AddOrganization_OrganizationHasSecretsManager_Throws(ProviderType providerType,
+        Provider provider, Organization organization, string key, SutProvider<ProviderService> sutProvider)
     {
+        provider.Type = providerType;
         organization.PlanType = PlanType.EnterpriseMonthly;
         organization.UseSecretsManager = true;
 
@@ -942,6 +945,28 @@ public class ProviderServiceTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key));
         Assert.Equal("The organization is subscribed to Secrets Manager. Please contact Customer Support to manage the subscription.", exception.Message);
+        await providerOrganizationRepository.DidNotReceiveWithAnyArgs().CreateAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddOrganization_ResellerWithSecretsManager_Succeeds(Provider provider, Organization organization, string key,
+        SutProvider<ProviderService> sutProvider)
+    {
+        provider.Type = ProviderType.Reseller;
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        organization.UseSecretsManager = true;
+
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        providerOrganizationRepository.GetByOrganizationId(organization.Id).ReturnsNull();
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+
+        await sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key);
+
+        await providerOrganizationRepository.Received(1)
+            .CreateAsync(Arg.Is<ProviderOrganization>(providerOrganization =>
+                providerOrganization.ProviderId == provider.Id &&
+                providerOrganization.OrganizationId == organization.Id));
     }
 
     [Theory, BitAutoData]
