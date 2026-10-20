@@ -184,7 +184,7 @@ public class SendsController : Controller
             await _pushNotificationService.PushSyncSendUpdateAsync(send);
         }
 
-        if (send.UserId.HasValue)
+        if (send.UserId.HasValue && (send.Type == SendType.Text || send.Type == SendType.Item))
         {
             var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
                 send.UserId.Value,
