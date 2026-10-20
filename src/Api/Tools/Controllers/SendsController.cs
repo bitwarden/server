@@ -184,18 +184,20 @@ public class SendsController : Controller
             await _pushNotificationService.PushSyncSendUpdateAsync(send);
         }
 
-        if (send.UserId.HasValue
-            && send.Type == SendType.Text)
+        if (send.UserId.HasValue)
         {
             var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
                 send.UserId.Value,
                 User.GetSendAccessEmail());
 
-            await _eventService.LogSendEventAsync(
-                send.UserId.Value,
-                send.Id,
-                EventType.Send_Accessed_Text,
-                orgContext);
+            if (send.Type == SendType.Text)
+            {
+                await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Accessed_Text, orgContext);
+            }
+            else if (send.Type == SendType.Item)
+            {
+                await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Accessed_Item, orgContext);
+            }
         }
 
         return new ObjectResult(sendResponse);
