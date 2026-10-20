@@ -416,6 +416,39 @@ public class SingleProviderSceneTests : IClassFixture<InPlaySeederApiApplication
     [Theory]
     [InlineData(ProviderType.Msp)]
     [InlineData(ProviderType.BusinessUnit)]
+    public async Task SingleProviderScene_BillableProviderWithoutOrganizations_SeedsUnallocatedPlan(ProviderType type)
+    {
+        var playId = Guid.NewGuid().ToString();
+
+        var providerAdminUserId = await SeedUserAsync(playId);
+
+        var providerResult = await PostSceneAsync(playId, nameof(SingleProviderScene), new SingleProviderScene.Request
+        {
+            OwnerUserId = providerAdminUserId,
+            Name = $"Empty {type}",
+            Type = type,
+            Plans = [new SingleProviderScene.PlanConfig { PlanType = PlanType.EnterpriseMonthly, Seats = 10 }]
+        });
+        var providerId = providerResult.GetProperty("providerId").GetGuid();
+        Assert.Empty(providerResult.GetProperty("providerOrganizationIds").EnumerateArray());
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+
+        var provider = await db.Providers.SingleAsync(p => p.Id == providerId);
+        Assert.Equal(ProviderStatusType.Billable, provider.Status);
+        Assert.False(await db.ProviderOrganizations.AnyAsync(po => po.ProviderId == providerId));
+
+        var plan = await db.ProviderPlans.SingleAsync(pp => pp.ProviderId == providerId);
+        Assert.Equal(PlanType.EnterpriseMonthly, plan.PlanType);
+        Assert.Equal(10, plan.SeatMinimum);
+        Assert.Equal(0, plan.AllocatedSeats);
+        Assert.Equal(0, plan.PurchasedSeats);
+    }
+
+    [Theory]
+    [InlineData(ProviderType.Msp)]
+    [InlineData(ProviderType.BusinessUnit)]
     public async Task SingleProviderScene_LinkedOrgWithoutMatchingPlan_ReturnsBadRequestWithoutWrites(ProviderType type)
     {
         var playId = Guid.NewGuid().ToString();
