@@ -545,9 +545,9 @@ public class CiphersController : Controller
 
     /// <summary>
     /// Permission helper to determine if the current user can purge an organization's vault.
-    /// Purging is permanent and unrecoverable, so it is restricted to Owners, provider users, and
-    /// Custom users holding the EditAnyCollection permission. Admins are intentionally excluded:
-    /// purge is documented as an owner-only action and the web client hides it from non-owners.
+    /// Purging is permanent and unrecoverable, so it is restricted to Owners and provider users, matching
+    /// the web client's isOwner guard on the page that offers it. Admins and Custom users (including those
+    /// holding EditAnyCollection) are intentionally excluded: purge is documented as an owner-only action.
     ///
     /// This deliberately does NOT use <see cref="CanDeleteOrRestoreCipherAsAdminAsync"/>, because an Owner
     /// fails that check when the organization's "admins can manage all collections and items" setting is
@@ -558,7 +558,7 @@ public class CiphersController : Controller
     {
         var org = _currentContext.GetOrganization(organizationId);
 
-        if (org is { Type: OrganizationUserType.Owner } or { Permissions.EditAnyCollection: true })
+        if (org is { Type: OrganizationUserType.Owner })
         {
             return true;
         }

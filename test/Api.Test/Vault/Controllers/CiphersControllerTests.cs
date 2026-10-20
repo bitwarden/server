@@ -1995,28 +1995,6 @@ public class CiphersControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task PostPurge_OrganizationPurge_WithEditAnyCollectionPermission_Successful(
-        User user,
-        SecretVerificationRequestModel model,
-        Guid organizationId,
-        SutProvider<CiphersController> sutProvider)
-    {
-        SetupOrganizationPurge(sutProvider, user, model, organizationId,
-            new CurrentContextOrganization
-            {
-                Id = organizationId,
-                Type = OrganizationUserType.Custom,
-                Permissions = new Permissions { EditAnyCollection = true }
-            });
-
-        await sutProvider.Sut.PostPurge(model, organizationId);
-
-        await sutProvider.GetDependency<ICipherService>()
-            .Received(1)
-            .PurgeAsync(organizationId);
-    }
-
-    [Theory, BitAutoData]
     public async Task PostPurge_OrganizationPurge_WithProviderUser_Successful(
         User user,
         SecretVerificationRequestModel model,
@@ -2057,6 +2035,32 @@ public class CiphersControllerTests
             {
                 Id = organizationId,
                 AllowAdminAccessToAllCollectionItems = allowAdminAccessToAllCollectionItems
+            });
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostPurge(model, organizationId));
+
+        await sutProvider.GetDependency<ICipherService>()
+            .DidNotReceiveWithAnyArgs()
+            .PurgeAsync(default);
+    }
+
+    /// <summary>
+    /// A Custom user with Edit any collection can reach the Admin Console but is not offered purge
+    /// there, so the API must refuse it too.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task PostPurge_OrganizationPurge_WithEditAnyCollectionPermission_ThrowsNotFoundException(
+        User user,
+        SecretVerificationRequestModel model,
+        Guid organizationId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        SetupOrganizationPurge(sutProvider, user, model, organizationId,
+            new CurrentContextOrganization
+            {
+                Id = organizationId,
+                Type = OrganizationUserType.Custom,
+                Permissions = new Permissions { EditAnyCollection = true }
             });
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostPurge(model, organizationId));
