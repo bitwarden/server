@@ -115,6 +115,9 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
             return IdentityResult.Failed(errors);
         }
 
+        // Equal timestamps mark a rotation done together with a password change (e.g. for Admin diagnostics).
+        user.LastKeyRotationDate = user.LastPasswordChangeDate = DateTime.UtcNow;
+
         await _userRepository.UpdateUserKeyAndEncryptedDataV2Async(user, saveEncryptedDataActions);
 
         await HandlePushNotificationAsync(shouldPersistV2UpgradeToken: false, user);
