@@ -7,6 +7,7 @@ using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
+using Bit.Core;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -57,6 +58,7 @@ public class ProvidersController : Controller
     private readonly IAccessControlService _accessControlService;
     private readonly ISubscriberService _subscriberService;
     private readonly ILogger<ProvidersController> _logger;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public ProvidersController(IOrganizationRepository organizationRepository,
         IResellerClientOrganizationSignUpCommand resellerClientOrganizationSignUpCommand,
@@ -74,7 +76,8 @@ public class ProvidersController : Controller
         IStripeAdapter stripeAdapter,
         IAccessControlService accessControlService,
         ISubscriberService subscriberService,
-        ILogger<ProvidersController> logger)
+        ILogger<ProvidersController> logger,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
         _organizationRepository = organizationRepository;
         _resellerClientOrganizationSignUpCommand = resellerClientOrganizationSignUpCommand;
@@ -95,6 +98,7 @@ public class ProvidersController : Controller
         _braintreeMerchantId = globalSettings.Braintree.MerchantId;
         _subscriberService = subscriberService;
         _logger = logger;
+        _featureService = featureService;
     }
 
     [RequirePermission(Permission.Provider_List_View)]
@@ -541,6 +545,12 @@ public class ProvidersController : Controller
         if (provider is not { Type: ProviderType.Reseller })
         {
             return RedirectToAction("Index");
+        }
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support) && model.UsePam)
+        {
+            TempData["Error"] = "Organizations managed by a provider can't use Privileged Access Management";
+            return RedirectToAction("CreateOrganization", new { providerId });
         }
 
         var organization = model.CreateOrganization(provider);
