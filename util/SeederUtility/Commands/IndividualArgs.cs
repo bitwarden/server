@@ -48,6 +48,9 @@ public class IndividualArgs : IArgumentModel
     [Option("stripe-address", Description = "Billing address: us (default), us-alaska, de, or ph. de-vat is rejected: a personal account takes no tax ID. Requires --stripe-billing.")]
     public string? StripeAddress { get; set; }
 
+    [Option("no-data-protection", Description = "Write User.Key and User.MasterPassword without the server's data protection, so a server with different data-protection keys can read them. DEV/QA only")]
+    public bool NoDataProtection { get; set; }
+
     public void Validate()
     {
         var sub = Subscription?.ToLowerInvariant();
