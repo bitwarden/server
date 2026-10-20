@@ -122,7 +122,11 @@ public class DatabaseDataAttribute : DataAttribute
             PasswordlessAuth = new GlobalSettings.PasswordlessAuthSettings
             {
                 UserRequestExpiration = TimeSpan.FromMinutes(15),
-            }
+            },
+            Partnerships = new GlobalSettings.PartnershipSettings
+            {
+                ExternalIdHashKey = "test-external-id-hash-key",
+            },
         };
         services.AddDapperRepositories(SelfHosted);
         services.AddSingleton(globalSettings);
@@ -145,6 +149,10 @@ public class DatabaseDataAttribute : DataAttribute
             PasswordlessAuth = new GlobalSettings.PasswordlessAuthSettings
             {
                 UserRequestExpiration = TimeSpan.FromMinutes(15),
+            },
+            Partnerships = new GlobalSettings.PartnershipSettings
+            {
+                ExternalIdHashKey = "test-external-id-hash-key",
             },
         };
         services.AddPasswordManagerEFRepositories(SelfHosted);
