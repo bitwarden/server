@@ -32,9 +32,8 @@ public static class OrganizationSubscriptionEndpointsExtensions
         group.RequireAuthorization(new AuthorizeAttribute<OrganizationBillingRequirement>());
         group.WithBasicExceptionHandling();
         group.AddEndpointFilter<RouteGroupBuilder, StripeCardErrorEndpointFilter>();
-        group.RequireFeature(InvoicingFeatureFlags.PM36631_PreviewDrivenCart);
 
-        // Previews are per-organization billing data; keep them out of any shared or browser cache.
+        // Responses are per-organization billing data; keep them out of any shared or browser cache.
         group.AddEndpointFilter(async (context, next) =>
         {
             context.HttpContext.Response.Headers.CacheControl = "no-store";
@@ -44,6 +43,7 @@ public static class OrganizationSubscriptionEndpointsExtensions
         group.MapGet("preview",
                 async ([FromRoute] Guid organizationId, [FromServices] GetOrganizationSubscriptionPreviewHandler handler) => await handler.HandleAsync(organizationId))
             .RequireAuthorization(new AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>())
+            .RequireFeature(InvoicingFeatureFlags.PM36631_PreviewDrivenCart)
             .WithName("GetOrganizationSubscriptionPreview")
             .WithDescription("Previews the organization's upcoming subscription renewal.");
 
@@ -51,12 +51,14 @@ public static class OrganizationSubscriptionEndpointsExtensions
                 async ([FromRoute] Guid organizationId, [FromBody] PreviewOrganizationPlanChangeRequest request,
                         [FromServices] PreviewOrganizationPlanChangeHandler handler) => await handler.HandleAsync(organizationId, request))
             .RequireAuthorization(new AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>())
+            .RequireFeature(InvoicingFeatureFlags.PM36631_PreviewDrivenCart)
             .WithName("PreviewOrganizationPlanChange")
             .WithDescription("Previews the cost of changing the organization's plan.");
 
         group.MapPost("restart/preview",
                 async ([FromRoute] Guid organizationId, [FromBody] PreviewOrganizationRestartRequest request,
                         [FromServices] PreviewOrganizationRestartHandler handler) => await handler.HandleAsync(organizationId, request))
+            .RequireFeature(InvoicingFeatureFlags.PM36631_PreviewDrivenCart)
             .WithName("PreviewOrganizationRestart")
             .WithDescription("Previews the cost of restarting the organization's canceled subscription.");
 

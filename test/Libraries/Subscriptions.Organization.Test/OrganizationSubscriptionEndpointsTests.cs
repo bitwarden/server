@@ -1,4 +1,6 @@
-﻿using Bit.Core.Auth.Identity;
+﻿using Bit.Core;
+using Bit.Core.Auth.Identity;
+using Bit.Invoicing;
 using Bit.OrganizationAuthorization;
 using Bit.Subscriptions.Organization.Requirements;
 using Bitwarden.Server.Sdk.Features;
@@ -14,7 +16,7 @@ namespace Bit.Subscriptions.Organization.Test;
 public class OrganizationSubscriptionEndpointsTests
 {
     [Fact]
-    public void MapOrganizationSubscriptionEndpoints_AppliesAuthorizationFeatureGateAndTags()
+    public void MapOrganizationSubscriptionEndpoints_AppliesAuthorizationAndTagsButNoFeatureGate()
     {
         var app = WebApplication.CreateBuilder().Build();
 
@@ -33,10 +35,9 @@ public class OrganizationSubscriptionEndpointsTests
         Assert.Contains(authorizeAttributes, attribute => attribute.Policy == Policies.Application);
         Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<OrganizationBillingRequirement>);
 
-        // Feature gate: IFeatureMetadata (Bitwarden.Server.Sdk.Features) exposes a FeatureCheck
-        // delegate, not a flag-name string — presence guards against a dropped RequireFeature.
-        var feature = endpoint.Metadata.GetMetadata<IFeatureMetadata>();
-        Assert.NotNull(feature);
+        // The group carries no feature gate: each endpoint declares its own, so a flag for one kind of endpoint
+        // (previews, a purchase) never gates another.
+        Assert.Empty(endpoint.Metadata.GetOrderedMetadata<IFeatureMetadata>());
 
         var tags = endpoint.Metadata.GetMetadata<ITagsMetadata>();
         Assert.NotNull(tags);
@@ -131,9 +132,6 @@ public class OrganizationSubscriptionEndpointsTests
             .OfType<RouteEndpoint>()
             .ToList();
         var purchase = endpoints.Single(e => e.RoutePattern.RawText!.Contains("privileged-controls/purchase"));
-        var preview = endpoints.Single(e => e.RoutePattern.RawText!.EndsWith("/preview")
-                                            && !e.RoutePattern.RawText!.Contains("plan-change")
-                                            && !e.RoutePattern.RawText!.Contains("restart"));
 
         var methods = purchase.Metadata.GetMetadata<IHttpMethodMetadata>();
         Assert.NotNull(methods);
@@ -143,9 +141,29 @@ public class OrganizationSubscriptionEndpointsTests
         Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<OrganizationBillingRequirement>);
         Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>);
 
-        // The group's flag applies to every endpoint; the purchase endpoint adds the Privileged Controls flag on top.
-        Assert.Equal(
-            preview.Metadata.GetOrderedMetadata<IFeatureMetadata>().Count + 1,
-            purchase.Metadata.GetOrderedMetadata<IFeatureMetadata>().Count);
+        // Gated by the Privileged Controls flag alone, not by the preview flag the preview endpoints carry.
+        var feature = Assert.Single(purchase.Metadata.GetOrderedMetadata<IFeatureMetadata>());
+        Assert.Contains(FeatureFlagKeys.PM39883_Pam_Billing_Support, feature.ToString());
+        Assert.DoesNotContain(InvoicingFeatureFlags.PM36631_PreviewDrivenCart, feature.ToString());
+    }
+
+    [Theory]
+    [InlineData("preview")]
+    [InlineData("plan-change/preview")]
+    [InlineData("restart/preview")]
+    public void MapOrganizationSubscriptionEndpoints_PreviewEndpointsAreGatedByThePreviewFlagAlone(string route)
+    {
+        var app = WebApplication.CreateBuilder().Build();
+
+        var group = app.MapGroup("/{organizationId:guid}")
+            .MapOrganizationSubscriptionEndpoints();
+
+        var preview = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(dataSource => dataSource.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Single(e => e.RoutePattern.RawText!.EndsWith("}/" + route));
+
+        var feature = Assert.Single(preview.Metadata.GetOrderedMetadata<IFeatureMetadata>());
+        Assert.Contains(InvoicingFeatureFlags.PM36631_PreviewDrivenCart, feature.ToString());
     }
 }

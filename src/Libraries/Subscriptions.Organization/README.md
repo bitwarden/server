@@ -34,10 +34,11 @@ API spec), the authenticated `Application` policy, the `OrganizationBillingRequi
 exception handling (from `Bit.ExceptionHandling`), `StripeCardErrorEndpointFilter` (turns a declined
 card into a 400 carrying Stripe's message; it sits inside the basic exception handling, which does not
 handle Stripe errors and would answer a declined card with a 500, so every charging endpoint added to
-the group gets the mapping), the `PM36631_PreviewDrivenCart` feature gate, and a
-`Cache-Control: no-store` filter (previews are per-organization billing data, never cached). The
-Privileged Controls purchase endpoint adds the `PM39883_Pam_Billing_Support` feature gate on top of the
-group's, so both flags must be on.
+the group gets the mapping), and a `Cache-Control: no-store` filter (the responses are per-organization
+billing data, never cached). The group carries no feature gate, so a flag for one kind of endpoint never
+gates another: each endpoint declares its own. The preview endpoints require
+`PM36631_PreviewDrivenCart`, and the Privileged Controls purchase endpoint requires
+`PM39883_Pam_Billing_Support` alone.
 
 `MapOrganizationSubscriptionPurchaseEndpoints()` attaches a second group, which the host mounts at
 `/organizations/billing/subscription`. Its chain applies the `OrganizationSubscriptions` tag, the
