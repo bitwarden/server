@@ -117,6 +117,37 @@ public class OrganizationSubscriptionEndpointsRequestBindingTests
         Assert.False(command.WasCalled);
     }
 
+    [Theory]
+    [InlineData("""{"seats":0}""", "Privileged Controls seats must be between 1 and 100,000")]
+    [InlineData("""{"seats":100001}""", "Privileged Controls seats must be between 1 and 100,000")]
+    [InlineData("""{"seats":10,"maxAutoscaleSeats":0}""", "The autoscale limit must be between 1 and 100,000")]
+    [InlineData("""{"seats":10,"maxAutoscaleSeats":100001}""", "The autoscale limit must be between 1 and 100,000")]
+    public async Task PurchasePrivilegedControls_ValueOutsideTheAllowedRange_ReturnsBadRequestWithoutCallingCommand(
+        string json, string expectedMessage)
+    {
+        var command = new FakeAddPrivilegedControlsCommand();
+
+        var context = await InvokePurchaseAsync(command, json);
+
+        context.Response.Body.Position = 0;
+        Assert.Equal((int)HttpStatusCode.BadRequest, context.Response.StatusCode);
+        Assert.Contains(expectedMessage, await new StreamReader(context.Response.Body).ReadToEndAsync());
+        Assert.False(command.WasCalled);
+    }
+
+    [Fact]
+    public async Task PurchasePrivilegedControls_SeatsAndAutoscaleLimitAtTheMaximum_CallsCommand()
+    {
+        var command = new FakeAddPrivilegedControlsCommand();
+
+        var context = await InvokePurchaseAsync(
+            command, $$"""{"seats":{{PlanConstants.MaxPurchasableQuantity}},"maxAutoscaleSeats":{{PlanConstants.MaxPurchasableQuantity}}}""");
+
+        Assert.Equal((int)HttpStatusCode.NoContent, context.Response.StatusCode);
+        Assert.Equal(PlanConstants.MaxPurchasableQuantity, command.ReceivedSeats);
+        Assert.Equal(PlanConstants.MaxPurchasableQuantity, command.ReceivedMaxAutoscaleSeats);
+    }
+
     [Fact]
     public async Task PurchasePrivilegedControls_CardError_ReturnsBadRequestWithStripeMessage()
     {
@@ -156,7 +187,8 @@ public class OrganizationSubscriptionEndpointsRequestBindingTests
         hasPaymentMethodQuery.Run(Arg.Any<ISubscriber>()).Returns(true);
         builder.Services.AddSingleton(hasPaymentMethodQuery);
         builder.Services.AddSingleton<IAddPrivilegedControlsToExistingSubscriptionCommand>(command);
-        builder.Services.AddScoped<PurchasePrivilegedControlsHandler>();
+        // The library's own registration, so the request validation is wired the way a host gets it.
+        builder.Services.AddOrganizationSubscriptions();
         var app = builder.Build();
         app.MapGroup("/{organizationId:guid}").MapOrganizationSubscriptionEndpoints();
 

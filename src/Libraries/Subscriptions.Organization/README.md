@@ -166,7 +166,12 @@ no Password Manager line item, is a **409**. A missing organization is a **404**
 ### Privileged Controls purchase
 
 Its request is a JSON body: `seats` (required, so an omitted value fails binding with a 400 rather than
-defaulting to zero) and an optional `maxAutoscaleSeats`. `PurchasePrivilegedControlsHandler` gates the call
+defaulting to zero) and an optional `maxAutoscaleSeats`. Both must be between 1 and
+`PlanConstants.MaxPurchasableQuantity`, declared with `[Range]` attributes on the request. A value outside
+that range is rejected with a 400 before the handler runs, in the framework's validation problem-details
+format rather than `ErrorResponseModel`. `AddOrganizationSubscriptions()` calls `AddValidation()` from this
+assembly so the validation source generator covers the request, and the request type is `public` because
+the generator skips types it cannot access. `PurchasePrivilegedControlsHandler` gates the call
 to `IAddPrivilegedControlsToExistingSubscriptionCommand`, which does the purchase. The handler checks, in
 order: the organization exists (404); it is not on a sales-initiated trial (400, sent to a customer service
 representative); its plan is an Enterprise plan that supports Privileged Controls (400); it has a payment
@@ -176,8 +181,8 @@ report. Trial detection is `PrivilegedControlsTrialHelpers.IsOnSalesInitiatedTri
 subscription response; the handler reads the subscription through `IStripeAdapter` only when the plan
 supports Privileged Controls and the organization already has the capability turned on.
 
-The command rejects a seat count below the minimum, a seat count below one, and an autoscale limit
-below the seat count, each as a `BadRequestException` that passes through the handler unchanged. A
+The command rejects a seat count below the minimum and an autoscale limit below the seat count, each as
+a `BadRequestException` that passes through the handler unchanged. A
 Stripe card error from the charge is mapped by the group's `StripeCardErrorEndpointFilter`, not by the
 handler. No upper seat cap against Password Manager seats is enforced.
 
@@ -208,6 +213,7 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | `IGetOrganizationRestartQuery`, `OrganizationRestart` (`Bit.Core.Billing.Subscriptions.Queries`, `Bit.Core.Billing.Subscriptions.Models`) | Resolving the restart preview's plan and line items with the same query restart uses |
 | `IHasPaymentMethodQuery` (`Bit.Core.Billing.Payment.Queries`), `PrivilegedControlsTrialHelpers` (`Bit.Core.Billing.Organizations.Helpers`) | Gating the Privileged Controls purchase on a payment method and on the sales-initiated trial rule the subscription response also uses |
 | `FeatureFlagKeys` (`Bit.Core`) | The `PM39883_Pam_Billing_Support` gate on the Privileged Controls purchase endpoint |
+| `PlanConstants` (`Bit.Core.Billing.Constants`) | The most of any one purchasable item that can be bought at once, for the purchase preview's checks and the Privileged Controls purchase request's ranges |
 | `IPricingClient` (`Bit.Core.Billing.Pricing`), `Plan` (`Bit.Core.Models.StaticStore`) | Resolving the current and target plans' Stripe price ids and seat/flat shape; reading a plan's Privileged Controls support and default seat minimum |
 | `OrganizationSubscriptionChangeSet` (`Bit.Core.Billing.Organizations.Models`) | Composing the plan change the same way the real upgrade does, then translating it into preview line items; building the Privileged Controls seat change |
 | `IUpdateOrganizationSubscriptionCommand` (`Bit.Core.Billing.Organizations.Commands`), `BillingCommandResult` (`Bit.Core.Billing.Commands`) | Charging the first Privileged Controls seats, and surfacing a failed update's message to the client through `GetValueOrThrowHttpException` |

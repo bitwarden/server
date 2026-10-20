@@ -21,6 +21,8 @@ public static class SubscriptionsOrganizationServiceCollectionExtensions
     {
         services.AddInvoicing();
         services.AddOrganizationAuthorization();
+        // Called from this assembly so the validation source generator covers this library's request types.
+        services.AddValidation();
         services.TryAddScoped<GetOrganizationSubscriptionPreviewHandler>();
         services.TryAddScoped<IPreviewOrganizationSubscriptionPurchaseQuery, PreviewOrganizationSubscriptionPurchaseQuery>();
         services.TryAddScoped<PreviewOrganizationSubscriptionPurchaseHandler>();
