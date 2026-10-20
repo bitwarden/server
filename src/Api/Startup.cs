@@ -1,4 +1,5 @@
 ﻿using Bit.Api.Utilities;
+using Bit.Api.AdminConsole.Partnerships;
 using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Settings;
@@ -256,6 +257,8 @@ public class Startup
     {
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
+
+        app.UseMiddleware<PartnershipRequestIdMiddleware>();
 
         // Default Middleware
         app.UseDefaultMiddleware(env, globalSettings);
