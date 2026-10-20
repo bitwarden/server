@@ -126,8 +126,7 @@ public class RotationAttemptCipherEndpointsTests
         var args = call.GetArguments();
         Assert.Equal(_connectorId, args[0]);
         Assert.Equal(_attemptId, args[1]);
-        Assert.Equal(existing.Key, args[3]);
-        Assert.Equal(_revision, args[4]);
+        Assert.Equal(_revision, args[3]);
         using var data = JsonDocument.Parse((string)args[2]!);
         Assert.Equal(Enc("password"), data.RootElement.GetProperty("Password").GetString());
         Assert.Equal(Enc("name"), data.RootElement.GetProperty("Name").GetString());
@@ -141,7 +140,7 @@ public class RotationAttemptCipherEndpointsTests
 
         await Assert.ThrowsAsync<NotFoundException>(() => Put(ValidModel(ExistingLogin())));
 
-        await _command.DidNotReceiveWithAnyArgs().SubmitAsync(default, default, default!, default, default);
+        await _command.DidNotReceiveWithAnyArgs().SubmitAsync(default, default, default!, default);
     }
 
     [Fact]
@@ -149,7 +148,7 @@ public class RotationAttemptCipherEndpointsTests
     {
         var existing = ExistingLogin();
         Reads(existing);
-        _command.SubmitAsync(default, default, default!, default, default).ReturnsForAnyArgs<Task>(_ => throw new ConflictException());
+        _command.SubmitAsync(default, default, default!, default).ReturnsForAnyArgs<Task>(_ => throw new ConflictException());
 
         await Assert.ThrowsAsync<ConflictException>(() => Put(ValidModel(existing)));
     }
@@ -200,56 +199,51 @@ public class RotationAttemptCipherEndpointsTests
         await AssertRejected(model);
     }
 
-    [Theory]
-    [InlineData("2.other|key")]
-    [InlineData(null)]
-    public async Task PutCipher_RequestKeyDiffersFromStored_IsStoredWithTheData(string? key)
-    {
-        // The client re-wraps the item key on every write, so a different key is the normal case.
-        var existing = ExistingLogin();
-        Reads(existing);
-        var model = ValidModel(existing);
-        model.Key = key;
-
-        Assert.IsType<Ok>(await Put(model));
-
-        var args = Assert.Single(_command.ReceivedCalls()).GetArguments();
-        Assert.Equal(key, args[3]);
-    }
-
     [Fact]
-    public async Task PutCipher_ExistingWithoutKeyAndModelWithout_IsAccepted()
+    public async Task PutCipher_StoredCipherWithoutKey_Returns400()
     {
         var existing = ExistingLogin(key: null);
-        Reads(existing);
-
-        Assert.IsType<Ok>(await Put(ValidModel(existing)));
-    }
-
-    [Fact]
-    public async Task PutCipher_KeylessCipherWithAttachments_Returns400()
-    {
-        var existing = ExistingLogin(key: null);
-        existing.SetAttachments(Attachments());
         Reads(existing);
 
         await AssertRejected(ValidModel(existing));
     }
 
-    [Fact]
-    public async Task PutCipher_KeyedCipherWithAttachments_IsAccepted()
+    [Theory]
+    [InlineData("2.other|key")]
+    [InlineData("2.KEY|wrapped")]
+    public async Task PutCipher_RequestKeyDiffersFromStored_Returns400(string key)
     {
         var existing = ExistingLogin();
-        existing.SetAttachments(Attachments());
+        Reads(existing);
+        var model = ValidModel(existing);
+        model.Key = key;
+
+        await AssertRejected(model);
+    }
+
+    [Fact]
+    public async Task PutCipher_NullRequestKeyForKeyedCipher_Returns400()
+    {
+        var existing = ExistingLogin();
+        Reads(existing);
+        var model = ValidModel(existing);
+        model.Key = null;
+
+        await AssertRejected(model);
+    }
+
+    [Fact]
+    public async Task PutCipher_IdenticalKeyWithAttachments_IsAccepted()
+    {
+        var existing = ExistingLogin();
+        existing.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            ["a1"] = new CipherAttachment.MetaData { FileName = Enc("file"), Key = Enc("attachment key"), Size = 10 },
+        });
         Reads(existing);
 
         Assert.IsType<Ok>(await Put(ValidModel(existing)));
     }
-
-    private static Dictionary<string, CipherAttachment.MetaData> Attachments() => new()
-    {
-        ["a1"] = new CipherAttachment.MetaData { FileName = Enc("file"), Key = Enc("attachment key"), Size = 10 },
-    };
 
     [Fact]
     public async Task PutCipher_DataProvided_Returns400()
@@ -276,7 +270,7 @@ public class RotationAttemptCipherEndpointsTests
     private async Task AssertRejected(CipherRequestModel model)
     {
         await Assert.ThrowsAsync<BadRequestException>(() => Put(model));
-        await _command.DidNotReceiveWithAnyArgs().SubmitAsync(default, default, default!, default, default);
+        await _command.DidNotReceiveWithAnyArgs().SubmitAsync(default, default, default!, default);
     }
 
     [Fact]

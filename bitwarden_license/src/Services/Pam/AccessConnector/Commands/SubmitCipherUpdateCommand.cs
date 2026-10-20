@@ -42,7 +42,6 @@ public class SubmitCipherUpdateCommand : ISubmitCipherUpdateCommand
         Guid accessConnectorId,
         Guid attemptId,
         string cipherDataJson,
-        string? cipherKey,
         DateTime lastKnownRevisionDate)
     {
         // A cross-org attempt looks unknown, so this access connector's name stays out of another org's trail.
@@ -61,7 +60,7 @@ public class SubmitCipherUpdateCommand : ISubmitCipherUpdateCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var outcome = await _jobRepository.AcceptCipherWriteAsync(
-            attemptId, accessConnectorId, cipherDataJson, cipherKey, lastKnownRevisionDate, now);
+            attemptId, accessConnectorId, cipherDataJson, lastKnownRevisionDate, now);
 
         if (outcome != PamRotationCipherWriteOutcome.Accepted)
         {

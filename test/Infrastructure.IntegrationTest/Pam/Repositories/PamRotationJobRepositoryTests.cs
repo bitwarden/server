@@ -377,19 +377,15 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(PamRotationClaimOutcome.Claimed, claim.Outcome);
         var writeNow = fixture.Now.AddMinutes(1);
         const string rotatedData = "{\"rotatedSecret\":true}";
-        const string rotatedKey = "2.rotatedKeyIv|rotatedKeyData|rotatedKeyMac";
 
         var outcome = await pamRotationJobRepository.AcceptCipherWriteAsync(
-            claim.AttemptId!.Value, fixture.AccessConnector.Id, rotatedData, rotatedKey, fixture.Cipher.RevisionDate,
-            writeNow);
+            claim.AttemptId!.Value, fixture.AccessConnector.Id, rotatedData, fixture.Cipher.RevisionDate, writeNow);
 
         Assert.Equal(PamRotationCipherWriteOutcome.Accepted, outcome);
 
         var cipher = await cipherRepository.GetByIdAsync(fixture.Cipher.Id);
         Assert.NotNull(cipher);
         Assert.Equal(rotatedData, cipher!.Data);
-        // The key is stored with the data it encrypts, in the same write.
-        Assert.Equal(rotatedKey, cipher.Key);
         Assert.Equal(writeNow, cipher.RevisionDate, LaxDateTimeComparer.Default);
 
         // The attempt stays unreported until the success report.
@@ -434,7 +430,7 @@ public class PamRotationJobRepositoryTests
         var claim = await pamRotationJobRepository.ClaimAsync(
             fixture.Job.Id, fixture.AccessConnector.Id, fixture.Now, _releaseDelay);
         Assert.Equal(PamRotationCipherWriteOutcome.Accepted, await pamRotationJobRepository.AcceptCipherWriteAsync(
-            claim.AttemptId!.Value, fixture.AccessConnector.Id, "{\"rotated\":true}", null, cipher!.RevisionDate,
+            claim.AttemptId!.Value, fixture.AccessConnector.Id, "{\"rotated\":true}", cipher!.RevisionDate,
             fixture.Now));
 
         Assert.True(await userRepository.GetAccountRevisionDateAsync(member.Id) > staleDate.AddHours(12));
@@ -458,12 +454,11 @@ public class PamRotationJobRepositoryTests
             apiKeyRepository, pamAccessConnectorRepository, fixture.Organization.Id);
 
         var outcome = await pamRotationJobRepository.AcceptCipherWriteAsync(
-            claim.AttemptId!.Value, impostor.Id, "{\"stolen\":true}", "2.stolen|key|mac", fixture.Cipher.RevisionDate, fixture.Now);
+            claim.AttemptId!.Value, impostor.Id, "{\"stolen\":true}", fixture.Cipher.RevisionDate, fixture.Now);
 
         Assert.Equal(PamRotationCipherWriteOutcome.Rejected, outcome);
         var cipher = await cipherRepository.GetByIdAsync(fixture.Cipher.Id);
         Assert.Equal(fixture.Cipher.Data, cipher!.Data);
-        Assert.Equal(fixture.Cipher.Key, cipher.Key);
         var attempt = await pamRotationJobRepository.GetAttemptByIdAsync(claim.AttemptId.Value);
         Assert.False(attempt!.CipherUpdated);
     }
@@ -485,7 +480,7 @@ public class PamRotationJobRepositoryTests
         await cipherRepository.DeleteAsync(fixture.Cipher);
 
         var outcome = await pamRotationJobRepository.AcceptCipherWriteAsync(
-            claim.AttemptId!.Value, fixture.AccessConnector.Id, "{\"rotatedSecret\":true}", null, fixture.Cipher.RevisionDate,
+            claim.AttemptId!.Value, fixture.AccessConnector.Id, "{\"rotatedSecret\":true}", fixture.Cipher.RevisionDate,
             fixture.Now.AddMinutes(1));
 
         Assert.Equal(PamRotationCipherWriteOutcome.Rejected, outcome);
@@ -510,14 +505,12 @@ public class PamRotationJobRepositoryTests
 
         // Drift beyond the 1-second tolerance simulates a concurrent user edit.
         var outcome = await pamRotationJobRepository.AcceptCipherWriteAsync(
-            claim.AttemptId!.Value, fixture.AccessConnector.Id, "{\"rotated\":true}", "2.rotated|key|mac",
+            claim.AttemptId!.Value, fixture.AccessConnector.Id, "{\"rotated\":true}",
             fixture.Cipher.RevisionDate.AddSeconds(-5), fixture.Now);
 
         Assert.Equal(PamRotationCipherWriteOutcome.RevisionMismatch, outcome);
         var cipher = await cipherRepository.GetByIdAsync(fixture.Cipher.Id);
         Assert.Equal(fixture.Cipher.Data, cipher!.Data);
-        // A refused write leaves the key with the data it still encrypts.
-        Assert.Equal(fixture.Cipher.Key, cipher.Key);
         var attempt = await pamRotationJobRepository.GetAttemptByIdAsync(claim.AttemptId.Value);
         Assert.False(attempt!.CipherUpdated);
     }
@@ -539,7 +532,7 @@ public class PamRotationJobRepositoryTests
             fixture.Job.Id, fixture.AccessConnector.Id, fixture.Now, _releaseDelay);
 
         var outcome = await pamRotationJobRepository.AcceptCipherWriteAsync(
-            claim.AttemptId!.Value, fixture.AccessConnector.Id, "{\"rotated\":true}", null,
+            claim.AttemptId!.Value, fixture.AccessConnector.Id, "{\"rotated\":true}",
             fixture.Cipher.RevisionDate.AddDays(-60), fixture.Now);
 
         Assert.Equal(PamRotationCipherWriteOutcome.RevisionMismatch, outcome);
@@ -566,7 +559,7 @@ public class PamRotationJobRepositoryTests
             fixture.Job.Id, fixture.AccessConnector.Id, fixture.Now, _releaseDelay);
 
         var outcome = await pamRotationJobRepository.AcceptCipherWriteAsync(
-            claim.AttemptId!.Value, fixture.AccessConnector.Id, "{\"rotated\":true}", null, default, fixture.Now);
+            claim.AttemptId!.Value, fixture.AccessConnector.Id, "{\"rotated\":true}", default, fixture.Now);
 
         Assert.Equal(PamRotationCipherWriteOutcome.RevisionMismatch, outcome);
         var cipher = await cipherRepository.GetByIdAsync(fixture.Cipher.Id);
@@ -597,7 +590,7 @@ public class PamRotationJobRepositoryTests
         Assert.Contains(released, r => r.JobId == fixture.Job.Id);
 
         var outcome = await pamRotationJobRepository.AcceptCipherWriteAsync(
-            claim.AttemptId!.Value, fixture.AccessConnector.Id, "{\"late\":true}", null, fixture.Cipher.RevisionDate, now);
+            claim.AttemptId!.Value, fixture.AccessConnector.Id, "{\"late\":true}", fixture.Cipher.RevisionDate, now);
 
         Assert.Equal(PamRotationCipherWriteOutcome.Rejected, outcome);
         var cipher = await cipherRepository.GetByIdAsync(fixture.Cipher.Id);
@@ -645,7 +638,7 @@ public class PamRotationJobRepositoryTests
         var claim = await pamRotationJobRepository.ClaimAsync(
             fixture.Job.Id, fixture.AccessConnector.Id, fixture.Now, _releaseDelay);
         Assert.Equal(PamRotationCipherWriteOutcome.Accepted, await pamRotationJobRepository.AcceptCipherWriteAsync(
-            claim.AttemptId!.Value, fixture.AccessConnector.Id, "{\"rotated\":true}", null, fixture.Cipher.RevisionDate,
+            claim.AttemptId!.Value, fixture.AccessConnector.Id, "{\"rotated\":true}", fixture.Cipher.RevisionDate,
             fixture.Now));
         var resolveNow = fixture.Now.AddMinutes(2);
 
@@ -684,7 +677,7 @@ public class PamRotationJobRepositoryTests
         var claim = await pamRotationJobRepository.ClaimAsync(
             fixture.Job.Id, fixture.AccessConnector.Id, claimTime, _releaseDelay);
         Assert.Equal(PamRotationCipherWriteOutcome.Accepted, await pamRotationJobRepository.AcceptCipherWriteAsync(
-            claim.AttemptId!.Value, fixture.AccessConnector.Id, "{\"rotated\":true}", null, fixture.Cipher.RevisionDate,
+            claim.AttemptId!.Value, fixture.AccessConnector.Id, "{\"rotated\":true}", fixture.Cipher.RevisionDate,
             claimTime));
 
         // The job derives as TimedOut before any sweep has run, so the late report is stale.
@@ -959,7 +952,7 @@ public class PamRotationJobRepositoryTests
         var claim = await pamRotationJobRepository.ClaimAsync(
             fixture.Job.Id, fixture.AccessConnector.Id, claimTime, _releaseDelay);
         Assert.Equal(PamRotationCipherWriteOutcome.Accepted, await pamRotationJobRepository.AcceptCipherWriteAsync(
-            claim.AttemptId!.Value, fixture.AccessConnector.Id, "{\"rotated\":true}", null, fixture.Cipher.RevisionDate,
+            claim.AttemptId!.Value, fixture.AccessConnector.Id, "{\"rotated\":true}", fixture.Cipher.RevisionDate,
             claimTime));
         Assert.Equal(PamRotationAttemptResolveOutcome.Resolved, await pamRotationJobRepository.MarkAttemptRotatedAsync(
             claim.AttemptId.Value, fixture.AccessConnector.Id, PamSessionTerminationOutcome.NotRequested, claimTime));
@@ -1095,7 +1088,7 @@ public class PamRotationJobRepositoryTests
         var claim = await pamRotationJobRepository.ClaimAsync(
             fixture.Job.Id, fixture.AccessConnector.Id, claimTime, _releaseDelay);
         Assert.Equal(PamRotationCipherWriteOutcome.Accepted, await pamRotationJobRepository.AcceptCipherWriteAsync(
-            claim.AttemptId!.Value, fixture.AccessConnector.Id, "{\"rotated\":true}", null, fixture.Cipher.RevisionDate,
+            claim.AttemptId!.Value, fixture.AccessConnector.Id, "{\"rotated\":true}", fixture.Cipher.RevisionDate,
             claimTime));
         Assert.Equal(PamRotationAttemptResolveOutcome.Resolved, await pamRotationJobRepository.MarkAttemptRotatedAsync(
             claim.AttemptId.Value, fixture.AccessConnector.Id, PamSessionTerminationOutcome.NotRequested, claimTime));

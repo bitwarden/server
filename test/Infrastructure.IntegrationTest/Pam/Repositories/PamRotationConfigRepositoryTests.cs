@@ -287,7 +287,7 @@ public class PamRotationConfigRepositoryTests
         var claim = await pamRotationJobRepository.ClaimAsync(
             job.Id, accessConnector.Id, now, TimeSpan.FromMinutes(15));
         await pamRotationJobRepository.AcceptCipherWriteAsync(
-            claim.AttemptId!.Value, accessConnector.Id, "{\"rotated\":true}", null, cipher.RevisionDate, now);
+            claim.AttemptId!.Value, accessConnector.Id, "{\"rotated\":true}", cipher.RevisionDate, now);
         await pamRotationJobRepository.MarkAttemptRotatedAsync(
             claim.AttemptId!.Value, accessConnector.Id, PamSessionTerminationOutcome.NotRequested, now);
 

@@ -172,11 +172,10 @@ revision date read above. The server builds the stored blob from the structured 
 - `lastKnownRevisionDate` is present; and
 - the model passes the standard cipher validation (encrypted-string formats and lengths, `name`).
 
-The request's `key` is stored with the data, in the same atomic write and under the same revision check:
-the data is encrypted under that key, and the vault encryption emits a freshly wrapped item key on every
-edit, so a data-only write would leave a stored key that no longer decrypts it. For the same reason an item
-with attachments and no item key is rejected with a **400**: the client would re-wrap the attachment keys under a
-new item key, and only the data and the key are persisted.
+The rotation never changes the item key, so the request's `key` must be identical to the stored one
+(compared exactly) and the server writes only the data. A cipher without an item key is refused with a **400**,
+as is a changed or missing `key`: the client would generate a new key, which would also orphan the
+attachment keys.
 
 The write goes through an atomic capability check that
 re-verifies, under a single lock, that the job is still claimed by this access connector and the

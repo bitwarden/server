@@ -300,13 +300,12 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
     }
 
     public async Task<PamRotationCipherWriteOutcome> AcceptCipherWriteAsync(Guid attemptId, Guid accessConnectorId,
-        string cipherData, string? cipherKey, DateTime lastKnownRevisionDate, DateTime now)
+        string cipherData, DateTime lastKnownRevisionDate, DateTime now)
         => await SerializableRetry.RunAsync(() =>
-            AcceptCipherWriteInternalAsync(
-                attemptId, accessConnectorId, cipherData, cipherKey, lastKnownRevisionDate, now));
+            AcceptCipherWriteInternalAsync(attemptId, accessConnectorId, cipherData, lastKnownRevisionDate, now));
 
     private async Task<PamRotationCipherWriteOutcome> AcceptCipherWriteInternalAsync(Guid attemptId,
-        Guid accessConnectorId, string cipherData, string? cipherKey, DateTime lastKnownRevisionDate, DateTime now)
+        Guid accessConnectorId, string cipherData, DateTime lastKnownRevisionDate, DateTime now)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -357,7 +356,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         // Vault's write joins this transaction. A deleted cipher (the config has no FK to Cipher) is Rejected, and a
         // concurrent user edit is refused rather than clobbered.
         var cipherResult = await dbContext.CipherUpdateDataAsync(
-            target.CipherId, target.OrganizationId, cipherData, lastKnownRevisionDate, now, updateKey: true, key: cipherKey);
+            target.CipherId, target.OrganizationId, cipherData, lastKnownRevisionDate, now);
         if (cipherResult != CipherDataUpdateResult.Updated)
         {
             await transaction.RollbackAsync();

@@ -17,7 +17,9 @@ namespace Bit.Api.Pam.AccessConnector;
 /// (<see cref="CipherRequestModel"/> in, <see cref="CipherMiniResponseModel"/> out), and the PAM library cannot
 /// reference these types. They depend only on Core interfaces whose implementations the PAM library provides, so this
 /// compiles in OSS builds; the caller maps the group with the access connector machine defaults, whose validation
-/// filter runs the DataAnnotations of the request before the handler. The handler keeps the business rules.
+/// filter runs the DataAnnotations of the request before the handler. The handler keeps the business rules: the
+/// server builds Data from the structured fields, the item key must come back unchanged, and a cipher without an
+/// item key cannot be rotated.
 /// </summary>
 public static class RotationAttemptCipherEndpoints
 {
@@ -39,9 +41,9 @@ public static class RotationAttemptCipherEndpoints
                 "Writes the rotated secret back to the cipher (spec AcceptCipherUpdate) via an atomic capability " +
                 "check. The body is the standard cipher request: a Login cipher with the structured fields, no " +
                 "Data, the same OrganizationId, and LastKnownRevisionDate set to the revision date " +
-                "read before rotating. The server builds the stored Data itself and stores the request's " +
-                "Key with it in the same write; anything else is a 400, as is a cipher with attachments " +
-                "and no item key. 409 means the claim/attempt no " +
+                "read before rotating. The server builds the stored Data itself from the structured fields. " +
+                "Key must be sent back unchanged, since the rotation never changes the item key; a cipher " +
+                "without an item key cannot be rotated. Anything else is a 400. 409 means the claim/attempt no " +
                 "longer holds, or LastKnownRevisionDate no longer matches the cipher's current revision (a " +
                 "concurrent user edit won) -- audited as write_rejected. " +
                 "404 means the attempt id is unknown (no audit).")
@@ -82,12 +84,12 @@ public static class RotationAttemptCipherEndpoints
 
         ValidateRequest(model, existing);
 
-        // Builds Data from the structured fields, as every other cipher write does, and takes the request's key: the
-        // client encrypts under a freshly wrapped item key, which the write stores together with the data.
+        // Builds Data from the structured fields, as every other cipher write does. Only Data is written; the item key
+        // is validated to be unchanged and is never stored.
         model.ToCipher(existing);
 
         await submitCipherUpdateCommand.SubmitAsync(
-            accessConnectorId, id, existing.Data, existing.Key, model.LastKnownRevisionDate!.Value);
+            accessConnectorId, id, existing.Data, model.LastKnownRevisionDate!.Value);
         return TypedResults.Ok();
     }
 
@@ -105,11 +107,16 @@ public static class RotationAttemptCipherEndpoints
             throw new BadRequestException("The cipher's organization cannot be changed.");
         }
 
-        // The client generates an item key for a keyless cipher and re-wraps the attachment keys under it, but this
-        // route persists only Data and Key, so the stored attachment keys would no longer unwrap.
-        if (string.IsNullOrEmpty(existing.Key) && (existing.GetAttachments()?.Count ?? 0) > 0)
+        // The route writes Data only. A keyless cipher would make the client generate a new item key (which would
+        // also orphan attachment keys), and a changed key would no longer match the stored attachment keys.
+        if (string.IsNullOrEmpty(existing.Key))
         {
-            throw new BadRequestException("A cipher with attachments and no item key cannot be rotated.");
+            throw new BadRequestException("A cipher without an item key cannot be rotated.");
+        }
+
+        if (!string.Equals(model.Key, existing.Key, StringComparison.Ordinal))
+        {
+            throw new BadRequestException("The cipher's item key cannot be changed.");
         }
 
         if (!string.IsNullOrWhiteSpace(model.Data))

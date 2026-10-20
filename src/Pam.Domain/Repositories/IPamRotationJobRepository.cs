@@ -50,11 +50,8 @@ public interface IPamRotationJobRepository
     /// Re-verifies the claim, the Executing attempt, and <paramref name="lastKnownRevisionDate"/>, then writes the
     /// cipher. Serializes against the release sweep, so there is no check-then-act window.
     /// </summary>
-    /// <param name="cipherKey">
-    /// The cipher's wrapped key, written together with the data it encrypts. Null clears the key.
-    /// </param>
     Task<PamRotationCipherWriteOutcome> AcceptCipherWriteAsync(Guid attemptId, Guid accessConnectorId,
-        string cipherData, string? cipherKey, DateTime lastKnownRevisionDate, DateTime now);
+        string cipherData, DateTime lastKnownRevisionDate, DateTime now);
 
     /// <summary>
     /// Marks an Executing attempt claimed by <paramref name="accessConnectorId"/> Rotated and its job Succeeded, if
