@@ -576,7 +576,6 @@ public class CipherLeaseGateTests
 
         Assert.True(access.Authorizes(cipherId));
         Assert.False(access.Authorizes(Guid.NewGuid()));
-        // The attempt capability is the authorization, so no gating or lease is consulted.
         sutProvider.GetDependency<IGoverningRuleResolver>()
             .DidNotReceiveWithAnyArgs().ResolveAsync(default, default, default!);
         sutProvider.GetDependency<IAccessLeaseRepository>()

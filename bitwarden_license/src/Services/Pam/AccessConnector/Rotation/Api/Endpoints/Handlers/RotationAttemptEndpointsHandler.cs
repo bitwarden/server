@@ -6,8 +6,7 @@ namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints.Handlers;
 
 /// <summary>
 /// Handler for the connector-facing <c>access-connectors/rotation/attempts/{id}</c> report actions. The commands throw
-/// 404 for an unknown attempt (not audited) and 409 for a stale report (audited). The cipher read and write routes live
-/// in <c>Bit.Api</c>, which owns the cipher wire contract.
+/// 404 for an unknown attempt (not audited) and 409 for a stale report (audited).
 /// </summary>
 public class RotationAttemptEndpointsHandler(
     ICurrentContext currentContext,

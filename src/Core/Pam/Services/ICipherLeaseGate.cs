@@ -82,9 +82,8 @@ public interface ICipherLeaseGate
         IEnumerable<Cipher> ciphers);
 
     /// <summary>
-    /// Mints the witness for the cipher an access connector reads to rotate its credential. The caller has already
-    /// verified that the access connector holds the executing attempt's capability for this cipher; that capability,
-    /// not leasing, is the authorization, so no lease is consulted.
+    /// Mints the witness for the cipher an access connector reads to rotate its credential. The caller must have
+    /// verified the executing attempt's capability for this cipher; that capability, not a lease, is the authorization.
     /// </summary>
     FullCipherAccess AuthorizeAccessConnectorRotationRead(Cipher cipher);
 

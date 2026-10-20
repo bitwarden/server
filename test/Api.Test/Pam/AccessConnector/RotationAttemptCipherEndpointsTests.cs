@@ -41,7 +41,7 @@ public class RotationAttemptCipherEndpointsTests
     private static readonly Guid _organizationId = Guid.NewGuid();
     private static readonly DateTime _revision = new(2026, 10, 5, 12, 0, 0, DateTimeKind.Utc);
 
-    /// <summary>A well-formed (AesCbc256_HmacSha256_B64) encrypted string; the content is opaque to the server.</summary>
+    /// <summary>A well-formed encrypted string; the content is opaque to the server.</summary>
     private static string Enc(string label) =>
         $"2.{Convert.ToBase64String(new byte[16])}|{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(label))}|" +
         Convert.ToBase64String(new byte[32]);
@@ -303,7 +303,7 @@ public class RotationAttemptCipherEndpointsTests
         Assert.All(endpoints, e => Assert.Contains("PamAccessConnectorRotationAttempts",
             e.Metadata.GetMetadata<ITagsMetadata>()!.Tags));
 
-        // The shared schema, not a duplicate for the sealed Full* subclass.
+        // The shared schema, not one for the sealed Full* subclass.
         Assert.Contains(get.Metadata.GetOrderedMetadata<IProducesResponseTypeMetadata>(),
             p => p.StatusCode == StatusCodes.Status200OK && p.Type == typeof(CipherMiniResponseModel));
         Assert.Contains(put.Metadata.GetOrderedMetadata<IAcceptsMetadata>(),
@@ -314,8 +314,7 @@ public class RotationAttemptCipherEndpointsTests
     [Fact]
     public async Task MapRotationAttemptCipherEndpoints_WithMachineDefaults_GetsPolicyDocAndHeartbeat()
     {
-        // Startup maps the group with the PAM machine defaults; the routes must carry the same policy, doc and
-        // heartbeat as the rest of the machine surface.
+        // Must carry the same policy, doc and heartbeat as the rest of the machine surface.
         var builder = WebApplication.CreateSlimBuilder();
         builder.Services.AddSingleton(_currentContext);
         builder.Services.AddSingleton(_query);

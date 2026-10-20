@@ -420,10 +420,7 @@ public class Startup
     }
 
 #if !OSS
-    /// <summary>
-    /// The cipher routes of the PAM rotation attempts resource. They live in this project because they speak the cipher
-    /// wire contract, which the PAM library cannot reference, but they join the access connector machine group.
-    /// </summary>
+    /// <summary>The PAM rotation cipher routes, mapped here because the PAM library cannot reference the cipher wire contract.</summary>
     private static void MapPamRotationAttemptCipherEndpoints(IEndpointRouteBuilder endpoints)
     {
         endpoints.MapGroup("/access-connectors/rotation/attempts")

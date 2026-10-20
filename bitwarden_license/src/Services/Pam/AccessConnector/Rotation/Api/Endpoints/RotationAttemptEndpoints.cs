@@ -3,10 +3,7 @@ using Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Request;
 
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints;
 
-/// <summary>
-/// The connector-facing <c>access-connectors/rotation/attempts</c> resource. The <c>cipher</c> routes are mapped by
-/// <c>Bit.Api</c> into the same group, since they speak its cipher wire contract.
-/// </summary>
+/// <summary>The connector-facing <c>access-connectors/rotation/attempts</c> resource; <c>Bit.Api</c> maps the cipher routes.</summary>
 internal static class RotationAttemptEndpoints
 {
     public static RouteGroupBuilder MapRotationAttemptEndpoints(this RouteGroupBuilder group)

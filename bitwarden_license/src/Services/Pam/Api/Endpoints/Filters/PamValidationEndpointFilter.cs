@@ -10,15 +10,13 @@ namespace Bit.Services.Pam.Api.Endpoints.Filters;
 /// </summary>
 /// <remarks>
 /// Request models are recognized by namespace, so this project needs no reference to the types. The vault cipher
-/// request namespaces are included because the access connector's rotation cipher routes, mapped by <c>Bit.Api</c>
-/// into the same group, accept the standard cipher request (<c>CipherRequestModel</c> and its nested models).
+/// request namespaces are included for the rotation cipher routes that <c>Bit.Api</c> maps into the same group.
 /// </remarks>
 public class PamValidationEndpointFilter : IEndpointFilter
 {
     // Matched by prefix and suffix, so request models in nested features such as AccessConnector.Rotation are covered.
     private const string RequestModelNamespacePrefix = "Bit.Services.Pam.";
     private const string RequestModelNamespaceSuffix = ".Api.Models.Request";
-    // The standard cipher request and the nested models it carries (CipherLoginModel, CipherFieldModel, ...).
     private const string VaultRequestModelNamespace = "Bit.Api.Vault.Models";
 
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)

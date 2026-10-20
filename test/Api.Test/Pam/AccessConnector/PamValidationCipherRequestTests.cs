@@ -11,8 +11,7 @@ using Xunit;
 namespace Bit.Api.Test.Pam.AccessConnector;
 
 /// <summary>
-/// The rotation cipher routes accept the standard cipher request, so the PAM validation filter must validate it and
-/// the nested vault models like any other PAM request model.
+/// The PAM validation filter must validate the standard cipher request and its nested vault models.
 /// </summary>
 public class PamValidationCipherRequestTests
 {

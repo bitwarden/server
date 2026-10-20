@@ -66,7 +66,6 @@ public class GetRotationCipherQuery : IGetRotationCipherQuery
             throw new NotFoundException();
         }
 
-        // Every capability check above passed, so the attempt, not a lease, authorizes the full read.
         return new RotationCipherAccess(cipher, _cipherLeaseGate.AuthorizeAccessConnectorRotationRead(cipher));
     }
 }

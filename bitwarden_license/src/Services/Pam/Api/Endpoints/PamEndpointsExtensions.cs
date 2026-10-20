@@ -49,8 +49,7 @@ public static class PamEndpointsExtensions
     }
 
     /// <summary>
-    /// Public so <c>Bit.Api</c> can map the cipher routes of the rotation attempts resource, which need its cipher
-    /// models, with the same policy, feature gate and heartbeat as the rest of the machine surface.
+    /// Public so <c>Bit.Api</c> can map the rotation cipher routes with the same policy, feature gate and heartbeat.
     ///
     /// <see cref="AccessConnectorHeartbeatEndpointFilter"/> is added last, so a disabled flag or malformed body
     /// short-circuits ahead of the heartbeat write. The organization comes from the connector's token.
