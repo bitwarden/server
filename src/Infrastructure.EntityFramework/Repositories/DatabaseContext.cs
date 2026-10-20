@@ -1,7 +1,6 @@
 ﻿using Bit.Core;
 using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
-using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Billing.Models;
 using Bit.Infrastructure.EntityFramework.Converters;
@@ -10,6 +9,7 @@ using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.NotificationCenter.Models;
 using Bit.Infrastructure.EntityFramework.Pam.Models;
 using Bit.Infrastructure.EntityFramework.Platform;
+using Bit.Infrastructure.EntityFramework.Providers.Models;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Microsoft.EntityFrameworkCore;

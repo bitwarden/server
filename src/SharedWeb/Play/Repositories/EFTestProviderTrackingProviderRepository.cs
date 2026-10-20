@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 using Bit.Core.Services;
-using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
+using Bit.Infrastructure.EntityFramework.Providers.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 using Provider = Bit.Core.AdminConsole.Entities.Provider.Provider;
 

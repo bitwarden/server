@@ -3,7 +3,7 @@ using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
-namespace Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.Queries;
+namespace Bit.Infrastructure.EntityFramework.Providers.Repositories.Queries;
 
 public class ProviderUserProviderDetailsReadByUserIdStatusQuery : IQuery<ProviderUserProviderDetails>
 {

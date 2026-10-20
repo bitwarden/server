@@ -1,8 +1,8 @@
-﻿using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
+﻿using Bit.Infrastructure.EntityFramework.Providers.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Bit.Infrastructure.EntityFramework.AdminConsole.Configurations;
+namespace Bit.Infrastructure.EntityFramework.Providers.Configurations;
 
 public class ProviderEntityTypeConfiguration : IEntityTypeConfiguration<Provider>
 {

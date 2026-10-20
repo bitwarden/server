@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Infrastructure.Dapper.AdminConsole.Repositories;
+using Bit.Infrastructure.Dapper.Providers.Repositories;
 using Provider = Bit.Core.AdminConsole.Entities.Provider.Provider;
 
 namespace Bit.SharedWeb.Play.Repositories;

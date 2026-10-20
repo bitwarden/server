@@ -2,9 +2,10 @@
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Repositories;
+using Bit.Infrastructure.IntegrationTest.AdminConsole;
 using Xunit;
 
-namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
+namespace Bit.Infrastructure.IntegrationTest.Providers.Repositories;
 
 public class ProviderOrganizationRepositoryTests
 {

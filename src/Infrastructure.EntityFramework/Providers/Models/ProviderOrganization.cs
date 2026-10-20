@@ -2,8 +2,9 @@
 #nullable disable
 
 using AutoMapper;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 
-namespace Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
+namespace Bit.Infrastructure.EntityFramework.Providers.Models;
 
 public class ProviderOrganization : Core.AdminConsole.Entities.Provider.ProviderOrganization
 {

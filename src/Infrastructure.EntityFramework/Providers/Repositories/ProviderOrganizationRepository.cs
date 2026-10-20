@@ -5,15 +5,15 @@ using AutoMapper;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.Queries;
+using Bit.Infrastructure.EntityFramework.Providers.Repositories.Queries;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
+namespace Bit.Infrastructure.EntityFramework.Providers.Repositories;
 
 public class ProviderOrganizationRepository :
-    Repository<ProviderOrganization, Models.Provider.ProviderOrganization, Guid>, IProviderOrganizationRepository
+    Repository<ProviderOrganization, Models.ProviderOrganization, Guid>, IProviderOrganizationRepository
 {
     public ProviderOrganizationRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, context => context.ProviderOrganizations)

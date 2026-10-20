@@ -9,9 +9,10 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
+using Bit.Infrastructure.IntegrationTest.AdminConsole;
 using Xunit;
 
-namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
+namespace Bit.Infrastructure.IntegrationTest.Providers.Repositories;
 
 public class ProviderUserRepositoryTests
 {
