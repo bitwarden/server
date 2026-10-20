@@ -1,4 +1,4 @@
-﻿using Bit.Api.AdminConsole.Models.Response;
+﻿using Bit.Api.Providers.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
@@ -10,7 +10,7 @@ using Bit.Core.Enums;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
-namespace Bit.Api.Test.AdminConsole.Models.Response;
+namespace Bit.Api.Test.Providers.Models.Response;
 
 public class ProfileProviderOrganizationResponseModelTests
 {

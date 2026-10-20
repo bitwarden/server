@@ -11,7 +11,7 @@ using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Enums;
 using Bit.SharedWeb.Utilities;
 
-namespace Bit.Admin.AdminConsole.Models;
+namespace Bit.Admin.Providers.Models;
 
 public class ProviderEditModel : ProviderViewModel, IValidatableObject
 {

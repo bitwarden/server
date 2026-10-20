@@ -2,9 +2,10 @@
 #nullable disable
 
 using System.ComponentModel.DataAnnotations;
+using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Models;
 
-namespace Bit.Admin.AdminConsole.Models;
+namespace Bit.Admin.Providers.Models;
 
 public class OrganizationUnassignedToProviderSearchViewModel : PagedModel<OrganizationSelectableViewModel>
 {

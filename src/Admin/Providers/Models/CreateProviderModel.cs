@@ -1,6 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Enums.Provider;
 
-namespace Bit.Admin.AdminConsole.Models;
+namespace Bit.Admin.Providers.Models;
 
 public class CreateProviderModel
 {

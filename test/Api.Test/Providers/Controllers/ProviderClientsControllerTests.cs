@@ -1,6 +1,6 @@
 ﻿using System.Security.Claims;
-using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.Billing.Models.Requests;
+using Bit.Api.Providers.Controllers;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -23,7 +23,7 @@ using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
 
-namespace Bit.Api.Test.AdminConsole.Controllers;
+namespace Bit.Api.Test.Providers.Controllers;
 
 [ControllerCustomize(typeof(ProviderClientsController))]
 [SutProviderCustomize]

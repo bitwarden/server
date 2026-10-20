@@ -7,7 +7,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Repositories;
 using Xunit;
 
-namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
+namespace Bit.Api.IntegrationTest.Providers.Controllers;
 
 public class ProvidersControllerTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {

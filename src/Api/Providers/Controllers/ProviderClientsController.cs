@@ -2,6 +2,7 @@
 #nullable disable
 
 using Bit.Api.AdminConsole.Authorization.Providers.Requirements;
+using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
@@ -19,7 +20,7 @@ using Bit.OrganizationAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.AdminConsole.Controllers;
+namespace Bit.Api.Providers.Controllers;
 
 [Route("providers/{providerId:guid}/clients")]
 [Authorize("Application")]

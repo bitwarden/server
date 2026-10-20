@@ -1,7 +1,7 @@
 ﻿using System.Net;
-using Bit.Api.AdminConsole.Models.Request.Providers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
+using Bit.Api.Providers.Models.Request;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -9,7 +9,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Repositories;
 using Xunit;
 
-namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
+namespace Bit.Api.IntegrationTest.Providers.Controllers;
 
 public class ProviderAbilityCacheTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {

@@ -7,7 +7,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 
-namespace Bit.Admin.AdminConsole.Models;
+namespace Bit.Admin.Providers.Models;
 
 public class CreateMspProviderModel : IValidatableObject
 {

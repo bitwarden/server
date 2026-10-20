@@ -8,7 +8,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 
-namespace Bit.Admin.AdminConsole.Models;
+namespace Bit.Admin.Providers.Models;
 
 public class CreateBusinessUnitProviderModel : IValidatableObject
 {

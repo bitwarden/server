@@ -1,4 +1,4 @@
-﻿using Bit.Api.AdminConsole.Controllers;
+﻿using Bit.Api.Providers.Controllers;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Exceptions;
@@ -8,7 +8,7 @@ using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
 
-namespace Bit.Api.Test.AdminConsole.Controllers;
+namespace Bit.Api.Test.Providers.Controllers;
 
 [ControllerCustomize(typeof(ProviderUsersController))]
 [SutProviderCustomize]

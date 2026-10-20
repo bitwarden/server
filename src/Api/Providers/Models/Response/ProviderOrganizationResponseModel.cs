@@ -7,7 +7,7 @@ using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Models.Api;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.AdminConsole.Models.Response.Providers;
+namespace Bit.Api.Providers.Models.Response;
 
 public class ProviderOrganizationResponseModel : ResponseModel
 {

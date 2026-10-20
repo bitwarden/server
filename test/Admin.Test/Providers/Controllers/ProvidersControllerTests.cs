@@ -1,5 +1,5 @@
-﻿using Bit.Admin.AdminConsole.Controllers;
-using Bit.Admin.AdminConsole.Models;
+﻿using Bit.Admin.Providers.Controllers;
+using Bit.Admin.Providers.Models;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
@@ -15,7 +15,7 @@ using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using Stripe;
 
-namespace Admin.Test.AdminConsole.Controllers;
+namespace Admin.Test.Providers.Controllers;
 
 [ControllerCustomize(typeof(ProvidersController))]
 [SutProviderCustomize]

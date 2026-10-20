@@ -5,6 +5,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Net;
 using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
+using Bit.Admin.Providers.Models;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
 using Bit.Core.AdminConsole.AbilitiesCache;
@@ -32,7 +33,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Stripe;
 
-namespace Bit.Admin.AdminConsole.Controllers;
+namespace Bit.Admin.Providers.Controllers;
 
 [Authorize]
 [SelfHosted(NotSelfHostedOnly = true)]

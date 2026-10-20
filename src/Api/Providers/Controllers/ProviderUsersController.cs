@@ -3,9 +3,9 @@
 
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Providers.Requirements;
-using Bit.Api.AdminConsole.Models.Request.Providers;
-using Bit.Api.AdminConsole.Models.Response.Providers;
 using Bit.Api.Models.Response;
+using Bit.Api.Providers.Models.Request;
+using Bit.Api.Providers.Models.Response;
 using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
@@ -15,7 +15,7 @@ using Bit.OrganizationAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.AdminConsole.Controllers;
+namespace Bit.Api.Providers.Controllers;
 
 [Route("providers/{providerId:guid}/users")]
 [Authorize("Application")]

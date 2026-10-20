@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.AdminConsole.Models.Request.Providers;
+namespace Bit.Api.Providers.Models.Request;
 
 public class ProviderOrganizationCreateRequestModel
 {

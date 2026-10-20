@@ -1,5 +1,5 @@
-﻿using Bit.Api.AdminConsole.Controllers;
-using Bit.Api.AdminConsole.Models.Request.Providers;
+﻿using Bit.Api.Providers.Controllers;
+using Bit.Api.Providers.Models.Request;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
@@ -8,7 +8,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.AdminConsole.Controllers;
+namespace Bit.Api.Test.Providers.Controllers;
 
 [ControllerCustomize(typeof(ProviderOrganizationsController))]
 [SutProviderCustomize]

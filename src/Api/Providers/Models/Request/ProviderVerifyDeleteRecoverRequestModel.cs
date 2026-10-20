@@ -3,7 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Api.AdminConsole.Models.Request.Providers;
+namespace Bit.Api.Providers.Models.Request;
 
 public class ProviderVerifyDeleteRecoverRequestModel
 {

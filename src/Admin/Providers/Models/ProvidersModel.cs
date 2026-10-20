@@ -4,7 +4,7 @@
 using Bit.Admin.Models;
 using Bit.Core.AdminConsole.Entities.Provider;
 
-namespace Bit.Admin.AdminConsole.Models;
+namespace Bit.Admin.Providers.Models;
 
 public class ProvidersModel : PagedModel<Provider>
 {
