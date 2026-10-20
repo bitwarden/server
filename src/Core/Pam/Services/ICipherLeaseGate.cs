@@ -82,6 +82,12 @@ public interface ICipherLeaseGate
         IEnumerable<Cipher> ciphers);
 
     /// <summary>
+    /// Mints the witness for the cipher an access connector reads to rotate its credential. The caller must have
+    /// verified the executing attempt's capability for this cipher; that capability, not a lease, is the authorization.
+    /// </summary>
+    FullCipherAccess AuthorizeAccessConnectorRotationRead(Cipher cipher);
+
+    /// <summary>
     /// Mints an unrestricted witness for whole-vault organization export, the only context where leasing is waived,
     /// since a partially stripped export is not a usable backup. The caller must establish export permission first.
     /// </summary>
