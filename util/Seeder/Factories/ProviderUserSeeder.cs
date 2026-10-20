@@ -1,9 +1,9 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Providers.Entities;
-using Bit.Core.Providers.Enums;
+﻿using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Entities;
 using Bit.Core.Utilities;
 using Bit.RustSDK;
-using Provider = Bit.Core.Providers.Entities.Provider;
+using Provider = Bit.Core.AdminConsole.Entities.Provider.Provider;
 
 namespace Bit.Seeder.Factories;
 

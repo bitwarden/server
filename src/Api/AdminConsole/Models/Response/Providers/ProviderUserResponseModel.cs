@@ -1,8 +1,8 @@
-﻿using Bit.Core.Models.Api;
+﻿using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Data.Provider;
+using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
-using Bit.Core.Providers.Entities;
-using Bit.Core.Providers.Enums;
-using Bit.Core.Providers.Models.Data;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.AdminConsole.Models.Response.Providers;

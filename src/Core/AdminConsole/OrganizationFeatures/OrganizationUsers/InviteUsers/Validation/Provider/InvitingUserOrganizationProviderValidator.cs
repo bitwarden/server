@@ -1,6 +1,6 @@
-﻿using Bit.Core.AdminConsole.Utilities.Validation;
+﻿using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Billing.Extensions;
-using Bit.Core.Providers.Enums;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Provider;
 

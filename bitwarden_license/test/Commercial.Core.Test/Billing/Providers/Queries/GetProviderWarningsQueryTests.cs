@@ -1,8 +1,8 @@
 ﻿using Bit.Commercial.Core.Billing.Providers.Queries;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
-using Bit.Core.Providers.Entities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;

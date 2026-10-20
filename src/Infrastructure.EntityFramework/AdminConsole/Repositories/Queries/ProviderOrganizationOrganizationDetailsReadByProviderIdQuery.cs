@@ -1,4 +1,4 @@
-﻿using Bit.Core.Providers.Models.Data;
+﻿using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 

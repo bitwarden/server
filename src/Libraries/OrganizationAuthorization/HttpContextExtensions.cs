@@ -1,6 +1,6 @@
-﻿using Bit.Core.Providers.Enums;
-using Bit.Core.Providers.Models.Data;
-using Bit.Core.Providers.Repositories;
+﻿using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Data.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 

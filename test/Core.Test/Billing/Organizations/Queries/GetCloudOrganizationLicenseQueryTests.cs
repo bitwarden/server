@@ -1,4 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Services;
@@ -6,8 +8,6 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Platform.Installations;
-using Bit.Core.Providers.Entities;
-using Bit.Core.Providers.Repositories;
 using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.Billing.AutoFixture;
 using Bit.Test.Common.AutoFixture;

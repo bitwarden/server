@@ -1,7 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Services;
-using Bit.Core.Providers.Entities;
-using Bit.Core.Providers.Repositories;
 using Bit.Core.Repositories;
 using OneOf;
 using Stripe;

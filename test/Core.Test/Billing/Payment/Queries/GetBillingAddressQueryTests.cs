@@ -1,10 +1,10 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
-using Bit.Core.Providers.Entities;
 using Bit.Core.Test.Billing.Extensions;
 using NSubstitute;
 using Stripe;

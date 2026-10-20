@@ -6,11 +6,11 @@ using Bit.Admin.Enums;
 using Bit.Admin.Models;
 using Bit.Admin.Utilities;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Platform.Installations;
-using Bit.Core.Providers.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -243,7 +243,7 @@ public class ToolsController : Controller
         {
             ModelState.AddModelError(nameof(model.UserId), "Service User Id not found in this provider.");
         }
-        else if (serviceUser.Type != Core.Providers.Enums.ProviderUserType.ServiceUser)
+        else if (serviceUser.Type != Core.AdminConsole.Enums.Provider.ProviderUserType.ServiceUser)
         {
             ModelState.AddModelError(nameof(model.UserId), "User is not a service user of this provider.");
         }
@@ -253,7 +253,7 @@ public class ToolsController : Controller
             return View(model);
         }
 
-        serviceUser.Type = Core.Providers.Enums.ProviderUserType.ProviderAdmin;
+        serviceUser.Type = Core.AdminConsole.Enums.Provider.ProviderUserType.ProviderAdmin;
         await _providerUserRepository.ReplaceAsync(serviceUser);
         return RedirectToAction("Edit", "Providers", new { id = model.ProviderId.Value });
     }

@@ -2,6 +2,7 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
@@ -9,7 +10,6 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Platform.Installations;
-using Bit.Core.Providers.Repositories;
 
 namespace Bit.Core.Billing.Organizations.Queries;
 

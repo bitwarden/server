@@ -1,6 +1,6 @@
-﻿using Bit.Core.Enums;
-using Bit.Core.Providers.Enums;
-using Provider = Bit.Core.Providers.Entities.Provider;
+﻿using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Enums;
+using Provider = Bit.Core.AdminConsole.Entities.Provider.Provider;
 
 namespace Bit.Seeder.Models;
 

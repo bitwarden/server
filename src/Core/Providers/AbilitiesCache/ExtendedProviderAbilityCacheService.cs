@@ -1,10 +1,10 @@
-﻿using Bit.Core.Providers.Entities;
-using Bit.Core.Providers.Models.Data;
-using Bit.Core.Providers.Repositories;
+﻿using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Models.Data.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 using ZiggyCreatures.Caching.Fusion;
 
-namespace Bit.Core.Providers.AbilitiesCache;
+namespace Bit.Core.AdminConsole.AbilitiesCache;
 
 public class ExtendedProviderAbilityCacheService(
     [FromKeyedServices(ExtendedProviderAbilityCacheService.CacheName)] IFusionCache cache,

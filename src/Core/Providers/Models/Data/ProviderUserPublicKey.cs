@@ -1,7 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-namespace Bit.Core.Providers.Models.Data;
+namespace Bit.Core.AdminConsole.Models.Data.Provider;
 
 public class ProviderUserPublicKey
 {

@@ -11,7 +11,6 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Providers.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Test.Billing.Mocks.Plans;
 using Bit.Test.Common.AutoFixture;
@@ -255,7 +254,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
-        Bit.Core.Providers.Entities.ProviderUser providerUser,
+        Bit.Core.AdminConsole.Entities.Provider.ProviderUser providerUser,
         SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);

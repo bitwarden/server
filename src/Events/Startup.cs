@@ -2,7 +2,6 @@
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Context;
-using Bit.Core.Providers.AbilitiesCache;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;

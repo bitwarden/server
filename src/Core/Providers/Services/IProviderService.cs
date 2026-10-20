@@ -1,13 +1,13 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
-using Bit.Core.Providers.Entities;
-using Bit.Core.Providers.Models.Business;
 
-namespace Bit.Core.Providers.Services;
+namespace Bit.Core.AdminConsole.Services;
 
 public interface IProviderService
 {

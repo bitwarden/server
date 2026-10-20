@@ -3,17 +3,16 @@
 
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Interfaces;
+using Bit.Core.AdminConsole.Models.Data.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
-using Bit.Core.Providers.AbilitiesCache;
-using Bit.Core.Providers.Entities;
-using Bit.Core.Providers.Models.Data;
-using Bit.Core.Providers.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Tools.Entities;

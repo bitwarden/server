@@ -1,8 +1,8 @@
 ﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Enums;
-using Bit.Core.Providers.Entities;
-using Bit.Core.Providers.Repositories;
 using Bit.Subscriptions.Organization.Requirements;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;

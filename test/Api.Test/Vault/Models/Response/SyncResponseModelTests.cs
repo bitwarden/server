@@ -1,5 +1,6 @@
 ﻿using Bit.Api.Vault.Models.Response;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -7,7 +8,6 @@ using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Providers.Models.Data;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;

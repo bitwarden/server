@@ -2,7 +2,7 @@
 using Bit.Core.Utilities;
 using Bit.Seeder.Models;
 using Bit.Seeder.Services;
-using Provider = Bit.Core.Providers.Entities.Provider;
+using Provider = Bit.Core.AdminConsole.Entities.Provider.Provider;
 
 namespace Bit.Seeder.Factories;
 

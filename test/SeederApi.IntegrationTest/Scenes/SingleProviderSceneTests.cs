@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
-using Bit.Core.Providers.Enums;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder.Scenes;
 using Bit.SeederApi.Models.Request;

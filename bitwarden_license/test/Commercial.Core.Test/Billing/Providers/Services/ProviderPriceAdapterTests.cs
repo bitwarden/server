@@ -1,7 +1,7 @@
-﻿using Bit.Core.Billing.Enums;
+﻿using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Providers.Services;
-using Bit.Core.Providers.Entities;
-using Bit.Core.Providers.Enums;
 using Stripe;
 using Xunit;
 

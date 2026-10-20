@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Core.Providers.Enums;
+namespace Bit.Core.AdminConsole.Enums.Provider;
 
 public enum ProviderType : byte
 {

@@ -2,6 +2,7 @@
 using System.Data.Common;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Dirt.Entities;
@@ -9,7 +10,6 @@ using Bit.Core.Dirt.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Providers.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;

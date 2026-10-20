@@ -1,7 +1,7 @@
 ﻿using Bit.Billing.Jobs;
+using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
-using Bit.Core.Providers.Models.Data;
-using Bit.Core.Providers.Repositories;
+using Bit.Core.AdminConsole.Repositories;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;

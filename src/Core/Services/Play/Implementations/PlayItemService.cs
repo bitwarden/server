@@ -2,7 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Microsoft.Extensions.Logging;
-using Provider = Bit.Core.Providers.Entities.Provider;
+using Provider = Bit.Core.AdminConsole.Entities.Provider.Provider;
 
 namespace Bit.Core.Services;
 

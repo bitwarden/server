@@ -1,5 +1,5 @@
-﻿using Bit.Core.Billing.Providers.Models;
-using Bit.Core.Providers.Entities;
+﻿using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.Billing.Providers.Models;
 
 namespace Bit.Core.Billing.Providers.Queries;
 

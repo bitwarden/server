@@ -1,4 +1,4 @@
-﻿using Bit.Core.Providers.Context;
+﻿using Bit.Core.AdminConsole.Context;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Api.AdminConsole.Authorization.Providers;

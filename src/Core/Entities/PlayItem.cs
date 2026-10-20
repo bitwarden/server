@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Utilities;
-using Provider = Bit.Core.Providers.Entities.Provider;
+using Provider = Bit.Core.AdminConsole.Entities.Provider.Provider;
 
 namespace Bit.Core.Entities;
 

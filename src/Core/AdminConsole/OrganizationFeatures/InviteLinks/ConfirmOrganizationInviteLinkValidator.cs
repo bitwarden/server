@@ -15,7 +15,6 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Providers.Repositories;
 using Bit.Core.Repositories;
 using PasswordManagerValidation = Bit.Core.AdminConsole.Utilities.Validation;
 

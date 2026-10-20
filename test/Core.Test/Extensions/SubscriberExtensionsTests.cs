@@ -1,5 +1,5 @@
-﻿using Bit.Core.Billing.Extensions;
-using Bit.Core.Providers.Entities;
+﻿using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.Billing.Extensions;
 using Xunit;
 
 namespace Bit.Core.Test.Extensions;

@@ -3,15 +3,15 @@
 
 using Bit.Api.AdminConsole.Authorization.Providers.Requirements;
 using Bit.Api.Billing.Models.Requests;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
-using Bit.Core.Providers.Entities;
-using Bit.Core.Providers.Repositories;
-using Bit.Core.Providers.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;

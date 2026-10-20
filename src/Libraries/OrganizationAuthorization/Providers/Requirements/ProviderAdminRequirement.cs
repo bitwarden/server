@@ -1,5 +1,5 @@
-﻿using Bit.Core.Providers.Context;
-using Bit.Core.Providers.Enums;
+﻿using Bit.Core.AdminConsole.Context;
+using Bit.Core.AdminConsole.Enums.Provider;
 
 namespace Bit.Api.AdminConsole.Authorization.Providers.Requirements;
 

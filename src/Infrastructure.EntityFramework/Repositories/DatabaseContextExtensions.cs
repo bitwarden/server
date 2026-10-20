@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Enums;
-using Bit.Core.Providers.Enums;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
 

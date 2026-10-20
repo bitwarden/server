@@ -1,12 +1,12 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Platform.Push;
-using Bit.Core.Providers.Entities;
-using Bit.Core.Providers.Enums;
-using Bit.Core.Providers.Repositories;
 
 namespace Bit.Billing.Services.Implementations;
 

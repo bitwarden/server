@@ -1,6 +1,6 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.AdminConsole.Models.Data.Provider;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.Providers.Models.Data;
 
 namespace Bit.Api.AdminConsole.Models.Response;
 

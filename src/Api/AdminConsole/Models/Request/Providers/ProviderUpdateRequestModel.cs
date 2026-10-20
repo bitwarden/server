@@ -3,7 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
-using Bit.Core.Providers.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 

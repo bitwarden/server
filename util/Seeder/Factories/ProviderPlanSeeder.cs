@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Utilities;
-using Provider = Bit.Core.Providers.Entities.Provider;
+using Provider = Bit.Core.AdminConsole.Entities.Provider.Provider;
 
 namespace Bit.Seeder.Factories;
 

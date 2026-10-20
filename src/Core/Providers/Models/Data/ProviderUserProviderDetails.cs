@@ -2,10 +2,10 @@
 #nullable disable
 
 using System.Text.Json.Serialization;
-using Bit.Core.Providers.Enums;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Providers.Models.Data;
+namespace Bit.Core.AdminConsole.Models.Data.Provider;
 
 public class ProviderUserProviderDetails
 {

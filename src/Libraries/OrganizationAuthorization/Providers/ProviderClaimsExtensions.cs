@@ -1,7 +1,7 @@
 ﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.Context;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Identity;
-using Bit.Core.Providers.Context;
-using Bit.Core.Providers.Enums;
 
 namespace Bit.Api.AdminConsole.Authorization.Providers;
 

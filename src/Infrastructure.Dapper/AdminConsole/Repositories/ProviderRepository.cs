@@ -1,7 +1,7 @@
 ﻿using System.Data;
-using Bit.Core.Providers.Entities;
-using Bit.Core.Providers.Models.Data;
-using Bit.Core.Providers.Repositories;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Models.Data.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;

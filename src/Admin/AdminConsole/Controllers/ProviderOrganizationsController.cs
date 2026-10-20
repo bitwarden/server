@@ -1,8 +1,8 @@
 ﻿using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
+using Bit.Core.AdminConsole.Providers.Interfaces;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Exceptions;
-using Bit.Core.Providers.Interfaces;
-using Bit.Core.Providers.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;

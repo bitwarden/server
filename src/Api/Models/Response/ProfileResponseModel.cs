@@ -3,12 +3,12 @@
 
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.AdminConsole.Models.Response.Providers;
+using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Api.Response;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Providers.Models.Data;
 
 namespace Bit.Api.Models.Response;
 

@@ -1,7 +1,7 @@
-﻿using Bit.Core.Billing.Enums;
-using Bit.Core.Providers.Entities;
+﻿using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.Billing.Enums;
 
-namespace Bit.Core.Providers.Interfaces;
+namespace Bit.Core.AdminConsole.Providers.Interfaces;
 
 public interface ICreateProviderCommand
 {

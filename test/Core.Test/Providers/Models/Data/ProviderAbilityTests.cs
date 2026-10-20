@@ -1,9 +1,9 @@
-﻿using Bit.Core.Providers.Models.Data;
+﻿using Bit.Core.AdminConsole.Models.Data.Provider;
 using Xunit;
 
-using ProviderEntity = Bit.Core.Providers.Entities.Provider;
+using ProviderEntity = Bit.Core.AdminConsole.Entities.Provider.Provider;
 
-namespace Bit.Core.Test.Providers.Models.Data;
+namespace Bit.Core.Test.AdminConsole.Models.Data.Provider;
 
 public class ProviderAbilityTests
 {

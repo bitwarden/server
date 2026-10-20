@@ -1,7 +1,7 @@
 ﻿// ReSharper disable SwitchExpressionHandlesSomeKnownEnumValuesWithExceptionInDefault
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Providers.Entities;
-using Bit.Core.Providers.Enums;
 using Stripe;
 
 namespace Bit.Core.Billing.Providers.Services;

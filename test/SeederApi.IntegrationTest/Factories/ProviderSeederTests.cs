@@ -1,5 +1,5 @@
-﻿using Bit.Core.Enums;
-using Bit.Core.Providers.Enums;
+﻿using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Enums;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Services;

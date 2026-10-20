@@ -1,4 +1,4 @@
-﻿using Bit.Core.Providers.Enums;
+﻿using Bit.Core.AdminConsole.Enums.Provider;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Provider;
 
@@ -10,7 +10,7 @@ public class InviteOrganizationProvider
     public bool Enabled { get; init; }
     public int? Seats { get; init; }
 
-    public InviteOrganizationProvider(Bit.Core.Providers.Entities.Provider provider, int? seats)
+    public InviteOrganizationProvider(Entities.Provider.Provider provider, int? seats)
     {
         ProviderId = provider.Id;
         Type = provider.Type;

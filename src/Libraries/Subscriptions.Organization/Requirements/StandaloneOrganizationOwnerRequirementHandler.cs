@@ -1,6 +1,6 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
-using Bit.Core.Providers.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 

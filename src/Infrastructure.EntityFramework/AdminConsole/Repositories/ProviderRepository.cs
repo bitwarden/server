@@ -2,9 +2,9 @@
 #nullable disable
 
 using AutoMapper;
-using Bit.Core.Providers.Entities;
-using Bit.Core.Providers.Models.Data;
-using Bit.Core.Providers.Repositories;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Models.Data.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

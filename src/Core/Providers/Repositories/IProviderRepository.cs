@@ -1,10 +1,10 @@
-﻿using Bit.Core.Providers.Entities;
-using Bit.Core.Providers.Models.Data;
+﻿using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Repositories;
 
 #nullable enable
 
-namespace Bit.Core.Providers.Repositories;
+namespace Bit.Core.AdminConsole.Repositories;
 
 public interface IProviderRepository : IRepository<Provider, Guid>
 {

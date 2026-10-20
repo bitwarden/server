@@ -1,12 +1,12 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Models.Data;
-using Bit.Core.Providers.Entities;
-using Bit.Core.Providers.Enums;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Providers.Context;
+namespace Bit.Core.AdminConsole.Context;
 
 public class CurrentContextProvider
 {

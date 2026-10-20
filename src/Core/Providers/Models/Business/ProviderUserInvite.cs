@@ -1,9 +1,9 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using Bit.Core.Providers.Enums;
+using Bit.Core.AdminConsole.Enums.Provider;
 
-namespace Bit.Core.Providers.Models.Business;
+namespace Bit.Core.AdminConsole.Models.Business.Provider;
 
 public class ProviderUserInvite<T>
 {

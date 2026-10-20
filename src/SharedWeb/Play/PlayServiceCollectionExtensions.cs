@@ -1,4 +1,4 @@
-﻿using Bit.Core.Providers.Repositories;
+﻿using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Repositories;
 using Bit.SharedWeb.Play.Repositories;
 using Microsoft.Extensions.DependencyInjection;

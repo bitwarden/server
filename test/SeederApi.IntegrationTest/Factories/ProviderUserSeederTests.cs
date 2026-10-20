@@ -1,5 +1,5 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Providers.Enums;
+﻿using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Entities;
 using Bit.Core.Utilities;
 using Bit.RustSDK;
 using Bit.Seeder.Factories;

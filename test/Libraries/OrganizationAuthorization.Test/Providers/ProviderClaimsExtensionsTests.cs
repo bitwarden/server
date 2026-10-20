@@ -1,7 +1,7 @@
 ﻿using System.Security.Claims;
 using Bit.Api.AdminConsole.Authorization.Providers;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Identity;
-using Bit.Core.Providers.Enums;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 

@@ -2,8 +2,8 @@
 
 using Bit.Api.AdminConsole.Authorization.Collections;
 using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
-using Bit.Core.Providers.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;

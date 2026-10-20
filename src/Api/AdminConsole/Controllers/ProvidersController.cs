@@ -4,10 +4,10 @@
 using Bit.Api.AdminConsole.Authorization.Providers.Requirements;
 using Bit.Api.AdminConsole.Models.Request.Providers;
 using Bit.Api.AdminConsole.Models.Response.Providers;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Exceptions;
-using Bit.Core.Providers.Repositories;
-using Bit.Core.Providers.Services;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.OrganizationAuthorization;

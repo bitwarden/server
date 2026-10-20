@@ -1,13 +1,13 @@
-﻿using Bit.Core.Providers.AbilitiesCache;
-using Bit.Core.Providers.Models.Data;
-using Bit.Core.Providers.Repositories;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Models.Data.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 using ZiggyCreatures.Caching.Fusion;
 
-namespace Bit.Core.Test.Providers.AbilitiesCache;
+namespace Bit.Core.Test.AdminConsole.AbilitiesCache;
 
 [SutProviderCustomize]
 public class ExtendedProviderAbilityCacheServiceTests

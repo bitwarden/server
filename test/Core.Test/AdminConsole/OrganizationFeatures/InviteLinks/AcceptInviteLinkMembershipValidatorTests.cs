@@ -1,18 +1,18 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Providers.Models.Data;
-using Bit.Core.Providers.Repositories;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -359,7 +359,7 @@ public class AcceptInviteLinkMembershipValidatorTests
 
     [Theory, BitAutoData]
     public async Task ValidateAsync_ProviderUser_NoPolicies_IsValid(
-        Organization organization, User user, Bit.Core.Providers.Entities.ProviderUser providerUser,
+        Organization organization, User user, Bit.Core.AdminConsole.Entities.Provider.ProviderUser providerUser,
         SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
     {
         SetupValidDependencies(sutProvider, organization, user);
@@ -435,7 +435,7 @@ public class AcceptInviteLinkMembershipValidatorTests
 
     [Theory, BitAutoData]
     public async Task ValidateAsync_ProviderUser_AutoConfirmEnabled_ReturnsProviderUsersCannotAcceptInviteLink(
-        Organization organization, User user, Bit.Core.Providers.Entities.ProviderUser providerUser,
+        Organization organization, User user, Bit.Core.AdminConsole.Entities.Provider.ProviderUser providerUser,
         SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
     {
         SetupValidDependencies(sutProvider, organization, user);

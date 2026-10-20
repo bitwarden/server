@@ -2,7 +2,7 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
-using Bit.Core.Providers.Repositories;
+using Bit.Core.AdminConsole.Repositories;
 using Quartz;
 
 namespace Bit.Billing.Jobs;
