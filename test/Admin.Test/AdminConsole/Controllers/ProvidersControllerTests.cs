@@ -270,12 +270,19 @@ public class ProvidersControllerTests
             Name = "Reseller client",
             PlanType = PlanType.EnterpriseAnnually,
             Plan = "Enterprise (Annually)",
-            UsePam = true
+            UsePam = true,
+            Owners = "owner@example.com"
         };
 
         await sutProvider.Sut.CreateOrganization(provider.Id, model);
 
         await sutProvider.GetDependency<IResellerClientOrganizationSignUpCommand>().Received(1)
-            .SignUpResellerClientAsync(Arg.Any<Organization>(), Arg.Any<string>());
+            .SignUpResellerClientAsync(
+                Arg.Is<Organization>(o =>
+                    o.Name == "Reseller client" &&
+                    o.PlanType == PlanType.EnterpriseAnnually &&
+                    o.Plan == "Enterprise (Annually)" &&
+                    o.UsePam),
+                "owner@example.com");
     }
 }
