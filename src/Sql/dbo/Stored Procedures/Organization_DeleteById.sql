@@ -159,6 +159,23 @@ BEGIN
     WHERE
         [OrganizationId] = @Id
 
+    -- Delete Organization Partnership Entitlements
+    DELETE
+        OPE
+    FROM
+        [dbo].[OrganizationPartnershipEntitlement] OPE
+    INNER JOIN
+        [dbo].[OrganizationPartnership] OP ON OP.[Id] = OPE.[OrganizationPartnershipId]
+    WHERE
+        OP.[OrganizationId] = @Id
+
+    -- Delete Organization Partnership
+    DELETE
+    FROM
+        [dbo].[OrganizationPartnership]
+    WHERE
+        [OrganizationId] = @Id
+
     -- Atomically enqueue one or more OrganizationDeleteTasks (e.g. for purging Table
     -- Storage event logs) so downstream cleanup is durably recorded with the deletion.
     -- Tasks are passed as a JSON array of { Id, TaskType, CreationDate } objects, letting
