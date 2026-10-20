@@ -368,6 +368,28 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
         Assert.Equal(0, _db.Users.Count());
     }
 
+    [Fact]
+    public async Task Execute_Options_DisableDataProtectionOnNonSqlServer_ThrowsBeforeAnyWriteAsync()
+    {
+        var orchestrator = NewOrchestrator(
+            new NoOpManglerService(),
+            attachmentStorageService: new NoopAttachmentStorageService(),
+            disableDataProtection: true);
+
+        var options = new OrganizationVaultOptions
+        {
+            Name = "Data Protection Org",
+            Domain = "dataprotection.example",
+            Users = 0,
+        };
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => orchestrator.ExecuteAsync(options));
+
+        Assert.Contains("SQL Server", ex.Message);
+        Assert.Equal(0, _db.Users.Count());
+        Assert.Equal(0, _db.Organizations.Count());
+    }
+
     private static OrganizationVaultOptions BillingOptions(PlanType planType = PlanType.EnterpriseAnnually) => new()
     {
         Name = "Billing Test",
@@ -402,7 +424,8 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
         IMapper? mapper = null,
         IAttachmentStorageService? attachmentStorageService = null,
         IUserStripeBillingService? userStripeBillingService = null,
-        ISeederLicenseSigner? licenseSigner = null)
+        ISeederLicenseSigner? licenseSigner = null,
+        bool disableDataProtection = false)
     {
         // Mapper, LicensingService, AttachmentStorageService, and LicenseSigner are not exercised by the
         // pre-flight guard, which fires before BulkCommitter or any AutoMapper usage. Null-forgive them; if
@@ -420,6 +443,7 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
         {
             OrganizationStripeBillingService = organizationStripeBillingService is null ? null : () => organizationStripeBillingService,
             UserStripeBillingService = userStripeBillingService is null ? null : () => userStripeBillingService,
+            DisableDataProtection = disableDataProtection,
         };
         return new RecipeOrchestrator(deps);
     }
