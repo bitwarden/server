@@ -219,10 +219,10 @@ Stripe call: a `sk_test_` key at `globalSettings:stripe:apiKey` in the `bitwarde
 
 **Caveats.** `DELETE /seed/{playId}` removes database rows only; the Stripe customer and subscription stay until
 Stripe's test-mode auto-cancel, about 90 days. The shared account has rate limits, so bill only what a test needs.
-When Stripe fails part-way, the error names any customer already created; cancel it in Stripe. A user can then be
-billed again. An organization keeps that customer ID, so the scene refuses it; seed a fresh organization instead. An
-organization whose first charge failed (`card: "fails-on-charge"` with `skipTrial`) shows a blank billing page
-unless the `pm-36631-preview-driven-cart` flag is on.
+When Stripe fails part-way, the error's `details` names any customer already created; cancel it in Stripe. A user
+can then be billed again. An organization keeps that customer ID, so the scene refuses it; seed a fresh organization
+instead. An organization whose first charge failed (`card: "fails-on-charge"` with `skipTrial`) shows a blank
+billing page unless the `pm-36631-preview-driven-cart` flag is on.
 
 ### Querying Data
 

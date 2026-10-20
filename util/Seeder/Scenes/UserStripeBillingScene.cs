@@ -44,13 +44,7 @@ public class UserStripeBillingScene(
     public async Task<SceneResult<UserStripeBillingSceneResult>> SeedAsync(Request request)
     {
         var profile = StripeBillingProfile.Parse(request.Card, request.Address);
-        if (profile.Address.TaxId is not null)
-        {
-            var withoutTaxId = Enum.GetValues<StripeTestAddress>().Where(a => a.TaxId is null).Select(a => a.Name);
-            throw new InvalidOperationException(
-                $"The '{profile.Address.Name}' test address carries a tax ID, and a premium user's personal account " +
-                $"takes none. Use one of: {string.Join(", ", withoutTaxId)}.");
-        }
+        profile.ValidateForPersonalAccount();
 
         var user = await userRepository.GetByIdAsync(request.UserId);
         if (user == null)
@@ -67,7 +61,16 @@ public class UserStripeBillingScene(
                 "Seed a fresh user, or link your own gateway IDs through SingleUserScene.");
         }
 
-        await billingService.CreateSubscriptionAsync(user, UserSubscriptionType.Premium, profile);
+        try
+        {
+            await billingService.CreateSubscriptionAsync(user, UserSubscriptionType.Premium, profile);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // SceneExecutor reports one level down (ex.InnerException ?? ex). Wrapping once more makes that level
+            // the billing service's exception, whose message names the Stripe customer to cancel.
+            throw new InvalidOperationException(ex.Message, ex);
+        }
 
         // The two stamps UserService.SaveUserAsync applies, so clients re-sync the premium change.
         user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;

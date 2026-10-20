@@ -122,6 +122,25 @@ public class OrganizationStripeBillingSceneTests : IAsyncLifetime
         await AssertNotBilledAsync();
     }
 
+    [Fact]
+    public async Task SeedEndpoint_StripeFailure_ReturnsTheCustomerToCancel()
+    {
+        var organizationId = await SeedOrganizationAsync();
+        _billingService
+            .CreateSubscriptionAsync(Arg.Any<Organization>(), Arg.Any<StripeBillingOptions>())
+            .Returns(Task.FromException(new InvalidOperationException(
+                "Stripe billing failed. Gateway customer: cus_orphan. Cancel any orphaned Stripe objects.",
+                new Exception("Stripe error"))));
+
+        var response = await PostBillingAsync(new OrganizationStripeBillingScene.Request
+        {
+            OrganizationId = organizationId
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("cus_orphan", await response.Content.ReadAsStringAsync());
+    }
+
     [Theory]
     [InlineData(false, 0)]
     [InlineData(false, 31)]

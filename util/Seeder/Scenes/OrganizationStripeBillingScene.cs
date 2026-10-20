@@ -25,10 +25,6 @@ public class OrganizationStripeBillingScene(
     IOrganizationStripeBillingService billingService)
     : IScene<OrganizationStripeBillingScene.Request, OrganizationStripeBillingSceneResult>
 {
-    private const int MinTrialDays = 1;
-    private const int MaxTrialDays = 30;
-    private const int DefaultTrialDays = 30;
-
     public class Request
     {
         [Required]
@@ -53,21 +49,13 @@ public class OrganizationStripeBillingScene(
 
     public async Task<SceneResult<OrganizationStripeBillingSceneResult>> SeedAsync(Request request)
     {
-        if (request.SkipTrial && request.TrialDays.HasValue)
-        {
-            throw new ArgumentException(
-                "SkipTrial and TrialDays are mutually exclusive: one asks for no trial, the other for a trial.");
-        }
-
-        if (request.TrialDays is < MinTrialDays or > MaxTrialDays)
-        {
-            throw new ArgumentException($"TrialDays must be between {MinTrialDays} and {MaxTrialDays}.");
-        }
+        StripeBillingOptions.ValidateTrial(
+            request.SkipTrial, request.TrialDays, nameof(Request.SkipTrial), nameof(Request.TrialDays));
 
         var options = new StripeBillingOptions
         {
             SkipTrial = request.SkipTrial,
-            TrialDays = request.TrialDays ?? DefaultTrialDays,
+            TrialDays = request.TrialDays ?? StripeBillingOptions.DefaultTrialDays,
             Profile = StripeBillingProfile.Parse(request.Card, request.Address),
         };
 
@@ -86,7 +74,16 @@ public class OrganizationStripeBillingScene(
                 "bills once. Seed a fresh organization, or link your own gateway IDs through SingleOrganizationScene.");
         }
 
-        await billingService.CreateSubscriptionAsync(organization, options);
+        try
+        {
+            await billingService.CreateSubscriptionAsync(organization, options);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // SceneExecutor reports one level down (ex.InnerException ?? ex). Wrapping once more makes that level
+            // the billing service's exception, whose message names the Stripe customer to cancel.
+            throw new InvalidOperationException(ex.Message, ex);
+        }
 
         return new SceneResult<OrganizationStripeBillingSceneResult>(
             result: new OrganizationStripeBillingSceneResult
