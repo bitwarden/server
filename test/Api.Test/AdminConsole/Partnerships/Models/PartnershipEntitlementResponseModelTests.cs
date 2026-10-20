@@ -93,6 +93,49 @@ public class PartnershipEntitlementResponseModelTests
         Assert.False(response.TryGetProperty("activationUrlExpiresAt", out _));
     }
 
+    [Fact]
+    public void Serialize_StaleTransitionResult_IncludesOutcomeWithoutActivationLink()
+    {
+        var entitlement = CreateCanceledEntitlement();
+        var result = new PartnershipEntitlementTransitionResult(entitlement, Applied: false,
+            PartnershipEntitlementAppliedReasons.StaleTransition, entitlement.LastAppliedEffectiveDate);
+
+        var response = Serialize(new PartnershipEntitlementResponseModel(result));
+
+        Assert.Equal("canceled", response.GetProperty("state").GetString());
+        Assert.False(response.GetProperty("applied").GetBoolean());
+        Assert.Equal("stale_transition", response.GetProperty("appliedReason").GetString());
+        Assert.Equal(entitlement.LastAppliedEffectiveDate, response.GetProperty("lastAppliedAt").GetDateTime());
+        Assert.False(response.TryGetProperty("activationUrl", out _));
+        Assert.False(response.TryGetProperty("activationUrlExpiresAt", out _));
+    }
+
+    [Fact]
+    public void Serialize_AppliedTransitionResult_OmitsAppliedReason()
+    {
+        var entitlement = CreateCanceledEntitlement();
+        var result = new PartnershipEntitlementTransitionResult(entitlement, Applied: true, null,
+            entitlement.LastAppliedEffectiveDate);
+
+        var response = Serialize(new PartnershipEntitlementResponseModel(result));
+
+        Assert.True(response.GetProperty("applied").GetBoolean());
+        Assert.False(response.TryGetProperty("appliedReason", out _));
+    }
+
+    [Fact]
+    public void Serialize_TransitionResult_NeverIncludesTheUserId()
+    {
+        var entitlement = CreateCanceledEntitlement();
+        var result = new PartnershipEntitlementTransitionResult(entitlement, Applied: true, null,
+            entitlement.LastAppliedEffectiveDate);
+
+        var json = JsonSerializer.Serialize(new PartnershipEntitlementResponseModel(result), _apiOptions);
+
+        Assert.DoesNotContain("userId", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(entitlement.UserId!.Value.ToString(), json, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static JsonElement Serialize(PartnershipEntitlementResponseModel model) =>
         JsonDocument.Parse(JsonSerializer.Serialize(model, _apiOptions)).RootElement;
 
