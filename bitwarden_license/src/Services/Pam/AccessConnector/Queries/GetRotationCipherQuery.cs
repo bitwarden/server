@@ -1,10 +1,10 @@
 ﻿using Bit.Core.Exceptions;
-using Bit.Core.Vault.Entities;
+using Bit.Core.Pam.AccessConnector.Queries;
+using Bit.Core.Pam.Services;
 using Bit.Core.Vault.Repositories;
 using Bit.Pam;
 using Bit.Pam.Enums;
 using Bit.Pam.Repositories;
-using Bit.Services.Pam.AccessConnector.Queries.Interfaces;
 
 namespace Bit.Services.Pam.AccessConnector.Queries;
 
@@ -14,21 +14,24 @@ public class GetRotationCipherQuery : IGetRotationCipherQuery
     private readonly IPamRotationJobRepository _jobRepository;
     private readonly IPamRotationConfigRepository _configRepository;
     private readonly ICipherRepository _cipherRepository;
+    private readonly ICipherLeaseGate _cipherLeaseGate;
     private readonly TimeProvider _timeProvider;
 
     public GetRotationCipherQuery(
         IPamRotationJobRepository jobRepository,
         IPamRotationConfigRepository configRepository,
         ICipherRepository cipherRepository,
+        ICipherLeaseGate cipherLeaseGate,
         TimeProvider timeProvider)
     {
         _jobRepository = jobRepository;
         _configRepository = configRepository;
         _cipherRepository = cipherRepository;
+        _cipherLeaseGate = cipherLeaseGate;
         _timeProvider = timeProvider;
     }
 
-    public async Task<Cipher> GetAsync(Guid accessConnectorId, Guid attemptId)
+    public async Task<RotationCipherAccess> GetAsync(Guid accessConnectorId, Guid attemptId)
     {
         var attempt = await _jobRepository.GetAttemptByIdAsync(attemptId);
         if (attempt is null || attempt.ClaimedByAccessConnectorId != accessConnectorId)
@@ -63,6 +66,6 @@ public class GetRotationCipherQuery : IGetRotationCipherQuery
             throw new NotFoundException();
         }
 
-        return cipher;
+        return new RotationCipherAccess(cipher, _cipherLeaseGate.AuthorizeAccessConnectorRotationRead(cipher));
     }
 }
