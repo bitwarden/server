@@ -1,5 +1,6 @@
 ﻿using Bit.Api.Utilities;
 using Bit.Api.AdminConsole.Partnerships;
+using Bit.Api.AdminConsole.Partnerships.Idempotency;
 using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Settings;
@@ -102,6 +103,17 @@ public class Startup
         // Caching
         services.AddMemoryCache();
         services.AddDistributedCache(globalSettings);
+        // Fail-safe and eager refresh would resurrect or rewrite idempotency entries, so both are off.
+        services.AddExtendedCache(PartnershipIdempotencyStore.CacheName, globalSettings,
+            new GlobalSettings.ExtendedCacheSettings
+            {
+                Duration = PartnershipIdempotencyStore.ResponseLifetime,
+                IsFailSafeEnabled = false,
+                EagerRefreshThreshold = null,
+                AllowBackgroundDistributedCacheOperations = false,
+                JitterMaxDuration = TimeSpan.Zero,
+            });
+        services.TryAddSingleton<PartnershipIdempotencyStore>();
 
         if (!globalSettings.SelfHosted)
         {
