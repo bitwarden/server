@@ -85,7 +85,7 @@ public class OrganizationsController(
         if (string.IsNullOrEmpty(organization.GatewaySubscriptionId))
         {
             return new OrganizationSubscriptionResponseModel(
-                organization, plan, occupiedPamSeats, PrivilegedControlsTrial.IsSalesInitiated(organization, plan));
+                organization, plan, occupiedPamSeats, PrivilegedControlsTrialHelpers.IsOnSalesInitiatedTrial(organization, plan));
         }
 
         var subscriptionInfo = await paymentService.GetSubscriptionAsync(organization);
@@ -104,7 +104,7 @@ public class OrganizationsController(
 
         return new OrganizationSubscriptionResponseModel(
             organization, subscriptionInfo, plan, hideSensitiveData, pendingAnnualUpgrade, occupiedPamSeats,
-            PrivilegedControlsTrial.IsSalesInitiated(organization, plan, subscriptionInfo));
+            PrivilegedControlsTrialHelpers.IsOnSalesInitiatedTrial(organization, plan, subscriptionInfo));
     }
 
     [HttpGet("{id:guid}/license")]

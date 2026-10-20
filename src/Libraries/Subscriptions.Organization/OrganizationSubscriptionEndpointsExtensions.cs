@@ -3,6 +3,7 @@ using Bit.Core.Auth.Identity;
 using Bit.ExceptionHandling;
 using Bit.Invoicing;
 using Bit.OrganizationAuthorization;
+using Bit.Subscriptions.Organization.Filters;
 using Bit.Subscriptions.Organization.Handlers;
 using Bit.Subscriptions.Organization.Models.Requests;
 using Bit.Subscriptions.Organization.Requirements;
@@ -30,6 +31,7 @@ public static class OrganizationSubscriptionEndpointsExtensions
         group.RequireAuthorization(Policies.Application);
         group.RequireAuthorization(new AuthorizeAttribute<OrganizationBillingRequirement>());
         group.WithBasicExceptionHandling();
+        group.AddEndpointFilter<RouteGroupBuilder, StripeCardErrorEndpointFilter>();
         group.RequireFeature(InvoicingFeatureFlags.PM36631_PreviewDrivenCart);
 
         // Previews are per-organization billing data; keep them out of any shared or browser cache.

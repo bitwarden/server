@@ -1,19 +1,22 @@
 ﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Helpers;
+using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Subscriptions.Organization.Commands;
 using Bit.Subscriptions.Organization.Models.Requests;
-using Stripe;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Subscriptions.Organization.Handlers;
 
 internal sealed class PurchasePrivilegedControlsHandler(
     IOrganizationRepository organizationRepository,
     IPricingClient pricingClient,
-    IStripePaymentService paymentService,
+    IStripeAdapter stripeAdapter,
+    IHasPaymentMethodQuery hasPaymentMethodQuery,
+    ILogger<PurchasePrivilegedControlsHandler> logger,
     IAddPrivilegedControlsToExistingSubscriptionCommand addPrivilegedControlsCommand)
 {
     public async Task HandleAsync(Guid organizationId, PurchasePrivilegedControlsRequest request)
@@ -23,16 +26,14 @@ internal sealed class PurchasePrivilegedControlsHandler(
 
         var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
-        // The trial check runs first because a sales-initiated trial organization may have no Stripe subscription,
-        // and the checks below would otherwise hide the representative message. The subscription only changes the
-        // trial rule's outcome when the plan supports Privileged Controls and Privileged Controls is on.
-        var subscriptionInfo =
+        // Checked first so a trial organization without a subscription gets this message, not the checks below.
+        var subscription =
             plan.SupportsPrivilegedControls && organization.UsePam &&
             !string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId)
-                ? await paymentService.GetSubscriptionAsync(organization)
+                ? await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(stripeAdapter, logger, organization)
                 : null;
 
-        if (PrivilegedControlsTrial.IsSalesInitiated(organization, plan, subscriptionInfo))
+        if (PrivilegedControlsTrialHelpers.IsOnSalesInitiatedTrial(organization, plan, subscription))
         {
             throw new BadRequestException(
                 "Work with your customer service representative to purchase Privileged Controls.");
@@ -43,9 +44,10 @@ internal sealed class PurchasePrivilegedControlsHandler(
             throw new BadRequestException("Privileged Controls is only available on Enterprise organizations.");
         }
 
-        if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
+        if (!await hasPaymentMethodQuery.Run(organization))
         {
-            throw new BadRequestException("No payment method found.");
+            throw new BadRequestException(
+                "Add a payment method to your organization before purchasing Privileged Controls.");
         }
 
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
@@ -53,13 +55,6 @@ internal sealed class PurchasePrivilegedControlsHandler(
             throw new BadRequestException("No subscription found.");
         }
 
-        try
-        {
-            await addPrivilegedControlsCommand.Run(organization, request.Seats, request.MaxAutoscaleSeats);
-        }
-        catch (StripeException stripeException) when (stripeException.StripeError?.Type == "card_error")
-        {
-            throw new BadRequestException(stripeException.StripeError.Message);
-        }
+        await addPrivilegedControlsCommand.Run(organization, request.Seats, request.MaxAutoscaleSeats);
     }
 }

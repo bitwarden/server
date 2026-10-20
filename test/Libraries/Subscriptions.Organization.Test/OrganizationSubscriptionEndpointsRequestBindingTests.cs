@@ -1,8 +1,11 @@
 ﻿using System.Net;
 using System.Text;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Invoicing.InvoicePreviews.Models;
 using Bit.Subscriptions.Organization.Commands;
@@ -14,6 +17,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using Stripe;
 using Xunit;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
 using PlanFeatures = Bit.Core.Models.StaticStore.Plan;
@@ -113,6 +117,24 @@ public class OrganizationSubscriptionEndpointsRequestBindingTests
         Assert.False(command.WasCalled);
     }
 
+    [Fact]
+    public async Task PurchasePrivilegedControls_CardError_ReturnsBadRequestWithStripeMessage()
+    {
+        var command = new FakeAddPrivilegedControlsCommand
+        {
+            ExceptionToThrow = new StripeException
+            {
+                StripeError = new StripeError { Type = StripeConstants.ErrorTypes.CardError, Message = "Your card was declined." }
+            }
+        };
+
+        var context = await InvokePurchaseAsync(command, """{"seats":10}""");
+
+        context.Response.Body.Position = 0;
+        Assert.Equal((int)HttpStatusCode.BadRequest, context.Response.StatusCode);
+        Assert.Contains("Your card was declined.", await new StreamReader(context.Response.Body).ReadToEndAsync());
+    }
+
     private async Task<HttpContext> InvokePurchaseAsync(FakeAddPrivilegedControlsCommand command, string json)
     {
         var organizationId = Guid.NewGuid();
@@ -129,7 +151,10 @@ public class OrganizationSubscriptionEndpointsRequestBindingTests
         var builder = WebApplication.CreateBuilder();
         builder.Services.AddSingleton(_organizationRepository);
         builder.Services.AddSingleton(pricingClient);
-        builder.Services.AddSingleton(Substitute.For<IStripePaymentService>());
+        builder.Services.AddSingleton(Substitute.For<IStripeAdapter>());
+        var hasPaymentMethodQuery = Substitute.For<IHasPaymentMethodQuery>();
+        hasPaymentMethodQuery.Run(Arg.Any<ISubscriber>()).Returns(true);
+        builder.Services.AddSingleton(hasPaymentMethodQuery);
         builder.Services.AddSingleton<IAddPrivilegedControlsToExistingSubscriptionCommand>(command);
         builder.Services.AddScoped<PurchasePrivilegedControlsHandler>();
         var app = builder.Build();
@@ -257,13 +282,14 @@ public class OrganizationSubscriptionEndpointsRequestBindingTests
         public bool WasCalled { get; private set; }
         public int ReceivedSeats { get; private set; }
         public int? ReceivedMaxAutoscaleSeats { get; private set; }
+        public Exception? ExceptionToThrow { get; init; }
 
         public Task Run(OrganizationEntity organization, int seats, int? maxAutoscaleSeats)
         {
             WasCalled = true;
             ReceivedSeats = seats;
             ReceivedMaxAutoscaleSeats = maxAutoscaleSeats;
-            return Task.CompletedTask;
+            return ExceptionToThrow is null ? Task.CompletedTask : Task.FromException(ExceptionToThrow);
         }
     }
 

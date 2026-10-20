@@ -1,14 +1,16 @@
-﻿using Bit.Core.Billing.Enums;
+﻿using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
-using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Subscriptions.Organization.Commands;
 using Bit.Subscriptions.Organization.Handlers;
 using Bit.Subscriptions.Organization.Models.Requests;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Stripe;
 using Xunit;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
@@ -23,12 +25,19 @@ public class PurchasePrivilegedControlsHandlerTests
 
     private readonly IOrganizationRepository _organizationRepository = Substitute.For<IOrganizationRepository>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
-    private readonly IStripePaymentService _paymentService = Substitute.For<IStripePaymentService>();
+    private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
+    private readonly IHasPaymentMethodQuery _hasPaymentMethodQuery = Substitute.For<IHasPaymentMethodQuery>();
     private readonly FakeAddPrivilegedControlsCommand _command = new();
     private readonly PurchasePrivilegedControlsHandler _sut;
 
     public PurchasePrivilegedControlsHandlerTests() =>
-        _sut = new PurchasePrivilegedControlsHandler(_organizationRepository, _pricingClient, _paymentService, _command);
+        _sut = new PurchasePrivilegedControlsHandler(
+            _organizationRepository,
+            _pricingClient,
+            _stripeAdapter,
+            _hasPaymentMethodQuery,
+            NullLogger<PurchasePrivilegedControlsHandler>.Instance,
+            _command);
 
     [Fact]
     public async Task HandleAsync_OrganizationMissing_ThrowsNotFound()
@@ -43,7 +52,7 @@ public class PurchasePrivilegedControlsHandlerTests
     public async Task HandleAsync_SalesInitiatedTrial_ThrowsBadRequestWithRepresentativeMessage()
     {
         var organization = Arrange(CreateOrganization(usePam: true));
-        _paymentService.GetSubscriptionAsync(organization).Returns(SubscriptionInfoWithPamLine(false));
+        ArrangeSubscription(StripeConstants.PurchasableReferences.PasswordManagerSeat);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.HandleAsync(organization.Id, Request()));
 
@@ -59,7 +68,30 @@ public class PurchasePrivilegedControlsHandlerTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.HandleAsync(organization.Id, Request()));
 
         Assert.Equal(_representativeMessage, exception.Message);
-        await _paymentService.DidNotReceive().GetSubscriptionAsync(Arg.Any<ISubscriber>());
+        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_SalesInitiatedTrialWithSubscriptionMissingInStripe_ThrowsRepresentativeMessage()
+    {
+        var organization = Arrange(CreateOrganization(usePam: true));
+        _stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId!, Arg.Any<SubscriptionGetOptions>())
+            .Throws(new StripeException { StripeError = new StripeError { Code = StripeConstants.ErrorCodes.ResourceMissing } });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.HandleAsync(organization.Id, Request()));
+
+        Assert.Equal(_representativeMessage, exception.Message);
+    }
+
+    [Fact]
+    public async Task HandleAsync_SubscriptionHasPrivilegedControlsLine_IsNotTreatedAsSalesInitiatedTrial()
+    {
+        var organization = Arrange(CreateOrganization(usePam: true));
+        ArrangeSubscription(StripeConstants.PurchasableReferences.PrivilegedControlsSeat);
+
+        await _sut.HandleAsync(organization.Id, Request());
+
+        Assert.True(_command.WasCalled);
     }
 
     [Fact]
@@ -68,20 +100,22 @@ public class PurchasePrivilegedControlsHandlerTests
         var organization = CreateOrganization(planType: PlanType.TeamsAnnually);
         Arrange(organization, new TestPlan(ProductTierType.Teams, supportsPrivilegedControls: false));
 
-        await Assert.ThrowsAsync<BadRequestException>(() => _sut.HandleAsync(organization.Id, Request()));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.HandleAsync(organization.Id, Request()));
 
+        Assert.Equal("Privileged Controls is only available on Enterprise organizations.", exception.Message);
         Assert.False(_command.WasCalled);
-        await _paymentService.DidNotReceive().GetSubscriptionAsync(Arg.Any<ISubscriber>());
+        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
     }
 
     [Fact]
-    public async Task HandleAsync_NoGatewayCustomerId_ThrowsBadRequestNoPaymentMethodFound()
+    public async Task HandleAsync_NoPaymentMethod_ThrowsBadRequestAskingForOne()
     {
-        var organization = Arrange(CreateOrganization(gatewayCustomerId: null));
+        var organization = Arrange(CreateOrganization());
+        _hasPaymentMethodQuery.Run(organization).Returns(false);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.HandleAsync(organization.Id, Request()));
 
-        Assert.Equal("No payment method found.", exception.Message);
+        Assert.Equal("Add a payment method to your organization before purchasing Privileged Controls.", exception.Message);
         Assert.False(_command.WasCalled);
     }
 
@@ -115,7 +149,7 @@ public class PurchasePrivilegedControlsHandlerTests
 
         await _sut.HandleAsync(organization.Id, Request());
 
-        await _paymentService.DidNotReceive().GetSubscriptionAsync(Arg.Any<ISubscriber>());
+        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
     }
 
     [Fact]
@@ -130,60 +164,51 @@ public class PurchasePrivilegedControlsHandlerTests
         Assert.Same(thrown, exception);
     }
 
-    [Fact]
-    public async Task HandleAsync_CardError_ThrowsBadRequestWithStripeMessage()
-    {
-        var organization = Arrange(CreateOrganization());
-        _command.ExceptionToThrow = new StripeException
-        {
-            StripeError = new StripeError { Type = "card_error", Message = "Your card was declined." }
-        };
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.HandleAsync(organization.Id, Request()));
-
-        Assert.Equal("Your card was declined.", exception.Message);
-    }
-
-    [Fact]
-    public async Task HandleAsync_NonCardStripeError_PropagatesStripeException()
-    {
-        var organization = Arrange(CreateOrganization());
-        var thrown = new StripeException { StripeError = new StripeError { Type = "api_error", Message = "Stripe is down." } };
-        _command.ExceptionToThrow = thrown;
-
-        var exception = await Assert.ThrowsAsync<StripeException>(() => _sut.HandleAsync(organization.Id, Request()));
-
-        Assert.Same(thrown, exception);
-    }
-
     private OrganizationEntity Arrange(OrganizationEntity organization, PlanFeatures? plan = null)
     {
         _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
         _pricingClient.GetPlanOrThrow(organization.PlanType)
             .Returns(plan ?? new TestPlan(ProductTierType.Enterprise, supportsPrivilegedControls: true));
+        _hasPaymentMethodQuery.Run(organization).Returns(true);
         return organization;
     }
+
+    private void ArrangeSubscription(string purchasableReference) =>
+        _stripeAdapter.GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>())
+            .Returns(new Subscription
+            {
+                Items = new StripeList<SubscriptionItem>
+                {
+                    Data =
+                    [
+                        new SubscriptionItem
+                        {
+                            Price = new Price
+                            {
+                                Metadata = new Dictionary<string, string>
+                                {
+                                    [StripeConstants.MetadataKeys.PurchasableReference] = purchasableReference
+                                }
+                            }
+                        }
+                    ]
+                }
+            });
 
     private static OrganizationEntity CreateOrganization(
         PlanType planType = PlanType.EnterpriseAnnually,
         bool usePam = false,
-        string? gatewayCustomerId = "cus_123",
         string? gatewaySubscriptionId = "sub_123") => new()
         {
             Id = Guid.NewGuid(),
             PlanType = planType,
             UsePam = usePam,
-            GatewayCustomerId = gatewayCustomerId,
+            GatewayCustomerId = "cus_123",
             GatewaySubscriptionId = gatewaySubscriptionId
         };
 
     private static PurchasePrivilegedControlsRequest Request(int seats = 10, int? maxAutoscaleSeats = null) =>
         new() { Seats = seats, MaxAutoscaleSeats = maxAutoscaleSeats };
-
-    private static SubscriptionInfo SubscriptionInfoWithPamLine(bool hasPamLine) => new()
-    {
-        Subscription = new SubscriptionInfo.BillingSubscription(null!) { HasPrivilegedControlsSeats = hasPamLine }
-    };
 
     private sealed record TestPlan : PlanFeatures
     {

@@ -9,8 +9,9 @@ See [LIBRARY.md](../LIBRARY.md) for the shape all libraries under `src/Libraries
 ## Public surface
 
 `AddOrganizationSubscriptions()` registers the group's services — a scoped handler class per endpoint
-(`GetOrganizationSubscriptionPreviewHandler`, `PreviewOrganizationPlanChangeHandler`, `PreviewOrganizationRestartHandler`, `PreviewOrganizationSubscriptionPurchaseHandler`), each depending
-only on `IOrganizationRepository` (or `IUserService` for purchases) and the query or command it runs; the plan-change command
+(`GetOrganizationSubscriptionPreviewHandler`, `PreviewOrganizationPlanChangeHandler`, `PreviewOrganizationRestartHandler`, `PreviewOrganizationSubscriptionPurchaseHandler`, `PurchasePrivilegedControlsHandler`), each depending
+on `IOrganizationRepository` (or `IUserService` for purchase previews) and the query or command it runs (`PurchasePrivilegedControlsHandler` also depends on `IPricingClient`,
+`IStripeAdapter`, and `IHasPaymentMethodQuery` for its gating checks); the plan-change command
 (`IPreviewOrganizationPlanChangeCommand`), the restart preview command (`IPreviewOrganizationRestartCommand`), the first Privileged Controls purchase command
 (`IAddPrivilegedControlsToExistingSubscriptionCommand`), the Privileged Controls seat change command
 (`IChangePrivilegedControlsSeatsCommand`), the Privileged Controls autoscale command
@@ -30,8 +31,13 @@ endpoints to an empty group; the host owns the route prefix and mounts it at
 `/organizations/{organizationId:guid}/billing/subscription`. The chain applies the
 `OrganizationSubscriptions` tag, the `internal` group name (keeps these endpoints out of the public
 API spec), the authenticated `Application` policy, the `OrganizationBillingRequirement`, basic
-exception handling (from `Bit.ExceptionHandling`), the `PM36631_PreviewDrivenCart` feature gate, and a
-`Cache-Control: no-store` filter (previews are per-organization billing data, never cached).
+exception handling (from `Bit.ExceptionHandling`), `StripeCardErrorEndpointFilter` (turns a declined
+card into a 400 carrying Stripe's message; it sits inside the basic exception handling, which does not
+handle Stripe errors and would answer a declined card with a 500, so every charging endpoint added to
+the group gets the mapping), the `PM36631_PreviewDrivenCart` feature gate, and a
+`Cache-Control: no-store` filter (previews are per-organization billing data, never cached). The
+Privileged Controls purchase endpoint adds the `PM39883_Pam_Billing_Support` feature gate on top of the
+group's, so both flags must be on.
 
 `MapOrganizationSubscriptionPurchaseEndpoints()` attaches a second group, which the host mounts at
 `/organizations/billing/subscription`. Its chain applies the `OrganizationSubscriptions` tag, the
@@ -50,12 +56,12 @@ The organization-scoped group authorizes **every** endpoint — the `Application
 library, enforced via `AuthorizeAttribute<OrganizationBillingRequirement>`. It admits organization
 Owners and confirmed provider users managing the organization; Admin and Custom are excluded.
 
-Individual endpoints may narrow this baseline further. The `preview` and `plan-change/preview` endpoints additionally require
+Individual endpoints may narrow this baseline further. The `preview`, `plan-change/preview`, and `privileged-controls/purchase` endpoints additionally require
 `StandaloneOrganizationOwnerRequirement`, so they admit **only** an Owner of a standalone organization:
 an owner of a provider-managed (MSP, reseller, or business unit) organization, and a confirmed provider user, are both
 denied. This is deliberately stricter than legacy `ICurrentContext.EditSubscription`, which still admits
 a provider user for a provider-managed organization; provider-managed billing is administered through the
-provider surface, so none of the organization's users reach those previews here.
+provider surface, so none of the organization's users reach these endpoints here.
 
 `restart/preview` does not narrow the baseline. It previews the existing restart endpoint
 (`POST organizations/{id}/billing/vnext/subscription/restart`), whose `ManageOrganizationBillingRequirement` admits the same
@@ -69,9 +75,11 @@ Owners and confirmed provider users, so anyone who can restart can see what rest
 | `POST .../plan-change/preview` | `PreviewOrganizationPlanChangeHandler` | `InvoicePreview` |
 | `POST .../restart/preview` | `PreviewOrganizationRestartHandler` | `InvoicePreview` |
 | `POST /organizations/billing/subscription/purchase/preview` | `PreviewOrganizationSubscriptionPurchaseHandler` | `InvoicePreview` |
+| `POST .../privileged-controls/purchase` | `PurchasePrivilegedControlsHandler` | `204 No Content` |
 
 GET endpoints are named `Get…` and POST previews are named `Preview…`, and the same prefix carries
-down through the handler, query, and request.
+down through the handler, query, and request. The purchase endpoint changes the subscription, so it is
+named `Purchase…`.
 
 Each handler resolves the organization via `IOrganizationRepository` (404 if missing).
 `GetOrganizationSubscriptionPreviewHandler` runs `Bit.Invoicing`'s `IGetSubscriptionPreviewQuery` and
@@ -154,10 +162,29 @@ A missing subscription, or one in any status other than `canceled` or `incomplet
 location or tax id Stripe rejects. A plan the pricing service doesn't have, or a canceled subscription with
 no Password Manager line item, is a **409**. A missing organization is a **404**.
 
+### Privileged Controls purchase
+
+Its request is a JSON body: `seats` (required, so an omitted value fails binding with a 400 rather than
+defaulting to zero) and an optional `maxAutoscaleSeats`. `PurchasePrivilegedControlsHandler` gates the call
+to `IAddPrivilegedControlsToExistingSubscriptionCommand`, which does the purchase. The handler checks, in
+order: the organization exists (404); it is not on a sales-initiated trial (400, sent to a customer service
+representative); its plan is an Enterprise plan that supports Privileged Controls (400); it has a payment
+method, via `IHasPaymentMethodQuery` (400); and it has a subscription (400). The trial check runs first
+because a trial organization may have no Stripe subscription, which the later checks would otherwise
+report. Trial detection is `PrivilegedControlsTrialHelpers.IsOnSalesInitiatedTrial`, shared with the
+subscription response; the handler reads the subscription through `IStripeAdapter` only when the plan
+supports Privileged Controls and the organization already has the capability turned on.
+
+The command rejects a seat count below the minimum, a seat count below one, and an autoscale limit
+below the seat count, each as a `BadRequestException` that passes through the handler unchanged. A
+Stripe card error from the charge is mapped by the group's `StripeCardErrorEndpointFilter`, not by the
+handler. No upper seat cap against Password Manager seats is enforced.
+
 ## Stripe boundary
 
 This library **reads** Stripe data directly through `IStripeAdapter` (fetching the organization's
-subscription and its customer's tax ids while building a plan-change preview). That is allowed for now;
+subscription and its customer's tax ids while building a plan-change preview, and the subscription's
+seat lines for the Privileged Controls purchase's trial check). That is allowed for now;
 the ideal end state is that these Stripe calls happen in a lower-level library instead. Until that
 library exists, customer-specific read logic lives here. The final preview call — turning the composed
 `InvoiceCreatePreviewOptions` into an `InvoicePreview` — still goes through `Bit.Invoicing`'s
@@ -175,9 +202,11 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | `CurrentContextOrganization` (`Bit.Core.Context`), `OrganizationUserType` (`Bit.Core.Enums`) | Evaluating the org-billing requirement (Owner vs. confirmed provider user) |
 | `IProviderOrganizationRepository` (`Bit.Core.AdminConsole.Repositories`) | The provider-managed-organization check behind `StandaloneOrganizationOwnerRequirement` |
 | `IUserService`, `User` (`Bit.Core.Services`, `Bit.Core.Entities`) | Resolving the purchase preview's caller |
-| `IStripeAdapter` (`Bit.Core.Billing.Services`) | Reading the organization's subscription (and its customer's tax ids) for the plan-change preview |
+| `IStripeAdapter` (`Bit.Core.Billing.Services`), `OrganizationSubscriptionHelpers` (`Bit.Core.Billing.Organizations.Helpers`) | Reading the organization's subscription (and its customer's tax ids) for the plan-change preview, and the subscription's seat lines for the Privileged Controls purchase's trial check |
 | `ISubscriberService` (`Bit.Core.Billing.Services`) | Reading the organization's canceled subscription for the restart preview |
 | `IGetOrganizationRestartQuery`, `OrganizationRestart` (`Bit.Core.Billing.Subscriptions.Queries`, `Bit.Core.Billing.Subscriptions.Models`) | Resolving the restart preview's plan and line items with the same query restart uses |
+| `IHasPaymentMethodQuery` (`Bit.Core.Billing.Payment.Queries`), `PrivilegedControlsTrialHelpers` (`Bit.Core.Billing.Organizations.Helpers`) | Gating the Privileged Controls purchase on a payment method and on the sales-initiated trial rule the subscription response also uses |
+| `FeatureFlagKeys` (`Bit.Core`) | The `PM39883_Pam_Billing_Support` gate on the Privileged Controls purchase endpoint |
 | `IPricingClient` (`Bit.Core.Billing.Pricing`), `Plan` (`Bit.Core.Models.StaticStore`) | Resolving the current and target plans' Stripe price ids and seat/flat shape; reading a plan's Privileged Controls support and default seat minimum |
 | `OrganizationSubscriptionChangeSet` (`Bit.Core.Billing.Organizations.Models`) | Composing the plan change the same way the real upgrade does, then translating it into preview line items; building the Privileged Controls seat change |
 | `IUpdateOrganizationSubscriptionCommand` (`Bit.Core.Billing.Organizations.Commands`), `BillingCommandResult` (`Bit.Core.Billing.Commands`) | Charging the first Privileged Controls seats, and surfacing a failed update's message to the client through `GetValueOrThrowHttpException` |
@@ -191,7 +220,7 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | `SponsoredPlans`, `PlanSponsorshipType` (`Bit.Core.Billing.Models`, `Bit.Core.Enums`) | The Families-for-Enterprise sponsored price |
 | `TaxID` (`Bit.Core.Billing.Payment.Models`) | The organization's on-file tax id and the mapped request tax id |
 | `PlanCadenceType`, `PlanType`, `ProductTierType` (`Bit.Core.Billing.Enums`), `StripeConstants.SubscriptionStatus` | Resolving the target plan, gating the previewable subscription statuses, and the restart preview's `canceled` check |
-| `StripeConstants` (`Bit.Core.Billing.Constants`) | `classic` billing mode, the `sm-standalone` coupon, `customer_tax_location_invalid`, `tax_id_invalid`, the `es_cif` and `eu_vat` tax ID types |
+| `StripeConstants` (`Bit.Core.Billing.Constants`) | `classic` billing mode, the `sm-standalone` coupon, `customer_tax_location_invalid`, `tax_id_invalid`, the `es_cif` and `eu_vat` tax ID types, the `card_error` error type |
 | `BadRequestException`, `ConflictException` (`Bit.Core.Exceptions`) | Rejected-request responses from the previews and the Privileged Controls purchase, via the group's exception handling |
 | `ICreateOrganizationSubscriptionCommand` (`Bit.Core.Billing.Organizations.Commands`), `OrganizationSubscriptionCreation` (`Bit.Core.Billing.Organizations.Models`) | The net-new-subscription purchase contract Core owns so the cloud sign-up command can inject it; this library implements it |
 | `CustomerSetup`, `SubscriptionSetup` (`Bit.Core.Billing.Models.Sales`), `TokenizedPaymentSource` (`Bit.Core.Billing.Models`), `TaxInformation` (`Bit.Core.Billing.Tax.Models`) | The customer payment/tax/coupon inputs for creating the subscription |
