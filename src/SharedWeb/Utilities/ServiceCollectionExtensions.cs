@@ -276,6 +276,12 @@ public static class ServiceCollectionExtensions
                 SalesAssistedRegistrationTokenable.DataProtectorPurpose,
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<SalesAssistedRegistrationTokenable>>>()));
+        services.TryAddSingleton<IDataProtectorTokenFactory<PartnershipActivationTokenable>>(
+            serviceProvider => new DataProtectorTokenFactory<PartnershipActivationTokenable>(
+                PartnershipActivationTokenable.ClearTextPrefix,
+                PartnershipActivationTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<PartnershipActivationTokenable>>>()));
     }
 
     public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
