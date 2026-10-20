@@ -1,5 +1,8 @@
-﻿using Bit.Admin.AdminConsole.Controllers;
+﻿using System.Reflection;
+using Bit.Admin.AdminConsole.Controllers;
 using Bit.Admin.AdminConsole.Models;
+using Bit.Admin.Enums;
+using Bit.Admin.Utilities;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Partnerships;
@@ -7,6 +10,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Partnerships;
 using Bit.Core.AdminConsole.OrganizationFeatures.Partnerships.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http;
@@ -252,5 +256,116 @@ public class OrganizationPartnershipsControllerTests
         Assert.IsType<ViewResult>(result);
         await sutProvider.GetDependency<ICreateOrganizationPartnershipCommand>()
             .DidNotReceiveWithAnyArgs().CreateAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Deactivate_Success_SetsInactiveAndRedirectsWithMessage(
+        Organization organization,
+        OrganizationPartnership partnership,
+        SutProvider<OrganizationPartnershipsController> sutProvider)
+    {
+        Arrange(sutProvider, organization);
+        var command = sutProvider.GetDependency<ISetOrganizationPartnershipStatusCommand>();
+        command.SetStatusAsync(organization.Id, PartnershipStatus.Inactive).Returns(partnership);
+
+        var result = await sutProvider.Sut.Deactivate(organization.Id);
+
+        await command.Received(1).SetStatusAsync(organization.Id, PartnershipStatus.Inactive);
+        AssertRedirectToOrganization(result, organization.Id);
+        Assert.Equal("Partnership deactivated.", sutProvider.Sut.TempData["Success"]);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Reactivate_Success_SetsActiveAndRedirectsWithMessage(
+        Organization organization,
+        OrganizationPartnership partnership,
+        SutProvider<OrganizationPartnershipsController> sutProvider)
+    {
+        Arrange(sutProvider, organization);
+        var command = sutProvider.GetDependency<ISetOrganizationPartnershipStatusCommand>();
+        command.SetStatusAsync(organization.Id, PartnershipStatus.Active).Returns(partnership);
+
+        var result = await sutProvider.Sut.Reactivate(organization.Id);
+
+        await command.Received(1).SetStatusAsync(organization.Id, PartnershipStatus.Active);
+        AssertRedirectToOrganization(result, organization.Id);
+        Assert.Equal("Partnership reactivated.", sutProvider.Sut.TempData["Success"]);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Deactivate_FeatureDisabled_ReturnsNotFoundWithoutCallingCommand(
+        Guid organizationId,
+        SutProvider<OrganizationPartnershipsController> sutProvider)
+    {
+        var result = await sutProvider.Sut.Deactivate(organizationId);
+
+        Assert.IsType<NotFoundResult>(result);
+        await sutProvider.GetDependency<ISetOrganizationPartnershipStatusCommand>()
+            .DidNotReceiveWithAnyArgs().SetStatusAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Reactivate_FeatureDisabled_ReturnsNotFoundWithoutCallingCommand(
+        Guid organizationId,
+        SutProvider<OrganizationPartnershipsController> sutProvider)
+    {
+        var result = await sutProvider.Sut.Reactivate(organizationId);
+
+        Assert.IsType<NotFoundResult>(result);
+        await sutProvider.GetDependency<ISetOrganizationPartnershipStatusCommand>()
+            .DidNotReceiveWithAnyArgs().SetStatusAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Deactivate_PartnershipNotFound_ReturnsNotFound(
+        Organization organization,
+        SutProvider<OrganizationPartnershipsController> sutProvider)
+    {
+        Arrange(sutProvider, organization);
+        sutProvider.GetDependency<ISetOrganizationPartnershipStatusCommand>()
+            .SetStatusAsync(organization.Id, PartnershipStatus.Inactive)
+            .Returns(new PartnershipNotFound());
+
+        var result = await sutProvider.Sut.Deactivate(organization.Id);
+
+        Assert.IsType<NotFoundResult>(result);
+        Assert.Null(sutProvider.Sut.TempData["Success"]);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Reactivate_PartnershipNotFound_ReturnsNotFound(
+        Organization organization,
+        SutProvider<OrganizationPartnershipsController> sutProvider)
+    {
+        Arrange(sutProvider, organization);
+        sutProvider.GetDependency<ISetOrganizationPartnershipStatusCommand>()
+            .SetStatusAsync(organization.Id, PartnershipStatus.Active)
+            .Returns(new PartnershipNotFound());
+
+        var result = await sutProvider.Sut.Reactivate(organization.Id);
+
+        Assert.IsType<NotFoundResult>(result);
+        Assert.Null(sutProvider.Sut.TempData["Success"]);
+    }
+
+    [Theory]
+    [InlineData(nameof(OrganizationPartnershipsController.Deactivate))]
+    [InlineData(nameof(OrganizationPartnershipsController.Reactivate))]
+    public void StatusAction_IsCloudOnlyAntiForgeryPostRequiringPlanEdit(string actionName)
+    {
+        var action = typeof(OrganizationPartnershipsController).GetMethod(actionName)!;
+
+        Assert.NotNull(action.GetCustomAttribute<HttpPostAttribute>());
+        Assert.NotNull(action.GetCustomAttribute<ValidateAntiForgeryTokenAttribute>());
+        Assert.Equal(Permission.Org_Plan_Edit, action.GetCustomAttribute<RequirePermissionAttribute>()!.Permission);
+        Assert.True(action.GetCustomAttribute<SelfHostedAttribute>()!.NotSelfHostedOnly);
+    }
+
+    private static void AssertRedirectToOrganization(IActionResult result, Guid organizationId)
+    {
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal("Organizations", redirect.ControllerName);
+        Assert.Equal("Edit", redirect.ActionName);
+        Assert.Equal(organizationId, redirect.RouteValues!["id"]);
     }
 }
