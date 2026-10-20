@@ -10,7 +10,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 
-namespace Bit.Commercial.Core.AdminConsole.Providers;
+namespace Bit.Commercial.Core.Providers;
 
 public class CreateProviderCommand : ICreateProviderCommand
 {

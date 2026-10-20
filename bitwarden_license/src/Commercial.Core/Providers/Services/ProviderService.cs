@@ -34,7 +34,7 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using Stripe;
 
-namespace Bit.Commercial.Core.AdminConsole.Services;
+namespace Bit.Commercial.Core.Providers.Services;
 
 public class ProviderService : IProviderService
 {
