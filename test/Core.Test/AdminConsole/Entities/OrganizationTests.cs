@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Test.Common.Helpers;
 using Xunit;
 
@@ -113,6 +114,25 @@ public class OrganizationTests
         };
 
         Assert.Null(organization.GetTwoFactorProviders());
+    }
+
+    [Fact]
+    public void GetOrganizationKeyId_SetColumn_ReturnsTheKeyId()
+    {
+        var organization = new Organization { OrganizationKeyId = "0123456789abcdef0123456789abcdef" };
+
+        Assert.Equal(KeyId.FromHexEncodedString("0123456789abcdef0123456789abcdef"),
+            organization.GetOrganizationKeyId());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void GetOrganizationKeyId_UnsetColumn_ReturnsNull(string? storedValue)
+    {
+        var organization = new Organization { OrganizationKeyId = storedValue };
+
+        Assert.Null(organization.GetOrganizationKeyId());
     }
 
     [Fact]

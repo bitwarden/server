@@ -6,6 +6,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Utilities;
 using Bitwarden.Server.Sdk.Features;
 
@@ -361,6 +362,9 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// lifecycle operations such as subscription cancellation and disabling for non-payment.
     /// </summary>
     public bool ExemptFromBillingAutomation { get; set; }
+
+    public KeyId? GetOrganizationKeyId() =>
+        KeyId.FromHexEncodedString(string.IsNullOrEmpty(OrganizationKeyId) ? null : OrganizationKeyId);
 
     /// <summary>
     /// Initializes <see cref="Id"/> to a new COMB GUID.

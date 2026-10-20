@@ -37,6 +37,7 @@ public class ProviderUserOrganizationDetails : IProfileOrganizationDetails
     public string? Identifier { get; set; }
     public string? PublicKey { get; set; }
     public string? PrivateKey { get; set; }
+    public string? OrganizationKeyId { get; set; }
     public Guid? ProviderId { get; set; }
     public Guid? ProviderUserId { get; set; }
     [JsonConverter(typeof(HtmlEncodingStringConverter))]

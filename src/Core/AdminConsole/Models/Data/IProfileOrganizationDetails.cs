@@ -37,6 +37,7 @@ public interface IProfileOrganizationDetails
     string? ResetPasswordKey { get; set; }
     string? PublicKey { get; set; }
     string? PrivateKey { get; set; }
+    string? OrganizationKeyId { get; set; }
     string? SsoExternalId { get; set; }
     string? Permissions { get; set; }
     Guid? ProviderId { get; set; }
