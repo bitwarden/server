@@ -595,8 +595,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
     }
 
     /// <summary>
-    /// Matches Organization_SetOrganizationKeyId. ExecuteUpdateAsync bypasses change tracking, so it writes the key id
-    /// even though tracked updates ignore it (see OrganizationEntityTypeConfiguration).
+    /// Matches Organization_UpdateOrganizationKeyIdIfNotPresent. ExecuteUpdateAsync bypasses change tracking, so it
+    /// writes the key id even though tracked updates ignore it (see OrganizationEntityTypeConfiguration).
     /// </summary>
     private static async Task<bool> SetOrganizationKeyIdAsync(DatabaseContext dbContext, Guid organizationId,
         KeyId organizationKeyId)

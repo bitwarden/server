@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[Organization_SetOrganizationKeyId]
+CREATE PROCEDURE [dbo].[Organization_UpdateOrganizationKeyIdIfNotPresent]
     @Id UNIQUEIDENTIFIER,
     @OrganizationKeyId VARCHAR(32),
     @RevisionDate DATETIME2(7)
@@ -19,4 +19,3 @@ BEGIN
 
     SELECT CAST(CASE WHEN @@ROWCOUNT > 0 THEN 1 ELSE 0 END AS BIT)
 END
-GO

@@ -390,7 +390,7 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         Guid organizationId, KeyId organizationKeyId)
     {
         return await connection.ExecuteScalarAsync<bool>(
-            "[dbo].[Organization_SetOrganizationKeyId]",
+            "[dbo].[Organization_UpdateOrganizationKeyIdIfNotPresent]",
             new { Id = organizationId, OrganizationKeyId = organizationKeyId.ToString(), RevisionDate = DateTime.UtcNow },
             transaction: transaction,
             commandType: CommandType.StoredProcedure);
