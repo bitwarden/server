@@ -82,6 +82,7 @@ public class OrganizationsController : Controller
     private readonly IOrganizationPlanMigrationCohortAssignmentRepository _organizationPlanMigrationCohortAssignmentRepository;
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IGetOrganizationTrialQuery _getOrganizationTrialQuery;
+    private readonly IOrganizationPartnershipRepository _organizationPartnershipRepository;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -115,7 +116,8 @@ public class OrganizationsController : Controller
         IOrganizationPlanMigrationCohortRepository organizationPlanMigrationCohortRepository,
         IOrganizationPlanMigrationCohortAssignmentRepository organizationPlanMigrationCohortAssignmentRepository,
         Bitwarden.Server.Sdk.Features.IFeatureService featureService,
-        IGetOrganizationTrialQuery getOrganizationTrialQuery)
+        IGetOrganizationTrialQuery getOrganizationTrialQuery,
+        IOrganizationPartnershipRepository organizationPartnershipRepository)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -149,6 +151,7 @@ public class OrganizationsController : Controller
         _organizationPlanMigrationCohortAssignmentRepository = organizationPlanMigrationCohortAssignmentRepository;
         _featureService = featureService;
         _getOrganizationTrialQuery = getOrganizationTrialQuery;
+        _organizationPartnershipRepository = organizationPartnershipRepository;
     }
 
     private bool CanManagePlanMigrationCohortAssignment() =>
@@ -214,8 +217,10 @@ public class OrganizationsController : Controller
         var smSeats = organization.UseSecretsManager
             ? await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
             : -1;
-        return View(new OrganizationViewModel(organization, provider, billingSyncConnection, users, ciphers, collections, groups, policies,
-            secrets, projects, serviceAccounts, smSeats));
+        var model = new OrganizationViewModel(organization, provider, billingSyncConnection, users, ciphers, collections, groups, policies,
+            secrets, projects, serviceAccounts, smSeats);
+        await SetPartnershipAsync(model);
+        return View(model);
     }
 
     [SelfHosted(NotSelfHostedOnly = true)]
@@ -353,6 +358,7 @@ public class OrganizationsController : Controller
             },
             Trial = await GetTrialAsync(organization),
         };
+        await SetPartnershipAsync(model);
 
         return View(model);
     }
@@ -379,6 +385,15 @@ public class OrganizationsController : Controller
                 "Failed to load the trial for organization {OrganizationId}.",
                 organization.Id);
             return null;
+        }
+    }
+
+    private async Task SetPartnershipAsync(OrganizationViewModel model)
+    {
+        model.PartnershipsEnabled = _featureService.IsEnabled(FeatureFlagKeys.PartnerSponsorships);
+        if (model.PartnershipsEnabled)
+        {
+            model.Partnership = await _organizationPartnershipRepository.GetByOrganizationIdAsync(model.Organization.Id);
         }
     }
 
