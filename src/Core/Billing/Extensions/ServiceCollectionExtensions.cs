@@ -53,6 +53,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IGetCohortAssignmentStateQuery, GetCohortAssignmentStateQuery>();
         services.AddTransient<IExportCohortAssignmentsQuery, ExportCohortAssignmentsQuery>();
         services.AddTransient<IRestartSubscriptionCommand, RestartSubscriptionCommand>();
+        services.AddTransient<IGetOrganizationRestartQuery, GetOrganizationRestartQuery>();
         services.AddTransient<IPreviewOrganizationTaxCommand, PreviewOrganizationTaxCommand>();
         services.AddTransient<IGetBitwardenSubscriptionQuery, GetBitwardenSubscriptionQuery>();
         services.AddTransient<IReinstateSubscriptionCommand, ReinstateSubscriptionCommand>();
