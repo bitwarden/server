@@ -1,10 +1,10 @@
 ﻿using Bit.Core.Exceptions;
+using Bit.Core.Pam.AccessConnector.Commands;
 using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
-using Bit.Services.Pam.AccessConnector.Commands.Interfaces;
 using Bit.Services.Pam.Services;
 
 namespace Bit.Services.Pam.AccessConnector.Commands;
@@ -42,6 +42,7 @@ public class SubmitCipherUpdateCommand : ISubmitCipherUpdateCommand
         Guid accessConnectorId,
         Guid attemptId,
         string cipherDataJson,
+        string? cipherKey,
         DateTime lastKnownRevisionDate)
     {
         // A cross-org attempt looks unknown, so this access connector's name stays out of another org's trail.
@@ -60,7 +61,7 @@ public class SubmitCipherUpdateCommand : ISubmitCipherUpdateCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var outcome = await _jobRepository.AcceptCipherWriteAsync(
-            attemptId, accessConnectorId, cipherDataJson, lastKnownRevisionDate, now);
+            attemptId, accessConnectorId, cipherDataJson, cipherKey, lastKnownRevisionDate, now);
 
         if (outcome != PamRotationCipherWriteOutcome.Accepted)
         {

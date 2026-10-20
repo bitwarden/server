@@ -219,6 +219,10 @@ public class CipherLeaseGate : ICipherLeaseGate
         return FullCipherAccess.ForCiphers(authorized);
     }
 
+    /// <remarks>Ignores leases: the executing attempt's capability, checked by the caller, is the authorization.</remarks>
+    public FullCipherAccess AuthorizeAccessConnectorRotationRead(Cipher cipher) =>
+        Enabled ? FullCipherAccess.ForCipher(cipher.Id) : FullCipherAccess.Unrestricted();
+
     public FullCipherAccess UnrestrictedForWholeVaultExport() => FullCipherAccess.Unrestricted();
 
     /// <summary>

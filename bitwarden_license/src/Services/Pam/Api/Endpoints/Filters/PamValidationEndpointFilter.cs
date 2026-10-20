@@ -8,11 +8,18 @@ namespace Bit.Services.Pam.Api.Endpoints.Filters;
 /// which <see cref="Validator.TryValidateObject(object, ValidationContext, ICollection{ValidationResult}, bool)"/>
 /// does not recurse into.
 /// </summary>
+/// <remarks>
+/// Request models are recognized by namespace, so this project needs no reference to the types. The vault cipher
+/// request namespaces are included because the access connector's rotation cipher routes, mapped by <c>Bit.Api</c>
+/// into the same group, accept the standard cipher request (<c>CipherRequestModel</c> and its nested models).
+/// </remarks>
 public class PamValidationEndpointFilter : IEndpointFilter
 {
     // Matched by prefix and suffix, so request models in nested features such as AccessConnector.Rotation are covered.
     private const string RequestModelNamespacePrefix = "Bit.Services.Pam.";
     private const string RequestModelNamespaceSuffix = ".Api.Models.Request";
+    // The standard cipher request and the nested models it carries (CipherLoginModel, CipherFieldModel, ...).
+    private const string VaultRequestModelNamespace = "Bit.Api.Vault.Models";
 
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
@@ -82,6 +89,8 @@ public class PamValidationEndpointFilter : IEndpointFilter
     private static bool IsRequestModel(object? value) =>
         value is not null
         && value.GetType().Namespace is { } ns
-        && ns.StartsWith(RequestModelNamespacePrefix, StringComparison.Ordinal)
-        && ns.EndsWith(RequestModelNamespaceSuffix, StringComparison.Ordinal);
+        && ((ns.StartsWith(RequestModelNamespacePrefix, StringComparison.Ordinal)
+                && ns.EndsWith(RequestModelNamespaceSuffix, StringComparison.Ordinal))
+            || ns == VaultRequestModelNamespace
+            || ns == VaultRequestModelNamespace + ".Request");
 }

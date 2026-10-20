@@ -139,13 +139,16 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
     }
 
     public async Task<PamRotationCipherWriteOutcome> AcceptCipherWriteAsync(Guid attemptId, Guid accessConnectorId, string cipherData,
-        DateTime lastKnownRevisionDate, DateTime now)
+        string? cipherKey, DateTime lastKnownRevisionDate, DateTime now)
     {
         var parameters = new DynamicParameters(new
         {
             AttemptId = attemptId,
             AccessConnectorId = accessConnectorId,
             CipherData = cipherData,
+            // The key travels with the data it encrypts; NULL is a real value (no item key), hence the flag.
+            UpdateCipherKey = true,
+            CipherKey = cipherKey,
         });
         // DATETIME2(7) rather than Dapper's default DATETIME, which rounds the cipher's new revision date to about 3ms
         // and can't hold an out-of-range last-known date, which should read as a mismatch.

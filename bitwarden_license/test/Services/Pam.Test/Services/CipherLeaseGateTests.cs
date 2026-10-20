@@ -567,6 +567,35 @@ public class CipherLeaseGateTests
     }
 
     [Fact]
+    public void AuthorizeAccessConnectorRotationRead_FlagOn_AuthorizesOnlyThatCipherWithoutQuerying()
+    {
+        var (sutProvider, _, cipherId) = Setup();
+
+        var access = sutProvider.Sut.AuthorizeAccessConnectorRotationRead(
+            new Cipher { Id = cipherId, OrganizationId = _organizationId });
+
+        Assert.True(access.Authorizes(cipherId));
+        Assert.False(access.Authorizes(Guid.NewGuid()));
+        // The attempt capability is the authorization, so no gating or lease is consulted.
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .DidNotReceiveWithAnyArgs().ResolveAsync(default, default, default!);
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .DidNotReceiveWithAnyArgs().GetActiveByRequesterIdCipherIdAsync(default, default, default);
+    }
+
+    [Fact]
+    public void AuthorizeAccessConnectorRotationRead_FlagOff_Unrestricted()
+    {
+        var (sutProvider, _, cipherId) = Setup(enabled: false);
+
+        var access = sutProvider.Sut.AuthorizeAccessConnectorRotationRead(
+            new Cipher { Id = cipherId, OrganizationId = _organizationId });
+
+        Assert.True(access.Authorizes(cipherId));
+        Assert.True(access.Authorizes(Guid.NewGuid()));
+    }
+
+    [Fact]
     public void UnrestrictedForWholeVaultExport_AuthorizesAnyCipher()
     {
         var (sutProvider, _, _) = Setup();

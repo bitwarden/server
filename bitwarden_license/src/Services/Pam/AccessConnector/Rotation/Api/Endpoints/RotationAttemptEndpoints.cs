@@ -3,32 +3,15 @@ using Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Request;
 
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints;
 
-/// <summary>The connector-facing <c>access-connectors/rotation/attempts</c> resource.</summary>
+/// <summary>
+/// The connector-facing <c>access-connectors/rotation/attempts</c> resource. The <c>cipher</c> routes are mapped by
+/// <c>Bit.Api</c> into the same group, since they speak its cipher wire contract.
+/// </summary>
 internal static class RotationAttemptEndpoints
 {
     public static RouteGroupBuilder MapRotationAttemptEndpoints(this RouteGroupBuilder group)
     {
         group.WithTags("PamAccessConnectorRotationAttempts");
-
-        group.MapGet("{id:guid}/cipher", (Guid id, RotationAttemptEndpointsHandler handler) => handler.GetCipher(id))
-            .WithName("Pam_AccessConnectors_Rotation_Attempts_GetCipher")
-            .WithDescription(
-                "Returns the cipher for this access connector's claimed, executing attempt only -- never a " +
-                "general cipher read. Data is returned exactly as stored: opaque ciphertext the server " +
-                "never decrypts.");
-
-        group.MapPut("{id:guid}/cipher",
-            async (Guid id, SubmitCipherUpdateRequestModel model, RotationAttemptEndpointsHandler handler) =>
-            {
-                await handler.PutCipher(id, model);
-                return TypedResults.Ok();
-            })
-            .WithName("Pam_AccessConnectors_Rotation_Attempts_PutCipher")
-            .WithDescription(
-                "Writes the rotated secret back to the cipher (spec AcceptCipherUpdate) via an atomic capability " +
-                "check. 409 means the claim/attempt no longer holds, or LastKnownRevisionDate no longer matches " +
-                "the cipher's current revision (a concurrent user edit won) -- audited as write_rejected. 404 means " +
-                "the attempt id is unknown (no audit).");
 
         group.MapPost("{id:guid}/success",
             async (Guid id, ReportRotationSucceededRequestModel model, RotationAttemptEndpointsHandler handler) =>

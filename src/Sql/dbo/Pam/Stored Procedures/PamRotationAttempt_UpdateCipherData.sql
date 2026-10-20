@@ -3,7 +3,9 @@ CREATE PROCEDURE [dbo].[PamRotationAttempt_UpdateCipherData]
     @AccessConnectorId UNIQUEIDENTIFIER,
     @CipherData NVARCHAR(MAX),
     @LastKnownRevisionDate DATETIME2(7),
-    @Now DATETIME2(7)
+    @Now DATETIME2(7),
+    @UpdateCipherKey BIT = 0,
+    @CipherKey VARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -53,7 +55,9 @@ BEGIN
             @Data = @CipherData,
             @RevisionDate = @Now,
             @LastKnownRevisionDate = @LastKnownRevisionDate,
-            @Outcome = @CipherOutcome OUTPUT
+            @Outcome = @CipherOutcome OUTPUT,
+            @UpdateKey = @UpdateCipherKey,
+            @Key = @CipherKey
 
         IF @CipherOutcome <> 1 -- Updated
         BEGIN

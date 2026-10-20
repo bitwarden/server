@@ -29,7 +29,7 @@ sequenceDiagram
     D->>S: POST access-connectors/rotation/jobs/{jobId}/claim
     S-->>D: attemptId, work snapshot, executeBy
     D->>S: GET access-connectors/rotation/attempts/{attemptId}/cipher
-    S-->>D: ciphertext + revisionDate
+    S-->>D: cipher (standard cipher response, incl. revisionDate)
     D->>T: set the new password
     D->>S: PUT access-connectors/rotation/attempts/{attemptId}/cipher
     D->>S: POST access-connectors/rotation/attempts/{attemptId}/success
@@ -152,12 +152,33 @@ vault-item read, which is bound to a member's identity —
 [`GetRotationCipherQuery`](../Queries/GetRotationCipherQuery.cs) re-verifies the attempt, its
 status, its claimant, and the job's claim before returning anything.
 
-`data` is the item's encrypted blob exactly as stored. Keep `revisionDate`; the write back needs it.
+The response is the standard cipher response every client reads (`CipherMiniResponseModel`, with the
+full encrypted `data` and the legacy typed `login` fields), so the SDK's vault crate decrypts it like
+any other item. The attempt's capability, not a lease, authorizes the full shape. Keep `revisionDate`;
+the write back needs it. The route is implemented in `Bit.Api`
+(`RotationAttemptCipherEndpoints`), which owns the cipher wire contract, and joins the same route group
+and machine-credential policy as the other attempt routes.
 
 ## Writing the rotated secret back
 
-`PUT access-connectors/rotation/attempts/{id}/cipher` carries the new encrypted blob and the
-`lastKnownRevisionDate` read above. The write goes through an atomic capability check that
+`PUT access-connectors/rotation/attempts/{id}/cipher` takes the standard cipher request
+(`CipherRequestModel`), the same body every client sends, with `lastKnownRevisionDate` set to the
+revision date read above. The server builds the stored blob from the structured fields itself
+(`CipherRequestModel.ToCipher`); it is never sent. The request is rejected with a **400** unless:
+
+- the item and the request are both Login items;
+- `organizationId` is the item's organization;
+- `data` is absent (the structured fields are required instead);
+- `lastKnownRevisionDate` is present; and
+- the model passes the standard cipher validation (encrypted-string formats and lengths, `name`).
+
+The request's `key` is stored with the data, in the same atomic write and under the same revision check:
+the data is encrypted under that key, and the vault encryption emits a freshly wrapped item key on every
+edit, so a data-only write would leave a stored key that no longer decrypts it. For the same reason an item
+with attachments and no item key is rejected with a **400**: the client would re-wrap the attachment keys under a
+new item key, and only the data and the key are persisted.
+
+The write goes through an atomic capability check that
 re-verifies, under a single lock, that the job is still claimed by this access connector and the
 attempt is still executing — closing the window between "may this access connector write" and "write
 it".

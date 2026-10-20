@@ -11,8 +11,13 @@ public static class CipherDatabaseContextExtensions
     /// the EF counterpart of <c>Cipher_UpdateData</c>. Runs on the caller's context and transaction: it never opens a
     /// transaction or saves, and the caller's save persists the account revision bumps.
     /// </summary>
+    /// <param name="updateKey">
+    /// Whether to write <paramref name="key"/> with the data, as <c>Cipher_UpdateData</c>'s <c>@UpdateKey</c>. A null
+    /// <paramref name="key"/> is a real value (no item key), so it cannot signal "leave alone".
+    /// </param>
     public static async Task<CipherDataUpdateResult> CipherUpdateDataAsync(this DatabaseContext context,
-        Guid cipherId, Guid organizationId, string data, DateTime lastKnownRevisionDate, DateTime revisionDate)
+        Guid cipherId, Guid organizationId, string data, DateTime lastKnownRevisionDate, DateTime revisionDate,
+        bool updateKey = false, string? key = null)
     {
         // The version check sits in the UPDATE rather than a read before it. Bounds are parameters, so every provider
         // can translate them, and they clamp so an out-of-range date reads as a mismatch instead of throwing. Same
@@ -26,9 +31,12 @@ public static class CipherDatabaseContextExtensions
 
         var updated = await context.Ciphers
             .Where(c => c.Id == cipherId && c.RevisionDate >= lowerBound && c.RevisionDate <= upperBound)
-            .ExecuteUpdateAsync(s => s
-                .SetProperty(c => c.Data, data)
-                .SetProperty(c => c.RevisionDate, revisionDate));
+            .ExecuteUpdateAsync(s => updateKey
+                ? s.SetProperty(c => c.Data, data)
+                    .SetProperty(c => c.Key, key)
+                    .SetProperty(c => c.RevisionDate, revisionDate)
+                : s.SetProperty(c => c.Data, data)
+                    .SetProperty(c => c.RevisionDate, revisionDate));
 
         if (updated == 0)
         {

@@ -44,6 +44,7 @@ using Bit.Commercial.Core.SecretsManager;
 using Bit.Commercial.Core.Utilities;
 using Bit.Commercial.Infrastructure.EntityFramework.SecretsManager;
 using Bit.Services.Pam.AccessConnector;
+using Bit.Api.Pam.AccessConnector;
 using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.AccessConnector.Jobs;
 using Bit.Services.Pam.Utilities;
@@ -222,6 +223,7 @@ public class Startup
         services.Configure<PamRotationOptions>(Configuration.GetSection("globalSettings:pam:rotation"));
         Jobs.JobsHostedService.AddCommercialSecretsManagerJobServices(services);
         services.AddPamJobServices();
+        services.AddOpenApiEndpointDataSource(MapPamRotationAttemptCipherEndpoints);
 #endif
 
         // Billing subscriptions minimal API libraries
@@ -305,6 +307,7 @@ public class Startup
 #if !OSS
             // PAM is a commercial feature; its Minimal API endpoints are only mapped in non-OSS builds.
             endpoints.MapPamEndpoints();
+            MapPamRotationAttemptCipherEndpoints(endpoints);
 #endif
 
             if (!globalSettings.SelfHosted)
@@ -415,6 +418,19 @@ public class Startup
         // Log startup
         logger.LogInformation(Constants.BypassFiltersEventId, "{Project} started.", globalSettings.ProjectName);
     }
+
+#if !OSS
+    /// <summary>
+    /// The cipher routes of the PAM rotation attempts resource. They live in this project because they speak the cipher
+    /// wire contract, which the PAM library cannot reference, but they join the access connector machine group.
+    /// </summary>
+    private static void MapPamRotationAttemptCipherEndpoints(IEndpointRouteBuilder endpoints)
+    {
+        endpoints.MapGroup("/access-connectors/rotation/attempts")
+            .WithPamAccessConnectorMachineDefaults()
+            .MapRotationAttemptCipherEndpoints();
+    }
+#endif
 
     private static void MapSubscriptionEndpoints(IEndpointRouteBuilder endpoints)
     {
