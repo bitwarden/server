@@ -22,6 +22,9 @@ public class ActivationLinksController(
     /// </summary>
     [HttpPost]
     [PartnershipIdempotent]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(PartnershipErrorResponseModel), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(PartnershipErrorResponseModel), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<ActivationLinkResponseModel>> PostAsync([FromBody] CreateActivationLinkRequestModel model)
     {
         var result = await createPartnershipActivationLinkCommand.CreateAsync(new CreatePartnershipActivationLinkRequest
