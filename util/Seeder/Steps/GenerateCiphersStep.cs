@@ -74,6 +74,7 @@ internal sealed class GenerateCiphersStep(
         var ciphers = new List<Cipher>(count);
         var cipherIds = new List<Guid>(count);
         var collectionCiphers = new List<CollectionCipher>(count + count / 3);
+        var loginCount = CipherComposer.CountLogins(typeDistribution, count);
 
         for (var i = 0; i < count; i++)
         {
@@ -81,7 +82,7 @@ internal sealed class GenerateCiphersStep(
             var reprompt = repromptEveryNthCipher > 0 && i % repromptEveryNthCipher == 0
                 ? CipherRepromptType.Password
                 : CipherRepromptType.None;
-            var cipher = CipherComposer.Compose(i, cipherType, orgKey, companies, generator, passwordDistribution, organizationId: orgId, reprompt: reprompt);
+            var cipher = CipherComposer.Compose(i, loginCount, cipherType, orgKey, companies, generator, passwordDistribution, organizationId: orgId, reprompt: reprompt);
 
             if (userDigests is { Count: > 0 } && userFolderIds is not null)
             {

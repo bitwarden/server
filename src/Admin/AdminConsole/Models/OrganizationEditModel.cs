@@ -114,6 +114,8 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
         UseMyItems = org.UseMyItems;
         UseInviteLinks = org.UseInviteLinks;
         UsePam = org.UsePam;
+        PamSeats = org.PamSeats;
+        MaxAutoscalePamSeats = org.MaxAutoscalePamSeats;
         ExemptFromBillingAutomation = org.ExemptFromBillingAutomation;
 
         _plans = plans;
@@ -214,6 +216,10 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
     public bool UseInviteLinks { get; set; }
     [Display(Name = "Use PAM")]
     public bool UsePam { get; set; }
+    [Display(Name = "Seats")]
+    public int? PamSeats { get; set; }
+    [Display(Name = "Max Autoscale Seats")]
+    public int? MaxAutoscalePamSeats { get; set; }
     [Display(Name = "Exempt From Billing Automation")]
     public bool ExemptFromBillingAutomation { get; set; }
 
@@ -240,6 +246,14 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
     /// eligibility, not the user's permission.
     /// </summary>
     public OrganizationTrial Trial { get; set; }
+
+    /// <summary>
+    /// Quantity of the Stripe subscription's Privileged Controls seat line; null when there is no line or it could not
+    /// be loaded.
+    /// </summary>
+    public int? PrivilegedControlsStripeSeats { get; set; }
+
+    public int OccupiedPamSeatsCount { get; set; }
 
     /**
      * Creates a Plan[] object for use in Javascript

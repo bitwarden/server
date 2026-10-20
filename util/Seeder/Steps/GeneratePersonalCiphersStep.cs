@@ -95,6 +95,8 @@ internal sealed class GeneratePersonalCiphersStep(
         // per-user loop.
         var selection = ArchiveDeleteDistribution.Select(expectedTotal, archivedTarget, bothTarget, deletedOnlyTarget);
 
+        var loginCount = CipherComposer.CountLogins(typeDistribution, expectedTotal);
+
         var userCiphers = new Cipher[userDigests.Count][];
 
         progress?.Report(new PhaseStarted(SeederPhases.CreatingPersonalCiphers, expectedTotal));
@@ -119,7 +121,7 @@ internal sealed class GeneratePersonalCiphersStep(
                     var reprompt = repromptEveryNthCipher > 0 && globalIndex % repromptEveryNthCipher == 0
                         ? CipherRepromptType.Password
                         : CipherRepromptType.None;
-                    var cipher = CipherComposer.Compose(globalIndex, cipherType, userDigest.SymmetricKey, companies, generator, passwordDistribution, userId: userDigest.UserId, reprompt: reprompt);
+                    var cipher = CipherComposer.Compose(globalIndex, loginCount, cipherType, userDigest.SymmetricKey, companies, generator, passwordDistribution, userId: userDigest.UserId, reprompt: reprompt);
 
                     CipherComposer.AssignFolder(cipher, userDigest.UserId, i, userFolderIds);
 
