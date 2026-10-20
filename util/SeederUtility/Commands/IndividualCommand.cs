@@ -15,7 +15,7 @@ public class IndividualCommand
         {
             args.Validate();
 
-            using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
+            using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle, DisableDataProtection = args.NoDataProtection });
 
             var result = await ConsoleProgressReporter.RunWithProgressAsync(
                 deps.ToDependencies(),

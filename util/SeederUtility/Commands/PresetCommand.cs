@@ -49,7 +49,7 @@ public class PresetCommand
 
     private static async Task RunOrganizationPresetAsync(PresetArgs args)
     {
-        using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
+        using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle, DisableDataProtection = args.NoDataProtection });
 
         await Console.Error.WriteLineAsync($"Seeding organization from preset '{args.Name}'...");
         var result = await ConsoleProgressReporter.RunWithProgressAsync(
@@ -93,7 +93,7 @@ public class PresetCommand
 
     private static async Task RunIndividualPresetAsync(PresetArgs args)
     {
-        using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
+        using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle, DisableDataProtection = args.NoDataProtection });
 
         await Console.Error.WriteLineAsync($"Seeding individual user from preset '{args.Name}'...");
         var result = await ConsoleProgressReporter.RunWithProgressAsync(
