@@ -545,6 +545,10 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasIndex("State", "ResumeWindowExpirationDate")
                         .HasAnnotation("SqlServer:Clustered", false);
 
+                    b.HasIndex("OrganizationPartnershipId", "RevisionDate", "Id")
+                        .HasDatabaseName("IX_OrganizationPartnershipEntitlement_OrganizationPartnershipI~1")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
                     b.ToTable("OrganizationPartnershipEntitlement", (string)null);
                 });
 

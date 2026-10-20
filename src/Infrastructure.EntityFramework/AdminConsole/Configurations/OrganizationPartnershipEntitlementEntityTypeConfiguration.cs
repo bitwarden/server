@@ -36,6 +36,10 @@ public class OrganizationPartnershipEntitlementEntityTypeConfiguration
             .IsClustered(false);
 
         builder
+            .HasIndex(e => new { e.OrganizationPartnershipId, e.RevisionDate, e.Id })
+            .IsClustered(false);
+
+        builder
             .HasIndex(e => new { e.State, e.ResumeWindowExpirationDate })
             .IsClustered(false);
 

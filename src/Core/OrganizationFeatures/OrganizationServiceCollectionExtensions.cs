@@ -231,6 +231,8 @@ public static class OrganizationServiceCollectionExtensions
         services.TryAddScoped<IProvisionPartnershipEntitlementCommand, ProvisionPartnershipEntitlementCommand>();
         services.TryAddScoped<ITransitionPartnershipEntitlementCommand, TransitionPartnershipEntitlementCommand>();
         services.TryAddScoped<IGetPartnershipEntitlementByExternalIdQuery, GetPartnershipEntitlementByExternalIdQuery>();
+        services.TryAddScoped<IListPartnershipEntitlementsQuery, ListPartnershipEntitlementsQuery>();
+        services.TryAddSingleton<IPartnershipEntitlementContinuationTokenProtector, PartnershipEntitlementContinuationTokenProtector>();
         services.TryAddScoped<IExpirePartnershipResumeWindowsCommand, ExpirePartnershipResumeWindowsCommand>();
         services.TryAddScoped<ICreatePartnershipActivationLinkCommand, CreatePartnershipActivationLinkCommand>();
         services.TryAddScoped<ICreatePartnershipReconciliationExportCommand, CreatePartnershipReconciliationExportCommand>();
