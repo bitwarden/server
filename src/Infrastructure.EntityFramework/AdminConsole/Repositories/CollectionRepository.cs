@@ -573,8 +573,10 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         CreationDate = collectionGroup.Key.CreationDate,
                         RevisionDate = collectionGroup.Key.RevisionDate,
                         ExternalId = collectionGroup.Key.ExternalId,
-                        ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
+                        ReadOnly = collectionGroup.Max(c => Convert.ToInt32(c.Assigned)) == 1 &&
+                            Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
                         HidePasswords =
+                            collectionGroup.Max(c => Convert.ToInt32(c.Assigned)) == 1 &&
                             Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
                         Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
                         Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
@@ -609,8 +611,10 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                                          CreationDate = collectionGroup.Key.CreationDate,
                                          RevisionDate = collectionGroup.Key.RevisionDate,
                                          ExternalId = collectionGroup.Key.ExternalId,
-                                         ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
+                                         ReadOnly = collectionGroup.Max(c => Convert.ToInt32(c.Assigned)) == 1 &&
+                                             Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
                                          HidePasswords =
+                                             collectionGroup.Max(c => Convert.ToInt32(c.Assigned)) == 1 &&
                                              Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
                                          Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
                                          Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),

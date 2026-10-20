@@ -8,18 +8,25 @@ BEGIN
 
     SELECT
         C.*,
-        MIN(CASE
+        -- Skip rows from groups not assigned to the collection
+        COALESCE(MIN(CASE
+            WHEN
+                CU.[CollectionId] IS NULL AND CG.[CollectionId] IS NULL
+            THEN NULL
             WHEN
                 COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) = 0
             THEN 0
             ELSE 1
-        END) AS [ReadOnly],
-        MIN(CASE
+        END), 0) AS [ReadOnly],
+        COALESCE(MIN(CASE
+            WHEN
+                CU.[CollectionId] IS NULL AND CG.[CollectionId] IS NULL
+            THEN NULL
             WHEN
                 COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
             THEN 0
             ELSE 1
-        END) AS [HidePasswords],
+        END), 0) AS [HidePasswords],
         MAX(CASE
             WHEN
                 COALESCE(CU.[Manage], CG.[Manage], 0) = 0

@@ -76,8 +76,9 @@ public class BulkCollectionAdminDetailsQuery : IQuery<CollectionAdminDetails>
             RevisionDate = x.c.RevisionDate,
             DefaultUserCollectionEmail = x.c.DefaultUserCollectionEmail,
             Type = x.c.Type,
-            ReadOnly = (bool?)x.cu.ReadOnly ?? (bool?)x.cg.ReadOnly ?? false,
-            HidePasswords = (bool?)x.cu.HidePasswords ?? (bool?)x.cg.HidePasswords ?? false,
+            // Default to true so rows from unassigned groups don't lower the Min.
+            ReadOnly = (bool?)x.cu.ReadOnly ?? (bool?)x.cg.ReadOnly ?? true,
+            HidePasswords = (bool?)x.cu.HidePasswords ?? (bool?)x.cg.HidePasswords ?? true,
             Manage = (bool?)x.cu.Manage ?? (bool?)x.cg.Manage ?? false,
             Assigned = x.cu != null || x.cg != null,
             Unmanaged = !activeUserManageRights.Contains(x.c.Id) && !activeGroupManageRights.Contains(x.c.Id),

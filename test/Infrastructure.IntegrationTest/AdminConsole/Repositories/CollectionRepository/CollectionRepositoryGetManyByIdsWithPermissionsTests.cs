@@ -120,6 +120,99 @@ public class CollectionRepositoryGetManyByIdsWithPermissionsTests
     }
 
     [DatabaseTheory, DatabaseData]
+    public async Task GetManyByIdsWithPermissionsAsync_WhenUserIsInAnUnassignedGroup_KeepsReadOnlyAndHidePasswords(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository,
+        ICollectionRepository collectionRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var user = await userRepository.CreateTestUserAsync();
+        var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+        var assignedGroup = await groupRepository.CreateTestGroupAsync(organization);
+        var unassignedGroup = await groupRepository.CreateTestGroupAsync(organization);
+        await groupRepository.AddGroupUsersByIdAsync(assignedGroup.Id, [orgUser.Id], DateTime.UtcNow);
+        await groupRepository.AddGroupUsersByIdAsync(unassignedGroup.Id, [orgUser.Id], DateTime.UtcNow);
+
+        var collection = new Collection { Name = "ReadOnlyViaGroup", OrganizationId = organization.Id };
+        await collectionRepository.CreateAsync(collection,
+            groups: [new CollectionAccessSelection { Id = assignedGroup.Id, ReadOnly = true, HidePasswords = true }],
+            users: []);
+
+        // Act
+        var results = await collectionRepository.GetManyByIdsWithPermissionsAsync(
+            [collection.Id], user.Id, includeAccessRelationships: false);
+
+        // Assert
+        var result = Single(results, collection.Id);
+        Assert.True(result.Assigned);
+        Assert.False(result.Manage);
+        Assert.True(result.ReadOnly);
+        Assert.True(result.HidePasswords);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyByIdsWithPermissionsAsync_WhenUserHasDirectAccessAndAnUnassignedGroup_KeepsReadOnlyAndHidePasswords(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository,
+        ICollectionRepository collectionRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var user = await userRepository.CreateTestUserAsync();
+        var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+        var unassignedGroup = await groupRepository.CreateTestGroupAsync(organization);
+        await groupRepository.AddGroupUsersByIdAsync(unassignedGroup.Id, [orgUser.Id], DateTime.UtcNow);
+
+        var collection = new Collection { Name = "ReadOnlyDirect", OrganizationId = organization.Id };
+        await collectionRepository.CreateAsync(collection, groups: [],
+            users: [new CollectionAccessSelection { Id = orgUser.Id, ReadOnly = true, HidePasswords = true }]);
+
+        // Act
+        var results = await collectionRepository.GetManyByIdsWithPermissionsAsync(
+            [collection.Id], user.Id, includeAccessRelationships: false);
+
+        // Assert
+        var result = Single(results, collection.Id);
+        Assert.True(result.Assigned);
+        Assert.True(result.ReadOnly);
+        Assert.True(result.HidePasswords);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyByIdsWithPermissionsAsync_WhenUserIsOnlyInAnUnassignedGroup_ReportsNoAccess(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository,
+        ICollectionRepository collectionRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var user = await userRepository.CreateTestUserAsync();
+        var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+        var unassignedGroup = await groupRepository.CreateTestGroupAsync(organization);
+        await groupRepository.AddGroupUsersByIdAsync(unassignedGroup.Id, [orgUser.Id], DateTime.UtcNow);
+
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+
+        // Act
+        var results = await collectionRepository.GetManyByIdsWithPermissionsAsync(
+            [collection.Id], user.Id, includeAccessRelationships: false);
+
+        // Assert
+        var result = Single(results, collection.Id);
+        Assert.False(result.Assigned);
+        Assert.False(result.Manage);
+        Assert.False(result.ReadOnly);
+        Assert.False(result.HidePasswords);
+    }
+
+    [DatabaseTheory, DatabaseData]
     public async Task GetManyByIdsWithPermissionsAsync_WhenMembershipIsNotConfirmed_DoesNotGrantAssignedOrManage(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
