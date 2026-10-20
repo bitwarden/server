@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Constants;
+﻿using Bit.Core.Billing;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
@@ -83,12 +84,29 @@ public class CreateOrganizationSubscriptionCommandTests
     [Fact]
     public async Task Run_PlanWithoutPrivilegedControlsSupport_ThrowsBadRequest()
     {
-        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(new TestPlan(supportsPrivilegedControls: false));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TestPlan(supportsPrivilegedControls: false));
 
         var organization = Organization();
 
-        await Assert.ThrowsAsync<BadRequestException>(
-            () => _command.Run(organization, Creation(privilegedControlsRequested: true, requestedSeatMinimum: 6)));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => _command.Run(organization, Creation(planType: PlanType.TeamsAnnually, privilegedControlsRequested: true, requestedSeatMinimum: 6)));
+        Assert.Contains("Invalid Privileged Controls plan selected", exception.Message);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateCustomerAsync(default!);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateSubscriptionAsync(default!);
+    }
+
+    [Fact]
+    public async Task Run_PrivilegedControlsWithSecretsManagerTrial_ThrowsBadRequest()
+    {
+        StubSuccessfulPurchase();
+
+        var creation = Creation(privilegedControlsRequested: true, requestedSeatMinimum: 6, secretManagerRequested: true) with
+        {
+            IsFromSecretsManagerTrial = true
+        };
+
+        await Assert.ThrowsAsync<BadRequestException>(() => _command.Run(Organization(), creation));
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateCustomerAsync(default!);
         await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateSubscriptionAsync(default!);
     }
 
@@ -101,7 +119,7 @@ public class CreateOrganizationSubscriptionCommandTests
 
         // SM + PC together is allowed on a net-new purchase; only the trial-initiation flow (upstream) forbids it.
         await _command.Run(organization,
-            Creation(privilegedControlsRequested: true, requestedSeatMinimum: 6, withSecretsManager: true));
+            Creation(privilegedControlsRequested: true, requestedSeatMinimum: 6, secretManagerRequested: true));
 
         Assert.NotNull(_capturedSubscriptionOptions);
         Assert.Contains(_capturedSubscriptionOptions!.Items, i => i.Price == "sm-seat");
@@ -120,6 +138,7 @@ public class CreateOrganizationSubscriptionCommandTests
         };
 
         await Assert.ThrowsAsync<BadRequestException>(() => _command.Run(organization, creation));
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateCustomerAsync(default!);
     }
 
     [Fact]
@@ -178,6 +197,7 @@ public class CreateOrganizationSubscriptionCommandTests
         };
 
         await Assert.ThrowsAsync<BadRequestException>(() => _command.Run(organization, creation));
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateCustomerAsync(default!);
         await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateSubscriptionAsync(default!);
     }
 
@@ -234,7 +254,7 @@ public class CreateOrganizationSubscriptionCommandTests
 
         var organization = Organization();
 
-        await _command.Run(organization, Creation(withSecretsManager: true));
+        await _command.Run(organization, Creation(secretManagerRequested: true));
 
         Assert.NotNull(_capturedSubscriptionOptions);
         Assert.Contains(_capturedSubscriptionOptions!.Items, i => i.Price == "sm-seat" && i.Quantity == 4);
@@ -254,16 +274,45 @@ public class CreateOrganizationSubscriptionCommandTests
         Assert.DoesNotContain(_capturedSubscriptionOptions!.Items, i => i.Price == "pam-seat");
     }
 
-    [Fact]
-    public async Task Run_TrialLength_SetsTrialPeriodDays()
+    [Theory]
+    [InlineData(14)]
+    [InlineData(30)]
+    public async Task Run_TrialLength_OverridesPlanDefaultTrialPeriodDays(int trialDays)
     {
         StubSuccessfulPurchase();
 
         var organization = Organization();
 
-        await _command.Run(organization, Creation(trialDays: 7));
+        await _command.Run(organization, Creation(trialDays: trialDays));
+
+        Assert.Equal(trialDays, _capturedSubscriptionOptions!.TrialPeriodDays);
+    }
+
+    [Fact]
+    public async Task Run_NullTrialLength_UsesPlanDefaultTrialPeriodDays()
+    {
+        StubSuccessfulPurchase();
+
+        var organization = Organization();
+
+        await _command.Run(organization, Creation(privilegedControlsRequested: true, requestedSeatMinimum: 6));
 
         Assert.Equal(7, _capturedSubscriptionOptions!.TrialPeriodDays);
+    }
+
+    [Fact]
+    public async Task Run_ZeroTrialLength_SkipsTrial()
+    {
+        StubSuccessfulPurchase();
+
+        var organization = Organization();
+
+        await _command.Run(organization,
+            Creation(privilegedControlsRequested: true, requestedSeatMinimum: 6, trialDays: 0));
+
+        Assert.Equal(0, _capturedSubscriptionOptions!.TrialPeriodDays);
+        // No trial means no missing-payment-method cancel behavior, even without a payment method.
+        Assert.Null(_capturedSubscriptionOptions!.TrialSettings);
     }
 
     [Fact]
@@ -419,11 +468,15 @@ public class CreateOrganizationSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task Run_SubscriptionCreationFails_DoesNotRevertCustomer()
+    public async Task Run_SubscriptionCreationFails_RevertsCustomer()
     {
         _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(new TestPlan());
         _subscriberService.CreateBraintreeCustomer(Arg.Any<ISubscriber>(), "paypal-token").Returns("braintree_test");
-        _stripeAdapter.CreateCustomerAsync(Arg.Any<CustomerCreateOptions>()).Returns(new Customer { Id = "cus_test" });
+        _stripeAdapter.CreateCustomerAsync(Arg.Any<CustomerCreateOptions>()).Returns(new Customer
+        {
+            Id = "cus_test",
+            Metadata = new Dictionary<string, string> { [Utilities.BraintreeCustomerIdKey] = "braintree_test" }
+        });
         _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>())
             .ThrowsAsync(new InvalidOperationException("subscription creation failed"));
 
@@ -438,8 +491,9 @@ public class CreateOrganizationSubscriptionCommandTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => _command.Run(Organization(), creation));
 
-        // Revert only covers customer creation; a subscription failure leaves the Braintree customer (no compensation).
-        await _braintreeGateway.Customer.DidNotReceive().DeleteAsync(Arg.Any<string>());
+        // A subscription failure must not orphan the customer created for it.
+        await _stripeAdapter.Received(1).DeleteCustomerAsync("cus_test");
+        await _braintreeGateway.Customer.Received(1).DeleteAsync("braintree_test");
     }
 
     private static OrganizationEntity Organization() => new()
@@ -464,7 +518,7 @@ public class CreateOrganizationSubscriptionCommandTests
         PlanType? planType = null,
         bool privilegedControlsRequested = false,
         int? requestedSeatMinimum = null,
-        bool withSecretsManager = false,
+        bool secretManagerRequested = false,
         short? storage = null,
         bool premiumAccess = false,
         int? trialDays = null) => new()
@@ -476,7 +530,7 @@ public class CreateOrganizationSubscriptionCommandTests
                 Storage = storage,
                 PremiumAccess = premiumAccess
             },
-            SecretsManager = withSecretsManager
+            SecretsManager = secretManagerRequested
             ? new OrganizationSubscriptionCreation.SecretsManagerPurchase { Seats = 4, ServiceAccounts = 5 }
             : null,
             PrivilegedControls = privilegedControlsRequested
@@ -493,6 +547,7 @@ public class CreateOrganizationSubscriptionCommandTests
     {
         public TestPlan(bool supportsPrivilegedControls = true)
         {
+            TrialPeriodDays = 7;
             PasswordManager = new PasswordManagerPlanFeatures
             {
                 StripeSeatPlanId = "pm-seat",

@@ -275,10 +275,10 @@ public class CloudOrganizationSignUpCommand(
                 RequestedSeatMinimum = signup.PamSeatMinimum
             },
             CustomerSetup = sale.CustomerSetup,
+            IsFromSecretsManagerTrial = signup.IsFromSecretsManagerTrial,
             Trial = new OrganizationSubscriptionCreation.TrialSetup
             {
-                Length = signup.TrialLength,
-                Skip = signup.SkipTrial,
+                Length = signup.SkipTrial ? 0 : signup.TrialLength,
                 InitiationPath = signup.InitiationPath
             },
             Owner = signup.Owner,

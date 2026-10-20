@@ -9,6 +9,7 @@ using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -620,6 +621,7 @@ public class CloudOrganizationSignUpCommandTests
         signup.UseSecretsManager = false;
         signup.IsFromProvider = false;
         signup.TrialLength = 7;
+        signup.SkipTrial = false;
         signup.UsePrivilegedControls = true;
         signup.PamSeatMinimum = 6;
 
@@ -684,4 +686,42 @@ public class CloudOrganizationSignUpCommandTests
 
         await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceive().CreateAsync(Arg.Any<Organization>());
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SignUpAsync_PrivilegedControls_OrganizationSaveFails_RecoversCharges(
+        OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        signup.Plan = PlanType.EnterpriseAnnually;
+        signup.AdditionalSeats = 10;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+        signup.UseSecretsManager = false;
+        signup.IsFromProvider = false;
+        signup.TrialLength = 7;
+        signup.UsePrivilegedControls = true;
+        signup.PamSeatMinimum = 6;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(true);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
+        sutProvider.GetDependency<ICreateOrganizationSubscriptionCommand>()
+            .Run(Arg.Any<Organization>(), Arg.Any<OrganizationSubscriptionCreation>())
+            .Returns(new Subscription());
+        sutProvider.GetDependency<IOrganizationRepository>().CreateAsync(Arg.Any<Organization>())
+            .ThrowsAsync(new InvalidOperationException("persistence failed"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.SignUpOrganizationAsync(signup));
+
+        // A persistence failure after the subscription is created must roll back the charges.
+        await sutProvider.GetDependency<IStripePaymentService>().Received(1)
+            .CancelAndRecoverChargesAsync(Arg.Any<Organization>());
+    }
+
 }

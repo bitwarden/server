@@ -15,8 +15,9 @@ public record OrganizationSubscriptionCreation
     public required PasswordManagerPurchase PasswordManager { get; init; }
     public SecretsManagerPurchase? SecretsManager { get; init; }
     public PrivilegedControlsPurchase? PrivilegedControls { get; init; }
-    public CustomerSetup? CustomerSetup { get; init; }
+    public required CustomerSetup CustomerSetup { get; init; }
     public TrialSetup Trial { get; init; } = new();
+    public bool IsFromSecretsManagerTrial { get; init; }
     public User? Owner { get; init; }
     public required string CloudRegion { get; init; }
 
@@ -41,7 +42,6 @@ public record OrganizationSubscriptionCreation
     public record TrialSetup
     {
         public int? Length { get; init; }
-        public bool Skip { get; init; }
         public string? InitiationPath { get; init; }
     }
 }

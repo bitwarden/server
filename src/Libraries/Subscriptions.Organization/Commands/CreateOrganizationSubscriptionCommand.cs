@@ -42,11 +42,15 @@ internal sealed class CreateOrganizationSubscriptionCommand(
 
         var customerSetup = purchase.CustomerSetup;
 
-        ArgumentNullException.ThrowIfNull(customerSetup);
-
         if (customerSetup is { SystemCoupons.Length: > 0, DiscountCoupons.Length: > 0 })
         {
             throw new BadRequestException("A subscription cannot be created with both system and discount coupons.");
+        }
+
+        if (purchase is { PrivilegedControls: not null, IsFromSecretsManagerTrial: true })
+        {
+            throw new BadRequestException(
+                "Privileged Controls cannot be combined with a Secrets Manager standalone trial.");
         }
 
         var privilegedControlsSeatsMinimum = ResolvePrivilegedControlSeatsMinimum(plan, purchase);
@@ -55,8 +59,21 @@ internal sealed class CreateOrganizationSubscriptionCommand(
 
         var customer = await CreateCustomerAsync(organization, customerSetup, purchase.CloudRegion);
 
-        var subscription = await CreateSubscriptionAsync(organization, customer, purchase, plan, coupons,
-            privilegedControlsSeatsMinimum);
+        Subscription subscription;
+        try
+        {
+            subscription = await CreateSubscriptionAsync(organization, customer, purchase, plan, coupons,
+                privilegedControlsSeatsMinimum);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception,
+                "Failed to create subscription for organization ({OrganizationID}); reverting customer ({CustomerID})",
+                organization.Id, customer.Id);
+
+            await RevertCustomerAsync(customer);
+            throw;
+        }
 
         ApplyResultsToOrganization(organization, customer, subscription, privilegedControlsSeatsMinimum);
 
@@ -390,7 +407,7 @@ internal sealed class CreateOrganizationSubscriptionCommand(
                 }
             },
             OffSession = true,
-            TrialPeriodDays = purchase.Trial.Skip ? 0 : purchase.Trial.Length ?? plan.TrialPeriodDays
+            TrialPeriodDays = purchase.Trial.Length ?? plan.TrialPeriodDays
         };
 
         if (coupons.Count > 0)
@@ -402,7 +419,7 @@ internal sealed class CreateOrganizationSubscriptionCommand(
 
         // This command is only used for creating new subscriptions, so we can assume that the subscription is being created for the first time.
         // The attached method would be the first payment method for the customer, so an additional query is not required.
-        var hasPaymentMethod = purchase.CustomerSetup!.IsBillable;
+        var hasPaymentMethod = purchase.CustomerSetup.IsBillable;
 
         // Only set trial_settings.end_behavior.missing_payment_method to "cancel"
         // if there is no payment method AND there's an actual trial period.
@@ -446,5 +463,19 @@ internal sealed class CreateOrganizationSubscriptionCommand(
             organization.UsePam = true;
             organization.PamSeatMinimum = pamSeats;
         }
+    }
+
+    // Deletes the customer created for this subscription when subscription creation fails, so a failed
+    // purchase doesn't orphan a Stripe (and, for PayPal, Braintree) customer.
+    private async Task RevertCustomerAsync(Customer customer)
+    {
+        if (customer.Metadata is not null &&
+            customer.Metadata.TryGetValue(Utilities.BraintreeCustomerIdKey, out var braintreeCustomerId) &&
+            braintreeCustomerId is not null and not "")
+        {
+            await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
+        }
+
+        await stripeAdapter.DeleteCustomerAsync(customer.Id);
     }
 }
