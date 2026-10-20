@@ -7,7 +7,7 @@ using Provider = Bit.Core.AdminConsole.Entities.Provider.Provider;
 namespace Bit.SharedWeb.Play.Repositories;
 
 /// <summary>
-/// EntityFramework decorator around the <see cref="Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.ProviderRepository"/> that tracks
+/// EntityFramework decorator around the <see cref="ProviderRepository"/> that tracks
 /// created Providers for seeding.
 /// </summary>
 public class EFTestProviderTrackingProviderRepository : ProviderRepository
