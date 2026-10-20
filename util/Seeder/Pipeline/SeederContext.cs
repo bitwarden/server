@@ -100,6 +100,9 @@ public sealed class SeederContext(IServiceProvider services)
     internal string RequireDomain() =>
         Domain ?? throw new InvalidOperationException("Domain not set. Run CreateOrganizationStep first.");
 
+    internal User RequireOwner() =>
+        Owner ?? throw new InvalidOperationException("Owner not set. Run CreateOwnerStep or CreateIndividualUserStep first.");
+
     internal GeneratorContext RequireGenerator() =>
         Generator ?? throw new InvalidOperationException("Generator not set. Call WithGenerator() / InitGeneratorStep first.");
 }
