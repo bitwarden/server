@@ -28,10 +28,12 @@ public struct SingleProviderSceneResult
 /// <summary>
 /// Links an existing owner user and existing client organizations to a new provider. The owner is added as
 /// a confirmed ProviderAdmin, the requested billing plans are configured, and each supplied organization is
-/// linked via a ProviderOrganization whose key wraps the organization key under the provider key. For MSP and
-/// Business Unit providers each linked organization is converted into a managed client organization with the same
+/// linked via a ProviderOrganization whose key wraps the organization key under the provider key. For Billable MSP
+/// and Business Unit providers each linked organization is converted into a managed client organization with the same
 /// entity changes as <c>ProviderBillingService.AddExistingOrganization</c>, and each plan's allocated seats are the
-/// summed seats of its linked clients; Reseller links leave the organization unchanged. The scene makes no Stripe
+/// summed seats of its linked clients; Pending and Reseller links leave the organization unchanged. Type/status pairs
+/// production cannot create (Reseller not Created, MSP/Business Unit Created) are rejected, as are Stripe IDs on a
+/// Pending provider. The scene makes no Stripe
 /// calls: it does not cancel client subscriptions or move customer balances, and it only links caller-supplied
 /// Stripe customer/subscription IDs to the provider.
 /// </summary>
@@ -51,7 +53,7 @@ public class SingleProviderScene(
         [Required]
         public required string Name { get; set; }
         public ProviderType Type { get; set; } = ProviderType.Msp;
-        public ProviderStatusType Status { get; set; } = ProviderStatusType.Billable;
+        public ProviderStatusType? Status { get; set; }
         public List<PlanConfig> Plans { get; set; } = [];
         public List<OrganizationLink> Organizations { get; set; } = [];
         public string? Domain { get; set; }
@@ -80,6 +82,10 @@ public class SingleProviderScene(
 
     public async Task<SceneResult<SingleProviderSceneResult>> SeedAsync(Request request)
     {
+        var status = ResolveStatus(request);
+        var convertsToManagedClient =
+            request.Type.SupportsConsolidatedBilling() && status == ProviderStatusType.Billable;
+
         var owner = await userRepository.GetByIdAsync(request.OwnerUserId);
         if (owner == null)
         {
@@ -99,7 +105,7 @@ public class SingleProviderScene(
         {
             var organization = await organizationRepository.GetByIdAsync(link.OrganizationId)
                 ?? throw new InvalidOperationException($"Organization {link.OrganizationId} not found.");
-            var managedPlanType = request.Type.SupportsConsolidatedBilling()
+            var managedPlanType = convertsToManagedClient
                 ? GetManagedPlanType(request, organization)
                 : (PlanType?)null;
             // Must be WrapSymmetricKey (raw key bytes), not EncryptString (base64 text), so clients unwrap it
@@ -118,7 +124,7 @@ public class SingleProviderScene(
                 Name = request.Name,
                 Domain = domain,
                 Type = request.Type,
-                Status = request.Status,
+                Status = status,
                 GatewayCustomerId = request.GatewayCustomerId,
                 GatewaySubscriptionId = request.GatewaySubscriptionId
             },
@@ -166,6 +172,29 @@ public class SingleProviderScene(
                 ProviderOrganizationIds = providerOrganizationIds.ToArray()
             },
             mangleMap: manglerService.GetMangleMap());
+    }
+
+    private static ProviderStatusType ResolveStatus(Request request)
+    {
+        var status = request.Status
+            ?? (request.Type == ProviderType.Reseller ? ProviderStatusType.Created : ProviderStatusType.Billable);
+
+        var producible = request.Type == ProviderType.Reseller
+            ? status == ProviderStatusType.Created
+            : status != ProviderStatusType.Created;
+        if (!producible)
+        {
+            throw new InvalidOperationException($"A {request.Type} provider cannot have status {status}.");
+        }
+
+        if (status == ProviderStatusType.Pending &&
+            (!string.IsNullOrEmpty(request.GatewayCustomerId) || !string.IsNullOrEmpty(request.GatewaySubscriptionId)))
+        {
+            throw new InvalidOperationException(
+                "A Pending provider has not completed setup and cannot have Stripe gateway IDs.");
+        }
+
+        return status;
     }
 
     private static PlanType GetManagedPlanType(Request request, Organization organization)

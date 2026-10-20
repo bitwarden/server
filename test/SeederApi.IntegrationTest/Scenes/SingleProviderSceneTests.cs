@@ -129,9 +129,10 @@ public class SingleProviderSceneTests : IClassFixture<InPlaySeederApiApplication
     }
 
     [Theory]
-    [InlineData(ProviderStatusType.Pending)]
-    [InlineData(ProviderStatusType.Created)]
-    public async Task SingleProviderScene_PassesProviderStatusThrough(ProviderStatusType status)
+    [InlineData(ProviderType.Msp, ProviderStatusType.Pending)]
+    [InlineData(ProviderType.BusinessUnit, ProviderStatusType.Pending)]
+    [InlineData(ProviderType.Reseller, ProviderStatusType.Created)]
+    public async Task SingleProviderScene_PassesProviderStatusThrough(ProviderType type, ProviderStatusType status)
     {
         var playId = Guid.NewGuid().ToString();
 
@@ -140,8 +141,8 @@ public class SingleProviderSceneTests : IClassFixture<InPlaySeederApiApplication
         var providerResult = await PostSceneAsync(playId, nameof(SingleProviderScene), new SingleProviderScene.Request
         {
             OwnerUserId = providerAdminUserId,
-            Name = "Status MSP",
-            Type = ProviderType.Msp,
+            Name = $"Status {type}",
+            Type = type,
             Status = status
         });
         var providerId = providerResult.GetProperty("providerId").GetGuid();
@@ -150,7 +151,125 @@ public class SingleProviderSceneTests : IClassFixture<InPlaySeederApiApplication
         var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
 
         var provider = await db.Providers.SingleAsync(p => p.Id == providerId);
+        Assert.Equal(type, provider.Type);
         Assert.Equal(status, provider.Status);
+    }
+
+    [Theory]
+    [InlineData(ProviderType.Msp, ProviderStatusType.Created)]
+    [InlineData(ProviderType.BusinessUnit, ProviderStatusType.Created)]
+    [InlineData(ProviderType.Reseller, ProviderStatusType.Billable)]
+    [InlineData(ProviderType.Reseller, ProviderStatusType.Pending)]
+    public async Task SingleProviderScene_InvalidTypeStatusPair_ReturnsBadRequestWithoutWrites(
+        ProviderType type, ProviderStatusType status)
+    {
+        var playId = Guid.NewGuid().ToString();
+        var providerName = $"Invalid {type} {status} {Guid.NewGuid():N}";
+
+        var providerAdminUserId = await SeedUserAsync(playId);
+        var orgOwnerUserId = await SeedUserAsync(playId);
+        var (organizationId, organizationKeyB64) = await SeedClientOrganizationAsync(playId, orgOwnerUserId);
+
+        var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
+        {
+            Template = nameof(SingleProviderScene),
+            Arguments = JsonSerializer.SerializeToElement(new SingleProviderScene.Request
+            {
+                OwnerUserId = providerAdminUserId,
+                Name = providerName,
+                Type = type,
+                Status = status,
+                Plans = [new SingleProviderScene.PlanConfig { PlanType = PlanType.EnterpriseMonthly, Seats = 5 }],
+                Organizations = [Link(organizationId, organizationKeyB64)]
+            })
+        }, playId);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+
+        Assert.False(await db.Providers.AnyAsync(p => p.Name!.EndsWith(providerName)));
+        Assert.False(await db.ProviderUsers.AnyAsync(pu => pu.UserId == providerAdminUserId));
+        Assert.False(await db.ProviderOrganizations.AnyAsync(po => po.OrganizationId == organizationId));
+        var organization = await db.Organizations.SingleAsync(o => o.Id == organizationId);
+        Assert.Equal(OrganizationStatusType.Created, organization.Status);
+        Assert.Equal(PlanType.EnterpriseAnnually, organization.PlanType);
+    }
+
+    [Theory]
+    [InlineData("cus_pending", null)]
+    [InlineData(null, "sub_pending")]
+    public async Task SingleProviderScene_PendingProviderWithGatewayIds_ReturnsBadRequestWithoutWrites(
+        string? gatewayCustomerId, string? gatewaySubscriptionId)
+    {
+        var playId = Guid.NewGuid().ToString();
+        var providerName = $"Pending Gateway {Guid.NewGuid():N}";
+
+        var providerAdminUserId = await SeedUserAsync(playId);
+
+        var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
+        {
+            Template = nameof(SingleProviderScene),
+            Arguments = JsonSerializer.SerializeToElement(new SingleProviderScene.Request
+            {
+                OwnerUserId = providerAdminUserId,
+                Name = providerName,
+                Type = ProviderType.Msp,
+                Status = ProviderStatusType.Pending,
+                GatewayCustomerId = gatewayCustomerId,
+                GatewaySubscriptionId = gatewaySubscriptionId
+            })
+        }, playId);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+
+        Assert.False(await db.Providers.AnyAsync(p => p.Name!.EndsWith(providerName)));
+        Assert.False(await db.ProviderUsers.AnyAsync(pu => pu.UserId == providerAdminUserId));
+    }
+
+    [Theory]
+    [InlineData(ProviderType.Msp)]
+    [InlineData(ProviderType.BusinessUnit)]
+    public async Task SingleProviderScene_PendingProviderLinksOrgWithoutConverting(ProviderType type)
+    {
+        var playId = Guid.NewGuid().ToString();
+
+        var providerAdminUserId = await SeedUserAsync(playId);
+        var orgOwnerUserId = await SeedUserAsync(playId);
+        var (organizationId, organizationKeyB64) = await SeedClientOrganizationAsync(
+            playId,
+            orgOwnerUserId,
+            gatewayCustomerId: "cus_seed",
+            gatewaySubscriptionId: "sub_seed");
+
+        var providerResult = await PostSceneAsync(playId, nameof(SingleProviderScene), new SingleProviderScene.Request
+        {
+            OwnerUserId = providerAdminUserId,
+            Name = $"Pending {type}",
+            Type = type,
+            Status = ProviderStatusType.Pending,
+            Plans = [new SingleProviderScene.PlanConfig { PlanType = PlanType.EnterpriseMonthly, Seats = 5 }],
+            Organizations = [Link(organizationId, organizationKeyB64)]
+        });
+        var providerId = providerResult.GetProperty("providerId").GetGuid();
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+
+        Assert.True(await db.ProviderOrganizations.AnyAsync(po =>
+            po.ProviderId == providerId && po.OrganizationId == organizationId));
+
+        var organization = await db.Organizations.SingleAsync(o => o.Id == organizationId);
+        Assert.Equal(OrganizationStatusType.Created, organization.Status);
+        Assert.Equal(PlanType.EnterpriseAnnually, organization.PlanType);
+        Assert.Equal("sub_seed", organization.GatewaySubscriptionId);
+
+        var plan = await db.ProviderPlans.SingleAsync(pp => pp.ProviderId == providerId);
+        Assert.Equal(0, plan.AllocatedSeats);
     }
 
     [Fact]
