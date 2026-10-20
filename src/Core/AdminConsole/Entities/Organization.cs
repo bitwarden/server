@@ -200,7 +200,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// <summary>
     /// A hex-encoded key id of the organization's current symmetric organization key.
     /// <para>
-    /// Each organization key has a unique key id, and this value will change after an organization key rotation.
+    /// Each organization key has a unique key id.
     /// It is not set for existing organizations until a client reports it.
     /// </para>
     /// </summary>

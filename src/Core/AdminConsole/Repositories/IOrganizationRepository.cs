@@ -105,8 +105,7 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     /// <summary>
     /// Sets the key id of the organization's symmetric key, when the organization has no key id.
     /// <para>
-    /// For backfilling organizations that predate the key id. Changing an existing key id must happen through an
-    /// organization key rotation.
+    /// For backfilling organizations that predate the key id.
     /// </para>
     /// </summary>
     /// <param name="organizationId">The organization identifier.</param>

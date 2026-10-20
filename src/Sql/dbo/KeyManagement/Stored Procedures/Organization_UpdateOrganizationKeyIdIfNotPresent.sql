@@ -6,8 +6,8 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- The key id is set once. Changing an existing key id must happen through an organization key rotation, so a
-    -- row that already has a key id is not updated. Returns 1 when the row was updated, and 0 when it was not.
+    -- The key id is set once, so a row that already has a key id is not updated. Returns 1 when the row was updated,
+    -- and 0 when it was not.
     UPDATE
         [dbo].[Organization]
     SET
