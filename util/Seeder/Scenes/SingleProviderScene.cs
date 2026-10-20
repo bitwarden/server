@@ -184,14 +184,17 @@ public class SingleProviderScene(
             : status != ProviderStatusType.Created;
         if (!producible)
         {
-            throw new InvalidOperationException($"A {request.Type} provider cannot have status {status}.");
+            var allowed = request.Type == ProviderType.Reseller ? "Created" : "Pending or Billable";
+            throw new InvalidOperationException(
+                $"A {request.Type} provider cannot have status {status}; status must be {allowed}.");
         }
 
         if (status == ProviderStatusType.Pending &&
             (!string.IsNullOrEmpty(request.GatewayCustomerId) || !string.IsNullOrEmpty(request.GatewaySubscriptionId)))
         {
             throw new InvalidOperationException(
-                "A Pending provider has not completed setup and cannot have Stripe gateway IDs.");
+                "A Pending provider has not completed setup and cannot have Stripe gateway IDs; " +
+                "omit gatewayCustomerId and gatewaySubscriptionId, or use status Billable.");
         }
 
         return status;
@@ -199,22 +202,38 @@ public class SingleProviderScene(
 
     private static PlanType GetManagedPlanType(Request request, Organization organization)
     {
-        var businessUnitPlanType = request.Plans.FirstOrDefault()?.PlanType;
-        var managedPlanType = request.Type == ProviderType.BusinessUnit
-            ? businessUnitPlanType is PlanType.EnterpriseMonthly or PlanType.EnterpriseAnnually
-                ? businessUnitPlanType
-                : null
-            : organization.PlanType switch
+        if (request.Type == ProviderType.BusinessUnit)
+        {
+            var businessUnitPlanType = request.Plans.FirstOrDefault()?.PlanType;
+            if (businessUnitPlanType is not (PlanType.EnterpriseMonthly or PlanType.EnterpriseAnnually))
             {
-                var planType when PlanConstants.TeamsPlanTypes.Contains(planType) => PlanType.TeamsMonthly,
-                var planType when PlanConstants.EnterprisePlanTypes.Contains(planType) => PlanType.EnterpriseMonthly,
-                _ => (PlanType?)null
-            };
+                throw new InvalidOperationException(
+                    "A Business Unit provider manages clients on its first plan, which must be EnterpriseMonthly or " +
+                    $"EnterpriseAnnually; plans[0] is {businessUnitPlanType?.ToString() ?? "missing"}.");
+            }
 
-        if (managedPlanType is not { } resolved || request.Plans.All(p => p.PlanType != resolved))
+            return businessUnitPlanType.Value;
+        }
+
+        PlanType? managedPlanType = organization.PlanType switch
+        {
+            var planType when PlanConstants.TeamsPlanTypes.Contains(planType) => PlanType.TeamsMonthly,
+            var planType when PlanConstants.EnterprisePlanTypes.Contains(planType) => PlanType.EnterpriseMonthly,
+            _ => null
+        };
+
+        if (managedPlanType is not { } resolved)
         {
             throw new InvalidOperationException(
-                $"Organization {organization.Id} on {organization.PlanType} has no matching {request.Type} provider plan.");
+                $"Organization {organization.Id} is on {organization.PlanType}; " +
+                "an MSP provider can only manage Teams or Enterprise organizations.");
+        }
+
+        if (request.Plans.All(p => p.PlanType != resolved))
+        {
+            throw new InvalidOperationException(
+                $"Organization {organization.Id} on {organization.PlanType} is managed on {resolved}; " +
+                $"add {resolved} to plans.");
         }
 
         return resolved;
