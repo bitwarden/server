@@ -690,6 +690,63 @@ public class OrganizationPartnershipEntitlementRepositoryTests
         Assert.Equal(user.Id, (await repository.GetByIdAsync(entitlement.Id))!.UserId);
     }
 
+    [Theory, DatabaseData]
+    public async Task GetPageByOrganizationPartnershipIdAsync_ReadsEveryEntitlementOnceAcrossPages(
+        IOrganizationPartnershipEntitlementRepository repository,
+        IOrganizationPartnershipRepository partnershipRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        var partnership = await CreatePartnershipAsync(partnershipRepository, organizationRepository);
+        var created = new List<Guid>();
+        for (var i = 0; i < 5; i++)
+        {
+            created.Add((await repository.CreateAsync(NewEntitlement(partnership, $"customer-{i}"))).Id);
+        }
+
+        var read = new List<Guid>();
+        Guid? afterId = null;
+        ICollection<OrganizationPartnershipEntitlement> page;
+        do
+        {
+            page = await repository.GetPageByOrganizationPartnershipIdAsync(partnership.Id, afterId, 2);
+            read.AddRange(page.Select(e => e.Id));
+            afterId = page.LastOrDefault()?.Id;
+        } while (page.Count == 2);
+
+        Assert.Equal(created.Order(), read.Order());
+        Assert.Equal(read.Count, read.Distinct().Count());
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetPageByOrganizationPartnershipIdAsync_ExcludesOtherPartnerships(
+        IOrganizationPartnershipEntitlementRepository repository,
+        IOrganizationPartnershipRepository partnershipRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        var partnership = await CreatePartnershipAsync(partnershipRepository, organizationRepository);
+        var otherPartnership = await CreatePartnershipAsync(partnershipRepository, organizationRepository);
+        var entitlement = await repository.CreateAsync(NewEntitlement(partnership, "customer-1"));
+        await repository.CreateAsync(NewEntitlement(otherPartnership, "customer-1"));
+
+        var page = await repository.GetPageByOrganizationPartnershipIdAsync(partnership.Id, null, 10);
+
+        Assert.Equal([entitlement.Id], page.Select(e => e.Id));
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetPageByOrganizationPartnershipIdAsync_ReturnsDecryptedExternalIds(
+        IOrganizationPartnershipEntitlementRepository repository,
+        IOrganizationPartnershipRepository partnershipRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        var partnership = await CreatePartnershipAsync(partnershipRepository, organizationRepository);
+        await repository.CreateAsync(NewEntitlement(partnership, "customer-1"));
+
+        var page = await repository.GetPageByOrganizationPartnershipIdAsync(partnership.Id, null, 10);
+
+        Assert.Equal("customer-1", Assert.Single(page).ExternalId);
+    }
+
     private static async Task<OrganizationPartnership> CreatePartnershipAsync(
         IOrganizationPartnershipRepository partnershipRepository,
         IOrganizationRepository organizationRepository)

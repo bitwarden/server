@@ -77,6 +77,22 @@ public class OrganizationPartnershipEntitlementRepository
         return entitlements;
     }
 
+    public async Task<ICollection<OrganizationPartnershipEntitlement>> GetPageByOrganizationPartnershipIdAsync(
+        Guid organizationPartnershipId, Guid? afterId, int pageSize)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<OrganizationPartnershipEntitlement>(
+            $"[{Schema}].[{Table}_ReadPageByOrganizationPartnershipId]",
+            new { OrganizationPartnershipId = organizationPartnershipId, AfterId = afterId, PageSize = pageSize },
+            commandType: CommandType.StoredProcedure);
+        var entitlements = results.ToList();
+        foreach (var entitlement in entitlements)
+        {
+            UnprotectData(entitlement);
+        }
+        return entitlements;
+    }
+
     public async Task<bool> ReplaceIfUnchangedAsync(
         OrganizationPartnershipEntitlement entitlement, DateTime expectedRevisionDate)
     {
