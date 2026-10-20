@@ -44,5 +44,7 @@ public class UnrestrictedCipherLeaseGate : ICipherLeaseGate
         IEnumerable<Cipher> ciphers)
         => Task.FromResult(FullCipherAccess.Unrestricted());
 
+    public FullCipherAccess AuthorizeAccessConnectorRotationRead(Cipher cipher) => FullCipherAccess.Unrestricted();
+
     public FullCipherAccess UnrestrictedForWholeVaultExport() => FullCipherAccess.Unrestricted();
 }

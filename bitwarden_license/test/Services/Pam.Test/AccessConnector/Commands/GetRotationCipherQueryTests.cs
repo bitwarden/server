@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Exceptions;
+using Bit.Core.Pam.Services;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Repositories;
 using Bit.Pam.Entities;
@@ -104,9 +105,28 @@ public class GetRotationCipherQueryTests
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetByIdAsync(config.Id).Returns(config);
         sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(config.CipherId).Returns(cipher);
 
+        var access = new UnrestrictedCipherLeaseGate().AuthorizeAccessConnectorRotationRead(cipher);
+        sutProvider.GetDependency<ICipherLeaseGate>().AuthorizeAccessConnectorRotationRead(cipher).Returns(access);
+
         var result = await sutProvider.Sut.GetAsync(accessConnectorId, attempt.Id);
 
-        Assert.Same(cipher, result);
+        Assert.Same(cipher, result.Cipher);
+        Assert.Same(access, result.Access);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsync_CapabilityCheckFails_NeverMintsTheWitness(
+        Guid accessConnectorId, PamRotationAttempt attempt, PamRotationJob job)
+    {
+        var sutProvider = Setup();
+        ClaimedBy(accessConnectorId, attempt, job);
+        attempt.Action = PamRotationAttemptAction.Errored;
+        Returns(sutProvider, attempt, job);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(accessConnectorId, attempt.Id));
+
+        sutProvider.GetDependency<ICipherLeaseGate>().DidNotReceiveWithAnyArgs()
+            .AuthorizeAccessConnectorRotationRead(default!);
     }
 
     private static SutProvider<GetRotationCipherQuery> Setup()

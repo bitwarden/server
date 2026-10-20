@@ -1,4 +1,4 @@
-﻿namespace Bit.Services.Pam.AccessConnector.Commands.Interfaces;
+﻿namespace Bit.Core.Pam.AccessConnector.Commands;
 
 public interface ISubmitCipherUpdateCommand
 {
@@ -7,5 +7,9 @@ public interface ISubmitCipherUpdateCommand
     /// <see cref="Bit.Core.Exceptions.NotFoundException"/> for an unknown attempt and
     /// <see cref="Bit.Core.Exceptions.ConflictException"/> for a lost capability or a stale revision.
     /// </summary>
-    Task SubmitAsync(Guid accessConnectorId, Guid attemptId, string cipherDataJson, DateTime lastKnownRevisionDate);
+    Task SubmitAsync(
+        Guid accessConnectorId,
+        Guid attemptId,
+        string cipherDataJson,
+        DateTime lastKnownRevisionDate);
 }

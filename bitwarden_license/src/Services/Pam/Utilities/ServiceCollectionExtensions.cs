@@ -1,4 +1,6 @@
-﻿using Bit.Core.Pam.Services;
+﻿using Bit.Core.Pam.AccessConnector.Commands;
+using Bit.Core.Pam.AccessConnector.Queries;
+using Bit.Core.Pam.Services;
 using Bit.HttpExtensions;
 using Bit.Services.Pam.AccessConnector.Api.Endpoints.Filters;
 using Bit.Services.Pam.AccessConnector.Api.Endpoints.Handlers;
