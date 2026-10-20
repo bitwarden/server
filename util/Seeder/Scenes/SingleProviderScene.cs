@@ -29,10 +29,11 @@ public struct SingleProviderSceneResult
 /// Links an existing owner user and existing client organizations to a new provider. The owner is added as
 /// a confirmed ProviderAdmin, the requested billing plans are configured, and each supplied organization is
 /// linked via a ProviderOrganization whose key wraps the organization key under the provider key. For MSP and
-/// Business Unit providers each linked organization is converted into a managed client organization, mirroring
-/// <c>ProviderBillingService.AddExistingOrganization</c>, and each plan's allocated seats are the summed seats of
-/// its linked clients; Reseller links leave the organization unchanged. Existing Stripe customer/subscription IDs
-/// can be linked to the provider; the scene does not call the Stripe API, it only links caller-supplied identifiers.
+/// Business Unit providers each linked organization is converted into a managed client organization with the same
+/// entity changes as <c>ProviderBillingService.AddExistingOrganization</c>, and each plan's allocated seats are the
+/// summed seats of its linked clients; Reseller links leave the organization unchanged. The scene makes no Stripe
+/// calls: it does not cancel client subscriptions or move customer balances, and it only links caller-supplied
+/// Stripe customer/subscription IDs to the provider.
 /// </summary>
 public class SingleProviderScene(
     IUserRepository userRepository,
@@ -50,6 +51,7 @@ public class SingleProviderScene(
         [Required]
         public required string Name { get; set; }
         public ProviderType Type { get; set; } = ProviderType.Msp;
+        public ProviderStatusType Status { get; set; } = ProviderStatusType.Billable;
         public List<PlanConfig> Plans { get; set; } = [];
         public List<OrganizationLink> Organizations { get; set; } = [];
         public string? Domain { get; set; }
@@ -90,7 +92,9 @@ public class SingleProviderScene(
                 $"User {request.OwnerUserId} has no public key; cannot encrypt the provider key for the owner.");
         }
 
-        var clients = new List<(Organization Organization, OrganizationLink Link, PlanType? ManagedPlanType)>();
+        var providerKey = RustSdkService.GenerateOrganizationKeys().Key;
+
+        var clients = new List<(Organization Organization, string WrappedKey, PlanType? ManagedPlanType)>();
         foreach (var link in request.Organizations)
         {
             var organization = await organizationRepository.GetByIdAsync(link.OrganizationId)
@@ -98,13 +102,15 @@ public class SingleProviderScene(
             var managedPlanType = request.Type.SupportsConsolidatedBilling()
                 ? GetManagedPlanType(request, organization)
                 : (PlanType?)null;
-            clients.Add((organization, link, managedPlanType));
+            // Must be WrapSymmetricKey (raw key bytes), not EncryptString (base64 text), so clients unwrap it
+            // back into the organization key.
+            var wrappedKey = RustSdkService.WrapSymmetricKey(link.OrganizationKeyB64, providerKey);
+            clients.Add((organization, wrappedKey, managedPlanType));
         }
 
         var domain = string.IsNullOrWhiteSpace(request.Domain)
             ? $"{Guid.NewGuid():N}.provider.test"
             : request.Domain;
-        var providerKey = RustSdkService.GenerateOrganizationKeys().Key;
 
         var provider = ProviderSeeder.Create(
             new ProviderSeed
@@ -112,6 +118,7 @@ public class SingleProviderScene(
                 Name = request.Name,
                 Domain = domain,
                 Type = request.Type,
+                Status = request.Status,
                 GatewayCustomerId = request.GatewayCustomerId,
                 GatewaySubscriptionId = request.GatewaySubscriptionId
             },
@@ -131,7 +138,7 @@ public class SingleProviderScene(
         }
 
         var providerOrganizationIds = new List<Guid>();
-        foreach (var (organization, link, managedPlanType) in clients)
+        foreach (var (organization, wrappedKey, managedPlanType) in clients)
         {
             if (managedPlanType is { } planType)
             {
@@ -142,10 +149,8 @@ public class SingleProviderScene(
             var providerOrganization = new ProviderOrganization
             {
                 ProviderId = provider.Id,
-                OrganizationId = link.OrganizationId,
-                // Wrap the organization key under the provider key so clients unwrap it back into the
-                // organization key. Must be WrapSymmetricKey (raw key bytes), not EncryptString (base64 text).
-                Key = RustSdkService.WrapSymmetricKey(link.OrganizationKeyB64, providerKey)
+                OrganizationId = organization.Id,
+                Key = wrappedKey
             };
             await providerOrganizationRepository.CreateAsync(providerOrganization);
             providerOrganizationIds.Add(providerOrganization.Id);
@@ -213,9 +218,7 @@ public class SingleProviderScene(
         organization.UseRiskInsights = plan.UseRiskInsights;
         organization.UseKeyConnector = plan.UseKeyConnector;
 
-        organization.UseSecretsManager = false;
         organization.BillingEmail = provider.BillingEmail!;
-        organization.GatewayCustomerId = null;
         organization.GatewaySubscriptionId = null;
         organization.ExpirationDate = null;
         organization.MaxAutoscaleSeats = null;

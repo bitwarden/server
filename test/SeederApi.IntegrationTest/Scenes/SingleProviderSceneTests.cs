@@ -128,6 +128,31 @@ public class SingleProviderSceneTests : IClassFixture<InPlaySeederApiApplication
         }
     }
 
+    [Theory]
+    [InlineData(ProviderStatusType.Pending)]
+    [InlineData(ProviderStatusType.Created)]
+    public async Task SingleProviderScene_PassesProviderStatusThrough(ProviderStatusType status)
+    {
+        var playId = Guid.NewGuid().ToString();
+
+        var providerAdminUserId = await SeedUserAsync(playId);
+
+        var providerResult = await PostSceneAsync(playId, nameof(SingleProviderScene), new SingleProviderScene.Request
+        {
+            OwnerUserId = providerAdminUserId,
+            Name = "Status MSP",
+            Type = ProviderType.Msp,
+            Status = status
+        });
+        var providerId = providerResult.GetProperty("providerId").GetGuid();
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+
+        var provider = await db.Providers.SingleAsync(p => p.Id == providerId);
+        Assert.Equal(status, provider.Status);
+    }
+
     [Fact]
     public async Task SingleProviderScene_ConvertsLinkedOrgsToManagedClients()
     {
@@ -140,7 +165,9 @@ public class SingleProviderSceneTests : IClassFixture<InPlaySeederApiApplication
             orgOwnerUserId,
             gatewayCustomerId: "cus_seed",
             gatewaySubscriptionId: "sub_seed",
-            overrides: new OrganizationOverrides { SyncSeats = false });
+            overrides: new OrganizationOverrides { SyncSeats = false },
+            enableSecretsManager: true,
+            smSeats: 4);
 
         var providerResult = await PostSceneAsync(playId, nameof(SingleProviderScene), new SingleProviderScene.Request
         {
@@ -164,15 +191,61 @@ public class SingleProviderSceneTests : IClassFixture<InPlaySeederApiApplication
         Assert.Equal(OrganizationStatusType.Managed, organization.Status);
         Assert.Equal(PlanType.EnterpriseMonthly, organization.PlanType);
         Assert.Equal("Enterprise (Monthly)", organization.Plan);
-        Assert.True(organization.UseSso);
-        Assert.True(organization.UsePolicies);
-        Assert.True(organization.UseScim);
-        Assert.True(organization.UseMyItems);
         Assert.False(organization.SyncSeats);
-        Assert.False(organization.UseSecretsManager);
+        Assert.True(organization.UseSecretsManager);
+        Assert.Equal(4, organization.SmSeats);
         Assert.Equal(provider.BillingEmail, organization.BillingEmail);
-        Assert.Null(organization.GatewayCustomerId);
+        Assert.Equal("cus_seed", organization.GatewayCustomerId);
         Assert.Null(organization.GatewaySubscriptionId);
+    }
+
+    [Fact]
+    public async Task SingleProviderScene_BusinessUnitConvertsTeamsOrgToEnterpriseClient()
+    {
+        var playId = Guid.NewGuid().ToString();
+
+        var providerAdminUserId = await SeedUserAsync(playId);
+        var orgOwnerUserId = await SeedUserAsync(playId);
+        var (organizationId, organizationKeyB64) =
+            await SeedClientOrganizationAsync(playId, orgOwnerUserId, PlanType.TeamsAnnually, 6);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+            var seeded = await db.Organizations.SingleAsync(o => o.Id == organizationId);
+            Assert.False(seeded.UseSso);
+            Assert.False(seeded.UsePolicies);
+            Assert.False(seeded.UseResetPassword);
+            Assert.False(seeded.UseMyItems);
+        }
+
+        var providerResult = await PostSceneAsync(playId, nameof(SingleProviderScene), new SingleProviderScene.Request
+        {
+            OwnerUserId = providerAdminUserId,
+            Name = "Managed Business Unit",
+            Type = ProviderType.BusinessUnit,
+            Plans = [new SingleProviderScene.PlanConfig { PlanType = PlanType.EnterpriseAnnually, Seats = 2 }],
+            Organizations = [Link(organizationId, organizationKeyB64)]
+        });
+        var providerId = providerResult.GetProperty("providerId").GetGuid();
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+
+            var organization = await db.Organizations.SingleAsync(o => o.Id == organizationId);
+            Assert.Equal(OrganizationStatusType.Managed, organization.Status);
+            Assert.Equal(PlanType.EnterpriseAnnually, organization.PlanType);
+            Assert.Equal("Enterprise (Annually)", organization.Plan);
+            Assert.True(organization.UseSso);
+            Assert.True(organization.UsePolicies);
+            Assert.True(organization.UseResetPassword);
+            Assert.True(organization.UseMyItems);
+
+            var plan = await db.ProviderPlans.SingleAsync(pp => pp.ProviderId == providerId);
+            Assert.Equal(PlanType.EnterpriseAnnually, plan.PlanType);
+            Assert.Equal(6, plan.AllocatedSeats);
+        }
     }
 
     [Fact]
@@ -257,6 +330,54 @@ public class SingleProviderSceneTests : IClassFixture<InPlaySeederApiApplication
         var organization = await db.Organizations.SingleAsync(o => o.Id == organizationId);
         Assert.Equal(OrganizationStatusType.Created, organization.Status);
         Assert.Equal(PlanType.EnterpriseAnnually, organization.PlanType);
+    }
+
+    [Fact]
+    public async Task SingleProviderScene_MalformedOrganizationKey_ReturnsBadRequestWithoutWrites()
+    {
+        var playId = Guid.NewGuid().ToString();
+        var providerName = $"Bad Key {Guid.NewGuid():N}";
+
+        var providerAdminUserId = await SeedUserAsync(playId);
+        var orgOwnerUserId = await SeedUserAsync(playId);
+        var valid = await SeedClientOrganizationAsync(playId, orgOwnerUserId);
+        var malformed = await SeedClientOrganizationAsync(playId, orgOwnerUserId);
+
+        var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
+        {
+            Template = nameof(SingleProviderScene),
+            Arguments = JsonSerializer.SerializeToElement(new SingleProviderScene.Request
+            {
+                OwnerUserId = providerAdminUserId,
+                Name = providerName,
+                Type = ProviderType.Msp,
+                Plans = [new SingleProviderScene.PlanConfig { PlanType = PlanType.EnterpriseMonthly, Seats = 5 }],
+                Organizations =
+                [
+                    Link(valid.OrganizationId, valid.OrganizationKeyB64),
+                    Link(malformed.OrganizationId, "not-a-key")
+                ]
+            })
+        }, playId);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+
+        Assert.False(await db.Providers.AnyAsync(p => p.Name!.EndsWith(providerName)));
+        Assert.False(await db.ProviderUsers.AnyAsync(pu => pu.UserId == providerAdminUserId));
+        Assert.False(await db.ProviderOrganizations.AnyAsync(po =>
+            po.OrganizationId == valid.OrganizationId || po.OrganizationId == malformed.OrganizationId));
+        var organizations = await db.Organizations
+            .Where(o => o.Id == valid.OrganizationId || o.Id == malformed.OrganizationId)
+            .ToListAsync();
+        Assert.Equal(2, organizations.Count);
+        Assert.All(organizations, o =>
+        {
+            Assert.Equal(OrganizationStatusType.Created, o.Status);
+            Assert.Equal(PlanType.EnterpriseAnnually, o.PlanType);
+        });
     }
 
     [Theory]
@@ -350,7 +471,9 @@ public class SingleProviderSceneTests : IClassFixture<InPlaySeederApiApplication
         int seats = 10,
         string? gatewayCustomerId = null,
         string? gatewaySubscriptionId = null,
-        OrganizationOverrides? overrides = null)
+        OrganizationOverrides? overrides = null,
+        bool enableSecretsManager = false,
+        int? smSeats = null)
     {
         var result = await PostSceneAsync(playId, "SingleOrganizationScene", new SingleOrganizationScene.Request
         {
@@ -361,7 +484,9 @@ public class SingleProviderSceneTests : IClassFixture<InPlaySeederApiApplication
             Seats = seats,
             GatewayCustomerId = gatewayCustomerId,
             GatewaySubscriptionId = gatewaySubscriptionId,
-            Overrides = overrides
+            Overrides = overrides,
+            EnableSecretsManager = enableSecretsManager,
+            SmSeats = smSeats
         });
 
         return (result.GetProperty("organizationId").GetGuid(),
