@@ -2,21 +2,33 @@
 using System.Text.Json;
 using Bit.Api.AdminConsole.Partnerships.Controllers;
 using Bit.Api.IntegrationTest.Factories;
+using Bit.Core.AdminConsole.Enums.Partnerships;
 using Bit.Core.AdminConsole.OrganizationFeatures.Partnerships;
 using Microsoft.AspNetCore.Mvc;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Partnerships;
 
-public class PartnershipErrorEnvelopeTests : IClassFixture<ApiApplicationFactory>
+public class PartnershipErrorEnvelopeTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
-    private readonly HttpClient _client;
+    private readonly ApiApplicationFactory _factory;
+    private HttpClient _client = null!;
 
     public PartnershipErrorEnvelopeTests(ApiApplicationFactory factory)
     {
-        factory.ConfigureServices(services =>
+        _factory = factory;
+        _factory.ConfigureServices(services =>
             services.AddMvcCore().AddApplicationPart(typeof(PartnershipEnvelopeTestController).Assembly));
-        _client = factory.CreateClient();
+        PartnershipTestHelpers.EnablePartnerSponsorships(_factory);
+    }
+
+    public async Task InitializeAsync() =>
+        _client = (await PartnershipTestHelpers.CreateOrganizationClientAsync(_factory, PartnershipStatus.Active)).Client;
+
+    public Task DisposeAsync()
+    {
+        _client.Dispose();
+        return Task.CompletedTask;
     }
 
     [Fact]

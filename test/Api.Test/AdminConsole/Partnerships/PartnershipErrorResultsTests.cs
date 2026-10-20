@@ -20,6 +20,7 @@ public class PartnershipErrorResultsTests
         { new PartnershipNotFound(), StatusCodes.Status404NotFound, "not_found" },
         { new EntitlementNotProvisioned(), StatusCodes.Status404NotFound, "not_provisioned" },
         { new PartnershipAlreadyExists(), StatusCodes.Status409Conflict, "partnership_already_exists" },
+        { new PartnershipNotActive(), StatusCodes.Status409Conflict, "partnership_not_active" },
         { new EntitlementAlreadyBound(), StatusCodes.Status409Conflict, "already_bound" },
     };
 
