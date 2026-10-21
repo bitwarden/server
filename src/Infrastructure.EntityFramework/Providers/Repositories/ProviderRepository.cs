@@ -9,9 +9,9 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
+namespace Bit.Infrastructure.EntityFramework.Providers.Repositories;
 
-public class ProviderRepository : Repository<Provider, Models.Provider.Provider, Guid>, IProviderRepository
+public class ProviderRepository : Repository<Provider, Models.Provider, Guid>, IProviderRepository
 {
 
     public ProviderRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)

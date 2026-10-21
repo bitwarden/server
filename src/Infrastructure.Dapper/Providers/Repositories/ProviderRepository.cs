@@ -9,7 +9,7 @@ using Microsoft.Data.SqlClient;
 
 #nullable enable
 
-namespace Bit.Infrastructure.Dapper.AdminConsole.Repositories;
+namespace Bit.Infrastructure.Dapper.Providers.Repositories;
 
 public class ProviderRepository : Repository<Provider, Guid>, IProviderRepository
 {

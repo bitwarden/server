@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 
-namespace Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
+namespace Bit.Infrastructure.EntityFramework.Providers.Models;
 
 public class Provider : Core.AdminConsole.Entities.Provider.Provider
 {

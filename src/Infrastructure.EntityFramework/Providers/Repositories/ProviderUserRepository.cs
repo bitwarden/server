@@ -6,16 +6,16 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.Queries;
+using Bit.Infrastructure.EntityFramework.Providers.Repositories.Queries;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
+namespace Bit.Infrastructure.EntityFramework.Providers.Repositories;
 
 public class ProviderUserRepository :
-    Repository<ProviderUser, Models.Provider.ProviderUser, Guid>, IProviderUserRepository
+    Repository<ProviderUser, Models.ProviderUser, Guid>, IProviderUserRepository
 {
     public ProviderUserRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.ProviderUsers)
