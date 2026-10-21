@@ -159,6 +159,7 @@ public class ProviderService : IProviderService
         var enabledStatusChanged = existingProvider != null && existingProvider.Enabled != provider.Enabled;
 
         await _providerRepository.ReplaceAsync(provider);
+        await _providerAbilityCacheService.UpsertProviderAbilityAsync(provider);
 
         if (enabledStatusChanged && (provider.Type == ProviderType.Msp || provider.Type == ProviderType.BusinessUnit))
         {

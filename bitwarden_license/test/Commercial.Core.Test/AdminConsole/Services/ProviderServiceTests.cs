@@ -171,6 +171,9 @@ public class ProviderServiceTests
     public async Task UpdateAsync_Success(Provider provider, SutProvider<ProviderService> sutProvider)
     {
         await sutProvider.Sut.UpdateAsync(provider);
+
+        await sutProvider.GetDependency<IProviderRepository>().Received(1).ReplaceAsync(provider);
+        await sutProvider.GetDependency<IProviderAbilityCacheService>().Received(1).UpsertProviderAbilityAsync(provider);
     }
 
     [Theory, BitAutoData]
