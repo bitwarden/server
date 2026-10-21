@@ -1249,8 +1249,8 @@
       },
       "Stripe.net": {
         "type": "Transitive",
-        "resolved": "52.1.0",
-        "contentHash": "xzYOMenSrhR2UIgk+zBOjfzADSFe9NnCuhffs2FMpWSJst4M19m6QS7GAxq4cLeBdWvUoUo3RuHNc5uzI5eOFg==",
+        "resolved": "52.4.2",
+        "contentHash": "cap6WfPXE1WBoCVle151RLGpF5cQoOx+6sitBG8wuoDJaVVhscJjX3c3F6ldvwFUelqo0GxtM9odaq8Rn7sKmA==",
         "dependencies": {
           "Newtonsoft.Json": "13.0.3",
           "System.Configuration.ConfigurationManager": "9.0.0"
@@ -1470,7 +1470,7 @@
           "SendGrid": "[9.29.3, 9.29.3]",
           "SerilogFileLogging": "[0.0.1, )",
           "SsrfProtection": "[0.0.1, )",
-          "Stripe.net": "[52.1.0, 52.1.0]",
+          "Stripe.net": "[52.4.2, 52.4.2]",
           "YubicoDotNetClient": "[1.2.0, 1.2.0]",
           "ZiggyCreatures.FusionCache": "[2.0.2, 2.0.2]",
           "ZiggyCreatures.FusionCache.Backplane.StackExchangeRedis": "[2.0.2, 2.0.2]",
