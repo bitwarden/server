@@ -120,7 +120,7 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
             OrganizationUseTotp = c.OrganizationUseTotp,
             Key = c.Key,
             ArchivedDate = GetArchivedDate(_userId, new Cipher { Id = c.Id, Archives = c.Archives }),
-            ReportExcludedDate = GetReportExcludedDate(_userId, new Cipher { Id = c.Id, ReportExclusions = c.ReportExclusions })
+            ExcludedFromReports = _userId.HasValue && c.ReportExclusions != null && c.ReportExclusions.ToLowerInvariant().Contains($"\"{_userId}\":true")
         });
         return union;
     }
@@ -146,26 +146,6 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
         }
     }
 
-    private static DateTime? GetReportExcludedDate(Guid? userId, Cipher cipher)
-    {
-        try
-        {
-            if (userId.HasValue && !string.IsNullOrWhiteSpace(cipher.ReportExclusions))
-            {
-                var exclusions = JsonSerializer.Deserialize<Dictionary<Guid, DateTime>>(cipher.ReportExclusions);
-                if (exclusions.TryGetValue(userId.Value, out var excludedDate))
-                {
-                    return excludedDate;
-                }
-            }
-
-            return null;
-        }
-        catch
-        {
-            return null;
-        }
-    }
 
     private static Guid? GetFolderId(Guid? userId, Cipher cipher)
     {

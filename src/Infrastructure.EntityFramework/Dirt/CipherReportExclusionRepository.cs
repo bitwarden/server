@@ -25,14 +25,13 @@ public class CipherReportExclusionRepository : BaseEntityFrameworkRepository, IC
                 && c.Type == CipherType.Login && c.DeletedDate == null)
             .ToListAsync();
 
-        var utcNow = DateTime.UtcNow;
         foreach (var cipher in ciphers)
         {
             var exclusions = string.IsNullOrWhiteSpace(cipher.ReportExclusions)
-                ? new Dictionary<Guid, DateTime>()
-                : CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, DateTime>>(cipher.ReportExclusions)
-                  ?? new Dictionary<Guid, DateTime>();
-            exclusions[userId] = utcNow;
+                ? new Dictionary<Guid, bool>()
+                : CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, bool>>(cipher.ReportExclusions)
+                  ?? new Dictionary<Guid, bool>();
+            exclusions[userId] = true;
             cipher.ReportExclusions = CoreHelpers.ClassToJsonData(exclusions);
         }
 

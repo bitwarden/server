@@ -11,7 +11,7 @@ BEGIN
         [ReportExclusions] = JSON_MODIFY(
             COALESCE(C.[ReportExclusions], N'{}'),
             CONCAT('$."', @UserId, '"'),
-            CONVERT(NVARCHAR(30), SYSUTCDATETIME(), 127)
+            CAST(1 AS BIT)
         )
     FROM
         [dbo].[Cipher] C
