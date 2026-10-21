@@ -2,6 +2,7 @@
 using System.Text;
 using Bit.Billing.Controllers;
 using Bit.Billing.Test.Utilities;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Services;
@@ -29,10 +30,12 @@ public class PayPalControllerTests(ITestOutputHelper testOutputHelper)
     private readonly IOptions<BillingSettings> _billingSettings = Substitute.For<IOptions<BillingSettings>>();
     private readonly IMailService _mailService = Substitute.For<IMailService>();
     private readonly IOrganizationRepository _organizationRepository = Substitute.For<IOrganizationRepository>();
+    private readonly IOrganizationService _organizationService = Substitute.For<IOrganizationService>();
     private readonly IStripePaymentService _paymentService = Substitute.For<IStripePaymentService>();
     private readonly ITransactionRepository _transactionRepository = Substitute.For<ITransactionRepository>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly IProviderRepository _providerRepository = Substitute.For<IProviderRepository>();
+    private readonly IProviderAbilityCacheService _providerAbilityCacheService = Substitute.For<IProviderAbilityCacheService>();
     private readonly IPremiumUserBillingService _premiumUserBillingService = Substitute.For<IPremiumUserBillingService>();
 
     private const string _defaultWebhookKey = "webhook-key";
@@ -334,7 +337,7 @@ public class PayPalControllerTests(ITestOutputHelper testOutputHelper)
 
         await _paymentService.Received(1).CreditAccountAsync(organization, 48M);
 
-        await _organizationRepository.Received(1).ReplaceAsync(organization);
+        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(organization);
 
         await _mailService.Received(1).SendAddedCreditAsync(billingEmail, 48M);
     }
@@ -515,10 +518,12 @@ public class PayPalControllerTests(ITestOutputHelper testOutputHelper)
             logger,
             _mailService,
             _organizationRepository,
+            _organizationService,
             _paymentService,
             _transactionRepository,
             _userRepository,
             _providerRepository,
+            _providerAbilityCacheService,
             _premiumUserBillingService);
 
         var httpContext = new DefaultHttpContext();

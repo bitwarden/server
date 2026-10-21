@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using Bit.Billing.Models;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Payment.Clients;
@@ -26,8 +27,10 @@ public class BitPayController(
     IBitPayClient bitPayClient,
     ITransactionRepository transactionRepository,
     IOrganizationRepository organizationRepository,
+    IOrganizationService organizationService,
     IUserRepository userRepository,
     IProviderRepository providerRepository,
+    IProviderAbilityCacheService providerAbilityCacheService,
     IMailService mailService,
     IStripePaymentService paymentService,
     ILogger<BitPayController> logger,
@@ -98,7 +101,7 @@ public class BitPayController(
                     billingEmail = organization.BillingEmailAddress();
                     if (await paymentService.CreditAccountAsync(organization, transaction.Amount))
                     {
-                        await organizationRepository.ReplaceAsync(organization);
+                        await organizationService.ReplaceAndUpdateCacheAsync(organization);
                     }
                 }
             }
@@ -120,6 +123,7 @@ public class BitPayController(
                     if (await paymentService.CreditAccountAsync(provider, transaction.Amount))
                     {
                         await providerRepository.ReplaceAsync(provider);
+                        await providerAbilityCacheService.UpsertProviderAbilityAsync(provider);
                     }
                 }
             }

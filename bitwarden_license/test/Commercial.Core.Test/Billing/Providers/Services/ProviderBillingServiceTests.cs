@@ -171,6 +171,14 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(command.NewPlan)
             .Returns(MockPlans.Get(command.NewPlan));
 
+        var clientOrganization = new Organization { Id = Guid.NewGuid(), PlanType = PlanType.EnterpriseAnnually };
+        sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
+        [
+            new ProviderOrganizationOrganizationDetails { OrganizationId = clientOrganization.Id }
+        ]);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(clientOrganization.Id)
+            .Returns(clientOrganization);
+
         // Act
         await sutProvider.Sut.ChangePlan(command);
 
@@ -195,6 +203,10 @@ public class ProviderBillingServiceTests
                         si.Price == newPlanCfg.PasswordManager.StripeProviderPortalSeatPlanId &&
                         si.Deleted == default &&
                         si.Quantity == 10) == 1));
+
+        await sutProvider.GetDependency<IOrganizationService>().Received(1)
+            .ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(o =>
+                o.Id == clientOrganization.Id && o.PlanType == PlanType.EnterpriseMonthly));
     }
 
     #endregion
@@ -306,7 +318,7 @@ public class ProviderBillingServiceTests
                 options.TaxIdData.FirstOrDefault().Type == providerCustomer.TaxIds.FirstOrDefault().Type &&
                 options.TaxIdData.FirstOrDefault().Value == providerCustomer.TaxIds.FirstOrDefault().Value));
 
-        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(Arg.Is<Organization>(
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(
             org => org.GatewayCustomerId == "customer_id"));
     }
 

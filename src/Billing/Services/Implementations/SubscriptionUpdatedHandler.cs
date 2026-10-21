@@ -269,7 +269,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
         organization.ExemptFromBillingAutomation = false;
         organization.RevisionDate = DateTime.UtcNow;
-        await _organizationRepository.ReplaceAsync(organization);
+        await _organizationService.ReplaceAndUpdateCacheAsync(organization);
 
         _logger.LogInformation(
             "Exemption has been cleared for organization ({OrganizationId})",

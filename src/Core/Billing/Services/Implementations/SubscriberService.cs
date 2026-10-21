@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
@@ -12,6 +13,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Braintree;
@@ -29,8 +31,9 @@ public class SubscriberService(
     IBraintreeGateway braintreeGateway,
     IGlobalSettings globalSettings,
     ILogger<SubscriberService> logger,
-    IOrganizationRepository organizationRepository,
+    IOrganizationService organizationService,
     IPriceIncreaseScheduler priceIncreaseScheduler,
+    IProviderAbilityCacheService providerAbilityCacheService,
     IProviderRepository providerRepository,
     IStripeAdapter stripeAdapter,
     IUserRepository userRepository) : ISubscriberService
@@ -201,12 +204,13 @@ public class SubscriberService(
             case Organization organization:
                 organization.Gateway = GatewayType.Stripe;
                 organization.GatewayCustomerId = customer.Id;
-                await organizationRepository.ReplaceAsync(organization);
+                await organizationService.ReplaceAndUpdateCacheAsync(organization);
                 break;
             case Provider provider:
                 provider.Gateway = GatewayType.Stripe;
                 provider.GatewayCustomerId = customer.Id;
                 await providerRepository.ReplaceAsync(provider);
+                await providerAbilityCacheService.UpsertProviderAbilityAsync(provider);
                 break;
             case User user:
                 user.Gateway = GatewayType.Stripe;

@@ -2075,7 +2075,7 @@ public class SubscriptionUpdatedHandlerTests
             .DisableAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>());
         await _stripeAdapter.DidNotReceive()
             .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
-        await _organizationRepository.Received(1).ReplaceAsync(
+        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(
             Arg.Is<Organization>(o => o.Id == organizationId && !o.ExemptFromBillingAutomation));
     }
 
