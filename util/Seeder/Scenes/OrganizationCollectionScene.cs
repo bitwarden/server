@@ -64,10 +64,10 @@ public class OrganizationCollectionScene(
             request.Users?.Select(u => u.Id), organization.Id);
         await groupRepository.ThrowIfGroupsNotInOrganizationAsync(request.Groups?.Select(g => g.Id), organization.Id);
 
-        var collection = CollectionSeeder.Create(organization.Id, request.OrganizationKeyB64, request.Name);
+        var users = MapAccessSelections(request.Users).DistinctOrThrowIfConflicting("organization user");
+        var groups = MapAccessSelections(request.Groups).DistinctOrThrowIfConflicting("group");
 
-        var users = MapAccessSelections(request.Users);
-        var groups = MapAccessSelections(request.Groups);
+        var collection = CollectionSeeder.Create(organization.Id, request.OrganizationKeyB64, request.Name);
 
         await collectionRepository.CreateAsync(collection, groups: groups, users: users);
 

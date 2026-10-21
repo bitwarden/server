@@ -55,9 +55,9 @@ public class OrganizationGroupScene(
         await collectionRepository.ThrowIfCollectionsNotInOrganizationAsync(
             request.Collections?.Select(c => c.Id), organization.Id);
 
-        var group = GroupSeeder.Create(organization.Id, request.Name);
+        var collections = MapAccessSelections(request.Collections).DistinctOrThrowIfConflicting("collection");
 
-        var collections = MapAccessSelections(request.Collections);
+        var group = GroupSeeder.Create(organization.Id, request.Name);
 
         await groupRepository.CreateAsync(group, collections ?? []);
 

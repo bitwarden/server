@@ -65,15 +65,15 @@ public class UserCipherSceneGuardTests : IClassFixture<InPlaySeederApiApplicatio
         Assert.False(await db.Ciphers.AnyAsync(c => c.UserId == user.UserId));
     }
 
-    [Fact]
-    public async Task UserSecureNoteCipherScene_OwnFolder_Succeeds()
+    [Theory]
+    [MemberData(nameof(UserCipherScenes))]
+    public async Task UserCipherScene_OwnFolder_Succeeds(string template)
     {
         var playId = Guid.NewGuid().ToString();
         var user = await SeedUserAsync(playId);
         var folderId = await SeedFolderAsync(playId, user);
 
-        var result = await PostSceneAsync(playId, nameof(UserSecureNoteCipherScene),
-            UserCipherRequest(nameof(UserSecureNoteCipherScene), user, folderId));
+        var result = await PostSceneAsync(playId, template, UserCipherRequest(template, user, folderId));
 
         var cipherId = result.GetProperty("cipherId").GetGuid();
         using var scope = _factory.Services.CreateScope();

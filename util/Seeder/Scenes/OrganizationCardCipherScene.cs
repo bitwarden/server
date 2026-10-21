@@ -72,7 +72,7 @@ public class OrganizationCardCipherScene(
             Card = card
         });
 
-        await cipherRepository.CreateAsync(cipher, request.CollectionIds);
+        await cipherRepository.CreateAsync(cipher, request.CollectionIds.Distinct());
 
         return new SceneResult<Result>(
             result: new Result

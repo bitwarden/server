@@ -47,5 +47,5 @@ public class OrganizationLoginCipherScene(
     }
 
     protected override Task PersistAsync(Cipher cipher, Request request)
-        => cipherRepository.CreateAsync(cipher, request.CollectionIds);
+        => cipherRepository.CreateAsync(cipher, request.CollectionIds.Distinct());
 }

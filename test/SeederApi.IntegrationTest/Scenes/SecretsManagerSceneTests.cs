@@ -271,6 +271,40 @@ public class SecretsManagerSceneTests : IClassFixture<InPlaySeederApiApplication
     }
 
     [Fact]
+    public async Task OrganizationSecretScene_DuplicateProjectIds_LinksProjectOnce()
+    {
+        var playId = Guid.NewGuid().ToString();
+
+        var ownerUserId = await SeedUserAsync(playId);
+        var (organizationId, _, organizationKeyB64) = await SeedSmOrganizationAsync(playId, ownerUserId);
+
+        var projectResult = await PostSceneAsync(playId, nameof(OrganizationProjectScene), new OrganizationProjectScene.Request
+        {
+            OrganizationId = organizationId,
+            OrganizationKeyB64 = organizationKeyB64,
+            Name = "Production"
+        });
+        var projectId = projectResult.GetProperty("projectId").GetGuid();
+
+        var secretResult = await PostSceneAsync(playId, nameof(OrganizationSecretScene), new OrganizationSecretScene.Request
+        {
+            OrganizationId = organizationId,
+            OrganizationKeyB64 = organizationKeyB64,
+            Key = "DB_PASSWORD",
+            Value = "s3cret",
+            ProjectIds = [projectId, projectId]
+        });
+        var secretId = secretResult.GetProperty("secretId").GetGuid();
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+
+        var secret = await db.Secret.Include(s => s.Projects).SingleAsync(s => s.Id == secretId);
+        var linkedProject = Assert.Single(secret.Projects!);
+        Assert.Equal(projectId, linkedProject.Id);
+    }
+
+    [Fact]
     public async Task OrganizationAccessPolicyScene_GrantableNotInOrganization_ReturnsBadRequest()
     {
         var playId = Guid.NewGuid().ToString();

@@ -96,7 +96,7 @@ public class OrganizationIdentityCipherScene(
             Identity = identity
         });
 
-        await cipherRepository.CreateAsync(cipher, request.CollectionIds);
+        await cipherRepository.CreateAsync(cipher, request.CollectionIds.Distinct());
 
         return new SceneResult<Result>(
             result: new Result
