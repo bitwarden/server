@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Helpers;
-using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
@@ -15,7 +14,6 @@ internal sealed class PurchasePrivilegedControlsHandler(
     IOrganizationRepository organizationRepository,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter,
-    IHasPaymentMethodQuery hasPaymentMethodQuery,
     ILogger<PurchasePrivilegedControlsHandler> logger,
     IAddPrivilegedControlsToExistingSubscriptionCommand addPrivilegedControlsCommand)
 {
@@ -42,12 +40,6 @@ internal sealed class PurchasePrivilegedControlsHandler(
         if (!plan.SupportsPrivilegedControls || plan.ProductTier != ProductTierType.Enterprise)
         {
             throw new BadRequestException("Privileged Controls is only available on Enterprise organizations.");
-        }
-
-        if (!await hasPaymentMethodQuery.Run(organization))
-        {
-            throw new BadRequestException(
-                "Add a payment method to your organization before purchasing Privileged Controls.");
         }
 
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))

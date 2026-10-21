@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
@@ -26,7 +25,6 @@ public class PurchasePrivilegedControlsHandlerTests
     private readonly IOrganizationRepository _organizationRepository = Substitute.For<IOrganizationRepository>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
-    private readonly IHasPaymentMethodQuery _hasPaymentMethodQuery = Substitute.For<IHasPaymentMethodQuery>();
     private readonly FakeAddPrivilegedControlsCommand _command = new();
     private readonly PurchasePrivilegedControlsHandler _sut;
 
@@ -35,7 +33,6 @@ public class PurchasePrivilegedControlsHandlerTests
             _organizationRepository,
             _pricingClient,
             _stripeAdapter,
-            _hasPaymentMethodQuery,
             NullLogger<PurchasePrivilegedControlsHandler>.Instance,
             _command);
 
@@ -108,18 +105,6 @@ public class PurchasePrivilegedControlsHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_NoPaymentMethod_ThrowsBadRequestAskingForOne()
-    {
-        var organization = Arrange(CreateOrganization());
-        _hasPaymentMethodQuery.Run(organization).Returns(false);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.HandleAsync(organization.Id, Request()));
-
-        Assert.Equal("Add a payment method to your organization before purchasing Privileged Controls.", exception.Message);
-        Assert.False(_command.WasCalled);
-    }
-
-    [Fact]
     public async Task HandleAsync_NoGatewaySubscriptionId_ThrowsBadRequestNoSubscriptionFound()
     {
         var organization = Arrange(CreateOrganization(gatewaySubscriptionId: null));
@@ -169,7 +154,6 @@ public class PurchasePrivilegedControlsHandlerTests
         _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
         _pricingClient.GetPlanOrThrow(organization.PlanType)
             .Returns(plan ?? new TestPlan(ProductTierType.Enterprise, supportsPrivilegedControls: true));
-        _hasPaymentMethodQuery.Run(organization).Returns(true);
         return organization;
     }
 

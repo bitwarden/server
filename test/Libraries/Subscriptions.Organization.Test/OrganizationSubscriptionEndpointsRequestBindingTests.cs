@@ -2,10 +2,8 @@
 using System.Text;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
-using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Invoicing.InvoicePreviews.Models;
 using Bit.Subscriptions.Organization.Commands;
@@ -183,9 +181,6 @@ public class OrganizationSubscriptionEndpointsRequestBindingTests
         builder.Services.AddSingleton(_organizationRepository);
         builder.Services.AddSingleton(pricingClient);
         builder.Services.AddSingleton(Substitute.For<IStripeAdapter>());
-        var hasPaymentMethodQuery = Substitute.For<IHasPaymentMethodQuery>();
-        hasPaymentMethodQuery.Run(Arg.Any<ISubscriber>()).Returns(true);
-        builder.Services.AddSingleton(hasPaymentMethodQuery);
         builder.Services.AddSingleton<IAddPrivilegedControlsToExistingSubscriptionCommand>(command);
         // The library's own registration, so the request validation is wired the way a host gets it.
         builder.Services.AddOrganizationSubscriptions();

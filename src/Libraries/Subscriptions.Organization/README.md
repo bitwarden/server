@@ -11,7 +11,7 @@ See [LIBRARY.md](../LIBRARY.md) for the shape all libraries under `src/Libraries
 `AddOrganizationSubscriptions()` registers the group's services — a scoped handler class per endpoint
 (`GetOrganizationSubscriptionPreviewHandler`, `PreviewOrganizationPlanChangeHandler`, `PreviewOrganizationRestartHandler`, `PreviewOrganizationSubscriptionPurchaseHandler`, `PurchasePrivilegedControlsHandler`), each depending
 on `IOrganizationRepository` (or `IUserService` for purchase previews) and the query or command it runs (`PurchasePrivilegedControlsHandler` also depends on `IPricingClient`,
-`IStripeAdapter`, and `IHasPaymentMethodQuery` for its gating checks); the plan-change command
+and `IStripeAdapter` for its gating checks); the plan-change command
 (`IPreviewOrganizationPlanChangeCommand`), the restart preview command (`IPreviewOrganizationRestartCommand`), the first Privileged Controls purchase command
 (`IAddPrivilegedControlsToExistingSubscriptionCommand`), the Privileged Controls seat change command
 (`IChangePrivilegedControlsSeatsCommand`), the Privileged Controls autoscale command
@@ -174,10 +174,11 @@ assembly so the validation source generator covers the request, and the request 
 the generator skips types it cannot access. `PurchasePrivilegedControlsHandler` gates the call
 to `IAddPrivilegedControlsToExistingSubscriptionCommand`, which does the purchase. The handler checks, in
 order: the organization exists (404); it is not on a sales-initiated trial (400, sent to a customer service
-representative); its plan is an Enterprise plan that supports Privileged Controls (400); it has a payment
-method, via `IHasPaymentMethodQuery` (400); and it has a subscription (400). The trial check runs first
-because a trial organization may have no Stripe subscription, which the later checks would otherwise
-report. Trial detection is `PrivilegedControlsTrialHelpers.IsOnSalesInitiatedTrial`, shared with the
+representative); its plan is an Enterprise plan that supports Privileged Controls (400); and it has a
+subscription (400). The trial check runs first because a trial organization may have no Stripe
+subscription, which the later checks would otherwise report. The handler does not check for a payment
+method: an invoiced customer may legitimately have none, and a missing one on an automatically charged
+subscription fails at the charge, in Stripe, with no extra lookups. Trial detection is `PrivilegedControlsTrialHelpers.IsOnSalesInitiatedTrial`, shared with the
 subscription response; the handler reads the subscription through `IStripeAdapter` only when the plan
 supports Privileged Controls and the organization already has the capability turned on.
 
@@ -211,7 +212,7 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | `IStripeAdapter` (`Bit.Core.Billing.Services`), `OrganizationSubscriptionHelpers` (`Bit.Core.Billing.Organizations.Helpers`) | Reading the organization's subscription (and its customer's tax ids) for the plan-change preview, and the subscription's seat lines for the Privileged Controls purchase's trial check |
 | `ISubscriberService` (`Bit.Core.Billing.Services`) | Reading the organization's canceled subscription for the restart preview |
 | `IGetOrganizationRestartQuery`, `OrganizationRestart` (`Bit.Core.Billing.Subscriptions.Queries`, `Bit.Core.Billing.Subscriptions.Models`) | Resolving the restart preview's plan and line items with the same query restart uses |
-| `IHasPaymentMethodQuery` (`Bit.Core.Billing.Payment.Queries`), `PrivilegedControlsTrialHelpers` (`Bit.Core.Billing.Organizations.Helpers`) | Gating the Privileged Controls purchase on a payment method and on the sales-initiated trial rule the subscription response also uses |
+| `PrivilegedControlsTrialHelpers` (`Bit.Core.Billing.Organizations.Helpers`) | Gating the Privileged Controls purchase on the sales-initiated trial rule the subscription response also uses |
 | `FeatureFlagKeys` (`Bit.Core`) | The `PM39883_Pam_Billing_Support` gate on the Privileged Controls purchase endpoint |
 | `PlanConstants` (`Bit.Core.Billing.Constants`) | The most of any one purchasable item that can be bought at once, for the purchase preview's checks and the Privileged Controls purchase request's ranges |
 | `IPricingClient` (`Bit.Core.Billing.Pricing`), `Plan` (`Bit.Core.Models.StaticStore`) | Resolving the current and target plans' Stripe price ids and seat/flat shape; reading a plan's Privileged Controls support and default seat minimum |

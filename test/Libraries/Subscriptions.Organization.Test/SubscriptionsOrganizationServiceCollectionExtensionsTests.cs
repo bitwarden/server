@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Billing.Organizations.Commands;
-using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Services;
@@ -62,7 +61,6 @@ public class SubscriptionsOrganizationServiceCollectionExtensionsTests
         services.AddSingleton(Substitute.For<IBitwardenEnvironment>());
         services.AddSingleton(Substitute.For<IOrganizationRepository>());
         services.AddSingleton(Substitute.For<IOrganizationUserRepository>());
-        services.AddSingleton(Substitute.For<IHasPaymentMethodQuery>());
         services.AddSingleton(Substitute.For<IOrganizationService>());
         services.AddSingleton(Substitute.For<IUpdateOrganizationSubscriptionCommand>());
         services.AddLogging();
