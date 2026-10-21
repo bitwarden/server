@@ -19,6 +19,10 @@ public interface IPolicyRepository : IRepository<Policy, Guid>
     /// </remarks>
     Task<Policy?> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType type);
     Task<ICollection<Policy>> GetManyByOrganizationIdAsync(Guid organizationId);
+    /// <summary>
+    /// Gets the policies of a given type for many organizations. Returns raw data, with no business rules applied.
+    /// </summary>
+    Task<ICollection<Policy>> GetManyByOrganizationIdsTypeAsync(IEnumerable<Guid> organizationIds, PolicyType type);
 
     /// <summary>
     /// Gets all policies for a user across organizations where the user is in the Confirmed status.

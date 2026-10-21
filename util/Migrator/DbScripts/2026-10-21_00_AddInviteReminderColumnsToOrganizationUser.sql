@@ -752,3 +752,36 @@ BEGIN
         @OrganizationUserIds OUI ON OUI.[Id] = OU.[Id]
 END
 GO
+
+CREATE OR ALTER PROCEDURE [dbo].[SsoConfig_ReadManyByOrganizationIds]
+    @OrganizationIds AS [dbo].[GuidIdArray] READONLY
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        SC.*
+    FROM
+        [dbo].[SsoConfigView] SC
+    INNER JOIN
+        @OrganizationIds I ON SC.[OrganizationId] = I.[Id]
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[Policy_ReadManyByOrganizationIdsType]
+    @OrganizationIds AS [dbo].[GuidIdArray] READONLY,
+    @Type TINYINT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        P.*
+    FROM
+        [dbo].[PolicyView] P
+    INNER JOIN
+        @OrganizationIds I ON P.[OrganizationId] = I.[Id]
+    WHERE
+        P.[Type] = @Type
+END
+GO
