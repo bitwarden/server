@@ -83,18 +83,20 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
         InvoicePreview preview;
         try
         {
-            preview = await invoicePreviewService.GetInvoicePreviewAsync(options, planTier, cadence);
+            preview = await invoicePreviewService.GetInvoicePreviewForBillingAddressAsync(options, planTier, cadence);
         }
         catch (StripeException stripeException)
             when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.CustomerTaxLocationInvalid)
         {
             throw new BadRequestException(
+                BillingErrorKeys.BillingAddress,
                 "Your location wasn't recognized. Please ensure your country and postal code are valid and try again.");
         }
         catch (StripeException stripeException)
             when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.TaxIdInvalid)
         {
             throw new BadRequestException(
+                BillingErrorKeys.BillingAddress,
                 "The tax ID number you provided was invalid. Please try again or contact support for assistance.");
         }
 
