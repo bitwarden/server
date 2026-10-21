@@ -1,6 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Infrastructure.IntegrationTest.Comparers;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.OrganizationUserRepository;
@@ -169,5 +171,34 @@ public class OrganizationUserRevocationTests
         var unchanged = await organizationUserRepository.GetByIdAsync(orgUser2.Id);
         Assert.Equal(OrganizationUserStatusType.Confirmed, unchanged!.Status);
         Assert.Null(unchanged.RevocationReason);
+    }
+
+    [Theory, DatabaseData]
+    public async Task RevokeManyAsync_FromInvited_KeepsInviteReminderColumns(
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var dueDate = DateTime.UtcNow.AddDays(5);
+        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            Email = $"{Guid.NewGuid()}@example.com",
+            Status = OrganizationUserStatusType.Invited,
+            Type = OrganizationUserType.User,
+            InviteReminderDueDate = dueDate,
+            InviteRemindersSentCount = 2
+        });
+
+        // Act
+        await organizationUserRepository.RevokeManyAsync([orgUser.Id], RevocationReason.Manual);
+
+        // Assert
+        var updated = await organizationUserRepository.GetByIdAsync(orgUser.Id);
+        Assert.Equal(OrganizationUserStatusType.Revoked, updated!.Status);
+        Assert.NotNull(updated.InviteReminderDueDate);
+        Assert.Equal(dueDate, updated.InviteReminderDueDate.Value, LaxDateTimeComparer.Default);
+        Assert.Equal((byte)2, updated.InviteRemindersSentCount);
     }
 }

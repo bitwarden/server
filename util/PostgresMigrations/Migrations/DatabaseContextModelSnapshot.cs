@@ -1886,6 +1886,12 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
 
+                    b.Property<DateTime?>("InviteReminderDueDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte?>("InviteRemindersSentCount")
+                        .HasColumnType("smallint");
+
                     b.Property<string>("Key")
                         .HasColumnType("text");
 

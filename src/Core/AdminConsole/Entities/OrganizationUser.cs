@@ -107,6 +107,16 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     /// revocation reasons were tracked.
     /// </summary>
     public RevocationReason? RevocationReason { get; set; }
+    /// <summary>
+    /// When the next invite reminder is due. NULL if the member has no reminder sequence.
+    /// Kept while the member is revoked, so a restore can resume the sequence.
+    /// </summary>
+    public DateTime? InviteReminderDueDate { get; set; }
+    /// <summary>
+    /// How many invite reminders have been claimed in the current sequence. NULL if the member has no
+    /// reminder sequence.
+    /// </summary>
+    public byte? InviteRemindersSentCount { get; set; }
 
     /// <summary>
     /// Checks whether the given reset password key is non-null and non-whitespace.
