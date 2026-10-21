@@ -141,4 +141,46 @@ public class ProvidersControllerTests : IClassFixture<ApiApplicationFactory>, IA
         var providerRepository = _factory.GetService<IProviderRepository>();
         Assert.NotNull(await providerRepository.GetByIdAsync(_provider.Id));
     }
+
+    [Fact]
+    public async Task PostDeleteRecoverToken_TokenForAnotherProvider_ReturnsBadRequestAndDoesNotDeleteEither()
+    {
+        var providerRepository = _factory.GetService<IProviderRepository>();
+        var otherProvider = await providerRepository.CreateAsync(new Provider
+        {
+            Name = "Other Test Provider",
+            BillingEmail = "billing@test.com",
+            Type = ProviderType.Msp,
+            Status = ProviderStatusType.Created,
+            Enabled = true
+        });
+
+        var token = _factory.GetService<IDataProtectorTokenFactory<ProviderDeleteTokenable>>()
+            .Protect(new ProviderDeleteTokenable(otherProvider));
+
+        var response = await _client.PostAsJsonAsync($"providers/{_provider.Id}/delete-recover-token",
+            new ProviderVerifyDeleteRecoverRequestModel { Token = token });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.NotNull(await providerRepository.GetByIdAsync(_provider.Id));
+        Assert.NotNull(await providerRepository.GetByIdAsync(otherProvider.Id));
+    }
+
+    [Fact]
+    public async Task PostDeleteRecoverToken_OrganizationDeleteToken_ReturnsBadRequestAndDoesNotDeleteProvider()
+    {
+        // An organization delete token for the provider's ID, with the provider token prefix added so
+        // that the prefix check alone doesn't reject it.
+        var orgToken = _factory.GetService<IDataProtectorTokenFactory<OrgDeleteTokenable>>()
+            .Protect(new OrgDeleteTokenable { Id = _provider.Id, ExpirationDate = DateTime.UtcNow.AddHours(1) });
+        var token = ProviderDeleteTokenable.ClearTextPrefix + orgToken;
+
+        var response = await _client.PostAsJsonAsync($"providers/{_provider.Id}/delete-recover-token",
+            new ProviderVerifyDeleteRecoverRequestModel { Token = token });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var providerRepository = _factory.GetService<IProviderRepository>();
+        Assert.NotNull(await providerRepository.GetByIdAsync(_provider.Id));
+    }
 }

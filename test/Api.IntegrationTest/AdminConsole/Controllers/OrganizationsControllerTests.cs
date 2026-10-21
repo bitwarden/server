@@ -231,4 +231,31 @@ public class OrganizationsControllerTests : IClassFixture<ApiApplicationFactory>
         var organizationRepository = _factory.GetService<IOrganizationRepository>();
         Assert.NotNull(await organizationRepository.GetByIdAsync(_organization.Id));
     }
+
+    [Fact]
+    public async Task PostDeleteRecoverToken_TokenForAnotherOrganization_ReturnsBadRequestAndDoesNotDeleteEither()
+    {
+        // Arrange
+        var otherOwnerEmail = $"org-integration-test-{Guid.NewGuid()}@example.com";
+        await _factory.LoginWithNewAccount(otherOwnerEmail);
+        var (otherOrganization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
+            plan: PlanType.EnterpriseAnnually,
+            ownerEmail: otherOwnerEmail,
+            passwordManagerSeats: 5,
+            paymentMethod: PaymentMethodType.Card);
+
+        var token = _factory.GetService<IDataProtectorTokenFactory<OrgDeleteTokenable>>()
+            .Protect(new OrgDeleteTokenable(otherOrganization));
+
+        // Act
+        var response = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/delete-recover-token",
+            new OrganizationVerifyDeleteRecoverRequestModel { Token = token });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var organizationRepository = _factory.GetService<IOrganizationRepository>();
+        Assert.NotNull(await organizationRepository.GetByIdAsync(_organization.Id));
+        Assert.NotNull(await organizationRepository.GetByIdAsync(otherOrganization.Id));
+    }
 }
