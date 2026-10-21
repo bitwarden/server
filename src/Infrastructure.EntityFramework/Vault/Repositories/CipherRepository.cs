@@ -518,6 +518,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                                         OrganizationUseTotp = false,
                                         Key = c.Key,
                                         ArchivedDate = c.ArchivedDate,
+                                        ReportExcludedDate = c.ReportExcludedDate,
                                     };
             }
 

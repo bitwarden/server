@@ -130,6 +130,19 @@ public class CipherReportExclusionRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
+    public async Task GetManyByUserIdAsync_WithoutOrganizations_ReturnsReportExcludedDate(
+        ICipherReportExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
+    {
+        var user = await userRepository.CreateTestUserAsync();
+        var cipher = await CreateCipherAsync(cipherRepository, user.Id);
+
+        await sut.ExcludeAsync([cipher.Id], user.Id);
+
+        var ciphers = await cipherRepository.GetManyByUserIdAsync(user.Id, withOrganizations: false);
+        Assert.NotNull(ciphers.Single(c => c.Id == cipher.Id).ReportExcludedDate);
+    }
+
+    [DatabaseTheory, DatabaseData]
     public async Task ReplaceAsync_CipherDetails_PreservesReportExclusions(
         ICipherReportExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
     {
