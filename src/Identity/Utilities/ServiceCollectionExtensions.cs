@@ -45,7 +45,6 @@ public static class ServiceCollectionExtensions
                 options.Endpoints.EnableTokenRevocationEndpoint = false;
                 options.Endpoints.EnablePushedAuthorizationEndpoint = false;
                 options.IssuerUri = $"{issuerUri.Scheme}://{issuerUri.Host}";
-                options.Caching.ClientStoreExpiration = new TimeSpan(0, 5, 0);
                 if (env.IsDevelopment())
                 {
                     options.Authentication.CookieSameSiteMode = Microsoft.AspNetCore.Http.SameSiteMode.Unspecified;
@@ -57,7 +56,6 @@ public static class ServiceCollectionExtensions
             .AddInMemoryCaching()
             .AddInMemoryApiResources(ApiResources.GetApiResources())
             .AddInMemoryApiScopes(ApiScopes.GetApiScopes())
-            .AddClientStoreCache<DynamicClientStore>()
             .AddCustomTokenRequestValidator<CustomTokenRequestValidator>()
             .AddProfileService<ProfileService>()
             .AddResourceOwnerValidator<ResourceOwnerPasswordValidator>()
@@ -80,6 +78,8 @@ public static class ServiceCollectionExtensions
         services.AddClientProvider<UserClientProvider>("user");
         services.AddClientProvider<OrganizationClientProvider>("organization");
         services.AddClientProvider<SecretsManagerApiKeyProvider>(SecretsManagerApiKeyProvider.ApiKeyPrefix);
+        services.AddClientProvider<PamAccessConnectorClientProvider>(
+            PamAccessConnectorClientProvider.AccessConnectorPrefix);
 
         if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CosmosConnectionString))
         {
