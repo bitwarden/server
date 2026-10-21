@@ -296,6 +296,7 @@ public abstract class CipherResponseModel : CipherMiniResponseModel
         Favorite = cipher.Favorite;
         Edit = cipher.Edit;
         ArchivedDate = cipher.ArchivedDate;
+        ReportExcludedDate = cipher.ReportExcludedDate;
         ViewPassword = cipher.ViewPassword;
         Permissions = new CipherPermissionsResponseModel(user, cipher, organizationAbility);
     }
@@ -312,6 +313,7 @@ public abstract class CipherResponseModel : CipherMiniResponseModel
     public bool Edit { get; set; }
     public bool ViewPassword { get; set; }
     public DateTime? ArchivedDate { get; set; }
+    public DateTime? ReportExcludedDate { get; set; }
     public CipherPermissionsResponseModel Permissions { get; set; }
 }
 
