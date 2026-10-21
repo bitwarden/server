@@ -8,7 +8,7 @@ using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Billing.Subscriptions.Queries;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using NSubstitute;
 using Stripe;
@@ -20,7 +20,7 @@ using static StripeConstants;
 
 public class RestartSubscriptionCommandTests
 {
-    private readonly IOrganizationRepository _organizationRepository = Substitute.For<IOrganizationRepository>();
+    private readonly IOrganizationService _organizationService = Substitute.For<IOrganizationService>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly ISubscriberService _subscriberService = Substitute.For<ISubscriberService>();
@@ -30,8 +30,8 @@ public class RestartSubscriptionCommandTests
     {
         _command = new RestartSubscriptionCommand(
             Substitute.For<Microsoft.Extensions.Logging.ILogger<RestartSubscriptionCommand>>(),
-            _organizationRepository,
             new GetOrganizationRestartQuery(_pricingClient),
+            _organizationService,
             _stripeAdapter,
             _subscriberService);
     }
@@ -271,7 +271,7 @@ public class RestartSubscriptionCommandTests
             options.OffSession == true &&
             options.TrialPeriodDays == 0));
 
-        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(org =>
+        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(org =>
             org.Id == organizationId &&
             org.GatewaySubscriptionId == "sub_new" &&
             org.Enabled == true &&
@@ -331,7 +331,7 @@ public class RestartSubscriptionCommandTests
             options.Items[1].Price == plan.PasswordManager.StripeStoragePlanId &&
             options.Items[1].Quantity == 3));
 
-        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(org =>
+        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(org =>
             org.Id == organizationId &&
             org.GatewaySubscriptionId == "sub_new_2" &&
             org.Enabled == true));
@@ -395,7 +395,7 @@ public class RestartSubscriptionCommandTests
             options.Items[3].Price == plan.SecretsManager.StripeServiceAccountPlanId &&
             options.Items[3].Quantity == 100));
 
-        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(org =>
+        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(org =>
             org.Id == organizationId &&
             org.GatewaySubscriptionId == "sub_new_3" &&
             org.Enabled == true));
@@ -454,7 +454,7 @@ public class RestartSubscriptionCommandTests
             options.Items[1].Price == newPlan.PasswordManager.StripeStoragePlanId &&
             options.Items[1].Quantity == 5));
 
-        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(org =>
+        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(org =>
             org.Id == organizationId &&
             org.GatewaySubscriptionId == "sub_upgraded" &&
             org.Enabled == true &&
@@ -479,7 +479,7 @@ public class RestartSubscriptionCommandTests
 
         // newPlan is Enterprise, which enables RiskInsights; assert the mapped value is true.
         Assert.True(newPlan.HasRiskInsights);
-        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(org =>
+        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(org =>
             org.UseRiskInsights));
     }
 
@@ -538,7 +538,7 @@ public class RestartSubscriptionCommandTests
             options.Items[2].Price == plan.SecretsManager.StripeSeatPlanId &&
             options.Items[2].Quantity == 6));
 
-        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(org =>
+        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(org =>
             org.Id == organizationId &&
             org.GatewaySubscriptionId == "sub_complex" &&
             org.Enabled == true));
@@ -596,7 +596,7 @@ public class RestartSubscriptionCommandTests
             options.Items[1].Price == plan.SecretsManager.StripeSeatPlanId &&
             options.Items[1].Quantity == 5));
 
-        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(org =>
+        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(org =>
             org.Id == organizationId &&
             org.GatewaySubscriptionId == "sub_sm" &&
             org.Enabled == true));
@@ -709,7 +709,7 @@ public class RestartSubscriptionCommandTests
 
         // Teams does not enable RiskInsights, so the mapped value is false.
         Assert.False(newPlan.HasRiskInsights);
-        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(org =>
+        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(org =>
             org.Id == organizationId &&
             org.PlanType == PlanType.TeamsAnnually &&
             org.UseRiskInsights == newPlan.HasRiskInsights &&

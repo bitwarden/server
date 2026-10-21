@@ -11,6 +11,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Braintree;
 using Microsoft.Extensions.Logging;
@@ -29,6 +30,7 @@ public class OrganizationBillingService(
     IHasPaymentMethodQuery hasPaymentMethodQuery,
     ILogger<OrganizationBillingService> logger,
     IOrganizationRepository organizationRepository,
+    IOrganizationService organizationService,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
@@ -62,7 +64,7 @@ public class OrganizationBillingService(
         {
             organization.Enabled = true;
             organization.ExpirationDate = subscription.GetCurrentPeriodEnd();
-            await organizationRepository.ReplaceAsync(organization);
+            await organizationService.ReplaceAndUpdateCacheAsync(organization);
         }
     }
 

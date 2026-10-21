@@ -10,6 +10,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -101,6 +102,10 @@ public class OrganizationBillingServiceTests
         Assert.NotNull(capturedOptions.TrialSettings);
         Assert.NotNull(capturedOptions.TrialSettings.EndBehavior);
         Assert.Equal("cancel", capturedOptions.TrialSettings.EndBehavior.MissingPaymentMethod);
+
+        await sutProvider.GetDependency<IOrganizationService>()
+            .Received(1)
+            .ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(org => org.Id == organization.Id && org.Enabled));
     }
 
     // Literal strings on purpose: the initiation path sentence must match the clients-repo
