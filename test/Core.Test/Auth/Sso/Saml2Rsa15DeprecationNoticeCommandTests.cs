@@ -4,6 +4,7 @@ using Bit.Core.Auth.Sso;
 using Bit.Core.Auth.Sso.Mail;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Platform.Mail.Delivery;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -23,17 +24,23 @@ public class Saml2Rsa15DeprecationNoticeCommandTests
 {
     private const string Recipient = "admin@example.com";
 
-    private static SutProvider<Saml2Rsa15DeprecationNoticeCommand> BuildSut(int cooldownInDays = 14)
+    private static SutProvider<Saml2Rsa15DeprecationNoticeCommand> BuildSut(
+        int cooldownInDays = 14, IMailDeliveryService? mailDeliveryService = null)
     {
         var globalSettings = Substitute.For<IGlobalSettings>();
         var ssoSettings = Substitute.For<ISsoSettings>();
         ssoSettings.Rsa15DeprecationEmailCooldownInDays = cooldownInDays;
         globalSettings.Sso.Returns(ssoSettings);
 
-        return new SutProvider<Saml2Rsa15DeprecationNoticeCommand>()
+        var sutProvider = new SutProvider<Saml2Rsa15DeprecationNoticeCommand>()
             .SetDependency(globalSettings)
-            .WithFakeTimeProvider()
-            .Create();
+            .WithFakeTimeProvider();
+        if (mailDeliveryService is not null)
+        {
+            sutProvider.SetDependency(mailDeliveryService);
+        }
+
+        return sutProvider.Create();
     }
 
     private static void SetupAdmins(
@@ -165,6 +172,24 @@ public class Saml2Rsa15DeprecationNoticeCommandTests
         var cache = sutProvider.GetDependency<IDistributedCache>();
         await cache.DidNotReceiveWithAnyArgs().GetAsync(default!, default);
         await AssertNoCacheWriteAsync(sutProvider);
+        await AssertNoEmailSentAsync(sutProvider);
+    }
+
+    [Fact]
+    public async Task SendEmailIfDueAsync_MailDeliveryNotConfigured_SendsNothingAndUsesNoCacheOrRepository()
+    {
+        var sutProvider = BuildSut(mailDeliveryService: new NoopMailDeliveryService());
+        var organizationId = Guid.NewGuid();
+        SetupAdmins(sutProvider, organizationId, Recipient);
+
+        await sutProvider.Sut.SendEmailIfDueAsync(organizationId);
+
+        var cache = sutProvider.GetDependency<IDistributedCache>();
+        await cache.DidNotReceiveWithAnyArgs().GetAsync(default!, default);
+        await AssertNoCacheWriteAsync(sutProvider);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetManyByMinimumRoleAsync(default, default);
         await AssertNoEmailSentAsync(sutProvider);
     }
 

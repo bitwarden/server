@@ -192,7 +192,9 @@ public class SsoTestDataBuilder
 
     /// <summary>
     /// Substitutes <see cref="IMailer"/> so a test can observe the emails that the host sends,
-    /// and no email is rendered or delivered.
+    /// and no email is rendered or delivered. Also substitutes <see cref="IMailDeliveryService"/>
+    /// with a service that is not <see cref="NoopMailDeliveryService"/>, unless the test sets
+    /// a delivery service with <see cref="WithMailDeliveryService"/>.
     /// </summary>
     public SsoTestDataBuilder WithMockedMailer()
     {
@@ -374,6 +376,10 @@ public class SsoTestDataBuilder
         if (_mockMailer)
         {
             factory.SubstituteService<IMailer>(_ => { });
+            if (_mailDeliveryService is null)
+            {
+                factory.SubstituteService<IMailDeliveryService>(_ => { });
+            }
         }
 
         if (_mailDeliveryService is { } mailDeliveryService)

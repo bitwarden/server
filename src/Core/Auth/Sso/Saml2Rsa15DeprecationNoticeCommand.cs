@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using Bit.Core.Auth.Sso.Mail;
 using Bit.Core.Enums;
+using Bit.Core.Platform.Mail.Delivery;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -19,6 +20,7 @@ public class Saml2Rsa15DeprecationNoticeCommand(
     TimeProvider timeProvider,
     IOrganizationUserRepository organizationUserRepository,
     IMailer mailer,
+    IMailDeliveryService mailDeliveryService,
     ILogger<Saml2Rsa15DeprecationNoticeCommand> logger) : ISaml2Rsa15DeprecationNoticeCommand
 {
     public async Task SendEmailIfDueAsync(Guid organizationId)
@@ -54,9 +56,17 @@ public class Saml2Rsa15DeprecationNoticeCommand(
     /// <summary>
     /// Determines whether the organization can receive the email now.
     /// </summary>
-    /// <returns><c>false</c> when an email send cooldown is active or the email is off. Otherwise <c>true</c>.</returns>
+    /// <returns>
+    /// <c>false</c> when mail delivery is not configured, an email send cooldown is active, or the email is off.
+    /// Otherwise <c>true</c>. Mail delivery that is not configured never reads or writes an email send cooldown.
+    /// </returns>
     private async Task<bool> IsEmailDueAsync(Guid organizationId)
     {
+        if (mailDeliveryService is NoopMailDeliveryService)
+        {
+            return false;
+        }
+
         if (EmailSendCooldown <= TimeSpan.Zero)
         {
             return false;

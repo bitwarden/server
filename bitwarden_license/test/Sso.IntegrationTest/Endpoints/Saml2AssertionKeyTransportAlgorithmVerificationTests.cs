@@ -16,6 +16,7 @@ using Bit.Sso.IntegrationTest.Utilities;
 using Bit.Sso.Utilities;
 using Bit.Sso.Utilities.Saml2;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Primitives;
 using NSubstitute;
@@ -246,6 +247,30 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
 
         // Assert
         await probe.Sent;
+    }
+
+    /// <summary>
+    /// Posts an RSA 1.5 assertion to a host with no mail delivery configuration, in any environment.
+    /// The host resolves <see cref="NoopMailDeliveryService"/>. It proves that the host stores no
+    /// email send cooldown.
+    /// </summary>
+    [Fact]
+    public async Task CouldHandleAsync_MailDeliveryNotConfigured_StoresNoCooldown()
+    {
+        // Arrange
+        using var arrangement = await ArrangeAsync(Saml2AcsPostHarness.BuildEncryptedAssertion(Rsa15));
+        var (samlOptions, organizationId, context, factory) = arrangement;
+        Assert.IsType<NoopMailDeliveryService>(factory.Services.GetRequiredService<IMailDeliveryService>());
+        await SeedOrganizationUserAsync(
+            factory, organizationId, OrganizationUserType.Owner, OrganizationUserStatusType.Confirmed, NewEmail("owner"));
+
+        // Act
+        await samlOptions.CouldHandleAsync(organizationId.ToString(), context);
+        await Task.Delay(_negativeWait);
+
+        // Assert
+        var cache = factory.Services.GetRequiredKeyedService<IDistributedCache>("persistent");
+        Assert.Null(await cache.GetStringAsync($"sso:saml2:rsa15-deprecation-email:{organizationId}"));
     }
 
     /// <summary>
