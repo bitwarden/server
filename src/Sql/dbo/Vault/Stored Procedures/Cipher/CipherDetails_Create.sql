@@ -19,7 +19,9 @@
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
     @ArchivedDate DATETIME2(7) = NULL,
-    @Archives NVARCHAR(MAX) = NULL -- not used
+    @Archives NVARCHAR(MAX) = NULL, -- not used
+    @ReportExcludedDate DATETIME2(7) = NULL, -- not used
+    @ReportExclusions NVARCHAR(MAX) = NULL -- not used
 AS
 BEGIN
     SET NOCOUNT ON
