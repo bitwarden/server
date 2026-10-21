@@ -92,7 +92,8 @@ public static class OrganizationServiceCollectionExtensions
 
     private static void AddOrganizationSignUpCommands(this IServiceCollection services)
     {
-        services.AddScoped<ICloudOrganizationSignUpCommand, CloudOrganizationSignUpCommand>();
+        // ICloudOrganizationSignUpCommand is registered in Api.Startup instead: it depends on
+        // ICreateOrganizationSubscriptionCommand from the Api-only Subscriptions.Organization library.
         services.AddScoped<IProviderClientOrganizationSignUpCommand, ProviderClientOrganizationSignUpCommand>();
         services.AddScoped<IResellerClientOrganizationSignUpCommand, ResellerClientOrganizationSignUpCommand>();
         services.AddScoped<ISelfHostedOrganizationSignUpCommand, SelfHostedOrganizationSignUpCommand>();
