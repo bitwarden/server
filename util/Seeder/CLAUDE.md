@@ -209,12 +209,15 @@ Developer-facing documentation in `Seeds/docs/scenarios/`. Each file maps an eng
 - Never duplicate CLI flag documentation — link to `SeederUtility/README.md`
 - Never duplicate preset catalog details — link to `Seeds/docs/presets.md`
 - Scenarios describe _why_ (the problem). READMEs describe _how_ (the tool). Keep the split clean.
+- When commands, flags, entry points, or documentation change in `util/Seeder`, `util/SeederUtility`, or `util/SeederApi`, remind the engineer to review the Seeder page on contributing.bitwarden.com, including its diagram: https://contributing.bitwarden.com/getting-started/server/seeder (source: `docs/getting-started/server/seeder.md` in bitwarden/contributing-docs)
+- If that page is stale and the fix is not part of the same change, file a work item and add a stale marker to the page, per the documentation standard
 
 **File relationships:**
 
 - `SeederUtility/README.md` → CLI reference (commands, flags, examples) → links to scenarios
 - `Seeds/docs/presets.md` → what exists (the catalog) → scenarios link back to it
 - `Seeds/docs/scenarios/` → why you'd use it (problem → command)
+- contributing.bitwarden.com › Getting started › Server › Seeder → the higher-level entry point (what the Seeder is, which entry point to use, first run) → links down to `SeederUtility/README.md`, `SeederApi/README.md`, `Seeds/docs/presets.md`, and `Seeds/docs/scenarios/`
 
 ## Collection Management Settings
 
