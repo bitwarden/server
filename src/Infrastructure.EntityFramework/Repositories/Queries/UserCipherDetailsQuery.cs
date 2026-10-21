@@ -71,7 +71,8 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                         OrganizationUseTotp = o.UseTotp,
                         c.Reprompt,
                         c.Key,
-                        c.Archives
+                        c.Archives,
+                        c.ReportExclusions
                     };
 
         var query2 = from c in dbContext.Ciphers
@@ -95,7 +96,8 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                          OrganizationUseTotp = false,
                          c.Reprompt,
                          c.Key,
-                         c.Archives
+                         c.Archives,
+                         c.ReportExclusions
                      };
 
         var union = query.Union(query2).Select(c => new CipherDetails
@@ -117,7 +119,8 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
             Manage = c.Manage,
             OrganizationUseTotp = c.OrganizationUseTotp,
             Key = c.Key,
-            ArchivedDate = GetArchivedDate(_userId, new Cipher { Id = c.Id, Archives = c.Archives })
+            ArchivedDate = GetArchivedDate(_userId, new Cipher { Id = c.Id, Archives = c.Archives }),
+            ReportExcludedDate = GetReportExcludedDate(_userId, new Cipher { Id = c.Id, ReportExclusions = c.ReportExclusions })
         });
         return union;
     }
@@ -132,6 +135,27 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                 if (archives.TryGetValue(userId.Value, out var archivedDate))
                 {
                     return archivedDate;
+                }
+            }
+
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static DateTime? GetReportExcludedDate(Guid? userId, Cipher cipher)
+    {
+        try
+        {
+            if (userId.HasValue && !string.IsNullOrWhiteSpace(cipher.ReportExclusions))
+            {
+                var exclusions = JsonSerializer.Deserialize<Dictionary<Guid, DateTime>>(cipher.ReportExclusions);
+                if (exclusions.TryGetValue(userId.Value, out var excludedDate))
+                {
+                    return excludedDate;
                 }
             }
 

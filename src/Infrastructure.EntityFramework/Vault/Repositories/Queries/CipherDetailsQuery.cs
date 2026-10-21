@@ -37,6 +37,9 @@ public class CipherDetailsQuery : IQuery<CipherDetails>
                         ArchivedDate = !_userId.HasValue || c.Archives == null || !c.Archives.ToLowerInvariant().Contains(_userId.Value.ToString()) ?
                             null :
                             CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, DateTime?>>(c.Archives)[_userId.Value],
+                        ReportExcludedDate = !_userId.HasValue || c.ReportExclusions == null || !c.ReportExclusions.ToLowerInvariant().Contains(_userId.Value.ToString()) ?
+                            null :
+                            CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, DateTime?>>(c.ReportExclusions)[_userId.Value],
                     };
         return query;
     }
