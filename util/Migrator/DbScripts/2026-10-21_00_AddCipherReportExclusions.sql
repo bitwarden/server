@@ -535,15 +535,13 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    DECLARE @UtcNow DATETIME2(7) = SYSUTCDATETIME();
-
     UPDATE
         C
     SET
         [ReportExclusions] = JSON_MODIFY(
             COALESCE(C.[ReportExclusions], N'{}'),
             CONCAT('$."', @UserId, '"'),
-            CONVERT(NVARCHAR(30), @UtcNow, 127)
+            CONVERT(NVARCHAR(30), SYSUTCDATETIME(), 127)
         )
     FROM
         [dbo].[Cipher] C
