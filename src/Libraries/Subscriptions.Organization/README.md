@@ -13,13 +13,17 @@ See [LIBRARY.md](../LIBRARY.md) for the shape all libraries under `src/Libraries
 only on `IOrganizationRepository` (or `IUserService` for purchases) and the query or command it runs; the plan-change command
 (`IPreviewOrganizationPlanChangeCommand`), the restart preview command (`IPreviewOrganizationRestartCommand`), the first Privileged Controls purchase command
 (`IAddPrivilegedControlsToExistingSubscriptionCommand`), the Privileged Controls seat change command
-(`IChangePrivilegedControlsSeatsCommand`), and the purchase query (`IPreviewOrganizationSubscriptionPurchaseQuery`); the `StandaloneOrganizationOwnerRequirementHandler`
+(`IChangePrivilegedControlsSeatsCommand`), the Privileged Controls autoscale command
+(`IAutoscalePrivilegedControlsSeatsCommand`), and the purchase query (`IPreviewOrganizationSubscriptionPurchaseQuery`); the `StandaloneOrganizationOwnerRequirementHandler`
 authorization handler; and the `Bit.Invoicing` library they depend on. One handler class per endpoint
 avoids a shared handler that accumulates a dependency per route.
 
 It also registers the implementation of `IPrivilegedControlsSeatChangeSetFactory`. The interface lives in
 `Core` so Admin Console operations, which `Core` cannot reference this library to reach, can inject it; the
-implementation stays internal here.
+implementation stays internal here. `IAutoscalePrivilegedControlsSeatsCommand` and its
+`AutoscalePrivilegedControlsSeatsResult` follow the same split: they live in `Core` so hosts and Admin Console
+operations can resolve the command, and this library implements it. A host that resolves it must call
+`AddOrganizationSubscriptions()`.
 
 `MapOrganizationSubscriptionEndpoints()` attaches the group's cross-cutting chain and maps its
 endpoints to an empty group; the host owns the route prefix and mounts it at
@@ -178,8 +182,10 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | `OrganizationSubscriptionChangeSet` (`Bit.Core.Billing.Organizations.Models`) | Composing the plan change the same way the real upgrade does, then translating it into preview line items; building the Privileged Controls seat change |
 | `IUpdateOrganizationSubscriptionCommand` (`Bit.Core.Billing.Organizations.Commands`), `BillingCommandResult` (`Bit.Core.Billing.Commands`) | Charging the first Privileged Controls seats, and surfacing a failed update's message to the client through `GetValueOrThrowHttpException` |
 | `IPrivilegedControlsSeatChangeSetFactory` (`Bit.Core.Billing.Organizations.Helpers`), `PrivilegedControlsSeatChange` (`Bit.Core.Billing.Organizations.Models`) | The factory contract Core owns so Admin Console can inject it; this library implements it |
+| `IAutoscalePrivilegedControlsSeatsCommand` (`Bit.Core.Billing.Organizations.Commands`), `AutoscalePrivilegedControlsSeatsResult` (`Bit.Core.Billing.Organizations.Models`) | The autoscale command contract and its result, which Core owns so hosts and Admin Console can resolve the command; this library implements it |
 | `IOrganizationService` (`Bit.Core.Services`) | Saving the organization's Privileged Controls seats and flags after the first purchase |
-| `IOrganizationUserRepository` (`Bit.Core.Repositories`) | Counting the Privileged Controls seats in use before a seat decrease |
+| `IOrganizationUserRepository` (`Bit.Core.Repositories`) | Counting the Privileged Controls seats in use before a seat decrease and before an autoscale; finding the Owners to email when the autoscale limit is reached |
+| `IMailer` (`Bit.Core.Platform.Mail.Mailer`), `PrivilegedControlsSeatLimitReachedMail` (`Bit.Core.Billing.Models.Mail.Mailer`) | Sending the Privileged Controls autoscale limit reached email to the Owners |
 | `ISubscriptionDiscountService`, `DiscountTierType` (`Bit.Core.Billing.Services`, `Bit.Core.Billing.Enums`) | Eligibility-checking Families purchase coupons |
 | `ITaxService` (`Bit.Core.Billing.Tax.Services`), `StripeConstants.TaxIdType` | Deriving the Stripe tax-id code (and the Spanish-NIF EU-VAT pairing) for `CustomerDetails.TaxIds` |
 | `SponsoredPlans`, `PlanSponsorshipType` (`Bit.Core.Billing.Models`, `Bit.Core.Enums`) | The Families-for-Enterprise sponsored price |
