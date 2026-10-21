@@ -8,7 +8,7 @@ namespace Bit.Api.AdminConsole.Models.Response;
 
 /// <summary>
 /// Sync data for organization members and their organization.
-/// Note: see <see cref="ProfileProviderOrganizationResponseModel"/> for organization sync data received by provider users.
+/// Note: see <see cref="Bit.Api.Providers.Models.Response.ProfileProviderOrganizationResponseModel"/> for organization sync data received by provider users.
 /// </summary>
 public class ProfileOrganizationResponseModel : BaseProfileOrganizationResponseModel
 {

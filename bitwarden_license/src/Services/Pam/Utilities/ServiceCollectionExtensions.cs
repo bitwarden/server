@@ -1,6 +1,11 @@
 ﻿using Bit.Core.Pam.Services;
 using Bit.HttpExtensions;
+using Bit.Services.Pam.AccessConnector.Api.Endpoints.Filters;
 using Bit.Services.Pam.AccessConnector.Api.Endpoints.Handlers;
+using Bit.Services.Pam.AccessConnector.Commands;
+using Bit.Services.Pam.AccessConnector.Commands.Interfaces;
+using Bit.Services.Pam.AccessConnector.Queries;
+using Bit.Services.Pam.AccessConnector.Queries.Interfaces;
 using Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
@@ -77,7 +82,28 @@ public static class ServiceCollectionExtensions
         services.TryAddScoped<IRequesterMailNotifier, RequesterMailNotifier>();
         services.TryAddScoped<ILeaseRevokedMailNotifier, LeaseRevokedMailNotifier>();
 
+        services.AddScoped<AccessConnectorHeartbeatEndpointFilter>();
+
+        services.AddPamRotationServices();
         services.AddPamOpenApiEndpointDataSource();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers credential rotation. The host registers the repositories and binds <c>PamRotationOptions</c>.
+    /// </summary>
+    private static IServiceCollection AddPamRotationServices(this IServiceCollection services)
+    {
+        services.AddScoped<IRegisterAccessConnectorCommand, RegisterAccessConnectorCommand>();
+        services.AddScoped<ISetAccessConnectorStatusCommand, SetAccessConnectorStatusCommand>();
+        services.AddScoped<IDeleteAccessConnectorCommand, DeleteAccessConnectorCommand>();
+        services.AddScoped<IAssignAccessConnectorToTargetCommand, AssignAccessConnectorToTargetCommand>();
+        services.AddScoped<IUnassignAccessConnectorFromTargetCommand, UnassignAccessConnectorFromTargetCommand>();
+
+        services.AddScoped<IListAccessConnectorsQuery, ListAccessConnectorsQuery>();
+        services.AddScoped<IGetAccessConnectorDetailsQuery, GetAccessConnectorDetailsQuery>();
+        services.AddScoped<ICanEditRotationCiphersQuery, CanEditRotationCiphersQuery>();
 
         return services;
     }

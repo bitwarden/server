@@ -25,6 +25,9 @@ public class PamTargetSystemResponseModel : ResponseModel
     /// <summary>The target system's sealed blob.</summary>
     public string? SealedData { get; set; }
 
+    /// <summary>The content key of the sealed blob, wrapped by the organization key.</summary>
+    public string? WrappedKey { get; set; }
+
     public DateTime CreationDate { get; set; }
 
     public DateTime RevisionDate { get; set; }

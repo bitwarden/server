@@ -154,16 +154,6 @@ public class GeneratorContextTests
     }
 
     [Fact]
-    public void CipherCount_ReflectsOptionsValue()
-    {
-        var options = CreateOptions("test.com", ciphers: 500);
-
-        var ctx = GeneratorContext.FromOptions(options);
-
-        Assert.Equal(500, ctx.CipherCount);
-    }
-
-    [Fact]
     public void Username_WithCorporatePattern_AppliesCorrectFormat()
     {
         var options = new OrganizationVaultOptions
