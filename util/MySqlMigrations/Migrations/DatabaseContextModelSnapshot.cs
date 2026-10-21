@@ -3349,6 +3349,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid?>("OrganizationId")
                         .HasColumnType("char(36)");
 
+                    b.Property<string>("ReportExclusions")
+                        .HasColumnType("longtext");
+
                     b.Property<byte?>("Reprompt")
                         .HasColumnType("tinyint unsigned");
 

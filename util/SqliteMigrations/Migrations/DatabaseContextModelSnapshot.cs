@@ -3338,6 +3338,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid?>("OrganizationId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ReportExclusions")
+                        .HasColumnType("TEXT");
+
                     b.Property<byte?>("Reprompt")
                         .HasColumnType("INTEGER");
 

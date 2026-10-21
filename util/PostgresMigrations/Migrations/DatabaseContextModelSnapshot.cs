@@ -3355,6 +3355,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid?>("OrganizationId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ReportExclusions")
+                        .HasColumnType("text");
+
                     b.Property<byte?>("Reprompt")
                         .HasColumnType("smallint");
 
