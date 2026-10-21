@@ -47,6 +47,33 @@ public class OrganizationInitiateDeleteCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task InitiateDeleteAsync_ValidAdminUser_IssuesTokenValidFor48Hours(
+        Organization organization, User orgAdmin, OrganizationUserOrganizationDetails orgAdminUser,
+        SutProvider<OrganizationInitiateDeleteCommand> sutProvider)
+    {
+        orgAdminUser.Type = OrganizationUserType.Owner;
+        orgAdminUser.Status = OrganizationUserStatusType.Confirmed;
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(orgAdmin.Email)
+            .Returns(orgAdmin);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetDetailsByUserAsync(orgAdmin.Id, organization.Id)
+            .Returns(orgAdminUser);
+
+        var expectedExpiry = DateTime.UtcNow.AddHours(48);
+
+        await sutProvider.Sut.InitiateDeleteAsync(organization, orgAdmin.Email);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<OrgDeleteTokenable>>().Received(1)
+            .Protect(Arg.Is<OrgDeleteTokenable>(t =>
+                t.Id == organization.Id &&
+                t.ExpirationDate >= expectedExpiry.AddMinutes(-1) &&
+                t.ExpirationDate <= expectedExpiry.AddMinutes(1)));
+    }
+
+    [Theory, BitAutoData]
     public async Task InitiateDeleteAsync_UserNotFound_ThrowsBadRequest(
         Organization organization, string email, SutProvider<OrganizationInitiateDeleteCommand> sutProvider)
     {

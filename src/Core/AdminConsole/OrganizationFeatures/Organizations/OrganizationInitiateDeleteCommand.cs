@@ -43,7 +43,7 @@ public class OrganizationInitiateDeleteCommand : IOrganizationInitiateDeleteComm
         {
             throw new BadRequestException(OrganizationAdminNotFoundErrorMessage);
         }
-        var token = _orgDeleteTokenDataFactory.Protect(new OrgDeleteTokenable(organization, 1));
+        var token = _orgDeleteTokenDataFactory.Protect(new OrgDeleteTokenable(organization));
         await _mailService.SendInitiateDeleteOrganzationEmailAsync(orgAdminEmail, organization, token);
     }
 }

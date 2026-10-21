@@ -352,7 +352,7 @@ public class OrganizationsControllerTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
         // Token has a matching organization Id but an expiration date two hours in the past.
-        var expiredTokenData = new OrgDeleteTokenable(organization, -2);
+        var expiredTokenData = new OrgDeleteTokenable { Id = organization.Id, ExpirationDate = DateTime.UtcNow.AddHours(-2) };
         sutProvider.GetDependency<IDataProtectorTokenFactory<OrgDeleteTokenable>>()
             .TryUnprotect(model.Token, out expiredTokenData).Returns(true);
 

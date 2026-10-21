@@ -104,7 +104,7 @@ public class OrganizationsControllerPerformanceTests(ITestOutputHelper testOutpu
         Assert.NotNull(organization);
 
         var tokenFactory = factory.GetService<IDataProtectorTokenFactory<OrgDeleteTokenable>>();
-        var tokenable = new OrgDeleteTokenable(organization, 24);
+        var tokenable = new OrgDeleteTokenable(organization);
         var token = tokenFactory.Protect(tokenable);
 
         var deleteRequest = new OrganizationVerifyDeleteRecoverRequestModel

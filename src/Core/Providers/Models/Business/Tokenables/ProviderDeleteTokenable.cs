@@ -1,31 +1,20 @@
-﻿using Newtonsoft.Json;
-
-namespace Bit.Core.AdminConsole.Models.Business.Tokenables;
+﻿namespace Bit.Core.AdminConsole.Models.Business.Tokenables;
 
 public class ProviderDeleteTokenable : Tokens.ExpiringTokenable
 {
     public const string ClearTextPrefix = "BwProviderId";
     public const string DataProtectorPurpose = "ProviderDeleteDataProtector";
     public const string TokenIdentifier = "ProviderDelete";
+    private const int ExpirationHours = 48;
     public string Identifier { get; set; } = TokenIdentifier;
     public Guid Id { get; set; }
 
-    [JsonConstructor]
-    public ProviderDeleteTokenable()
-    {
+    public ProviderDeleteTokenable() { }
 
-    }
-
-    [JsonConstructor]
-    public ProviderDeleteTokenable(DateTime expirationDate)
-    {
-        ExpirationDate = expirationDate;
-    }
-
-    public ProviderDeleteTokenable(Entities.Provider.Provider provider, int hoursTillExpiration)
+    public ProviderDeleteTokenable(Entities.Provider.Provider provider)
     {
         Id = provider.Id;
-        ExpirationDate = DateTime.UtcNow.AddHours(hoursTillExpiration);
+        ExpirationDate = DateTime.UtcNow.AddHours(ExpirationHours);
     }
 
     public bool IsValid(Entities.Provider.Provider provider)

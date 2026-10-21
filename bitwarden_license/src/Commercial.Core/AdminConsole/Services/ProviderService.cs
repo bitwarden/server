@@ -696,7 +696,7 @@ public class ProviderService : IProviderService
             throw new BadRequestException("Org admin not found.");
         }
 
-        var token = _providerDeleteTokenDataFactory.Protect(new ProviderDeleteTokenable(provider, 1));
+        var token = _providerDeleteTokenDataFactory.Protect(new ProviderDeleteTokenable(provider));
         await _mailService.SendInitiateDeletProviderEmailAsync(providerAdminEmail, provider, token);
     }
 

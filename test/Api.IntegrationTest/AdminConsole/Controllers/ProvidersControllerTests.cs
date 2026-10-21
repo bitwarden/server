@@ -1,10 +1,13 @@
 ﻿using System.Net;
+using Bit.Api.AdminConsole.Models.Request.Providers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Repositories;
+using Bit.Core.Tokens;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
@@ -107,5 +110,35 @@ public class ProvidersControllerTests : IClassFixture<ApiApplicationFactory>, IA
         await _loginHelper.LoginAsync(_providerAdminEmail);
         var response = await _client.GetAsync($"providers/{_provider.Id}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostDeleteRecoverToken_ValidToken_DeletesProvider()
+    {
+        var token = _factory.GetService<IDataProtectorTokenFactory<ProviderDeleteTokenable>>()
+            .Protect(new ProviderDeleteTokenable(_provider));
+
+        var response = await _client.PostAsJsonAsync($"providers/{_provider.Id}/delete-recover-token",
+            new ProviderVerifyDeleteRecoverRequestModel { Token = token });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var providerRepository = _factory.GetService<IProviderRepository>();
+        Assert.Null(await providerRepository.GetByIdAsync(_provider.Id));
+    }
+
+    [Fact]
+    public async Task PostDeleteRecoverToken_ExpiredToken_ReturnsBadRequestAndDoesNotDeleteProvider()
+    {
+        var token = _factory.GetService<IDataProtectorTokenFactory<ProviderDeleteTokenable>>()
+            .Protect(new ProviderDeleteTokenable { Id = _provider.Id, ExpirationDate = DateTime.UtcNow.AddHours(-1) });
+
+        var response = await _client.PostAsJsonAsync($"providers/{_provider.Id}/delete-recover-token",
+            new ProviderVerifyDeleteRecoverRequestModel { Token = token });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var providerRepository = _factory.GetService<IProviderRepository>();
+        Assert.NotNull(await providerRepository.GetByIdAsync(_provider.Id));
     }
 }
