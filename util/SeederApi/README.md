@@ -147,8 +147,9 @@ By default the SeederApi makes no Stripe calls. The `gateway*` fields above link
 itself. Two opt-in scenes instead create the Stripe customer and subscription in the shared test account, the same
 way the CLI's `--stripe-billing` does. Seed the organization or user first, then post its ID to the billing scene.
 
-Each scene refuses an organization or user that already has a gateway ID, so it bills once. The arguments mirror the
-CLI flags; see the [card and address catalogs](../SeederUtility/README.md#cards) for the valid names.
+Each scene refuses an organization or user that already has a gateway ID, so it bills once. The organization scene
+also refuses a provider-managed client, which its provider bills. The arguments mirror the CLI flags; see the
+[card and address catalogs](../SeederUtility/README.md#cards) for the valid names.
 
 | Scene                            | Argument                                 | Effect                                                              |
 | -------------------------------- | ---------------------------------------- | ------------------------------------------------------------------- |

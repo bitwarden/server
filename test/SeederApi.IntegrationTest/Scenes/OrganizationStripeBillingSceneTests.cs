@@ -3,6 +3,7 @@ using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
+using Bit.Core.Repositories;
 using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Options;
 using Bit.Seeder.Scenes;
@@ -119,6 +120,28 @@ public class OrganizationStripeBillingSceneTests : IAsyncLifetime
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Contains("already linked", await response.Content.ReadAsStringAsync());
+        await AssertNotBilledAsync();
+    }
+
+    [Fact]
+    public async Task SeedEndpoint_ProviderManagedClient_ReturnsBadRequestWithoutBilling()
+    {
+        var organizationId = await SeedOrganizationAsync();
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var organizationRepository = scope.ServiceProvider.GetRequiredService<IOrganizationRepository>();
+            var organization = await organizationRepository.GetByIdAsync(organizationId);
+            organization!.Status = OrganizationStatusType.Managed;
+            await organizationRepository.ReplaceAsync(organization);
+        }
+
+        var response = await PostBillingAsync(new OrganizationStripeBillingScene.Request
+        {
+            OrganizationId = organizationId
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("provider-managed", await response.Content.ReadAsStringAsync());
         await AssertNotBilledAsync();
     }
 

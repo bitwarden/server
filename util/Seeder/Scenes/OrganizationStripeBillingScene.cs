@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Seeder.Options;
 using Bit.Seeder.Services;
@@ -17,8 +18,9 @@ public struct OrganizationStripeBillingSceneResult
 /// same way the CLI's <c>--stripe-billing</c> does.
 /// </summary>
 /// <remarks>
-/// Refuses an organization that already has a gateway ID, so it bills once. <c>OrganizationBillingService</c>
-/// reuses a non-empty <c>GatewayCustomerId</c> instead of creating a customer.
+/// Refuses an organization that already has a gateway ID, so it bills once, and a provider-managed client, which its
+/// provider bills. <c>OrganizationBillingService</c> reuses a non-empty <c>GatewayCustomerId</c> instead of creating
+/// a customer.
 /// </remarks>
 public class OrganizationStripeBillingScene(
     IOrganizationRepository organizationRepository,
@@ -63,6 +65,13 @@ public class OrganizationStripeBillingScene(
         if (organization == null)
         {
             throw new InvalidOperationException($"Organization with ID {request.OrganizationId} not found.");
+        }
+
+        if (organization.Status == OrganizationStatusType.Managed)
+        {
+            throw new InvalidOperationException(
+                $"Organization {request.OrganizationId} is a provider-managed client, and its provider is billed " +
+                "for it. Bill an organization that is not linked to a provider.");
         }
 
         if (organization.Gateway.HasValue ||
