@@ -101,22 +101,6 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData(" ")]
-    public async Task Run_NoGatewayCustomer_ThrowsBadRequestWithoutReadingSeatsInUse(string? gatewayCustomerId)
-    {
-        var organization = CreateOrganization(gatewayCustomerId: gatewayCustomerId);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, 1));
-
-        Assert.Equal("No payment method found.", exception.Message);
-        await _organizationUserRepository.DidNotReceive()
-            .GetOccupiedPamSeatCountByOrganizationIdAsync(Arg.Any<Guid>());
-        await _seatChangeSetFactory.DidNotReceive().CreateAsync(Arg.Any<OrganizationEntity>(), Arg.Any<int>());
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData(" ")]
     public async Task Run_NoGatewaySubscription_ThrowsBadRequestWithoutReadingSeatsInUse(string? gatewaySubscriptionId)
     {
         var organization = CreateOrganization(gatewaySubscriptionId: gatewaySubscriptionId);
@@ -358,7 +342,6 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
         bool usePam = true,
         int? pamSeats = _boughtSeats,
         int? maxAutoscalePamSeats = null,
-        string? gatewayCustomerId = "cus_123",
         string? gatewaySubscriptionId = "sub_123") => new()
         {
             Id = Guid.NewGuid(),
@@ -368,7 +351,7 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
             PamSeats = pamSeats,
             PamSeatMinimum = 10,
             MaxAutoscalePamSeats = maxAutoscalePamSeats,
-            GatewayCustomerId = gatewayCustomerId,
+            GatewayCustomerId = "cus_123",
             GatewaySubscriptionId = gatewaySubscriptionId
         };
 }
