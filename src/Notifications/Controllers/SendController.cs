@@ -1,11 +1,11 @@
 ﻿#nullable enable
-using System.Text;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Notifications.Controllers;
 
+[ApiController]
 [Authorize("Internal")]
 public class SendController : Controller
 {
@@ -18,13 +18,8 @@ public class SendController : Controller
 
     [HttpPost("~/send")]
     [SelfHosted(SelfHostedOnly = true)]
-    public async Task PostSendAsync()
+    public async Task PostSendAsync(InboundNotification inboundNotification)
     {
-        using var reader = new StreamReader(Request.Body, Encoding.UTF8);
-        var notificationJson = await reader.ReadToEndAsync();
-        if (!string.IsNullOrWhiteSpace(notificationJson))
-        {
-            await _hubHelpers.SendNotificationToHubAsync(notificationJson);
-        }
+        await _hubHelpers.SendNotificationToHubAsync(inboundNotification, HttpContext.RequestAborted);
     }
 }

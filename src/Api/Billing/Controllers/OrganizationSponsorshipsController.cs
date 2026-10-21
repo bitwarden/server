@@ -41,7 +41,7 @@ public class OrganizationSponsorshipsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly IUserService _userService;
     private readonly IPolicyQuery _policyQuery;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly ILogger<OrganizationSponsorshipsController> _logger;
 
     public OrganizationSponsorshipsController(
@@ -59,7 +59,7 @@ public class OrganizationSponsorshipsController : Controller
         IUserService userService,
         ICurrentContext currentContext,
         IPolicyQuery policyQuery,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         ILogger<OrganizationSponsorshipsController> logger)
     {
         _organizationSponsorshipRepository = organizationSponsorshipRepository;
@@ -126,13 +126,41 @@ public class OrganizationSponsorshipsController : Controller
             .GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default);
 
         var sponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrgId);
-        var filteredSponsorship = sponsorships.FirstOrDefault(s => s.FriendlyName != null && s.FriendlyName.Equals(sponsoredFriendlyName, StringComparison.OrdinalIgnoreCase));
+        var filteredSponsorship = sponsorships.FirstOrDefault(s =>
+            (s.IsAdminInitiated || s.SponsoringOrganizationUserId == sponsoringOrgUser?.Id) &&
+            s.FriendlyName != null && s.FriendlyName.Equals(sponsoredFriendlyName, StringComparison.OrdinalIgnoreCase));
         if (filteredSponsorship != null)
         {
             await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(
                 await _organizationRepository.GetByIdAsync(sponsoringOrgId),
                 sponsoringOrgUser, filteredSponsorship);
         }
+    }
+
+    [Authorize("Application")]
+    [Authorize<MemberRequirement>]
+    [HttpPost("{organizationId}/families-for-enterprise/resend-self")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task ResendOwnSponsorshipOffer([FromRoute(Name = "organizationId")] Guid sponsoringOrgId)
+    {
+        var freeFamiliesSponsorshipPolicy = await _policyQuery.RunAsync(sponsoringOrgId,
+            PolicyType.FreeFamiliesSponsorshipPolicy);
+
+        if (freeFamiliesSponsorshipPolicy.Enabled)
+        {
+            throw new BadRequestException("Free Bitwarden Families sponsorship has been disabled by your organization administrator.");
+        }
+
+        var sponsoringOrgUser = await _organizationUserRepository
+            .GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default);
+
+        var sponsorship = sponsoringOrgUser == null
+            ? null
+            : await _organizationSponsorshipRepository.GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id);
+
+        await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(
+            await _organizationRepository.GetByIdAsync(sponsoringOrgId),
+            sponsoringOrgUser, sponsorship);
     }
 
     [Authorize("Application")]
@@ -232,9 +260,10 @@ public class OrganizationSponsorshipsController : Controller
     }
 
     [Authorize("Application")]
-    [HttpDelete("{sponsoringOrganizationId}")]
+    [Authorize<MemberRequirement>]
+    [HttpDelete("{organizationId}")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task RevokeSponsorship(Guid sponsoringOrganizationId)
+    public async Task RevokeSponsorship([FromRoute(Name = "organizationId")] Guid sponsoringOrganizationId)
     {
 
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrganizationId, _currentContext.UserId ?? default);
@@ -250,10 +279,11 @@ public class OrganizationSponsorshipsController : Controller
     }
 
     [Authorize("Application")]
-    [HttpPost("{sponsoringOrganizationId}/delete")]
-    [Obsolete("This endpoint is deprecated. Use DELETE /{sponsoringOrganizationId} instead.")]
+    [Authorize<MemberRequirement>]
+    [HttpPost("{organizationId}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE /{organizationId} instead.")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostRevokeSponsorship(Guid sponsoringOrganizationId)
+    public async Task PostRevokeSponsorship([FromRoute(Name = "organizationId")] Guid sponsoringOrganizationId)
     {
         await RevokeSponsorship(sponsoringOrganizationId);
     }
@@ -265,7 +295,7 @@ public class OrganizationSponsorshipsController : Controller
     public async Task AdminInitiatedRevokeSponsorshipAsync([FromRoute(Name = "organizationId")] Guid sponsoringOrgId, string sponsoredFriendlyName)
     {
         var sponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrgId);
-        var existingOrgSponsorship = sponsorships.FirstOrDefault(s => s.FriendlyName != null && s.FriendlyName.Equals(sponsoredFriendlyName, StringComparison.OrdinalIgnoreCase));
+        var existingOrgSponsorship = sponsorships.FirstOrDefault(s => s.IsAdminInitiated && s.FriendlyName != null && s.FriendlyName.Equals(sponsoredFriendlyName, StringComparison.OrdinalIgnoreCase));
         if (existingOrgSponsorship == null)
         {
             throw new BadRequestException("The specified sponsored organization could not be found under the given sponsoring organization.");

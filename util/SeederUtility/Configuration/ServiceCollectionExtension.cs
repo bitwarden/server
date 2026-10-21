@@ -94,18 +94,20 @@ public static class ServiceCollectionExtension
             PrivateKey = globalSettings.Braintree.PrivateKey,
         });
 
-        // SubscriberService → PriceIncreaseScheduler has a hard constructor dependency on the obsolete
-        // IFeatureService. NoopFeatureService satisfies it without pulling in the LaunchDarkly-backed SDK.
-        services.TryAddSingleton<Bit.Core.Services.IFeatureService, NoopFeatureService>();
+        // SubscriberService → PriceIncreaseScheduler (and other billing services) have hard constructor
+        // dependencies on IFeatureService. NoopFeatureService satisfies it without pulling in the
+        // LaunchDarkly-backed SDK.
+        services.TryAddSingleton<Bitwarden.Server.Sdk.Features.IFeatureService, NoopFeatureService>();
 
-        services.AddScoped<IStripeBillingInitializer, StripeBillingInitializer>();
+        services.AddScoped<IOrganizationStripeBillingService, OrganizationStripeBillingService>();
+        services.AddScoped<IUserStripeBillingService, UserStripeBillingService>();
 
         // StripeAdapter reads these statics rather than GlobalSettings, mirroring src/Api/Startup.cs.
         // Left unarmed when no key is configured, or when the configured key isn't a test-mode key, so a
         // default seed cannot half-initialize the Stripe client and this tool can never hold a live key.
         var stripeSettings = globalSettings.Stripe;
         if (!string.IsNullOrWhiteSpace(stripeSettings?.ApiKey) &&
-            stripeSettings.ApiKey.StartsWith(StripeBillingInitializer.TestKeyPrefix, StringComparison.Ordinal))
+            stripeSettings.ApiKey.StartsWith(StripeSettingValidator.TestKeyPrefix, StringComparison.Ordinal))
         {
             StripeConfiguration.ApiKey = stripeSettings.ApiKey;
             StripeConfiguration.MaxNetworkRetries = stripeSettings.MaxNetworkRetries;

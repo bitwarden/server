@@ -1,7 +1,9 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
+using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Invoicing;
 using Bit.Subscriptions.Organization.Commands;
 using Bit.Subscriptions.Organization.Handlers;
+using Bit.Subscriptions.Organization.Helpers;
 using Bit.Subscriptions.Organization.Queries;
 using Bit.Subscriptions.Organization.Requirements;
 using Microsoft.AspNetCore.Authorization;
@@ -23,6 +25,12 @@ public static class SubscriptionsOrganizationServiceCollectionExtensions
         services.TryAddScoped<PreviewOrganizationSubscriptionPurchaseHandler>();
         services.TryAddScoped<PreviewOrganizationPlanChangeHandler>();
         services.TryAddScoped<IPreviewOrganizationPlanChangeCommand, PreviewOrganizationPlanChangeCommand>();
+        services.TryAddScoped<PreviewOrganizationRestartHandler>();
+        services.TryAddScoped<IPreviewOrganizationRestartCommand, PreviewOrganizationRestartCommand>();
+        services.TryAddScoped<IPrivilegedControlsSeatChangeSetFactory, PrivilegedControlsSeatChangeSetFactory>();
+        services.TryAddScoped<IAddPrivilegedControlsToExistingSubscriptionCommand, AddPrivilegedControlsToExistingSubscriptionCommand>();
+        services.TryAddScoped<IChangePrivilegedControlsSeatsCommand, ChangePrivilegedControlsSeatsCommand>();
+        services.TryAddScoped<IRemovePrivilegedControlsCommand, RemovePrivilegedControlsCommand>();
         services.TryAddEnumerable(
             ServiceDescriptor.Scoped<IAuthorizationHandler, StandaloneOrganizationOwnerRequirementHandler>());
         return services;

@@ -444,7 +444,7 @@ public class ProviderService : IProviderService
 
         ThrowOnInvalidPlanType(provider.Type, organization.PlanType);
 
-        if (organization.UseSecretsManager)
+        if (organization.UseSecretsManager && provider.Type != ProviderType.Reseller)
         {
             throw new BadRequestException(
                 "The organization is subscribed to Secrets Manager. Please contact Customer Support to manage the subscription.");

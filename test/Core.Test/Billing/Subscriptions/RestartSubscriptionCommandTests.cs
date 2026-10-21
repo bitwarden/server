@@ -5,6 +5,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Commands;
+using Bit.Core.Billing.Subscriptions.Queries;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -30,7 +31,7 @@ public class RestartSubscriptionCommandTests
         _command = new RestartSubscriptionCommand(
             Substitute.For<Microsoft.Extensions.Logging.ILogger<RestartSubscriptionCommand>>(),
             _organizationRepository,
-            _pricingClient,
+            new GetOrganizationRestartQuery(_pricingClient),
             _stripeAdapter,
             _subscriberService);
     }
