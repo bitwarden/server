@@ -108,13 +108,12 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     /// </summary>
     public RevocationReason? RevocationReason { get; set; }
     /// <summary>
-    /// When the next invite reminder is due. NULL if the member has no reminder sequence.
-    /// Kept while the member is revoked, so a restore can resume the sequence.
+    /// When the next invite reminder is due. Null when no reminders are scheduled.
+    /// A revoke keeps this value for a later restore.
     /// </summary>
     public DateTime? InviteReminderDueDate { get; set; }
     /// <summary>
-    /// How many invite reminders have been claimed in the current sequence. NULL if the member has no
-    /// reminder sequence.
+    /// The number of invite reminders claimed in the current sequence. Null when no reminders are scheduled.
     /// </summary>
     public byte? InviteRemindersSentCount { get; set; }
 

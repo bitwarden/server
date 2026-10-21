@@ -883,7 +883,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
         var dbContext = GetDatabaseContext(scope);
 
-        // Does not bump the account revision date: the reminder columns are not synced to clients
+        // Do not change the account revision date. Clients do not sync the reminder columns.
         await dbContext.OrganizationUsers
             .Where(x => organizationUserIds.Contains(x.Id))
             .ExecuteUpdateAsync(s => s
@@ -895,10 +895,9 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
     public async Task<ICollection<OrganizationUserInviteReminder>> ClaimInviteReminderSequencesAsync(DateTime now,
         DateTime oldestDueDate, DateTime nextDueDate, int batchSize)
     {
-        // The MSSQL procedure claims the batch in 1 statement using WITH (UPDLOCK, READPAST), which has no EF Core
-        // translation. This claims 1 member at a time instead. ExecuteUpdateAsync returns only a count, so the update
-        // only matches the row if it is still Invited and its due date and count are unchanged since it was read.
-        // A member counts as claimed only when the update changed 1 row, so a member is never claimed twice.
+        // EF Core cannot use the WITH (UPDLOCK, READPAST) hints of the MSSQL procedure. Thus, claim 1 member at a time.
+        // The update changes the row only if the row did not change after the read.
+        // A member is claimed only when the update changes 1 row. Thus, 2 claims never get the same member.
         using var scope = ServiceScopeFactory.CreateScope();
 
         var dbContext = GetDatabaseContext(scope);
@@ -944,7 +943,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
             if (updated == 0)
             {
-                // Another claim, or another write, changed the row first. The next read skips it.
+                // Another write changed the row first. The next read skips this member.
                 consecutiveMisses++;
                 continue;
             }

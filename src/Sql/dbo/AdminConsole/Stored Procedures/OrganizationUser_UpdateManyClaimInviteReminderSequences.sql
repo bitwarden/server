@@ -7,8 +7,8 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Status and the reminder limit are literals, not parameters, so the query matches
-    -- the filter of IX_OrganizationUser_InviteReminders_Filtered
+    -- Status and the reminder limit are literal values. With parameters, SQL Server cannot use
+    -- the filtered index IX_OrganizationUser_InviteReminders_Filtered.
     ;WITH [Due] AS (
         SELECT TOP (@BatchSize)
             OU.[Id],

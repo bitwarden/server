@@ -219,7 +219,7 @@ public class OrganizationUserInviteReminderTests
         var cleared = await CreateInvitedAsync(organizationUserRepository, organization, dueDate, 1);
         var set = await CreateInvitedAsync(organizationUserRepository, organization, null, null);
 
-        // The EF implementation can only update entities that came from a query
+        // EF can only update entities that it read from the database
         var toUpdate = await organizationUserRepository.GetManyAsync([cleared.Id, set.Id]);
         foreach (var orgUser in toUpdate)
         {
@@ -285,8 +285,8 @@ public class OrganizationUserInviteReminderTests
     }
 
     /// <summary>
-    /// The claim scans the whole shared table, so each test claims in its own random window, far in the future.
-    /// Whole seconds keep the bounds exact, because Dapper rounds the stored dates.
+    /// The claim reads the full shared table. Thus, each test uses its own random date range in the future.
+    /// Whole seconds keep the limits exact, because Dapper rounds the stored dates.
     /// </summary>
     private static (DateTime Now, DateTime OldestDueDate, DateTime NextDueDate) CreateClaimWindow()
     {

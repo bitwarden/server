@@ -20,7 +20,7 @@ public interface IPolicyRepository : IRepository<Policy, Guid>
     Task<Policy?> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType type);
     Task<ICollection<Policy>> GetManyByOrganizationIdAsync(Guid organizationId);
     /// <summary>
-    /// Gets the policies of a given type for many organizations. Returns raw data, with no business rules applied.
+    /// Gets the policies of one type for many organizations. Returns raw data. Applies no business rules.
     /// </summary>
     Task<ICollection<Policy>> GetManyByOrganizationIdsTypeAsync(IEnumerable<Guid> organizationIds, PolicyType type);
 

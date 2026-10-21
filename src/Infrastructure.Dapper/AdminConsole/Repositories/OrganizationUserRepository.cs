@@ -668,7 +668,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         {
             OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP()
         });
-        // DATETIME2(7) rather than Dapper's default DATETIME, which rounds the date to about 3ms
+        // Use DATETIME2(7). Dapper's default DATETIME rounds the date to approximately 3 ms.
         parameters.Add("@DueDate", dueDate, DbType.DateTime2, null, 7);
 
         await using var connection = new SqlConnection(ConnectionString);
@@ -683,8 +683,8 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         DateTime oldestDueDate, DateTime nextDueDate, int batchSize)
     {
         var parameters = new DynamicParameters(new { BatchSize = batchSize });
-        // DATETIME2(7) rather than Dapper's default DATETIME, which rounds the dates to about 3ms and so
-        // moves the bounds of the claim
+        // Use DATETIME2(7). Dapper's default DATETIME rounds the dates to approximately 3 ms.
+        // This moves the limits of the claim.
         parameters.Add("@Now", now, DbType.DateTime2, null, 7);
         parameters.Add("@OldestDueDate", oldestDueDate, DbType.DateTime2, null, 7);
         parameters.Add("@NextDueDate", nextDueDate, DbType.DateTime2, null, 7);

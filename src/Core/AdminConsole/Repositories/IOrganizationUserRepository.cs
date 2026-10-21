@@ -117,23 +117,22 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task RestoreManyAsync(IEnumerable<Guid> organizationUserIds, OrganizationUserStatusType status);
 
     /// <summary>
-    /// Starts or restarts the invite reminder sequence for the given organization users. Sets the reminder count
-    /// to 0, and the due date to <paramref name="dueDate"/>, unless the stored due date is later.
-    /// Does not bump the account revision date.
+    /// Starts the invite reminder sequence for the given members. Sets the count to 0.
+    /// Sets the due date to <paramref name="dueDate"/>, but keeps a later stored due date.
+    /// Does not change the account revision date.
     /// </summary>
-    /// <param name="organizationUserIds">The IDs of the organization users.</param>
+    /// <param name="organizationUserIds">The member IDs.</param>
     /// <param name="dueDate">When the next reminder is due.</param>
     Task StartInviteReminderSequencesAsync(IEnumerable<Guid> organizationUserIds, DateTime dueDate);
     /// <summary>
-    /// Claims the invited members whose invite reminder is due, oldest due date first. For each claimed member,
-    /// adds 1 to the reminder count and sets the due date to <paramref name="nextDueDate"/>, so a concurrent
-    /// claim never returns the same member. Skips members with no email, members of disabled organizations, and
-    /// members who already had 3 reminders.
+    /// Claims the invited members whose reminder is due, oldest first. Adds 1 to each count and sets the due date
+    /// to <paramref name="nextDueDate"/>. Thus, a second claim cannot get the same member.
+    /// Skips members without an email, members of disabled organizations, and members with 3 reminders.
     /// </summary>
-    /// <param name="now">The newest due date to claim.</param>
-    /// <param name="oldestDueDate">The oldest due date to claim. Older reminders are too late and are skipped.</param>
+    /// <param name="now">The latest due date to claim.</param>
+    /// <param name="oldestDueDate">The earliest due date to claim. Older reminders are too late.</param>
     /// <param name="nextDueDate">The new due date for each claimed member.</param>
-    /// <param name="batchSize">The most members to claim.</param>
+    /// <param name="batchSize">The maximum number of members to claim.</param>
     Task<ICollection<OrganizationUserInviteReminder>> ClaimInviteReminderSequencesAsync(DateTime now,
         DateTime oldestDueDate, DateTime nextDueDate, int batchSize);
 

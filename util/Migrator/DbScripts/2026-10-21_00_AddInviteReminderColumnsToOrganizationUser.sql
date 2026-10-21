@@ -13,7 +13,7 @@ BEGIN
 END
 GO
 
--- Refresh the core OrganizationUser view (SELECT * over the table) and its dependents
+-- Refresh the views that read OrganizationUser
 EXEC sp_refreshview N'[dbo].[OrganizationUserView]';
 EXEC sp_refreshview N'[dbo].[OrganizationUserOrganizationDetailsView]';
 EXEC sp_refreshview N'[dbo].[OrganizationUserUserDetailsView]';
@@ -21,7 +21,7 @@ EXEC sp_refreshview N'[dbo].[ProviderOrganizationOrganizationDetailsView]';
 EXEC sp_refreshview N'[dbo].[UserPremiumAccessView]';
 GO
 
--- Index for the invite reminder claim
+-- Add the index for the invite reminder claim
 IF NOT EXISTS (
     SELECT
         *
@@ -691,8 +691,8 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Status and the reminder limit are literals, not parameters, so the query matches
-    -- the filter of IX_OrganizationUser_InviteReminders_Filtered
+    -- Status and the reminder limit are literal values. With parameters, SQL Server cannot use
+    -- the filtered index IX_OrganizationUser_InviteReminders_Filtered.
     ;WITH [Due] AS (
         SELECT TOP (@BatchSize)
             OU.[Id],
@@ -735,12 +735,12 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Does not bump the account revision date: the reminder columns are not synced to clients
+    -- Do not change the account revision date. Clients do not sync the reminder columns.
     UPDATE
         OU
     SET
         OU.[InviteRemindersSentCount] = 0,
-        -- Keep a later stored due date
+        -- Keep the stored due date if it is later
         OU.[InviteReminderDueDate] = CASE
             WHEN OU.[InviteReminderDueDate] > @DueDate
             THEN OU.[InviteReminderDueDate]
