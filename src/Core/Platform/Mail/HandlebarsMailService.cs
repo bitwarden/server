@@ -439,7 +439,17 @@ public class HandlebarsMailService : IMailService
 
             var organizationName = CoreHelpers.PreventEmailAutoLinking(orgInvitesInfo.OrganizationName);
 
-            var (subject, templateName) = GetInviteReminderTemplateInfo(reminderNumber, orgInvitesInfo.OrganizationName);
+            var (subject, templateName) = reminderNumber switch
+            {
+                1 => ($"Reminder: You're invited to join {orgInvitesInfo.OrganizationName} on Bitwarden",
+                    "AdminConsole.OrganizationInvite.OrganizationInviteReminder1View"),
+                2 => ($"Don't miss out: Your {orgInvitesInfo.OrganizationName} invite is still waiting",
+                    "AdminConsole.OrganizationInvite.OrganizationInviteReminder2View"),
+                3 => ($"Last chance: Your {orgInvitesInfo.OrganizationName} invite is about to expire",
+                    "AdminConsole.OrganizationInvite.OrganizationInviteReminder3View"),
+                _ => throw new ArgumentOutOfRangeException(nameof(reminderNumber), reminderNumber,
+                    "Reminder number must be 1, 2, or 3.")
+            };
 
             var url = BuildInvitationUrl(orgInvitesInfo, orgUserTokenPair.OrgUser, orgUserTokenPair.Token);
             var expirationDate = $"{orgUserTokenPair.Token.ExpirationDate.ToLongDateString()} {orgUserTokenPair.Token.ExpirationDate.ToShortTimeString()} UTC";
@@ -861,21 +871,6 @@ public class HandlebarsMailService : IMailService
                 : "You have been invited to Bitwarden Password Manager",
             "AdminConsole.OrganizationInvite.OrganizationInviteFreeView",
             existingUserButton);
-    }
-
-    private static (string Subject, string TemplateName) GetInviteReminderTemplateInfo(int reminderNumber, string organizationName)
-    {
-        return reminderNumber switch
-        {
-            1 => ($"Reminder: You're invited to join {organizationName} on Bitwarden",
-                "AdminConsole.OrganizationInvite.OrganizationInviteReminder1View"),
-            2 => ($"Don't miss out: Your {organizationName} invite is still waiting",
-                "AdminConsole.OrganizationInvite.OrganizationInviteReminder2View"),
-            3 => ($"Last chance: Your {organizationName} invite is about to expire",
-                "AdminConsole.OrganizationInvite.OrganizationInviteReminder3View"),
-            _ => throw new ArgumentOutOfRangeException(nameof(reminderNumber), reminderNumber,
-                "Reminder number must be 1, 2, or 3.")
-        };
     }
 
     private static bool IsEnterpriseOrTeamsPlan(PlanType planType)
