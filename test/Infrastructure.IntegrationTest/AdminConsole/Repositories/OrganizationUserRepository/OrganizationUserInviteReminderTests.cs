@@ -190,7 +190,7 @@ public class OrganizationUserInviteReminderTests
     }
 
     [Theory, DatabaseData]
-    public async Task ReplaceAsync_SavesInviteReminderColumns(
+    public async Task ReplaceAsync_RoundTripsInviteReminderColumns(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository)
     {
@@ -209,7 +209,7 @@ public class OrganizationUserInviteReminderTests
     }
 
     [Theory, DatabaseData]
-    public async Task ReplaceManyAsync_SavesInviteReminderColumns(
+    public async Task ReplaceManyAsync_RoundTripsInviteReminderColumns(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository)
     {
@@ -237,32 +237,43 @@ public class OrganizationUserInviteReminderTests
     }
 
     [Theory, DatabaseData]
-    public async Task CreateAndReplaceWithCollections_SaveInviteReminderColumns(
+    public async Task CreateAsync_WithCollections_RoundTripsInviteReminderColumns(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository)
     {
         // Arrange
         var (dueDate, _, _) = CreateClaimWindow();
         var organization = await organizationRepository.CreateTestOrganizationAsync();
-        var orgUser = NewInvited(organization, dueDate, 0);
+        var orgUser = NewInvited(organization, dueDate, 1);
 
         // Act
         await organizationUserRepository.CreateAsync(orgUser, new List<CollectionAccessSelection>());
 
         // Assert
-        await AssertSequenceAsync(organizationUserRepository, orgUser.Id, dueDate, 0);
-
-        // Act
-        orgUser.InviteReminderDueDate = dueDate.AddDays(5);
-        orgUser.InviteRemindersSentCount = 1;
-        await organizationUserRepository.ReplaceAsync(orgUser, new List<CollectionAccessSelection>());
-
-        // Assert
-        await AssertSequenceAsync(organizationUserRepository, orgUser.Id, dueDate.AddDays(5), 1);
+        await AssertSequenceAsync(organizationUserRepository, orgUser.Id, dueDate, 1);
     }
 
     [Theory, DatabaseData]
-    public async Task CreateManyAsync_SavesInviteReminderColumns(
+    public async Task ReplaceAsync_WithCollections_RoundTripsInviteReminderColumns(
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        // Arrange
+        var (dueDate, _, _) = CreateClaimWindow();
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var orgUser = await CreateInvitedAsync(organizationUserRepository, organization, null, null);
+        orgUser.InviteReminderDueDate = dueDate;
+        orgUser.InviteRemindersSentCount = 2;
+
+        // Act
+        await organizationUserRepository.ReplaceAsync(orgUser, new List<CollectionAccessSelection>());
+
+        // Assert
+        await AssertSequenceAsync(organizationUserRepository, orgUser.Id, dueDate, 2);
+    }
+
+    [Theory, DatabaseData]
+    public async Task CreateManyAsync_RoundTripsInviteReminderColumns(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository)
     {
