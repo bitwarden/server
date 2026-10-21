@@ -1,5 +1,6 @@
 ﻿using Bit.Api.Utilities;
 using Bit.Core;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.Context;
 using Bit.Core.Settings;
 using AspNetCoreRateLimit;
@@ -225,6 +226,12 @@ public class Startup
         // Billing subscriptions minimal API libraries
         services.AddUserSubscriptions();
         services.AddOrganizationSubscriptions();
+
+        // Registered here rather than in the shared AddOrganizationServices/AddOrganizationSignUpCommands
+        // This command now depends on ICreateOrganizationSubscriptionCommand, which only Api registers (via AddOrganizationSubscriptions).
+        // This command is only used in the Api, so it is registered here rather than in the shared library.
+        services.AddScoped<ICloudOrganizationSignUpCommand, CloudOrganizationSignUpCommand>();
+
         if (!globalSettings.SelfHosted)
         {
             services.AddOpenApiEndpointDataSource(MapSubscriptionEndpoints);
