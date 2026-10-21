@@ -19,7 +19,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Stripe;
 
-namespace Bit.Commercial.Core.AdminConsole.Providers;
+namespace Bit.Commercial.Core.Providers;
 
 public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProviderCommand
 {

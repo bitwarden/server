@@ -1,4 +1,4 @@
-﻿using Bit.Commercial.Core.AdminConsole.Providers;
+﻿using Bit.Commercial.Core.Providers;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -22,7 +22,7 @@ using NSubstitute;
 using Stripe;
 using Xunit;
 
-namespace Bit.Commercial.Core.Test.AdminConsole.ProviderFeatures;
+namespace Bit.Commercial.Core.Test.Providers;
 
 [SutProviderCustomize]
 public class RemoveOrganizationFromProviderCommandTests

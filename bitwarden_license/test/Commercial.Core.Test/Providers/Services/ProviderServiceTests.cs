@@ -1,5 +1,5 @@
-﻿using Bit.Commercial.Core.AdminConsole.Services;
-using Bit.Commercial.Core.Test.AdminConsole.AutoFixture;
+﻿using Bit.Commercial.Core.Providers.Services;
+using Bit.Commercial.Core.Test.Providers.AutoFixture;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
@@ -39,7 +39,7 @@ using Xunit;
 using Provider = Bit.Core.AdminConsole.Entities.Provider.Provider;
 using ProviderUser = Bit.Core.AdminConsole.Entities.Provider.ProviderUser;
 
-namespace Bit.Commercial.Core.Test.AdminConsole.Services;
+namespace Bit.Commercial.Core.Test.Providers.Services;
 
 [SutProviderCustomize]
 public class ProviderServiceTests
