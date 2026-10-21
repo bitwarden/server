@@ -1,9 +1,11 @@
 ﻿using System.Net;
 using System.Text;
+using System.Text.Json;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
 using Bit.Invoicing.InvoicePreviews.Models;
 using Bit.Subscriptions.Organization.Commands;
@@ -116,20 +118,22 @@ public class OrganizationSubscriptionEndpointsRequestBindingTests
     }
 
     [Theory]
-    [InlineData("""{"seats":0}""", "Privileged Controls seats must be between 1 and 100,000")]
-    [InlineData("""{"seats":100001}""", "Privileged Controls seats must be between 1 and 100,000")]
-    [InlineData("""{"seats":10,"maxAutoscaleSeats":0}""", "The autoscale limit must be between 1 and 100,000")]
-    [InlineData("""{"seats":10,"maxAutoscaleSeats":100001}""", "The autoscale limit must be between 1 and 100,000")]
+    [InlineData("""{"seats":0}""", "Seats", "Privileged Controls seats must be between 1 and 100,000")]
+    [InlineData("""{"seats":100001}""", "Seats", "Privileged Controls seats must be between 1 and 100,000")]
+    [InlineData("""{"seats":10,"maxAutoscaleSeats":0}""", "MaxAutoscaleSeats", "The autoscale limit must be between 1 and 100,000")]
+    [InlineData("""{"seats":10,"maxAutoscaleSeats":100001}""", "MaxAutoscaleSeats", "The autoscale limit must be between 1 and 100,000")]
     public async Task PurchasePrivilegedControls_ValueOutsideTheAllowedRange_ReturnsBadRequestWithoutCallingCommand(
-        string json, string expectedMessage)
+        string json, string expectedKey, string expectedMessage)
     {
         var command = new FakeAddPrivilegedControlsCommand();
 
         var context = await InvokePurchaseAsync(command, json);
 
         context.Response.Body.Position = 0;
+        var error = await JsonSerializer.DeserializeAsync<ErrorResponseModel>(
+            context.Response.Body, new JsonSerializerOptions(JsonSerializerDefaults.Web));
         Assert.Equal((int)HttpStatusCode.BadRequest, context.Response.StatusCode);
-        Assert.Contains(expectedMessage, await new StreamReader(context.Response.Body).ReadToEndAsync());
+        Assert.Equal([expectedMessage], error!.ValidationErrors![expectedKey]);
         Assert.False(command.WasCalled);
     }
 
@@ -182,7 +186,7 @@ public class OrganizationSubscriptionEndpointsRequestBindingTests
         builder.Services.AddSingleton(pricingClient);
         builder.Services.AddSingleton(Substitute.For<IStripeAdapter>());
         builder.Services.AddSingleton<IAddPrivilegedControlsToExistingSubscriptionCommand>(command);
-        // The library's own registration, so the request validation is wired the way a host gets it.
+        // The library's own registration, so the handler is wired the way a host gets it.
         builder.Services.AddOrganizationSubscriptions();
         var app = builder.Build();
         app.MapGroup("/{organizationId:guid}").MapOrganizationSubscriptionEndpoints();

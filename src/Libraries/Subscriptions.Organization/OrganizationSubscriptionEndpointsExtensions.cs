@@ -69,6 +69,7 @@ public static class OrganizationSubscriptionEndpointsExtensions
                     await handler.HandleAsync(organizationId, request);
                     return Results.NoContent();
                 })
+            .AddEndpointFilter<RouteHandlerBuilder, RequestValidationEndpointFilter<PurchasePrivilegedControlsRequest>>()
             .RequireAuthorization(new AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>())
             .RequireFeature(FeatureFlagKeys.PM39883_Pam_Billing_Support)
             .WithName("PurchasePrivilegedControls")

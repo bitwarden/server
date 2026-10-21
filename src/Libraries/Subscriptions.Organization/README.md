@@ -168,10 +168,10 @@ no Password Manager line item, is a **409**. A missing organization is a **404**
 Its request is a JSON body: `seats` (required, so an omitted value fails binding with a 400 rather than
 defaulting to zero) and an optional `maxAutoscaleSeats`. Both must be between 1 and
 `PlanConstants.MaxPurchasableQuantity`, declared with `[Range]` attributes on the request. A value outside
-that range is rejected with a 400 before the handler runs, in the framework's validation problem-details
-format rather than `ErrorResponseModel`. `AddOrganizationSubscriptions()` calls `AddValidation()` from this
-assembly so the validation source generator covers the request, and the request type is `public` because
-the generator skips types it cannot access. `PurchasePrivilegedControlsHandler` gates the call
+that range is rejected with a 400 before the handler runs. The endpoint's `RequestValidationEndpointFilter`
+runs the attributes and throws a `BadRequestException` carrying the model state, so the group's basic
+exception handling answers with the same `ErrorResponseModel` body, `validationErrors` keyed by property,
+that MVC controllers return for invalid model state. `PurchasePrivilegedControlsHandler` gates the call
 to `IAddPrivilegedControlsToExistingSubscriptionCommand`, which does the purchase. The handler checks, in
 order: the organization exists (404); it is not on a sales-initiated trial (400, sent to a customer service
 representative); its plan is an Enterprise plan that supports Privileged Controls (400); and it has a
