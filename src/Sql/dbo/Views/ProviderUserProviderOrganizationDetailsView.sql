@@ -49,7 +49,8 @@ SELECT
     O.[UseDisableSmAdsForUsers],
     O.[UseMyItems],
     O.[UseInviteLinks],
-    O.[UsePam]
+    O.[UsePam],
+    O.[OrganizationKeyId]
 FROM
     [dbo].[ProviderUser] PU
 INNER JOIN
