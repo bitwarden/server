@@ -197,8 +197,7 @@ public class OrganizationUserRevocationTests
         // Assert
         var updated = await organizationUserRepository.GetByIdAsync(orgUser.Id);
         Assert.Equal(OrganizationUserStatusType.Revoked, updated!.Status);
-        Assert.NotNull(updated.InviteReminderDueDate);
-        Assert.Equal(dueDate, updated.InviteReminderDueDate.Value, LaxDateTimeComparer.Default);
+        Assert.Equal(dueDate, updated.InviteReminderDueDate!.Value, LaxDateTimeComparer.Default);
         Assert.Equal((byte)2, updated.InviteRemindersSentCount);
     }
 }

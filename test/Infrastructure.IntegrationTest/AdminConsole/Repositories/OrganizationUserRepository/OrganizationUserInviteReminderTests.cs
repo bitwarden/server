@@ -281,7 +281,7 @@ public class OrganizationUserInviteReminderTests
         var (dueDate, _, _) = CreateClaimWindow();
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var withCollections = NewInvited(organization, dueDate, 0);
-        withCollections.Id = CoreHelpers.GenerateComb();
+        withCollections.Id = CombGuid.Generate();
 
         // Act
         var ids = await organizationUserRepository.CreateManyAsync([NewInvited(organization, dueDate, 1)]);
@@ -345,8 +345,7 @@ public class OrganizationUserInviteReminderTests
         }
         else
         {
-            Assert.NotNull(orgUser.InviteReminderDueDate);
-            Assert.Equal(expectedDueDate.Value, orgUser.InviteReminderDueDate.Value, LaxDateTimeComparer.Default);
+            Assert.Equal(expectedDueDate.Value, orgUser.InviteReminderDueDate!.Value, LaxDateTimeComparer.Default);
         }
         Assert.Equal(expectedSentCount, orgUser.InviteRemindersSentCount);
     }
