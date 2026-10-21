@@ -145,8 +145,8 @@ tax ids with the request's, deleting them when the request has none. Stripe fall
 ids when `customer_details.tax_ids` is omitted and rejects an empty list, so the client prefills the tax id
 to keep the two in step.
 
-A missing subscription, or one in any status other than `canceled`, is a **400** with restart's own message
-("Cannot restart a subscription that is not canceled."), as are an invalid billing address and a tax
+A missing subscription, or one in any status other than `canceled` or `incomplete_expired`, is a **400** with restart's own message
+("Cannot restart a subscription that has not ended."), as are an invalid billing address and a tax
 location or tax id Stripe rejects. A plan the pricing service doesn't have, or a canceled subscription with
 no Password Manager line item, is a **409**. A missing organization is a **404**.
 
