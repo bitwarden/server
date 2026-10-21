@@ -64,7 +64,7 @@ public class OrganizationUsersControllerBulkEnablePamTests
         var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/enable-pam",
             new OrganizationUserBulkRequestModel { Ids = [member.Id, alreadyEnabledMember.Id] });
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         await AssertAccessPamAsync(member, true);
         await AssertAccessPamAsync(alreadyEnabledMember, true);
     }
@@ -119,7 +119,7 @@ public class OrganizationUsersControllerBulkEnablePamTests
         var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/enable-pam",
             new OrganizationUserBulkRequestModel { Ids = [member.Id, otherOrgMember.Id] });
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         await AssertAccessPamAsync(member, true);
         await AssertAccessPamAsync(otherOrgMember, false);
     }
@@ -139,7 +139,7 @@ public class OrganizationUsersControllerBulkEnablePamTests
         var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/enable-pam",
             new OrganizationUserBulkRequestModel { Ids = [invitedMember.Id, revokedMember.Id] });
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         await AssertAccessPamAsync(invitedMember, true);
         await AssertAccessPamAsync(revokedMember, true);
     }
@@ -209,7 +209,7 @@ public class OrganizationUsersControllerBulkEnablePamTests
         var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/enable-pam",
             new OrganizationUserBulkRequestModel { Ids = [member.Id] });
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         await AssertAccessPamAsync(member, true);
     }
 

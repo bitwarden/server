@@ -124,6 +124,7 @@ public static class OrganizationFactory
             UseMyItems = license.UseMyItems,
             UseInviteLinks = license.UseInviteLinks,
             UsePam = license.UsePam,
-            // PamSeats is intentionally left unset: it is only trusted from the signed token (PM-44602).
+            // DO NOT add new properties here. This overload only serves licenses without a signed token and is
+            // deprecated: new properties can only be populated from the token in the other Create overload.
         };
 }

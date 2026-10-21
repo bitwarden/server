@@ -18,6 +18,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.BulkEnablePam;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
@@ -69,7 +70,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
-    private readonly ICountNewPamSeatsRequiredQuery _countNewPamSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IAuthorizationService _authorizationService;
@@ -84,6 +84,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
     private readonly IBulkResendOrganizationInvitesCommand _bulkResendOrganizationInvitesCommand;
     private readonly IBulkAutomaticallyConfirmOrganizationUsersCommand _bulkAutomaticallyConfirmOrganizationUsersCommand;
+    private readonly IBulkEnablePamCommand _bulkEnablePamCommand;
     private readonly V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand _revokeOrganizationUserCommandVNext;
     private readonly IConfirmOrganizationUserCommand _confirmOrganizationUserCommand;
     private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
@@ -108,7 +109,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IUserService userService,
         ICurrentContext currentContext,
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
-        ICountNewPamSeatsRequiredQuery countNewPamSeatsRequiredQuery,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IAuthorizationService authorizationService,
@@ -127,6 +127,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IBulkResendOrganizationInvitesCommand bulkResendOrganizationInvitesCommand,
         IAdminRecoverAccountCommand adminRecoverAccountCommand,
         IBulkAutomaticallyConfirmOrganizationUsersCommand bulkAutomaticallyConfirmOrganizationUsersCommand,
+        IBulkEnablePamCommand bulkEnablePamCommand,
         V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext,
         ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand,
         IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand,
@@ -147,7 +148,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _userService = userService;
         _currentContext = currentContext;
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
-        _countNewPamSeatsRequiredQuery = countNewPamSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _acceptOrgUserCommand = acceptOrgUserCommand;
         _authorizationService = authorizationService;
@@ -162,6 +162,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
         _bulkResendOrganizationInvitesCommand = bulkResendOrganizationInvitesCommand;
         _bulkAutomaticallyConfirmOrganizationUsersCommand = bulkAutomaticallyConfirmOrganizationUsersCommand;
+        _bulkEnablePamCommand = bulkEnablePamCommand;
         _revokeOrganizationUserCommandVNext = revokeOrganizationUserCommandVNext;
         _confirmOrganizationUserCommand = confirmOrganizationUserCommand;
         _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
@@ -779,43 +780,15 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
     /// <summary>
-    /// Grants PAM access to the specified members. Members who already have access are skipped. A self-hosted
-    /// instance cannot add seats, so the grant is rejected there when it would exceed the organization's Privileged
-    /// Controls seats.
+    /// Grants PAM access to the specified members. See <see cref="IBulkEnablePamCommand"/>.
     /// </summary>
     [HttpPut("enable-pam")]
     [Authorize<ManageUsersRequirement>]
-    public async Task BulkEnablePamAsync([FromRoute] Guid orgId,
+    public async Task<IResult> BulkEnablePamAsync([BindOrganization] Organization organization,
         [FromBody] OrganizationUserBulkRequestModel model)
     {
-        var orgUsers = (await _organizationUserRepository.GetManyAsync(model.Ids))
-            .Where(ou => ou.OrganizationId == orgId && !ou.AccessPam).ToList();
-        if (orgUsers.Count == 0)
-        {
-            throw new BadRequestException(new UsersInvalid().Message);
-        }
-
-        // Granting access on an organization without PAM would be inert: claim emission ANDs AccessPam with the
-        // organization's UsePam.
-        var organization = await _organizationRepository.GetByIdAsync(orgId);
-        if (organization is not { UsePam: true })
-        {
-            throw new BadRequestException(new V2_UpdateUserCommand.PamNotEnabled().Message);
-        }
-
-        var additionalPamSeatsRequired =
-            await _countNewPamSeatsRequiredQuery.CountNewPamSeatsRequiredAsync(organization, orgUsers.Count);
-        if (additionalPamSeatsRequired > 0 && _globalSettings.SelfHosted)
-        {
-            throw new BadRequestException(new V2_UpdateUserCommand.CannotAutoscalePamSeatsOnSelfHost().Message);
-        }
-
-        foreach (var orgUser in orgUsers)
-        {
-            orgUser.AccessPam = true;
-        }
-
-        await _organizationUserRepository.ReplaceManyAsync(orgUsers);
+        var result = await _bulkEnablePamCommand.BulkEnablePamAsync(organization, model.Ids);
+        return Handle(result);
     }
 
     [HttpPost("{id}/auto-confirm")]

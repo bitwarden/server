@@ -1,11 +1,11 @@
 ﻿using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Mail.Mailer.MemberEmailChanged;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Auth.UserFeatures.UserEmail;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -172,46 +172,6 @@ public class UpdateOrganizationUserCommandTests
             .Received(1)
             .ReplaceAsync(Arg.Is<OrganizationUser>(ou => ou.AccessPam),
                 Arg.Any<IEnumerable<CollectionAccessSelection>>());
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task UpdateUserAsync_WhenMemberAlreadyHasPam_DoesNotCountPamSeats(
-        SutProvider<UpdateOrganizationUserCommand> sutProvider,
-        Organization organization,
-        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
-    {
-        organizationUser.AccessPam = true;
-        var request = Setup(sutProvider, organization, organizationUser, targetAccessPam: true);
-        sutProvider.GetDependency<IGlobalSettings>().SelfHosted = true;
-        sutProvider.GetDependency<ICountNewPamSeatsRequiredQuery>()
-            .CountNewPamSeatsRequiredAsync(organization, 1)
-            .Returns(1);
-
-        var result = await sutProvider.Sut.UpdateUserAsync(request);
-
-        Assert.True(result.IsSuccess);
-        await sutProvider.GetDependency<ICountNewPamSeatsRequiredQuery>()
-            .DidNotReceiveWithAnyArgs()
-            .CountNewPamSeatsRequiredAsync(default, default);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task UpdateUserAsync_WhenValidationFails_DoesNotCountPamSeats(
-        SutProvider<UpdateOrganizationUserCommand> sutProvider,
-        Organization organization,
-        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
-    {
-        organizationUser.AccessPam = false;
-        var request = Setup(sutProvider, organization, organizationUser, valid: false, targetAccessPam: true);
-
-        var result = await sutProvider.Sut.UpdateUserAsync(request);
-
-        Assert.True(result.IsError);
-        await sutProvider.GetDependency<ICountNewPamSeatsRequiredQuery>()
-            .DidNotReceiveWithAnyArgs()
-            .CountNewPamSeatsRequiredAsync(default, default);
     }
 
     [Theory]

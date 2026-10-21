@@ -492,7 +492,9 @@ public class OrganizationLicense : ILicense
                    || useInviteLinks == organization.UseInviteLinks) &&
                (!claimsPrincipal.HasClaim(c => c.Type == nameof(UsePam))
                    || usePam == organization.UsePam) &&
+               // A null PamSeats means the claim was never applied to the organization, not that it was altered.
                (!claimsPrincipal.HasClaim(c => c.Type == nameof(PamSeats))
+                   || organization.PamSeats is null
                    || pamSeats == organization.PamSeats) &&
                // UseRiskInsights is additive and plan-derived (backfilled for existing
                // Enterprise orgs). Licenses issued since 2025-04 carry the claim with the

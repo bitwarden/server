@@ -465,8 +465,13 @@ If you believe you need to change the version for a valid reason, please discuss
         Assert.False(license.VerifyData(organization, claimsPrincipal, globalSettings));
     }
 
+    /// <summary>
+    /// A self-hosted server on a version before PamSeats existed stores a license whose token carries
+    /// the claim but never copies it to the organization. After upgrading, the nightly check must not
+    /// disable that organization: the next license upload or sync applies the value.
+    /// </summary>
     [Fact]
-    public void OrganizationLicense_VerifyData_FailsWhenPamSeatsClaimPresentAndOrganizationPamSeatsNull()
+    public void OrganizationLicense_VerifyData_PassesWhenPamSeatsClaimPresentAndOrganizationPamSeatsNull()
     {
         var organization = CreateDeterministicOrganization();
         organization.PamSeats = null;
@@ -485,7 +490,7 @@ If you believe you need to change the version for a valid reason, please discuss
             Id = installationId
         });
 
-        Assert.False(license.VerifyData(organization, claimsPrincipal, globalSettings));
+        Assert.True(license.VerifyData(organization, claimsPrincipal, globalSettings));
     }
 
     /// <summary>
