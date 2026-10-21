@@ -30,7 +30,7 @@ using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Tokens;
-using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
+using Bit.Infrastructure.EntityFramework.Providers.Models;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;

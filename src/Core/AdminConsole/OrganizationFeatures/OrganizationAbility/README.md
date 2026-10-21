@@ -180,7 +180,7 @@ EF is primarily used for self-host. Implementations must be kept consistent.
 - `src/Infrastructure.EntityFramework/AdminConsole/Repositories/Queries/OrganizationUserOrganizationDetailsViewQuery.cs`
     - Update the integration test:
       `test/Infrastructure.IntegrationTest/AdminConsole/Repositories/OrganizationUserRepository/OrganizationUserRepositoryTests.cs`
-- `src/Infrastructure.EntityFramework/AdminConsole/Repositories/Queries/ProviderUserOrganizationDetailsViewQuery.cs`
+- `src/Infrastructure.EntityFramework/Providers/Repositories/Queries/ProviderUserOrganizationDetailsViewQuery.cs`
 
 ### 4. Data migrations for existing organizations
 

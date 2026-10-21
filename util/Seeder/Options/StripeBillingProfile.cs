@@ -32,4 +32,19 @@ public sealed record StripeBillingProfile
         Card = string.IsNullOrEmpty(card) ? StripeTestCard.Visa : StripeTestCard.Parse(card),
         Address = string.IsNullOrEmpty(address) ? StripeTestAddress.UnitedStates : StripeTestAddress.Parse(address),
     };
+
+    /// <summary>
+    /// Throws when the address carries a tax ID, which a premium user's personal account cannot take.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown for an address with a tax ID; the message lists the valid ones.</exception>
+    internal void ValidateForPersonalAccount()
+    {
+        if (Address.TaxId is not null)
+        {
+            var withoutTaxId = Enum.GetValues<StripeTestAddress>().Where(a => a.TaxId is null).Select(a => a.Name);
+            throw new InvalidOperationException(
+                $"The '{Address.Name}' test address carries a tax ID, and a premium user's personal account " +
+                $"takes none. Use one of: {string.Join(", ", withoutTaxId)}.");
+        }
+    }
 }
