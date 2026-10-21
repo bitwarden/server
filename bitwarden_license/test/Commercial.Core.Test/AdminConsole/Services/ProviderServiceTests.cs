@@ -32,6 +32,7 @@ using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Stripe;
@@ -1337,23 +1338,26 @@ public class ProviderServiceTests
 
     [Theory, BitAutoData]
     public async Task InitiateDeleteAsync_IssuesTokenValidFor48Hours(Provider provider, User providerAdmin
-        , ProviderUser providerUser, SutProvider<ProviderService> sutProvider)
+        , ProviderUser providerUser)
     {
+        var sutProvider = new SutProvider<ProviderService>()
+            .WithFakeTimeProvider()
+            .Create();
+        var now = new DateTime(2026, 10, 21, 12, 0, 0, DateTimeKind.Utc);
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(now);
+
         providerUser.Status = ProviderUserStatusType.Confirmed;
         providerUser.Type = ProviderUserType.ProviderAdmin;
 
         sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(providerAdmin.Email).Returns(providerAdmin);
         sutProvider.GetDependency<IProviderUserRepository>().GetByProviderUserAsync(provider.Id, providerAdmin.Id).Returns(providerUser);
 
-        var expectedExpiry = DateTime.UtcNow.AddHours(48);
-
         await sutProvider.Sut.InitiateDeleteAsync(provider, providerAdmin.Email);
 
         sutProvider.GetDependency<IDataProtectorTokenFactory<ProviderDeleteTokenable>>().Received(1)
             .Protect(Arg.Is<ProviderDeleteTokenable>(t =>
                 t.Id == provider.Id &&
-                t.ExpirationDate >= expectedExpiry.AddMinutes(-1) &&
-                t.ExpirationDate <= expectedExpiry.AddMinutes(1)));
+                t.ExpirationDate == now.AddHours(48)));
     }
 
     [Theory, BitAutoData]

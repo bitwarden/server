@@ -13,10 +13,10 @@ public class OrgDeleteTokenable : Tokens.ExpiringTokenable
 
     public OrgDeleteTokenable() { }
 
-    public OrgDeleteTokenable(Organization organization)
+    public OrgDeleteTokenable(Organization organization, TimeProvider timeProvider)
     {
         Id = organization.Id;
-        ExpirationDate = DateTime.UtcNow.AddHours(ExpirationHours);
+        ExpirationDate = timeProvider.GetUtcNow().UtcDateTime.AddHours(ExpirationHours);
     }
 
     public bool IsValid(Organization organization)

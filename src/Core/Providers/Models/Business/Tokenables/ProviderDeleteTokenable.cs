@@ -11,10 +11,10 @@ public class ProviderDeleteTokenable : Tokens.ExpiringTokenable
 
     public ProviderDeleteTokenable() { }
 
-    public ProviderDeleteTokenable(Entities.Provider.Provider provider)
+    public ProviderDeleteTokenable(Entities.Provider.Provider provider, TimeProvider timeProvider)
     {
         Id = provider.Id;
-        ExpirationDate = DateTime.UtcNow.AddHours(ExpirationHours);
+        ExpirationDate = timeProvider.GetUtcNow().UtcDateTime.AddHours(ExpirationHours);
     }
 
     public bool IsValid(Entities.Provider.Provider provider)

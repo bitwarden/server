@@ -116,7 +116,7 @@ public class ProvidersControllerTests : IClassFixture<ApiApplicationFactory>, IA
     public async Task PostDeleteRecoverToken_ValidToken_DeletesProvider()
     {
         var token = _factory.GetService<IDataProtectorTokenFactory<ProviderDeleteTokenable>>()
-            .Protect(new ProviderDeleteTokenable(_provider));
+            .Protect(new ProviderDeleteTokenable(_provider, _factory.GetService<TimeProvider>()));
 
         var response = await _client.PostAsJsonAsync($"providers/{_provider.Id}/delete-recover-token",
             new ProviderVerifyDeleteRecoverRequestModel { Token = token });
@@ -156,7 +156,7 @@ public class ProvidersControllerTests : IClassFixture<ApiApplicationFactory>, IA
         });
 
         var token = _factory.GetService<IDataProtectorTokenFactory<ProviderDeleteTokenable>>()
-            .Protect(new ProviderDeleteTokenable(otherProvider));
+            .Protect(new ProviderDeleteTokenable(otherProvider, _factory.GetService<TimeProvider>()));
 
         var response = await _client.PostAsJsonAsync($"providers/{_provider.Id}/delete-recover-token",
             new ProviderVerifyDeleteRecoverRequestModel { Token = token });

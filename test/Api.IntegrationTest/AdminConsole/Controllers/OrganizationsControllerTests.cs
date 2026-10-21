@@ -201,7 +201,7 @@ public class OrganizationsControllerTests : IClassFixture<ApiApplicationFactory>
     {
         // Arrange
         var token = _factory.GetService<IDataProtectorTokenFactory<OrgDeleteTokenable>>()
-            .Protect(new OrgDeleteTokenable(_organization));
+            .Protect(new OrgDeleteTokenable(_organization, _factory.GetService<TimeProvider>()));
 
         // Act
         var response = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/delete-recover-token",
@@ -245,7 +245,7 @@ public class OrganizationsControllerTests : IClassFixture<ApiApplicationFactory>
             paymentMethod: PaymentMethodType.Card);
 
         var token = _factory.GetService<IDataProtectorTokenFactory<OrgDeleteTokenable>>()
-            .Protect(new OrgDeleteTokenable(otherOrganization));
+            .Protect(new OrgDeleteTokenable(otherOrganization, _factory.GetService<TimeProvider>()));
 
         // Act
         var response = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/delete-recover-token",

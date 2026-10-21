@@ -65,6 +65,7 @@ public class ProviderService : IProviderService
     private readonly IPricingClient _pricingClient;
     private readonly IProviderClientOrganizationSignUpCommand _providerClientOrganizationSignUpCommand;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly TimeProvider _timeProvider;
 
     public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
         IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
@@ -77,7 +78,8 @@ public class ProviderService : IProviderService
         IProviderAbilityCacheService providerAbilityCacheService,
         IProviderBillingService providerBillingService, IPricingClient pricingClient,
         IProviderClientOrganizationSignUpCommand providerClientOrganizationSignUpCommand,
-        IPolicyRequirementQuery policyRequirementQuery)
+        IPolicyRequirementQuery policyRequirementQuery,
+        TimeProvider timeProvider)
     {
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
@@ -99,6 +101,7 @@ public class ProviderService : IProviderService
         _pricingClient = pricingClient;
         _providerClientOrganizationSignUpCommand = providerClientOrganizationSignUpCommand;
         _policyRequirementQuery = policyRequirementQuery;
+        _timeProvider = timeProvider;
     }
 
     public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key, TokenizedPaymentMethod paymentMethod, BillingAddress billingAddress)
@@ -696,7 +699,7 @@ public class ProviderService : IProviderService
             throw new BadRequestException("Org admin not found.");
         }
 
-        var token = _providerDeleteTokenDataFactory.Protect(new ProviderDeleteTokenable(provider));
+        var token = _providerDeleteTokenDataFactory.Protect(new ProviderDeleteTokenable(provider, _timeProvider));
         await _mailService.SendInitiateDeletProviderEmailAsync(providerAdminEmail, provider, token);
     }
 
