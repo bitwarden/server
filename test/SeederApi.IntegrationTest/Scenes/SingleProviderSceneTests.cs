@@ -532,6 +532,50 @@ public class SingleProviderSceneTests : IClassFixture<InPlaySeederApiApplication
         });
     }
 
+    [Fact]
+    public async Task SingleProviderScene_OrganizationAlreadyLinkedToProvider_ReturnsBadRequestWithoutWrites()
+    {
+        var playId = Guid.NewGuid().ToString();
+        var secondProviderName = $"Second Provider {Guid.NewGuid():N}";
+
+        var firstAdminUserId = await SeedUserAsync(playId);
+        var secondAdminUserId = await SeedUserAsync(playId);
+        var orgOwnerUserId = await SeedUserAsync(playId);
+        var (organizationId, organizationKeyB64) = await SeedClientOrganizationAsync(playId, orgOwnerUserId);
+
+        await PostSceneAsync(playId, nameof(SingleProviderScene), new SingleProviderScene.Request
+        {
+            OwnerUserId = firstAdminUserId,
+            Name = "First Provider",
+            Type = ProviderType.Msp,
+            Status = ProviderStatusType.Pending,
+            Organizations = [Link(organizationId, organizationKeyB64)]
+        });
+
+        var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
+        {
+            Template = nameof(SingleProviderScene),
+            Arguments = JsonSerializer.SerializeToElement(new SingleProviderScene.Request
+            {
+                OwnerUserId = secondAdminUserId,
+                Name = secondProviderName,
+                Type = ProviderType.Msp,
+                Status = ProviderStatusType.Pending,
+                Organizations = [Link(organizationId, organizationKeyB64)]
+            })
+        }, playId);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("already belongs to a provider", await response.Content.ReadAsStringAsync());
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+
+        Assert.False(await db.Providers.AnyAsync(p => p.Name!.EndsWith(secondProviderName)));
+        Assert.False(await db.ProviderUsers.AnyAsync(pu => pu.UserId == secondAdminUserId));
+        Assert.Equal(1, await db.ProviderOrganizations.CountAsync(po => po.OrganizationId == organizationId));
+    }
+
     [Theory]
     [InlineData(ProviderUserType.ServiceUser, ProviderUserStatusType.Confirmed)]
     [InlineData(ProviderUserType.ProviderAdmin, ProviderUserStatusType.Accepted)]

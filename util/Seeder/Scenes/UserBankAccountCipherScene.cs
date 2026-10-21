@@ -3,13 +3,14 @@ using System.Text.Json;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
+using Bit.Seeder.Extensions;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Services;
 
 namespace Bit.Seeder.Scenes;
 
-public class UserBankAccountCipherScene(IUserRepository userRepository, ICipherRepository cipherRepository, IManglerService manglerService) : IScene<UserBankAccountCipherScene.Request, UserBankAccountCipherScene.Result>
+public class UserBankAccountCipherScene(IUserRepository userRepository, ICipherRepository cipherRepository, IFolderRepository folderRepository, IManglerService manglerService) : IScene<UserBankAccountCipherScene.Request, UserBankAccountCipherScene.Result>
 {
     public class Request
     {
@@ -47,6 +48,9 @@ public class UserBankAccountCipherScene(IUserRepository userRepository, ICipherR
         {
             throw new Exception($"User with ID {request.UserId} not found.");
         }
+
+        await folderRepository.ThrowIfFoldersNotOwnedByUserAsync(
+            request.FolderId is { } folderId ? [folderId] : [], request.UserId);
 
         var bankAccount = new BankAccountViewDto
         {

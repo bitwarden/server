@@ -2,6 +2,7 @@
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Repositories;
+using Bit.Seeder.Extensions;
 using Bit.Seeder.Services;
 
 namespace Bit.Seeder.Scenes;
@@ -9,6 +10,7 @@ namespace Bit.Seeder.Scenes;
 public class UserLoginCipherScene(
     IUserRepository userRepository,
     ICipherRepository cipherRepository,
+    IFolderRepository folderRepository,
     IManglerService manglerService)
     : LoginCipherScene<UserLoginCipherScene.Request>(manglerService)
 {
@@ -25,6 +27,9 @@ public class UserLoginCipherScene(
         {
             throw new Exception($"User with ID {request.UserId} not found.");
         }
+
+        await folderRepository.ThrowIfFoldersNotOwnedByUserAsync(
+            request.FolderId is { } folderId ? [folderId] : [], request.UserId);
 
         return new CipherOwner(request.UserKeyB64, null, request.UserId);
     }

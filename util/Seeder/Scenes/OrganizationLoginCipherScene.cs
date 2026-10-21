@@ -2,6 +2,7 @@
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Repositories;
+using Bit.Seeder.Extensions;
 using Bit.Seeder.Services;
 
 namespace Bit.Seeder.Scenes;
@@ -13,6 +14,9 @@ namespace Bit.Seeder.Scenes;
 public class OrganizationLoginCipherScene(
     IOrganizationRepository organizationRepository,
     ICipherRepository cipherRepository,
+    ICollectionRepository collectionRepository,
+    IOrganizationUserRepository organizationUserRepository,
+    IFolderRepository folderRepository,
     IManglerService manglerService)
     : LoginCipherScene<OrganizationLoginCipherScene.Request>(manglerService)
 {
@@ -33,6 +37,11 @@ public class OrganizationLoginCipherScene(
         {
             throw new InvalidOperationException($"Organization {request.OrganizationId} not found.");
         }
+
+        await collectionRepository.ThrowIfCollectionsNotInOrganizationAsync(request.CollectionIds, organization.Id);
+        await organizationUserRepository.ThrowIfUsersNotConfirmedMembersOfOrganizationAsync([request.UserId], organization.Id);
+        await folderRepository.ThrowIfFoldersNotOwnedByUserAsync(
+            request.FolderId is { } folderId ? [folderId] : [], request.UserId);
 
         return new CipherOwner(request.OrganizationKeyB64, organization.Id, null);
     }

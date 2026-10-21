@@ -2,6 +2,7 @@
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
+using Bit.Seeder.Extensions;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Services;
@@ -11,6 +12,7 @@ namespace Bit.Seeder.Scenes;
 public class OrganizationDriversLicenseCipherScene(
     IOrganizationRepository organizationRepository,
     ICipherRepository cipherRepository,
+    ICollectionRepository collectionRepository,
     IManglerService manglerService)
     : IScene<OrganizationDriversLicenseCipherScene.Request, OrganizationDriversLicenseCipherScene.Result>
 {
@@ -51,6 +53,8 @@ public class OrganizationDriversLicenseCipherScene(
         {
             throw new InvalidOperationException($"Organization {request.OrganizationId} not found.");
         }
+
+        await collectionRepository.ThrowIfCollectionsNotInOrganizationAsync(request.CollectionIds, organization.Id);
 
         var driversLicense = new DriversLicenseViewDto
         {

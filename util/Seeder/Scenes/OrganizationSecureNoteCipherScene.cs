@@ -2,6 +2,7 @@
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
+using Bit.Seeder.Extensions;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Services;
@@ -11,6 +12,7 @@ namespace Bit.Seeder.Scenes;
 public class OrganizationSecureNoteCipherScene(
     IOrganizationRepository organizationRepository,
     ICipherRepository cipherRepository,
+    ICollectionRepository collectionRepository,
     IManglerService manglerService)
     : IScene<OrganizationSecureNoteCipherScene.Request, OrganizationSecureNoteCipherScene.Result>
 {
@@ -40,6 +42,8 @@ public class OrganizationSecureNoteCipherScene(
         {
             throw new InvalidOperationException($"Organization {request.OrganizationId} not found.");
         }
+
+        await collectionRepository.ThrowIfCollectionsNotInOrganizationAsync(request.CollectionIds, organization.Id);
 
         var cipher = SecureNoteCipherSeeder.Create(new CipherSeed
         {

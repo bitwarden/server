@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Seeder.Extensions;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Services;
@@ -10,6 +11,7 @@ namespace Bit.Seeder.Scenes;
 public class OrganizationEventScene(
     IOrganizationRepository organizationRepository,
     IEventRepository eventRepository,
+    IOrganizationUserRepository organizationUserRepository,
     IManglerService manglerService) : IScene<OrganizationEventScene.Request, OrganizationEventScene.Result>
 {
     private const int MaxEventCount = 20;
@@ -45,6 +47,9 @@ public class OrganizationEventScene(
         {
             throw new InvalidOperationException($"Count must not exceed {MaxEventCount}, but was {request.Count}.");
         }
+
+        await organizationUserRepository.ThrowIfUsersNotConfirmedMembersOfOrganizationAsync(
+            request.ActingUserId is { } actingUserId ? [actingUserId] : [], organization.Id);
 
         var baseDate = DateTime.UtcNow;
         var seededCount = 0;

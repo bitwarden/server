@@ -1,6 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Seeder.Extensions;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Services;
 
@@ -13,6 +15,8 @@ namespace Bit.Seeder.Scenes;
 public class OrganizationCollectionScene(
     IOrganizationRepository organizationRepository,
     ICollectionRepository collectionRepository,
+    IOrganizationUserRepository organizationUserRepository,
+    IGroupRepository groupRepository,
     IManglerService manglerService) : IScene<OrganizationCollectionScene.Request, OrganizationCollectionScene.Result>
 {
     public class Request
@@ -55,6 +59,10 @@ public class OrganizationCollectionScene(
         {
             throw new InvalidOperationException($"Organization {request.OrganizationId} not found.");
         }
+
+        await organizationUserRepository.ThrowIfOrganizationUsersNotInOrganizationAsync(
+            request.Users?.Select(u => u.Id), organization.Id);
+        await groupRepository.ThrowIfGroupsNotInOrganizationAsync(request.Groups?.Select(g => g.Id), organization.Id);
 
         var collection = CollectionSeeder.Create(organization.Id, request.OrganizationKeyB64, request.Name);
 

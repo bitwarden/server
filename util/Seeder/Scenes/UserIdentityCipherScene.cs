@@ -3,13 +3,14 @@ using System.Text.Json;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
+using Bit.Seeder.Extensions;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Services;
 
 namespace Bit.Seeder.Scenes;
 
-public class UserIdentityCipherScene(IUserRepository userRepository, ICipherRepository cipherRepository, IManglerService manglerService) : IScene<UserIdentityCipherScene.Request, UserIdentityCipherScene.Result>
+public class UserIdentityCipherScene(IUserRepository userRepository, ICipherRepository cipherRepository, IFolderRepository folderRepository, IManglerService manglerService) : IScene<UserIdentityCipherScene.Request, UserIdentityCipherScene.Result>
 {
     public class Request
     {
@@ -55,6 +56,9 @@ public class UserIdentityCipherScene(IUserRepository userRepository, ICipherRepo
         {
             throw new Exception($"User with ID {request.UserId} not found.");
         }
+
+        await folderRepository.ThrowIfFoldersNotOwnedByUserAsync(
+            request.FolderId is { } folderId ? [folderId] : [], request.UserId);
 
         var identity = new IdentityViewDto
         {
