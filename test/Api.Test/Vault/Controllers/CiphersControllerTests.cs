@@ -31,6 +31,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Routing;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using NSubstitute.ReturnsExtensions;
@@ -195,6 +196,66 @@ public class CiphersControllerTests
 
         Assert.IsType<OptionalCipherDetailsResponseModel>(result);
         Assert.True(result.Unavailable);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutSharedFolders_vNext_ReturnsSameResultAsLegacyRoute(Guid id, CipherCollectionsRequestModel model, Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        SetupUserAndOrgMocks(id, userId, sutProvider);
+        var cipherDetails = CreateCipherDetailsMock(id, userId);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsForAnyArgs(cipherDetails, [(CipherDetails)null]);
+        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
+
+        var result = await sutProvider.Sut.PutSharedFolders_vNext(id, model);
+
+        Assert.True(result.Unavailable);
+        await sutProvider.GetDependency<ICipherService>().ReceivedWithAnyArgs(1).SaveCollectionsAsync(default, default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutSharedFolders_ThrowsNotFoundWhenCipherIsNull(Guid id, CipherCollectionsRequestModel model, User user,
+        SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, user.Id).ReturnsNull();
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PutSharedFolders(id, model));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostSharedFolders(id, model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostBulkSharedFolders_ThrowsNotFoundWhenUserCannotModify(CipherBulkUpdateCollectionsRequestModel model,
+        Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(default).ReturnsNullForAnyArgs();
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostBulkSharedFolders(model));
+    }
+
+    [Theory]
+    [InlineData(nameof(CiphersController.PutCollections), nameof(CiphersController.PutSharedFolders), "{id}/shared-folders")]
+    [InlineData(nameof(CiphersController.PostCollections), nameof(CiphersController.PostSharedFolders), "{id}/shared-folders")]
+    [InlineData(nameof(CiphersController.PutCollections_vNext), nameof(CiphersController.PutSharedFolders_vNext), "{id}/shared-folders_v2")]
+    [InlineData(nameof(CiphersController.PostCollections_vNext), nameof(CiphersController.PostSharedFolders_vNext), "{id}/shared-folders_v2")]
+    [InlineData(nameof(CiphersController.PutCollectionsAdmin), nameof(CiphersController.PutSharedFoldersAdmin), "{id}/shared-folders-admin")]
+    [InlineData(nameof(CiphersController.PostCollectionsAdmin), nameof(CiphersController.PostSharedFoldersAdmin), "{id}/shared-folders-admin")]
+    [InlineData(nameof(CiphersController.PostBulkCollections), nameof(CiphersController.PostBulkSharedFolders), "bulk-shared-folders")]
+    public void SharedFolderAliasRoutes_AreRoutedAndLegacyRoutesAreObsolete(string legacyName, string aliasName, string expectedTemplate)
+    {
+        var legacy = typeof(CiphersController).GetMethod(legacyName)!;
+        var alias = typeof(CiphersController).GetMethod(aliasName)!;
+
+        var obsolete = Assert.Single(legacy.GetCustomAttributes(typeof(ObsoleteAttribute), false).Cast<ObsoleteAttribute>());
+        Assert.Equal(legacyName.StartsWith("Post") && legacyName != nameof(CiphersController.PostBulkCollections)
+            ? "This endpoint is deprecated. Use PUT method instead."
+            : "Replaced by /shared-folders route; retained for backwards compatibility", obsolete.Message);
+        Assert.Empty(alias.GetCustomAttributes(typeof(ObsoleteAttribute), false));
+
+        var legacyVerb = legacy.GetCustomAttributes(typeof(HttpMethodAttribute), false).Cast<HttpMethodAttribute>().Single();
+        var aliasVerb = alias.GetCustomAttributes(typeof(HttpMethodAttribute), false).Cast<HttpMethodAttribute>().Single();
+        Assert.Equal(legacyVerb.HttpMethods, aliasVerb.HttpMethods);
+        Assert.Equal(expectedTemplate, aliasVerb.Template);
     }
 
     private void SetupUserAndOrgMocks(Guid id, Guid userId, SutProvider<CiphersController> sutProvider)
