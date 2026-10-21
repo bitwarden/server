@@ -32,6 +32,7 @@ public static class SubscriptionsOrganizationServiceCollectionExtensions
         services.TryAddScoped<IAddPrivilegedControlsToExistingSubscriptionCommand, AddPrivilegedControlsToExistingSubscriptionCommand>();
         services.TryAddScoped<IChangePrivilegedControlsSeatsCommand, ChangePrivilegedControlsSeatsCommand>();
         services.TryAddScoped<IRemovePrivilegedControlsCommand, RemovePrivilegedControlsCommand>();
+        services.TryAddScoped<IAutoscalePrivilegedControlsSeatsCommand, AutoscalePrivilegedControlsSeatsCommand>();
         services.TryAddScoped<ICreateOrganizationSubscriptionCommand, CreateOrganizationSubscriptionCommand>();
         services.TryAddEnumerable(
             ServiceDescriptor.Scoped<IAuthorizationHandler, StandaloneOrganizationOwnerRequirementHandler>());
