@@ -32,9 +32,9 @@ public class RestartSubscriptionCommand(
     {
         var existingSubscription = await subscriberService.GetSubscription(subscriber);
 
-        if (existingSubscription is not { Status: SubscriptionStatus.Canceled })
+        if (existingSubscription is not { Status: SubscriptionStatus.Canceled or SubscriptionStatus.IncompleteExpired })
         {
-            return new BadRequest("Cannot restart a subscription that is not canceled.");
+            return new BadRequest("Cannot restart a subscription that has not ended.");
         }
 
         await RestartSubscriptionAsync(subscriber, existingSubscription);
