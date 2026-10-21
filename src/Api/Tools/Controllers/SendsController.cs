@@ -123,10 +123,6 @@ public class SendsController : Controller
     {
         var sendId = new Guid(id);
         var send = await _sendOwnerQuery.Get(sendId, User);
-        if (send.Type == SendType.Item && !_featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing))
-        {
-            throw new NotFoundException();
-        }
         return new SendResponseModel(send);
     }
 
@@ -135,10 +131,6 @@ public class SendsController : Controller
     public async Task<ListResponseModel<SendResponseModel>> GetAll()
     {
         var sends = (await _sendOwnerQuery.GetOwned(User)).AsEnumerable();
-        if (!_featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing))
-        {
-            sends = sends.Where(s => s.Type != SendType.Item);
-        }
         var responses = sends.Select(s => new SendResponseModel(s));
         var result = new ListResponseModel<SendResponseModel>(responses);
         return result;
@@ -158,7 +150,7 @@ public class SendsController : Controller
             throw new BadRequestException("Could not locate send");
         }
 
-        if (!INonAnonymousSendCommand.SendCanBeAccessed(send) || (send.Type == SendType.Item && !_featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing)))
+        if (!INonAnonymousSendCommand.SendCanBeAccessed(send))
         {
             throw new NotFoundException();
         }
@@ -245,10 +237,6 @@ public class SendsController : Controller
     {
         model.ValidateCreation();
         var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
-        if (model.Type == SendType.Item && !_featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing))
-        {
-            throw new BadRequestException("Item type Sends are not yet enabled");
-        }
         var hasPremium = await _hasPremiumAccessQuery.HasPremiumAccessAsync(userId);
         if (!hasPremium && model.Type == SendType.Item)
         {
@@ -360,10 +348,6 @@ public class SendsController : Controller
     public async Task<SendResponseModel> Put(string id, [FromBody] SendRequestModel model)
     {
         model.ValidateEdit();
-        if (model.Type == SendType.Item && !_featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing))
-        {
-            throw new BadRequestException("Item type Sends are not yet enabled");
-        }
         var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var hasPremium = await _hasPremiumAccessQuery.HasPremiumAccessAsync(userId);
 
