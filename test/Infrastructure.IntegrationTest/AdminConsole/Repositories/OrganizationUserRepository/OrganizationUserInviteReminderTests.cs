@@ -12,6 +12,157 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.Organizat
 
 public class OrganizationUserInviteReminderTests
 {
+    private const int BatchSize = 100;
+
+    [Theory, DatabaseData]
+    public async Task ClaimInviteReminderSequencesAsync_DueMembers_ClaimsOldestFirstUpToBatchSize(
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        // Arrange
+        var (now, oldestDueDate, nextDueDate) = CreateClaimWindow();
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var oldest = await CreateInvitedAsync(organizationUserRepository, organization, now.AddDays(-3), 0);
+        var middle = await CreateInvitedAsync(organizationUserRepository, organization, now.AddDays(-2), 1);
+        var newest = await CreateInvitedAsync(organizationUserRepository, organization, now.AddDays(-1), 2);
+
+        // Act
+        var claimed = await organizationUserRepository.ClaimInviteReminderSequencesAsync(
+            now, oldestDueDate, nextDueDate, 2);
+
+        // Assert
+        Assert.Equal(2, claimed.Count);
+        var claimedOldest = Assert.Single(claimed, c => c.Id == oldest.Id);
+        Assert.Equal(organization.Id, claimedOldest.OrganizationId);
+        Assert.Equal(oldest.Email, claimedOldest.Email);
+        Assert.Equal(1, claimedOldest.InviteRemindersSentCount);
+        Assert.Equal(2, Assert.Single(claimed, c => c.Id == middle.Id).InviteRemindersSentCount);
+
+        await AssertSequenceAsync(organizationUserRepository, oldest.Id, nextDueDate, 1);
+        await AssertSequenceAsync(organizationUserRepository, middle.Id, nextDueDate, 2);
+        await AssertSequenceAsync(organizationUserRepository, newest.Id, now.AddDays(-1), 2);
+    }
+
+    [Theory, DatabaseData]
+    public async Task ClaimInviteReminderSequencesAsync_DueDateOnEitherBound_ClaimsMember(
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        // Arrange
+        var (now, oldestDueDate, nextDueDate) = CreateClaimWindow();
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var dueNow = await CreateInvitedAsync(organizationUserRepository, organization, now, 0);
+        var dueOldest = await CreateInvitedAsync(organizationUserRepository, organization, oldestDueDate, 0);
+
+        // Act
+        var claimed = await organizationUserRepository.ClaimInviteReminderSequencesAsync(
+            now, oldestDueDate, nextDueDate, BatchSize);
+
+        // Assert
+        Assert.Equal(new[] { dueNow.Id, dueOldest.Id }.Order(), claimed.Select(c => c.Id).Order());
+    }
+
+    [Theory, DatabaseData]
+    public async Task ClaimInviteReminderSequencesAsync_IneligibleMembers_SkipsThem(
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var (now, oldestDueDate, nextDueDate) = CreateClaimWindow();
+        var due = now.AddDays(-1);
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var disabledOrganization = await organizationRepository.CreateTestOrganizationAsync();
+        disabledOrganization.Enabled = false;
+        await organizationRepository.ReplaceAsync(disabledOrganization);
+        var user = await userRepository.CreateTestUserAsync();
+
+        var accepted = await organizationUserRepository.CreateAcceptedTestOrganizationUserAsync(organization, user);
+        accepted.Email = $"{Guid.NewGuid()}@example.com";
+        accepted.InviteReminderDueDate = due;
+        accepted.InviteRemindersSentCount = 0;
+        await organizationUserRepository.ReplaceAsync(accepted);
+
+        var skipped = new List<OrganizationUser>
+        {
+            accepted,
+            await CreateInvitedAsync(organizationUserRepository, organization, due, 0,
+                OrganizationUserStatusType.Revoked),
+            await CreateInvitedAsync(organizationUserRepository, disabledOrganization, due, 0),
+            await CreateInvitedAsync(organizationUserRepository, organization, null, null),
+            await CreateInvitedAsync(organizationUserRepository, organization, due, 3),
+            await CreateInvitedAsync(organizationUserRepository, organization, now.AddSeconds(1), 0),
+            await CreateInvitedAsync(organizationUserRepository, organization, oldestDueDate.AddSeconds(-1), 0),
+            await CreateInvitedAsync(organizationUserRepository, organization, due, 0, hasEmail: false),
+        };
+
+        // Act
+        var claimed = await organizationUserRepository.ClaimInviteReminderSequencesAsync(
+            now, oldestDueDate, nextDueDate, BatchSize);
+
+        // Assert
+        var skippedIds = skipped.Select(ou => ou.Id).ToHashSet();
+        Assert.DoesNotContain(claimed, c => skippedIds.Contains(c.Id));
+        foreach (var orgUser in skipped)
+        {
+            await AssertSequenceAsync(organizationUserRepository, orgUser.Id,
+                orgUser.InviteReminderDueDate, orgUser.InviteRemindersSentCount);
+        }
+    }
+
+    [Theory, DatabaseData]
+    public async Task ClaimInviteReminderSequencesAsync_SecondClaim_ReturnsNoClaimedMember(
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        // Arrange
+        var (now, oldestDueDate, nextDueDate) = CreateClaimWindow();
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var orgUser = await CreateInvitedAsync(organizationUserRepository, organization, now.AddDays(-1), 0);
+
+        // Act
+        var first = await organizationUserRepository.ClaimInviteReminderSequencesAsync(
+            now, oldestDueDate, nextDueDate, BatchSize);
+        var second = await organizationUserRepository.ClaimInviteReminderSequencesAsync(
+            now, oldestDueDate, nextDueDate, BatchSize);
+
+        // Assert
+        Assert.Contains(first, c => c.Id == orgUser.Id);
+        Assert.DoesNotContain(second, c => c.Id == orgUser.Id);
+        await AssertSequenceAsync(organizationUserRepository, orgUser.Id, nextDueDate, 1);
+    }
+
+    [Theory, DatabaseData]
+    public async Task ClaimInviteReminderSequencesAsync_ConcurrentClaims_ClaimEachMemberOnce(
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        // Arrange
+        var (now, oldestDueDate, nextDueDate) = CreateClaimWindow();
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var orgUserIds = new List<Guid>();
+        for (var i = 0; i < 10; i++)
+        {
+            var orgUser = await CreateInvitedAsync(organizationUserRepository, organization,
+                now.AddMinutes(-i), 0);
+            orgUserIds.Add(orgUser.Id);
+        }
+
+        // Act
+        var results = await Task.WhenAll(
+            organizationUserRepository.ClaimInviteReminderSequencesAsync(now, oldestDueDate, nextDueDate, BatchSize),
+            organizationUserRepository.ClaimInviteReminderSequencesAsync(now, oldestDueDate, nextDueDate, BatchSize));
+
+        // Assert
+        var claimedIds = results.SelectMany(r => r).Select(c => c.Id).ToList();
+        Assert.Equal(orgUserIds.Order(), claimedIds.Order());
+        Assert.Empty(results[0].Select(c => c.Id).Intersect(results[1].Select(c => c.Id)));
+        foreach (var orgUserId in orgUserIds)
+        {
+            await AssertSequenceAsync(organizationUserRepository, orgUserId, nextDueDate, 1);
+        }
+    }
+
     [Theory, DatabaseData]
     public async Task StartInviteReminderSequencesAsync_ResetsCountAndKeepsLaterDueDate(
         IOrganizationUserRepository organizationUserRepository,

@@ -124,6 +124,18 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// <param name="organizationUserIds">The IDs of the organization users.</param>
     /// <param name="dueDate">When the next reminder is due.</param>
     Task StartInviteReminderSequencesAsync(IEnumerable<Guid> organizationUserIds, DateTime dueDate);
+    /// <summary>
+    /// Claims the invited members whose invite reminder is due, oldest due date first. For each claimed member,
+    /// adds 1 to the reminder count and sets the due date to <paramref name="nextDueDate"/>, so a concurrent
+    /// claim never returns the same member. Skips members with no email, members of disabled organizations, and
+    /// members who already had 3 reminders.
+    /// </summary>
+    /// <param name="now">The newest due date to claim.</param>
+    /// <param name="oldestDueDate">The oldest due date to claim. Older reminders are too late and are skipped.</param>
+    /// <param name="nextDueDate">The new due date for each claimed member.</param>
+    /// <param name="batchSize">The most members to claim.</param>
+    Task<ICollection<OrganizationUserInviteReminder>> ClaimInviteReminderSequencesAsync(DateTime now,
+        DateTime oldestDueDate, DateTime nextDueDate, int batchSize);
 
     /// <summary>
     /// Returns a list of OrganizationUsersUserDetails with the specified role.

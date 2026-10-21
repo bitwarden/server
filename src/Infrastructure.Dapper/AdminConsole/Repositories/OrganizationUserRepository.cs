@@ -679,6 +679,26 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             commandType: CommandType.StoredProcedure);
     }
 
+    public async Task<ICollection<OrganizationUserInviteReminder>> ClaimInviteReminderSequencesAsync(DateTime now,
+        DateTime oldestDueDate, DateTime nextDueDate, int batchSize)
+    {
+        var parameters = new DynamicParameters(new { BatchSize = batchSize });
+        // DATETIME2(7) rather than Dapper's default DATETIME, which rounds the dates to about 3ms and so
+        // moves the bounds of the claim
+        parameters.Add("@Now", now, DbType.DateTime2, null, 7);
+        parameters.Add("@OldestDueDate", oldestDueDate, DbType.DateTime2, null, 7);
+        parameters.Add("@NextDueDate", nextDueDate, DbType.DateTime2, null, 7);
+
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var results = await connection.QueryAsync<OrganizationUserInviteReminder>(
+            "[dbo].[OrganizationUser_UpdateManyClaimInviteReminderSequences]",
+            parameters,
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToList();
+    }
+
     public async Task<IEnumerable<OrganizationUserUserDetails>> GetManyDetailsByRoleAsync(Guid organizationId, OrganizationUserType role)
     {
         using (var connection = new SqlConnection(ConnectionString))

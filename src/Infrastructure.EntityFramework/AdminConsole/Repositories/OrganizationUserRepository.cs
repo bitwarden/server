@@ -22,6 +22,8 @@ namespace Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 
 public class OrganizationUserRepository : Repository<Core.Entities.OrganizationUser, OrganizationUser, Guid>, IOrganizationUserRepository
 {
+    private const int MaxConsecutiveInviteReminderClaimMisses = 3;
+
     public OrganizationUserRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.OrganizationUsers)
     { }
@@ -888,6 +890,77 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 .SetProperty(x => x.InviteRemindersSentCount, (byte?)0)
                 .SetProperty(x => x.InviteReminderDueDate,
                     x => x.InviteReminderDueDate > dueDate ? x.InviteReminderDueDate : (DateTime?)dueDate));
+    }
+
+    public async Task<ICollection<OrganizationUserInviteReminder>> ClaimInviteReminderSequencesAsync(DateTime now,
+        DateTime oldestDueDate, DateTime nextDueDate, int batchSize)
+    {
+        // The MSSQL procedure claims the batch in 1 statement using WITH (UPDLOCK, READPAST), which has no EF Core
+        // translation. This claims 1 member at a time instead. ExecuteUpdateAsync returns only a count, so the update
+        // only matches the row if it is still Invited and its due date and count are unchanged since it was read.
+        // A member counts as claimed only when the update changed 1 row, so a member is never claimed twice.
+        using var scope = ServiceScopeFactory.CreateScope();
+
+        var dbContext = GetDatabaseContext(scope);
+
+        var claimed = new List<OrganizationUserInviteReminder>();
+        var consecutiveMisses = 0;
+        while (claimed.Count < batchSize && consecutiveMisses < MaxConsecutiveInviteReminderClaimMisses)
+        {
+            var candidate = await (
+                    from ou in dbContext.OrganizationUsers
+                    join o in dbContext.Organizations on ou.OrganizationId equals o.Id
+                    where ou.Status == OrganizationUserStatusType.Invited &&
+                          ou.Email != null &&
+                          ou.InviteReminderDueDate != null &&
+                          ou.InviteReminderDueDate <= now &&
+                          ou.InviteReminderDueDate >= oldestDueDate &&
+                          ou.InviteRemindersSentCount < 3 &&
+                          o.Enabled
+                    orderby ou.InviteReminderDueDate
+                    select new
+                    {
+                        ou.Id,
+                        ou.OrganizationId,
+                        ou.Email,
+                        ou.InviteReminderDueDate,
+                        ou.InviteRemindersSentCount
+                    })
+                .FirstOrDefaultAsync();
+
+            if (candidate is null)
+            {
+                break;
+            }
+
+            var updated = await dbContext.OrganizationUsers
+                .Where(ou => ou.Id == candidate.Id &&
+                             ou.Status == OrganizationUserStatusType.Invited &&
+                             ou.InviteReminderDueDate == candidate.InviteReminderDueDate &&
+                             ou.InviteRemindersSentCount == candidate.InviteRemindersSentCount)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(ou => ou.InviteRemindersSentCount, ou => (byte?)(ou.InviteRemindersSentCount + 1))
+                    .SetProperty(ou => ou.InviteReminderDueDate, nextDueDate));
+
+            if (updated == 0)
+            {
+                // Another claim, or another write, changed the row first. The next read skips it.
+                consecutiveMisses++;
+                continue;
+            }
+
+            consecutiveMisses = 0;
+
+            claimed.Add(new OrganizationUserInviteReminder
+            {
+                Id = candidate.Id,
+                OrganizationId = candidate.OrganizationId,
+                Email = candidate.Email,
+                InviteRemindersSentCount = (byte)(candidate.InviteRemindersSentCount.Value + 1)
+            });
+        }
+
+        return claimed;
     }
 
     public async Task<IEnumerable<OrganizationUserUserDetails>> GetManyDetailsByRoleAsync(Guid organizationId, OrganizationUserType role)
