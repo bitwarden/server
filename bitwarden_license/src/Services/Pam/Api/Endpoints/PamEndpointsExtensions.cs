@@ -4,6 +4,7 @@ using Bit.ExceptionHandling;
 using Bit.OrganizationAuthorization;
 using Bit.Services.Pam.AccessConnector.Api.Authorization;
 using Bit.Services.Pam.AccessConnector.Api.Endpoints;
+using Bit.Services.Pam.AccessConnector.Api.Endpoints.Filters;
 using Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints;
 using Bit.Services.Pam.Api.Endpoints.Filters;
 
@@ -46,8 +47,8 @@ public static class PamEndpointsExtensions
     /// <summary>
     /// The access connector's admin surface: behind the connector flag rather than the base PAM flag, and authorized
     /// in the middleware by <see cref="ManageAccessConnectorRequirement"/> rather than in the handlers. Handlers and
-    /// commands are left with resource scoping only -- confirming an id reached by route belongs to the route
-    /// organization.
+    /// commands are left with resource scoping -- confirming an id reached by route belongs to the route
+    /// organization -- and the commands also check the plan and edit access.
     /// </summary>
     private static RouteGroupBuilder WithPamAccessConnectorAdminDefaults(this RouteGroupBuilder group)
     {
@@ -57,15 +58,14 @@ public static class PamEndpointsExtensions
     }
 
     /// <summary>
-    /// The connector-facing surface. These routes carry no {orgId} and no organization requirement: a connector's
-    /// organization comes from its token, and the work queries scope every read and write to it.
+    /// <see cref="AccessConnectorHeartbeatEndpointFilter"/> is added last, so a disabled flag or malformed body
+    /// short-circuits ahead of the heartbeat write. The organization comes from the connector's token.
     ///
-    /// TODO(PM-39040): these routes belong behind the machine-credential policy, not the user-token
-    /// <see cref="Policies.Application"/>. That policy — and the client type and API scope it asserts on — lands
-    /// with the connector identity wiring, which must merge before the handlers below stop throwing.
+    /// TODO(PM-39040): rate-limit this group by client_id.
     /// </summary>
     private static RouteGroupBuilder WithPamAccessConnectorMachineDefaults(this RouteGroupBuilder group) =>
-        group.WithPamDefaults(Policies.Application, FeatureFlagKeys.PamAccessConnector);
+        group.WithPamDefaults(Policies.AccessConnector, FeatureFlagKeys.PamAccessConnector)
+            .AddEndpointFilter<AccessConnectorHeartbeatEndpointFilter>();
 
     /// <summary>
     /// Applies the shared PAM endpoint chain to a group for the given authorization policy and feature flag. Order

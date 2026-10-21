@@ -73,7 +73,7 @@ public class SendAccessResponseModelTests
         {
             Type = SendType.Item,
             Data = JsonSerializer.Serialize(new SendItemData("name", null, SendEncryptionType.V1, "sealed_blob",
-                new SendItemMetadata { ItemId = itemId })),
+                new SendItemMetadata { ItemId = itemId, CreationDate = DateTime.UtcNow, RevisionDate = DateTime.UtcNow })),
         };
 
         var responseModel = new SendAccessResponseModel(send);

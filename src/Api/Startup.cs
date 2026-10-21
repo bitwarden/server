@@ -43,6 +43,7 @@ using Bit.Subscriptions.User;
 using Bit.Commercial.Core.SecretsManager;
 using Bit.Commercial.Core.Utilities;
 using Bit.Commercial.Infrastructure.EntityFramework.SecretsManager;
+using Bit.Services.Pam.AccessConnector;
 using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.Utilities;
 #endif
@@ -149,6 +150,12 @@ public class Startup
                     (c.Value.Contains(ApiScopes.Api) || c.Value.Contains(ApiScopes.ApiSecrets))
                 ));
             });
+            config.AddPolicy(Policies.AccessConnector, policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiPamCredentialRotation);
+                policy.RequireClaim(Claims.Type, IdentityClientType.AccessConnector.ToString());
+            });
             config.AddPolicy(Policies.Send, configurePolicy: policy =>
             {
                 policy.RequireAuthenticatedUser();
@@ -211,6 +218,7 @@ public class Startup
         services.AddCommercialSecretsManagerServices();
         services.AddSecretsManagerEfRepositories();
         services.AddPamServices();
+        services.Configure<PamRotationOptions>(Configuration.GetSection("globalSettings:pam:rotation"));
         Jobs.JobsHostedService.AddCommercialSecretsManagerJobServices(services);
 #endif
 
