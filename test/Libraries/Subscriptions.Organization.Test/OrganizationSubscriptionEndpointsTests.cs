@@ -62,7 +62,8 @@ public class OrganizationSubscriptionEndpointsTests
             .SelectMany(dataSource => dataSource.Endpoints)
             .OfType<RouteEndpoint>()
             .Single(e => e.RoutePattern.RawText!.EndsWith("/preview")
-                         && !e.RoutePattern.RawText!.Contains("plan-change"));
+                         && !e.RoutePattern.RawText!.Contains("plan-change")
+                         && !e.RoutePattern.RawText!.Contains("restart"));
 
         var authorizeAttributes = preview.Metadata.GetOrderedMetadata<AuthorizeAttribute>();
         Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<OrganizationBillingRequirement>);
@@ -89,5 +90,31 @@ public class OrganizationSubscriptionEndpointsTests
         var authorizeAttributes = planChange.Metadata.GetOrderedMetadata<AuthorizeAttribute>();
         Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<OrganizationBillingRequirement>);
         Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>);
+    }
+
+    [Fact]
+    public void MapOrganizationSubscriptionEndpoints_RestartPreviewIsPostAndInheritsOrganizationBillingOnly()
+    {
+        var app = WebApplication.CreateBuilder().Build();
+
+        var group = app.MapGroup("/{organizationId:guid}")
+            .MapOrganizationSubscriptionEndpoints();
+
+        var restartPreview = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(dataSource => dataSource.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Single(e => e.RoutePattern.RawText!.Contains("restart/preview"));
+
+        var methods = restartPreview.Metadata.GetMetadata<IHttpMethodMetadata>();
+        Assert.NotNull(methods);
+        Assert.Contains("POST", methods!.HttpMethods);
+
+        var authorizeAttributes = restartPreview.Metadata.GetOrderedMetadata<AuthorizeAttribute>();
+        Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<OrganizationBillingRequirement>);
+        Assert.DoesNotContain(authorizeAttributes, attribute => attribute is AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>);
+
+        var name = restartPreview.Metadata.GetMetadata<IEndpointNameMetadata>();
+        Assert.NotNull(name);
+        Assert.Equal("PreviewOrganizationRestart", name!.EndpointName);
     }
 }

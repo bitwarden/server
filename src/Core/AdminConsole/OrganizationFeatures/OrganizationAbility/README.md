@@ -213,7 +213,7 @@ Update related models and mapping code so models receive the new value.
 **Data models:**
 
 - `src/Core/AdminConsole/Models/Data/Organizations/OrganizationUsers/OrganizationUserOrganizationDetails.cs`
-- `src/Core/AdminConsole/Models/Data/Provider/ProviderUserOrganizationDetails.cs`
+- `src/Core/Providers/Models/Data/ProviderUserOrganizationDetails.cs`
 - `src/Core/AdminConsole/Models/Data/Organizations/SelfHostedOrganizationDetails.cs`
 - `src/Core/AdminConsole/Models/Data/IProfileOrganizationDetails.cs`
 

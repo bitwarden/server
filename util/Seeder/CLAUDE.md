@@ -226,7 +226,7 @@ Developer-facing documentation in `Seeds/docs/scenarios/`. Each file maps an eng
 
 ## Dependency Isolation
 
-**Never require a change to shared/production code (e.g. `src/SharedWeb`, `src/Core`) to satisfy a Seeder-only DI need.** The Seeder's DI graph must stay fully self-contained, even at the cost of some duplication — e.g. `util/SeederUtility/Configuration/ServiceCollectionExtension.cs` deliberately re-registers `IStripeAdapter`/`IBraintreeGateway` rather than extracting a shared helper into `SharedWeb`. A local, harmless duplicate always wins over refactoring code that ships to production.
+**Never require a change to shared/production code (e.g. `src/SharedWeb`, `src/Core`) to satisfy a Seeder-only DI need.** The Seeder's DI graph must stay fully self-contained, even at the cost of some duplication — e.g. `util/Seeder/Extensions/StripeBillingServiceCollectionExtensions.cs` is the Seeder-owned billing registration both hosts call, and deliberately re-registers `IStripeAdapter`/`IBraintreeGateway` and a subset of Core's billing services rather than extracting a shared helper into `SharedWeb` or `src/Core`. A local, harmless duplicate always wins over refactoring code that ships to production.
 
 ## Security Reminders
 
