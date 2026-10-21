@@ -117,6 +117,15 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task RestoreManyAsync(IEnumerable<Guid> organizationUserIds, OrganizationUserStatusType status);
 
     /// <summary>
+    /// Starts or restarts the invite reminder sequence for the given organization users. Sets the reminder count
+    /// to 0, and the due date to <paramref name="dueDate"/>, unless the stored due date is later.
+    /// Does not bump the account revision date.
+    /// </summary>
+    /// <param name="organizationUserIds">The IDs of the organization users.</param>
+    /// <param name="dueDate">When the next reminder is due.</param>
+    Task StartInviteReminderSequencesAsync(IEnumerable<Guid> organizationUserIds, DateTime dueDate);
+
+    /// <summary>
     /// Returns a list of OrganizationUsersUserDetails with the specified role.
     /// </summary>
     /// <param name="organizationId">The organization to search within</param>

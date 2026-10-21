@@ -662,6 +662,23 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             commandType: CommandType.StoredProcedure);
     }
 
+    public async Task StartInviteReminderSequencesAsync(IEnumerable<Guid> organizationUserIds, DateTime dueDate)
+    {
+        var parameters = new DynamicParameters(new
+        {
+            OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP()
+        });
+        // DATETIME2(7) rather than Dapper's default DATETIME, which rounds the date to about 3ms
+        parameters.Add("@DueDate", dueDate, DbType.DateTime2, null, 7);
+
+        await using var connection = new SqlConnection(ConnectionString);
+
+        await connection.ExecuteAsync(
+            "[dbo].[OrganizationUser_UpdateManyStartInviteReminderSequences]",
+            parameters,
+            commandType: CommandType.StoredProcedure);
+    }
+
     public async Task<IEnumerable<OrganizationUserUserDetails>> GetManyDetailsByRoleAsync(Guid organizationId, OrganizationUserType role)
     {
         using (var connection = new SqlConnection(ConnectionString))

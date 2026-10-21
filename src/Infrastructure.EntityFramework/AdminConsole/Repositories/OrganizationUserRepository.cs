@@ -875,6 +875,21 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(organizationUserIds);
     }
 
+    public async Task StartInviteReminderSequencesAsync(IEnumerable<Guid> organizationUserIds, DateTime dueDate)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+
+        var dbContext = GetDatabaseContext(scope);
+
+        // Does not bump the account revision date: the reminder columns are not synced to clients
+        await dbContext.OrganizationUsers
+            .Where(x => organizationUserIds.Contains(x.Id))
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(x => x.InviteRemindersSentCount, (byte?)0)
+                .SetProperty(x => x.InviteReminderDueDate,
+                    x => x.InviteReminderDueDate > dueDate ? x.InviteReminderDueDate : (DateTime?)dueDate));
+    }
+
     public async Task<IEnumerable<OrganizationUserUserDetails>> GetManyDetailsByRoleAsync(Guid organizationId, OrganizationUserType role)
     {
         using (var scope = ServiceScopeFactory.CreateScope())

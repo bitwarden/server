@@ -13,6 +13,32 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.Organizat
 public class OrganizationUserInviteReminderTests
 {
     [Theory, DatabaseData]
+    public async Task StartInviteReminderSequencesAsync_ResetsCountAndKeepsLaterDueDate(
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        // Arrange
+        var (dueDate, _, _) = CreateClaimWindow();
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var laterDueDate = await CreateInvitedAsync(organizationUserRepository, organization, dueDate.AddDays(1), 2);
+        var earlierDueDate = await CreateInvitedAsync(organizationUserRepository, organization, dueDate.AddDays(-1), 3);
+        var noDueDate = await CreateInvitedAsync(organizationUserRepository, organization, null, null);
+        var notInList = await CreateInvitedAsync(organizationUserRepository, organization, dueDate.AddDays(-1), 1);
+        var revisionDate = (await organizationUserRepository.GetByIdAsync(laterDueDate.Id))!.RevisionDate;
+
+        // Act
+        await organizationUserRepository.StartInviteReminderSequencesAsync(
+            [laterDueDate.Id, earlierDueDate.Id, noDueDate.Id], dueDate);
+
+        // Assert
+        await AssertSequenceAsync(organizationUserRepository, laterDueDate.Id, dueDate.AddDays(1), 0);
+        await AssertSequenceAsync(organizationUserRepository, earlierDueDate.Id, dueDate, 0);
+        await AssertSequenceAsync(organizationUserRepository, noDueDate.Id, dueDate, 0);
+        await AssertSequenceAsync(organizationUserRepository, notInList.Id, dueDate.AddDays(-1), 1);
+        Assert.Equal(revisionDate, (await organizationUserRepository.GetByIdAsync(laterDueDate.Id))!.RevisionDate);
+    }
+
+    [Theory, DatabaseData]
     public async Task ReplaceAsync_SavesInviteReminderColumns(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository)
