@@ -21,6 +21,26 @@ EXEC sp_refreshview N'[dbo].[ProviderOrganizationOrganizationDetailsView]';
 EXEC sp_refreshview N'[dbo].[UserPremiumAccessView]';
 GO
 
+-- Index for the invite reminder claim
+IF NOT EXISTS (
+    SELECT
+        *
+    FROM
+        sys.indexes
+    WHERE
+        name = 'IX_OrganizationUser_InviteReminders_Filtered'
+        AND object_id = OBJECT_ID('[dbo].[OrganizationUser]')
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_OrganizationUser_InviteReminders_Filtered]
+        ON [dbo].[OrganizationUser]([InviteReminderDueDate] ASC, [InviteRemindersSentCount] ASC)
+        INCLUDE ([OrganizationId], [Email])
+        WHERE [Status] = 0 -- 0 = Invited
+            AND [InviteReminderDueDate] IS NOT NULL
+            AND [InviteRemindersSentCount] < 3;
+END
+GO
+
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
