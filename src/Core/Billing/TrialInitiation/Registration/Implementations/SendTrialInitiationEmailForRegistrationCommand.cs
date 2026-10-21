@@ -37,7 +37,7 @@ public class SendTrialInitiationEmailForRegistrationCommand(
         }
 
         var userExists = await CheckUserExistsConstantTimeAsync(email);
-        var token = GenerateToken(email, name, receiveMarketingEmails);
+        var token = GenerateToken(email, name, receiveMarketingEmails, emailSent: globalSettings.EnableEmailVerification);
 
         if (!globalSettings.EnableEmailVerification)
         {
@@ -86,9 +86,9 @@ public class SendTrialInitiationEmailForRegistrationCommand(
         await Task.Delay(130);
     }
 
-    private string GenerateToken(string email, string? name, bool receiveMarketingEmails)
+    private string GenerateToken(string email, string? name, bool receiveMarketingEmails, bool emailSent)
     {
-        var tokenable = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
+        var tokenable = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails, emailSent);
         return tokenDataFactory.Protect(tokenable);
     }
 
