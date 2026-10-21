@@ -39,8 +39,9 @@ SELECT
         WHEN
             @UserId IS NULL
             OR C.[ReportExclusions] IS NULL
-        THEN NULL
-        ELSE TRY_CONVERT(DATETIME2(7), JSON_VALUE(C.[ReportExclusions], CONCAT('$."', @UserId, '"')))
-    END [ReportExcludedDate]
+            OR JSON_VALUE(C.[ReportExclusions], CONCAT('$."', @UserId, '"')) IS NULL
+        THEN 0
+        ELSE 1
+    END [ExcludedFromReports]
 FROM
     [dbo].[Cipher] C;

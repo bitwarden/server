@@ -21,7 +21,7 @@ SELECT
         [Key],
         [OrganizationUseTotp],
         [ArchivedDate],
-        [ReportExcludedDate],
+        [ExcludedFromReports],
         -- The highest rank holds Manage as 4, Edit as 2 and ViewPassword as 1; each flag is one part of it
         (MAX(R.[Rank]) / 2) % 2 AS [Edit],
         MAX(R.[Rank]) % 2 AS [ViewPassword],
@@ -50,5 +50,5 @@ SELECT
         [Key],
         [OrganizationUseTotp],
         [ArchivedDate],
-        [ReportExcludedDate]
+        [ExcludedFromReports]
 END
