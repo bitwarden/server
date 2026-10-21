@@ -46,9 +46,10 @@ SELECT
         WHEN
             @UserId IS NULL
             OR C.[ReportExclusions] IS NULL
-        THEN NULL
-        ELSE TRY_CONVERT(DATETIME2(7), JSON_VALUE(C.[ReportExclusions], CONCAT('$."', @UserId, '"')))
-    END [ReportExcludedDate]
+            OR JSON_VALUE(C.[ReportExclusions], CONCAT('$."', @UserId, '"')) IS NULL
+        THEN 0
+        ELSE 1
+    END [ExcludedFromReports]
 FROM
     [dbo].[Cipher] C;
 GO
@@ -295,7 +296,7 @@ CREATE OR ALTER PROCEDURE [dbo].[CipherDetails_Create]
     @Key VARCHAR(MAX) = NULL,
     @ArchivedDate DATETIME2(7) = NULL,
     @Archives NVARCHAR(MAX) = NULL, -- not used
-    @ReportExcludedDate DATETIME2(7) = NULL, -- not used
+    @ExcludedFromReports BIT = NULL, -- not used
     @ReportExclusions NVARCHAR(MAX) = NULL -- not used
 AS
 BEGIN
@@ -370,7 +371,7 @@ CREATE OR ALTER PROCEDURE [dbo].[CipherDetails_CreateWithCollections]
     @Key VARCHAR(MAX) = NULL,
     @ArchivedDate DATETIME2(7) = NULL,
     @Archives NVARCHAR(MAX) = NULL, -- not used
-    @ReportExcludedDate DATETIME2(7) = NULL, -- not used
+    @ExcludedFromReports BIT = NULL, -- not used
     @ReportExclusions NVARCHAR(MAX) = NULL, -- not used
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
@@ -414,7 +415,7 @@ CREATE OR ALTER PROCEDURE [dbo].[CipherDetails_Update]
     @Key VARCHAR(MAX) = NULL,
     @ArchivedDate DATETIME2(7) = NULL,
     @Archives NVARCHAR(MAX) = NULL, -- not used
-    @ReportExcludedDate DATETIME2(7) = NULL, -- not used
+    @ExcludedFromReports BIT = NULL, -- not used
     @ReportExclusions NVARCHAR(MAX) = NULL -- not used
 AS
 BEGIN
@@ -500,7 +501,7 @@ SELECT
         [Key],
         [OrganizationUseTotp],
         [ArchivedDate],
-        [ReportExcludedDate],
+        [ExcludedFromReports],
         MAX ([Edit]) AS [Edit],
         MAX ([ViewPassword]) AS [ViewPassword],
         MAX ([Manage]) AS [Manage]
@@ -524,7 +525,7 @@ SELECT
         [Key],
         [OrganizationUseTotp],
         [ArchivedDate],
-        [ReportExcludedDate]
+        [ExcludedFromReports]
 END
 GO
 
@@ -541,7 +542,7 @@ BEGIN
         [ReportExclusions] = JSON_MODIFY(
             COALESCE(C.[ReportExclusions], N'{}'),
             CONCAT('$."', @UserId, '"'),
-            CONVERT(NVARCHAR(30), SYSUTCDATETIME(), 127)
+            CAST(1 AS BIT)
         )
     FROM
         [dbo].[Cipher] C
