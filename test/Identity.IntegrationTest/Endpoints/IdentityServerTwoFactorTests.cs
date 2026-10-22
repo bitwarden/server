@@ -241,17 +241,17 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         var code = await EmailLoginCodeAsync(_factory, email, IdentityApplicationFactory.DefaultDeviceIdentifier);
 
         // Act
-        var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(
-            new Dictionary<string, string>
-            {
-                { "scope", "api offline_access" },
-                { "client_id", "web" },
-                { "grant_type", "password" },
-                { "username", email },
-                { "password", _testPassword },
-                { "TwoFactorToken", code },
-                { "TwoFactorProvider", ProviderKey(TwoFactorProviderType.Email) },
-            }));
+        using var content = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "scope", "api offline_access" },
+            { "client_id", "web" },
+            { "grant_type", "password" },
+            { "username", email },
+            { "password", _testPassword },
+            { "TwoFactorToken", code },
+            { "TwoFactorProvider", ProviderKey(TwoFactorProviderType.Email) },
+        });
+        var context = await _factory.Server.PostAsync("/connect/token", content);
 
         // Assert
         using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);

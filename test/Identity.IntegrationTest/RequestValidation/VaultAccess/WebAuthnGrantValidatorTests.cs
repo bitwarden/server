@@ -245,13 +245,16 @@ public class WebAuthnGrantValidatorTests(IdentityApplicationFactory _factory) : 
         public Task<HttpResponseMessage> PostTokenAsync(bool includeDevice = true)
             => client.PostAsync("/connect/token", BuildTokenRequest(token, deviceResponseJson, includeDevice));
 
-        public Task<HttpResponseMessage> PostRefreshTokenAsync(string refreshToken)
-            => client.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        public async Task<HttpResponseMessage> PostRefreshTokenAsync(string refreshToken)
+        {
+            using var content = new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 { OidcConstants.TokenRequest.GrantType, "refresh_token" },
                 { OidcConstants.TokenRequest.ClientId, "web" },
                 { "refresh_token", refreshToken },
-            }));
+            });
+            return await client.PostAsync("/connect/token", content);
+        }
 
         public void Dispose()
         {

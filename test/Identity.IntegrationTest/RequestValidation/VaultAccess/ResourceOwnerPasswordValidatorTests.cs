@@ -61,13 +61,13 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
         AccessTokenAssertions.AssertDeviceClaims(loginAccessToken, _defaultDeviceIdentifier, _defaultDeviceType);
 
         // Act
-        var refreshContext = await localFactory.Server.PostAsync("/connect/token",
-            new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                { "grant_type", "refresh_token" },
-                { "client_id", "web" },
-                { "refresh_token", refreshToken },
-            }));
+        using var refreshContent = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "grant_type", "refresh_token" },
+            { "client_id", "web" },
+            { "refresh_token", refreshToken },
+        });
+        var refreshContext = await localFactory.Server.PostAsync("/connect/token", refreshContent);
 
         // Assert
         using var refreshBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(refreshContext);

@@ -912,13 +912,13 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
 
     private async Task<string> RefreshAccessTokenAsync(string refreshToken)
     {
-        var context = await _factory.Identity.Server.PostAsync("/connect/token", new FormUrlEncodedContent(
-            new Dictionary<string, string>
-            {
-                { "grant_type", "refresh_token" },
-                { "client_id", "web" },
-                { "refresh_token", refreshToken },
-            }));
+        using var content = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "grant_type", "refresh_token" },
+            { "client_id", "web" },
+            { "refresh_token", refreshToken },
+        });
+        var context = await _factory.Identity.Server.PostAsync("/connect/token", content);
         var root = await ReadIdentityJsonAsync(context);
         AssertLoggedIn(root);
         return root.GetProperty("access_token").GetString()!;
@@ -1138,7 +1138,8 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
             form["twoFactorRemember"] = "0";
         }
 
-        var context = await _factory.Identity.Server.PostAsync("/connect/token", new FormUrlEncodedContent(form));
+        using var content = new FormUrlEncodedContent(form);
+        var context = await _factory.Identity.Server.PostAsync("/connect/token", content);
         return await ReadIdentityJsonAsync(context);
     }
 }

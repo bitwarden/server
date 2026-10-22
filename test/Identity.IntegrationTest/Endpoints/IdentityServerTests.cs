@@ -253,18 +253,17 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var localFactory = new IdentityApplicationFactory();
         var user = await localFactory.RegisterNewIdentityFactoryUserAsync(model);
 
-        var context = await localFactory.Server.PostAsync("/connect/token",
-            new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                { "grant_type", "client_credentials" },
-                { "client_id", $"user.{user.Id}" },
-                { "client_secret", user.ApiKey },
-                { "scope", "api" },
-                { "DeviceIdentifier", IdentityApplicationFactory.DefaultDeviceIdentifier },
-                { "DeviceType", DeviceTypeAsString(DeviceType.FirefoxBrowser) },
-                { "DeviceName", "firefox" },
-            })
-        );
+        using var content = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "grant_type", "client_credentials" },
+            { "client_id", $"user.{user.Id}" },
+            { "client_secret", user.ApiKey },
+            { "scope", "api" },
+            { "DeviceIdentifier", IdentityApplicationFactory.DefaultDeviceIdentifier },
+            { "DeviceType", DeviceTypeAsString(DeviceType.FirefoxBrowser) },
+            { "DeviceName", "firefox" },
+        });
+        var context = await localFactory.Server.PostAsync("/connect/token", content);
 
         using var body = await AssertDefaultTokenBodyAsync(context, "api");
         var accessToken = AssertAccessTokenExists(body.RootElement);
@@ -289,15 +288,14 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var localFactory = new IdentityApplicationFactory();
         var user = await localFactory.RegisterNewIdentityFactoryUserAsync(model);
 
-        var context = await localFactory.Server.PostAsync("/connect/token",
-            new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                { "grant_type", "client_credentials" },
-                { "client_id", $"user.{user.Id}" },
-                { "client_secret", user.ApiKey },
-                { "scope", "api" },
-            })
-        );
+        using var content = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "grant_type", "client_credentials" },
+            { "client_id", $"user.{user.Id}" },
+            { "client_secret", user.ApiKey },
+            { "scope", "api" },
+        });
+        var context = await localFactory.Server.PostAsync("/connect/token", content);
 
         Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
         using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);

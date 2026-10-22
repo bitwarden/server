@@ -626,19 +626,20 @@ public class IdentityServerSsoTests
             form["deviceName"] = "firefox";
         }
 
-        var loginContext = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(form));
+        using var content = new FormUrlEncodedContent(form);
+        var loginContext = await factory.Server.PostAsync("/connect/token", content);
         return (factory, loginContext);
     }
 
     private static async Task<HttpContext> PostRefreshTokenAsync(IdentityApplicationFactory factory, string refreshToken)
     {
-        return await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(
-            new Dictionary<string, string>
-            {
-                { "grant_type", "refresh_token" },
-                { "client_id", "web" },
-                { "refresh_token", refreshToken },
-            }));
+        using var content = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "grant_type", "refresh_token" },
+            { "client_id", "web" },
+            { "refresh_token", refreshToken },
+        });
+        return await factory.Server.PostAsync("/connect/token", content);
     }
 
     private static async Task<JsonDocument> RunSuccessTestAsync(MemberDecryptionType memberDecryptionType)
