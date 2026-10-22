@@ -1,63 +1,50 @@
 ﻿using System.Net;
-using System.Text.Json;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Enums;
-using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder.Scenes;
-using Bit.SeederApi.Models.Request;
-using Bit.SeederApi.Models.Response;
 using Duende.IdentityModel.Client;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest.Scenes;
 
-public class SelfHostedSceneGuardTests : IAsyncLifetime
+public class SelfHostedSceneGuardTests : IClassFixture<SelfHostedSeederApiApplicationFactory>, IAsyncLifetime
 {
-    private const string Username = "username";
-    private const string Password = "pass";
-
-    private readonly SeederApiApplicationFactory _factory;
+    private readonly SelfHostedSeederApiApplicationFactory _factory;
     private readonly HttpClient _client;
+    private readonly string _playId = Guid.NewGuid().ToString();
 
-    public SelfHostedSceneGuardTests()
+    public SelfHostedSceneGuardTests(SelfHostedSeederApiApplicationFactory factory)
     {
-        _factory = new SeederApiApplicationFactory();
-        _factory.ConfigureAuth(Username, Password);
-        _factory.UpdateConfiguration("globalSettings:selfHosted", "true");
-        // AddPush rejects self-hosted startup without an installation id.
-        _factory.UpdateConfiguration("globalSettings:installation:id", "10000000-0000-0000-0000-000000000000");
-        // Self-hosted defaults data protection keys to /etc/bitwarden, which is not writable on CI.
-        _factory.UpdateConfiguration("globalSettings:dataProtection:directory",
-            Path.Combine(Path.GetTempPath(), $"seeder-dp-{Guid.NewGuid()}"));
+        _factory = factory;
         _client = _factory.CreateClient();
-        _client.SetBasicAuthentication(Username, Password);
+        _client.SetBasicAuthentication(_factory.Username, _factory.Password);
     }
 
     public Task InitializeAsync() => Task.CompletedTask;
 
     public async Task DisposeAsync()
     {
-        await _client.DeleteAsync("/seed");
+        await _client.DeleteAsync($"/seed/{_playId}");
         _client.Dispose();
-        await _factory.DisposeAsync();
     }
 
     [Fact]
     public async Task SingleProviderScene_SelfHosted_ReturnsBadRequestWithoutWrites()
     {
         var ownerUserId = await SeedUserAsync();
+        var name = $"Self-hosted MSP {Guid.NewGuid():N}";
 
-        var response = await PostAsync(nameof(SingleProviderScene), new SingleProviderScene.Request
+        var response = await _client.PostSceneRequestAsync(_playId, nameof(SingleProviderScene), new SingleProviderScene.Request
         {
             OwnerUserId = ownerUserId,
-            Name = "Self-hosted MSP",
+            Name = name,
             Type = ProviderType.Msp
         });
 
         await AssertSelfHostRejectionAsync(response, "Providers");
-        Assert.False(await QueryAsync(db => db.Providers.AnyAsync()));
-        Assert.False(await QueryAsync(db => db.ProviderUsers.AnyAsync()));
+        Assert.False(await _factory.QueryAsync(db => db.Providers.AnyAsync(p => p.Name == name)));
+        Assert.False(await _factory.QueryAsync(db => db.ProviderUsers.AnyAsync(pu => pu.UserId == ownerUserId)));
     }
 
     [Fact]
@@ -65,7 +52,7 @@ public class SelfHostedSceneGuardTests : IAsyncLifetime
     {
         var userId = await SeedUserAsync();
 
-        var response = await PostAsync(nameof(ProviderUserScene), new ProviderUserScene.Request
+        var response = await _client.PostSceneRequestAsync(_playId, nameof(ProviderUserScene), new ProviderUserScene.Request
         {
             UserId = userId,
             ProviderId = Guid.NewGuid(),
@@ -75,21 +62,25 @@ public class SelfHostedSceneGuardTests : IAsyncLifetime
         });
 
         await AssertSelfHostRejectionAsync(response, "Provider users");
-        Assert.False(await QueryAsync(db => db.ProviderUsers.AnyAsync()));
+        Assert.False(await _factory.QueryAsync(db => db.ProviderUsers.AnyAsync(pu => pu.UserId == userId)));
     }
 
     [Fact]
     public async Task MigrationCohortExportScene_SelfHosted_ReturnsBadRequestWithoutWrites()
     {
-        var response = await PostAsync(nameof(MigrationCohortExportScene), new MigrationCohortExportScene.Request
+        var cohortName = $"self-host-{Guid.NewGuid():N}";
+        var namePrefix = $"sh-{Guid.NewGuid():N}-";
+
+        var response = await _client.PostSceneRequestAsync(_playId, nameof(MigrationCohortExportScene), new MigrationCohortExportScene.Request
         {
-            CohortName = $"self-host-{Guid.NewGuid():N}",
-            OrgCount = 1
+            CohortName = cohortName,
+            OrgCount = 1,
+            NamePrefix = namePrefix
         });
 
         await AssertSelfHostRejectionAsync(response, "Plan migration cohorts");
-        Assert.False(await QueryAsync(db => db.OrganizationPlanMigrationCohorts.AnyAsync()));
-        Assert.False(await QueryAsync(db => db.Organizations.AnyAsync()));
+        Assert.False(await _factory.QueryAsync(db => db.OrganizationPlanMigrationCohorts.AnyAsync(c => c.Name == cohortName)));
+        Assert.False(await _factory.QueryAsync(db => db.Organizations.AnyAsync(o => o.Name.StartsWith(namePrefix))));
     }
 
     [Theory]
@@ -99,12 +90,13 @@ public class SelfHostedSceneGuardTests : IAsyncLifetime
         string? gatewayCustomerId, string? gatewaySubscriptionId)
     {
         var ownerUserId = await SeedUserAsync();
+        var name = $"Self-hosted Org {Guid.NewGuid():N}";
 
-        var response = await PostAsync(nameof(SingleOrganizationScene), new SingleOrganizationScene.Request
+        var response = await _client.PostSceneRequestAsync(_playId, nameof(SingleOrganizationScene), new SingleOrganizationScene.Request
         {
             OwnerUserId = ownerUserId,
             PlanType = PlanType.EnterpriseAnnually,
-            Name = "Self-hosted Org",
+            Name = name,
             Domain = $"selfhost-{Guid.NewGuid():N}.example.com",
             Seats = 10,
             GatewayCustomerId = gatewayCustomerId,
@@ -112,7 +104,7 @@ public class SelfHostedSceneGuardTests : IAsyncLifetime
         });
 
         await AssertSelfHostRejectionAsync(response, "Stripe gateway IDs");
-        Assert.False(await QueryAsync(db => db.Organizations.AnyAsync()));
+        Assert.False(await _factory.QueryAsync(db => db.Organizations.AnyAsync(o => o.Name == name)));
     }
 
     [Fact]
@@ -120,7 +112,7 @@ public class SelfHostedSceneGuardTests : IAsyncLifetime
     {
         var ownerUserId = await SeedUserAsync();
 
-        var result = await PostSceneAsync(nameof(SingleOrganizationScene), new SingleOrganizationScene.Request
+        var result = await _client.PostSceneAsync(_playId, nameof(SingleOrganizationScene), new SingleOrganizationScene.Request
         {
             OwnerUserId = ownerUserId,
             PlanType = PlanType.EnterpriseAnnually,
@@ -130,7 +122,7 @@ public class SelfHostedSceneGuardTests : IAsyncLifetime
         });
 
         var organizationId = result.GetProperty("organizationId").GetGuid();
-        Assert.True(await QueryAsync(db => db.Organizations.AnyAsync(o => o.Id == organizationId)));
+        Assert.True(await _factory.QueryAsync(db => db.Organizations.AnyAsync(o => o.Id == organizationId)));
     }
 
     [Theory]
@@ -139,16 +131,18 @@ public class SelfHostedSceneGuardTests : IAsyncLifetime
     public async Task SingleUserScene_SelfHostedWithGatewayIds_ReturnsBadRequestWithoutWrites(
         string? gatewayCustomerId, string? gatewaySubscriptionId)
     {
-        var response = await PostAsync(nameof(SingleUserScene), new SingleUserScene.Request
+        var email = $"selfhost-{Guid.NewGuid():N}@example.com";
+
+        var response = await _client.PostSceneRequestAsync(_playId, nameof(SingleUserScene), new SingleUserScene.Request
         {
-            Email = $"selfhost-{Guid.NewGuid():N}@example.com",
+            Email = email,
             Password = "asdfasdfasdf",
             GatewayCustomerId = gatewayCustomerId,
             GatewaySubscriptionId = gatewaySubscriptionId
         });
 
         await AssertSelfHostRejectionAsync(response, "Stripe gateway IDs");
-        Assert.False(await QueryAsync(db => db.Users.AnyAsync()));
+        Assert.False(await _factory.QueryAsync(db => db.Users.AnyAsync(u => u.Email == email)));
     }
 
     private static async Task AssertSelfHostRejectionAsync(HttpResponseMessage response, string subject)
@@ -161,7 +155,7 @@ public class SelfHostedSceneGuardTests : IAsyncLifetime
 
     private async Task<Guid> SeedUserAsync()
     {
-        var result = await PostSceneAsync(nameof(SingleUserScene), new SingleUserScene.Request
+        var result = await _client.PostSceneAsync(_playId, nameof(SingleUserScene), new SingleUserScene.Request
         {
             Email = $"user-{Guid.NewGuid():N}@example.com",
             Password = "asdfasdfasdf",
@@ -169,29 +163,5 @@ public class SelfHostedSceneGuardTests : IAsyncLifetime
         });
 
         return result.GetProperty("userId").GetGuid();
-    }
-
-    private async Task<T> QueryAsync<T>(Func<DatabaseContext, Task<T>> query)
-    {
-        using var scope = _factory.Services.CreateScope();
-        return await query(scope.ServiceProvider.GetRequiredService<DatabaseContext>());
-    }
-
-    private Task<HttpResponseMessage> PostAsync<TRequest>(string template, TRequest arguments) =>
-        _client.PostAsJsonAsync("/seed", new SeedRequestModel
-        {
-            Template = template,
-            Arguments = JsonSerializer.SerializeToElement(arguments)
-        }, Guid.NewGuid().ToString());
-
-    private async Task<JsonElement> PostSceneAsync<TRequest>(string template, TRequest arguments)
-    {
-        var response = await PostAsync(template, arguments);
-        response.EnsureSuccessStatusCode();
-
-        var model = await response.Content.ReadFromJsonAsync<SceneResponseModel>();
-        Assert.NotNull(model);
-        Assert.NotNull(model!.Result);
-        return (JsonElement)model.Result!;
     }
 }
