@@ -43,6 +43,14 @@ public class OrganizationUserScene(
         /// Overrides the member's PAM license. Unset follows the organization's <c>UsePam</c>.
         /// </summary>
         public bool? AccessPam { get; set; }
+
+        /// <summary>
+        /// The member's decrypted user symmetric key (B64), e.g. <c>DecryptedKeyB64</c> from
+        /// <c>SingleUserScene</c>. When provided, the member is enrolled in admin account recovery:
+        /// <c>ResetPasswordKey</c> is set to this key encrypted to the organization's public key.
+        /// Not valid for Invited members.
+        /// </summary>
+        public string? UserKeyB64 { get; set; }
     }
 
     public async Task<SceneResult<OrganizationUserSceneResult>> SeedAsync(Request request)
@@ -68,6 +76,22 @@ public class OrganizationUserScene(
             throw new InvalidOperationException($"Organization {request.OrganizationId} not found.");
         }
 
+        var enrollInAccountRecovery = !string.IsNullOrEmpty(request.UserKeyB64);
+        if (enrollInAccountRecovery)
+        {
+            if (request.OrganizationUserStatusType == OrganizationUserStatusType.Invited)
+            {
+                throw new InvalidOperationException(
+                    "Invited members cannot be enrolled in account recovery.");
+            }
+
+            if (string.IsNullOrEmpty(organization.PublicKey))
+            {
+                throw new InvalidOperationException(
+                    $"Organization {request.OrganizationId} has no public key; cannot enroll the member in account recovery.");
+            }
+        }
+
         var encryptedOrgKey = requiresKey
             ? RustSdkService.GenerateUserOrganizationKey(user.PublicKey!, request.OrganizationKeyB64)
             : null;
@@ -87,6 +111,12 @@ public class OrganizationUserScene(
         if (request.AccessPam is { } accessPam)
         {
             organizationUser.AccessPam = accessPam;
+        }
+
+        if (enrollInAccountRecovery)
+        {
+            organizationUser.ResetPasswordKey = RustSdkService.GenerateUserOrganizationKey(
+                organization.PublicKey!, request.UserKeyB64!);
         }
 
         await organizationUserRepository.CreateAsync(organizationUser);
