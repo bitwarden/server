@@ -1,7 +1,9 @@
-﻿using Bit.Core.Billing.Pricing;
+﻿using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Services;
+using Bit.Subscriptions.Organization.Commands;
 using Bit.Subscriptions.Organization.Handlers;
 using Bit.Subscriptions.Organization.Queries;
 using Bitwarden.Server.Sdk.Environment;
@@ -31,5 +33,18 @@ public class SubscriptionsOrganizationServiceCollectionExtensionsTests
         Assert.IsType<PreviewOrganizationSubscriptionPurchaseQuery>(
             scope.ServiceProvider.GetService<IPreviewOrganizationSubscriptionPurchaseQuery>());
         Assert.NotNull(scope.ServiceProvider.GetService<PreviewOrganizationSubscriptionPurchaseHandler>());
+    }
+
+    [Fact]
+    public void AddOrganizationSubscriptions_RegistersTheAutoscalePrivilegedControlsSeatsCommandAsScoped()
+    {
+        var services = new ServiceCollection();
+
+        services.AddOrganizationSubscriptions();
+
+        var descriptor = Assert.Single(
+            services, d => d.ServiceType == typeof(IAutoscalePrivilegedControlsSeatsCommand));
+        Assert.Equal(typeof(AutoscalePrivilegedControlsSeatsCommand), descriptor.ImplementationType);
+        Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
     }
 }

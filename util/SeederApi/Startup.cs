@@ -4,6 +4,7 @@ using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Services;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Seeder.Extensions;
 using Bit.SeederApi.Extensions;
 using Bit.SeederApi.Utilities;
 using Bit.SharedWeb.Utilities;
@@ -47,6 +48,7 @@ public class Startup
         services.AddLicenseServices();
         services.TryAddSingleton<IMailService, NoopMailService>();
         services.AddPush(globalSettings);
+        services.AddStripeBilling(globalSettings);
         services.TryAddSingleton<ILicensingService, LicensingService>();
         services.TryAddSingleton<Func<ILicensingService>>(sp => sp.GetRequiredService<ILicensingService>);
 
