@@ -147,7 +147,8 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
         Organization organization,
         Plan plan,
         int? occupiedPamSeats = null,
-        bool? isOnPamSalesInitiatedTrial = null) : base(organization, plan, "organizationSubscription")
+        bool? isOnPamSalesInitiatedTrial = null,
+        int? pamSeatMinimum = null) : base(organization, plan, "organizationSubscription")
     {
         Expiration = organization.ExpirationDate;
         StorageName = organization.Storage.HasValue ?
@@ -157,6 +158,7 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
         ExemptFromBillingAutomation = organization.ExemptFromBillingAutomation;
         OccupiedPamSeats = occupiedPamSeats;
         IsOnPamSalesInitiatedTrial = isOnPamSalesInitiatedTrial;
+        PamSeatMinimum = pamSeatMinimum;
     }
 
     public OrganizationSubscriptionResponseModel(
@@ -166,7 +168,8 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
         bool hideSensitiveData,
         PendingAnnualUpgrade pendingAnnualUpgrade = null,
         int? occupiedPamSeats = null,
-        bool? isOnPamSalesInitiatedTrial = null) : this(organization, plan, occupiedPamSeats, isOnPamSalesInitiatedTrial)
+        bool? isOnPamSalesInitiatedTrial = null,
+        int? pamSeatMinimum = null) : this(organization, plan, occupiedPamSeats, isOnPamSalesInitiatedTrial, pamSeatMinimum)
     {
         Subscription = subscription.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
         PendingAnnualUpgrade = pendingAnnualUpgrade != null
@@ -259,6 +262,12 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
     /// Privileged Controls line. Null on self-hosted.
     /// </summary>
     public bool? IsOnPamSalesInitiatedTrial { get; set; }
+
+    /// <summary>
+    /// The organization's Privileged Controls seat minimum, or the plan default. Null on self-hosted, when
+    /// Privileged Controls is off, and when the plan has no Privileged Controls.
+    /// </summary>
+    public int? PamSeatMinimum { get; set; }
 
     /// <summary>
     /// Date when a self-hosted organization's subscription expires, without any grace period.

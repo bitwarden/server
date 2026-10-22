@@ -49,6 +49,11 @@ public class PlanResponseModel : ResponseModel
             SecretsManager = new SecretsManagerPlanFeaturesResponseModel(plan.SecretsManager);
         }
 
+        if (plan.PrivilegedControls != null)
+        {
+            PrivilegedControls = new PrivilegedControlsPlanFeaturesResponseModel(plan.PrivilegedControls);
+        }
+
         PasswordManager = new PasswordManagerPlanFeaturesResponseModel(plan.PasswordManager);
     }
 
@@ -89,6 +94,7 @@ public class PlanResponseModel : ResponseModel
     public bool Disabled { get; set; }
     public SecretsManagerPlanFeaturesResponseModel SecretsManager { get; protected init; }
     public PasswordManagerPlanFeaturesResponseModel PasswordManager { get; protected init; }
+    public PrivilegedControlsPlanFeaturesResponseModel PrivilegedControls { get; protected init; }
 
     public class SecretsManagerPlanFeaturesResponseModel
     {
@@ -131,6 +137,22 @@ public class PlanResponseModel : ResponseModel
 
         // Features
         public int MaxProjects { get; init; }
+    }
+
+    public class PrivilegedControlsPlanFeaturesResponseModel
+    {
+        public PrivilegedControlsPlanFeaturesResponseModel(Plan.PrivilegedControlsPlanFeatures plan)
+        {
+            StripeSeatPlanId = plan.StripeSeatPlanId;
+            SeatPrice = plan.SeatPrice;
+            BaseSeats = plan.BaseSeats;
+            DefaultSeatMinimum = plan.DefaultSeatMinimum;
+        }
+        // Seats
+        public string StripeSeatPlanId { get; init; }
+        public decimal SeatPrice { get; init; }
+        public int BaseSeats { get; init; }
+        public int DefaultSeatMinimum { get; init; }
     }
 
     public record PasswordManagerPlanFeaturesResponseModel
