@@ -447,7 +447,7 @@ public class ProviderService : IProviderService
         if (organization.UsePam)
         {
             throw new BadRequestException(
-                "Organizations managed by a provider can't use Privileged Access Management. Please contact Customer Support.");
+                "Organizations managed by a provider can't use Privileged Controls. Please contact Customer Support.");
         }
 
         if (organization.UseSecretsManager && provider.Type != ProviderType.Reseller)
@@ -498,7 +498,7 @@ public class ProviderService : IProviderService
         var organizations = await _organizationRepository.GetManyByIdsAsync(orgIdsList);
         if (organizations.Any(o => o.UsePam))
         {
-            throw new BadRequestException("Organizations managed by a provider can't use Privileged Access Management. Turn it off for the selected organizations and try again.");
+            throw new BadRequestException("Organizations managed by a provider can't use Privileged Controls. Turn it off for the selected organizations and try again.");
         }
 
         var providerOrganizationsToInsert = orgIdsList.Select(orgId => new ProviderOrganization { ProviderId = providerId, OrganizationId = orgId });

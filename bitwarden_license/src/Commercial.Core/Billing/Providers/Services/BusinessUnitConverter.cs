@@ -431,7 +431,7 @@ public class BusinessUnitConverter(
 
         if (organization.UsePam)
         {
-            problems.Add("Organization has Privileged Access Management turned on. Turn it off before converting this organization to a business unit.");
+            problems.Add("Organization has Privileged Controls turned on. Turn it off before converting this organization to a business unit.");
         }
 
         var subscription = await subscriberService.GetSubscription(organization);

@@ -967,7 +967,7 @@ public class ProviderServiceTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key));
-        Assert.Equal("Organizations managed by a provider can't use Privileged Access Management. Please contact Customer Support.", exception.Message);
+        Assert.Equal("Organizations managed by a provider can't use Privileged Controls. Please contact Customer Support.", exception.Message);
         await providerOrganizationRepository.DidNotReceiveWithAnyArgs().CreateAsync(default);
     }
 
@@ -1157,7 +1157,7 @@ public class ProviderServiceTests
         var organizationIds = organizations.Select(o => o.Id).ToArray();
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddOrganizationsToReseller(provider.Id, organizationIds));
-        Assert.Equal("Organizations managed by a provider can't use Privileged Access Management. Turn it off for the selected organizations and try again.", exception.Message);
+        Assert.Equal("Organizations managed by a provider can't use Privileged Controls. Turn it off for the selected organizations and try again.", exception.Message);
 
         await sutProvider.GetDependency<IProviderOrganizationRepository>().DidNotReceiveWithAnyArgs().CreateManyAsync(default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogProviderOrganizationEventsAsync(default);

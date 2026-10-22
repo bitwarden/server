@@ -69,7 +69,7 @@ public class ProviderBillingService(
         if (organization.UsePam)
         {
             throw new BadRequestException(
-                "Organizations managed by a provider can't use Privileged Access Management. Please contact Customer Support.");
+                "Organizations managed by a provider can't use Privileged Controls. Please contact Customer Support.");
         }
 
         await priceIncreaseScheduler.Release(

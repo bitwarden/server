@@ -433,7 +433,7 @@ public class BusinessUnitConverterTests
 
         var problems = result.AsT1;
 
-        Assert.Contains("Organization has Privileged Access Management turned on. Turn it off before converting this organization to a business unit.", problems);
+        Assert.Contains("Organization has Privileged Controls turned on. Turn it off before converting this organization to a business unit.", problems);
 
         await _providerRepository.DidNotReceiveWithAnyArgs().CreateAsync(Arg.Any<Provider>());
     }

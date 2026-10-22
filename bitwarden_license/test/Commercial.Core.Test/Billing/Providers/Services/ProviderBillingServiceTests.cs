@@ -2665,7 +2665,7 @@ public class ProviderBillingServiceTests
             sutProvider.Sut.AddExistingOrganization(provider, organization, key));
 
         Assert.Equal(
-            "Organizations managed by a provider can't use Privileged Access Management. Please contact Customer Support.",
+            "Organizations managed by a provider can't use Privileged Controls. Please contact Customer Support.",
             exception.Message);
         await priceIncreaseScheduler.DidNotReceiveWithAnyArgs()
             .Release(default, default, default);
