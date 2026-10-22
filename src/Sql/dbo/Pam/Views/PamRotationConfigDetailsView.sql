@@ -15,6 +15,7 @@ SELECT
     C.[CreationDate],
     C.[RevisionDate],
     C.[SealedData],
+    C.[WrappedKey],
     T.[Name] AS [TargetSystemName],
     T.[Method] AS [TargetSystemMethod],
     CASE
