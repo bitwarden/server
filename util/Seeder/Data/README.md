@@ -34,7 +34,7 @@ index-set selection like `ArchiveDeleteDistribution.Select(...)` for lifecycle-s
 
 #### Calibrated login rates
 
-`CipherComposer` constants, measured on a large EU org (2026-10-11). They apply to every preset that generates logins.
+`CipherComposer` constants, measured on a large EU org (2026-10-11). They apply to every preset that generates ciphers.
 Re-measure before changing them.
 
 | Constant | Value | Source |
@@ -43,6 +43,7 @@ Re-measure before changing them.
 | `NotesPer100Logins` | 37 | Target org (fleet: 8%). Note lengths have a long tail: 70% short, 25% a paragraph, 5% runbook-sized |
 | `FieldsPer100Logins` / `TotpPer100Logins` | 6 / 2 | Target org (fleet: 4% / 2.1%) |
 | `PasskeysPer100Logins` / `PasswordHistoryPer100Logins` | 1 / 6 | Prod: passkeys on 0.2-1.2% of logins, history on 5-7% |
+| `ItemKeysPer100` | 55 | Generated items of every type with their own key (`Cipher.Key`), as in the target org (fleet: 33%) |
 
 Stored login `Data` omits the legacy top-level `Uri`, as the API does.
 

@@ -24,6 +24,8 @@ Seeded ciphers and attachments reproduce Bitwarden's historical encryption schem
 
 **Invariant:** a cipher and its attachments use the same strategy — a `v2` attachment requires a `cipherKey` host; `v0`/`v1` require a `userKey` host.
 
+Generated ciphers (not fixtures) mix both cipher encryption values: about 55% of the items of each type get a `cipherKey` (`CipherComposer.ItemKeysPer100`), the rest stay `userKey`.
+
 > **Not the same as account "Encryption V1/V2".** The attachment `v0/v1/v2` axis is about attachment key wrapping. Everything the seeder emits is Encryption-V1 (AES-256-CBC-HMAC, type-2 EncString) — there is no XChaCha20/COSE (Encryption V2) path. See the [cryptography guide](https://contributing.bitwarden.com/architecture/cryptography/crypto-guide).
 
 ### Data Structure Differences

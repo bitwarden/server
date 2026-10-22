@@ -271,6 +271,16 @@ public class CipherComposerTests
         Assert.All(withUris, data => Assert.False(data.ContainsKey(nameof(CipherLoginData.Uri))));
     }
 
+    [Theory]
+    [InlineData(CipherType.Login, 1_000)]
+    [InlineData(CipherType.Card, 100)]
+    public void Compose_Items_FiftyFivePercentHaveTheirOwnKey(CipherType cipherType, int total)
+    {
+        var items = ComposeItems(cipherType, total, RustSdkService.GenerateOrganizationKeys().Key);
+
+        Assert.Equal(CipherComposer.ItemKeysPer100 * total / 100, items.Count(cipher => cipher.Key is not null));
+    }
+
     [Fact]
     public void Compose_OnePassVault_GivesEveryCompanyAUriBearingLogin()
     {

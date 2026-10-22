@@ -6,6 +6,7 @@ using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Data.Generators;
 using Bit.Seeder.Data.Static;
+using Bit.Seeder.Enums;
 using Bit.Seeder.Models;
 
 namespace Bit.Seeder.Factories;
@@ -51,6 +52,12 @@ internal static class CipherComposer
     /// Logins per 100 that carry a TOTP secret. EU prod 2026-10-11, target org: 1.9% (fleet: 2.1%).
     /// </summary>
     internal const int TotpPer100Logins = 2;
+
+    /// <summary>
+    /// Generated items per 100, of every type, encrypted with their own key wrapped by the org or user key.
+    /// EU prod 2026-10-11, target org (fleet: 33%).
+    /// </summary>
+    internal const int ItemKeysPer100 = 55;
 
     /// <summary>
     /// Composes one encrypted cipher of the given type for an organization or a personal vault.
@@ -146,6 +153,7 @@ internal static class CipherComposer
             Notes = Spread(index, 13, 5) < NotesPer100Logins ? LoginExtras.Notes(index, company.Category.ToString()) : null,
             Fields = Spread(index, 17, 7) < FieldsPer100Logins ? LoginExtras.Fields(index) : null,
             EncryptionKey = encryptionKey,
+            CipherEncryption = EncryptionFor(index),
             OrganizationId = organizationId,
             UserId = userId,
             Reprompt = reprompt,
@@ -164,6 +172,10 @@ internal static class CipherComposer
     // A stride coprime with 100 hits every residue once per block of 100 logins, so each rate is exact;
     // a different stride per content kind keeps the kinds from piling onto the same logins
     private static int Spread(int index, int stride, int offset) => (index * stride + offset) % 100;
+
+    // Each cipher type is one contiguous run of indices, so a stride on the raw index reaches every type
+    private static CipherEncryptionType EncryptionFor(int index) =>
+        Spread(index, 37, 11) < ItemKeysPer100 ? CipherEncryptionType.CipherKey : CipherEncryptionType.UserKey;
 
     internal static List<PasswordHistoryViewDto> BuildPasswordHistory(
         int index,
@@ -215,6 +227,7 @@ internal static class CipherComposer
             Type = CipherType.Card,
             Name = $"{card.CardholderName}'s {card.Brand}",
             EncryptionKey = encryptionKey,
+            CipherEncryption = EncryptionFor(index),
             OrganizationId = organizationId,
             UserId = userId,
             Reprompt = reprompt,
@@ -241,6 +254,7 @@ internal static class CipherComposer
             Type = CipherType.Identity,
             Name = name,
             EncryptionKey = encryptionKey,
+            CipherEncryption = EncryptionFor(index),
             OrganizationId = organizationId,
             UserId = userId,
             Reprompt = reprompt,
@@ -263,6 +277,7 @@ internal static class CipherComposer
             Name = name,
             Notes = notes,
             EncryptionKey = encryptionKey,
+            CipherEncryption = EncryptionFor(index),
             OrganizationId = organizationId,
             UserId = userId,
             Reprompt = reprompt
@@ -282,6 +297,7 @@ internal static class CipherComposer
             Type = CipherType.SSHKey,
             Name = $"SSH Key {index + 1}",
             EncryptionKey = encryptionKey,
+            CipherEncryption = EncryptionFor(index),
             OrganizationId = organizationId,
             UserId = userId,
             Reprompt = reprompt,

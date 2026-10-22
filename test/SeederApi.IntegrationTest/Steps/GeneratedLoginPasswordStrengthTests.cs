@@ -16,6 +16,7 @@ namespace Bit.SeederApi.IntegrationTest.Steps;
 /// Verifies that the cipher generation steps spread login passwords over every strength of the default
 /// password distribution when logins lead the cipher type mix, as they do in the default mix. The generator
 /// comes from <see cref="InitGeneratorStep"/>, which builds it without a cipher count, as the preset path does.
+/// Only logins without their own key are counted: the org or user key can decrypt them.
 /// </summary>
 public sealed class GeneratedLoginPasswordStrengthTests
 {
@@ -56,6 +57,8 @@ public sealed class GeneratedLoginPasswordStrengthTests
     {
         var passwords = ciphers
             .Where(cipher => cipher.Type == CipherType.Login)
+            // An item with its own key needs that key unwrapped first; the org or user key alone cannot decrypt it
+            .Where(cipher => cipher.Key is null)
             .Select(cipher => JsonSerializer.Deserialize<CipherLoginData>(cipher.Data)!.Password!)
             .Select(encrypted => RustSdkService.DecryptString(encrypted, encryptionKey))
             .ToList();
