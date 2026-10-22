@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Constants;
+using Bit.Core;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
@@ -8,6 +9,7 @@ using Bit.Invoicing.InvoicePreviews;
 using Bit.Invoicing.InvoicePreviews.Models;
 using Bit.Subscriptions.Organization.Models.Requests;
 using Bit.Subscriptions.Organization.Queries;
+using Bitwarden.Server.Sdk.Features;
 using NSubstitute;
 using Stripe;
 using Xunit;
@@ -24,20 +26,34 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly ISubscriptionDiscountService _subscriptionDiscountService = Substitute.For<ISubscriptionDiscountService>();
     private readonly ITaxService _taxService = Substitute.For<ITaxService>();
+    private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly IInvoicePreviewService _invoicePreviewService = Substitute.For<IInvoicePreviewService>();
     private readonly PreviewOrganizationSubscriptionPurchaseQuery _sut;
+
+    private const int PamDefaultSeatMinimum = 10;
+    private const int PamPromotionalSeatMinimum = 5;
 
     public PreviewOrganizationSubscriptionPurchaseQueryTests()
     {
         _sut = new PreviewOrganizationSubscriptionPurchaseQuery(
-            _logger, _pricingClient, _subscriptionDiscountService, _taxService, _invoicePreviewService);
+            _logger, _pricingClient, _subscriptionDiscountService, _taxService, _featureService, _invoicePreviewService);
+
+        _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(true);
 
         _pricingClient.GetPlan(PlanType.FamiliesAnnually).Returns(TestPlan.Packaged("2020-families-org-annually", "personal-storage-gb-annually"));
         _pricingClient.GetPlan(PlanType.TeamsAnnually).Returns(TestPlan.SeatBased("teams-seat-annually", "storage-gb-annually", "sm-teams-seat-annually", "sm-teams-sa-annually"));
         _pricingClient.GetPlan(PlanType.TeamsMonthly).Returns(TestPlan.SeatBased("teams-seat-monthly", "storage-gb-monthly", "sm-teams-seat-monthly", "sm-teams-sa-monthly"));
-        _pricingClient.GetPlan(PlanType.EnterpriseAnnually).Returns(TestPlan.SeatBased("enterprise-seat-annually", "storage-gb-annually", "sm-enterprise-seat-annually", "sm-enterprise-sa-annually"));
-        _pricingClient.GetPlan(PlanType.EnterpriseMonthly).Returns(TestPlan.SeatBased("enterprise-seat-monthly", "storage-gb-monthly", "sm-enterprise-seat-monthly", "sm-enterprise-sa-monthly"));
+        _pricingClient.GetPlan(PlanType.EnterpriseAnnually).Returns(TestPlan.SeatBased("enterprise-seat-annually", "storage-gb-annually", "sm-enterprise-seat-annually", "sm-enterprise-sa-annually", PrivilegedControls("pam-seat-annually")));
+        _pricingClient.GetPlan(PlanType.EnterpriseMonthly).Returns(TestPlan.SeatBased("enterprise-seat-monthly", "storage-gb-monthly", "sm-enterprise-seat-monthly", "sm-enterprise-sa-monthly", PrivilegedControls("pam-seat-monthly")));
     }
+
+    private static Bit.Core.Models.StaticStore.Plan.PrivilegedControlsPlanFeatures PrivilegedControls(string seatPlanId) =>
+        new()
+        {
+            StripeSeatPlanId = seatPlanId,
+            DefaultSeatMinimum = PamDefaultSeatMinimum,
+            PromotionalSeatMinimums = [PamPromotionalSeatMinimum]
+        };
 
     [Fact]
     public async Task Run_WhenPurchaseIsMissing_ThrowsBadRequest()
@@ -422,6 +438,7 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
             PlanCadenceType.Annually,
             new PasswordManagerSelections(4, 2, false),
             new SecretsManagerSelections(4, 20, true),
+            null,
             ["USER-COUPON"])));
 
         var options = CapturedOptions();
@@ -436,6 +453,90 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
         Assert.Single(items, item => item.Price == "storage-gb-annually" && item.Quantity == 2);
         Assert.Single(items, item => item.Price == "sm-teams-seat-annually" && item.Quantity == 4);
         Assert.Single(items, item => item.Price == "sm-teams-sa-annually" && item.Quantity == 20);
+    }
+
+    [Fact]
+    public async Task Run_ForEnterpriseWithPrivilegedControlsAndNoRequestedMinimum_AddsTheDefaultMinimumSeatLine()
+    {
+        ArrangePreview();
+
+        await _sut.Run(User(), Request(Purchase(ProductTierType.Enterprise) with
+        {
+            PrivilegedControls = new PrivilegedControlsSelections(null)
+        }));
+
+        Assert.Single(CapturedOptions().SubscriptionDetails.Items,
+            item => item.Price == "pam-seat-annually" && item.Quantity == PamDefaultSeatMinimum);
+    }
+
+    [Fact]
+    public async Task Run_WithAnApprovedPromotionalMinimum_AddsThatSeatCount()
+    {
+        ArrangePreview();
+
+        await _sut.Run(User(), Request(Purchase(ProductTierType.Enterprise) with
+        {
+            PrivilegedControls = new PrivilegedControlsSelections(PamPromotionalSeatMinimum)
+        }));
+
+        Assert.Single(CapturedOptions().SubscriptionDetails.Items,
+            item => item.Price == "pam-seat-annually" && item.Quantity == PamPromotionalSeatMinimum);
+    }
+
+    [Fact]
+    public async Task Run_WithAnUnapprovedPromotionalMinimum_FallsBackToTheDefault()
+    {
+        ArrangePreview();
+
+        await _sut.Run(User(), Request(Purchase(ProductTierType.Enterprise) with
+        {
+            PrivilegedControls = new PrivilegedControlsSelections(PamPromotionalSeatMinimum - 1)
+        }));
+
+        Assert.Single(CapturedOptions().SubscriptionDetails.Items,
+            item => item.Price == "pam-seat-annually" && item.Quantity == PamDefaultSeatMinimum);
+    }
+
+    [Fact]
+    public async Task Run_WhenPrivilegedControlsBillingIsDisabled_IgnoresTheSelection()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(false);
+        ArrangePreview();
+
+        await _sut.Run(User(), Request(Purchase(ProductTierType.Enterprise) with
+        {
+            PrivilegedControls = new PrivilegedControlsSelections(null)
+        }));
+
+        Assert.DoesNotContain(CapturedOptions().SubscriptionDetails.Items, item => item.Price == "pam-seat-annually");
+    }
+
+    [Theory]
+    [InlineData(ProductTierType.Teams)]
+    [InlineData(ProductTierType.Families)]
+    public async Task Run_WithPrivilegedControlsOnANonEnterpriseTier_ThrowsBadRequest(ProductTierType tier)
+    {
+        var request = Request(Purchase(tier) with { PrivilegedControls = new PrivilegedControlsSelections(null) });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(User(), request));
+
+        Assert.True(exception.ModelState!.ContainsKey("Purchase.PrivilegedControls"));
+        await AssertNoIoAsync();
+    }
+
+    [Fact]
+    public async Task Run_WithPrivilegedControlsAndStandaloneSecretsManager_ThrowsBadRequest()
+    {
+        var request = Request(Purchase(ProductTierType.Enterprise) with
+        {
+            SecretsManager = new SecretsManagerSelections(4, 0, true),
+            PrivilegedControls = new PrivilegedControlsSelections(null)
+        });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(User(), request));
+
+        Assert.True(exception.ModelState!.ContainsKey("Purchase.PrivilegedControls"));
+        await AssertNoIoAsync();
     }
 
     [Fact]
@@ -637,7 +738,7 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
         ProductTierType tier,
         PlanCadenceType cadence = PlanCadenceType.Annually,
         PasswordManagerSelections? passwordManager = null) =>
-        new(tier, cadence, passwordManager ?? new PasswordManagerSelections(1, 0, false), null, null);
+        new(tier, cadence, passwordManager ?? new PasswordManagerSelections(1, 0, false), null, null, null);
 
     private static PreviewOrganizationSubscriptionPurchaseRequest Request(PurchaseSelections purchase, BillingAddressSelections? billingAddress = null) =>
         new(purchase, billingAddress ?? Address());
@@ -684,18 +785,28 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
 
     private sealed record TestPlan : Bit.Core.Models.StaticStore.Plan
     {
-        private TestPlan(PasswordManagerPlanFeatures passwordManager, SecretsManagerPlanFeatures? secretsManager)
+        private TestPlan(
+            PasswordManagerPlanFeatures passwordManager,
+            SecretsManagerPlanFeatures? secretsManager,
+            PrivilegedControlsPlanFeatures? privilegedControls = null)
         {
             PasswordManager = passwordManager;
             SecretsManager = secretsManager!;
+            PrivilegedControls = privilegedControls!;
         }
 
         public static TestPlan Packaged(string planId, string storagePlanId) =>
             new(new PasswordManagerPlanFeatures { StripePlanId = planId, StripeStoragePlanId = storagePlanId }, null);
 
-        public static TestPlan SeatBased(string seatPlanId, string storagePlanId, string secretsManagerSeatPlanId, string serviceAccountPlanId) =>
+        public static TestPlan SeatBased(
+            string seatPlanId,
+            string storagePlanId,
+            string secretsManagerSeatPlanId,
+            string serviceAccountPlanId,
+            PrivilegedControlsPlanFeatures? privilegedControls = null) =>
             new(
                 new PasswordManagerPlanFeatures { StripeSeatPlanId = seatPlanId, StripeStoragePlanId = storagePlanId },
-                new SecretsManagerPlanFeatures { StripeSeatPlanId = secretsManagerSeatPlanId, StripeServiceAccountPlanId = serviceAccountPlanId });
+                new SecretsManagerPlanFeatures { StripeSeatPlanId = secretsManagerSeatPlanId, StripeServiceAccountPlanId = serviceAccountPlanId },
+                privilegedControls);
     }
 }

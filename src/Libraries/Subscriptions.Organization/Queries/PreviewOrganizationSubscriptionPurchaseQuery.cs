@@ -1,6 +1,8 @@
-﻿using Bit.Core.Billing.Constants;
+﻿using Bit.Core;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Services;
@@ -9,6 +11,7 @@ using Bit.Core.Exceptions;
 using Bit.Invoicing.InvoicePreviews;
 using Bit.Invoicing.InvoicePreviews.Models;
 using Bit.Subscriptions.Organization.Models.Requests;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using OrganizationPlan = Bit.Core.Models.StaticStore.Plan;
@@ -26,13 +29,21 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
     IPricingClient pricingClient,
     ISubscriptionDiscountService subscriptionDiscountService,
     ITaxService taxService,
+    IFeatureService featureService,
     IInvoicePreviewService invoicePreviewService) : IPreviewOrganizationSubscriptionPurchaseQuery
 {
     private const string CatalogFaultMessage = "The plan could not be previewed. Please contact support for assistance.";
 
     public async Task<InvoicePreview> Run(UserEntity user, PreviewOrganizationSubscriptionPurchaseRequest request)
     {
-        var (purchase, tier, cadence, passwordManager) = ValidatePurchase(request.Purchase);
+        // Drop the Privileged Controls selection up front when billing is disabled, so the rest of the
+        // flow treats a disabled flag exactly like an absent selection.
+        var requestedPurchase = request.Purchase is { PrivilegedControls: not null } p &&
+                                !featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support)
+            ? p with { PrivilegedControls = null }
+            : request.Purchase;
+
+        var (purchase, tier, cadence, passwordManager) = ValidatePurchase(requestedPurchase);
         var customerDetails = ResolveBillingAddress(request.BillingAddress);
         var (planType, planTier) = ResolvePlan(tier, cadence);
 
@@ -67,7 +78,7 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
         {
             var plan = await GetPlanAsync(user, planType);
 
-            options.SubscriptionDetails.Items = BuildItems(plan, passwordManager, purchase.SecretsManager);
+            options.SubscriptionDetails.Items = BuildItems(plan, passwordManager, purchase.SecretsManager, purchase.PrivilegedControls);
 
             if (purchase.SecretsManager is { Standalone: true })
             {
@@ -202,6 +213,23 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
             }
         }
 
+        if (purchase.PrivilegedControls is not null)
+        {
+            if (tier != ProductTierType.Enterprise)
+            {
+                throw new BadRequestException(
+                    $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.PrivilegedControls)}",
+                    "Privileged Controls is only available on the Enterprise plan.");
+            }
+
+            if (purchase.SecretsManager is { Standalone: true })
+            {
+                throw new BadRequestException(
+                    $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.PrivilegedControls)}",
+                    "Privileged Controls cannot be combined with a Secrets Manager trial.");
+            }
+        }
+
         return (purchase, tier, cadence, passwordManager);
     }
 
@@ -316,7 +344,8 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
     }
 
     private static List<InvoiceSubscriptionDetailsItemOptions> BuildItems(
-        OrganizationPlan plan, PasswordManagerSelections passwordManager, SecretsManagerSelections? secretsManager)
+        OrganizationPlan plan, PasswordManagerSelections passwordManager, SecretsManagerSelections? secretsManager,
+        PrivilegedControlsSelections? privilegedControls)
     {
         // Packaged plans (Families) bill one package regardless of seats, matching subscription creation.
         var items = new List<InvoiceSubscriptionDetailsItemOptions>
@@ -351,6 +380,16 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
                     Quantity = secretsManager.AdditionalServiceAccounts
                 });
             }
+        }
+
+        // Trials bill Privileged Controls at the resolved seat minimum, matching subscription creation.
+        if (privilegedControls is not null && plan.SupportsPrivilegedControls)
+        {
+            items.Add(new InvoiceSubscriptionDetailsItemOptions
+            {
+                Price = plan.PrivilegedControls.StripeSeatPlanId,
+                Quantity = PrivilegedControlsSeatMinimumResolver.Resolve(plan.PrivilegedControls, privilegedControls.RequestedSeatMinimum)
+            });
         }
 
         return items;
