@@ -30,6 +30,7 @@ public class TwoFactorControllerEmailTests
 {
     private const string DeviceIdentifier = "device-identifier";
     private const string MasterPasswordHash = "master-password-hash";
+    private const string LogInAgainMessage = "Log out and log back in to set up email two-step login.";
 
     [Theory, BitAutoData]
     public async Task GetEmail_Success(
@@ -144,6 +145,32 @@ public class TwoFactorControllerEmailTests
             .SendTwoFactorSetupEmailAsync(default, default);
     }
 
+    /// <summary>
+    /// Without a device, the user is told to log in again and no code is sent.
+    /// </summary>
+    [Theory]
+    [BitAutoData((string)null)]
+    [BitAutoData("")]
+    [BitAutoData(" ")]
+    public async Task SendEmailSetup_NoDevice_ThrowsLogInAgain(
+        string deviceIdentifier,
+        User user,
+        TwoFactorEmailSetupRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupUserVerificationTokenFactoryToUnprotectInto(
+            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.Email));
+        sutProvider.GetDependency<ICurrentContext>().DeviceIdentifier = deviceIdentifier;
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SendEmailSetup(model));
+
+        Assert.Equal(LogInAgainMessage, exception.Message);
+        await sutProvider.GetDependency<ITwoFactorEmailService>()
+            .DidNotReceiveWithAnyArgs()
+            .SendTwoFactorSetupEmailAsync(default, default);
+    }
+
     [Theory, BitAutoData]
     public async Task PutEmail_ValidTokenAndOtp_ReturnsResponse(
         User user,
@@ -185,6 +212,35 @@ public class TwoFactorControllerEmailTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutEmail(model));
         AssertModelStateContains(exception, "Token", "Invalid token.");
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateTwoFactorProviderAsync(default, default);
+    }
+
+    /// <summary>
+    /// Without a device, the user is told to log in again, the code is not checked, and email 2FA stays disabled.
+    /// </summary>
+    [Theory]
+    [BitAutoData((string)null)]
+    [BitAutoData("")]
+    [BitAutoData(" ")]
+    public async Task PutEmail_NoDevice_ThrowsLogInAgain(
+        string deviceIdentifier,
+        User user,
+        TwoFactorEmailUpdateRequestModel model,
+        SutProvider<TwoFactorController> sutProvider)
+    {
+        SetupGetUserByPrincipalAsync(sutProvider, user);
+        SetupUserVerificationTokenFactoryToUnprotectInto(
+            sutProvider, ValidUserVerificationTokenableFor(user, TwoFactorProviderType.Email));
+        sutProvider.GetDependency<ICurrentContext>().DeviceIdentifier = deviceIdentifier;
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutEmail(model));
+
+        Assert.Equal(LogInAgainMessage, exception.Message);
+        await sutProvider.GetDependency<ITwoFactorEmailService>()
+            .DidNotReceiveWithAnyArgs()
+            .VerifyTwoFactorSetupTokenAsync(default, default, default);
         await sutProvider.GetDependency<IUserService>()
             .DidNotReceiveWithAnyArgs()
             .UpdateTwoFactorProviderAsync(default, default);

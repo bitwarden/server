@@ -426,9 +426,10 @@ public class TwoFactorController : Controller
     public async Task SendEmailSetup([FromBody] TwoFactorEmailSetupRequestModel model)
     {
         var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.Email);
+        var deviceIdentifier = GetEmailSetupDeviceIdentifier();
         // Add email to the user's 2FA providers, with the email address they've provided.
         model.ToUser(user);
-        await _twoFactorEmailService.SendTwoFactorSetupEmailAsync(user, _currentContext.DeviceIdentifier);
+        await _twoFactorEmailService.SendTwoFactorSetupEmailAsync(user, deviceIdentifier);
     }
 
     [AllowAnonymous]
@@ -492,10 +493,10 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorEmailUpdateResponseModel> PutEmail([FromBody] TwoFactorEmailUpdateRequestModel model)
     {
         var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.Email);
+        var deviceIdentifier = GetEmailSetupDeviceIdentifier();
         model.ToUser(user);
 
-        if (!await _twoFactorEmailService.VerifyTwoFactorSetupTokenAsync(
-                user, _currentContext.DeviceIdentifier, model.Token))
+        if (!await _twoFactorEmailService.VerifyTwoFactorSetupTokenAsync(user, deviceIdentifier, model.Token))
         {
             throw new BadRequestException("Token", "Invalid token.");
         }
@@ -569,6 +570,25 @@ public class TwoFactorController : Controller
             throw new BadRequestException("UserVerificationToken", "User verification failed.");
         }
         return user;
+    }
+
+    /// <summary>Returns the requesting device identifier from the current context.</summary>
+    /// <remarks>
+    /// Every login issues an access token with a device claim, and refreshed access tokens keep it. A token without
+    /// one belongs to a session the user can renew by logging in again.
+    /// </remarks>
+    /// <exception cref="BadRequestException">The current context has no device identifier.</exception>
+    private string GetEmailSetupDeviceIdentifier()
+    {
+        var deviceIdentifier = _currentContext.DeviceIdentifier;
+        if (string.IsNullOrWhiteSpace(deviceIdentifier))
+        {
+            // TODO: PM-45528 - One release after this ships, replace this message with a generic missing-device
+            // message, keep the 400, drop the log-in-again remarks above, and update the NoDevice controller tests.
+            throw new BadRequestException("Log out and log back in to set up email two-step login.");
+        }
+
+        return deviceIdentifier;
     }
 
     /// <summary>Verifies the user has premium access.</summary>

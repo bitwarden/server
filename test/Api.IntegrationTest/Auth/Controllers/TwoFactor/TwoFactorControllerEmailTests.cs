@@ -817,6 +817,30 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
     }
 
     /// <summary>
+    /// Full setup on an SSO session whose access token has been refreshed. Clients refresh the access token right
+    /// after an SSO login, so the refreshed token must keep the session's device for setup to work.
+    /// </summary>
+    [Fact]
+    public async Task PutEmail_SsoAccessTokenRefreshed_EnablesProvider()
+    {
+        var sso = await ArrangeSsoLoginAsync();
+        var login = await PostSsoTokenAsync(sso, DeviceIdentifier, twoFactorToken: null);
+        AssertLoggedIn(login);
+        var refreshToken = login.GetProperty("refresh_token").GetString()!;
+        using var client = CreateAuthenticatedClient(await RefreshAccessTokenAsync(refreshToken));
+        var uvToken = await GetEmailUserVerificationTokenAsync(client);
+        var setupCode = await EmailSetupCodeAsync(client, _userEmail, uvToken);
+
+        var response = await client.PutAsJsonAsync("/two-factor/email",
+            new TwoFactorEmailUpdateRequestModel { Email = _userEmail, Token = setupCode, UserVerificationToken = uvToken });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var provider = (await GetUserAsync()).GetTwoFactorProvider(TwoFactorProviderType.Email);
+        Assert.NotNull(provider);
+        Assert.True(provider.Enabled);
+    }
+
+    /// <summary>
     /// A login code stored in the previous cache format no longer logs in. A user holding one requests a new code.
     /// </summary>
     [Fact]
