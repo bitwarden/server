@@ -127,11 +127,6 @@ public static class TokenPurposes
     public const string LinkSso = "LinkSso";
 }
 
-public static class AuthenticationSchemes
-{
-    public const string BitwardenExternalCookieAuthenticationScheme = "bw.external";
-}
-
 [FlagKeyCollection]
 public static partial class FeatureFlagKeys
 {
