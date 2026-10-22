@@ -27,6 +27,38 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.InviteLinks;
 [SutProviderCustomize]
 public class AcceptOrganizationInviteLinkCommandTests
 {
+    [Theory, BitAutoData]
+    public async Task AcceptAsync_WhenEligibilityFails_ReturnsErrorAndDoesNotPersist(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
+    {
+        // Arrange
+        SetupHappyPath(organization, inviteLink, user, sutProvider);
+        inviteLink.AllowedDomains = "[\"allowed.com\"]";
+
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
+
+        // Act
+        var result = await sutProvider.Sut.AcceptAsync(request);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<EmailDomainNotAllowed>(result.AsError);
+        await sutProvider.GetDependency<IAcceptInviteLinkMembershipValidator>()
+            .DidNotReceiveWithAnyArgs()
+            .ValidateAsync(Arg.Any<AcceptInviteLinkMembershipValidationRequest>());
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(Arg.Any<OrganizationUser>());
+    }
+
     // Membership and policy validation lives in IAcceptInviteLinkMembershipValidator (covered by its own
     // tests); the command must surface any validator error and persist nothing.
     [Theory, BitAutoData]
