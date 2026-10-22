@@ -1,5 +1,6 @@
 ﻿using Bit.Api.Utilities;
 using Bit.Core;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.Context;
 using Bit.Core.Settings;
 using AspNetCoreRateLimit;
@@ -43,6 +44,7 @@ using Bit.Subscriptions.User;
 using Bit.Commercial.Core.SecretsManager;
 using Bit.Commercial.Core.Utilities;
 using Bit.Commercial.Infrastructure.EntityFramework.SecretsManager;
+using Bit.Services.Pam.AccessConnector;
 using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.Utilities;
 #endif
@@ -217,12 +219,19 @@ public class Startup
         services.AddCommercialSecretsManagerServices();
         services.AddSecretsManagerEfRepositories();
         services.AddPamServices();
+        services.Configure<PamRotationOptions>(Configuration.GetSection("globalSettings:pam:rotation"));
         Jobs.JobsHostedService.AddCommercialSecretsManagerJobServices(services);
 #endif
 
         // Billing subscriptions minimal API libraries
         services.AddUserSubscriptions();
         services.AddOrganizationSubscriptions();
+
+        // Registered here rather than in the shared AddOrganizationServices/AddOrganizationSignUpCommands
+        // This command now depends on ICreateOrganizationSubscriptionCommand, which only Api registers (via AddOrganizationSubscriptions).
+        // This command is only used in the Api, so it is registered here rather than in the shared library.
+        services.AddScoped<ICloudOrganizationSignUpCommand, CloudOrganizationSignUpCommand>();
+
         if (!globalSettings.SelfHosted)
         {
             services.AddOpenApiEndpointDataSource(MapSubscriptionEndpoints);

@@ -27,6 +27,7 @@ namespace Bit.Seeder.Pipeline;
 /// Most Core entities require AutoMapper conversion to their EF counterparts before insert;
 /// a few (CollectionCipher) share the same type across layers and copy directly.
 /// Cipher uses a seeder-internal <see cref="CipherBulkRow"/> projection — see <see cref="BulkInsertCiphers"/>.
+/// With data protection disabled, User uses <see cref="UserBulkRow"/> — see <see cref="BulkInsertUnprotectedUsers"/>.
 /// Each list is cleared after insert so the context is ready for the next pipeline run.
 ///
 /// CollectionUser and CollectionGroup require an explicit table name in BulkCopyOptions because
@@ -36,7 +37,7 @@ namespace Bit.Seeder.Pipeline;
 /// </remarks>
 /// <seealso cref="SeederContext"/>
 /// <seealso cref="RecipeExecutor"/>
-internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
+internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper, bool disableDataProtection)
 {
     internal void Commit(SeederContext context)
     {
@@ -48,7 +49,14 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
 
         CommitSsoConfigs(context.SsoConfigs);
 
-        MapCopyAndClear<Core.Entities.User, EfUser>(context.Users);
+        if (disableDataProtection)
+        {
+            BulkInsertUnprotectedUsers(context.Users);
+        }
+        else
+        {
+            MapCopyAndClear<Core.Entities.User, EfUser>(context.Users);
+        }
 
         MapCopyAndClear<Core.Entities.OrganizationUser, EfOrganizationUser>(context.OrganizationUsers);
 
@@ -72,6 +80,13 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
     }
 
     /// <summary>
+    /// Builds BulkCopy options without a timeout. SqlBulkCopy's 30-second default is too short for large
+    /// presets against a remote database. Zero means no limit, which is acceptable for a dev CLI the
+    /// operator can cancel.
+    /// </summary>
+    private static BulkCopyOptions WithoutTimeout(string? tableName = null) => new() { TableName = tableName, BulkCopyTimeout = 0 };
+
+    /// <summary>
     /// Resolves the table name for an EF entity type from the EF Core model,
     /// falling back to the C# class name for SQL Server.
     /// </summary>
@@ -89,14 +104,7 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
 
         var mapped = entities.Select(e => mapper.Map<TEf>(e));
 
-        if (tableName is not null)
-        {
-            db.BulkCopy(new BulkCopyOptions { TableName = tableName }, mapped);
-        }
-        else
-        {
-            db.BulkCopy(mapped);
-        }
+        db.BulkCopy(WithoutTimeout(tableName), mapped);
 
         entities.Clear();
     }
@@ -109,7 +117,7 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
         }
 
         var mapped = mapper.Map<TEf>(entity);
-        db.BulkCopy(new[] { mapped });
+        db.BulkCopy(WithoutTimeout(), new[] { mapped });
     }
 
     private void CopyAndClear<T>(List<T> entities) where T : class
@@ -119,7 +127,7 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
             return;
         }
 
-        db.BulkCopy(entities);
+        db.BulkCopy(WithoutTimeout(), entities);
         entities.Clear();
     }
 
@@ -148,6 +156,22 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
 
         db.SaveChanges();
         ssoConfigs.Clear();
+    }
+
+    /// <summary>
+    /// Bulk-inserts users via a <see cref="UserBulkRow"/> projection, which bypasses the EF
+    /// <c>DataProtectionConverter</c> on <c>Key</c> and <c>MasterPassword</c>.
+    /// The server reads unprefixed values as-is.
+    /// </summary>
+    private void BulkInsertUnprotectedUsers(List<Core.Entities.User> users)
+    {
+        if (users.Count is 0)
+        {
+            return;
+        }
+
+        db.BulkCopy(WithoutTimeout(GetTableName<EfUser>()), users.Select(UserBulkRow.From));
+        users.Clear();
     }
 
     /// <summary>
@@ -182,11 +206,7 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
             Key = c.Key,
         });
 
-        var options = tableName is not null
-            ? new BulkCopyOptions { TableName = tableName }
-            : new BulkCopyOptions();
-
-        db.BulkCopy(options, rows);
+        db.BulkCopy(WithoutTimeout(tableName), rows);
         ciphers.Clear();
     }
 
