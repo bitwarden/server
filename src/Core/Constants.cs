@@ -141,6 +141,7 @@ public static partial class FeatureFlagKeys
     public const string GenerateInviteLink = "pm-32497-generate-invite-link";
     public const string InviteLinkAutoConfirm = "pm-34429-invite-link-auto-confirm";
     public const string InviteLinkNotification = "pm-39601-invite-link-notification";
+    public const string AutoReinviteUsers = "pm-39473-auto-reinvite-users";
     public const string PM35153CollectionSdkDecryption = "pm-35153-collection-sdk-decryption";
     public const string PM43375CollectionsDecryptListFailures = "pm-43375-collections-decrypt-list-failures";
     public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
