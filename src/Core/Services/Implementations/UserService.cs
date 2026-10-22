@@ -541,13 +541,20 @@ public class UserService : UserManager<User>, IUserService
     }
 
     // TODO removed with https://bitwarden.atlassian.net/browse/PM-27328
-    public async Task<IdentityResult> SetKeyConnectorKeyAsync(User user, string key, string orgIdentifier)
+    public async Task<IdentityResult> SetKeyConnectorKeyAsync(User user, string key, string orgIdentifier,
+        bool acceptOrganizationInvite = true)
     {
         var identityResult = CheckCanUseKeyConnector(user);
         if (identityResult != null)
         {
             return identityResult;
         }
+
+        // Make sure the user belongs to the organization specified by orgIdentifier before setting keys.
+        var org = await _organizationRepository.GetByIdentifierAsync(orgIdentifier)
+            ?? throw new BadRequestException(new OrganizationNotFoundError().Message);
+        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, user.Id)
+            ?? throw new BadRequestException(new UserNotFoundInOrganizationError().Message);
 
         user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
         user.Key = key;
@@ -556,7 +563,10 @@ public class UserService : UserManager<User>, IUserService
         await _userRepository.ReplaceAsync(user);
         await _eventService.LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
 
-        await _acceptOrgUserCommand.AcceptOrgUserByOrgSsoIdAsync(orgIdentifier, user, this);
+        if (acceptOrganizationInvite)
+        {
+            await _acceptOrgUserCommand.AcceptOrgUserAsync(orgUser, user, this);
+        }
 
         return IdentityResult.Success;
     }
