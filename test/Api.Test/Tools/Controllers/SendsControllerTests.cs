@@ -1653,6 +1653,44 @@ public class SendsControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task AccessUsingAuth_ItemSend_LogsSendAccessedItem()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing).Returns(true);
+        var sendId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.Item,
+            Data = JsonSerializer.Serialize(new SendItemData
+            {
+                Data = "ENCRYPTED_DATA",
+                EncryptionVersion = SendEncryptionType.V1,
+                Metadata = new SendItemMetadata
+                {
+                    ItemId = Guid.NewGuid(),
+                }
+            }),
+            AuthType = AuthType.Email,
+            Emails = "recipient@bitwarden.com",
+            HideEmail = true,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+        };
+
+        _sut.ControllerContext = CreateControllerContextWithUser(CreateUserWithSendIdClaim(sendId));
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        await _sut.AccessUsingAuth();
+
+        await _eventService.Received(1).LogSendEventAsync(
+            userId,
+            Arg.Any<Guid>(),
+            EventType.Send_Accessed_Item,
+            Arg.Any<IReadOnlyDictionary<Guid, SendAccessEventOrgContext>>());
+    }
+
+    [Fact]
     public async Task AccessUsingAuth_FileSend_DoesNotLogAccessEvent()
     {
         var sendId = Guid.NewGuid();
