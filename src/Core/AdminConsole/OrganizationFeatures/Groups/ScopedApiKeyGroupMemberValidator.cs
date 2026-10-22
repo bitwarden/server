@@ -29,7 +29,10 @@ public class ScopedApiKeyGroupMemberValidator(
         }
 
         var changedMembers = await organizationUserRepository.GetManyAsync(changedMemberIds);
-        return changedMembers.Any(m => m.OrganizationId == organizationId && m.Type != OrganizationUserType.User)
+        var containsNonUserMember = changedMembers.Any(m =>
+            m.OrganizationId == organizationId && m.Type != OrganizationUserType.User);
+
+        return containsNonUserMember
             ? new ScopedApiKeyCanOnlyManageUsers()
             : null;
     }
