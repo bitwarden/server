@@ -238,6 +238,7 @@ public class BusinessUnitConverterTests
     {
         organization.PlanType = PlanType.EnterpriseAnnually;
         organization.UseSecretsManager = false;
+        organization.UsePam = false;
 
         _subscriberService.GetSubscription(organization).Returns(new Subscription
         {
@@ -315,6 +316,7 @@ public class BusinessUnitConverterTests
     {
         organization.PlanType = PlanType.TeamsMonthly;
         organization.UseSecretsManager = true;
+        organization.UsePam = false;
 
         _subscriberService.GetSubscription(organization).Returns(new Subscription
         {
@@ -363,6 +365,7 @@ public class BusinessUnitConverterTests
     {
         organization.PlanType = PlanType.EnterpriseAnnually;
         organization.UseSecretsManager = true;
+        organization.UsePam = false;
 
         _subscriberService.GetSubscription(organization).Returns(new Subscription
         {
@@ -391,6 +394,46 @@ public class BusinessUnitConverterTests
         var problems = result.AsT1;
 
         Assert.Contains("Organization is subscribed to Secrets Manager. Please contact Customer Support to convert this organization to a business unit.", problems);
+
+        await _providerRepository.DidNotReceiveWithAnyArgs().CreateAsync(Arg.Any<Provider>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitiateConversion_OrganizationUsesPam_ReturnsError(
+        Organization organization,
+        string providerAdminEmail)
+    {
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        organization.UseSecretsManager = false;
+        organization.UsePam = true;
+
+        _subscriberService.GetSubscription(organization).Returns(new Subscription
+        {
+            Status = StripeConstants.SubscriptionStatus.Active
+        });
+
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = providerAdminEmail
+        };
+
+        _userRepository.GetByEmailAsync(providerAdminEmail).Returns(user);
+
+        var organizationUser = new OrganizationUser { Status = OrganizationUserStatusType.Confirmed };
+
+        _organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id)
+            .Returns(organizationUser);
+
+        var businessUnitConverter = BuildConverter();
+
+        var result = await businessUnitConverter.InitiateConversion(organization, providerAdminEmail);
+
+        Assert.True(result.IsT1);
+
+        var problems = result.AsT1;
+
+        Assert.Contains("Organization has Privileged Access Management turned on. Turn it off before converting this organization to a business unit.", problems);
 
         await _providerRepository.DidNotReceiveWithAnyArgs().CreateAsync(Arg.Any<Provider>());
     }

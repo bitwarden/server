@@ -429,6 +429,11 @@ public class BusinessUnitConverter(
             problems.Add("Organization is subscribed to Secrets Manager. Please contact Customer Support to convert this organization to a business unit.");
         }
 
+        if (organization.UsePam)
+        {
+            problems.Add("Organization has Privileged Access Management turned on. Turn it off before converting this organization to a business unit.");
+        }
+
         var subscription = await subscriberService.GetSubscription(organization);
 
         if (subscription is not
