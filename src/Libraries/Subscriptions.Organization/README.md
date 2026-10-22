@@ -13,13 +13,17 @@ See [LIBRARY.md](../LIBRARY.md) for the shape all libraries under `src/Libraries
 only on `IOrganizationRepository` (or `IUserService` for purchases) and the query or command it runs; the plan-change command
 (`IPreviewOrganizationPlanChangeCommand`), the restart preview command (`IPreviewOrganizationRestartCommand`), the first Privileged Controls purchase command
 (`IAddPrivilegedControlsToExistingSubscriptionCommand`), the Privileged Controls seat change command
-(`IChangePrivilegedControlsSeatsCommand`), and the purchase query (`IPreviewOrganizationSubscriptionPurchaseQuery`); the `StandaloneOrganizationOwnerRequirementHandler`
+(`IChangePrivilegedControlsSeatsCommand`), the Privileged Controls autoscale command
+(`IAutoscalePrivilegedControlsSeatsCommand`), and the purchase query (`IPreviewOrganizationSubscriptionPurchaseQuery`); the `StandaloneOrganizationOwnerRequirementHandler`
 authorization handler; and the `Bit.Invoicing` library they depend on. One handler class per endpoint
 avoids a shared handler that accumulates a dependency per route.
 
 It also registers the implementation of `IPrivilegedControlsSeatChangeSetFactory`. The interface lives in
 `Core` so Admin Console operations, which `Core` cannot reference this library to reach, can inject it; the
-implementation stays internal here.
+implementation stays internal here. `IAutoscalePrivilegedControlsSeatsCommand` and its
+`AutoscalePrivilegedControlsSeatsResult` follow the same split: they live in `Core` so hosts and Admin Console
+operations can resolve the command, and this library implements it. A host that resolves it must call
+`AddOrganizationSubscriptions()`.
 
 `MapOrganizationSubscriptionEndpoints()` attaches the group's cross-cutting chain and maps its
 endpoints to an empty group; the host owns the route prefix and mounts it at
@@ -145,8 +149,8 @@ tax ids with the request's, deleting them when the request has none. Stripe fall
 ids when `customer_details.tax_ids` is omitted and rejects an empty list, so the client prefills the tax id
 to keep the two in step.
 
-A missing subscription, or one in any status other than `canceled`, is a **400** with restart's own message
-("Cannot restart a subscription that is not canceled."), as are an invalid billing address and a tax
+A missing subscription, or one in any status other than `canceled` or `incomplete_expired`, is a **400** with restart's own message
+("Cannot restart a subscription that has not ended."), as are an invalid billing address and a tax
 location or tax id Stripe rejects. A plan the pricing service doesn't have, or a canceled subscription with
 no Password Manager line item, is a **409**. A missing organization is a **404**.
 
@@ -178,8 +182,10 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | `OrganizationSubscriptionChangeSet` (`Bit.Core.Billing.Organizations.Models`) | Composing the plan change the same way the real upgrade does, then translating it into preview line items; building the Privileged Controls seat change |
 | `IUpdateOrganizationSubscriptionCommand` (`Bit.Core.Billing.Organizations.Commands`), `BillingCommandResult` (`Bit.Core.Billing.Commands`) | Charging the first Privileged Controls seats, and surfacing a failed update's message to the client through `GetValueOrThrowHttpException` |
 | `IPrivilegedControlsSeatChangeSetFactory` (`Bit.Core.Billing.Organizations.Helpers`), `PrivilegedControlsSeatChange` (`Bit.Core.Billing.Organizations.Models`) | The factory contract Core owns so Admin Console can inject it; this library implements it |
+| `IAutoscalePrivilegedControlsSeatsCommand` (`Bit.Core.Billing.Organizations.Commands`), `AutoscalePrivilegedControlsSeatsResult` (`Bit.Core.Billing.Organizations.Models`) | The autoscale command contract and its result, which Core owns so hosts and Admin Console can resolve the command; this library implements it |
 | `IOrganizationService` (`Bit.Core.Services`) | Saving the organization's Privileged Controls seats and flags after the first purchase |
-| `IOrganizationUserRepository` (`Bit.Core.Repositories`) | Counting the Privileged Controls seats in use before a seat decrease |
+| `IOrganizationUserRepository` (`Bit.Core.Repositories`) | Counting the Privileged Controls seats in use before a seat decrease and before an autoscale; finding the Owners to email when the autoscale limit is reached |
+| `IMailer` (`Bit.Core.Platform.Mail.Mailer`), `PrivilegedControlsSeatLimitReachedMail` (`Bit.Core.Billing.Models.Mail.Mailer`) | Sending the Privileged Controls autoscale limit reached email to the Owners |
 | `ISubscriptionDiscountService`, `DiscountTierType` (`Bit.Core.Billing.Services`, `Bit.Core.Billing.Enums`) | Eligibility-checking Families purchase coupons |
 | `ITaxService` (`Bit.Core.Billing.Tax.Services`), `StripeConstants.TaxIdType` | Deriving the Stripe tax-id code (and the Spanish-NIF EU-VAT pairing) for `CustomerDetails.TaxIds` |
 | `SponsoredPlans`, `PlanSponsorshipType` (`Bit.Core.Billing.Models`, `Bit.Core.Enums`) | The Families-for-Enterprise sponsored price |
@@ -187,6 +193,15 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | `PlanCadenceType`, `PlanType`, `ProductTierType` (`Bit.Core.Billing.Enums`), `StripeConstants.SubscriptionStatus` | Resolving the target plan, gating the previewable subscription statuses, and the restart preview's `canceled` check |
 | `StripeConstants` (`Bit.Core.Billing.Constants`) | `classic` billing mode, the `sm-standalone` coupon, `customer_tax_location_invalid`, `tax_id_invalid`, the `es_cif` and `eu_vat` tax ID types |
 | `BadRequestException`, `ConflictException` (`Bit.Core.Exceptions`) | Rejected-request responses from the previews and the Privileged Controls purchase, via the group's exception handling |
+| `ICreateOrganizationSubscriptionCommand` (`Bit.Core.Billing.Organizations.Commands`), `OrganizationSubscriptionCreation` (`Bit.Core.Billing.Organizations.Models`) | The net-new-subscription purchase contract Core owns so the cloud sign-up command can inject it; this library implements it |
+| `CustomerSetup`, `SubscriptionSetup` (`Bit.Core.Billing.Models.Sales`), `TokenizedPaymentSource` (`Bit.Core.Billing.Models`), `TaxInformation` (`Bit.Core.Billing.Tax.Models`) | The customer payment/tax/coupon inputs for creating the subscription |
+| `ISubscriberService` (`Bit.Core.Billing.Services`), `IBraintreeGateway` (`Braintree`) | Creating the Stripe customer (Braintree customer for PayPal); the trial's missing-payment-method cancel behavior is derived from `CustomerSetup.IsBillable`, and the cloud region is passed in on the request |
+| `GatewayType`, `PaymentMethodType` (`Bit.Core.Enums`) | Linking the created Stripe gateway and switching on the tokenized payment source type |
 
 Depending on `Core` for these is fine for now; this table exists so they're known, not because
 they're queued up for extraction.
+
+The net-new-subscription create commands (`CreateOrganizationSubscriptionCommand` and its helpers) carry the
+heaviest Core surface here — the full customer-creation path (Braintree, tax, discounts). This mirrors
+`OrganizationBillingService.Finalize` in Core, which the cloud sign-up command still uses for non-Privileged-Controls
+signups; migrating those callers and retiring the Core duplication is follow-up work.
