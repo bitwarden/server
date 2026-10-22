@@ -9,14 +9,8 @@ namespace Bit.SeederUtility.Commands;
 /// </summary>
 internal static class StripeBillingArgs
 {
-    private const int _minTrialDays = 1;
-    private const int _maxTrialDays = 30;
-    private const int _defaultTrialDays = 30;
-
     /// <summary>
-    /// Rejects trial flags that are meaningless or contradictory, then the card and address flags. The day
-    /// range mirrors production's <c>ValidateTrialLength</c> — <c>IOrganizationBillingService.Finalize</c>
-    /// enforces nothing itself, so an out-of-range value would reach Stripe unchecked.
+    /// Rejects trial flags that are meaningless or contradictory, then the card and address flags.
     /// </summary>
     internal static void Validate(bool stripeBilling, bool skipTrial, int? trialDays, string? card, string? address)
     {
@@ -26,17 +20,7 @@ internal static class StripeBillingArgs
                 "--skip-trial and --trial-days only apply to Stripe billing. Add --stripe-billing or drop them.");
         }
 
-        if (skipTrial && trialDays.HasValue)
-        {
-            throw new ArgumentException(
-                "--skip-trial and --trial-days are mutually exclusive: one asks for no trial, the other for a trial.");
-        }
-
-        if (trialDays is < _minTrialDays or > _maxTrialDays)
-        {
-            throw new ArgumentException(
-                $"--trial-days must be between {_minTrialDays} and {_maxTrialDays}.");
-        }
+        StripeBillingOptions.ValidateTrial(skipTrial, trialDays, "--skip-trial", "--trial-days");
 
         ValidateProfile(stripeBilling, card, address);
     }
@@ -66,7 +50,7 @@ internal static class StripeBillingArgs
             ? new StripeBillingOptions
             {
                 SkipTrial = skipTrial,
-                TrialDays = trialDays ?? _defaultTrialDays,
+                TrialDays = trialDays ?? StripeBillingOptions.DefaultTrialDays,
                 Profile = StripeBillingProfile.Parse(card, address),
             }
             : null;

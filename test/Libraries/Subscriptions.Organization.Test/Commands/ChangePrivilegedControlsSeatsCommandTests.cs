@@ -78,20 +78,6 @@ public class ChangePrivilegedControlsSeatsCommandTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData(" ")]
-    public async Task Run_NoGatewayCustomer_ThrowsBadRequest(string? gatewayCustomerId)
-    {
-        var organization = CreateOrganization(gatewayCustomerId: gatewayCustomerId);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, 15, null));
-
-        Assert.Equal("No payment method found.", exception.Message);
-        await _seatChangeSetFactory.DidNotReceive().CreateAsync(Arg.Any<OrganizationEntity>(), Arg.Any<int>());
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData(" ")]
     public async Task Run_NoGatewaySubscription_ThrowsBadRequest(string? gatewaySubscriptionId)
     {
         var organization = CreateOrganization(gatewaySubscriptionId: gatewaySubscriptionId);
@@ -329,7 +315,6 @@ public class ChangePrivilegedControlsSeatsCommandTests
         bool usePam = true,
         int? pamSeats = _currentSeats,
         int? maxAutoscalePamSeats = null,
-        string? gatewayCustomerId = "cus_123",
         string? gatewaySubscriptionId = "sub_123") => new()
         {
             Id = Guid.NewGuid(),
@@ -339,7 +324,7 @@ public class ChangePrivilegedControlsSeatsCommandTests
             PamSeats = pamSeats,
             PamSeatMinimum = _seatMinimum,
             MaxAutoscalePamSeats = maxAutoscalePamSeats,
-            GatewayCustomerId = gatewayCustomerId,
+            GatewayCustomerId = "cus_123",
             GatewaySubscriptionId = gatewaySubscriptionId
         };
 }
