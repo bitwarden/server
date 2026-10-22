@@ -6,6 +6,8 @@
 
 **For detailed usages of the Seeder library, read `util/SeederUtility/README.md` and `util/SeederApi/README.md`**
 
+**To seed a database, use the `seeding-bitwarden-data` skill.** It picks a preset first, runs the CLI, and lists the logins.
+
 ## Commands
 
 ```bash
@@ -102,7 +104,7 @@ Steps accept an optional `DensityProfile` that controls relationship patterns be
 
 ## Regression Testing
 
-Changes to `Factories/`, `Steps/`, `Scenes/`, or `Recipes/` need more than the unit suite — it covers none of the CLI, the SeederApi, or a real database. `Seeds/docs/regression.md` maps each changed path to the preset that reaches it and the assertion that proves it, and records the known non-regressions worth not chasing. Claude drives the CLI, API, and SQL; the developer smoke-tests the web vault.
+Changes to `Factories/`, `Steps/`, `Scenes/`, or `Recipes/` need more than the unit suite — it covers none of the CLI, the SeederApi, or a real database. `Seeds/docs/regression.md` maps each changed path to the preset that reaches it and the assertion that proves it, and records the known non-regressions worth not chasing. Claude drives the CLI, API, and SQL (CLI via `seeding-bitwarden-data`, SQL via `exploring-bitwarden-data`); the developer smoke-tests the web vault.
 
 ## Data/ File Organization
 
@@ -203,6 +205,7 @@ Developer-facing documentation in `Seeds/docs/scenarios/`. Each file maps an eng
 **Maintenance rules:**
 
 - When adding a new preset, check if an existing scenario should reference it as a variation
+- When renaming or removing a preset, update the cases in `.claude/skills/seeding-bitwarden-data/evals/evals.json`
 - When adding a new command or flag, check if it enables a new scenario or changes an existing one
 - When CLI flags, commands, or preset names change, scan all `*.md` files under `Seeds/` and `SeederUtility/` for stale references
 - Scenario files follow the template in `Seeds/docs/scenarios/README.md`
