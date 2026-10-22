@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
@@ -42,18 +41,18 @@ public class AcceptOrganizationInviteLinkCommand(
         var user = request.User;
 
         var link = await organizationInviteLinkRepository.GetByOrganizationIdAsync(request.OrganizationId);
-        var organization = link is null
+        var existingOrganization = link is null
             ? null
             : await organizationRepository.GetByIdAsync(link.OrganizationId);
 
-        var eligibilityError = InviteLinkRules.ValidateEligibility(link, request.Code, organization, user);
+        var eligibilityError = InviteLinkRules.ValidateEligibility(link, request.Code, existingOrganization, user);
         if (eligibilityError is not null)
         {
             return eligibilityError;
         }
 
         // ValidateEligibility guarantees the organization exists.
-        Debug.Assert(organization is not null);
+        var organization = existingOrganization!;
 
         var existingOrganizationUser = await ResolveExistingOrganizationUserAsync(organization, user);
 
