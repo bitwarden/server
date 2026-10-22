@@ -77,7 +77,7 @@
     {
       "id": 8,
       "prompt": "Premium user I can log in as alice@test.example",
-      "expected_output": "Runs `individual --subscription premium --email alice@test.example` without --mangle.",
+      "expected_output": "Runs `individual --subscription premium --email alice@test.example --first-name <first> --last-name <last>` without --mangle.",
       "expectations": [
         "The command uses the individual command with --subscription premium",
         "The command passes --email alice@test.example",
