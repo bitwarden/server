@@ -41,9 +41,14 @@ internal sealed class ConfigureJwtBearerOptions : IConfigureNamedOptions<JwtBear
         if (string.IsNullOrWhiteSpace(options.Authority))
         {
             var internalIdentity = GetInternalIdentity();
-            options.Authority = !string.IsNullOrWhiteSpace(internalIdentity)
-                ? internalIdentity
-                : _environment.SelfHosted ? "http://identity:5000" : null;
+            if (!string.IsNullOrWhiteSpace(internalIdentity))
+            {
+                options.Authority = internalIdentity;
+            }
+            else if (_environment.SelfHosted)
+            {
+                options.Authority = "http://identity:5000";
+            }
         }
 
         // Unlike the authority, this is always computed, so Authentication:Schemes:Bearer:RequireHttpsMetadata is
