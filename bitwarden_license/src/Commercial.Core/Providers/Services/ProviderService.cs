@@ -489,6 +489,12 @@ public class ProviderService : IProviderService
             throw new BadRequestException("Organizations must not be assigned to any Provider.");
         }
 
+        var organizations = await _organizationRepository.GetManyByIdsAsync(orgIdsList);
+        if (organizations.Any(o => o.UsePam))
+        {
+            throw new BadRequestException("Organizations managed by a provider can't use Privileged Access Management. Turn it off for the selected organizations and try again.");
+        }
+
         var providerOrganizationsToInsert = orgIdsList.Select(orgId => new ProviderOrganization { ProviderId = providerId, OrganizationId = orgId });
         var insertedProviderOrganizations = await _providerOrganizationRepository.CreateManyAsync(providerOrganizationsToInsert);
 

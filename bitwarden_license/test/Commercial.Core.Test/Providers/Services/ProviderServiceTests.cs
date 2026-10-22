@@ -1099,7 +1099,9 @@ public class ProviderServiceTests
         foreach (var organization in organizations)
         {
             organization.PlanType = PlanType.EnterpriseAnnually;
+            organization.UsePam = false;
         }
+        sutProvider.GetDependency<IOrganizationRepository>().GetManyByIdsAsync(Arg.Any<IEnumerable<Guid>>()).Returns(organizations.ToList());
 
         var organizationIds = organizations.Select(o => o.Id).ToArray();
 
@@ -1109,6 +1111,44 @@ public class ProviderServiceTests
         await sutProvider.GetDependency<IEventService>().Received(1).LogProviderOrganizationEventsAsync(
             Arg.Is<IEnumerable<(ProviderOrganization, EventType, DateTime?)>>(events => events.All(e =>
                 e.Item1.ProviderId == provider.Id && organizationIds.Contains(e.Item1.OrganizationId) && e.Item2 == EventType.ProviderOrganization_Added)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddOrganizationsToReseller_OrganizationUsesPam_Throws(Provider provider, List<Organization> organizations, SutProvider<ProviderService> sutProvider)
+    {
+        provider.Type = ProviderType.Reseller;
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+
+        organizations = organizations.Take(3).ToList();
+        foreach (var organization in organizations)
+        {
+            organization.UsePam = false;
+        }
+        organizations[1].UsePam = true;
+        sutProvider.GetDependency<IOrganizationRepository>().GetManyByIdsAsync(Arg.Any<IEnumerable<Guid>>()).Returns(organizations);
+
+        var organizationIds = organizations.Select(o => o.Id).ToArray();
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddOrganizationsToReseller(provider.Id, organizationIds));
+        Assert.Equal("Organizations managed by a provider can't use Privileged Access Management. Turn it off for the selected organizations and try again.", exception.Message);
+
+        await sutProvider.GetDependency<IProviderOrganizationRepository>().DidNotReceiveWithAnyArgs().CreateManyAsync(default);
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogProviderOrganizationEventsAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddOrganizationsToReseller_PamSeatsWithoutUsePam_Succeeds(Provider provider, Organization organization, SutProvider<ProviderService> sutProvider)
+    {
+        provider.Type = ProviderType.Reseller;
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+
+        organization.UsePam = false;
+        organization.PamSeats = 5;
+        sutProvider.GetDependency<IOrganizationRepository>().GetManyByIdsAsync(Arg.Any<IEnumerable<Guid>>()).Returns(new List<Organization> { organization });
+
+        await sutProvider.Sut.AddOrganizationsToReseller(provider.Id, [organization.Id]);
+
+        await sutProvider.GetDependency<IProviderOrganizationRepository>().Received(1).CreateManyAsync(Arg.Any<IEnumerable<ProviderOrganization>>());
     }
 
     [Theory, BitAutoData]
