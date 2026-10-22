@@ -17,6 +17,42 @@ namespace Bit.Seeder.Factories;
 internal static class CipherComposer
 {
     /// <summary>
+    /// Logins per 100 that carry a FIDO2 passkey. EU prod 2026-10-11: 0.2-1.2% of logins.
+    /// </summary>
+    internal const int PasskeysPer100Logins = 1;
+
+    /// <summary>
+    /// Logins per 100 that carry a password history. EU prod 2026-10-11: 5-7% of items.
+    /// </summary>
+    internal const int PasswordHistoryPer100Logins = 6;
+
+    /// <summary>
+    /// Logins per 100 that carry at least one URI. EU prod 2026-10-11, target org (fleet: 86%).
+    /// </summary>
+    internal const int UriPer100Logins = 32;
+
+    /// <summary>
+    /// Logins per 100 that carry two URIs, counted inside <see cref="UriPer100Logins"/>.
+    /// EU prod 2026-10-11, target org: 0.9% (fleet: 2.4%).
+    /// </summary>
+    internal const int MultiUriPer100Logins = 1;
+
+    /// <summary>
+    /// Logins per 100 that carry notes. EU prod 2026-10-11, target org (fleet: 8%).
+    /// </summary>
+    internal const int NotesPer100Logins = 37;
+
+    /// <summary>
+    /// Logins per 100 that carry custom fields. EU prod 2026-10-11, target org (fleet: 4%).
+    /// </summary>
+    internal const int FieldsPer100Logins = 6;
+
+    /// <summary>
+    /// Logins per 100 that carry a TOTP secret. EU prod 2026-10-11, target org: 1.9% (fleet: 2.1%).
+    /// </summary>
+    internal const int TotpPer100Logins = 2;
+
+    /// <summary>
     /// Composes one encrypted cipher of the given type for an organization or a personal vault.
     /// </summary>
     /// <param name="index">
@@ -81,23 +117,34 @@ internal static class CipherComposer
         CipherRepromptType reprompt = CipherRepromptType.None)
     {
         var company = companies[index % companies.Length];
-        var uri = $"https://{company.Domain}";
+        var domain = company.Domain;
         var slot = index % total;
-        var username = generator.Username.GenerateByIndex(slot, totalHint: total, domain: company.Domain);
+        var username = generator.Username.GenerateByIndex(slot, totalHint: total, domain: domain);
 
-        // ~20% of logins get a FIDO2 passkey; ~40% get a 1-3 entry password history. Deterministic by index.
-        var fido2Credentials = index % 5 == 0
-            ? new List<Fido2CredentialViewDto> { LoginCipherSeeder.CreateFido2Credential(company.Domain, company.Name, username) }
+        var per100 = index % 100;
+        var fido2Credentials = per100 < PasskeysPer100Logins
+            ? new List<Fido2CredentialViewDto> { LoginCipherSeeder.CreateFido2Credential(domain, company.Name, username) }
             : null;
 
-        var passwordHistory = index % 5 < 2
+        var passwordHistory = per100 >= 50 && per100 < 50 + PasswordHistoryPer100Logins
             ? BuildPasswordHistory(slot, 1 + (index % 3), total, passwordDistribution)
             : null;
+
+        // Each pass over the companies moves a login's URI position by companies.Length * 9 % 100 (26 for 314),
+        // so every company gets URI-bearing logins; stride 7 moved it by 2 and left 193 of 314 companies without one
+        List<LoginUriViewDto>? uris = Spread(index, 9, 3) switch
+        {
+            < MultiUriPer100Logins => [new LoginUriViewDto { Uri = $"https://{domain}" }, new LoginUriViewDto { Uri = $"https://login.{domain}" }],
+            < UriPer100Logins => [new LoginUriViewDto { Uri = $"https://{domain}" }],
+            _ => null
+        };
 
         return LoginCipherSeeder.Create(new CipherSeed
         {
             Type = CipherType.Login,
             Name = $"{company.Name} ({company.Category})",
+            Notes = Spread(index, 13, 5) < NotesPer100Logins ? LoginExtras.Notes(index, company.Category.ToString()) : null,
+            Fields = Spread(index, 17, 7) < FieldsPer100Logins ? LoginExtras.Fields(index) : null,
             EncryptionKey = encryptionKey,
             OrganizationId = organizationId,
             UserId = userId,
@@ -106,12 +153,17 @@ internal static class CipherComposer
             {
                 Username = username,
                 Password = Passwords.GetPassword(slot, total, passwordDistribution),
-                Uris = [new LoginUriViewDto { Uri = uri }],
+                Totp = Spread(index, 23, 19) < TotpPer100Logins ? LoginExtras.TotpSecret(index) : null,
+                Uris = uris,
                 Fido2Credentials = fido2Credentials,
                 PasswordHistory = passwordHistory
             }
         });
     }
+
+    // A stride coprime with 100 hits every residue once per block of 100 logins, so each rate is exact;
+    // a different stride per content kind keeps the kinds from piling onto the same logins
+    private static int Spread(int index, int stride, int offset) => (index * stride + offset) % 100;
 
     internal static List<PasswordHistoryViewDto> BuildPasswordHistory(
         int index,

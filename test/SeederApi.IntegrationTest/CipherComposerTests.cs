@@ -1,9 +1,15 @@
-﻿using Bit.Core.Vault.Entities;
+﻿using System.Text.Json;
+using System.Text.Json.Nodes;
+using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
+using Bit.Core.Vault.Models.Data;
+using Bit.RustSDK;
+using Bit.Seeder.Data;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Data.Static;
 using Bit.Seeder.Factories;
+using Bit.Seeder.Options;
 using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest;
@@ -233,6 +239,70 @@ public class CipherComposerTests
         Assert.Equal(originalRevisionDate, cipher.RevisionDate);
         Assert.Null(cipher.Archives);
         Assert.Null(cipher.DeletedDate);
+    }
+
+    [Fact]
+    public void Compose_Logins_ContentRatesMatchTheConstants()
+    {
+        // Every stride is coprime with 100 and the total is a multiple of 100, so each count is exact
+        const int total = 1_000;
+        var logins = ComposeItems(CipherType.Login, total, RustSdkService.GenerateOrganizationKeys().Key)
+            .Select(cipher => JsonSerializer.Deserialize<CipherLoginData>(cipher.Data)!)
+            .ToList();
+
+        Assert.Equal(CipherComposer.PasskeysPer100Logins * total / 100, logins.Count(login => login.Fido2Credentials is { Length: > 0 }));
+        Assert.Equal(CipherComposer.PasswordHistoryPer100Logins * total / 100, logins.Count(login => login.PasswordHistory?.Any() == true));
+        Assert.Equal(CipherComposer.UriPer100Logins * total / 100, logins.Count(login => login.Uris?.Any() == true));
+        Assert.Equal(CipherComposer.MultiUriPer100Logins * total / 100, logins.Count(login => login.Uris?.Count() == 2));
+        Assert.Equal(CipherComposer.NotesPer100Logins * total / 100, logins.Count(login => login.Notes is not null));
+        Assert.Equal(CipherComposer.FieldsPer100Logins * total / 100, logins.Count(login => login.Fields?.Any() == true));
+        Assert.Equal(CipherComposer.TotpPer100Logins * total / 100, logins.Count(login => login.Totp is not null));
+    }
+
+    [Fact]
+    public void Compose_Login_StoresUrisWithoutTheLegacyTopLevelUri()
+    {
+        var withUris = ComposeItems(CipherType.Login, 100, RustSdkService.GenerateOrganizationKeys().Key)
+            .Select(cipher => JsonNode.Parse(cipher.Data)!.AsObject())
+            .Where(data => data.ContainsKey(nameof(CipherLoginData.Uris)))
+            .ToList();
+
+        Assert.NotEmpty(withUris);
+        Assert.All(withUris, data => Assert.False(data.ContainsKey(nameof(CipherLoginData.Uri))));
+    }
+
+    [Fact]
+    public void Compose_OnePassVault_GivesEveryCompanyAUriBearingLogin()
+    {
+        // Logins pick their company by index % companies.Length, so the URI-bearing indices name the companies covered
+        const int total = 1_312;
+        var companies = Companies.All;
+
+        var companiesWithUris = ComposeItems(CipherType.Login, total, RustSdkService.GenerateOrganizationKeys().Key)
+            .Select((cipher, index) => (cipher, index))
+            .Where(login => JsonNode.Parse(login.cipher.Data)!.AsObject().ContainsKey(nameof(CipherLoginData.Uris)))
+            .Select(login => login.index % companies.Length)
+            .Distinct()
+            .Count();
+
+        Assert.Equal(companies.Length, companiesWithUris);
+    }
+
+    private static List<Cipher> ComposeItems(CipherType cipherType, int total, string orgKey)
+    {
+        var generator = GeneratorContext.FromOptions(new OrganizationVaultOptions
+        {
+            Name = "Composer Test",
+            Domain = "composer.example",
+            Users = 0
+        });
+        var organizationId = Guid.NewGuid();
+
+        return Enumerable.Range(0, total)
+            .Select(index => CipherComposer.Compose(
+                index, total, cipherType, orgKey, Companies.All, generator, PasswordDistributions.Realistic,
+                organizationId: organizationId))
+            .ToList();
     }
 
     private static PasswordStrength ClassifyStrength(string password)

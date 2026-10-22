@@ -185,6 +185,10 @@ var seed = options.Seed ?? DeriveStableSeed(options.Domain);
 
 **Distribution totals are explicit.** `Distribution<T>.Select(index, total)` throws unless `0 <= index < total`. `CipherComposer.Compose(index, total, ...)` takes the modulus for a login's username and password (`index % total`, so they repeat every `total` items; the other cipher types use `index`). The steps pass the number of logins (`CipherComposer.CountLogins`): logins are one contiguous run of the type distribution, so a larger total would give them only its first buckets (no Strong or VeryStrong passwords). Don't derive the total from the generator: preset recipes build it without a cipher count, and a zero total once put every generated preset login in the last password bucket (24 distinct "very strong" passwords).
 
+**Login content rates are calibrated to prod.** The `*Per100` constants in `CipherComposer` apply to every preset
+that generates logins. Values and sources are in [Data/README.md](Data/README.md#calibrated-login-rates). Re-measure before
+changing them.
+
 ## Fixture Contract Sync
 
 `Models/SeedModels.cs`, `Seeds/schemas/*.schema.json`, and `Seeds/docs/fixtures.md` describe one contract from three angles — the deserialization target, the editor validation, and the human documentation. A field present in only some of them is silently ignored or silently undocumented: `roster.schema.json` documented a per-user `email` for months while `SeedRosterUser` had no property to carry it.
