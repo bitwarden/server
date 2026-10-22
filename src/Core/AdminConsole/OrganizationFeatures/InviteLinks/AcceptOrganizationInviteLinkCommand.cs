@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Diagnostics;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
@@ -41,21 +42,18 @@ public class AcceptOrganizationInviteLinkCommand(
         var user = request.User;
 
         var link = await organizationInviteLinkRepository.GetByOrganizationIdAsync(request.OrganizationId);
-        if (link is null || !link.CodeMatches(request.Code.ToString()))
+        var organization = link is null
+            ? null
+            : await organizationRepository.GetByIdAsync(link.OrganizationId);
+
+        var eligibilityError = InviteLinkRules.ValidateEligibility(link, request.Code, organization, user);
+        if (eligibilityError is not null)
         {
-            return new InviteLinkNotFound();
+            return eligibilityError;
         }
 
-        var organization = await organizationRepository.GetByIdAsync(link.OrganizationId);
-        if (organization is null or { Enabled: false })
-        {
-            return new InviteLinkNotFound();
-        }
-
-        if (!organization.UseInviteLinks)
-        {
-            return new InviteLinkNotAvailable();
-        }
+        // ValidateEligibility guarantees the organization exists.
+        Debug.Assert(organization is not null);
 
         var existingOrganizationUser = await ResolveExistingOrganizationUserAsync(organization, user);
 
@@ -70,7 +68,6 @@ public class AcceptOrganizationInviteLinkCommand(
             {
                 Organization = organization,
                 User = user,
-                AllowedDomains = link.GetAllowedDomains(),
                 ExistingMembership = existingOrganizationUser,
                 ResetPasswordKey = request.ResetPasswordKey,
                 AutoConfirmPolicyEnabled = autoConfirmPolicyEnabled,
