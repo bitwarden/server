@@ -69,6 +69,29 @@ public class SeederAccessSelectionExtensionsTests
         Assert.Equal($"Conflicting access settings requested for organization user {id}.", exception.Message);
     }
 
+    [Fact]
+    public void DistinctOrThrowIfConflicting_Generic_IdenticalDuplicates_KeepsFirstOccurrence()
+    {
+        var first = (Id: 1, Setting: "a", Tag: "first");
+        var duplicate = (Id: 1, Setting: "a", Tag: "second");
+        var other = (Id: 2, Setting: "b", Tag: "other");
+
+        var result = new[] { first, duplicate, other }
+            .DistinctOrThrowIfConflicting(i => i.Id, i => i.Setting, id => $"conflict {id}");
+
+        Assert.Equal(new[] { first, other }, result);
+    }
+
+    [Fact]
+    public void DistinctOrThrowIfConflicting_Generic_SameIdWithDifferentSettings_ThrowsWithMessage()
+    {
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => new[] { (Id: 1, Setting: "a"), (Id: 1, Setting: "b") }
+                .DistinctOrThrowIfConflicting(i => i.Id, i => i.Setting, id => $"conflict {id}"));
+
+        Assert.Equal("conflict 1", exception.Message);
+    }
+
     private static CollectionAccessSelection Selection(
         Guid id, bool readOnly = false, bool hidePasswords = false, bool manage = false) =>
         new() { Id = id, ReadOnly = readOnly, HidePasswords = hidePasswords, Manage = manage };

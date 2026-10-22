@@ -88,6 +88,14 @@ public class SingleProviderScene(
         globalSettings.ThrowIfSelfHosted("Providers");
 
         var status = ResolveStatus(request);
+        var plans = request.Plans.DistinctOrThrowIfConflicting(
+            p => p.PlanType,
+            p => p.Seats,
+            planType => $"Conflicting seat minimums requested for plan {planType}.");
+        var links = request.Organizations.DistinctOrThrowIfConflicting(
+            o => o.OrganizationId,
+            o => o.OrganizationKeyB64,
+            organizationId => $"Conflicting organization keys requested for organization {organizationId}.");
         var convertsToManagedClient =
             request.Type.SupportsConsolidatedBilling() && status == ProviderStatusType.Billable;
 
@@ -104,12 +112,12 @@ public class SingleProviderScene(
         }
 
         await providerOrganizationRepository.ThrowIfOrganizationsLinkedToProviderAsync(
-            request.Organizations.Select(o => o.OrganizationId));
+            links.Select(o => o.OrganizationId));
 
         var providerKey = RustSdkService.GenerateOrganizationKeys().Key;
 
         var clients = new List<(Organization Organization, string WrappedKey, PlanType? ManagedPlanType)>();
-        foreach (var link in request.Organizations)
+        foreach (var link in links)
         {
             var organization = await organizationRepository.GetByIdAsync(link.OrganizationId)
                 ?? throw new InvalidOperationException($"Organization {link.OrganizationId} not found.");
@@ -142,7 +150,7 @@ public class SingleProviderScene(
         var providerUser = ProviderUserSeeder.CreateConfirmedAdmin(provider, owner, providerKey);
         await providerUserRepository.CreateAsync(providerUser);
 
-        foreach (var plan in request.Plans)
+        foreach (var plan in plans)
         {
             var allocatedSeats = clients
                 .Where(c => c.ManagedPlanType == plan.PlanType)

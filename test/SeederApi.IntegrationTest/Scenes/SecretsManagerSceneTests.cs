@@ -431,6 +431,109 @@ public class SecretsManagerSceneTests : IClassFixture<InPlaySeederApiApplication
         Assert.False(await db.GroupProjectAccessPolicy.AnyAsync(ap => ap.GrantedProjectId == projectId));
     }
 
+    [Fact]
+    public async Task OrganizationAccessPolicyScene_DuplicateIdenticalGrants_CreatesPolicyOnce()
+    {
+        var playId = Guid.NewGuid().ToString();
+
+        var ownerUserId = await SeedUserAsync(playId);
+        var (organizationId, orgUserId, organizationKeyB64) = await SeedSmOrganizationAsync(playId, ownerUserId);
+        var projectId = await SeedProjectAsync(playId, organizationId, organizationKeyB64);
+
+        var result = await PostSceneAsync(playId, nameof(OrganizationAccessPolicyScene), new OrganizationAccessPolicyScene.Request
+        {
+            OrganizationId = organizationId,
+            Grants = [UserProjectGrant(orgUserId, projectId, write: true), UserProjectGrant(orgUserId, projectId, write: true)]
+        });
+        Assert.Equal(1, result.GetProperty("count").GetInt32());
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+
+        var policy = await db.UserProjectAccessPolicy.SingleAsync(ap =>
+            ap.OrganizationUserId == orgUserId && ap.GrantedProjectId == projectId);
+        Assert.True(policy.Read);
+        Assert.True(policy.Write);
+    }
+
+    [Fact]
+    public async Task OrganizationAccessPolicyScene_ConflictingGrantPermissions_ReturnsBadRequestWithoutWrites()
+    {
+        var playId = Guid.NewGuid().ToString();
+
+        var ownerUserId = await SeedUserAsync(playId);
+        var (organizationId, orgUserId, organizationKeyB64) = await SeedSmOrganizationAsync(playId, ownerUserId);
+        var projectId = await SeedProjectAsync(playId, organizationId, organizationKeyB64);
+
+        var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
+        {
+            Template = nameof(OrganizationAccessPolicyScene),
+            Arguments = JsonSerializer.SerializeToElement(new OrganizationAccessPolicyScene.Request
+            {
+                OrganizationId = organizationId,
+                Grants = [UserProjectGrant(orgUserId, projectId), UserProjectGrant(orgUserId, projectId, write: true)]
+            })
+        }, playId);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Conflicting permissions requested for grantee", await response.Content.ReadAsStringAsync());
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+        Assert.False(await db.UserProjectAccessPolicy.AnyAsync(ap => ap.GrantedProjectId == projectId));
+    }
+
+    [Fact]
+    public async Task OrganizationAccessPolicyScene_GrantWithoutRead_ReturnsBadRequestWithoutWrites()
+    {
+        var playId = Guid.NewGuid().ToString();
+
+        var ownerUserId = await SeedUserAsync(playId);
+        var (organizationId, orgUserId, organizationKeyB64) = await SeedSmOrganizationAsync(playId, ownerUserId);
+        var projectId = await SeedProjectAsync(playId, organizationId, organizationKeyB64);
+
+        var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
+        {
+            Template = nameof(OrganizationAccessPolicyScene),
+            Arguments = JsonSerializer.SerializeToElement(new OrganizationAccessPolicyScene.Request
+            {
+                OrganizationId = organizationId,
+                Grants = [UserProjectGrant(orgUserId, projectId, read: false, write: true)]
+            })
+        }, playId);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("must be Read = true", await response.Content.ReadAsStringAsync());
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+        Assert.False(await db.UserProjectAccessPolicy.AnyAsync(ap => ap.GrantedProjectId == projectId));
+    }
+
+    private static OrganizationAccessPolicyScene.Grant UserProjectGrant(
+        Guid orgUserId, Guid projectId, bool read = true, bool write = false) =>
+        new()
+        {
+            GranteeType = AccessPolicySeeder.GranteeType.OrganizationUser,
+            GranteeId = orgUserId,
+            GrantableType = AccessPolicySeeder.GrantableType.Project,
+            GrantableId = projectId,
+            Read = read,
+            Write = write
+        };
+
+    private async Task<Guid> SeedProjectAsync(string playId, Guid organizationId, string organizationKeyB64)
+    {
+        var result = await PostSceneAsync(playId, nameof(OrganizationProjectScene), new OrganizationProjectScene.Request
+        {
+            OrganizationId = organizationId,
+            OrganizationKeyB64 = organizationKeyB64,
+            Name = "Production"
+        });
+
+        return result.GetProperty("projectId").GetGuid();
+    }
+
     private async Task<Guid> SeedUserAsync(string playId)
     {
         var result = await PostSceneAsync(playId, "SingleUserScene", new SingleUserScene.Request

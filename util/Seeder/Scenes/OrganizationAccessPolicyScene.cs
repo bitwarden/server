@@ -54,7 +54,18 @@ public class OrganizationAccessPolicyScene(
     {
         await organizationRepository.GetSecretsManagerOrganizationOrThrowAsync(request.OrganizationId);
 
-        var grants = request.Grants.ToList();
+        var unreadable = request.Grants.FirstOrDefault(g => !g.Read);
+        if (unreadable != null)
+        {
+            throw new InvalidOperationException(
+                $"Grant for grantee {unreadable.GranteeId} on {unreadable.GrantableType} {unreadable.GrantableId} " +
+                "must be Read = true.");
+        }
+
+        var grants = request.Grants.DistinctOrThrowIfConflicting(
+            g => (g.GranteeType, g.GranteeId, g.GrantableType, g.GrantableId),
+            g => (g.Read, g.Write),
+            k => $"Conflicting permissions requested for grantee {k.GranteeId} on {k.GrantableType} {k.GrantableId}.");
 
         var projectIds = GrantableIds(grants, AccessPolicySeeder.GrantableType.Project);
         var serviceAccountIds = GrantableIds(grants, AccessPolicySeeder.GrantableType.ServiceAccount)
