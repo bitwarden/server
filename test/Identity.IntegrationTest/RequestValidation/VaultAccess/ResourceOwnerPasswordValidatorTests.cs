@@ -6,6 +6,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Repositories;
+using Bit.Identity.IntegrationTest.Grants;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -39,6 +40,63 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
 
         var token = AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String).GetString();
         Assert.NotNull(token);
+    }
+
+    /// <summary>
+    /// The login access token names the device the user logged in on, and a refreshed access token keeps it. API
+    /// endpoints read the requesting device from these claims.
+    /// </summary>
+    [Fact]
+    public async Task ValidateAsync_DeviceClaims_PersistThroughRefresh()
+    {
+        // Arrange
+        var localFactory = new IdentityApplicationFactory();
+        await RegisterUserAsync(localFactory);
+        var loginContext = await localFactory.Server.PostAsync("/connect/token", GetFormUrlEncodedContent());
+        using var loginBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(loginContext);
+        var loginAccessToken = AssertHelper.AssertJsonProperty(
+            loginBody.RootElement, "access_token", JsonValueKind.String).GetString()!;
+        var refreshToken = AssertHelper.AssertJsonProperty(
+            loginBody.RootElement, "refresh_token", JsonValueKind.String).GetString()!;
+        AccessTokenAssertions.AssertDeviceClaims(loginAccessToken, _defaultDeviceIdentifier, _defaultDeviceType);
+
+        // Act
+        var refreshContext = await localFactory.Server.PostAsync("/connect/token",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                { "grant_type", "refresh_token" },
+                { "client_id", "web" },
+                { "refresh_token", refreshToken },
+            }));
+
+        // Assert
+        using var refreshBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(refreshContext);
+        var refreshedAccessToken = AssertHelper.AssertJsonProperty(
+            refreshBody.RootElement, "access_token", JsonValueKind.String).GetString()!;
+        AccessTokenAssertions.AssertDeviceClaims(refreshedAccessToken, _defaultDeviceIdentifier, _defaultDeviceType);
+    }
+
+    /// <summary>
+    /// A password login that names no device is rejected, so no access token is ever issued without device claims.
+    /// </summary>
+    [Fact]
+    public async Task ValidateAsync_WithoutDevice_IsRejected()
+    {
+        // Arrange
+        var localFactory = new IdentityApplicationFactory();
+        await RegisterUserAsync(localFactory);
+
+        // Act
+        var context = await localFactory.Server.PostAsync("/connect/token",
+            GetDefaultFormUrlEncodedContentWithoutDevice());
+
+        // Assert
+        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        Assert.False(body.RootElement.TryGetProperty("access_token", out _));
+        var errorModel = AssertHelper.AssertJsonProperty(body.RootElement, "ErrorModel", JsonValueKind.Object);
+        Assert.Equal("no device information provided",
+            AssertHelper.AssertJsonProperty(errorModel, "Message", JsonValueKind.String).GetString());
     }
 
     [Theory, BitAutoData]

@@ -17,6 +17,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Bit.Identity.IdentityServer;
 using Bit.Identity.IdentityServer.RequestValidators;
+using Bit.Identity.IntegrationTest.Grants;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.Constants;
 using Bit.Test.Common.Helpers;
@@ -34,6 +35,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints;
 public class IdentityServerSsoTests
 {
     const string TestEmail = "sso_user@email.com";
+    const string SsoDeviceIdentifier = "test_id";
 
     [Fact]
     public async Task Test_MasterPassword_DecryptionType()
@@ -523,6 +525,120 @@ public class IdentityServerSsoTests
 
         var keyConnectorUrl = AssertHelper.AssertJsonProperty(keyConnectorOption, "KeyConnectorUrl", JsonValueKind.String).GetString();
         Assert.Equal("https://key_connector.com", keyConnectorUrl);
+    }
+
+    /// <summary>
+    /// API endpoints read the requesting device from the access token's device claims, and today, clients refresh the
+    /// access token shortly after an SSO login. The device claims must survive that refresh.
+    /// </summary>
+    [Fact]
+    public async Task SsoLogin_RefreshToken_PreservesDeviceClaims()
+    {
+        // Arrange
+        var (factory, loginRoot) = await SsoLoginAsync();
+        var loginAccessToken = AssertHelper.AssertJsonProperty(loginRoot, "access_token", JsonValueKind.String).GetString()!;
+        var refreshToken = AssertHelper.AssertJsonProperty(loginRoot, "refresh_token", JsonValueKind.String).GetString()!;
+        AccessTokenAssertions.AssertDeviceClaims(loginAccessToken, SsoDeviceIdentifier, DeviceType.FirefoxBrowser);
+
+        // Act
+        var refreshContext = await PostRefreshTokenAsync(factory, refreshToken);
+
+        // Assert
+        using var refreshBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(refreshContext);
+        var refreshedAccessToken = AssertHelper.AssertJsonProperty(
+            refreshBody.RootElement, "access_token", JsonValueKind.String).GetString()!;
+        AccessTokenAssertions.AssertDeviceClaims(refreshedAccessToken, SsoDeviceIdentifier, DeviceType.FirefoxBrowser);
+    }
+
+    /// <summary>
+    /// An SSO login that names no device is rejected, so no access token is ever issued without device claims.
+    /// </summary>
+    [Fact]
+    public async Task SsoLogin_WithoutDevice_IsRejected()
+    {
+        // Act
+        var (_, loginContext) = await PostSsoLoginAsync(includeDevice: false);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status400BadRequest, loginContext.Response.StatusCode);
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(loginContext);
+        Assert.False(body.RootElement.TryGetProperty("access_token", out _));
+        var errorModel = AssertHelper.AssertJsonProperty(body.RootElement, "ErrorModel", JsonValueKind.Object);
+        Assert.Equal("no device information provided",
+            AssertHelper.AssertJsonProperty(errorModel, "Message", JsonValueKind.String).GetString());
+    }
+
+    /// <summary>
+    /// A user stamp change (e.g. a password change) must end SSO sessions on their next refresh, the same as
+    /// password-login sessions.
+    /// </summary>
+    [Fact]
+    public async Task SsoLogin_RefreshToken_AfterUserStampChange_IsRejected()
+    {
+        // Arrange
+        var (factory, loginRoot) = await SsoLoginAsync();
+        var refreshToken = AssertHelper.AssertJsonProperty(loginRoot, "refresh_token", JsonValueKind.String).GetString()!;
+        await UpdateUserAsync(factory, user => user.SecurityStamp = Guid.NewGuid().ToString());
+
+        // Act
+        var refreshContext = await PostRefreshTokenAsync(factory, refreshToken);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status400BadRequest, refreshContext.Response.StatusCode);
+        using var refreshBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(refreshContext);
+        var error = AssertHelper.AssertJsonProperty(refreshBody.RootElement, "error", JsonValueKind.String).GetString();
+        Assert.Equal("invalid_grant", error);
+    }
+
+    private static async Task<(IdentityApplicationFactory Factory, JsonElement LoginRoot)> SsoLoginAsync()
+    {
+        var (factory, loginContext) = await PostSsoLoginAsync(includeDevice: true);
+        Assert.Equal(StatusCodes.Status200OK, loginContext.Response.StatusCode);
+        using var loginBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(loginContext);
+        return (factory, loginBody.RootElement.Clone());
+    }
+
+    private static async Task<(IdentityApplicationFactory Factory, HttpContext LoginContext)> PostSsoLoginAsync(
+        bool includeDevice)
+    {
+        var challenge = new string('c', 50);
+        var factory = await CreateFactoryAsync(new SsoConfigurationData
+        {
+            MemberDecryptionType = MemberDecryptionType.MasterPassword,
+        }, challenge);
+
+        var form = new Dictionary<string, string>
+        {
+            { "scope", "api offline_access" },
+            { "client_id", "web" },
+            { "twoFactorToken", "TEST" },
+            { "twoFactorProvider", "5" }, // RememberMe Provider
+            { "twoFactorRemember", "0" },
+            { "grant_type", "authorization_code" },
+            { "code", "test_code" },
+            { "code_verifier", challenge },
+            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+        };
+        if (includeDevice)
+        {
+            form["deviceType"] = ((int)DeviceType.FirefoxBrowser).ToString();
+            form["deviceIdentifier"] = SsoDeviceIdentifier;
+            form["deviceName"] = "firefox";
+        }
+
+        var loginContext = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(form));
+        return (factory, loginContext);
+    }
+
+    private static async Task<HttpContext> PostRefreshTokenAsync(IdentityApplicationFactory factory, string refreshToken)
+    {
+        return await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(
+            new Dictionary<string, string>
+            {
+                { "grant_type", "refresh_token" },
+                { "client_id", "web" },
+                { "refresh_token", refreshToken },
+            }));
     }
 
     private static async Task<JsonDocument> RunSuccessTestAsync(MemberDecryptionType memberDecryptionType)
