@@ -39,8 +39,7 @@ public class UserSecureNoteCipherScene(IUserRepository userRepository, ICipherRe
             throw new Exception($"User with ID {request.UserId} not found.");
         }
 
-        await folderRepository.ThrowIfFoldersNotOwnedByUserAsync(
-            request.FolderId is { } folderId ? [folderId] : [], request.UserId);
+        await folderRepository.ThrowIfFolderNotOwnedByUserAsync(request.FolderId, request.UserId);
 
         var cipher = SecureNoteCipherSeeder.Create(new CipherSeed
         {

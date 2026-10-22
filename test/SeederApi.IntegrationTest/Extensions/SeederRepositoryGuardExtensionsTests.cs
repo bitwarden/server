@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -227,24 +228,96 @@ public class SeederRepositoryGuardExtensionsTests
     }
 
     [Fact]
+    public async Task ThrowIfUserNotConfirmedMemberOfOrganizationAsync_Null_DoesNotQuery()
+    {
+        var repository = Substitute.For<IOrganizationUserRepository>();
+
+        await repository.ThrowIfUserNotConfirmedMemberOfOrganizationAsync(null, _ownerId);
+
+        await repository.DidNotReceiveWithAnyArgs().GetManyByManyUsersAsync(default!);
+    }
+
+    [Fact]
+    public async Task ThrowIfUserNotConfirmedMemberOfOrganizationAsync_NotAMember_Throws()
+    {
+        var userId = Guid.NewGuid();
+        var repository = Substitute.For<IOrganizationUserRepository>();
+        repository.GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>()).Returns([]);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => repository.ThrowIfUserNotConfirmedMemberOfOrganizationAsync(userId, _ownerId));
+
+        await repository.Received(1).GetManyByManyUsersAsync(
+            Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(new[] { userId })));
+    }
+
+    [Fact]
+    public async Task ThrowIfFolderNotOwnedByUserAsync_Null_DoesNotQuery()
+    {
+        var repository = Substitute.For<IFolderRepository>();
+
+        await repository.ThrowIfFolderNotOwnedByUserAsync(null, _ownerId);
+
+        await repository.DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
+    }
+
+    [Fact]
+    public async Task ThrowIfFolderNotOwnedByUserAsync_OwnedByUser_Passes()
+    {
+        var folder = NewFolder(_ownerId);
+        var repository = Substitute.For<IFolderRepository>();
+        repository.GetManyByUserIdAsync(_ownerId).Returns([folder]);
+
+        await repository.ThrowIfFolderNotOwnedByUserAsync(folder.Id, _ownerId);
+
+        await repository.Received(1).GetManyByUserIdAsync(_ownerId);
+    }
+
+    [Fact]
+    public async Task ThrowIfFolderNotOwnedByUserAsync_NotOwned_Throws()
+    {
+        var repository = Substitute.For<IFolderRepository>();
+        repository.GetManyByUserIdAsync(_ownerId).Returns([]);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => repository.ThrowIfFolderNotOwnedByUserAsync(Guid.NewGuid(), _ownerId));
+    }
+
+    [Theory]
+    [MemberData(nameof(NullOrEmptyIds))]
+    public async Task ThrowIfOrganizationsLinkedToProviderAsync_NullOrEmpty_DoesNotQuery(Guid[]? ids)
+    {
+        var repository = Substitute.For<IProviderOrganizationRepository>();
+
+        await repository.ThrowIfOrganizationsLinkedToProviderAsync(ids);
+
+        await repository.DidNotReceiveWithAnyArgs().GetByOrganizationId(default);
+    }
+
+    [Fact]
     public async Task ThrowIfOrganizationsLinkedToProviderAsync_NotLinked_Passes()
     {
         var repository = Substitute.For<IProviderOrganizationRepository>();
-        repository.GetCountByOrganizationIdsAsync(Arg.Any<IEnumerable<Guid>>()).Returns(0);
+        repository.GetByOrganizationId(Arg.Any<Guid>()).Returns((ProviderOrganization?)null);
 
         await repository.ThrowIfOrganizationsLinkedToProviderAsync([Guid.NewGuid()]);
     }
 
     [Fact]
-    public async Task ThrowIfOrganizationsLinkedToProviderAsync_Linked_Throws()
+    public async Task ThrowIfOrganizationsLinkedToProviderAsync_Linked_ThrowsWithOrganizationId()
     {
+        var unlinkedId = Guid.NewGuid();
+        var linkedId = Guid.NewGuid();
         var repository = Substitute.For<IProviderOrganizationRepository>();
-        repository.GetCountByOrganizationIdsAsync(Arg.Any<IEnumerable<Guid>>()).Returns(1);
+        repository.GetByOrganizationId(linkedId)
+            .Returns(new ProviderOrganization { ProviderId = Guid.NewGuid(), OrganizationId = linkedId });
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => repository.ThrowIfOrganizationsLinkedToProviderAsync([Guid.NewGuid()]));
+            () => repository.ThrowIfOrganizationsLinkedToProviderAsync([unlinkedId, linkedId, linkedId]));
 
         Assert.Contains("already belongs to a provider", exception.Message);
+        Assert.Contains(linkedId.ToString(), exception.Message);
+        await repository.Received(1).GetByOrganizationId(linkedId);
     }
 
     private static Group NewGroup(Guid organizationId) =>

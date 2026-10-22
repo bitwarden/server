@@ -74,10 +74,7 @@ public class SingleUserScene(
             globalSettings.ThrowIfNotSelfHosted("A SelfHosted premium user");
         }
 
-        if (!string.IsNullOrEmpty(request.GatewayCustomerId) || !string.IsNullOrEmpty(request.GatewaySubscriptionId))
-        {
-            globalSettings.ThrowIfSelfHosted("Stripe gateway IDs");
-        }
+        globalSettings.ThrowIfSelfHostedWithGatewayIds(request.GatewayCustomerId, request.GatewaySubscriptionId);
 
         var (user, keys) = UserSeeder.Create(
             new UserSeed

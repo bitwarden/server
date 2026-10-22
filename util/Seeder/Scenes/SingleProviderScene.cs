@@ -36,9 +36,8 @@ public struct SingleProviderSceneResult
 /// summed seats of its linked clients; Pending and Reseller links leave the organization unchanged. Type/status pairs
 /// production cannot create (Reseller not Created, MSP/Business Unit Created) are rejected, as are Stripe IDs on a
 /// Pending provider, organizations already linked to a provider, and any request on a self-hosted instance. The
-/// scene makes no Stripe
-/// calls: it does not cancel client subscriptions or move customer balances, and it only links caller-supplied
-/// Stripe customer/subscription IDs to the provider.
+/// scene makes no Stripe calls: it does not cancel client subscriptions or move customer balances, and it only
+/// links caller-supplied Stripe customer/subscription IDs to the provider.
 /// </summary>
 public class SingleProviderScene(
     IUserRepository userRepository,

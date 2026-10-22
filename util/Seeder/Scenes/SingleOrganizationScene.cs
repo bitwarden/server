@@ -56,10 +56,7 @@ public class SingleOrganizationScene(
 
     public async Task<SceneResult<SingleOrganizationSceneResult>> SeedAsync(Request request)
     {
-        if (!string.IsNullOrEmpty(request.GatewayCustomerId) || !string.IsNullOrEmpty(request.GatewaySubscriptionId))
-        {
-            globalSettings.ThrowIfSelfHosted("Stripe gateway IDs");
-        }
+        globalSettings.ThrowIfSelfHostedWithGatewayIds(request.GatewayCustomerId, request.GatewaySubscriptionId);
 
         var user = await userRepository.GetByIdAsync(request.OwnerUserId);
         if (user == null)

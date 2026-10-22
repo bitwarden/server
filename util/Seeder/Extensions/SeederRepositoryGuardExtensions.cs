@@ -83,6 +83,15 @@ internal static class SeederRepositoryGuardExtensions
                 organizationId),
             $"One or more users are not confirmed members of organization {organizationId}.");
 
+    public static Task ThrowIfUserNotConfirmedMemberOfOrganizationAsync(
+        this IOrganizationUserRepository organizationUserRepository, Guid? userId, Guid organizationId)
+        => organizationUserRepository.ThrowIfUsersNotConfirmedMembersOfOrganizationAsync(
+            userId is { } id ? [id] : [], organizationId);
+
+    public static Task ThrowIfFolderNotOwnedByUserAsync(
+        this IFolderRepository folderRepository, Guid? folderId, Guid userId)
+        => folderRepository.ThrowIfFoldersNotOwnedByUserAsync(folderId is { } id ? [id] : [], userId);
+
     public static Task ThrowIfFoldersNotOwnedByUserAsync(
         this IFolderRepository folderRepository, IEnumerable<Guid>? folderIds, Guid userId)
         => ThrowIfAnyNotOwnedAsync(
@@ -93,12 +102,22 @@ internal static class SeederRepositoryGuardExtensions
                 userId),
             $"One or more folders are not owned by user {userId}.");
 
-    public static Task ThrowIfOrganizationsLinkedToProviderAsync(
+    public static async Task ThrowIfOrganizationsLinkedToProviderAsync(
         this IProviderOrganizationRepository providerOrganizationRepository, IEnumerable<Guid>? organizationIds)
-        => ThrowIfAnyNotOwnedAsync(
-            organizationIds,
-            async ids => await providerOrganizationRepository.GetCountByOrganizationIdsAsync(ids) == 0,
-            "Organization already belongs to a provider.");
+    {
+        if (organizationIds == null)
+        {
+            return;
+        }
+
+        foreach (var organizationId in organizationIds.Distinct())
+        {
+            if (await providerOrganizationRepository.GetByOrganizationId(organizationId) != null)
+            {
+                throw new InvalidOperationException($"Organization {organizationId} already belongs to a provider.");
+            }
+        }
+    }
 
     private static async Task ThrowIfAnyNotOwnedAsync(
         IEnumerable<Guid>? ids, Func<List<Guid>, Task<bool>> allOwnedAsync, string message)

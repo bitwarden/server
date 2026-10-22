@@ -48,8 +48,7 @@ public class OrganizationEventScene(
             throw new InvalidOperationException($"Count must not exceed {MaxEventCount}, but was {request.Count}.");
         }
 
-        await organizationUserRepository.ThrowIfUsersNotConfirmedMembersOfOrganizationAsync(
-            request.ActingUserId is { } actingUserId ? [actingUserId] : [], organization.Id);
+        await organizationUserRepository.ThrowIfUserNotConfirmedMemberOfOrganizationAsync(request.ActingUserId, organization.Id);
 
         var baseDate = DateTime.UtcNow;
         var seededCount = 0;

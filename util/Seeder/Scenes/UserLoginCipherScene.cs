@@ -28,8 +28,7 @@ public class UserLoginCipherScene(
             throw new Exception($"User with ID {request.UserId} not found.");
         }
 
-        await folderRepository.ThrowIfFoldersNotOwnedByUserAsync(
-            request.FolderId is { } folderId ? [folderId] : [], request.UserId);
+        await folderRepository.ThrowIfFolderNotOwnedByUserAsync(request.FolderId, request.UserId);
 
         return new CipherOwner(request.UserKeyB64, null, request.UserId);
     }

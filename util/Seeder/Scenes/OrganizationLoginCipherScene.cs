@@ -39,9 +39,8 @@ public class OrganizationLoginCipherScene(
         }
 
         await collectionRepository.ThrowIfCollectionsNotInOrganizationAsync(request.CollectionIds, organization.Id);
-        await organizationUserRepository.ThrowIfUsersNotConfirmedMembersOfOrganizationAsync([request.UserId], organization.Id);
-        await folderRepository.ThrowIfFoldersNotOwnedByUserAsync(
-            request.FolderId is { } folderId ? [folderId] : [], request.UserId);
+        await organizationUserRepository.ThrowIfUserNotConfirmedMemberOfOrganizationAsync(request.UserId, organization.Id);
+        await folderRepository.ThrowIfFolderNotOwnedByUserAsync(request.FolderId, request.UserId);
 
         return new CipherOwner(request.OrganizationKeyB64, organization.Id, null);
     }

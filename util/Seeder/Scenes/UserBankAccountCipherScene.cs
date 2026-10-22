@@ -49,8 +49,7 @@ public class UserBankAccountCipherScene(IUserRepository userRepository, ICipherR
             throw new Exception($"User with ID {request.UserId} not found.");
         }
 
-        await folderRepository.ThrowIfFoldersNotOwnedByUserAsync(
-            request.FolderId is { } folderId ? [folderId] : [], request.UserId);
+        await folderRepository.ThrowIfFolderNotOwnedByUserAsync(request.FolderId, request.UserId);
 
         var bankAccount = new BankAccountViewDto
         {

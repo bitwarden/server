@@ -14,6 +14,15 @@ internal static class SeederEnvironmentGuardExtensions
         }
     }
 
+    public static void ThrowIfSelfHostedWithGatewayIds(
+        this IGlobalSettings globalSettings, string? gatewayCustomerId, string? gatewaySubscriptionId)
+    {
+        if (!string.IsNullOrEmpty(gatewayCustomerId) || !string.IsNullOrEmpty(gatewaySubscriptionId))
+        {
+            globalSettings.ThrowIfSelfHosted("Stripe gateway IDs");
+        }
+    }
+
     public static void ThrowIfNotSelfHosted(this IGlobalSettings globalSettings, string subject)
     {
         if (!globalSettings.SelfHosted)
