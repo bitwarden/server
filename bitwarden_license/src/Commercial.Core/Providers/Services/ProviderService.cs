@@ -444,6 +444,12 @@ public class ProviderService : IProviderService
 
         ThrowOnInvalidPlanType(provider.Type, organization.PlanType);
 
+        if (organization.UsePam)
+        {
+            throw new BadRequestException(
+                "Organizations managed by a provider can't use Privileged Access Management. Please contact Customer Support.");
+        }
+
         if (organization.UseSecretsManager && provider.Type != ProviderType.Reseller)
         {
             throw new BadRequestException(
