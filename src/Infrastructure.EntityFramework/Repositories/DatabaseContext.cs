@@ -1,7 +1,6 @@
 ﻿using Bit.Core;
 using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
-using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Billing.Models;
 using Bit.Infrastructure.EntityFramework.Converters;
@@ -10,6 +9,7 @@ using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.NotificationCenter.Models;
 using Bit.Infrastructure.EntityFramework.Pam.Models;
 using Bit.Infrastructure.EntityFramework.Platform;
+using Bit.Infrastructure.EntityFramework.Providers.Models;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Microsoft.EntityFrameworkCore;
@@ -63,6 +63,7 @@ public class DatabaseContext : DbContext
     public DbSet<Event> Events { get; set; }
     public DbSet<Folder> Folders { get; set; }
     public DbSet<Grant> Grants { get; set; }
+    public DbSet<TwoFactorRememberToken> TwoFactorRememberTokens { get; set; }
     public DbSet<Group> Groups { get; set; }
     public DbSet<GroupUser> GroupUsers { get; set; }
     public DbSet<Installation> Installations { get; set; }
