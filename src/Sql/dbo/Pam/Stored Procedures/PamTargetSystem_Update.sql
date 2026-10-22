@@ -4,7 +4,7 @@ CREATE PROCEDURE [dbo].[PamTargetSystem_Update]
     @Name NVARCHAR(200),
     @Method TINYINT,
     @SealedData NVARCHAR(MAX),
-    @WrappedKey NVARCHAR(MAX),
+    @WrappedKey NVARCHAR(MAX) = NULL,
     @Status TINYINT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)

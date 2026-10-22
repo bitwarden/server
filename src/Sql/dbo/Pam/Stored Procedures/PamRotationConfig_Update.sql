@@ -4,7 +4,7 @@ CREATE PROCEDURE [dbo].[PamRotationConfig_Update]
     @CipherId UNIQUEIDENTIFIER,
     @TargetSystemId UNIQUEIDENTIFIER,
     @SealedData NVARCHAR(MAX),
-    @WrappedKey NVARCHAR(MAX),
+    @WrappedKey NVARCHAR(MAX) = NULL,
     @ScheduleCron NVARCHAR(100) = NULL,
     @RotateOnAccessEnd BIT,
     @NextRotationDate DATETIME2(7) = NULL,
