@@ -21,6 +21,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.BulkEnablePam;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
@@ -165,6 +166,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IAdminRecoverAccountValidator, AdminRecoverAccountValidator>();
         services.AddScoped<IBulkAutomaticallyConfirmOrganizationUsersValidator, BulkAutomaticallyConfirmOrganizationUsersValidator>();
         services.AddScoped<IBulkAutomaticallyConfirmOrganizationUsersCommand, BulkAutomaticallyConfirmOrganizationUsersCommand>();
+        services.TryAddScoped<IBulkEnablePamCommand, BulkEnablePamCommand>();
 
         services.AddScoped<IDeleteClaimedOrganizationUserAccountCommand, DeleteClaimedOrganizationUserAccountCommand>();
         services.AddScoped<IDeleteClaimedOrganizationUserAccountValidator, DeleteClaimedOrganizationUserAccountValidator>();
