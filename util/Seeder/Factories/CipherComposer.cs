@@ -66,10 +66,18 @@ internal static class CipherComposer
     internal const int AppsPer100Logins = 24;
 
     /// <summary>
+    /// Logins per 100, among those drawn Fair or stronger, whose password no other login shares. VeryWeak and Weak
+    /// draws always use the shared pools: zxcvbn scores no unique password as low as the pooled ones, and reused
+    /// passwords skew weak. An assumption, not a measurement: vault passwords are encrypted per item, so prod reuse
+    /// can't be counted.
+    /// </summary>
+    internal const int UniquePasswordsPer100FairOrStronger = 80;
+
+    /// <summary>
     /// Composes one encrypted cipher of the given type for an organization or a personal vault.
     /// </summary>
     /// <param name="index">
-    /// Position of the item. A login's username and password come from <c>index % total</c>, so they repeat
+    /// Position of the item. A login's username and pooled password come from <c>index % total</c>, so they repeat
     /// every <paramref name="total"/> items; the other cipher types use <paramref name="index"/> directly.
     /// May be at or above <paramref name="total"/>.
     /// </param>
@@ -166,13 +174,22 @@ internal static class CipherComposer
             Login = new LoginViewDto
             {
                 Username = username,
-                Password = Passwords.GetPassword(slot, total, passwordDistribution),
+                Password = ComposePassword(index, slot, total, passwordDistribution),
                 Totp = Spread(index, 23, 19) < TotpPer100Logins ? LoginExtras.TotpSecret(index) : null,
                 Uris = uris,
                 Fido2Credentials = fido2Credentials,
                 PasswordHistory = passwordHistory
             }
         });
+    }
+
+    private static string ComposePassword(int index, int slot, int total, Distribution<PasswordStrength> passwordDistribution)
+    {
+        var strength = passwordDistribution.Select(slot, total);
+        return strength is not (PasswordStrength.VeryWeak or PasswordStrength.Weak)
+            && Spread(index, 43, 29) < UniquePasswordsPer100FairOrStronger
+                ? UniquePasswordGenerator.Generate(index, strength)
+                : Passwords.GetPassword(slot, total, passwordDistribution);
     }
 
     // A stride coprime with 100 hits every residue once per block of 100 logins, so each rate is exact;

@@ -30,7 +30,7 @@ index-set selection like `ArchiveDeleteDistribution.Select(...)` for lifecycle-s
 - 314 companies across 6 regions (`.example` domains) with metadata (category, type, domain)
 - Locale-aware name generation via Bogus (Faker) library with 1500-entry pools
 - 8 username patterns (corporate email, personal, social, employee ID, etc.)
-- 5 password strength levels (138 total passwords)
+- 5 password strength levels: shared pools (138 passwords) plus per-item Fair, Strong and VeryStrong passwords from `UniquePasswordGenerator`
 
 #### Calibrated login rates
 
@@ -45,6 +45,7 @@ Re-measure before changing them.
 | `PasskeysPer100Logins` / `PasswordHistoryPer100Logins` | 1 / 6 | Prod: passkeys on 0.2-1.2% of logins, history on 5-7% |
 | `ItemKeysPer100` | 55 | Generated items of every type with their own key (`Cipher.Key`), as in the target org (fleet: 33%) |
 | `AppsPer100Logins` | 24 | Large-org median of applications per password in the Access Intelligence report. Rounded up to whole passes over the 314 companies, so a generated pool of up to 1,312 logins keeps the company domains; later passes use `{name}-{n}.example`. The personal step sizes passes on every user's personal logins together |
+| `UniquePasswordsPer100FairOrStronger` | 80 | **Assumption**: prod reuse can't be counted because passwords are encrypted per item. Applies to logins drawn Fair or stronger (~36% of logins get a unique password); VeryWeak and Weak draws stay pooled because zxcvbn scores no unique password as low as the pooled ones. Drives breach-check (HIBP) volume |
 
 Stored login `Data` omits the legacy top-level `Uri`, as the API does.
 

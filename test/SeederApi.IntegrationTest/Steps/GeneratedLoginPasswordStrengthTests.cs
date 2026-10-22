@@ -16,11 +16,13 @@ namespace Bit.SeederApi.IntegrationTest.Steps;
 /// Verifies that the cipher generation steps spread login passwords over every strength of the default
 /// password distribution when logins lead the cipher type mix, as they do in the default mix. The generator
 /// comes from <see cref="InitGeneratorStep"/>, which builds it without a cipher count, as the preset path does.
-/// Only logins without their own key are counted: the org or user key can decrypt them.
+/// Only pooled passwords on logins without their own key are counted: those are the ones a pool lookup can
+/// classify and the org or user key can decrypt.
 /// </summary>
 public sealed class GeneratedLoginPasswordStrengthTests
 {
-    private const int _cipherCount = 100;
+    // 300 logins: enough pooled, user-key logins to reach every strength (100 ciphers miss VeryStrong)
+    private const int _cipherCount = 500;
 
     // The default mix's 60% login share and position, without SSH keys: composing the first SSH key cipher
     // builds a pool of 500 RSA keys, which takes about 30 seconds.

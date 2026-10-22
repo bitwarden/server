@@ -7,6 +7,7 @@ using Bit.RustSDK;
 using Bit.Seeder.Data;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
+using Bit.Seeder.Data.Generators;
 using Bit.Seeder.Data.Static;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Options;
@@ -338,6 +339,65 @@ public class CipherComposerTests
             .Count();
 
         Assert.True(hosts > Companies.All.Length * 3, $"Expected more than {Companies.All.Length * 3} distinct sites; got {hosts}.");
+    }
+
+    [Fact]
+    public void Compose_Logins_VeryWeakAndWeakDrawsUseThePool()
+    {
+        var passwords = DecryptUserKeyPasswordsByDrawnStrength(1_000)
+            .Where(login => login.Strength is PasswordStrength.VeryWeak or PasswordStrength.Weak)
+            .ToList();
+
+        Assert.NotEmpty(passwords);
+        Assert.All(passwords, login => Assert.Contains(login.Password, Passwords.GetByStrength(login.Strength)));
+    }
+
+    [Fact]
+    public void Compose_Logins_MostFairOrStrongerPasswordsAreUnique()
+    {
+        var passwords = DecryptUserKeyPasswordsByDrawnStrength(1_000)
+            .Where(login => login.Strength is not (PasswordStrength.VeryWeak or PasswordStrength.Weak))
+            .Select(login => login.Password)
+            .ToList();
+
+        var generated = passwords.Where(password => !Passwords.All.Contains(password)).ToList();
+
+        Assert.InRange(generated.Count, passwords.Count * 70 / 100, passwords.Count * 90 / 100);
+        Assert.Equal(generated.Count, generated.Distinct().Count());
+    }
+
+    [Theory]
+    [InlineData(PasswordStrength.Fair)]
+    [InlineData(PasswordStrength.Strong)]
+    [InlineData(PasswordStrength.VeryStrong)]
+    public void UniquePasswordGenerator_SameIndexAndTier_GivesSamePassword(PasswordStrength strength)
+    {
+        Assert.All(Enumerable.Range(0, 1_000), index =>
+            Assert.Equal(UniquePasswordGenerator.Generate(index, strength), UniquePasswordGenerator.Generate(index, strength)));
+    }
+
+    [Theory]
+    [InlineData(PasswordStrength.Fair)]
+    [InlineData(PasswordStrength.Strong)]
+    [InlineData(PasswordStrength.VeryStrong)]
+    public void UniquePasswordGenerator_DifferentIndices_RarelyRepeat(PasswordStrength strength)
+    {
+        var passwords = Enumerable.Range(0, 20_000).Select(index => UniquePasswordGenerator.Generate(index, strength));
+
+        Assert.True(passwords.Distinct().Count() >= 19_900);
+    }
+
+    // Logins with their own key are skipped: the org key alone cannot decrypt them
+    private static List<(PasswordStrength Strength, string Password)> DecryptUserKeyPasswordsByDrawnStrength(int total)
+    {
+        var orgKey = RustSdkService.GenerateOrganizationKeys().Key;
+        return ComposeItems(CipherType.Login, total, orgKey)
+            .Select((cipher, index) => (cipher, index))
+            .Where(login => login.cipher.Key is null)
+            .Select(login => (
+                PasswordDistributions.Realistic.Select(login.index, total),
+                RustSdkService.DecryptString(JsonSerializer.Deserialize<CipherLoginData>(login.cipher.Data)!.Password!, orgKey)))
+            .ToList();
     }
 
     private static List<Cipher> ComposeItems(CipherType cipherType, int total, string orgKey)
