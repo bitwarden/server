@@ -54,6 +54,9 @@ public class AccessAuditEventEmitterTests
         await sutProvider.GetDependency<IAccessAuditEventRepository>()
             .DidNotReceiveWithAnyArgs()
             .CreateAsync(default!);
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogPamAccessEventAsync(default, default!);
     }
 
     // A failed attempt stops the action.
@@ -90,6 +93,9 @@ public class AccessAuditEventEmitterTests
 
         await sutProvider.Sut.EmitAsync(AnEventOfKind(organizationId, AccessAuditEventKind.RequestSubmitted));
 
+        await sutProvider.GetDependency<IAccessAuditEventRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(default!);
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogPamAccessEventAsync(EventType.Pam_AccessRequest_Submitted, Arg.Any<PamAccessEventContext>());
     }

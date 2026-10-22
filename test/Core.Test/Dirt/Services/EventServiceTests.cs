@@ -1109,14 +1109,17 @@ public class EventServiceTests
 
     [Theory, BitAutoData]
     public async Task LogPamAccessEventAsync_WithSystemUser_RecordsAServerSideAction(
-        Guid organizationId, Guid requesterId, Guid accessRequestId, string ipAddress, DeviceType deviceType,
-        DateTime occurredAt, SutProvider<EventService> sutProvider)
+        Guid organizationId, Guid requesterId, Guid accessRequestId, Guid providerId, Guid installationId,
+        string ipAddress, DeviceType deviceType, DateTime occurredAt, SutProvider<EventService> sutProvider)
     {
         // Arrange
         sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
             .Returns(new OrganizationAbility { Id = organizationId, Enabled = true, UseEvents = true });
-        // A system-user action has no request behind it; the ambient context must not be attributed to it.
+        sutProvider.GetDependency<ICurrentContext>().ProviderIdForOrg(organizationId).Returns(providerId);
+        sutProvider.GetDependency<ICurrentContext>().InstallationId.Returns(installationId);
+        // A system-user action has no request behind it; the request's IP address and device type must not be
+        // attributed to it.
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
 
@@ -1138,6 +1141,8 @@ public class EventServiceTests
             e.ActingUserId == null &&
             e.UserId == requesterId &&
             e.AccessRequestId == accessRequestId &&
+            e.ProviderId == providerId &&
+            e.InstallationId == installationId &&
             e.DeviceType == Bit.Core.Enums.DeviceType.Server &&
             e.IpAddress == null));
     }
