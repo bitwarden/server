@@ -134,6 +134,8 @@ public class SsoJitProvisionFinishControllerKeyConnectorTests
         User user)
     {
         // Arrange
+        user.PublicKey = null;
+        user.PrivateKey = null;
         var model = new SsoJitProvisionFinishSetKeyConnectorKeyRequestModel
         {
             KeyConnectorKeys = CreateV1Keys(),
