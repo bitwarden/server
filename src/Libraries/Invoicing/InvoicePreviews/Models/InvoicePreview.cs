@@ -9,6 +9,7 @@ public record InvoicePreview
 {
     public required PasswordManagerInvoiceItems PasswordManager { get; init; }
     public SecretsManagerInvoiceItems? SecretsManager { get; init; }
+    public PrivilegedControlsInvoiceItems? PrivilegedControls { get; init; }
 
     [JsonConverter(typeof(EnumMemberJsonConverter<PlanCadenceType>))]
     public required PlanCadenceType Cadence { get; init; }

@@ -13,6 +13,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
@@ -336,6 +337,54 @@ public class PoliciesControllerTests
     }
 
     [Theory]
+    [BitAutoData(OrganizationUserStatusType.Accepted)]
+    [BitAutoData(OrganizationUserStatusType.Confirmed)]
+    [BitAutoData(OrganizationUserStatusType.Revoked)]
+    public async Task GetByToken_WhenUserIsNotInvited_ThrowsNotFoundException(
+        OrganizationUserStatusType status,
+        SutProvider<PoliciesController> sutProvider,
+        Guid orgId,
+        Guid organizationUserId,
+        string token,
+        string email,
+        OrganizationUser orgUser,
+        OrganizationAbility organizationAbility
+    )
+    {
+        // Arrange
+        organizationAbility.UsePolicies = true;
+
+        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
+        organizationAbilityCacheService.GetOrganizationAbilityAsync(orgId).Returns(organizationAbility);
+
+        var decryptedToken = Substitute.For<OrgUserInviteTokenable>();
+        decryptedToken.Valid.Returns(true);
+        decryptedToken.OrgUserId = organizationUserId;
+        decryptedToken.OrgUserEmail = email;
+
+        var orgUserInviteTokenDataFactory =
+            sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>();
+
+        orgUserInviteTokenDataFactory.TryUnprotect(token, out Arg.Any<OrgUserInviteTokenable>())
+            .Returns(x =>
+            {
+                x[1] = decryptedToken;
+                return true;
+            });
+
+        orgUser.OrganizationId = orgId;
+        orgUser.Status = status;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUserId)
+            .Returns(orgUser);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.GetByToken(orgId, email, token, organizationUserId));
+    }
+
+    [Theory]
     [BitAutoData]
     public async Task GetByToken_ShouldReturnEnabledPolicies(
         SutProvider<PoliciesController> sutProvider,
@@ -369,6 +418,7 @@ public class PoliciesControllerTests
             });
 
         orgUser.OrganizationId = orgId;
+        orgUser.Status = OrganizationUserStatusType.Invited;
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUserId)
             .Returns(orgUser);

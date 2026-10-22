@@ -51,6 +51,12 @@ public static class OrganizationSubscriptionEndpointsExtensions
             .WithName("PreviewOrganizationPlanChange")
             .WithDescription("Previews the cost of changing the organization's plan.");
 
+        group.MapPost("restart/preview",
+                async ([FromRoute] Guid organizationId, [FromBody] PreviewOrganizationRestartRequest request,
+                        [FromServices] PreviewOrganizationRestartHandler handler) => await handler.HandleAsync(organizationId, request))
+            .WithName("PreviewOrganizationRestart")
+            .WithDescription("Previews the cost of restarting the organization's canceled subscription.");
+
         return group;
     }
 }

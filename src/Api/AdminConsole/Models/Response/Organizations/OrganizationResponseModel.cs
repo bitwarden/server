@@ -68,6 +68,8 @@ public class OrganizationResponseModel : ResponseModel
         SmServiceAccounts = organization.SmServiceAccounts;
         MaxAutoscaleSmSeats = organization.MaxAutoscaleSmSeats;
         MaxAutoscaleSmServiceAccounts = organization.MaxAutoscaleSmServiceAccounts;
+        PamSeats = organization.PamSeats;
+        MaxAutoscalePamSeats = organization.MaxAutoscalePamSeats;
         LimitCollectionCreation = organization.LimitCollectionCreation;
         LimitCollectionDeletion = organization.LimitCollectionDeletion;
         LimitItemDeletion = organization.LimitItemDeletion;
@@ -122,6 +124,8 @@ public class OrganizationResponseModel : ResponseModel
     public int? SmServiceAccounts { get; set; }
     public int? MaxAutoscaleSmSeats { get; set; }
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
+    public int? PamSeats { get; set; }
+    public int? MaxAutoscalePamSeats { get; set; }
     public bool LimitCollectionCreation { get; set; }
     public bool LimitCollectionDeletion { get; set; }
     public bool LimitItemDeletion { get; set; }
@@ -141,7 +145,9 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
 {
     public OrganizationSubscriptionResponseModel(
         Organization organization,
-        Plan plan) : base(organization, plan, "organizationSubscription")
+        Plan plan,
+        int? occupiedPamSeats = null,
+        bool? isOnPamSalesInitiatedTrial = null) : base(organization, plan, "organizationSubscription")
     {
         Expiration = organization.ExpirationDate;
         StorageName = organization.Storage.HasValue ?
@@ -149,6 +155,8 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
         StorageGb = organization.Storage.HasValue ?
             Math.Round(organization.Storage.Value / 1073741824D, 2) : 0; // 1 GB
         ExemptFromBillingAutomation = organization.ExemptFromBillingAutomation;
+        OccupiedPamSeats = occupiedPamSeats;
+        IsOnPamSalesInitiatedTrial = isOnPamSalesInitiatedTrial;
     }
 
     public OrganizationSubscriptionResponseModel(
@@ -156,7 +164,9 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
         SubscriptionInfo subscription,
         Plan plan,
         bool hideSensitiveData,
-        PendingAnnualUpgrade pendingAnnualUpgrade = null) : this(organization, plan)
+        PendingAnnualUpgrade pendingAnnualUpgrade = null,
+        int? occupiedPamSeats = null,
+        bool? isOnPamSalesInitiatedTrial = null) : this(organization, plan, occupiedPamSeats, isOnPamSalesInitiatedTrial)
     {
         Subscription = subscription.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
         PendingAnnualUpgrade = pendingAnnualUpgrade != null
@@ -238,6 +248,17 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
     /// a concrete count (including 0 for a non-migrated cloud organization) otherwise.
     /// </summary>
     public int? SmServiceAccountsGrace { get; set; }
+
+    /// <summary>
+    /// The count of Privileged Controls seats in use. Null on self-hosted and when Privileged Controls is off.
+    /// </summary>
+    public int? OccupiedPamSeats { get; set; }
+
+    /// <summary>
+    /// True when the plan supports Privileged Controls, Privileged Controls is on, and the subscription has no
+    /// Privileged Controls line. Null on self-hosted.
+    /// </summary>
+    public bool? IsOnPamSalesInitiatedTrial { get; set; }
 
     /// <summary>
     /// Date when a self-hosted organization's subscription expires, without any grace period.

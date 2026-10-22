@@ -119,6 +119,11 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
             claims.Add(new Claim(nameof(OrganizationLicenseConstants.SmServiceAccounts), entity.SmServiceAccounts.ToString()));
         }
 
+        if (entity.PamSeats.HasValue)
+        {
+            claims.Add(new Claim(nameof(OrganizationLicenseConstants.PamSeats), entity.PamSeats.ToString()));
+        }
+
         if (expirationWithoutGracePeriod is not null)
         {
             claims.Add(new Claim(nameof(OrganizationLicenseConstants.ExpirationWithoutGracePeriod),
