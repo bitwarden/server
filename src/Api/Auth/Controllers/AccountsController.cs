@@ -27,7 +27,6 @@ using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Api.Response;
-using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -43,7 +42,6 @@ public class AccountsController : Controller
 {
     private readonly IOrganizationService _organizationService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IOrganizationRepository _organizationRepository;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IUserService _userService;
     private readonly ISelfServicePasswordChangeCommand _selfServicePasswordChangeCommand;
@@ -51,7 +49,6 @@ public class AccountsController : Controller
     private readonly ISetInitialMasterPasswordCommandV1 _setInitialMasterPasswordCommandV1;
     private readonly IFinishSsoJitProvisionMasterPasswordCommand _finishSsoJitProvisionMasterPasswordCommand;
     private readonly ITdeSetPasswordCommand _tdeSetPasswordCommand;
-    private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly IReplaceAdminSetTemporaryPasswordCommand _replaceAdminSetTemporaryPasswordCommand;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
@@ -68,7 +65,6 @@ public class AccountsController : Controller
     public AccountsController(
         IOrganizationService organizationService,
         IOrganizationUserRepository organizationUserRepository,
-        IOrganizationRepository organizationRepository,
         IProviderUserRepository providerUserRepository,
         IUserService userService,
         ISelfServicePasswordChangeCommand selfServicePasswordChangeCommand,
@@ -76,7 +72,6 @@ public class AccountsController : Controller
         IFinishSsoJitProvisionMasterPasswordCommand finishSsoJitProvisionMasterPasswordCommand,
         ISetInitialMasterPasswordCommandV1 setInitialMasterPasswordCommandV1,
         ITdeSetPasswordCommand tdeSetPasswordCommand,
-        IAcceptOrgUserCommand acceptOrgUserCommand,
         ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
         IReplaceAdminSetTemporaryPasswordCommand replaceAdminSetTemporaryPasswordCommand,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
@@ -93,7 +88,6 @@ public class AccountsController : Controller
     {
         _organizationService = organizationService;
         _organizationUserRepository = organizationUserRepository;
-        _organizationRepository = organizationRepository;
         _providerUserRepository = providerUserRepository;
         _userService = userService;
         _selfServicePasswordChangeCommand = selfServicePasswordChangeCommand;
@@ -101,7 +95,6 @@ public class AccountsController : Controller
         _finishSsoJitProvisionMasterPasswordCommand = finishSsoJitProvisionMasterPasswordCommand;
         _setInitialMasterPasswordCommandV1 = setInitialMasterPasswordCommandV1;
         _tdeSetPasswordCommand = tdeSetPasswordCommand;
-        _acceptOrgUserCommand = acceptOrgUserCommand;
         _tdeOffboardingPasswordCommand = tdeOffboardingPasswordCommand;
         _replaceAdminSetTemporaryPasswordCommand = replaceAdminSetTemporaryPasswordCommand;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
@@ -290,7 +283,11 @@ public class AccountsController : Controller
     [HttpPost("set-password")]
     public async Task PostSetPasswordAsync([FromBody] SetInitialPasswordRequestModel model)
     {
-        var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
 
         // Modern-shape request (MPAD + MPUD set). Try the specialized branches below — TDE
         // set-password (no keypair) and V2 MP JIT (AccountKeys + flag on). If neither matches,
@@ -304,9 +301,10 @@ public class AccountsController : Controller
             // without touching cryptographic state).
             // 
             // Note: Why not check the V2RegistrationTDEJIT flag?
-            // The V2RegistrationTDEJIT flag governs SSO+TDE account creation, not set-password.
-            // A TDE user reaching this endpoint should already have keys that were set up at
-            // registration time, regardless of the flag.
+            // The V2RegistrationTDEJIT flag governs SSO+TDE account creation, not set-password, so
+            // don't reference it here (no feature-flag gate), because it isn't relevant. A TDE user
+            // reaching this endpoint already has keys that were set up at registration time, regardless
+            // of the flag.
             if (model.IsTdeSetPasswordRequest())
             {
                 await _tdeSetPasswordCommand.SetMasterPasswordAsync(user, model.ToData());
@@ -321,11 +319,7 @@ public class AccountsController : Controller
             if (model.AccountKeys != null &&
                 _featureService.IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration))
             {
-                // this is only called on US-dev, this code is not in production yet per LD dashboard
                 await _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, model.ToData());
-
-                // direct-invite behavior: this endpoint accepts the pending organization invite.
-                await _acceptOrgUserCommand.AcceptOrgUserByOrgSsoIdAsync(model.OrgIdentifier, user, _userService);
                 return;
             }
         }
@@ -391,8 +385,6 @@ public class AccountsController : Controller
 
         if (result.Succeeded)
         {
-            // direct-invite behavior: this endpoint accepts the pending organization invite.
-            await AcceptInvitedOrganizationUserAsync(user, model.OrgIdentifier);
             return;
         }
 
@@ -402,24 +394,6 @@ public class AccountsController : Controller
         }
 
         throw new BadRequestException(ModelState);
-    }
-
-    private async Task AcceptInvitedOrganizationUserAsync(User user, string orgSsoIdentifier)
-    {
-        var org = await _organizationRepository.GetByIdentifierAsync(orgSsoIdentifier)
-            ?? throw new BadRequestException("Organization invalid.");
-
-        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, user.Id)
-            ?? throw new BadRequestException("User not found within organization.");
-
-        // TDE users who go from a user without admin acct recovery permission to having it will be
-        // required to set a MP for the first time and we don't want to re-execute the accept logic
-        // as they are already confirmed.
-        // TLDR: only accept post SSO user if they are invited
-        if (orgUser.Status == OrganizationUserStatusType.Invited)
-        {
-            await _acceptOrgUserCommand.AcceptOrgUserAsync(orgUser, user, _userService);
-        }
     }
 
     [HttpPost("verify-password")]
