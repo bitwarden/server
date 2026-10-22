@@ -62,6 +62,7 @@ public class GlobalSettings : IGlobalSettings
     /// </summary>
     public virtual int ProviderInviteExpirationHours { get; set; } = 120; // 5 days
     public virtual int TwoFactorUserVerificationTokenLifetimeInMinutes { get; set; } = 30;
+    public virtual int TwoFactorRememberTokenLifetimeInDays { get; set; } = 30;
     public virtual int DeviceLastActivityCacheTtlHours { get; set; } = 120; // 5 days
     public virtual string EventGridKey { get; set; }
     public virtual bool TestPlayIdTrackingEnabled { get; set; } = false;

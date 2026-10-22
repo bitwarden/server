@@ -1,9 +1,9 @@
 ﻿using Bit.Core.Billing.Enums;
-using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Options;
 using Bit.Seeder.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Seeder.Pipeline;
@@ -172,14 +172,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
 
         if (options.StripeBilling is not null)
         {
-            var address = options.StripeBilling.Address;
-            if (address.TaxId is not null)
-            {
-                var withoutTaxId = Enum.GetValues<StripeTestAddress>().Where(a => a.TaxId is null).Select(a => a.Name);
-                throw new InvalidOperationException(
-                    $"The '{address.Name}' test address carries a tax ID, and a premium user's personal account " +
-                    $"takes none. Use one of: {string.Join(", ", withoutTaxId)}.");
-            }
+            options.StripeBilling.ValidateForPersonalAccount();
 
             RequireBillingService(deps.UserStripeBillingService).ValidateConfiguration();
 
@@ -238,8 +231,13 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
 
     private async Task<PipelineExecutionResult> BuildAndExecuteAsync(string recipeName, ServiceCollection services)
     {
+        if (deps.DisableDataProtection && !deps.Db.Database.IsSqlServer())
+        {
+            throw new InvalidOperationException("Disabling data protection (--no-data-protection) is only supported on SQL Server.");
+        }
+
         await using var serviceProvider = services.BuildServiceProvider();
-        var committer = new BulkCommitter(deps.Db, deps.Mapper);
+        var committer = new BulkCommitter(deps.Db, deps.Mapper, deps.DisableDataProtection);
         var executor = new RecipeExecutor(recipeName, serviceProvider, committer);
         return await executor.ExecuteAsync();
     }

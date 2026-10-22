@@ -63,6 +63,7 @@ public static class PlanFeatures
                 org.UseTotp = true;
                 org.Use2fa = true;
                 org.UsersGetPremium = true;
+                org.SelfHost = true;
                 break;
 
             default:

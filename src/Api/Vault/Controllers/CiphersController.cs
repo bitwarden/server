@@ -572,6 +572,30 @@ public class CiphersController : Controller
         return await CanEditCiphersAsync(organizationId, cipherIds);
     }
 
+    /// <summary>
+    /// Permission helper to determine if the current user can purge an organization's vault.
+    /// Purging is permanent and unrecoverable, so it is restricted to Owners and provider users, matching
+    /// the web client's isOwner guard on the page that offers it. Admins and Custom users (including those
+    /// holding EditAnyCollection) are intentionally excluded: purge is documented as an owner-only action.
+    ///
+    /// This deliberately does NOT use <see cref="CanDeleteOrRestoreCipherAsAdminAsync"/>, because an Owner
+    /// fails that check when the organization's "admins can manage all collections and items" setting is
+    /// off, which would break owner purge for the default organization configuration.
+    /// TODO: Move this to its own authorization handler or equivalent service - AC-2062
+    /// </summary>
+    private async Task<bool> CanPurgeOrganizationVaultAsync(Guid organizationId)
+    {
+        var org = _currentContext.GetOrganization(organizationId);
+
+        if (org is { Type: OrganizationUserType.Owner })
+        {
+            return true;
+        }
+
+        // Provider users act on behalf of the organization's owners and retain purge access.
+        return await _currentContext.ProviderUserForOrgAsync(organizationId);
+    }
+
     private async Task<bool> CanDeleteOrRestoreCipherAsAdminAsync(Guid organizationId, IEnumerable<Guid> cipherIds)
     {
         var org = _currentContext.GetOrganization(organizationId);
@@ -1472,7 +1496,7 @@ public class CiphersController : Controller
         }
         else
         {
-            if (!await _currentContext.EditAnyCollection(organizationId!.Value))
+            if (!await CanPurgeOrganizationVaultAsync(organizationId!.Value))
             {
                 throw new NotFoundException();
             }

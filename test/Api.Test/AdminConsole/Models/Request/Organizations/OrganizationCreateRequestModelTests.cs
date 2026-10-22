@@ -184,6 +184,30 @@ public class OrganizationCreateRequestModelTests
         Assert.Equal(14, signup.TrialLength);
     }
 
+    [Fact]
+    public void ToOrganizationSignup_PrivilegedControls_IsMapped()
+    {
+        var model = new OrganizationCreateRequestModel
+        {
+            Name = "Test Org",
+            BillingEmail = "test@example.com",
+            Key = "test-key",
+            UseSecretsManager = false,
+            Keys = new OrganizationKeysRequestModel
+            {
+                PublicKey = "test-public-key",
+                EncryptedPrivateKey = "test-encrypted-private-key"
+            },
+            UsePrivilegedControls = true,
+            PamSeatMinimum = 6
+        };
+
+        var signup = model.ToOrganizationSignup(new Bit.Core.Entities.User());
+
+        Assert.True(signup.UsePrivilegedControls);
+        Assert.Equal(6, signup.PamSeatMinimum);
+    }
+
     [Theory]
     [InlineData(CountryAbbreviations.UnitedStates)]
     [InlineData(CountryAbbreviations.Switzerland)]
