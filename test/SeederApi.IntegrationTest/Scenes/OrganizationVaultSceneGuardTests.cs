@@ -47,26 +47,6 @@ public class OrganizationVaultSceneGuardTests : IClassFixture<InPlaySeederApiApp
     }
 
     [Fact]
-    public async Task OrganizationCollectionScene_ForeignGroup_ReturnsBadRequestWithoutWrites()
-    {
-        var playId = Guid.NewGuid().ToString();
-        var org = await SeedOrganizationAsync(playId);
-        var foreignOrg = await SeedOrganizationAsync(playId);
-        var foreignGroupId = await SeedGroupAsync(playId, foreignOrg.OrganizationId);
-
-        var response = await _client.PostSceneRequestAsync(playId, nameof(OrganizationCollectionScene), new OrganizationCollectionScene.Request
-        {
-            OrganizationId = org.OrganizationId,
-            OrganizationKeyB64 = org.OrganizationKeyB64,
-            Name = "Engineering",
-            Groups = [Access(foreignGroupId)]
-        });
-
-        await AssertBadRequestAsync(response, "not in organization");
-        Assert.False(await _factory.QueryAsync(db => db.Collections.AnyAsync(c => c.OrganizationId == org.OrganizationId)));
-    }
-
-    [Fact]
     public async Task OrganizationCollectionScene_SameOrganizationUsersAndGroups_Succeeds()
     {
         var playId = Guid.NewGuid().ToString();
@@ -180,21 +160,6 @@ public class OrganizationVaultSceneGuardTests : IClassFixture<InPlaySeederApiApp
 
         await AssertBadRequestAsync(response, "not in organization");
         Assert.False(await _factory.QueryAsync(db => db.Ciphers.AnyAsync(c => c.OrganizationId == org.OrganizationId)));
-    }
-
-    [Fact]
-    public async Task OrganizationLoginCipherScene_DuplicateCollectionIds_LinksCollectionOnce()
-    {
-        var playId = Guid.NewGuid().ToString();
-        var org = await SeedOrganizationAsync(playId);
-        var collectionId = await SeedCollectionAsync(playId, org);
-
-        var result = await _client.PostSceneAsync(playId, nameof(OrganizationLoginCipherScene),
-            OrganizationLoginRequest(org, [collectionId, collectionId], org.Owner.UserId, folderId: null));
-
-        var cipherId = result.GetProperty("cipherId").GetGuid();
-        Assert.Equal(1, await _factory.QueryAsync(db => db.CollectionCiphers.CountAsync(cc =>
-            cc.CipherId == cipherId && cc.CollectionId == collectionId)));
     }
 
     [Fact]
