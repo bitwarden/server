@@ -56,11 +56,6 @@ internal sealed class GeneratorContext
     /// </summary>
     public int Seed => _seed;
 
-    /// <summary>
-    /// Total cipher count from options. Used for distribution calculations.
-    /// </summary>
-    public int CipherCount => _options.Ciphers;
-
     private CipherUsernameGenerator? _username;
 
     public CipherUsernameGenerator Username => _username ??= new(

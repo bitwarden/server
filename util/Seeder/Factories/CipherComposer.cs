@@ -16,8 +16,21 @@ namespace Bit.Seeder.Factories;
 /// </summary>
 internal static class CipherComposer
 {
+    /// <summary>
+    /// Composes one encrypted cipher of the given type for an organization or a personal vault.
+    /// </summary>
+    /// <param name="index">
+    /// Position of the item. A login's username and password come from <c>index % total</c>, so they repeat
+    /// every <paramref name="total"/> items; the other cipher types use <paramref name="index"/> directly.
+    /// May be at or above <paramref name="total"/>.
+    /// </param>
+    /// <param name="total">
+    /// Modulus for a login's username and password. The steps pass <see cref="CountLogins"/>, so logins cover
+    /// the whole distribution. Must be positive.
+    /// </param>
     internal static Cipher Compose(
         int index,
+        int total,
         CipherType cipherType,
         string encryptionKey,
         Company[] companies,
@@ -27,9 +40,11 @@ internal static class CipherComposer
         Guid? userId = null,
         CipherRepromptType reprompt = CipherRepromptType.None)
     {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(total);
+
         return cipherType switch
         {
-            CipherType.Login => ComposeLogin(index, encryptionKey, companies, generator, passwordDistribution, organizationId, userId, reprompt),
+            CipherType.Login => ComposeLogin(index, total, encryptionKey, companies, generator, passwordDistribution, organizationId, userId, reprompt),
             CipherType.Card => ComposeCard(index, encryptionKey, generator, organizationId, userId, reprompt),
             CipherType.Identity => ComposeIdentity(index, encryptionKey, generator, organizationId, userId, reprompt),
             CipherType.SecureNote => ComposeSecureNote(index, encryptionKey, generator, organizationId, userId, reprompt),
@@ -38,8 +53,25 @@ internal static class CipherComposer
         };
     }
 
+    /// <summary>
+    /// Counts the logins <paramref name="typeDistribution"/> assigns across <paramref name="total"/> items.
+    /// The steps pass this as the <c>total</c> of <see cref="Compose"/>: the type distribution hands logins out
+    /// as one contiguous run, so a larger total would give them only the first buckets of the password and
+    /// username distributions. Never less than 1, because <see cref="Compose"/> rejects a total of zero and a
+    /// mix without logins never uses the value.
+    /// </summary>
+    internal static int CountLogins(Distribution<CipherType> typeDistribution, int total)
+    {
+        var logins = typeDistribution.GetCounts(total)
+            .Where(bucket => bucket.Value == CipherType.Login)
+            .Sum(bucket => bucket.Count);
+
+        return Math.Max(1, logins);
+    }
+
     private static Cipher ComposeLogin(
         int index,
+        int total,
         string encryptionKey,
         Company[] companies,
         GeneratorContext generator,
@@ -50,7 +82,8 @@ internal static class CipherComposer
     {
         var company = companies[index % companies.Length];
         var uri = $"https://{company.Domain}";
-        var username = generator.Username.GenerateByIndex(index, totalHint: generator.CipherCount, domain: company.Domain);
+        var slot = index % total;
+        var username = generator.Username.GenerateByIndex(slot, totalHint: total, domain: company.Domain);
 
         // ~20% of logins get a FIDO2 passkey; ~40% get a 1-3 entry password history. Deterministic by index.
         var fido2Credentials = index % 5 == 0
@@ -58,7 +91,7 @@ internal static class CipherComposer
             : null;
 
         var passwordHistory = index % 5 < 2
-            ? BuildPasswordHistory(index, 1 + (index % 3), generator.CipherCount, passwordDistribution)
+            ? BuildPasswordHistory(slot, 1 + (index % 3), total, passwordDistribution)
             : null;
 
         return LoginCipherSeeder.Create(new CipherSeed
@@ -72,7 +105,7 @@ internal static class CipherComposer
             Login = new LoginViewDto
             {
                 Username = username,
-                Password = Passwords.GetPassword(index, generator.CipherCount, passwordDistribution),
+                Password = Passwords.GetPassword(slot, total, passwordDistribution),
                 Uris = [new LoginUriViewDto { Uri = uri }],
                 Fido2Credentials = fido2Credentials,
                 PasswordHistory = passwordHistory
@@ -89,10 +122,10 @@ internal static class CipherComposer
         var history = new List<PasswordHistoryViewDto>(entryCount);
         for (var k = 1; k <= entryCount; k++)
         {
-            // Walk to a deterministic prior position in the pool. The offset must stay in [0, total) so
-            // Distribution.Select lands in a real bucket (otherwise every historical password collapses into the
-            // strongest tier), and must be non-zero so priorIndex != index — i.e. the prior password is genuinely
-            // distinct from the current one. 7919 is prime; multiplying by k varies offsets across entries.
+            // Walk to a deterministic prior position in the pool. The offset must stay in [0, total) because
+            // Distribution.Select throws outside that range, and must be non-zero so priorIndex != index — i.e. the
+            // prior password is genuinely distinct from the current one. 7919 is prime; multiplying by k varies
+            // offsets across entries.
             int priorIndex;
             if (total <= 1)
             {

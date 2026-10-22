@@ -69,6 +69,23 @@ public class OrganizationSubscriptionEndpointsRequestBindingTests
         Assert.Null(command.ReceivedRequest);
     }
 
+    [Fact]
+    public async Task RestartPreview_BindsBillingAddressFromJsonBody()
+    {
+        var organizationId = Guid.NewGuid();
+        _organizationRepository.GetByIdAsync(organizationId).Returns(new OrganizationEntity { Id = organizationId });
+        var command = new FakePreviewOrganizationRestartCommand { Result = SamplePreview() };
+
+        var context = await InvokeRestartAsync(command, organizationId,
+            """{"billingAddress":{"country":"US","postalCode":"12345","taxId":{"code":"eu_vat","value":"DE123"}}}""");
+
+        Assert.Equal((int)HttpStatusCode.OK, context.Response.StatusCode);
+        Assert.Equal("US", command.ReceivedRequest!.BillingAddress!.Country);
+        Assert.Equal("12345", command.ReceivedRequest.BillingAddress.PostalCode);
+        Assert.Equal("eu_vat", command.ReceivedRequest.BillingAddress.TaxId!.Code);
+        Assert.Equal("DE123", command.ReceivedRequest.BillingAddress.TaxId.Value);
+    }
+
     private async Task<HttpContext> InvokeAsync(
         FakePreviewOrganizationPlanChangeCommand command, Guid organizationId, string json)
     {
@@ -83,6 +100,36 @@ public class OrganizationSubscriptionEndpointsRequestBindingTests
             .SelectMany(dataSource => dataSource.Endpoints)
             .OfType<RouteEndpoint>()
             .Single(e => e.RoutePattern.RawText!.Contains("plan-change/preview", StringComparison.Ordinal));
+
+        using var scope = app.Services.CreateScope();
+        var body = Encoding.UTF8.GetBytes(json);
+        var context = new DefaultHttpContext { RequestServices = scope.ServiceProvider };
+        context.Features.Set<IHttpRequestBodyDetectionFeature>(new BodyDetectionFeature(canHaveBody: true));
+        context.Request.Method = HttpMethods.Post;
+        context.Request.RouteValues["organizationId"] = organizationId.ToString();
+        context.Request.ContentType = "application/json";
+        context.Request.Body = new MemoryStream(body);
+        context.Request.ContentLength = body.Length;
+        context.Response.Body = new MemoryStream();
+
+        await endpoint.RequestDelegate!(context);
+        return context;
+    }
+
+    private async Task<HttpContext> InvokeRestartAsync(
+        FakePreviewOrganizationRestartCommand command, Guid organizationId, string json)
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.Services.AddSingleton(_organizationRepository);
+        builder.Services.AddSingleton<IPreviewOrganizationRestartCommand>(command);
+        builder.Services.AddScoped<PreviewOrganizationRestartHandler>();
+        var app = builder.Build();
+        app.MapGroup("/{organizationId:guid}").MapOrganizationSubscriptionEndpoints();
+
+        var endpoint = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(dataSource => dataSource.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Single(e => e.RoutePattern.RawText!.Contains("restart/preview", StringComparison.Ordinal));
 
         using var scope = app.Services.CreateScope();
         var body = Encoding.UTF8.GetBytes(json);
@@ -118,6 +165,18 @@ public class OrganizationSubscriptionEndpointsRequestBindingTests
         public required InvoicePreview Result { get; init; }
 
         public Task<InvoicePreview> Run(OrganizationEntity organization, PreviewOrganizationPlanChangeRequest request)
+        {
+            ReceivedRequest = request;
+            return Task.FromResult(Result);
+        }
+    }
+
+    private sealed class FakePreviewOrganizationRestartCommand : IPreviewOrganizationRestartCommand
+    {
+        public PreviewOrganizationRestartRequest? ReceivedRequest { get; private set; }
+        public required InvoicePreview Result { get; init; }
+
+        public Task<InvoicePreview> Run(OrganizationEntity organization, PreviewOrganizationRestartRequest request)
         {
             ReceivedRequest = request;
             return Task.FromResult(Result);

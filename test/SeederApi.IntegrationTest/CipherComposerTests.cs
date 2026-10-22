@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Enums;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Data.Static;
@@ -102,12 +103,23 @@ public class CipherComposerTests
     }
 
     [Fact]
-    public void BuildPasswordHistory_ZeroTotal_DoesNotThrow()
+    public void BuildPasswordHistory_ZeroTotal_Throws()
     {
-        var history = CipherComposer.BuildPasswordHistory(0, 1, 0, PasswordDistributions.Realistic);
+        Assert.Throws<ArgumentOutOfRangeException>(() => CipherComposer.BuildPasswordHistory(0, 1, 0, PasswordDistributions.Realistic));
+    }
 
-        Assert.Single(history);
-        Assert.False(string.IsNullOrEmpty(history[0].Password));
+    [Fact]
+    public void CountLogins_RealisticMix_ReturnsLoginShareOfTotal()
+    {
+        Assert.Equal(60, CipherComposer.CountLogins(CipherTypeDistributions.Realistic, 100));
+    }
+
+    [Fact]
+    public void CountLogins_MixWithoutLogins_ReturnsOne()
+    {
+        var withoutLogins = new Distribution<CipherType>((CipherType.Card, 0.50), (CipherType.SecureNote, 0.50));
+
+        Assert.Equal(1, CipherComposer.CountLogins(withoutLogins, 100));
     }
 
     [Fact]

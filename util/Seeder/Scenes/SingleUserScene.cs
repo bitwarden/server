@@ -2,6 +2,7 @@
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Seeder.Factories;
@@ -50,10 +51,23 @@ public class SingleUserScene(
         public GatewayType? Gateway { get; set; }
         public string? GatewayCustomerId { get; set; }
         public string? GatewaySubscriptionId { get; set; }
+        /// <summary>
+        /// PBKDF2 iteration count. Null uses <see cref="UserSeed.DefaultKdfIterations"/>.
+        /// </summary>
+        public int? KdfIterations { get; set; }
     }
+
+    private const int MinKdfIterations = 5_000;
 
     public async Task<SceneResult<SingleUserSceneResult>> SeedAsync(Request request)
     {
+        if (request.KdfIterations is { } kdfIterations &&
+            (kdfIterations < MinKdfIterations || kdfIterations > KdfConstants.PBKDF2_ITERATIONS.Max))
+        {
+            throw new ArgumentOutOfRangeException(nameof(request.KdfIterations), kdfIterations,
+                $"KdfIterations must be between {MinKdfIterations:N0} and {KdfConstants.PBKDF2_ITERATIONS.Max:N0}.");
+        }
+
         if (request.SelfHosted && request.Premium && !globalSettings.SelfHosted)
         {
             throw new InvalidOperationException(
@@ -72,7 +86,8 @@ public class SingleUserScene(
                 Password = request.Password,
                 Gateway = request.Gateway,
                 GatewayCustomerId = request.GatewayCustomerId,
-                GatewaySubscriptionId = request.GatewaySubscriptionId
+                GatewaySubscriptionId = request.GatewaySubscriptionId,
+                KdfIterations = request.KdfIterations ?? UserSeed.DefaultKdfIterations
             },
             passwordHasher,
             manglerService);
