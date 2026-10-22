@@ -71,7 +71,7 @@ public class ConfirmOrganizationInviteLinkCommand(
     }
 
     private async Task<CommandResult<OrganizationUser>> AddUserToOrganizationAsync(
-        ConfirmOrganizationInviteLinkRequest request, ConfirmOrganizationInviteLinkValidationResult validated)
+        ConfirmOrganizationInviteLinkRequest request, InviteLinkMembershipValidationResult validated)
     {
         if (validated.ExistingOrganizationUser is not null)
         {
@@ -83,7 +83,7 @@ public class ConfirmOrganizationInviteLinkCommand(
     }
 
     private async Task PerformPostConfirmSideEffectsAsync(ConfirmOrganizationInviteLinkRequest request,
-        ConfirmOrganizationInviteLinkValidationResult validated, OrganizationUser organizationUser)
+        InviteLinkMembershipValidationResult validated, OrganizationUser organizationUser)
     {
         var user = request.User;
         var organization = validated.Organization;

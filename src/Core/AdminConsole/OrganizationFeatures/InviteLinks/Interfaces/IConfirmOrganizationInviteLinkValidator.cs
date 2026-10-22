@@ -8,18 +8,11 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 /// performed; the caller is responsible for any state changes once validation succeeds.
 /// </summary>
 /// <remarks>
-/// The following are validated:
-/// <list type="bullet">
-///     <item>The invite link exists, its organization is enabled and supports invite links, and the link supports confirmation.</item>
-///     <item>The user has verified their email address.</item>
-///     <item>The user's email domain is allowed by the link.</item>
-///     <item>Any existing membership is neither revoked nor already confirmed.</item>
-///     <item>The Automatic User Confirmation, Single Organization, Require Two-Factor Authentication, and Account
-///     Recovery policies.</item>
-/// </list>
+/// See <see cref="BaseInviteLinkMembershipValidator"/> for the checks performed. In addition, the link must
+/// support confirmation, and an existing membership must be neither revoked nor already confirmed.
 /// </remarks>
 public interface IConfirmOrganizationInviteLinkValidator
 {
-    Task<CommandResult<ConfirmOrganizationInviteLinkValidationResult>> ValidateAsync(
+    Task<CommandResult<InviteLinkMembershipValidationResult>> ValidateAsync(
         ConfirmOrganizationInviteLinkValidationRequest request);
 }

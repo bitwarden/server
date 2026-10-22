@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Utilities.v2.Validation;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Utilities.v2.Results;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 
@@ -14,11 +15,13 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 ///     <item>The existing membership's status:
 ///     <see cref="InviteLinkRules.ValidateConfirmMembershipStatus"/> when the link supports confirmation,
 ///     otherwise <see cref="InviteLinkRules.ValidateAcceptMembershipStatus"/>.</item>
+///     <item>The free organization admin limit and the Automatic User Confirmation, Single Organization, and Require
+///     Two-Factor Authentication policies.</item>
 /// </list>
-/// The caller supplies the invite link, organization, and existing membership. The reset password key is left to the
-/// accept and confirm endpoints.
+/// The Account Recovery policy requires the reset password key, so it is left to the accept and confirm endpoints.
 /// </remarks>
 public interface IGetOrganizationInviteValidator
 {
-    ValidationResult<OrganizationInviteLinkValidationRequest> Validate(OrganizationInviteLinkValidationRequest request);
+    /// <returns>The validated invite link.</returns>
+    Task<CommandResult<OrganizationInviteLink>> ValidateAsync(GetOrganizationInviteRequest request);
 }

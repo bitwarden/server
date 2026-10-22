@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
@@ -10,15 +9,12 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PreAccess;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
-using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 
 /// <summary>
-/// Shared read-only precheck for the invite link confirmation flow. See
-/// <see cref="IConfirmOrganizationInviteLinkValidator"/> for the checks performed.
+/// See <see cref="IConfirmOrganizationInviteLinkValidator"/>.
 /// </summary>
 /// <remarks>
 /// This performs the eligibility checks without any write side effects, so the confirmation endpoints
@@ -32,105 +28,75 @@ public class ConfirmOrganizationInviteLinkValidator(
     IOrganizationUserValidationService organizationUserValidationService,
     IPreAccessEnforcerQuery preAccessEnforcerQuery,
     IJoinOrganizationPolicyValidationService joinOrganizationPolicyValidationService)
-    : IConfirmOrganizationInviteLinkValidator
+    : BaseInviteLinkMembershipValidator(
+        organizationInviteLinkRepository,
+        organizationRepository,
+        organizationUserRepository,
+        organizationUserValidationService,
+        joinOrganizationPolicyValidationService),
+    IConfirmOrganizationInviteLinkValidator
 {
-    public async Task<CommandResult<ConfirmOrganizationInviteLinkValidationResult>> ValidateAsync(
+    public async Task<CommandResult<InviteLinkMembershipValidationResult>> ValidateAsync(
         ConfirmOrganizationInviteLinkValidationRequest request)
     {
-        var user = request.User;
+        var inviteLinkResult = await ValidateInviteLinkAsync(
+            request.OrganizationId,
+            request.Code,
+            request.User);
 
-        var existingInviteLink = await organizationInviteLinkRepository.GetByOrganizationIdAsync(request.OrganizationId);
-        var existingOrganization = existingInviteLink is null
-            ? null
-            : await organizationRepository.GetByIdAsync(existingInviteLink.OrganizationId);
-
-        var eligibilityError = InviteLinkRules.ValidateEligibility(existingInviteLink, request.Code, existingOrganization, user);
-        if (eligibilityError is not null)
+        if (inviteLinkResult.IsError)
         {
-            return ToValidationError(eligibilityError);
+            return ToValidationError(inviteLinkResult.AsError);
         }
 
-        // ValidateEligibility guarantees the invite link and organization exist.
-        var link = existingInviteLink!;
-        var organization = existingOrganization!;
+        var (inviteLink, organization) = inviteLinkResult.AsSuccess;
 
-        if (!link.SupportsConfirmation)
+        if (!inviteLink.SupportsConfirmation)
         {
             return new ConfirmInviteLinkConfirmationNotSupported();
         }
 
-        var existingOrganizationUser = await ResolveExistingOrganizationUserAsync(organization, user);
+        var existingOrganizationUser = await ResolveExistingOrganizationUserAsync(organization, request.User);
 
         var membershipStatusError = InviteLinkRules.ValidateConfirmMembershipStatus(organization, existingOrganizationUser);
+
         if (membershipStatusError is not null)
         {
             return ToValidationError(membershipStatusError);
         }
 
-        var proposedRole = existingOrganizationUser?.Type ?? OrganizationUserType.User;
-
-        // The free organization admin count only includes confirmed memberships, so the membership being confirmed
-        // has not been counted yet.
-        var freeAdminError = await organizationUserValidationService.ValidateFreeOrgAdminLimitAsync(
-            user.Id, organization.PlanType, currentUserType: OrganizationUserType.User, newUserType: proposedRole);
-        if (freeAdminError is not null)
-        {
-            return ToValidationError(freeAdminError);
-        }
-
         var policyEnforcer = await preAccessEnforcerQuery.RunAsync(organization.Id);
-        var allOrganizationMemberships = await organizationUserRepository.GetManyByUserAsync(user.Id);
-        var autoConfirmResult = await joinOrganizationPolicyValidationService.ValidateAutomaticUserConfirmationPolicyAsync(
-            organization.Id, user, proposedRole, policyEnforcer, allOrganizationMemberships);
-        if (autoConfirmResult.IsError)
+
+        var policyResult = await ValidateJoinPoliciesAsync(
+            organization,
+            existingOrganizationUser,
+            request.User,
+            policyEnforcer);
+
+        if (policyResult.IsError)
         {
-            return ToValidationError(autoConfirmResult.Error!);
+            return ToValidationError(policyResult.AsError);
         }
 
-        var singleOrgError = await joinOrganizationPolicyValidationService.ValidateSingleOrganizationPolicyAsync(
-            organization.Id, user, proposedRole, policyEnforcer, allOrganizationMemberships);
-        if (singleOrgError is not null)
-        {
-            return ToValidationError(singleOrgError);
-        }
+        var accountRecoveryResult = JoinOrganizationPolicyValidationService.ValidateAccountRecoveryPolicy(
+            organization.Id,
+            request.User,
+            GetProposedRole(existingOrganizationUser),
+            policyEnforcer,
+            request.ResetPasswordKey);
 
-        var twoFactorError = await joinOrganizationPolicyValidationService.ValidateTwoFactorAuthenticationPolicyAsync(
-            organization.Id, user, proposedRole, policyEnforcer);
-        if (twoFactorError is not null)
-        {
-            return ToValidationError(twoFactorError);
-        }
-
-        var accountRecoveryResult = joinOrganizationPolicyValidationService.ValidateAccountRecoveryPolicy(
-            organization.Id, user, proposedRole, policyEnforcer, request.ResetPasswordKey);
         if (accountRecoveryResult.IsError)
         {
             return ToValidationError(accountRecoveryResult.Error!);
         }
 
-        return new ConfirmOrganizationInviteLinkValidationResult
+        return new InviteLinkMembershipValidationResult
         {
-            InviteLink = link,
             Organization = organization,
             ExistingOrganizationUser = existingOrganizationUser,
             AccountRecoveryAutoEnrollEnabled = accountRecoveryResult.AutoEnrollEnabled,
-            AutoConfirmPolicyEnabled = autoConfirmResult.AutoConfirmPolicyEnabled,
+            AutoConfirmPolicyEnabled = policyResult.AsSuccess.AutoConfirmPolicyEnabled,
         };
-    }
-
-    /// <summary>
-    /// Resolves the membership to confirm, preferring an existing user-linked membership and falling
-    /// back to a pending email invitation for the same address.
-    /// </summary>
-    private async Task<OrganizationUser?> ResolveExistingOrganizationUserAsync(Organization organization, User user)
-    {
-        var userLinkedOrganizationUser = await organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id);
-        if (userLinkedOrganizationUser is not null)
-        {
-            return userLinkedOrganizationUser;
-        }
-
-        return await organizationUserRepository.GetByOrganizationEmailAsync(organization.Id, user.Email);
     }
 
     /// <summary>

@@ -1,11 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
@@ -21,7 +17,6 @@ using Microsoft.Extensions.Logging;
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 
 public class AcceptOrganizationInviteLinkCommand(
-    IOrganizationInviteLinkRepository organizationInviteLinkRepository,
     IOrganizationRepository organizationRepository,
     IOrganizationUserRepository organizationUserRepository,
     IAcceptInviteLinkMembershipValidator acceptInviteLinkMembershipValidator,
@@ -31,7 +26,6 @@ public class AcceptOrganizationInviteLinkCommand(
     IMailService mailService,
     IPushAutoConfirmNotificationCommand pushAutoConfirmNotificationCommand,
     IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand,
-    IPolicyQuery policyQuery,
     ILogger<AcceptOrganizationInviteLinkCommand> logger,
     IEventService eventService)
     : IAcceptOrganizationInviteLinkCommand
@@ -40,46 +34,17 @@ public class AcceptOrganizationInviteLinkCommand(
     {
         var user = request.User;
 
-        var link = await organizationInviteLinkRepository.GetByOrganizationIdAsync(request.OrganizationId);
-        if (link is null || !link.CodeMatches(request.Code.ToString()))
+        var validationResult = await acceptInviteLinkMembershipValidator.ValidateAsync(request);
+        if (validationResult.IsError)
         {
-            return new InviteLinkNotFound();
+            return validationResult.AsError;
         }
 
-        var organization = await organizationRepository.GetByIdAsync(link.OrganizationId);
-        if (organization is null or { Enabled: false })
-        {
-            return new InviteLinkNotFound();
-        }
-
-        if (!organization.UseInviteLinks)
-        {
-            return new InviteLinkNotAvailable();
-        }
-
-        var existingOrganizationUser = await ResolveExistingOrganizationUserAsync(organization, user);
-
-        // These policy states are needed both to validate the accept and to drive the post-accept side effects
-        // below, so resolve them here and pass them into the validator on the request.
-        var autoConfirmPolicyEnabled = organization.UsePolicies
-            && (await policyQuery.RunAsync(organization.Id, PolicyType.AutomaticUserConfirmation)).Enabled;
-        var autoEnrollEnabled = await IsAccountRecoveryAutoEnrollEnabledAsync(organization);
-
-        var membershipValidationResult = await acceptInviteLinkMembershipValidator.ValidateAsync(
-            new AcceptInviteLinkMembershipValidationRequest
-            {
-                Organization = organization,
-                User = user,
-                AllowedDomains = link.GetAllowedDomains(),
-                ExistingMembership = existingOrganizationUser,
-                ResetPasswordKey = request.ResetPasswordKey,
-                AutoConfirmPolicyEnabled = autoConfirmPolicyEnabled,
-                AccountRecoveryAutoEnroll = autoEnrollEnabled,
-            });
-        if (membershipValidationResult.IsError)
-        {
-            return membershipValidationResult.AsError;
-        }
+        var validated = validationResult.AsSuccess;
+        var organization = validated.Organization;
+        var existingOrganizationUser = validated.ExistingOrganizationUser;
+        var autoConfirmPolicyEnabled = validated.AutoConfirmPolicyEnabled;
+        var autoEnrollEnabled = validated.AccountRecoveryAutoEnrollEnabled;
 
         var acceptResult = existingOrganizationUser is not null
             ? await AcceptExistingOrgUserAsync(organization, existingOrganizationUser, user, autoConfirmPolicyEnabled)
@@ -94,33 +59,6 @@ public class AcceptOrganizationInviteLinkCommand(
         await PerformPostAcceptSideEffectsAsync(organization, user, autoEnrollEnabled, request.ResetPasswordKey, autoConfirmPolicyEnabled);
 
         return acceptResult;
-    }
-
-    private async Task<bool> IsAccountRecoveryAutoEnrollEnabledAsync(Organization organization)
-    {
-        if (!organization.UsePolicies)
-        {
-            return false;
-        }
-
-        var resetPasswordPolicy = await policyQuery.RunAsync(organization.Id, PolicyType.ResetPassword);
-        return resetPasswordPolicy.Enabled
-            && resetPasswordPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled;
-    }
-
-    /// <summary>
-    /// Resolves the organization user to accept, preferring an existing user-linked membership
-    /// and falling back to a pending email invitation for the same address.
-    /// </summary>
-    private async Task<OrganizationUser?> ResolveExistingOrganizationUserAsync(Organization organization, User user)
-    {
-        var userLinkedOrganizationUser = await organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id);
-        if (userLinkedOrganizationUser is not null)
-        {
-            return userLinkedOrganizationUser;
-        }
-
-        return await organizationUserRepository.GetByOrganizationEmailAsync(organization.Id, user.Email);
     }
 
     private async Task<CommandResult<OrganizationUser>> AcceptExistingOrgUserAsync(
