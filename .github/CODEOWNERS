@@ -72,6 +72,7 @@ bitwarden_license/src/test/Scim.IntegrationTest @bitwarden/team-admin-console-de
 bitwarden_license/src/test/Scim.ScimTest @bitwarden/team-admin-console-dev
 
 # Provider team
+## Note: comes before Billing so that Billing keep Billing/Providers folders.
 **/Providers @bitwarden/team-provider-business-unit-portals-dev
 
 # Billing team
