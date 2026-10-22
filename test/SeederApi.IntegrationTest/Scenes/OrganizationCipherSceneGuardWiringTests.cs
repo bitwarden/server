@@ -80,16 +80,29 @@ public class OrganizationCipherSceneGuardWiringTests
             Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(new[] { collection.Id })));
     }
 
-    [Fact]
-    public async Task OrganizationLoginCipherScene_UserNotConfirmedMember_ThrowsWithoutCreatingCipher()
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task OrganizationLoginCipherScene_NonMemberWithPerUserState_ThrowsWithoutCreatingCipher(
+        bool favorite, bool archived)
     {
-        var scene = NewLoginScene();
+        var request = LoginRequest(userId: Guid.NewGuid(), folderId: null);
+        request.Favorite = favorite;
+        request.Archived = archived;
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => scene.SeedAsync(LoginRequest(userId: Guid.NewGuid(), folderId: null)));
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => NewLoginScene().SeedAsync(request));
 
-        Assert.Contains("not confirmed members", exception.Message);
+        Assert.Contains("is not a confirmed or revoked member", exception.Message);
         await _cipherRepository.DidNotReceive().CreateAsync(Arg.Any<Cipher>(), Arg.Any<IEnumerable<Guid>>());
+    }
+
+    [Fact]
+    public async Task OrganizationLoginCipherScene_NonMemberWithoutPerUserState_CreatesCipher()
+    {
+        await NewLoginScene().SeedAsync(LoginRequest(userId: Guid.NewGuid(), folderId: null));
+
+        await _organizationUserRepository.DidNotReceiveWithAnyArgs().GetManyByManyUsersAsync(default!);
+        await _cipherRepository.Received(1).CreateAsync(Arg.Any<Cipher>(), Arg.Any<IEnumerable<Guid>>());
     }
 
     [Fact]

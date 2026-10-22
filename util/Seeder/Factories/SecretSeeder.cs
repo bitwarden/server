@@ -22,7 +22,6 @@ internal static class SecretSeeder
             Value = RustSdkService.EncryptString(value ?? string.Empty, orgKey),
             Note = RustSdkService.EncryptString(note ?? string.Empty, orgKey),
             Projects = projectIds?
-                .Distinct()
                 .Select(id => new Project { Id = id, OrganizationId = organizationId })
                 .ToList()
         };

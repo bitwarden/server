@@ -32,17 +32,18 @@ public class OrganizationLoginCipherScene(
 
     protected override async Task<CipherOwner> ResolveOwnerAsync(Request request)
     {
-        var organization = await organizationRepository.GetByIdAsync(request.OrganizationId);
-        if (organization == null)
+        await organizationRepository.GetDistinctCollectionIdsOrThrowAsync(
+            collectionRepository, request.OrganizationId, request.CollectionIds);
+
+        if (request.Favorite || request.Archived || request.FolderId.HasValue)
         {
-            throw new InvalidOperationException($"Organization {request.OrganizationId} not found.");
+            await organizationUserRepository.ThrowIfUserNotConfirmedOrRevokedMemberOfOrganizationAsync(
+                request.UserId, request.OrganizationId);
         }
 
-        await collectionRepository.ThrowIfCollectionsNotInOrganizationAsync(request.CollectionIds, organization.Id);
-        await organizationUserRepository.ThrowIfUserNotConfirmedMemberOfOrganizationAsync(request.UserId, organization.Id);
         await folderRepository.ThrowIfFolderNotOwnedByUserAsync(request.FolderId, request.UserId);
 
-        return new CipherOwner(request.OrganizationKeyB64, organization.Id, null);
+        return new CipherOwner(request.OrganizationKeyB64, request.OrganizationId, null);
     }
 
     protected override Task PersistAsync(Cipher cipher, Request request)

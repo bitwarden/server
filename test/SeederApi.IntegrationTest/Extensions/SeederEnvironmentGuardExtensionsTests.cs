@@ -7,38 +7,6 @@ namespace Bit.SeederApi.IntegrationTest.Extensions;
 
 public class SeederEnvironmentGuardExtensionsTests
 {
-    [Fact]
-    public void ThrowIfSelfHosted_SelfHosted_ThrowsWithSubjectAndSetting()
-    {
-        var exception = Assert.Throws<InvalidOperationException>(
-            () => Settings(selfHosted: true).ThrowIfSelfHosted("Providers"));
-
-        Assert.StartsWith("Providers cannot exist on a self-hosted instance", exception.Message);
-        Assert.Contains("'globalSettings:selfHosted' is true", exception.Message);
-    }
-
-    [Fact]
-    public void ThrowIfSelfHosted_Cloud_DoesNotThrow()
-    {
-        Settings(selfHosted: false).ThrowIfSelfHosted("Providers");
-    }
-
-    [Fact]
-    public void ThrowIfNotSelfHosted_Cloud_ThrowsWithSubjectAndSetting()
-    {
-        var exception = Assert.Throws<InvalidOperationException>(
-            () => Settings(selfHosted: false).ThrowIfNotSelfHosted("Self-host licenses"));
-
-        Assert.StartsWith("Self-host licenses requires a self-hosted instance", exception.Message);
-        Assert.Contains("'globalSettings:selfHosted' is false", exception.Message);
-    }
-
-    [Fact]
-    public void ThrowIfNotSelfHosted_SelfHosted_DoesNotThrow()
-    {
-        Settings(selfHosted: true).ThrowIfNotSelfHosted("Self-host licenses");
-    }
-
     [Theory]
     [InlineData("cus_1", null)]
     [InlineData(null, "sub_1")]

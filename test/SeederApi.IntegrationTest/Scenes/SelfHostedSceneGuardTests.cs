@@ -145,15 +145,5 @@ public class SelfHostedSceneGuardTests : IClassFixture<SelfHostedSeederApiApplic
         Assert.Contains("globalSettings:selfHosted", body);
     }
 
-    private async Task<Guid> SeedUserAsync()
-    {
-        var result = await _client.PostSceneAsync(_playId, nameof(SingleUserScene), new SingleUserScene.Request
-        {
-            Email = $"user-{Guid.NewGuid():N}@example.com",
-            Password = "asdfasdfasdf",
-            EmailVerified = true
-        });
-
-        return result.GetProperty("userId").GetGuid();
-    }
+    private async Task<Guid> SeedUserAsync() => (await _client.SeedUserAsync(_playId)).UserId;
 }

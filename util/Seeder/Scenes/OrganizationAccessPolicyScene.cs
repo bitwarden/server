@@ -54,13 +54,7 @@ public class OrganizationAccessPolicyScene(
     {
         await organizationRepository.GetSecretsManagerOrganizationOrThrowAsync(request.OrganizationId);
 
-        var unreadable = request.Grants.FirstOrDefault(g => !g.Read);
-        if (unreadable != null)
-        {
-            throw new InvalidOperationException(
-                $"Grant for grantee {unreadable.GranteeId} on {unreadable.GrantableType} {unreadable.GrantableId} " +
-                "must be Read = true.");
-        }
+        request.Grants.ThrowIfAnyWithoutRead();
 
         var grants = request.Grants.DistinctOrThrowIfConflicting(
             g => (g.GranteeType, g.GranteeId, g.GrantableType, g.GrantableId),

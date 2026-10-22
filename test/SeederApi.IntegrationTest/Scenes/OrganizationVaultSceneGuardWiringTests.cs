@@ -143,17 +143,14 @@ public class OrganizationVaultSceneGuardWiringTests
     }
 
     [Fact]
-    public async Task OrganizationEventScene_ActingUserNotConfirmedMember_ThrowsWithoutCreatingEvents()
+    public async Task OrganizationEventScene_ActingUserNotAMember_CreatesEvents()
     {
-        _organizationUserRepository.GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>()).Returns([]);
-        var scene = new OrganizationEventScene(
-            _organizationRepository, _eventRepository, _organizationUserRepository, _manglerService);
+        var actingUserId = Guid.NewGuid();
+        var scene = new OrganizationEventScene(_organizationRepository, _eventRepository, _manglerService);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => scene.SeedAsync(
-            new OrganizationEventScene.Request { OrganizationId = _organization.Id, ActingUserId = Guid.NewGuid() }));
+        await scene.SeedAsync(new OrganizationEventScene.Request { OrganizationId = _organization.Id, ActingUserId = actingUserId });
 
-        Assert.Contains("not confirmed members", exception.Message);
-        await _eventRepository.DidNotReceiveWithAnyArgs().CreateAsync(default(IEvent)!);
+        await _eventRepository.Received(2).CreateAsync(Arg.Is<IEvent>(e => e.ActingUserId == actingUserId));
     }
 
     private OrganizationCollectionScene NewCollectionScene() => new(

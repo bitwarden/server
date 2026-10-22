@@ -552,18 +552,14 @@ public class SingleProviderSceneTests : IClassFixture<InPlaySeederApiApplication
             Organizations = [Link(organizationId, organizationKeyB64)]
         });
 
-        var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
+        var response = await _client.PostSceneRequestAsync(playId, nameof(SingleProviderScene), new SingleProviderScene.Request
         {
-            Template = nameof(SingleProviderScene),
-            Arguments = JsonSerializer.SerializeToElement(new SingleProviderScene.Request
-            {
-                OwnerUserId = secondAdminUserId,
-                Name = secondProviderName,
-                Type = ProviderType.Msp,
-                Status = ProviderStatusType.Pending,
-                Organizations = [Link(organizationId, organizationKeyB64)]
-            })
-        }, playId);
+            OwnerUserId = secondAdminUserId,
+            Name = secondProviderName,
+            Type = ProviderType.Msp,
+            Status = ProviderStatusType.Pending,
+            Organizations = [Link(organizationId, organizationKeyB64)]
+        });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Contains("already belongs to a provider", await response.Content.ReadAsStringAsync());
@@ -616,22 +612,18 @@ public class SingleProviderSceneTests : IClassFixture<InPlaySeederApiApplication
         var (organizationId, organizationKeyB64) = await SeedClientOrganizationAsync(playId, orgOwnerUserId);
         var (_, otherOrganizationKeyB64) = await SeedClientOrganizationAsync(playId, orgOwnerUserId);
 
-        var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
+        var response = await _client.PostSceneRequestAsync(playId, nameof(SingleProviderScene), new SingleProviderScene.Request
         {
-            Template = nameof(SingleProviderScene),
-            Arguments = JsonSerializer.SerializeToElement(new SingleProviderScene.Request
-            {
-                OwnerUserId = providerAdminUserId,
-                Name = providerName,
-                Type = ProviderType.Msp,
-                Plans = [new SingleProviderScene.PlanConfig { PlanType = PlanType.EnterpriseMonthly, Seats = 5 }],
-                Organizations =
-                [
-                    Link(organizationId, organizationKeyB64),
-                    Link(organizationId, otherOrganizationKeyB64)
-                ]
-            })
-        }, playId);
+            OwnerUserId = providerAdminUserId,
+            Name = providerName,
+            Type = ProviderType.Msp,
+            Plans = [new SingleProviderScene.PlanConfig { PlanType = PlanType.EnterpriseMonthly, Seats = 5 }],
+            Organizations =
+            [
+                Link(organizationId, organizationKeyB64),
+                Link(organizationId, otherOrganizationKeyB64)
+            ]
+        });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
@@ -687,22 +679,18 @@ public class SingleProviderSceneTests : IClassFixture<InPlaySeederApiApplication
         var orgOwnerUserId = await SeedUserAsync(playId);
         var (organizationId, organizationKeyB64) = await SeedClientOrganizationAsync(playId, orgOwnerUserId);
 
-        var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
+        var response = await _client.PostSceneRequestAsync(playId, nameof(SingleProviderScene), new SingleProviderScene.Request
         {
-            Template = nameof(SingleProviderScene),
-            Arguments = JsonSerializer.SerializeToElement(new SingleProviderScene.Request
-            {
-                OwnerUserId = providerAdminUserId,
-                Name = providerName,
-                Type = ProviderType.Msp,
-                Plans =
-                [
-                    new SingleProviderScene.PlanConfig { PlanType = PlanType.EnterpriseMonthly, Seats = 5 },
-                    new SingleProviderScene.PlanConfig { PlanType = PlanType.EnterpriseMonthly, Seats = 10 }
-                ],
-                Organizations = [Link(organizationId, organizationKeyB64)]
-            })
-        }, playId);
+            OwnerUserId = providerAdminUserId,
+            Name = providerName,
+            Type = ProviderType.Msp,
+            Plans =
+            [
+                new SingleProviderScene.PlanConfig { PlanType = PlanType.EnterpriseMonthly, Seats = 5 },
+                new SingleProviderScene.PlanConfig { PlanType = PlanType.EnterpriseMonthly, Seats = 10 }
+            ],
+            Organizations = [Link(organizationId, organizationKeyB64)]
+        });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Contains(
@@ -791,17 +779,7 @@ public class SingleProviderSceneTests : IClassFixture<InPlaySeederApiApplication
     private static SingleProviderScene.OrganizationLink Link(Guid organizationId, string organizationKeyB64) =>
         new() { OrganizationId = organizationId, OrganizationKeyB64 = organizationKeyB64 };
 
-    private async Task<Guid> SeedUserAsync(string playId)
-    {
-        var result = await PostSceneAsync(playId, "SingleUserScene", new SingleUserScene.Request
-        {
-            Email = $"user-{Guid.NewGuid():N}@example.com",
-            Password = "asdfasdfasdf",
-            EmailVerified = true
-        });
-
-        return result.GetProperty("userId").GetGuid();
-    }
+    private async Task<Guid> SeedUserAsync(string playId) => (await _client.SeedUserAsync(playId)).UserId;
 
     private async Task<(Guid OrganizationId, string OrganizationKeyB64)> SeedClientOrganizationAsync(
         string playId,

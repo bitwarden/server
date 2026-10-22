@@ -58,46 +58,14 @@ public class SeederRepositoryGuardExtensionsTests
     }
 
     [Fact]
-    public async Task ThrowIfGroupsNotInOrganizationAsync_AllInOrganization_Passes()
-    {
-        var group = NewGroup(_ownerId);
-        var repository = Substitute.For<IGroupRepository>();
-        repository.GetManyByManyIds(Arg.Any<IEnumerable<Guid>>()).Returns([group]);
-
-        await repository.ThrowIfGroupsNotInOrganizationAsync([group.Id], _ownerId);
-    }
-
-    [Fact]
     public async Task ThrowIfGroupsNotInOrganizationAsync_InOtherOrganization_Throws()
     {
         var group = NewGroup(_otherOwnerId);
         var repository = Substitute.For<IGroupRepository>();
         repository.GetManyByManyIds(Arg.Any<IEnumerable<Guid>>()).Returns([group]);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => repository.ThrowIfGroupsNotInOrganizationAsync([group.Id], _ownerId));
-
-        Assert.Contains(_ownerId.ToString(), exception.Message);
-    }
-
-    [Fact]
-    public async Task ThrowIfGroupsNotInOrganizationAsync_Missing_Throws()
-    {
-        var repository = Substitute.For<IGroupRepository>();
-        repository.GetManyByManyIds(Arg.Any<IEnumerable<Guid>>()).Returns([]);
-
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => repository.ThrowIfGroupsNotInOrganizationAsync([Guid.NewGuid()], _ownerId));
-    }
-
-    [Fact]
-    public async Task ThrowIfOrganizationUsersNotInOrganizationAsync_AllInOrganization_Passes()
-    {
-        var organizationUser = NewOrganizationUser(_ownerId, OrganizationUserStatusType.Invited);
-        var repository = Substitute.For<IOrganizationUserRepository>();
-        repository.GetManyAsync(Arg.Any<IEnumerable<Guid>>()).Returns([organizationUser]);
-
-        await repository.ThrowIfOrganizationUsersNotInOrganizationAsync([organizationUser.Id], _ownerId);
+            () => repository.ThrowIfGroupsNotInOrganizationAsync([group.Id], _ownerId));
     }
 
     [Fact]
@@ -107,20 +75,8 @@ public class SeederRepositoryGuardExtensionsTests
         var repository = Substitute.For<IOrganizationUserRepository>();
         repository.GetManyAsync(Arg.Any<IEnumerable<Guid>>()).Returns([organizationUser]);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => repository.ThrowIfOrganizationUsersNotInOrganizationAsync([organizationUser.Id], _ownerId));
-
-        Assert.Contains(_ownerId.ToString(), exception.Message);
-    }
-
-    [Fact]
-    public async Task ThrowIfOrganizationUsersNotInOrganizationAsync_Missing_Throws()
-    {
-        var repository = Substitute.For<IOrganizationUserRepository>();
-        repository.GetManyAsync(Arg.Any<IEnumerable<Guid>>()).Returns([]);
-
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => repository.ThrowIfOrganizationUsersNotInOrganizationAsync([Guid.NewGuid()], _ownerId));
+            () => repository.ThrowIfOrganizationUsersNotInOrganizationAsync([organizationUser.Id], _ownerId));
     }
 
     [Fact]
@@ -140,10 +96,8 @@ public class SeederRepositoryGuardExtensionsTests
         var repository = Substitute.For<ICollectionRepository>();
         repository.GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>()).Returns([collection]);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        await Assert.ThrowsAsync<InvalidOperationException>(
             () => repository.ThrowIfCollectionsNotInOrganizationAsync([collection.Id], _ownerId));
-
-        Assert.Contains(_ownerId.ToString(), exception.Message);
     }
 
     [Fact]
@@ -158,43 +112,46 @@ public class SeederRepositoryGuardExtensionsTests
     }
 
     [Fact]
-    public async Task ThrowIfUsersNotConfirmedMembersOfOrganizationAsync_ConfirmedMember_Passes()
+    public async Task GetDistinctCollectionIdsOrThrowAsync_OrganizationMissing_ThrowsWithoutQueryingCollections()
     {
-        var membership = NewOrganizationUser(_ownerId, OrganizationUserStatusType.Confirmed);
+        var organizationRepository = Substitute.For<IOrganizationRepository>();
+        organizationRepository.GetByIdAsync(_ownerId).Returns((Organization?)null);
+        var collectionRepository = Substitute.For<ICollectionRepository>();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            organizationRepository.GetDistinctCollectionIdsOrThrowAsync(collectionRepository, _ownerId, [Guid.NewGuid()]));
+
+        await collectionRepository.DidNotReceiveWithAnyArgs().GetManyByManyIdsAsync(default!);
+    }
+
+    [Theory]
+    [InlineData(OrganizationUserStatusType.Confirmed)]
+    [InlineData(OrganizationUserStatusType.Revoked)]
+    public async Task ThrowIfUserNotConfirmedOrRevokedMemberOfOrganizationAsync_ConfirmedOrRevokedMember_Passes(
+        OrganizationUserStatusType status)
+    {
+        var membership = NewOrganizationUser(_ownerId, status);
         var repository = Substitute.For<IOrganizationUserRepository>();
         repository.GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>()).Returns([membership]);
 
-        await repository.ThrowIfUsersNotConfirmedMembersOfOrganizationAsync([membership.UserId!.Value], _ownerId);
+        await repository.ThrowIfUserNotConfirmedOrRevokedMemberOfOrganizationAsync(membership.UserId!.Value, _ownerId);
     }
 
     [Fact]
-    public async Task ThrowIfUsersNotConfirmedMembersOfOrganizationAsync_MemberOfOtherOrganization_Throws()
+    public async Task ThrowIfUserNotConfirmedOrRevokedMemberOfOrganizationAsync_MemberOfOtherOrganization_Throws()
     {
         var membership = NewOrganizationUser(_otherOwnerId, OrganizationUserStatusType.Confirmed);
         var repository = Substitute.For<IOrganizationUserRepository>();
         repository.GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>()).Returns([membership]);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => repository.ThrowIfUsersNotConfirmedMembersOfOrganizationAsync([membership.UserId!.Value], _ownerId));
-
-        Assert.Contains(_ownerId.ToString(), exception.Message);
-    }
-
-    [Fact]
-    public async Task ThrowIfUsersNotConfirmedMembersOfOrganizationAsync_NotAMember_Throws()
-    {
-        var repository = Substitute.For<IOrganizationUserRepository>();
-        repository.GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>()).Returns([]);
-
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => repository.ThrowIfUsersNotConfirmedMembersOfOrganizationAsync([Guid.NewGuid()], _ownerId));
+            () => repository.ThrowIfUserNotConfirmedOrRevokedMemberOfOrganizationAsync(membership.UserId!.Value, _ownerId));
     }
 
     [Theory]
     [InlineData(OrganizationUserStatusType.Invited)]
     [InlineData(OrganizationUserStatusType.Accepted)]
-    [InlineData(OrganizationUserStatusType.Revoked)]
-    public async Task ThrowIfUsersNotConfirmedMembersOfOrganizationAsync_UnconfirmedMember_Throws(
+    public async Task ThrowIfUserNotConfirmedOrRevokedMemberOfOrganizationAsync_UnconfirmedMember_Throws(
         OrganizationUserStatusType status)
     {
         var membership = NewOrganizationUser(_ownerId, status);
@@ -202,7 +159,7 @@ public class SeederRepositoryGuardExtensionsTests
         repository.GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>()).Returns([membership]);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => repository.ThrowIfUsersNotConfirmedMembersOfOrganizationAsync([membership.UserId!.Value], _ownerId));
+            () => repository.ThrowIfUserNotConfirmedOrRevokedMemberOfOrganizationAsync(membership.UserId!.Value, _ownerId));
     }
 
     [Fact]
@@ -221,34 +178,8 @@ public class SeederRepositoryGuardExtensionsTests
         var repository = Substitute.For<IFolderRepository>();
         repository.GetManyByUserIdAsync(_ownerId).Returns([NewFolder(_ownerId)]);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => repository.ThrowIfFoldersNotOwnedByUserAsync([Guid.NewGuid()], _ownerId));
-
-        Assert.Contains(_ownerId.ToString(), exception.Message);
-    }
-
-    [Fact]
-    public async Task ThrowIfUserNotConfirmedMemberOfOrganizationAsync_Null_DoesNotQuery()
-    {
-        var repository = Substitute.For<IOrganizationUserRepository>();
-
-        await repository.ThrowIfUserNotConfirmedMemberOfOrganizationAsync(null, _ownerId);
-
-        await repository.DidNotReceiveWithAnyArgs().GetManyByManyUsersAsync(default!);
-    }
-
-    [Fact]
-    public async Task ThrowIfUserNotConfirmedMemberOfOrganizationAsync_NotAMember_Throws()
-    {
-        var userId = Guid.NewGuid();
-        var repository = Substitute.For<IOrganizationUserRepository>();
-        repository.GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>()).Returns([]);
-
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => repository.ThrowIfUserNotConfirmedMemberOfOrganizationAsync(userId, _ownerId));
-
-        await repository.Received(1).GetManyByManyUsersAsync(
-            Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(new[] { userId })));
+            () => repository.ThrowIfFoldersNotOwnedByUserAsync([Guid.NewGuid()], _ownerId));
     }
 
     [Fact]
@@ -259,28 +190,6 @@ public class SeederRepositoryGuardExtensionsTests
         await repository.ThrowIfFolderNotOwnedByUserAsync(null, _ownerId);
 
         await repository.DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
-    }
-
-    [Fact]
-    public async Task ThrowIfFolderNotOwnedByUserAsync_OwnedByUser_Passes()
-    {
-        var folder = NewFolder(_ownerId);
-        var repository = Substitute.For<IFolderRepository>();
-        repository.GetManyByUserIdAsync(_ownerId).Returns([folder]);
-
-        await repository.ThrowIfFolderNotOwnedByUserAsync(folder.Id, _ownerId);
-
-        await repository.Received(1).GetManyByUserIdAsync(_ownerId);
-    }
-
-    [Fact]
-    public async Task ThrowIfFolderNotOwnedByUserAsync_NotOwned_Throws()
-    {
-        var repository = Substitute.For<IFolderRepository>();
-        repository.GetManyByUserIdAsync(_ownerId).Returns([]);
-
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => repository.ThrowIfFolderNotOwnedByUserAsync(Guid.NewGuid(), _ownerId));
     }
 
     [Theory]

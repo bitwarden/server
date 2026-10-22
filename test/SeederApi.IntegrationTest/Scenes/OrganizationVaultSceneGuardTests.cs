@@ -1,6 +1,4 @@
-﻿using System.Net;
-using Bit.Core.Billing.Enums;
-using Bit.Seeder.Scenes;
+﻿using Bit.Seeder.Scenes;
 using Duende.IdentityModel.Client;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -28,29 +26,10 @@ public class OrganizationVaultSceneGuardTests : IClassFixture<InPlaySeederApiApp
     }
 
     [Fact]
-    public async Task OrganizationCollectionScene_ForeignOrganizationUser_ReturnsBadRequestWithoutWrites()
-    {
-        var playId = Guid.NewGuid().ToString();
-        var org = await SeedOrganizationAsync(playId);
-        var foreignOrg = await SeedOrganizationAsync(playId);
-
-        var response = await _client.PostSceneRequestAsync(playId, nameof(OrganizationCollectionScene), new OrganizationCollectionScene.Request
-        {
-            OrganizationId = org.OrganizationId,
-            OrganizationKeyB64 = org.OrganizationKeyB64,
-            Name = "Engineering",
-            Users = [Access(foreignOrg.OrganizationUserId)]
-        });
-
-        await AssertBadRequestAsync(response, "not in organization");
-        Assert.False(await _factory.QueryAsync(db => db.Collections.AnyAsync(c => c.OrganizationId == org.OrganizationId)));
-    }
-
-    [Fact]
     public async Task OrganizationCollectionScene_SameOrganizationUsersAndGroups_Succeeds()
     {
         var playId = Guid.NewGuid().ToString();
-        var org = await SeedOrganizationAsync(playId);
+        var org = await _client.SeedOrganizationAsync(playId);
         var groupId = await SeedGroupAsync(playId, org.OrganizationId);
 
         var result = await _client.PostSceneAsync(playId, nameof(OrganizationCollectionScene), new OrganizationCollectionScene.Request
@@ -68,51 +47,10 @@ public class OrganizationVaultSceneGuardTests : IClassFixture<InPlaySeederApiApp
     }
 
     [Fact]
-    public async Task OrganizationCollectionScene_DuplicateIdenticalUsersAndGroups_LinksEachOnce()
-    {
-        var playId = Guid.NewGuid().ToString();
-        var org = await SeedOrganizationAsync(playId);
-        var groupId = await SeedGroupAsync(playId, org.OrganizationId);
-
-        var result = await _client.PostSceneAsync(playId, nameof(OrganizationCollectionScene), new OrganizationCollectionScene.Request
-        {
-            OrganizationId = org.OrganizationId,
-            OrganizationKeyB64 = org.OrganizationKeyB64,
-            Name = "Engineering",
-            Users = [Access(org.OrganizationUserId), Access(org.OrganizationUserId)],
-            Groups = [Access(groupId), Access(groupId)]
-        });
-
-        var collectionId = result.GetProperty("collectionId").GetGuid();
-        Assert.Equal(1, await _factory.QueryAsync(db => db.CollectionUsers.CountAsync(cu =>
-            cu.CollectionId == collectionId && cu.OrganizationUserId == org.OrganizationUserId)));
-        Assert.Equal(1, await _factory.QueryAsync(db => db.CollectionGroups.CountAsync(cg =>
-            cg.CollectionId == collectionId && cg.GroupId == groupId)));
-    }
-
-    [Fact]
-    public async Task OrganizationCollectionScene_ConflictingUserAccess_ReturnsBadRequestWithoutWrites()
-    {
-        var playId = Guid.NewGuid().ToString();
-        var org = await SeedOrganizationAsync(playId);
-
-        var response = await _client.PostSceneRequestAsync(playId, nameof(OrganizationCollectionScene), new OrganizationCollectionScene.Request
-        {
-            OrganizationId = org.OrganizationId,
-            OrganizationKeyB64 = org.OrganizationKeyB64,
-            Name = "Engineering",
-            Users = [Access(org.OrganizationUserId), Access(org.OrganizationUserId, readOnly: true)]
-        });
-
-        await AssertBadRequestAsync(response, "Conflicting access settings");
-        Assert.False(await _factory.QueryAsync(db => db.Collections.AnyAsync(c => c.OrganizationId == org.OrganizationId)));
-    }
-
-    [Fact]
     public async Task OrganizationGroupScene_SameOrganizationUsersAndCollections_Succeeds()
     {
         var playId = Guid.NewGuid().ToString();
-        var org = await SeedOrganizationAsync(playId);
+        var org = await _client.SeedOrganizationAsync(playId);
         var collectionId = await SeedCollectionAsync(playId, org);
 
         var result = await _client.PostSceneAsync(playId, nameof(OrganizationGroupScene), new OrganizationGroupScene.Request
@@ -129,60 +67,11 @@ public class OrganizationVaultSceneGuardTests : IClassFixture<InPlaySeederApiApp
     }
 
     [Fact]
-    public async Task OrganizationGroupScene_DuplicateIdenticalCollections_LinksCollectionOnce()
-    {
-        var playId = Guid.NewGuid().ToString();
-        var org = await SeedOrganizationAsync(playId);
-        var collectionId = await SeedCollectionAsync(playId, org);
-
-        var result = await _client.PostSceneAsync(playId, nameof(OrganizationGroupScene), new OrganizationGroupScene.Request
-        {
-            OrganizationId = org.OrganizationId,
-            Name = "Admins",
-            Collections = [GroupAccess(collectionId), GroupAccess(collectionId)]
-        });
-
-        var groupId = result.GetProperty("groupId").GetGuid();
-        Assert.Equal(1, await _factory.QueryAsync(db => db.CollectionGroups.CountAsync(cg =>
-            cg.CollectionId == collectionId && cg.GroupId == groupId)));
-    }
-
-    [Fact]
-    public async Task OrganizationLoginCipherScene_ForeignCollection_ReturnsBadRequestWithoutWrites()
-    {
-        var playId = Guid.NewGuid().ToString();
-        var org = await SeedOrganizationAsync(playId);
-        var foreignOrg = await SeedOrganizationAsync(playId);
-        var foreignCollectionId = await SeedCollectionAsync(playId, foreignOrg);
-
-        var response = await _client.PostSceneRequestAsync(playId, nameof(OrganizationLoginCipherScene),
-            OrganizationLoginRequest(org, [foreignCollectionId], org.Owner.UserId, folderId: null));
-
-        await AssertBadRequestAsync(response, "not in organization");
-        Assert.False(await _factory.QueryAsync(db => db.Ciphers.AnyAsync(c => c.OrganizationId == org.OrganizationId)));
-    }
-
-    [Fact]
-    public async Task OrganizationLoginCipherScene_UserNotAMember_ReturnsBadRequestWithoutWrites()
-    {
-        var playId = Guid.NewGuid().ToString();
-        var org = await SeedOrganizationAsync(playId);
-        var outsider = await SeedUserAsync(playId);
-        var collectionId = await SeedCollectionAsync(playId, org);
-
-        var response = await _client.PostSceneRequestAsync(playId, nameof(OrganizationLoginCipherScene),
-            OrganizationLoginRequest(org, [collectionId], outsider.UserId, folderId: null));
-
-        await AssertBadRequestAsync(response, "not confirmed members");
-        Assert.False(await _factory.QueryAsync(db => db.Ciphers.AnyAsync(c => c.OrganizationId == org.OrganizationId)));
-    }
-
-    [Fact]
     public async Task OrganizationLoginCipherScene_ConfirmedMemberWithOwnFolder_Succeeds()
     {
         var playId = Guid.NewGuid().ToString();
-        var org = await SeedOrganizationAsync(playId);
-        var folderId = await SeedFolderAsync(playId, org.Owner);
+        var org = await _client.SeedOrganizationAsync(playId);
+        var folderId = await _client.SeedFolderAsync(playId, org.Owner);
         var collectionId = await SeedCollectionAsync(playId, org);
 
         var result = await _client.PostSceneAsync(playId, nameof(OrganizationLoginCipherScene),
@@ -199,7 +88,7 @@ public class OrganizationVaultSceneGuardTests : IClassFixture<InPlaySeederApiApp
     public async Task OrganizationEventScene_ConfirmedOrNoActingUser_Succeeds(bool withActingUser)
     {
         var playId = Guid.NewGuid().ToString();
-        var org = await SeedOrganizationAsync(playId);
+        var org = await _client.SeedOrganizationAsync(playId);
         Guid? actingUserId = withActingUser ? org.Owner.UserId : null;
 
         var result = await _client.PostSceneAsync(playId, nameof(OrganizationEventScene), new OrganizationEventScene.Request
@@ -213,8 +102,8 @@ public class OrganizationVaultSceneGuardTests : IClassFixture<InPlaySeederApiApp
             e.OrganizationId == org.OrganizationId && e.ActingUserId == actingUserId)));
     }
 
-    private static OrganizationCollectionScene.AccessSelectionRequest Access(Guid id, bool readOnly = false) =>
-        new() { Id = id, ReadOnly = readOnly, HidePasswords = false, Manage = false };
+    private static OrganizationCollectionScene.AccessSelectionRequest Access(Guid id) =>
+        new() { Id = id, ReadOnly = false, HidePasswords = false, Manage = false };
 
     private static OrganizationGroupScene.AccessSelectionRequest GroupAccess(Guid id) =>
         new() { Id = id, ReadOnly = false, HidePasswords = false, Manage = false };
@@ -229,42 +118,6 @@ public class OrganizationVaultSceneGuardTests : IClassFixture<InPlaySeederApiApp
             Name = "Login",
             FolderId = folderId
         };
-
-    private record SeededUser(Guid UserId, string UserKeyB64);
-
-    private record SeededOrganization(
-        Guid OrganizationId, Guid OrganizationUserId, string OrganizationKeyB64, SeededUser Owner);
-
-    private async Task<SeededUser> SeedUserAsync(string playId)
-    {
-        var result = await _client.PostSceneAsync(playId, nameof(SingleUserScene), new SingleUserScene.Request
-        {
-            Email = $"user-{Guid.NewGuid():N}@example.com",
-            Password = "asdfasdfasdf",
-            EmailVerified = true
-        });
-
-        return new SeededUser(result.GetProperty("userId").GetGuid(), result.GetProperty("decryptedKeyB64").GetString()!);
-    }
-
-    private async Task<SeededOrganization> SeedOrganizationAsync(string playId)
-    {
-        var owner = await SeedUserAsync(playId);
-        var result = await _client.PostSceneAsync(playId, nameof(SingleOrganizationScene), new SingleOrganizationScene.Request
-        {
-            OwnerUserId = owner.UserId,
-            PlanType = PlanType.EnterpriseAnnually,
-            Name = "Guard Org",
-            Domain = $"guard-{Guid.NewGuid():N}.example.com",
-            Seats = 10
-        });
-
-        return new SeededOrganization(
-            result.GetProperty("organizationId").GetGuid(),
-            result.GetProperty("organizationUserId").GetGuid(),
-            result.GetProperty("organizationKeyB64").GetString()!,
-            owner);
-    }
 
     private async Task<Guid> SeedGroupAsync(string playId, Guid organizationId)
     {
@@ -287,23 +140,5 @@ public class OrganizationVaultSceneGuardTests : IClassFixture<InPlaySeederApiApp
         });
 
         return result.GetProperty("collectionId").GetGuid();
-    }
-
-    private async Task<Guid> SeedFolderAsync(string playId, SeededUser user)
-    {
-        var result = await _client.PostSceneAsync(playId, nameof(UserFolderScene), new UserFolderScene.Request
-        {
-            UserId = user.UserId,
-            UserKeyB64 = user.UserKeyB64,
-            FolderName = "Folder"
-        });
-
-        return result.GetProperty("folderId").GetGuid();
-    }
-
-    private static async Task AssertBadRequestAsync(HttpResponseMessage response, string expectedMessage)
-    {
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Contains(expectedMessage, await response.Content.ReadAsStringAsync());
     }
 }

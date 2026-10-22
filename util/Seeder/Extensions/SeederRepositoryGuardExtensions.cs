@@ -71,22 +71,35 @@ internal static class SeederRepositoryGuardExtensions
                 organizationId),
             $"One or more collections are not in organization {organizationId}.");
 
-    public static Task ThrowIfUsersNotConfirmedMembersOfOrganizationAsync(
-        this IOrganizationUserRepository organizationUserRepository, IEnumerable<Guid>? userIds, Guid organizationId)
+    public static async Task<List<Guid>> GetDistinctCollectionIdsOrThrowAsync(
+        this IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        Guid organizationId,
+        IEnumerable<Guid> collectionIds)
+    {
+        if (await organizationRepository.GetByIdAsync(organizationId) == null)
+        {
+            throw new InvalidOperationException($"Organization {organizationId} not found.");
+        }
+
+        var distinctIds = collectionIds.Distinct().ToList();
+        await collectionRepository.ThrowIfCollectionsNotInOrganizationAsync(distinctIds, organizationId);
+
+        return distinctIds;
+    }
+
+    public static Task ThrowIfUserNotConfirmedOrRevokedMemberOfOrganizationAsync(
+        this IOrganizationUserRepository organizationUserRepository, Guid userId, Guid organizationId)
         => ThrowIfAnyNotOwnedAsync(
-            userIds,
+            [userId],
             async ids => AllResolvedToOwner(
                 ids,
                 (await organizationUserRepository.GetManyByManyUsersAsync(ids))
-                    .Where(ou => ou.UserId.HasValue && ou.Status == OrganizationUserStatusType.Confirmed)
+                    .Where(ou => ou.UserId.HasValue &&
+                        ou.Status is OrganizationUserStatusType.Confirmed or OrganizationUserStatusType.Revoked)
                     .Select(ou => (ou.UserId!.Value, ou.OrganizationId)),
                 organizationId),
-            $"One or more users are not confirmed members of organization {organizationId}.");
-
-    public static Task ThrowIfUserNotConfirmedMemberOfOrganizationAsync(
-        this IOrganizationUserRepository organizationUserRepository, Guid? userId, Guid organizationId)
-        => organizationUserRepository.ThrowIfUsersNotConfirmedMembersOfOrganizationAsync(
-            userId is { } id ? [id] : [], organizationId);
+            $"User {userId} is not a confirmed or revoked member of organization {organizationId}.");
 
     public static Task ThrowIfFolderNotOwnedByUserAsync(
         this IFolderRepository folderRepository, Guid? folderId, Guid userId)

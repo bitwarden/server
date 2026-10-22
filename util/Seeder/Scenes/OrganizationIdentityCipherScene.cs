@@ -55,13 +55,8 @@ public class OrganizationIdentityCipherScene(
 
     public async Task<SceneResult<Result>> SeedAsync(Request request)
     {
-        var organization = await organizationRepository.GetByIdAsync(request.OrganizationId);
-        if (organization == null)
-        {
-            throw new InvalidOperationException($"Organization {request.OrganizationId} not found.");
-        }
-
-        await collectionRepository.ThrowIfCollectionsNotInOrganizationAsync(request.CollectionIds, organization.Id);
+        var collectionIds = await organizationRepository.GetDistinctCollectionIdsOrThrowAsync(
+            collectionRepository, request.OrganizationId, request.CollectionIds);
 
         var identity = new IdentityViewDto
         {
@@ -96,7 +91,7 @@ public class OrganizationIdentityCipherScene(
             Identity = identity
         });
 
-        await cipherRepository.CreateAsync(cipher, request.CollectionIds.Distinct());
+        await cipherRepository.CreateAsync(cipher, collectionIds);
 
         return new SceneResult<Result>(
             result: new Result

@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Models.Data;
+using Bit.Seeder.Scenes;
 
 namespace Bit.Seeder.Extensions;
 
@@ -12,26 +13,29 @@ internal static class SeederAccessSelectionExtensions
             return null;
         }
 
-        return selections.DistinctOrThrowIfConflicting(
+        var distinct = selections.DistinctOrThrowIfConflicting(
             s => s.Id,
             s => (s.ReadOnly, s.HidePasswords, s.Manage),
             id => $"Conflicting access settings requested for {subject} {id}.");
-    }
 
-    public static List<T> DistinctOrThrowIfConflicting<T, TId, TSettings>(
-        this IEnumerable<T> items,
-        Func<T, TId> id,
-        Func<T, TSettings> settings,
-        Func<TId, string> conflictMessage)
-    {
-        var distinct = items.DistinctBy(i => (id(i), settings(i))).ToList();
-
-        var conflicting = distinct.GroupBy(id).FirstOrDefault(g => g.Count() > 1);
-        if (conflicting != null)
+        var invalid = distinct.FirstOrDefault(s => !s.Valid());
+        if (invalid != null)
         {
-            throw new InvalidOperationException(conflictMessage(conflicting.Key));
+            throw new InvalidOperationException(
+                $"Manage cannot be combined with ReadOnly or HidePasswords for {subject} {invalid.Id}.");
         }
 
         return distinct;
+    }
+
+    public static void ThrowIfAnyWithoutRead(this IEnumerable<OrganizationAccessPolicyScene.Grant> grants)
+    {
+        var unreadable = grants.FirstOrDefault(g => !g.Read);
+        if (unreadable != null)
+        {
+            throw new InvalidOperationException(
+                $"Grant for grantee {unreadable.GranteeId} on {unreadable.GrantableType} {unreadable.GrantableId} " +
+                "must be Read = true.");
+        }
     }
 }
