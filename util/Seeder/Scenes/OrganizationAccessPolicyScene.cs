@@ -54,7 +54,7 @@ public class OrganizationAccessPolicyScene(
     {
         await organizationRepository.GetSecretsManagerOrganizationOrThrowAsync(request.OrganizationId);
 
-        request.Grants.ThrowIfAnyWithoutRead();
+        ThrowIfAnyWithoutRead(request.Grants);
 
         var grants = request.Grants.DistinctOrThrowIfConflicting(
             g => (g.GranteeType, g.GranteeId, g.GrantableType, g.GrantableId),
@@ -86,6 +86,17 @@ public class OrganizationAccessPolicyScene(
                 AccessPolicyIds = created.Select(p => p.Id).ToList()
             },
             mangleMap: manglerService.GetMangleMap());
+    }
+
+    private static void ThrowIfAnyWithoutRead(IEnumerable<Grant> grants)
+    {
+        var unreadable = grants.FirstOrDefault(g => !g.Read);
+        if (unreadable != null)
+        {
+            throw new InvalidOperationException(
+                $"Grant for grantee {unreadable.GranteeId} on {unreadable.GrantableType} {unreadable.GrantableId} " +
+                "must be Read = true.");
+        }
     }
 
     private static IEnumerable<Guid> GrantableIds(IEnumerable<Grant> grants, AccessPolicySeeder.GrantableType type) =>

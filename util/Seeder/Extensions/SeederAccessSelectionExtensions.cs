@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Models.Data;
-using Bit.Seeder.Scenes;
 
 namespace Bit.Seeder.Extensions;
 
@@ -26,16 +25,5 @@ internal static class SeederAccessSelectionExtensions
         }
 
         return distinct;
-    }
-
-    public static void ThrowIfAnyWithoutRead(this IEnumerable<OrganizationAccessPolicyScene.Grant> grants)
-    {
-        var unreadable = grants.FirstOrDefault(g => !g.Read);
-        if (unreadable != null)
-        {
-            throw new InvalidOperationException(
-                $"Grant for grantee {unreadable.GranteeId} on {unreadable.GrantableType} {unreadable.GrantableId} " +
-                "must be Read = true.");
-        }
     }
 }
