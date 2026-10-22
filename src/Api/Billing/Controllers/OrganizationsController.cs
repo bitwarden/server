@@ -7,6 +7,7 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
@@ -52,7 +53,8 @@ public class OrganizationsController(
     IOrganizationInstallationRepository organizationInstallationRepository,
     IPricingClient pricingClient,
     IReinstateSubscriptionCommand reinstateSubscriptionCommand,
-    IGetPendingAnnualUpgradeQuery getPendingAnnualUpgradeQuery)
+    IGetPendingAnnualUpgradeQuery getPendingAnnualUpgradeQuery,
+    Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     : Controller
 {
     [HttpGet("{id:guid}/subscription")]
@@ -86,12 +88,14 @@ public class OrganizationsController(
             ? organization.GetPrivilegedControlsSeatMinimum(plan)
             : null;
 
+        var includePrivilegedControlsPlanFeatures = featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support);
+
         if (string.IsNullOrEmpty(organization.GatewaySubscriptionId))
         {
             return new OrganizationSubscriptionResponseModel(
                 organization, plan, occupiedPamSeats,
                 organization.IsOnPrivilegedControlsSalesInitiatedTrial(plan, subscriptionHasPrivilegedControlsSeats: false),
-                pamSeatMinimum);
+                pamSeatMinimum, includePrivilegedControlsPlanFeatures);
         }
 
         var subscriptionInfo = await paymentService.GetSubscriptionAsync(organization);
@@ -112,7 +116,7 @@ public class OrganizationsController(
             organization, subscriptionInfo, plan, hideSensitiveData, pendingAnnualUpgrade, occupiedPamSeats,
             organization.IsOnPrivilegedControlsSalesInitiatedTrial(
                 plan, subscriptionInfo.Subscription?.HasPrivilegedControlsSeats == true),
-            pamSeatMinimum);
+            pamSeatMinimum, includePrivilegedControlsPlanFeatures);
     }
 
     [HttpGet("{id:guid}/license")]

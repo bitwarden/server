@@ -11,7 +11,7 @@ namespace Bit.Api.Models.Response;
 
 public class PlanResponseModel : ResponseModel
 {
-    public PlanResponseModel(Plan plan, string obj = "plan")
+    public PlanResponseModel(Plan plan, string obj = "plan", bool includePrivilegedControls = false)
         : base(obj)
     {
         if (plan == null)
@@ -49,7 +49,8 @@ public class PlanResponseModel : ResponseModel
             SecretsManager = new SecretsManagerPlanFeaturesResponseModel(plan.SecretsManager);
         }
 
-        if (plan.PrivilegedControls != null)
+        // Privileged Controls pricing ships with the PAM billing flag; callers opt in so the public plans list doesn't leak it first.
+        if (includePrivilegedControls && plan.PrivilegedControls != null)
         {
             PrivilegedControls = new PrivilegedControlsPlanFeaturesResponseModel(plan.PrivilegedControls);
         }

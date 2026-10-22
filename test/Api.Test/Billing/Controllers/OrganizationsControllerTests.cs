@@ -3,6 +3,7 @@ using AutoFixture.Xunit2;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Billing.Controllers;
 using Bit.Api.Models.Request.Organizations;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -61,6 +62,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IPricingClient _pricingClient;
     private readonly IReinstateSubscriptionCommand _reinstateSubscriptionCommand;
     private readonly IGetPendingAnnualUpgradeQuery _getPendingAnnualUpgradeQuery;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     private readonly OrganizationsController _sut;
 
@@ -87,6 +89,7 @@ public class OrganizationsControllerTests : IDisposable
         _pricingClient = Substitute.For<IPricingClient>();
         _reinstateSubscriptionCommand = Substitute.For<IReinstateSubscriptionCommand>();
         _getPendingAnnualUpgradeQuery = Substitute.For<IGetPendingAnnualUpgradeQuery>();
+        _featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -105,7 +108,8 @@ public class OrganizationsControllerTests : IDisposable
             _organizationInstallationRepository,
             _pricingClient,
             _reinstateSubscriptionCommand,
-            _getPendingAnnualUpgradeQuery);
+            _getPendingAnnualUpgradeQuery,
+            _featureService);
     }
 
     public void Dispose()
@@ -868,6 +872,39 @@ public class OrganizationsControllerTests : IDisposable
 
         Assert.Null(response.PamSeatMinimum);
         await _pricingClient.DidNotReceiveWithAnyArgs().GetPlanOrThrow(default);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_PamBillingFlagOn_PlanCarriesPrivilegedControlsPricing(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.UsePam = true;
+        var plan = new EnterprisePlan(isAnnual: true);
+        ArrangeCloudSubscription(organizationId, organization, plan, PurchasableReferences.PrivilegedControlsSeat);
+        _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(true);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.NotNull(response.Plan.PrivilegedControls);
+        Assert.Equal(72, response.Plan.PrivilegedControls.SeatPrice);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_PamBillingFlagOff_PlanHidesPrivilegedControlsPricingButSeatMinimumStays(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.UsePam = true;
+        organization.PamSeatMinimum = 4;
+        var plan = new EnterprisePlan(isAnnual: true);
+        ArrangeCloudSubscription(organizationId, organization, plan, PurchasableReferences.PrivilegedControlsSeat);
+        _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(false);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Null(response.Plan.PrivilegedControls);
+        Assert.Equal(4, response.PamSeatMinimum);
     }
 
     [Theory, AutoData]

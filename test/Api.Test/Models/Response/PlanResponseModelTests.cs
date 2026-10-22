@@ -14,7 +14,7 @@ public class PlanResponseModelTests
         string expectedStripeSeatPlanId,
         decimal expectedSeatPrice)
     {
-        var model = new PlanResponseModel(new EnterprisePlan(isAnnual));
+        var model = new PlanResponseModel(new EnterprisePlan(isAnnual), includePrivilegedControls: true);
 
         Assert.NotNull(model.PrivilegedControls);
         Assert.Equal(expectedStripeSeatPlanId, model.PrivilegedControls.StripeSeatPlanId);
@@ -25,7 +25,7 @@ public class PlanResponseModelTests
     [Fact]
     public void Constructor_PlanWithPrivilegedControls_MapsBaseSeats()
     {
-        var model = new PlanResponseModel(new EnterprisePlanWithBaseSeats());
+        var model = new PlanResponseModel(new EnterprisePlanWithBaseSeats(), includePrivilegedControls: true);
 
         Assert.Equal(3, model.PrivilegedControls.BaseSeats);
     }
@@ -40,7 +40,15 @@ public class PlanResponseModelTests
     [Fact]
     public void Constructor_PlanWithoutPrivilegedControls_LeavesPrivilegedControlsNull()
     {
-        var model = new PlanResponseModel(new TeamsPlan(isAnnual: true));
+        var model = new PlanResponseModel(new TeamsPlan(isAnnual: true), includePrivilegedControls: true);
+
+        Assert.Null(model.PrivilegedControls);
+    }
+
+    [Fact]
+    public void Constructor_PrivilegedControlsNotRequested_LeavesPrivilegedControlsNullEvenWhenThePlanHasIt()
+    {
+        var model = new PlanResponseModel(new EnterprisePlan(isAnnual: true));
 
         Assert.Null(model.PrivilegedControls);
     }
