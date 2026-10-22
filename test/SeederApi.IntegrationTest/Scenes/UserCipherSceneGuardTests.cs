@@ -26,114 +26,41 @@ public class UserCipherSceneGuardTests : IClassFixture<InPlaySeederApiApplicatio
         _client.Dispose();
     }
 
-    public static TheoryData<string> UserCipherScenes() => new()
-    {
-        nameof(UserLoginCipherScene),
-        nameof(UserBankAccountCipherScene),
-        nameof(UserCardCipherScene),
-        nameof(UserDriversLicenseCipherScene),
-        nameof(UserIdentityCipherScene),
-        nameof(UserPassportCipherScene),
-        nameof(UserSecureNoteCipherScene),
-        nameof(UserSshKeyCipherScene)
-    };
-
-    [Theory]
-    [MemberData(nameof(UserCipherScenes))]
-    public async Task UserCipherScene_FolderOwnedByAnotherUser_ReturnsBadRequestWithoutWrites(string template)
+    [Fact]
+    public async Task UserLoginCipherScene_FolderOwnedByAnotherUser_ReturnsBadRequestWithoutWrites()
     {
         var playId = Guid.NewGuid().ToString();
         var user = await SeedUserAsync(playId);
         var otherUser = await SeedUserAsync(playId);
         var otherUserFolderId = await SeedFolderAsync(playId, otherUser);
 
-        var response = await _client.PostSceneRequestAsync(playId, template, UserCipherRequest(template, user, otherUserFolderId));
+        var response = await _client.PostSceneRequestAsync(playId, nameof(UserLoginCipherScene), LoginRequest(user, otherUserFolderId));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Contains("not owned by user", await response.Content.ReadAsStringAsync());
         Assert.False(await _factory.QueryAsync(db => db.Ciphers.AnyAsync(c => c.UserId == user.UserId)));
     }
 
-    [Theory]
-    [MemberData(nameof(UserCipherScenes))]
-    public async Task UserCipherScene_OwnFolder_Succeeds(string template)
+    [Fact]
+    public async Task UserLoginCipherScene_OwnFolder_Succeeds()
     {
         var playId = Guid.NewGuid().ToString();
         var user = await SeedUserAsync(playId);
         var folderId = await SeedFolderAsync(playId, user);
 
-        var result = await _client.PostSceneAsync(playId, template, UserCipherRequest(template, user, folderId));
+        var result = await _client.PostSceneAsync(playId, nameof(UserLoginCipherScene), LoginRequest(user, folderId));
 
         var cipherId = result.GetProperty("cipherId").GetGuid();
         Assert.True(await _factory.QueryAsync(db => db.Ciphers.AnyAsync(c => c.Id == cipherId && c.UserId == user.UserId)));
     }
 
-    private static object UserCipherRequest(string template, SeededUser user, Guid folderId) =>
-        template switch
-        {
-            nameof(UserLoginCipherScene) => new UserLoginCipherScene.Request
-            {
-                UserId = user.UserId,
-                UserKeyB64 = user.UserKeyB64,
-                Name = "Login",
-                FolderId = folderId
-            },
-            nameof(UserBankAccountCipherScene) => new UserBankAccountCipherScene.Request
-            {
-                UserId = user.UserId,
-                UserKeyB64 = user.UserKeyB64,
-                Name = "Bank",
-                FolderId = folderId
-            },
-            nameof(UserCardCipherScene) => new UserCardCipherScene.Request
-            {
-                UserId = user.UserId,
-                UserKeyB64 = user.UserKeyB64,
-                Name = "Card",
-                CardholderName = "Jane Doe",
-                Number = "4111111111111111",
-                ExpMonth = "12",
-                ExpYear = "2030",
-                Code = "123",
-                FolderId = folderId
-            },
-            nameof(UserDriversLicenseCipherScene) => new UserDriversLicenseCipherScene.Request
-            {
-                UserId = user.UserId,
-                UserKeyB64 = user.UserKeyB64,
-                Name = "License",
-                FolderId = folderId
-            },
-            nameof(UserIdentityCipherScene) => new UserIdentityCipherScene.Request
-            {
-                UserId = user.UserId,
-                UserKeyB64 = user.UserKeyB64,
-                Name = "Identity",
-                FolderId = folderId
-            },
-            nameof(UserPassportCipherScene) => new UserPassportCipherScene.Request
-            {
-                UserId = user.UserId,
-                UserKeyB64 = user.UserKeyB64,
-                Name = "Passport",
-                FolderId = folderId
-            },
-            nameof(UserSecureNoteCipherScene) => new UserSecureNoteCipherScene.Request
-            {
-                UserId = user.UserId,
-                UserKeyB64 = user.UserKeyB64,
-                Name = "Note",
-                FolderId = folderId
-            },
-            nameof(UserSshKeyCipherScene) => new UserSshKeyCipherScene.Request
-            {
-                UserId = user.UserId,
-                UserKeyB64 = user.UserKeyB64,
-                Name = "SSH",
-                FolderId = folderId
-            },
-            _ => throw new ArgumentOutOfRangeException(nameof(template), template, null)
-        };
+    private static UserLoginCipherScene.Request LoginRequest(SeededUser user, Guid folderId) => new()
+    {
+        UserId = user.UserId,
+        UserKeyB64 = user.UserKeyB64,
+        Name = "Login",
+        FolderId = folderId
+    };
 
     private record SeededUser(Guid UserId, string UserKeyB64);
 

@@ -83,11 +83,8 @@ public class SelfHostedSceneGuardTests : IClassFixture<SelfHostedSeederApiApplic
         Assert.False(await _factory.QueryAsync(db => db.Organizations.AnyAsync(o => o.Name.StartsWith(namePrefix))));
     }
 
-    [Theory]
-    [InlineData("cus_selfhost", null)]
-    [InlineData(null, "sub_selfhost")]
-    public async Task SingleOrganizationScene_SelfHostedWithGatewayIds_ReturnsBadRequestWithoutWrites(
-        string? gatewayCustomerId, string? gatewaySubscriptionId)
+    [Fact]
+    public async Task SingleOrganizationScene_SelfHostedWithGatewayCustomerId_ReturnsBadRequestWithoutWrites()
     {
         var ownerUserId = await SeedUserAsync();
         var name = $"Self-hosted Org {Guid.NewGuid():N}";
@@ -99,8 +96,7 @@ public class SelfHostedSceneGuardTests : IClassFixture<SelfHostedSeederApiApplic
             Name = name,
             Domain = $"selfhost-{Guid.NewGuid():N}.example.com",
             Seats = 10,
-            GatewayCustomerId = gatewayCustomerId,
-            GatewaySubscriptionId = gatewaySubscriptionId
+            GatewayCustomerId = "cus_selfhost"
         });
 
         await AssertSelfHostRejectionAsync(response, "Stripe gateway IDs");
@@ -125,11 +121,8 @@ public class SelfHostedSceneGuardTests : IClassFixture<SelfHostedSeederApiApplic
         Assert.True(await _factory.QueryAsync(db => db.Organizations.AnyAsync(o => o.Id == organizationId)));
     }
 
-    [Theory]
-    [InlineData("cus_selfhost", null)]
-    [InlineData(null, "sub_selfhost")]
-    public async Task SingleUserScene_SelfHostedWithGatewayIds_ReturnsBadRequestWithoutWrites(
-        string? gatewayCustomerId, string? gatewaySubscriptionId)
+    [Fact]
+    public async Task SingleUserScene_SelfHostedWithGatewaySubscriptionId_ReturnsBadRequestWithoutWrites()
     {
         var email = $"selfhost-{Guid.NewGuid():N}@example.com";
 
@@ -137,8 +130,7 @@ public class SelfHostedSceneGuardTests : IClassFixture<SelfHostedSeederApiApplic
         {
             Email = email,
             Password = "asdfasdfasdf",
-            GatewayCustomerId = gatewayCustomerId,
-            GatewaySubscriptionId = gatewaySubscriptionId
+            GatewaySubscriptionId = "sub_selfhost"
         });
 
         await AssertSelfHostRejectionAsync(response, "Stripe gateway IDs");

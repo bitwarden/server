@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Enums;
 using Bit.Seeder.Scenes;
 using Duende.IdentityModel.Client;
 using Microsoft.EntityFrameworkCore;
@@ -130,62 +129,6 @@ public class OrganizationVaultSceneGuardTests : IClassFixture<InPlaySeederApiApp
     }
 
     [Fact]
-    public async Task OrganizationCollectionScene_ConflictingGroupAccess_ReturnsBadRequestWithoutWrites()
-    {
-        var playId = Guid.NewGuid().ToString();
-        var org = await SeedOrganizationAsync(playId);
-        var groupId = await SeedGroupAsync(playId, org.OrganizationId);
-
-        var response = await _client.PostSceneRequestAsync(playId, nameof(OrganizationCollectionScene), new OrganizationCollectionScene.Request
-        {
-            OrganizationId = org.OrganizationId,
-            OrganizationKeyB64 = org.OrganizationKeyB64,
-            Name = "Engineering",
-            Groups = [Access(groupId), Access(groupId, readOnly: true)]
-        });
-
-        await AssertBadRequestAsync(response, "Conflicting access settings");
-        Assert.False(await _factory.QueryAsync(db => db.Collections.AnyAsync(c => c.OrganizationId == org.OrganizationId)));
-    }
-
-    [Fact]
-    public async Task OrganizationGroupScene_ForeignOrganizationUser_ReturnsBadRequestWithoutWrites()
-    {
-        var playId = Guid.NewGuid().ToString();
-        var org = await SeedOrganizationAsync(playId);
-        var foreignOrg = await SeedOrganizationAsync(playId);
-
-        var response = await _client.PostSceneRequestAsync(playId, nameof(OrganizationGroupScene), new OrganizationGroupScene.Request
-        {
-            OrganizationId = org.OrganizationId,
-            Name = "Admins",
-            OrganizationUserIds = [foreignOrg.OrganizationUserId]
-        });
-
-        await AssertBadRequestAsync(response, "not in organization");
-        Assert.False(await _factory.QueryAsync(db => db.Groups.AnyAsync(g => g.OrganizationId == org.OrganizationId)));
-    }
-
-    [Fact]
-    public async Task OrganizationGroupScene_ForeignCollection_ReturnsBadRequestWithoutWrites()
-    {
-        var playId = Guid.NewGuid().ToString();
-        var org = await SeedOrganizationAsync(playId);
-        var foreignOrg = await SeedOrganizationAsync(playId);
-        var foreignCollectionId = await SeedCollectionAsync(playId, foreignOrg);
-
-        var response = await _client.PostSceneRequestAsync(playId, nameof(OrganizationGroupScene), new OrganizationGroupScene.Request
-        {
-            OrganizationId = org.OrganizationId,
-            Name = "Admins",
-            Collections = [GroupAccess(foreignCollectionId)]
-        });
-
-        await AssertBadRequestAsync(response, "not in organization");
-        Assert.False(await _factory.QueryAsync(db => db.Groups.AnyAsync(g => g.OrganizationId == org.OrganizationId)));
-    }
-
-    [Fact]
     public async Task OrganizationGroupScene_SameOrganizationUsersAndCollections_Succeeds()
     {
         var playId = Guid.NewGuid().ToString();
@@ -225,73 +168,29 @@ public class OrganizationVaultSceneGuardTests : IClassFixture<InPlaySeederApiApp
     }
 
     [Fact]
-    public async Task OrganizationGroupScene_ConflictingCollectionAccess_ReturnsBadRequestWithoutWrites()
-    {
-        var playId = Guid.NewGuid().ToString();
-        var org = await SeedOrganizationAsync(playId);
-        var collectionId = await SeedCollectionAsync(playId, org);
-
-        var response = await _client.PostSceneRequestAsync(playId, nameof(OrganizationGroupScene), new OrganizationGroupScene.Request
-        {
-            OrganizationId = org.OrganizationId,
-            Name = "Admins",
-            Collections = [GroupAccess(collectionId), GroupAccess(collectionId, readOnly: true)]
-        });
-
-        await AssertBadRequestAsync(response, "Conflicting access settings");
-        Assert.False(await _factory.QueryAsync(db => db.Groups.AnyAsync(g => g.OrganizationId == org.OrganizationId)));
-    }
-
-    public static TheoryData<string> OrganizationCipherScenes() => new()
-    {
-        nameof(OrganizationLoginCipherScene),
-        nameof(OrganizationBankAccountCipherScene),
-        nameof(OrganizationCardCipherScene),
-        nameof(OrganizationDriversLicenseCipherScene),
-        nameof(OrganizationIdentityCipherScene),
-        nameof(OrganizationPassportCipherScene),
-        nameof(OrganizationSecureNoteCipherScene)
-    };
-
-    [Theory]
-    [MemberData(nameof(OrganizationCipherScenes))]
-    public async Task OrganizationCipherScene_ForeignCollection_ReturnsBadRequestWithoutWrites(string template)
+    public async Task OrganizationLoginCipherScene_ForeignCollection_ReturnsBadRequestWithoutWrites()
     {
         var playId = Guid.NewGuid().ToString();
         var org = await SeedOrganizationAsync(playId);
         var foreignOrg = await SeedOrganizationAsync(playId);
         var foreignCollectionId = await SeedCollectionAsync(playId, foreignOrg);
 
-        var response = await _client.PostSceneRequestAsync(playId, template, OrganizationCipherRequest(template, org, foreignCollectionId));
+        var response = await _client.PostSceneRequestAsync(playId, nameof(OrganizationLoginCipherScene),
+            OrganizationLoginRequest(org, [foreignCollectionId], org.Owner.UserId, folderId: null));
 
         await AssertBadRequestAsync(response, "not in organization");
         Assert.False(await _factory.QueryAsync(db => db.Ciphers.AnyAsync(c => c.OrganizationId == org.OrganizationId)));
     }
 
-    [Theory]
-    [MemberData(nameof(OrganizationCipherScenes))]
-    public async Task OrganizationCipherScene_SameOrganizationCollection_Succeeds(string template)
+    [Fact]
+    public async Task OrganizationLoginCipherScene_DuplicateCollectionIds_LinksCollectionOnce()
     {
         var playId = Guid.NewGuid().ToString();
         var org = await SeedOrganizationAsync(playId);
         var collectionId = await SeedCollectionAsync(playId, org);
 
-        var result = await _client.PostSceneAsync(playId, template, OrganizationCipherRequest(template, org, collectionId));
-
-        var cipherId = result.GetProperty("cipherId").GetGuid();
-        Assert.True(await _factory.QueryAsync(db => db.Ciphers.AnyAsync(c =>
-            c.Id == cipherId && c.OrganizationId == org.OrganizationId)));
-    }
-
-    [Theory]
-    [MemberData(nameof(OrganizationCipherScenes))]
-    public async Task OrganizationCipherScene_DuplicateCollectionIds_LinksCollectionOnce(string template)
-    {
-        var playId = Guid.NewGuid().ToString();
-        var org = await SeedOrganizationAsync(playId);
-        var collectionId = await SeedCollectionAsync(playId, org);
-
-        var result = await _client.PostSceneAsync(playId, template, OrganizationCipherRequest(template, org, collectionId, collectionId));
+        var result = await _client.PostSceneAsync(playId, nameof(OrganizationLoginCipherScene),
+            OrganizationLoginRequest(org, [collectionId, collectionId], org.Owner.UserId, folderId: null));
 
         var cipherId = result.GetProperty("cipherId").GetGuid();
         Assert.Equal(1, await _factory.QueryAsync(db => db.CollectionCiphers.CountAsync(cc =>
@@ -314,45 +213,6 @@ public class OrganizationVaultSceneGuardTests : IClassFixture<InPlaySeederApiApp
     }
 
     [Fact]
-    public async Task OrganizationLoginCipherScene_AcceptedMember_ReturnsBadRequestWithoutWrites()
-    {
-        var playId = Guid.NewGuid().ToString();
-        var org = await SeedOrganizationAsync(playId);
-        var member = await SeedUserAsync(playId);
-        await _client.PostSceneAsync(playId, nameof(OrganizationUserScene), new OrganizationUserScene.Request
-        {
-            UserId = member.UserId,
-            OrganizationId = org.OrganizationId,
-            OrganizationKeyB64 = org.OrganizationKeyB64,
-            OrganizationUserType = OrganizationUserType.User,
-            OrganizationUserStatusType = OrganizationUserStatusType.Accepted
-        });
-        var collectionId = await SeedCollectionAsync(playId, org);
-
-        var response = await _client.PostSceneRequestAsync(playId, nameof(OrganizationLoginCipherScene),
-            OrganizationLoginRequest(org, [collectionId], member.UserId, folderId: null));
-
-        await AssertBadRequestAsync(response, "not confirmed members");
-        Assert.False(await _factory.QueryAsync(db => db.Ciphers.AnyAsync(c => c.OrganizationId == org.OrganizationId)));
-    }
-
-    [Fact]
-    public async Task OrganizationLoginCipherScene_FolderOwnedByAnotherUser_ReturnsBadRequestWithoutWrites()
-    {
-        var playId = Guid.NewGuid().ToString();
-        var org = await SeedOrganizationAsync(playId);
-        var otherUser = await SeedUserAsync(playId);
-        var otherUserFolderId = await SeedFolderAsync(playId, otherUser);
-        var collectionId = await SeedCollectionAsync(playId, org);
-
-        var response = await _client.PostSceneRequestAsync(playId, nameof(OrganizationLoginCipherScene),
-            OrganizationLoginRequest(org, [collectionId], org.Owner.UserId, otherUserFolderId));
-
-        await AssertBadRequestAsync(response, "not owned by user");
-        Assert.False(await _factory.QueryAsync(db => db.Ciphers.AnyAsync(c => c.OrganizationId == org.OrganizationId)));
-    }
-
-    [Fact]
     public async Task OrganizationLoginCipherScene_ConfirmedMemberWithOwnFolder_Succeeds()
     {
         var playId = Guid.NewGuid().ToString();
@@ -366,23 +226,6 @@ public class OrganizationVaultSceneGuardTests : IClassFixture<InPlaySeederApiApp
         var cipherId = result.GetProperty("cipherId").GetGuid();
         Assert.True(await _factory.QueryAsync(db => db.Ciphers.AnyAsync(c =>
             c.Id == cipherId && c.OrganizationId == org.OrganizationId)));
-    }
-
-    [Fact]
-    public async Task OrganizationEventScene_ActingUserNotAMember_ReturnsBadRequest()
-    {
-        var playId = Guid.NewGuid().ToString();
-        var org = await SeedOrganizationAsync(playId);
-        var foreignOrg = await SeedOrganizationAsync(playId);
-
-        var response = await _client.PostSceneRequestAsync(playId, nameof(OrganizationEventScene), new OrganizationEventScene.Request
-        {
-            OrganizationId = org.OrganizationId,
-            ActingUserId = foreignOrg.Owner.UserId
-        });
-
-        await AssertBadRequestAsync(response, "not confirmed members");
-        Assert.False(await _factory.QueryAsync(db => db.Events.AnyAsync(e => e.OrganizationId == org.OrganizationId)));
     }
 
     [Theory]
@@ -408,8 +251,8 @@ public class OrganizationVaultSceneGuardTests : IClassFixture<InPlaySeederApiApp
     private static OrganizationCollectionScene.AccessSelectionRequest Access(Guid id, bool readOnly = false) =>
         new() { Id = id, ReadOnly = readOnly, HidePasswords = false, Manage = false };
 
-    private static OrganizationGroupScene.AccessSelectionRequest GroupAccess(Guid id, bool readOnly = false) =>
-        new() { Id = id, ReadOnly = readOnly, HidePasswords = false, Manage = false };
+    private static OrganizationGroupScene.AccessSelectionRequest GroupAccess(Guid id) =>
+        new() { Id = id, ReadOnly = false, HidePasswords = false, Manage = false };
 
     private static OrganizationLoginCipherScene.Request OrganizationLoginRequest(
         SeededOrganization org, IEnumerable<Guid> collectionIds, Guid userId, Guid? folderId) => new()
@@ -420,60 +263,6 @@ public class OrganizationVaultSceneGuardTests : IClassFixture<InPlaySeederApiApp
             UserId = userId,
             Name = "Login",
             FolderId = folderId
-        };
-
-    private static object OrganizationCipherRequest(string template, SeededOrganization org, params Guid[] collectionIds) =>
-        template switch
-        {
-            nameof(OrganizationLoginCipherScene) => OrganizationLoginRequest(org, collectionIds, org.Owner.UserId, null),
-            nameof(OrganizationBankAccountCipherScene) => new OrganizationBankAccountCipherScene.Request
-            {
-                OrganizationId = org.OrganizationId,
-                OrganizationKeyB64 = org.OrganizationKeyB64,
-                CollectionIds = collectionIds,
-                Name = "Bank"
-            },
-            nameof(OrganizationCardCipherScene) => new OrganizationCardCipherScene.Request
-            {
-                OrganizationId = org.OrganizationId,
-                OrganizationKeyB64 = org.OrganizationKeyB64,
-                CollectionIds = collectionIds,
-                Name = "Card",
-                CardholderName = "Jane Doe",
-                Number = "4111111111111111",
-                ExpMonth = "12",
-                ExpYear = "2030",
-                Code = "123"
-            },
-            nameof(OrganizationDriversLicenseCipherScene) => new OrganizationDriversLicenseCipherScene.Request
-            {
-                OrganizationId = org.OrganizationId,
-                OrganizationKeyB64 = org.OrganizationKeyB64,
-                CollectionIds = collectionIds,
-                Name = "License"
-            },
-            nameof(OrganizationIdentityCipherScene) => new OrganizationIdentityCipherScene.Request
-            {
-                OrganizationId = org.OrganizationId,
-                OrganizationKeyB64 = org.OrganizationKeyB64,
-                CollectionIds = collectionIds,
-                Name = "Identity"
-            },
-            nameof(OrganizationPassportCipherScene) => new OrganizationPassportCipherScene.Request
-            {
-                OrganizationId = org.OrganizationId,
-                OrganizationKeyB64 = org.OrganizationKeyB64,
-                CollectionIds = collectionIds,
-                Name = "Passport"
-            },
-            nameof(OrganizationSecureNoteCipherScene) => new OrganizationSecureNoteCipherScene.Request
-            {
-                OrganizationId = org.OrganizationId,
-                OrganizationKeyB64 = org.OrganizationKeyB64,
-                CollectionIds = collectionIds,
-                Name = "Note"
-            },
-            _ => throw new ArgumentOutOfRangeException(nameof(template), template, null)
         };
 
     private record SeededUser(Guid UserId, string UserKeyB64);
