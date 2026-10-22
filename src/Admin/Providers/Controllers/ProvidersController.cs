@@ -517,7 +517,15 @@ public class ProvidersController : Controller
         var organizationIds = model.Items.Where(o => o.Selected).Select(o => o.Id).ToArray();
         if (organizationIds.Any())
         {
-            await _providerService.AddOrganizationsToReseller(id, organizationIds);
+            try
+            {
+                await _providerService.AddOrganizationsToReseller(id, organizationIds);
+            }
+            catch (BadRequestException ex)
+            {
+                TempData["Error"] = ex.Message;
+                return RedirectToAction("AddExistingOrganization", new { id });
+            }
         }
 
         return RedirectToAction("Edit", "Providers", new { id = id });

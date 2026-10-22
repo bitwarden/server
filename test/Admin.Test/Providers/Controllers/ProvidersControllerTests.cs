@@ -7,14 +7,17 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Services;
+using Bit.Core.Exceptions;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using NSubstitute.ReceivedExtensions;
 using Stripe;
 
@@ -285,5 +288,31 @@ public class ProvidersControllerTests
                     o.Plan == "Enterprise (Annually)" &&
                     o.UsePam),
                 "owner@example.com");
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task AddExistingOrganization_ServiceRejects_SetsErrorAndRedirectsToSearch(
+        Guid providerId,
+        Guid organizationId,
+        SutProvider<ProvidersController> sutProvider)
+    {
+        sutProvider.GetDependency<IProviderService>()
+            .AddOrganizationsToReseller(providerId, Arg.Any<IEnumerable<Guid>>())
+            .ThrowsAsync(new BadRequestException("rejected"));
+        sutProvider.Sut.TempData =
+            new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+        var model = new OrganizationUnassignedToProviderSearchViewModel
+        {
+            Items = [new OrganizationSelectableViewModel { Id = organizationId, Selected = true }]
+        };
+
+        var result = await sutProvider.Sut.AddExistingOrganization(providerId, model);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal("AddExistingOrganization", redirect.ActionName);
+        Assert.Equal(providerId, redirect.RouteValues!["id"]);
+        Assert.Equal("rejected", sutProvider.Sut.TempData["Error"]);
     }
 }
