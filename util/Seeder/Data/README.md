@@ -44,6 +44,7 @@ Re-measure before changing them.
 | `FieldsPer100Logins` / `TotpPer100Logins` | 6 / 2 | Target org (fleet: 4% / 2.1%) |
 | `PasskeysPer100Logins` / `PasswordHistoryPer100Logins` | 1 / 6 | Prod: passkeys on 0.2-1.2% of logins, history on 5-7% |
 | `ItemKeysPer100` | 55 | Generated items of every type with their own key (`Cipher.Key`), as in the target org (fleet: 33%) |
+| `AppsPer100Logins` | 24 | Large-org median of applications per password in the Access Intelligence report. Rounded up to whole passes over the 314 companies, so a generated pool of up to 1,312 logins keeps the company domains; later passes use `{name}-{n}.example`. The personal step sizes passes on every user's personal logins together |
 
 Stored login `Data` omits the legacy top-level `Uri`, as the API does.
 

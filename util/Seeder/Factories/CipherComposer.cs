@@ -60,6 +60,12 @@ internal static class CipherComposer
     internal const int ItemKeysPer100 = 55;
 
     /// <summary>
+    /// Distinct sites per 100 logins, rounded up to whole passes over the company list.
+    /// Large-org median of applications per password in the Access Intelligence report.
+    /// </summary>
+    internal const int AppsPer100Logins = 24;
+
+    /// <summary>
     /// Composes one encrypted cipher of the given type for an organization or a personal vault.
     /// </summary>
     /// <param name="index">
@@ -124,7 +130,7 @@ internal static class CipherComposer
         CipherRepromptType reprompt = CipherRepromptType.None)
     {
         var company = companies[index % companies.Length];
-        var domain = company.Domain;
+        var domain = SiteDomain(company, index, total, companies.Length);
         var slot = index % total;
         var username = generator.Username.GenerateByIndex(slot, totalHint: total, domain: domain);
 
@@ -172,6 +178,20 @@ internal static class CipherComposer
     // A stride coprime with 100 hits every residue once per block of 100 logins, so each rate is exact;
     // a different stride per content kind keeps the kinds from piling onto the same logins
     private static int Spread(int index, int stride, int offset) => (index * stride + offset) % 100;
+
+    /// <summary>
+    /// Picks the site of the login at <paramref name="index"/>. The site pool grows with the vault: about
+    /// <see cref="AppsPer100Logins"/> sites per 100 logins, rounded up to whole passes over the company list.
+    /// The first pass uses each company's domain; later passes use <c>{name}-{pass}.example</c>, so each pass adds
+    /// distinct applications to the Access Intelligence report.
+    /// </summary>
+    /// <param name="total">The number of logins, which sets how many passes there are.</param>
+    internal static string SiteDomain(Company company, int index, int total, int companyCount)
+    {
+        var passes = Math.Max(1, (total * AppsPer100Logins / 100 + companyCount - 1) / companyCount);
+        var pass = index % (passes * companyCount) / companyCount;
+        return pass == 0 ? company.Domain : $"{company.Domain.Split('.')[0]}-{pass}.example";
+    }
 
     // Each cipher type is one contiguous run of indices, so a stride on the raw index reaches every type
     private static CipherEncryptionType EncryptionFor(int index) =>

@@ -282,6 +282,31 @@ public class CipherComposerTests
     }
 
     [Fact]
+    public void SiteDomain_SmallVault_KeepsCompanyDomains()
+    {
+        // 1,312 logins is the largest vault whose 24-per-100 site target still fits in one pass over 314 companies
+        const int total = 1_312;
+        var companies = Companies.All;
+
+        Assert.All(Enumerable.Range(0, total), index =>
+        {
+            var company = companies[index % companies.Length];
+            Assert.Equal(company.Domain, CipherComposer.SiteDomain(company, index, total, companies.Length));
+        });
+    }
+
+    [Fact]
+    public void SiteDomain_VaultPastOnePass_GivesSecondPassItsOwnDomains()
+    {
+        var companies = Companies.All;
+        var company = companies[0];
+
+        var domain = CipherComposer.SiteDomain(company, companies.Length, 1_313, companies.Length);
+
+        Assert.Equal($"{company.Domain.Split('.')[0]}-1.example", domain);
+    }
+
+    [Fact]
     public void Compose_OnePassVault_GivesEveryCompanyAUriBearingLogin()
     {
         // Logins pick their company by index % companies.Length, so the URI-bearing indices name the companies covered
@@ -296,6 +321,23 @@ public class CipherComposerTests
             .Count();
 
         Assert.Equal(companies.Length, companiesWithUris);
+    }
+
+    [Fact]
+    public void Compose_LargeVault_SpreadsLoginsOverMoreSitesThanTheCompanyList()
+    {
+        const int total = 20_000;
+        var orgKey = RustSdkService.GenerateOrganizationKeys().Key;
+
+        var hosts = ComposeItems(CipherType.Login, total, orgKey)
+            .Where(cipher => cipher.Key is null)
+            .Select(cipher => JsonSerializer.Deserialize<CipherLoginData>(cipher.Data)!.Uris?.FirstOrDefault()?.Uri)
+            .OfType<string>()
+            .Select(encrypted => new Uri(RustSdkService.DecryptString(encrypted, orgKey)).Host)
+            .Distinct()
+            .Count();
+
+        Assert.True(hosts > Companies.All.Length * 3, $"Expected more than {Companies.All.Length * 3} distinct sites; got {hosts}.");
     }
 
     private static List<Cipher> ComposeItems(CipherType cipherType, int total, string orgKey)
