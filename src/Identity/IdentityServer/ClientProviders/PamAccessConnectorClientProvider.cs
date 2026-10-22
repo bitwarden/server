@@ -41,7 +41,7 @@ internal class PamAccessConnectorClientProvider : IClientProvider
         }
 
         var apiKey = await _apiKeyRepository.GetByIdAsync(apiKeyId);
-        if (apiKey?.ClientSecretHash == null || apiKey.ExpireAt <= DateTime.UtcNow)
+        if (apiKey?.ClientSecretHash == null || apiKey.EncryptedPayload == null || apiKey.ExpireAt <= DateTime.UtcNow)
         {
             return null;
         }
