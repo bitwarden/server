@@ -2,7 +2,7 @@
 
 How to prove a Seeder change is behavior-preserving. Written for Claude Code working with a developer: **Claude drives the CLI, the SeederApi, and the SQL checks; the developer smoke-tests the web vault** against the credentials Claude reports back.
 
-Unit tests cover none of the CLI, the API, or a real database. Use this whenever a change touches `Factories/`, `Steps/`, `Scenes/`, or `Recipes/`.
+The developer and Claude Code run every check against a live local SQL Server database: Claude seeds it with the Seeder and queries it with the `exploring-bitwarden-data` skill. Use this whenever a change touches `Factories/`, `Steps/`, `Scenes/`, or `Recipes/`.
 
 ## Preflight
 
