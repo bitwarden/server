@@ -11,8 +11,8 @@ namespace Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 /// <para>2) In organizations configured with SSO and trusted devices decryption:
 /// Users who are upgraded to have admin account recovery permissions must set a master password
 /// to ensure their ability to reset other users' accounts.</para>
-/// <para>This command does not change the organization membership status. Callers that need to accept a pending
-/// invite must do so separately.</para>
+/// <para>Accepts the user's organization membership when it is Invited, unless the caller passes
+/// <c>acceptOrganizationInvite: false</c> (open-invite do not modify OrgUser Status).</para>
 /// </summary>
 // TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
 [Obsolete("Use IFinishSsoJitProvisionMasterPasswordCommand instead")]

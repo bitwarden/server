@@ -11,8 +11,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.Auth.Controllers;
 
 /// <summary>
-/// Finishes onboarding for SSO JIT provisioned users by member decryption type. These endpoints do not accept a user's 
-/// pending organization invite, so clients can rely on the membership status being left unchanged.
+/// Finishes onboarding for SSO JIT provisioned users by member decryption type. Each request's required
+/// <c>AcceptOrganizationInvite</c> flag controls whether the user's pending organization invite is accepted. Open-invite clients send <c>false</c> so the member stays Invited for later Admin Console checks.
 /// </summary>
 [Route("sso-jit-provision-finish")]
 [Authorize(Policies.Application)]
@@ -30,22 +30,24 @@ public class SsoJitProvisionFinishController(
 
     /// <summary>
     /// Sets the initial master password and account keys for an SSO JIT provisioned user in an organization
-    /// that uses master password decryption. Does not accept the organization membership.
+    /// that uses master password decryption. Accepts the pending organization invite only when
+    /// <see cref="SsoJitProvisionFinishSetInitialPasswordRequestModel.AcceptOrganizationInvite"/> is <c>true</c>.
     /// </summary>
     /// <remarks>
-    /// Accepts the same request shapes as the MP JIT branches of <c>accounts/set-password</c>:
-    /// V2 encryption (MPAD + MPUD + AccountKeys, V2 MP JIT flag on) and V1 encryption
-    /// (modern or legacy shape with legacy Keys). A keypair is required.
+    /// Accepts MPAD + MPUD with exactly one keypair: V2 encryption (AccountKeys, V2 MP JIT flag on)
+    /// or V1 encryption (legacy Keys).
     /// </remarks>
     [HttpPost("password")]
     public async Task FinishMasterPasswordAsync([FromBody] SsoJitProvisionFinishSetInitialPasswordRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
 
-        if (model.HasAuthAndUnlockData() &&
+        // Require AccountKeys so V1 requests (legacy Keys) still route to V1 when the flag is on.
+        if (model.AccountKeys != null &&
             _featureService.IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration))
         {
-            await _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, model.ToData());
+            await _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(
+                user, model.ToData(), model.AcceptOrganizationInvite);
             return;
         }
 
@@ -70,10 +72,9 @@ public class SsoJitProvisionFinishController(
         try
         {
             // Stage 1 (PM-27044) compatibility: see AccountsController.SetInitialPasswordV1Async.
-            model.MasterPasswordUnlock?.ToData().ValidateSaltUnchangedForUser(user);
-            model.MasterPasswordAuthentication?.ToData().ValidateSaltUnchangedForUser(user);
+            model.MasterPasswordUnlock.ToData().ValidateSaltUnchangedForUser(user);
+            model.MasterPasswordAuthentication.ToData().ValidateSaltUnchangedForUser(user);
 
-            // ToUser() handles fallbacks if MPAD + MPUD are not present (i.e. legacy shape)
             user = model.ToUser(user);
         }
         catch (Exception e)
@@ -84,8 +85,8 @@ public class SsoJitProvisionFinishController(
 
         var result = await _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
             user,
-            model.MasterPasswordAuthentication?.MasterPasswordAuthenticationHash ?? model.MasterPasswordHash!,
-            model.MasterPasswordUnlock?.MasterKeyWrappedUserKey ?? model.Key!,
+            model.MasterPasswordAuthentication.MasterPasswordAuthenticationHash,
+            model.MasterPasswordUnlock.MasterKeyWrappedUserKey,
             model.OrgIdentifier,
             model.AcceptOrganizationInvite);
 
