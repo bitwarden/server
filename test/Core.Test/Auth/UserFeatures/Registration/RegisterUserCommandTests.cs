@@ -1663,7 +1663,7 @@ public class RegisterUserCommandTests
             .Returns(mockDataProtector);
 
         sutProvider.GetDependency<IGlobalSettings>()
-            .OrganizationInviteExpirationHours.Returns(120); // 5 days
+            .ProviderInviteExpirationHours.Returns(120); // 5 days
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
@@ -1720,7 +1720,7 @@ public class RegisterUserCommandTests
             .Returns(mockDataProtector);
 
         sutProvider.GetDependency<IGlobalSettings>()
-            .OrganizationInviteExpirationHours.Returns(120); // 5 days
+            .ProviderInviteExpirationHours.Returns(120); // 5 days
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
@@ -1733,6 +1733,42 @@ public class RegisterUserCommandTests
         // Act & Assert
         var result = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.RegisterUserViaProviderInviteToken(user, registerFinishData, base64EncodedProviderInvToken, Guid.NewGuid()));
+        Assert.Equal("Invalid provider invite token.", result.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaProviderInviteToken_TokenExpiredForProviderLifetime_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider,
+        User user, RegisterFinishData registerFinishData, Guid providerUserId)
+    {
+        // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        // Token is 2 hours old: past the provider lifetime, but within the organization invite lifetime
+        var createdMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow.AddHours(-2));
+        var decryptedProviderInviteToken = $"ProviderUserInvite {providerUserId} {user.Email} {createdMillis}";
+        var decryptedProviderInviteTokenByteArray = Encoding.UTF8.GetBytes(decryptedProviderInviteToken);
+        var base64EncodedProviderInvToken = WebEncoders.Base64UrlEncode(decryptedProviderInviteTokenByteArray);
+
+        var mockDataProtector = Substitute.For<IDataProtector>();
+        mockDataProtector.Unprotect(Arg.Any<byte[]>()).Returns(decryptedProviderInviteTokenByteArray);
+
+        sutProvider.GetDependency<IDataProtectionProvider>()
+            .CreateProtector("ProviderServiceDataProtector")
+            .Returns(mockDataProtector);
+
+        sutProvider.GetDependency<IGlobalSettings>().ProviderInviteExpirationHours.Returns(1);
+        sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteExpirationHours.Returns(168);
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
+        sutProvider.Create();
+
+        // Act & Assert
+        var result = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaProviderInviteToken(user, registerFinishData, base64EncodedProviderInvToken, providerUserId));
         Assert.Equal("Invalid provider invite token.", result.Message);
     }
 
@@ -2210,7 +2246,7 @@ public class RegisterUserCommandTests
             .Returns(mockDataProtector);
 
         sutProvider.GetDependency<IGlobalSettings>()
-            .OrganizationInviteExpirationHours.Returns(120); // 5 days
+            .ProviderInviteExpirationHours.Returns(120); // 5 days
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com")
