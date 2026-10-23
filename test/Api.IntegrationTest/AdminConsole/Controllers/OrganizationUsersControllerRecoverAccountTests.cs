@@ -360,7 +360,7 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
         {
             ResetMasterPassword = true,
             NewMasterPasswordHash = "new-master-password-hash",
-            Key = "encrypted-recovery-key"
+            Key = "2.AAECAwQFBgcICQoLDA0ODw==|QmFzZTY0UGFydA==|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
         };
 
         // Act
