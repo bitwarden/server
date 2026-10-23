@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Identity.Test" />
+    <InternalsVisibleTo Include="Identity.IntegrationTest" />
   </ItemGroup>
 
 </Project>
