@@ -47,6 +47,7 @@ using Bit.Commercial.Infrastructure.EntityFramework.SecretsManager;
 using Bit.Services.Pam.AccessConnector;
 using Bit.Api.Pam.AccessConnector;
 using Bit.Services.Pam.Api.Endpoints;
+using Bit.Services.Pam.AccessConnector.Jobs;
 using Bit.Services.Pam.Utilities;
 #endif
 
@@ -222,6 +223,7 @@ public class Startup
         services.AddPamServices();
         services.Configure<PamRotationOptions>(Configuration.GetSection("globalSettings:pam:rotation"));
         Jobs.JobsHostedService.AddCommercialSecretsManagerJobServices(services);
+        services.AddPamJobServices();
         services.AddOpenApiEndpointDataSource(MapPamRotationAttemptCipherEndpoints);
 #endif
 
