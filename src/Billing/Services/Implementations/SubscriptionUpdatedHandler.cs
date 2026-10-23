@@ -497,7 +497,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             organization.UsersGetPremium = familiesPlan.UsersGetPremium;
             organization.Seats = familiesPlan.PasswordManager.BaseSeats;
 
-            await _organizationRepository.ReplaceAsync(organization);
+            await _organizationService.ReplaceAndUpdateCacheAsync(organization);
 
             _logger.LogInformation(
                 "Updated organization ({OrganizationId}) to FamiliesAnnually plan after schedule transition",

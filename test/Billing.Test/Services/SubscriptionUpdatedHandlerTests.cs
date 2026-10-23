@@ -1534,7 +1534,7 @@ public class SubscriptionUpdatedHandlerTests
         Assert.Equal("Families", organization.Plan);
         Assert.True(organization.UsersGetPremium);
         Assert.Equal(6, organization.Seats);
-        await _organizationRepository.Received(1).ReplaceAsync(
+        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(
             Arg.Is<Organization>(o =>
                 o.Id == organizationId &&
                 o.PlanType == PlanType.FamiliesAnnually &&
@@ -1587,7 +1587,7 @@ public class SubscriptionUpdatedHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
     }
 
     [Fact]
@@ -1648,7 +1648,7 @@ public class SubscriptionUpdatedHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
     }
 
     [Fact]
@@ -1704,7 +1704,7 @@ public class SubscriptionUpdatedHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
     }
 
     [Fact]
@@ -1745,7 +1745,7 @@ public class SubscriptionUpdatedHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
     }
 
     [Fact]
@@ -1805,7 +1805,7 @@ public class SubscriptionUpdatedHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         // Assert — guard exits early — logs warning, does not throw, does not update
-        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
     }
 
     [Fact]
@@ -1883,7 +1883,7 @@ public class SubscriptionUpdatedHandlerTests
         Assert.Equal(PlanType.FamiliesAnnually, organization.PlanType);
         Assert.True(organization.UsersGetPremium);
         Assert.Equal(6, organization.Seats);
-        await _organizationRepository.Received(1).ReplaceAsync(
+        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(
             Arg.Is<Organization>(o => o.Id == organizationId));
     }
 

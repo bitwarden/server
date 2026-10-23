@@ -2439,7 +2439,7 @@ public class ProviderBillingServiceTests
 
         var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationService = sutProvider.GetDependency<IOrganizationService>();
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
         var customerId = organization.GatewayCustomerId;
         var subscriptionId = organization.GatewaySubscriptionId;
@@ -2454,7 +2454,7 @@ public class ProviderBillingServiceTests
         {
             priceIncreaseScheduler.Release(customerId, subscriptionId, orgId);
             stripeAdapter.CancelSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
-            organizationRepository.ReplaceAsync(organization);
+            organizationService.ReplaceAndUpdateCacheAsync(organization);
             providerOrganizationRepository.CreateAsync(Arg.Any<ProviderOrganization>());
         });
         await priceIncreaseScheduler.Received(1).Release(customerId, subscriptionId, orgId);
@@ -2474,7 +2474,7 @@ public class ProviderBillingServiceTests
         ArrangeAddExistingOrganizationHappyPath(sutProvider, provider, organization);
 
         var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationService = sutProvider.GetDependency<IOrganizationService>();
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
         // Capture before Act — AddExistingOrganization clears GatewaySubscriptionId
@@ -2488,7 +2488,7 @@ public class ProviderBillingServiceTests
 
         // Assert
         await priceIncreaseScheduler.Received(1).Release(customerId, subscriptionId, orgId);
-        await organizationRepository.Received(1).ReplaceAsync(organization);
+        await organizationService.Received(1).ReplaceAndUpdateCacheAsync(organization);
         Assert.Equal(MockPlans.Get(PlanType.EnterpriseMonthly).HasRiskInsights, organization.UseRiskInsights);
         await providerOrganizationRepository.Received(1).CreateAsync(Arg.Is<ProviderOrganization>(po =>
             po.ProviderId == provider.Id && po.OrganizationId == organization.Id && po.Key == key));
@@ -2535,7 +2535,7 @@ public class ProviderBillingServiceTests
 
         var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationService = sutProvider.GetDependency<IOrganizationService>();
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
         var customerId = organization.GatewayCustomerId;
         var subscriptionId = organization.GatewaySubscriptionId;
@@ -2552,11 +2552,11 @@ public class ProviderBillingServiceTests
             priceIncreaseScheduler.Release(customerId, subscriptionId, orgId);
             stripeAdapter.UpdateSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionUpdateOptions>());
             stripeAdapter.CancelSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
-            organizationRepository.ReplaceAsync(organization);
+            organizationService.ReplaceAndUpdateCacheAsync(organization);
             providerOrganizationRepository.CreateAsync(Arg.Any<ProviderOrganization>());
         });
         await priceIncreaseScheduler.Received(1).Release(customerId, subscriptionId, orgId);
-        await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
+        await organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(o =>
             o.Id == organization.Id && o.PlanType == PlanType.TeamsMonthly));
     }
 
@@ -2575,7 +2575,7 @@ public class ProviderBillingServiceTests
 
         var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationService = sutProvider.GetDependency<IOrganizationService>();
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
         var subscriptionId = organization.GatewaySubscriptionId;
@@ -2593,7 +2593,7 @@ public class ProviderBillingServiceTests
             .UpdateSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionUpdateOptions>());
         await stripeAdapter.Received(0)
             .CancelSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
-        await organizationRepository.Received(0).ReplaceAsync(Arg.Any<Organization>());
+        await organizationService.Received(0).ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
         await providerOrganizationRepository.Received(0).CreateAsync(Arg.Any<ProviderOrganization>());
         await eventService.Received(0).LogProviderOrganizationEventAsync(
             Arg.Any<ProviderOrganization>(), Arg.Any<EventType>());
