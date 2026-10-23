@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.OrganizationAuth;
+﻿using Bit.Core.AdminConsole.Context;
+using Bit.Core.AdminConsole.OrganizationAuth;
 using Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 using Bit.Core.AdminConsole.OrganizationFeatures.Collections;
@@ -65,6 +66,8 @@ public static class OrganizationServiceCollectionExtensions
     public static void AddOrganizationServices(this IServiceCollection services, IGlobalSettings globalSettings)
     {
         services.AddScoped<IOrganizationService, OrganizationService>();
+        services.AddHttpContextAccessor();
+        services.TryAddScoped<IScopedOrganizationApiKeyContext, ScopedOrganizationApiKeyContext>();
         services.AddTokenizers();
         services.AddOrganizationGroupCommands();
         services.AddOrganizationConnectionCommands();
@@ -200,6 +203,7 @@ public static class OrganizationServiceCollectionExtensions
     private static void AddOrganizationGroupCommands(this IServiceCollection services)
     {
         services.TryAddScoped<IGroupCollectionAccessValidator, GroupCollectionAccessValidator>();
+        services.TryAddScoped<IScopedApiKeyGroupMemberValidator, ScopedApiKeyGroupMemberValidator>();
         services.AddScoped<ICreateGroupCommand, CreateGroupCommand>();
         services.AddScoped<IDeleteGroupCommand, DeleteGroupCommand>();
         services.AddScoped<IUpdateGroupCommand, UpdateGroupCommand>();

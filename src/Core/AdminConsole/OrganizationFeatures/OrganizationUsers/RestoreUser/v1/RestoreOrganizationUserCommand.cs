@@ -1,8 +1,10 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.AdminConsole.Context;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -32,7 +34,8 @@ public class RestoreOrganizationUserCommand(
     IPolicyRequirementQuery policyRequirementQuery,
     ICollectionRepository collectionRepository,
     IAutomaticUserConfirmationPolicyEnforcementHandler automaticUserConfirmationPolicyEnforcementHandler,
-    IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand) : IRestoreOrganizationUserCommand
+    IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand,
+    IScopedOrganizationApiKeyContext scopedOrganizationApiKeyContext) : IRestoreOrganizationUserCommand
 {
     public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, string defaultCollectionName)
     {
@@ -76,6 +79,11 @@ public class RestoreOrganizationUserCommand(
 
     private async Task RepositoryRestoreUserAsync(OrganizationUser organizationUser, string defaultCollectionName)
     {
+        if (scopedOrganizationApiKeyContext.IsScopedOrganizationApiKey && organizationUser.Type != OrganizationUserType.User)
+        {
+            throw new BadRequestException(new ScopedApiKeyCanOnlyManageUsers().Message);
+        }
+
         if (organizationUser.Status != OrganizationUserStatusType.Revoked)
         {
             throw new BadRequestException(new AlreadyActive().Message);
