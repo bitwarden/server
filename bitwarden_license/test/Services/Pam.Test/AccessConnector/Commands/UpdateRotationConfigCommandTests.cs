@@ -137,6 +137,7 @@ public class UpdateRotationConfigCommandTests
     {
         var sutProvider = Setup();
         details.HasActiveJob = false;
+        details.TargetSystemMethod = PamTargetSystemMethod.Automatic;
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetDetailsByIdAsync(details.Id).Returns(details);
         var nextOccurrence = _now.AddHours(6);
         sutProvider.GetDependency<IRotationScheduleCalculator>().GetNextOccurrence(newCron, _now).Returns(nextOccurrence);
@@ -172,6 +173,69 @@ public class UpdateRotationConfigCommandTests
         Assert.Null(result.NextRotationDate);
         await sutProvider.GetDependency<IPamRotationConfigRepository>().Received(1).ReplaceAsync(Arg.Is<PamRotationConfig>(c =>
             c.Id == details.Id && c.ScheduleCron == null && c.NextRotationDate == null));
+    }
+
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task UpdateAsync_ManualObligationDue_KeepsNextRotationAt(
+        bool enabled, Guid actingUserId, PamRotationConfigDetails details, string sealedData, string wrappedKey,
+        string newCron)
+    {
+        var sutProvider = Setup();
+        details.HasActiveJob = false;
+        details.Enabled = enabled;
+        details.TargetSystemMethod = PamTargetSystemMethod.Manual;
+        var due = _now.AddHours(-2);
+        details.NextRotationDate = due;
+        sutProvider.GetDependency<IPamRotationConfigRepository>().GetDetailsByIdAsync(details.Id).Returns(details);
+
+        var result = await sutProvider.Sut.UpdateAsync(
+            details.OrganizationId, actingUserId, details.Id, sealedData, wrappedKey, newCron, true);
+
+        Assert.Equal(due, result.NextRotationDate);
+        Assert.Equal(newCron, result.ScheduleCron);
+        sutProvider.GetDependency<IRotationScheduleCalculator>().DidNotReceiveWithAnyArgs().GetNextOccurrence(default, default);
+        await sutProvider.GetDependency<IPamRotationConfigRepository>().Received(1).ReplaceAsync(Arg.Is<PamRotationConfig>(c =>
+            c.Id == details.Id && c.NextRotationDate == due));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_ManualObligationDue_NullCron_KeepsNextRotationAt(
+        Guid actingUserId, PamRotationConfigDetails details, string sealedData, string wrappedKey)
+    {
+        var sutProvider = Setup();
+        details.HasActiveJob = false;
+        details.TargetSystemMethod = PamTargetSystemMethod.Manual;
+        details.NextRotationDate = _now;
+        sutProvider.GetDependency<IPamRotationConfigRepository>().GetDetailsByIdAsync(details.Id).Returns(details);
+
+        var result = await sutProvider.Sut.UpdateAsync(
+            details.OrganizationId, actingUserId, details.Id, sealedData, wrappedKey, null, false);
+
+        Assert.Null(result.ScheduleCron);
+        Assert.Equal(_now, result.NextRotationDate);
+    }
+
+    [Theory]
+    [BitAutoData(PamTargetSystemMethod.Manual, 1)]
+    [BitAutoData(PamTargetSystemMethod.Automatic, -2)]
+    public async Task UpdateAsync_NoManualObligationDue_RecomputesNextRotationAt(
+        PamTargetSystemMethod method, int storedOffsetHours, Guid actingUserId, PamRotationConfigDetails details,
+        string sealedData, string wrappedKey, string newCron)
+    {
+        var sutProvider = Setup();
+        details.HasActiveJob = false;
+        details.TargetSystemMethod = method;
+        details.NextRotationDate = _now.AddHours(storedOffsetHours);
+        sutProvider.GetDependency<IPamRotationConfigRepository>().GetDetailsByIdAsync(details.Id).Returns(details);
+        var nextOccurrence = _now.AddHours(6);
+        sutProvider.GetDependency<IRotationScheduleCalculator>().GetNextOccurrence(newCron, _now).Returns(nextOccurrence);
+
+        var result = await sutProvider.Sut.UpdateAsync(
+            details.OrganizationId, actingUserId, details.Id, sealedData, wrappedKey, newCron, false);
+
+        Assert.Equal(nextOccurrence, result.NextRotationDate);
     }
 
     [Theory, BitAutoData]
