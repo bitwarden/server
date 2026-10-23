@@ -1,18 +1,16 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
-using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Repositories;
-using Bit.Core.Settings;
 using OneOf.Types;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.BulkEnablePam;
 
 public class BulkEnablePamCommand(
     IOrganizationUserRepository organizationUserRepository,
-    ICountNewPamSeatsRequiredQuery countNewPamSeatsRequiredQuery,
-    IGlobalSettings globalSettings) : IBulkEnablePamCommand
+    IReservePrivilegedControlsSeatsCommand reservePrivilegedControlsSeatsCommand) : IBulkEnablePamCommand
 {
     public async Task<CommandResult> BulkEnablePamAsync(Organization organization, IEnumerable<Guid> organizationUserIds)
     {
@@ -31,11 +29,15 @@ public class BulkEnablePamCommand(
             return new PamNotEnabled();
         }
 
-        var additionalPamSeatsRequired =
-            await countNewPamSeatsRequiredQuery.CountNewPamSeatsRequiredAsync(organization, organizationUsers.Count);
-        if (additionalPamSeatsRequired > 0 && globalSettings.SelfHosted)
+        // Revoked and staged members are given access without occupying a seat.
+        var membersTakingSeats = organizationUsers.Count(u => PrivilegedControlsSeatOccupancy.OccupiesSeat(u.Status));
+        var reservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, membersTakingSeats);
+        switch (reservation)
         {
-            return new CannotAutoscalePamSeatsOnSelfHost();
+            case PrivilegedControlsSeatReservation.LimitReached:
+                return new PrivilegedControlsSeatLimitReached();
+            case PrivilegedControlsSeatReservation.SelfHostedShortfall:
+                return new CannotAutoscalePamSeatsOnSelfHost();
         }
 
         foreach (var organizationUser in organizationUsers)
