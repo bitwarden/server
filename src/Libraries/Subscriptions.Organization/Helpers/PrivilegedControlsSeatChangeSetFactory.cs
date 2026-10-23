@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Organizations.Helpers;
+﻿using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Exceptions;
@@ -27,7 +28,7 @@ internal sealed class PrivilegedControlsSeatChangeSetFactory(
             throw new BadRequestException("At least one Privileged Controls seat is required.");
         }
 
-        var minimum = organization.PamSeatMinimum ?? plan.PrivilegedControls.DefaultSeatMinimum;
+        var minimum = organization.GetPrivilegedControlsSeatMinimum(plan);
         var builder = OrganizationSubscriptionChangeSet.Builder(plan);
 
         var currentSeats = organization.PamSeats.GetValueOrDefault();
