@@ -444,6 +444,12 @@ public class ProviderService : IProviderService
 
         ThrowOnInvalidPlanType(provider.Type, organization.PlanType);
 
+        if (organization.UsePam)
+        {
+            throw new BadRequestException(
+                "Organizations managed by a provider can't use Privileged Controls. Please contact Customer Support.");
+        }
+
         if (organization.UseSecretsManager && provider.Type != ProviderType.Reseller)
         {
             throw new BadRequestException(
@@ -487,6 +493,12 @@ public class ProviderService : IProviderService
         if (existingProviderOrganizationsCount > 0)
         {
             throw new BadRequestException("Organizations must not be assigned to any Provider.");
+        }
+
+        var organizations = await _organizationRepository.GetManyByIdsAsync(orgIdsList);
+        if (organizations.Any(o => o.UsePam))
+        {
+            throw new BadRequestException("Organizations managed by a provider can't use Privileged Controls. Turn it off for the selected organizations and try again.");
         }
 
         var providerOrganizationsToInsert = orgIdsList.Select(orgId => new ProviderOrganization { ProviderId = providerId, OrganizationId = orgId });

@@ -8,7 +8,6 @@ using Bit.Admin.Enums;
 using Bit.Admin.Providers.Models;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
-using Bit.Core;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -517,7 +516,15 @@ public class ProvidersController : Controller
         var organizationIds = model.Items.Where(o => o.Selected).Select(o => o.Id).ToArray();
         if (organizationIds.Any())
         {
-            await _providerService.AddOrganizationsToReseller(id, organizationIds);
+            try
+            {
+                await _providerService.AddOrganizationsToReseller(id, organizationIds);
+            }
+            catch (BadRequestException ex)
+            {
+                TempData["Error"] = ex.Message;
+                return RedirectToAction("AddExistingOrganization", new { id });
+            }
         }
 
         return RedirectToAction("Edit", "Providers", new { id = id });
@@ -548,7 +555,7 @@ public class ProvidersController : Controller
             return RedirectToAction("Index");
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support) && model.UsePam)
+        if (model.UsePam)
         {
             TempData["Error"] = "Organizations managed by a provider can't use Privileged Access Management";
             return RedirectToAction("CreateOrganization", new { providerId });
