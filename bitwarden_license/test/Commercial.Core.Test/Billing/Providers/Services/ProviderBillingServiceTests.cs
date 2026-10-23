@@ -171,14 +171,6 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(command.NewPlan)
             .Returns(MockPlans.Get(command.NewPlan));
 
-        var clientOrganization = new Organization { Id = Guid.NewGuid(), PlanType = PlanType.EnterpriseAnnually };
-        sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
-        [
-            new ProviderOrganizationOrganizationDetails { OrganizationId = clientOrganization.Id }
-        ]);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(clientOrganization.Id)
-            .Returns(clientOrganization);
-
         // Act
         await sutProvider.Sut.ChangePlan(command);
 
@@ -203,10 +195,6 @@ public class ProviderBillingServiceTests
                         si.Price == newPlanCfg.PasswordManager.StripeProviderPortalSeatPlanId &&
                         si.Deleted == default &&
                         si.Quantity == 10) == 1));
-
-        await sutProvider.GetDependency<IOrganizationService>().Received(1)
-            .ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(o =>
-                o.Id == clientOrganization.Id && o.PlanType == PlanType.EnterpriseMonthly));
     }
 
     #endregion
@@ -318,7 +306,7 @@ public class ProviderBillingServiceTests
                 options.TaxIdData.FirstOrDefault().Type == providerCustomer.TaxIds.FirstOrDefault().Type &&
                 options.TaxIdData.FirstOrDefault().Value == providerCustomer.TaxIds.FirstOrDefault().Value));
 
-        await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(Arg.Is<Organization>(
             org => org.GatewayCustomerId == "customer_id"));
     }
 
@@ -2629,7 +2617,7 @@ public class ProviderBillingServiceTests
 
         var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        var organizationService = sutProvider.GetDependency<IOrganizationService>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
 
         // Act
@@ -2646,7 +2634,7 @@ public class ProviderBillingServiceTests
             .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
         await stripeAdapter.Received(0)
             .CancelSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
-        await organizationService.Received(0).ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await organizationRepository.Received(0).ReplaceAsync(Arg.Any<Organization>());
         await providerOrganizationRepository.Received(0).CreateAsync(Arg.Any<ProviderOrganization>());
         await eventService.Received(0).LogProviderOrganizationEventAsync(
             Arg.Any<ProviderOrganization>(), Arg.Any<EventType>());

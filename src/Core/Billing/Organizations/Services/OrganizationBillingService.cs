@@ -10,6 +10,7 @@ using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Braintree;
@@ -28,6 +29,7 @@ public class OrganizationBillingService(
     IGlobalSettings globalSettings,
     IHasPaymentMethodQuery hasPaymentMethodQuery,
     ILogger<OrganizationBillingService> logger,
+    IOrganizationRepository organizationRepository,
     IOrganizationService organizationService,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter,
@@ -136,7 +138,7 @@ public class OrganizationBillingService(
             // Update the subscription in Stripe
             await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, updateOptions);
             organization.PlanType = newPlan.Type;
-            await organizationService.ReplaceAndUpdateCacheAsync(organization);
+            await organizationRepository.ReplaceAsync(organization);
         }
         catch (StripeException stripeException)
         {
@@ -346,7 +348,7 @@ public class OrganizationBillingService(
 
             organization.Gateway = GatewayType.Stripe;
             organization.GatewayCustomerId = customer.Id;
-            await organizationService.ReplaceAndUpdateCacheAsync(organization);
+            await organizationRepository.ReplaceAsync(organization);
 
             return customer;
         }
@@ -504,7 +506,7 @@ public class OrganizationBillingService(
         var subscription = await stripeAdapter.CreateSubscriptionAsync(subscriptionCreateOptions);
 
         organization.GatewaySubscriptionId = subscription.Id;
-        await organizationService.ReplaceAndUpdateCacheAsync(organization);
+        await organizationRepository.ReplaceAsync(organization);
 
         return subscription;
     }

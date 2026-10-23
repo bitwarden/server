@@ -9,6 +9,7 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
@@ -84,6 +85,10 @@ public class OrganizationBillingServiceTests
                 Status = StripeConstants.SubscriptionStatus.Trialing
             });
 
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .ReplaceAsync(organization)
+            .Returns(Task.CompletedTask);
+
         // Act
         await sutProvider.Sut.Finalize(sale);
 
@@ -99,9 +104,8 @@ public class OrganizationBillingServiceTests
         Assert.Equal("cancel", capturedOptions.TrialSettings.EndBehavior.MissingPaymentMethod);
 
         await sutProvider.GetDependency<IOrganizationService>()
-            .Received(2)
+            .Received(1)
             .ReplaceAndUpdateCacheAsync(organization);
-        Assert.Equal("sub_test123", organization.GatewaySubscriptionId);
         Assert.True(organization.Enabled);
     }
 
@@ -175,6 +179,10 @@ public class OrganizationBillingServiceTests
                 Status = StripeConstants.SubscriptionStatus.Trialing
             });
 
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .ReplaceAsync(organization)
+            .Returns(Task.CompletedTask);
+
         // Act
         await sutProvider.Sut.Finalize(sale);
 
@@ -241,6 +249,10 @@ public class OrganizationBillingServiceTests
                 Id = "sub_test123",
                 Status = StripeConstants.SubscriptionStatus.Active
             });
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .ReplaceAsync(organization)
+            .Returns(Task.CompletedTask);
 
         // Act
         await sutProvider.Sut.Finalize(sale);
@@ -313,6 +325,10 @@ public class OrganizationBillingServiceTests
                 Id = "sub_test123",
                 Status = StripeConstants.SubscriptionStatus.Trialing
             });
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .ReplaceAsync(organization)
+            .Returns(Task.CompletedTask);
 
         // Act
         await sutProvider.Sut.Finalize(sale);
@@ -401,6 +417,10 @@ public class OrganizationBillingServiceTests
                 Id = "sub_test123",
                 Status = StripeConstants.SubscriptionStatus.Active
             });
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .ReplaceAsync(organization)
+            .Returns(Task.CompletedTask);
 
         // Act
         await sutProvider.Sut.Finalize(sale);
@@ -563,6 +583,10 @@ public class OrganizationBillingServiceTests
                 Id = "sub_test123",
                 Status = StripeConstants.SubscriptionStatus.Active
             });
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .ReplaceAsync(organization)
+            .Returns(Task.CompletedTask);
 
         // Act
         await sutProvider.Sut.Finalize(sale);
@@ -729,6 +753,10 @@ public class OrganizationBillingServiceTests
                 Id = "sub_test123",
                 Status = StripeConstants.SubscriptionStatus.Active
             });
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .ReplaceAsync(organization)
+            .Returns(Task.CompletedTask);
 
         // Act
         await sutProvider.Sut.Finalize(sale);
@@ -1293,6 +1321,8 @@ public class OrganizationBillingServiceTests
         sutProvider.GetDependency<IStripeAdapter>()
             .CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>())
             .Returns(new Subscription { Id = "sub_test123", Status = StripeConstants.SubscriptionStatus.Active });
+
+        sutProvider.GetDependency<IOrganizationRepository>().ReplaceAsync(organization).Returns(Task.CompletedTask);
 
         var sale = new OrganizationSale
         {

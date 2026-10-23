@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Event = Stripe.Event;
 
 namespace Bit.Billing.Services.Implementations;
@@ -7,20 +6,17 @@ namespace Bit.Billing.Services.Implementations;
 public class CustomerUpdatedHandler : ICustomerUpdatedHandler
 {
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationService _organizationService;
     private readonly IStripeEventService _stripeEventService;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
     private readonly ILogger<CustomerUpdatedHandler> _logger;
 
     public CustomerUpdatedHandler(
         IOrganizationRepository organizationRepository,
-        IOrganizationService organizationService,
         IStripeEventService stripeEventService,
         IStripeEventUtilityService stripeEventUtilityService,
         ILogger<CustomerUpdatedHandler> logger)
     {
         _organizationRepository = organizationRepository ?? throw new ArgumentNullException(nameof(organizationRepository));
-        _organizationService = organizationService;
         _stripeEventService = stripeEventService;
         _stripeEventUtilityService = stripeEventUtilityService;
         _logger = logger;
@@ -88,6 +84,6 @@ public class CustomerUpdatedHandler : ICustomerUpdatedHandler
         }
 
         organization.BillingEmail = customer.Email;
-        await _organizationService.ReplaceAndUpdateCacheAsync(organization);
+        await _organizationRepository.ReplaceAsync(organization);
     }
 }

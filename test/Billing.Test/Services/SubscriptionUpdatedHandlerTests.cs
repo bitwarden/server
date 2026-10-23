@@ -2075,7 +2075,7 @@ public class SubscriptionUpdatedHandlerTests
             .DisableAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>());
         await _stripeAdapter.DidNotReceive()
             .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(
+        await _organizationRepository.Received(1).ReplaceAsync(
             Arg.Is<Organization>(o => o.Id == organizationId && !o.ExemptFromBillingAutomation));
     }
 
@@ -2432,7 +2432,7 @@ public class SubscriptionUpdatedHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         // Assert — handler bails on null ScheduleId; no org or assignment writes
-        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
         await _cohortAssignmentRepository.DidNotReceive()
             .ReplaceAsync(Arg.Any<Bit.Core.Billing.Organizations.PlanMigration.Entities.OrganizationPlanMigrationCohortAssignment>());
     }
@@ -2523,7 +2523,7 @@ public class SubscriptionUpdatedHandlerTests
         // Assert — handler resolved the path, then bailed at the source-price intersection.
         // No target-plan lookup, no org write, no assignment stamp.
         await _pricingClient.DidNotReceive().GetPlanOrThrow(PlanType.EnterpriseAnnually);
-        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
         await _cohortAssignmentRepository.DidNotReceive().ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
     }
 
@@ -2594,7 +2594,7 @@ public class SubscriptionUpdatedHandlerTests
         // Assert — dispatch gate (feature flag) is the outermost guard; no cohort lookups happen
         await _cohortRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
         await _cohortAssignmentRepository.DidNotReceive().GetByOrganizationIdAsync(Arg.Any<Guid>());
-        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
     }
 
     [Fact]
@@ -2659,7 +2659,7 @@ public class SubscriptionUpdatedHandlerTests
         // Assert — no cohort lookup, no DB writes, no warning (most orgs won't be in a cohort
         // so logging per-event would be noisy)
         await _cohortRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
-        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
         await _cohortAssignmentRepository.DidNotReceive().ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
         _logger.DidNotReceive().Log(
             LogLevel.Warning,
@@ -2737,7 +2737,7 @@ public class SubscriptionUpdatedHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         // Assert — cohort missing, no DB writes
-        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
         await _cohortAssignmentRepository.DidNotReceive().ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
         _logger.Received(1).Log(
             LogLevel.Warning,
@@ -2816,7 +2816,7 @@ public class SubscriptionUpdatedHandlerTests
 
         // Assert — idempotency: cohort lookup NEVER happens, no writes
         await _cohortRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
-        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
         await _cohortAssignmentRepository.DidNotReceive().ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
     }
 
@@ -2903,7 +2903,7 @@ public class SubscriptionUpdatedHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         // Assert — sanity check fired, no writes
-        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
         await _cohortAssignmentRepository.DidNotReceive().ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
         _logger.Received(1).Log(
             LogLevel.Warning,
@@ -3017,7 +3017,7 @@ public class SubscriptionUpdatedHandlerTests
         Assert.Equal((short)200, organization.Seats);
         Assert.Equal((short)50, organization.MaxStorageGb);
 
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(o =>
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
             o.Id == organizationId && o.PlanType == PlanType.EnterpriseAnnually));
 
         Assert.NotNull(assignment.MigratedDate);
@@ -3591,7 +3591,7 @@ public class SubscriptionUpdatedHandlerTests
         Assert.Equal((short)200, organization.Seats);
         Assert.Equal((short)50, organization.MaxStorageGb);
 
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(o =>
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
             o.Id == organizationId && o.PlanType == PlanType.EnterpriseMonthly));
         Assert.NotNull(assignment.MigratedDate);
         Assert.NotEqual(default, assignment.RevisionDate);
@@ -3700,7 +3700,7 @@ public class SubscriptionUpdatedHandlerTests
         Assert.Equal((short)50, organization.Seats);
         Assert.Equal((short)20, organization.MaxStorageGb);
 
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(o =>
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
             o.Id == organizationId && o.PlanType == PlanType.TeamsAnnually));
         Assert.NotNull(assignment.MigratedDate);
         Assert.NotEqual(default, assignment.RevisionDate);
@@ -3808,7 +3808,7 @@ public class SubscriptionUpdatedHandlerTests
         Assert.Equal((short)25, organization.Seats);
         Assert.Equal((short)10, organization.MaxStorageGb);
 
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(o =>
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
             o.Id == organizationId && o.PlanType == PlanType.TeamsMonthly));
         Assert.NotNull(assignment.MigratedDate);
         Assert.NotEqual(default, assignment.RevisionDate);
@@ -4354,7 +4354,7 @@ public class SubscriptionUpdatedHandlerTests
 
         // Assert — Seats reconciled to the billed seat line item quantity and persisted.
         Assert.Equal((int)billedSeats, organization.Seats);
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(o =>
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
             o.Id == organizationId &&
             o.PlanType == PlanType.TeamsMonthly &&
             o.Seats == (int)billedSeats));
@@ -4475,7 +4475,7 @@ public class SubscriptionUpdatedHandlerTests
         // Assert — Seats floored at SmSeats and persisted; SmSeats itself untouched (we raise PM, never lower SM).
         Assert.Equal(expectedSeats, organization.Seats);
         Assert.Equal(smSeats, organization.SmSeats);
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(o =>
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
             o.Id == organizationId &&
             o.PlanType == PlanType.TeamsMonthly &&
             o.Seats == expectedSeats &&
@@ -4675,7 +4675,7 @@ public class SubscriptionUpdatedHandlerTests
 
         // Assert — handler did not bail (Gap A), plan-shape updated, and Seats reconciled to billed (Gap B).
         Assert.Equal((int)billedSeats, organization.Seats);
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(o =>
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
             o.Id == organizationId &&
             o.PlanType == PlanType.TeamsMonthly &&
             o.Seats == (int)billedSeats));
@@ -4774,7 +4774,7 @@ public class SubscriptionUpdatedHandlerTests
 
         // Assert — per-seat source: Seats left untouched despite the differing line item quantity.
         Assert.Equal(25, organization.Seats);
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(o =>
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
             o.Id == organizationId &&
             o.PlanType == PlanType.TeamsMonthly &&
             o.Seats == 25));
@@ -5061,7 +5061,7 @@ public class SubscriptionUpdatedHandlerTests
         // no org write, no subscription metadata update.
         await _cohortRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
         await _cohortAssignmentRepository.DidNotReceive().GetByOrganizationIdAsync(Arg.Any<Guid>());
-        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
         await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 
@@ -5113,7 +5113,7 @@ public class SubscriptionUpdatedHandlerTests
 
         // Assert — business handler bailed: no cohort lookup, no migration writes, warning logged
         await _cohortAssignmentRepository.DidNotReceive().GetByOrganizationIdAsync(Arg.Any<Guid>());
-        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
         await _cohortAssignmentRepository.DidNotReceive().ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
         _logger.Received(1).Log(
             LogLevel.Warning,
@@ -5199,7 +5199,7 @@ public class SubscriptionUpdatedHandlerTests
 
         // Assert — null MigrationPathId is a skip; no target-plan lookup, no writes
         await _pricingClient.DidNotReceive().GetPlanOrThrow(PlanType.EnterpriseAnnually);
-        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
         await _cohortAssignmentRepository.DidNotReceive().ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
         _logger.Received(1).Log(
             LogLevel.Warning,
@@ -5288,7 +5288,7 @@ public class SubscriptionUpdatedHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         // Assert — unregistered path is a safe skip; no NRE, no target lookup, no writes
-        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
         await _cohortAssignmentRepository.DidNotReceive().ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
         _logger.Received(1).Log(
             LogLevel.Warning,
@@ -5357,7 +5357,7 @@ public class SubscriptionUpdatedHandlerTests
         // Act + Assert — BillingException must propagate out of HandleAsync
         await Assert.ThrowsAsync<BillingException>(() => _sut.HandleAsync(parsedEvent));
 
-        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
         await _cohortAssignmentRepository.DidNotReceive().ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
     }
 
@@ -5448,7 +5448,7 @@ public class SubscriptionUpdatedHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         // Assert — handler reached the org lookup, saw null, and skipped without writing
-        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
         await _cohortAssignmentRepository.DidNotReceive().ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
     }
 
@@ -5534,7 +5534,7 @@ public class SubscriptionUpdatedHandlerTests
             MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
             IsActive = true
         });
-        _organizationService.ReplaceAndUpdateCacheAsync(Arg.Any<Organization>())
+        _organizationRepository.ReplaceAsync(Arg.Any<Organization>())
             .Throws(new InvalidOperationException("simulated DB failure"));
 
         // Act — must NOT throw; generic exceptions are absorbed by the catch-all
@@ -5633,7 +5633,7 @@ public class SubscriptionUpdatedHandlerTests
         await Assert.ThrowsAsync<BillingException>(() => _sut.HandleAsync(parsedEvent));
 
         // Org was written before the failure
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(o =>
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
             o.Id == organizationId && o.PlanType == PlanType.EnterpriseAnnually));
 
         // Assignment MigratedDate was set in-memory but the write failed; retry will redo it.
@@ -5875,7 +5875,7 @@ public class SubscriptionUpdatedHandlerTests
         Assert.Equal((short)200, organization.Seats);
         Assert.Equal((short)50, organization.MaxStorageGb);
 
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(o =>
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
             o.Id == organizationId && o.PlanType == PlanType.EnterpriseAnnually));
 
         Assert.NotNull(assignment.MigratedDate);
@@ -6192,7 +6192,7 @@ public class SubscriptionUpdatedHandlerTests
         // Assert — plan shape applied and assignment marked, despite no SM line items.
         Assert.Equal(PlanType.EnterpriseAnnually, organization.PlanType);
         Assert.False(organization.UseSecretsManager); // ChangePlan does not touch this column
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(o =>
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
             o.Id == organizationId && o.PlanType == PlanType.EnterpriseAnnually));
         Assert.NotNull(assignment.MigratedDate);
         await _cohortAssignmentRepository.Received(1).ReplaceAsync(
@@ -6258,7 +6258,7 @@ public class SubscriptionUpdatedHandlerTests
 
         await _sut.HandleAsync(parsedEvent);
 
-        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
     }
 
     [Fact]
@@ -6312,7 +6312,7 @@ public class SubscriptionUpdatedHandlerTests
 
         await _sut.HandleAsync(parsedEvent);
 
-        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
     }
 
     [Fact]
@@ -6368,7 +6368,7 @@ public class SubscriptionUpdatedHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         Assert.Equal(PlanType.TeamsAnnually, organization.PlanType);
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(o =>
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
             o.Id == organizationId && o.PlanType == PlanType.TeamsAnnually));
     }
 
@@ -6433,7 +6433,7 @@ public class SubscriptionUpdatedHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         Assert.Equal(PlanType.TeamsAnnually, organization.PlanType);
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(o =>
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
             o.Id == organizationId && o.PlanType == PlanType.TeamsAnnually));
     }
 
@@ -6489,7 +6489,7 @@ public class SubscriptionUpdatedHandlerTests
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthly);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(teamsAnnual);
         _pricingClient.ListPlans().Returns(MockPlans.Plans);
-        _organizationService.ReplaceAndUpdateCacheAsync(Arg.Any<Organization>())
+        _organizationRepository.ReplaceAsync(Arg.Any<Organization>())
             .Returns<Task>(_ => throw new InvalidOperationException("transient DB failure"));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.HandleAsync(parsedEvent));
@@ -6554,7 +6554,7 @@ public class SubscriptionUpdatedHandlerTests
 
         await Assert.ThrowsAsync<BillingException>(() => _sut.HandleAsync(parsedEvent));
 
-        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
     }
 
     [Fact]
@@ -6612,7 +6612,7 @@ public class SubscriptionUpdatedHandlerTests
 
         await Assert.ThrowsAsync<HttpRequestException>(() => _sut.HandleAsync(parsedEvent));
 
-        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
     }
 
     [Fact]
@@ -6672,13 +6672,13 @@ public class SubscriptionUpdatedHandlerTests
             .Returns(_ => throw new BillingException(message: "pricing service unavailable"), _ => teamsMonthly);
 
         await Assert.ThrowsAsync<BillingException>(() => _sut.HandleAsync(parsedEvent));
-        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
         Assert.Equal(PlanType.TeamsMonthly, organization.PlanType);
 
         // Same event object, unchanged, as Stripe would redeliver it.
         await _sut.HandleAsync(parsedEvent);
 
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(
+        await _organizationRepository.Received(1).ReplaceAsync(
             Arg.Is<Organization>(o => o.Id == organizationId && o.PlanType == PlanType.TeamsAnnually));
         Assert.Equal(PlanType.TeamsAnnually, organization.PlanType);
     }
@@ -6726,7 +6726,7 @@ public class SubscriptionUpdatedHandlerTests
 
         await _sut.HandleAsync(parsedEvent);
 
-        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
     }
 
     [Fact]
@@ -6788,7 +6788,7 @@ public class SubscriptionUpdatedHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         Assert.Equal(PlanType.TeamsAnnually, organization.PlanType);
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(o =>
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
             o.Id == organizationId && o.PlanType == PlanType.TeamsAnnually));
     }
 
@@ -6851,6 +6851,6 @@ public class SubscriptionUpdatedHandlerTests
 
         await _sut.HandleAsync(parsedEvent);
 
-        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
     }
 }

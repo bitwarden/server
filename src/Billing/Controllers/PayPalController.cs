@@ -3,7 +3,6 @@
 
 using System.Text;
 using Bit.Billing.Models;
-using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -24,12 +23,10 @@ public class PayPalController : Controller
     private readonly ILogger<PayPalController> _logger;
     private readonly IMailService _mailService;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationService _organizationService;
     private readonly IStripePaymentService _paymentService;
     private readonly ITransactionRepository _transactionRepository;
     private readonly IUserRepository _userRepository;
     private readonly IProviderRepository _providerRepository;
-    private readonly IProviderAbilityCacheService _providerAbilityCacheService;
     private readonly IPremiumUserBillingService _premiumUserBillingService;
 
     public PayPalController(
@@ -37,24 +34,20 @@ public class PayPalController : Controller
         ILogger<PayPalController> logger,
         IMailService mailService,
         IOrganizationRepository organizationRepository,
-        IOrganizationService organizationService,
         IStripePaymentService paymentService,
         ITransactionRepository transactionRepository,
         IUserRepository userRepository,
         IProviderRepository providerRepository,
-        IProviderAbilityCacheService providerAbilityCacheService,
         IPremiumUserBillingService premiumUserBillingService)
     {
         _billingSettings = billingSettings?.Value;
         _logger = logger;
         _mailService = mailService;
         _organizationRepository = organizationRepository;
-        _organizationService = organizationService;
         _paymentService = paymentService;
         _transactionRepository = transactionRepository;
         _userRepository = userRepository;
         _providerRepository = providerRepository;
-        _providerAbilityCacheService = providerAbilityCacheService;
         _premiumUserBillingService = premiumUserBillingService;
     }
 
@@ -262,7 +255,7 @@ public class PayPalController : Controller
 
             if (await _paymentService.CreditAccountAsync(organization, transaction.Amount))
             {
-                await _organizationService.ReplaceAndUpdateCacheAsync(organization);
+                await _organizationRepository.ReplaceAsync(organization);
 
                 billingEmail = organization.BillingEmailAddress();
             }
@@ -284,7 +277,6 @@ public class PayPalController : Controller
             if (await _paymentService.CreditAccountAsync(provider, transaction.Amount))
             {
                 await _providerRepository.ReplaceAsync(provider);
-                await _providerAbilityCacheService.UpsertProviderAbilityAsync(provider);
 
                 billingEmail = provider.BillingEmailAddress();
             }

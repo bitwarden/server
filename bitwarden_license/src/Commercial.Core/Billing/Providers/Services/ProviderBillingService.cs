@@ -220,7 +220,7 @@ public class ProviderBillingService(
 
             organization.PlanType = newPlanType;
             organization.Plan = newPlan.Name;
-            await organizationService.ReplaceAndUpdateCacheAsync(organization);
+            await organizationRepository.ReplaceAsync(organization);
         }
     }
 
@@ -287,7 +287,7 @@ public class ProviderBillingService(
 
         organization.GatewayCustomerId = customer.Id;
 
-        await organizationService.ReplaceAndUpdateCacheAsync(organization);
+        await organizationRepository.ReplaceAsync(organization);
     }
 
     public async Task<byte[]> GenerateClientInvoiceReport(

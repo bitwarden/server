@@ -1,14 +1,11 @@
-﻿using Bit.Core.AdminConsole.AbilitiesCache;
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Enums;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Braintree;
@@ -1861,46 +1858,5 @@ public class SubscriberServiceTests
             sutProvider.GetDependency<IPriceIncreaseScheduler>()
                 .ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>());
         });
-    }
-
-    [Theory, BitAutoData]
-    public async Task CreateStripeCustomer_Organization_SavesAndUpdatesCache(
-        Organization organization,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        // Arrange
-        organization.GatewayCustomerId = null;
-        sutProvider.GetDependency<IStripeAdapter>()
-            .CreateCustomerAsync(Arg.Any<CustomerCreateOptions>())
-            .Returns(new Customer { Id = "cus_123" });
-
-        // Act
-        await sutProvider.Sut.CreateStripeCustomer(organization);
-
-        // Assert
-        await sutProvider.GetDependency<IOrganizationService>().Received(1)
-            .ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(o =>
-                o.Id == organization.Id && o.Gateway == GatewayType.Stripe && o.GatewayCustomerId == "cus_123"));
-    }
-
-    [Theory, BitAutoData]
-    public async Task CreateStripeCustomer_Provider_SavesAndUpdatesCache(
-        Provider provider,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        // Arrange
-        provider.GatewayCustomerId = null;
-        sutProvider.GetDependency<IStripeAdapter>()
-            .CreateCustomerAsync(Arg.Any<CustomerCreateOptions>())
-            .Returns(new Customer { Id = "cus_123" });
-
-        // Act
-        await sutProvider.Sut.CreateStripeCustomer(provider);
-
-        // Assert
-        await sutProvider.GetDependency<IProviderRepository>().Received(1)
-            .ReplaceAsync(Arg.Is<Provider>(p => p.Id == provider.Id && p.GatewayCustomerId == "cus_123"));
-        await sutProvider.GetDependency<IProviderAbilityCacheService>().Received(1)
-            .UpsertProviderAbilityAsync(Arg.Is<Provider>(p => p.Id == provider.Id));
     }
 }

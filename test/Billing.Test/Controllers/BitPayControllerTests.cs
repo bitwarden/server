@@ -1,6 +1,5 @@
 ﻿using Bit.Billing.Controllers;
 using Bit.Billing.Models;
-using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
@@ -29,10 +28,8 @@ public class BitPayControllerTests
     private readonly IBitPayClient _bitPayClient = Substitute.For<IBitPayClient>();
     private readonly ITransactionRepository _transactionRepository = Substitute.For<ITransactionRepository>();
     private readonly IOrganizationRepository _organizationRepository = Substitute.For<IOrganizationRepository>();
-    private readonly IOrganizationService _organizationService = Substitute.For<IOrganizationService>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly IProviderRepository _providerRepository = Substitute.For<IProviderRepository>();
-    private readonly IProviderAbilityCacheService _providerAbilityCacheService = Substitute.For<IProviderAbilityCacheService>();
     private readonly IMailService _mailService = Substitute.For<IMailService>();
     private readonly IStripePaymentService _paymentService = Substitute.For<IStripePaymentService>();
 
@@ -53,10 +50,8 @@ public class BitPayControllerTests
         _bitPayClient,
         _transactionRepository,
         _organizationRepository,
-        _organizationService,
         _userRepository,
         _providerRepository,
-        _providerAbilityCacheService,
         _mailService,
         _paymentService,
         Substitute.For<ILogger<BitPayController>>(),
@@ -224,7 +219,7 @@ public class BitPayControllerTests
             t.Type == TransactionType.Credit &&
             t.Gateway == GatewayType.BitPay &&
             t.PaymentMethodType == PaymentMethodType.BitPay));
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(organization);
+        await _organizationRepository.Received(1).ReplaceAsync(organization);
         await _mailService.Received(1).SendAddedCreditAsync("billing@example.com", 100.00m);
     }
 
@@ -276,7 +271,6 @@ public class BitPayControllerTests
             t.Gateway == GatewayType.BitPay &&
             t.PaymentMethodType == PaymentMethodType.BitPay));
         await _providerRepository.Received(1).ReplaceAsync(provider);
-        await _providerAbilityCacheService.Received(1).UpsertProviderAbilityAsync(provider);
         await _mailService.Received(1).SendAddedCreditAsync("provider@example.com", 100.00m);
     }
 

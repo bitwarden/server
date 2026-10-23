@@ -331,7 +331,7 @@ public class RestartSubscriptionCommandTests
         await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(options =>
             options.Customer == "cus_123"));
 
-        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(org =>
+        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(org =>
             org.GatewaySubscriptionId == "sub_new" &&
             org.Enabled == true));
     }

@@ -269,7 +269,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
         organization.ExemptFromBillingAutomation = false;
         organization.RevisionDate = DateTime.UtcNow;
-        await _organizationService.ReplaceAndUpdateCacheAsync(organization);
+        await _organizationRepository.ReplaceAsync(organization);
 
         _logger.LogInformation(
             "Exemption has been cleared for organization ({OrganizationId})",
@@ -647,7 +647,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 organization.Seats = (int)Math.Max(Math.Max(1L, billedSeatQuantity), (long)(organization.SmSeats ?? 0));
             }
 
-            await _organizationService.ReplaceAndUpdateCacheAsync(organization);
+            await _organizationRepository.ReplaceAsync(organization);
 
             var sourceProvidedServiceAccounts = sourcePlan.SecretsManager?.BaseServiceAccount ?? 0;
             var targetProvidedServiceAccounts = targetPlan.SecretsManager?.BaseServiceAccount ?? 0;
@@ -787,7 +787,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             }
 
             organization.ChangePlan(targetPlan);
-            await _organizationService.ReplaceAndUpdateCacheAsync(organization);
+            await _organizationRepository.ReplaceAsync(organization);
 
             _logger.LogInformation(
                 "Schedule-triggered annual upgrade applied for organization ({OrganizationId}): PlanType {SourcePlanType} -> {TargetPlanType}",
