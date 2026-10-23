@@ -78,6 +78,13 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
         {
             var plan = await GetPlanAsync(user, planType);
 
+            if (purchase.PrivilegedControls is not null && !plan.SupportsPrivilegedControls)
+            {
+                throw new BadRequestException(
+                    $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.PrivilegedControls)}",
+                    "Invalid Privileged Controls plan selected.");
+            }
+
             options.SubscriptionDetails.Items = BuildItems(plan, passwordManager, purchase.SecretsManager, purchase.PrivilegedControls);
 
             if (purchase.SecretsManager is { Standalone: true })
@@ -383,7 +390,8 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
         }
 
         // Trials bill Privileged Controls at the resolved seat minimum, matching subscription creation.
-        if (privilegedControls is not null && plan.SupportsPrivilegedControls)
+        // Run rejects a selection on a plan without Privileged Controls support before this runs.
+        if (privilegedControls is not null)
         {
             items.Add(new InvoiceSubscriptionDetailsItemOptions
             {
