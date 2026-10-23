@@ -47,6 +47,6 @@ internal sealed class PurchasePrivilegedControlsHandler(
             throw new BadRequestException("No subscription found.");
         }
 
-        await addPrivilegedControlsCommand.Run(organization, request.Seats, request.MaxAutoscaleSeats);
+        await addPrivilegedControlsCommand.Run(organization, request.Seats!.Value, request.MaxAutoscaleSeats);
     }
 }

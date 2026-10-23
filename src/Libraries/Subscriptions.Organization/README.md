@@ -178,10 +178,11 @@ no Password Manager line item, is a **409**. A missing organization is a **404**
 
 ### Privileged Controls purchase
 
-Its request is a JSON body: `seats` (required, so an omitted value fails binding with a 400 rather than
-defaulting to zero) and an optional `maxAutoscaleSeats`. Both must be between 1 and
-`PlanConstants.MaxPurchasableQuantity`, declared with `[Range]` attributes on the request. A value outside
-that range is rejected with a 400 before the handler runs. The endpoint's `RequestValidationEndpointFilter`
+Its request is a JSON body: `seats` (required) and an optional `maxAutoscaleSeats`. Both must be between 1
+and `PlanConstants.MaxPurchasableQuantity`, declared with `[Range]` attributes on the request. `seats` is
+nullable with a `[Required]` attribute carrying the same message as its range, so an omitted value reaches
+validation instead of failing binding with an empty body. A missing or out-of-range value is rejected with
+a 400 before the handler runs. The endpoint's `RequestValidationEndpointFilter`
 runs the attributes and throws a `BadRequestException` carrying the model state, so the group's basic
 exception handling answers with the same `ErrorResponseModel` body, `validationErrors` keyed by property,
 that MVC controllers return for invalid model state. `PurchasePrivilegedControlsHandler` gates the call

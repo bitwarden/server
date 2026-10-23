@@ -105,24 +105,13 @@ public class OrganizationSubscriptionEndpointsRequestBindingTests
         Assert.Equal(20, command.ReceivedMaxAutoscaleSeats);
     }
 
-    [Fact]
-    public async Task PurchasePrivilegedControls_MissingSeats_ReturnsBadRequestWithoutCallingCommand()
-    {
-        var command = new FakeAddPrivilegedControlsCommand();
-
-        // seats is a required member, so an omitted one fails binding with a 400 rather than defaulting to zero.
-        var context = await InvokePurchaseAsync(command, """{"maxAutoscaleSeats":20}""");
-
-        Assert.Equal((int)HttpStatusCode.BadRequest, context.Response.StatusCode);
-        Assert.False(command.WasCalled);
-    }
-
     [Theory]
+    [InlineData("""{"maxAutoscaleSeats":20}""", "Seats", "Privileged Controls seats must be between 1 and 100,000")]
     [InlineData("""{"seats":0}""", "Seats", "Privileged Controls seats must be between 1 and 100,000")]
     [InlineData("""{"seats":100001}""", "Seats", "Privileged Controls seats must be between 1 and 100,000")]
     [InlineData("""{"seats":10,"maxAutoscaleSeats":0}""", "MaxAutoscaleSeats", "The autoscale limit must be between 1 and 100,000")]
     [InlineData("""{"seats":10,"maxAutoscaleSeats":100001}""", "MaxAutoscaleSeats", "The autoscale limit must be between 1 and 100,000")]
-    public async Task PurchasePrivilegedControls_ValueOutsideTheAllowedRange_ReturnsBadRequestWithoutCallingCommand(
+    public async Task PurchasePrivilegedControls_MissingOrOutOfRangeValue_ReturnsBadRequestWithoutCallingCommand(
         string json, string expectedKey, string expectedMessage)
     {
         var command = new FakeAddPrivilegedControlsCommand();
