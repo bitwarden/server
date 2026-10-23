@@ -21,6 +21,7 @@ using Bit.Infrastructure.Dapper.Dirt.Repositories;
 using Bit.Infrastructure.Dapper.KeyManagement.Repositories;
 using Bit.Infrastructure.Dapper.NotificationCenter.Repositories;
 using Bit.Infrastructure.Dapper.Platform;
+using Bit.Infrastructure.Dapper.Providers.Repositories;
 using Bit.Infrastructure.Dapper.Repositories;
 using Bit.Infrastructure.Dapper.SecretsManager.Repositories;
 using Bit.Infrastructure.Dapper.Tools.Repositories;
@@ -72,6 +73,7 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<ISsoConfigRepository, SsoConfigRepository>();
         services.AddSingleton<ISsoUserRepository, SsoUserRepository>();
         services.AddSingleton<ITransactionRepository, TransactionRepository>();
+        services.AddSingleton<ITwoFactorRememberTokenRepository, TwoFactorRememberTokenRepository>();
         services.AddSingleton<IUserRepository, UserRepository>();
         services.AddSingleton<IOrganizationDomainRepository, OrganizationDomainRepository>();
         services.AddSingleton<IWebAuthnCredentialRepository, WebAuthnCredentialRepository>();

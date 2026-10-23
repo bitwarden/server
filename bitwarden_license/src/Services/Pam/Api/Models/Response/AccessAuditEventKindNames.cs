@@ -43,6 +43,7 @@ public static class AccessAuditEventKindNames
     public const string RotationReportRejected = "rotationReportRejected";
     public const string ManualRotationDue = "manualRotationDue";
     public const string ManualRotationRecorded = "manualRotationRecorded";
+    public const string RotationConfigUpdated = "rotationConfigUpdated";
     public const string AccessConnectorRegistered = "accessConnectorRegistered";
     public const string AccessConnectorRevoked = "accessConnectorRevoked";
     public const string AccessConnectorDisabled = "accessConnectorDisabled";
@@ -56,6 +57,7 @@ public static class AccessAuditEventKindNames
     public const string TargetSystemRenamed = "targetSystemRenamed";
     public const string TargetSystemPolicyUpdated = "targetSystemPolicyUpdated";
     public const string TargetSystemDeleted = "targetSystemDeleted";
+    public const string TargetSystemUpdated = "targetSystemUpdated";
 
     public static string From(AccessAuditEventKind kind) => kind switch
     {
@@ -95,6 +97,7 @@ public static class AccessAuditEventKindNames
         AccessAuditEventKind.RotationReportRejected => RotationReportRejected,
         AccessAuditEventKind.ManualRotationDue => ManualRotationDue,
         AccessAuditEventKind.ManualRotationRecorded => ManualRotationRecorded,
+        AccessAuditEventKind.RotationConfigUpdated => RotationConfigUpdated,
         AccessAuditEventKind.AccessConnectorRegistered => AccessConnectorRegistered,
         AccessAuditEventKind.AccessConnectorRevoked => AccessConnectorRevoked,
         AccessAuditEventKind.AccessConnectorDisabled => AccessConnectorDisabled,
@@ -108,6 +111,7 @@ public static class AccessAuditEventKindNames
         AccessAuditEventKind.TargetSystemRenamed => TargetSystemRenamed,
         AccessAuditEventKind.TargetSystemPolicyUpdated => TargetSystemPolicyUpdated,
         AccessAuditEventKind.TargetSystemDeleted => TargetSystemDeleted,
+        AccessAuditEventKind.TargetSystemUpdated => TargetSystemUpdated,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
 
@@ -118,8 +122,23 @@ public static class AccessAuditEventKindNames
         Enum.GetValues<AccessAuditEventKind>().ToDictionary(From, kind => kind, StringComparer.Ordinal);
 
     /// <summary>
-    /// Reads a wire name back into its kind. False for an unknown name.
+    /// Names that older web bundles still post in the kind filter. Parse-only; drop once no such bundle can be open.
+    /// </summary>
+    private static readonly Dictionary<string, AccessAuditEventKind> _preRenameFleetNames = new(StringComparer.Ordinal)
+    {
+        ["daemonRegistered"] = AccessAuditEventKind.AccessConnectorRegistered,
+        ["daemonRevoked"] = AccessAuditEventKind.AccessConnectorRevoked,
+        ["daemonDisabled"] = AccessAuditEventKind.AccessConnectorDisabled,
+        ["daemonEnabled"] = AccessAuditEventKind.AccessConnectorEnabled,
+        ["daemonDeleted"] = AccessAuditEventKind.AccessConnectorDeleted,
+        ["daemonAssignedToTarget"] = AccessAuditEventKind.AccessConnectorAssignedToTarget,
+        ["daemonUnassignedFromTarget"] = AccessAuditEventKind.AccessConnectorUnassignedFromTarget,
+    };
+
+    /// <summary>
+    /// Reads a wire name, or a name in <see cref="_preRenameFleetNames"/>, back into its kind. False for an unknown
+    /// name.
     /// </summary>
     public static bool TryParse(string name, out AccessAuditEventKind kind) =>
-        _byName.TryGetValue(name, out kind);
+        _byName.TryGetValue(name, out kind) || _preRenameFleetNames.TryGetValue(name, out kind);
 }

@@ -1,4 +1,5 @@
-﻿using AutoFixture.Xunit2;
+﻿using System.Text.Json.Nodes;
+using AutoFixture.Xunit2;
 using Bit.Core.Tokens;
 
 namespace Bit.Core.Test.Auth.Models.Business.Tokenables;
@@ -31,19 +32,21 @@ public class RegistrationEmailVerificationTokenableTests
         Assert.Equal(email, token.Email);
         Assert.Equal(default, token.Name);
         Assert.Equal(default, token.ReceiveMarketingEmails);
+        Assert.False(token.EmailSent);
     }
 
     /// <summary>
     /// Tests that when a valid inputs are provided to the constructor, the resulting token properties match the user.
     /// </summary>
     [Theory, AutoData]
-    public void Constructor_ValidInputs_PropertiesSetFromInputs(string email, string name, bool receiveMarketingEmails)
+    public void Constructor_ValidInputs_PropertiesSetFromInputs(string email, string name, bool receiveMarketingEmails, bool emailSent)
     {
-        var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
+        var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails, emailSent);
 
         Assert.Equal(email, token.Email);
         Assert.Equal(name, token.Name);
         Assert.Equal(receiveMarketingEmails, token.ReceiveMarketingEmails);
+        Assert.Equal(emailSent, token.EmailSent);
     }
 
     /// <summary>
@@ -157,5 +160,36 @@ public class RegistrationEmailVerificationTokenableTests
         var result = Tokenable.FromToken<RegistrationEmailVerificationTokenable>(token.ToToken());
 
         Assert.Equal(expectedDateTime, result.ExpirationDate, precision: _timeTolerance);
+    }
+
+    /// <summary>
+    /// Tests that EmailSent survives serialization.
+    /// </summary>
+    [Theory]
+    [InlineAutoData(true)]
+    [InlineAutoData(false)]
+    public void FromToken_SerializedToken_PreservesEmailSent(bool emailSent, string email, string name, bool receiveMarketingEmails)
+    {
+        var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails, emailSent);
+
+        var result = Tokenable.FromToken<RegistrationEmailVerificationTokenable>(token.ToToken());
+
+        Assert.Equal(emailSent, result.EmailSent);
+    }
+
+    // TODO: PM-45479 - Assert false once EmailSent is non-nullable, or delete this test.
+    /// <summary>
+    /// Tests that a token serialized before EmailSent existed deserializes with EmailSent null.
+    /// </summary>
+    [Theory, AutoData]
+    public void FromToken_TokenWithoutEmailSent_EmailSentIsNull(string email, string name, bool receiveMarketingEmails)
+    {
+        var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails, emailSent: true);
+        var json = JsonNode.Parse(token.ToToken().ToString())!.AsObject();
+        json.Remove(nameof(RegistrationEmailVerificationTokenable.EmailSent));
+
+        var result = Tokenable.FromToken<RegistrationEmailVerificationTokenable>(json.ToJsonString());
+
+        Assert.Null(result.EmailSent);
     }
 }

@@ -4,6 +4,7 @@ using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Services.Pam.AccessConnector.Api.Models.Response;
 using Bit.Services.Pam.AccessConnector.Models;
+using Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 using Xunit;
 
 namespace Bit.Services.Pam.Test.AccessConnector.Api.Models;
@@ -41,6 +42,33 @@ public class RotationDetailResponseModelTests
         Assert.Equal(accessConnector.Name, json.GetProperty("Name").GetString());
         Assert.True(json.GetProperty("IsConnected").GetBoolean());
         Assert.Equal(targetSystemId, json.GetProperty("AssignedTargetSystemIds")[0].GetGuid());
+        AssertJobShape(json);
+    }
+
+    [Fact]
+    public void ConfigDetail_CarriesTheConfigFieldsAndItsHistoryOnOneObject()
+    {
+        var config = new PamRotationConfigDetails
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = Guid.NewGuid(),
+            CipherId = Guid.NewGuid(),
+            TargetSystemId = Guid.NewGuid(),
+            TargetSystemName = "prod-mssql",
+            TargetSystemMethod = PamTargetSystemMethod.Automatic,
+            SealedData = "sealed-blob",
+            WrappedKey = "wrapped-key",
+            CreationDate = _created,
+            RevisionDate = _created,
+        };
+        var history = new PamRotationConfigHistory(config, [Job(Guid.NewGuid())]);
+
+        var json = Serialize(new PamRotationConfigDetailResponseModel(history, awaitingManualRotation: false));
+
+        Assert.Equal(config.Id, json.GetProperty("Id").GetGuid());
+        Assert.Equal(config.TargetSystemName, json.GetProperty("TargetSystemName").GetString());
+        Assert.Equal(config.SealedData, json.GetProperty("SealedData").GetString());
+        Assert.Equal(config.WrappedKey, json.GetProperty("WrappedKey").GetString());
         AssertJobShape(json);
     }
 
