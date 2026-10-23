@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -59,6 +60,7 @@ public class AccountController : Controller
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly IRegisterUserCommand _registerUserCommand;
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
+    private readonly IReservePrivilegedControlsSeatForJoiningMemberCommand _reservePrivilegedControlsSeatForJoiningMemberCommand;
 
     public AccountController(
         IAuthenticationSchemeProvider schemeProvider,
@@ -80,7 +82,8 @@ public class AccountController : Controller
         IDataProtectorTokenFactory<SsoTokenable> dataProtector,
         IOrganizationDomainRepository organizationDomainRepository,
         IRegisterUserCommand registerUserCommand,
-        ISendOrganizationInvitesCommand sendOrganizationInvitesCommand)
+        ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
+        IReservePrivilegedControlsSeatForJoiningMemberCommand reservePrivilegedControlsSeatForJoiningMemberCommand)
     {
         _schemeProvider = schemeProvider;
         _clientStore = clientStore;
@@ -102,6 +105,7 @@ public class AccountController : Controller
         _organizationDomainRepository = organizationDomainRepository;
         _registerUserCommand = registerUserCommand;
         _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
+        _reservePrivilegedControlsSeatForJoiningMemberCommand = reservePrivilegedControlsSeatForJoiningMemberCommand;
     }
 
     [HttpGet]
@@ -773,6 +777,8 @@ public class AccountController : Controller
             if (possibleOrgUser.Status == OrganizationUserStatusType.Staged)
             {
                 // Seat availability was verified up-front before user creation so safe to consume this seat.
+                await ReservePrivilegedControlsSeatForStagedMemberAsync(
+                    organization, possibleOrgUser, possibleOrgUser.Email ?? email);
                 possibleOrgUser.Status = OrganizationUserStatusType.Invited;
             }
 
@@ -837,6 +843,27 @@ public class AccountController : Controller
     }
 
     /// <summary>
+    /// Reserves a Privileged Controls seat for a staged member who has Privileged Controls access. When none can
+    /// be reserved the member's access is removed in memory for the caller to save, and the Owners are notified.
+    /// Throws <see cref="SsoAuthnNoSeatsAvailableException"/> when the seat cannot be reserved because of an error.
+    /// </summary>
+    private async Task ReservePrivilegedControlsSeatForStagedMemberAsync(
+        Organization organization,
+        OrganizationUser orgUser,
+        string memberEmail)
+    {
+        try
+        {
+            await _reservePrivilegedControlsSeatForJoiningMemberCommand.RunAsync(organization, orgUser, memberEmail);
+        }
+        catch (Exception e)
+        {
+            _logger.LogInformation(e, "SSO auto provisioning failed to reserve a Privileged Controls seat");
+            throw new SsoAuthnNoSeatsAvailableException();
+        }
+    }
+
+    /// <summary>
     /// Promotes a Staged <see cref="OrganizationUser"/> row to
     /// <see cref="OrganizationUserStatusType.Invited"/> and sends the org invite email.
     /// Mutates only <see cref="OrganizationUser.Status"/> and
@@ -851,6 +878,9 @@ public class AccountController : Controller
 
         var previousStatus = orgUser.Status;
         var previousRevisionDate = orgUser.RevisionDate;
+        var previousAccessPam = orgUser.AccessPam;
+
+        await ReservePrivilegedControlsSeatForStagedMemberAsync(organization, orgUser, orgUser.Email!);
 
         orgUser.Status = OrganizationUserStatusType.Invited;
         orgUser.RevisionDate = DateTime.UtcNow;
@@ -873,6 +903,7 @@ public class AccountController : Controller
 
             orgUser.Status = previousStatus;
             orgUser.RevisionDate = previousRevisionDate;
+            orgUser.AccessPam = previousAccessPam;
             await _organizationUserRepository.ReplaceAsync(orgUser);
 
             throw;
