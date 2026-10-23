@@ -4,6 +4,7 @@ CREATE PROCEDURE [dbo].[PamTargetSystem_Create]
     @Name NVARCHAR(200),
     @Method TINYINT,
     @SealedData NVARCHAR(MAX) = NULL,
+    @WrappedKey NVARCHAR(MAX) = NULL,
     @Status TINYINT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
@@ -18,6 +19,7 @@ BEGIN
         [Name],
         [Method],
         [SealedData],
+        [WrappedKey],
         [Status],
         [CreationDate],
         [RevisionDate]
@@ -29,6 +31,7 @@ BEGIN
         @Name,
         @Method,
         @SealedData,
+        @WrappedKey,
         @Status,
         @CreationDate,
         @RevisionDate
