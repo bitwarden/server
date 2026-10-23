@@ -183,7 +183,13 @@ Same domain = same seed = reproducible data:
 var seed = options.Seed ?? DeriveStableSeed(options.Domain);
 ```
 
-**Distribution totals are explicit.** `Distribution<T>.Select(index, total)` throws unless `0 <= index < total`. `CipherComposer.Compose(index, total, ...)` takes the modulus for a login's username and password (`index % total`, so they repeat every `total` items; the other cipher types use `index`). The steps pass the number of logins (`CipherComposer.CountLogins`): logins are one contiguous run of the type distribution, so a larger total would give them only its first buckets (no Strong or VeryStrong passwords). Don't derive the total from the generator: preset recipes build it without a cipher count, and a zero total once put every generated preset login in the last password bucket (24 distinct "very strong" passwords).
+Per-item generators seed with `ItemSeedMixer.Mix(seed, index)`, never `seed + index`: the sum gives seed `s` at index `i + 1` the same stream as seed `s + 1` at index `i`.
+
+**Distribution totals are explicit.** `Distribution<T>.Select(index, total)` throws unless `0 <= index < total`. `CipherComposer.Compose(index, total, ...)` takes the modulus for a login's username, password strength and pooled password (`index % total`, so they repeat every `total` items); unique passwords, URIs, notes, fields, TOTP, item keys and the other cipher types use `index`. The steps pass the number of logins (`CipherComposer.CountLogins`): logins are one contiguous run of the type distribution, so a larger total would give them only its first buckets (no Strong or VeryStrong passwords). Don't derive the total from the generator: preset recipes build it without a cipher count, and a zero total once put every generated preset login in the last password bucket (24 distinct "very strong" passwords).
+
+**Generated content rates are calibrated to prod.** The `*Per100` constants in `CipherComposer` apply to every preset
+that generates ciphers. Values and sources are in [Data/README.md](Data/README.md#calibrated-login-rates). Re-measure before
+changing them.
 
 ## Fixture Contract Sync
 
@@ -211,12 +217,15 @@ Developer-facing documentation in `Seeds/docs/scenarios/`. Each file maps an eng
 - Never duplicate CLI flag documentation; link to `SeederUtility/README.md`
 - Never duplicate preset catalog details; link to `Seeds/docs/presets.md`
 - Scenarios describe _why_ (the problem). READMEs describe _how_ (the tool). Keep the split clean.
+- When commands, flags, entry points, or documentation change in `util/Seeder`, `util/SeederUtility`, or `util/SeederApi`, remind the engineer to review the Seeder page on contributing.bitwarden.com, including its diagram: https://contributing.bitwarden.com/getting-started/server/seeder (source: `docs/getting-started/server/seeder.md` in bitwarden/contributing-docs)
+- If that page is stale and the fix is not part of the same change, file a work item and add a stale marker to the page, per the documentation standard
 
 **File relationships:**
 
 - `SeederUtility/README.md` → CLI reference (commands, flags, examples) → links to scenarios
 - `Seeds/docs/presets.md` → what exists (the catalog) → scenarios link back to it
 - `Seeds/docs/scenarios/` → why you'd use it (problem → command)
+- contributing.bitwarden.com › Getting started › Server › Seeder → the higher-level entry point (what the Seeder is, which entry point to use, first run) → links down to `SeederUtility/README.md`, `SeederApi/README.md`, `Seeds/docs/presets.md`, and `Seeds/docs/scenarios/`
 
 ## Collection Management Settings
 

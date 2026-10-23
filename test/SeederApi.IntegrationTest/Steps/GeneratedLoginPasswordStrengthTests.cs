@@ -5,7 +5,9 @@ using Bit.Core.Vault.Models.Data;
 using Bit.RustSDK;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
+using Bit.Seeder.Data.Generators;
 using Bit.Seeder.Data.Static;
+using Bit.Seeder.Factories;
 using Bit.Seeder.Pipeline;
 using Bit.Seeder.Steps;
 using Xunit;
@@ -16,10 +18,13 @@ namespace Bit.SeederApi.IntegrationTest.Steps;
 /// Verifies that the cipher generation steps spread login passwords over every strength of the default
 /// password distribution when logins lead the cipher type mix, as they do in the default mix. The generator
 /// comes from <see cref="InitGeneratorStep"/>, which builds it without a cipher count, as the preset path does.
+/// Each login's password must be the pooled or the unique password of the strength its position selects. Logins
+/// with their own key are skipped: the org or user key cannot decrypt them.
 /// </summary>
 public sealed class GeneratedLoginPasswordStrengthTests
 {
-    private const int _cipherCount = 100;
+    // 300 ciphers leave 4 keyless logins in the rarest strength (VeryStrong) and 12 or more in the others; 250 leave 2
+    private const int _cipherCount = 300;
 
     // The default mix's 60% login share and position, without SSH keys: composing the first SSH key cipher
     // builds a pool of 500 RSA keys, which takes about 30 seconds.
@@ -36,7 +41,7 @@ public sealed class GeneratedLoginPasswordStrengthTests
 
         new GenerateCiphersStep(_cipherCount, _loginsLeadTheMix).Execute(context);
 
-        AssertLoginsCoverAllFiveStrengths(context.Ciphers, context.RequireOrgKey());
+        AssertLoginsCoverAllFiveStrengths(context, context.Ciphers, context.RequireOrgKey());
     }
 
     [Fact]
@@ -49,18 +54,39 @@ public sealed class GeneratedLoginPasswordStrengthTests
 
         new GeneratePersonalCiphersStep(_cipherCount, _loginsLeadTheMix).Execute(context);
 
-        AssertLoginsCoverAllFiveStrengths(context.Ciphers, userKey);
+        AssertLoginsCoverAllFiveStrengths(context, context.Ciphers, userKey);
     }
 
-    private static void AssertLoginsCoverAllFiveStrengths(IEnumerable<Cipher> ciphers, string encryptionKey)
+    private static void AssertLoginsCoverAllFiveStrengths(
+        SeederContext context,
+        IReadOnlyList<Cipher> ciphers,
+        string encryptionKey)
     {
-        var passwords = ciphers
-            .Where(cipher => cipher.Type == CipherType.Login)
-            .Select(cipher => JsonSerializer.Deserialize<CipherLoginData>(cipher.Data)!.Password!)
-            .Select(encrypted => RustSdkService.DecryptString(encrypted, encryptionKey))
-            .ToList();
+        // Logins lead the mix, so a login's position in the cipher list is its login index
+        var loginCount = CipherComposer.CountLogins(_loginsLeadTheMix, _cipherCount);
+        var generator = context.RequireGenerator();
+        var strengthsSeen = new HashSet<PasswordStrength>();
 
-        Assert.All(Enum.GetValues<PasswordStrength>(), strength =>
-            Assert.Contains(passwords, password => Passwords.GetByStrength(strength).Contains(password)));
+        foreach (var (cipher, index) in ciphers.Select((cipher, index) => (cipher, index)))
+        {
+            // An item with its own key needs that key unwrapped first; the org or user key alone cannot decrypt it
+            if (cipher.Type != CipherType.Login || cipher.Key is not null)
+            {
+                continue;
+            }
+
+            var strength = PasswordDistributions.Realistic.Select(index, loginCount);
+            var encrypted = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data)!.Password!;
+            var password = RustSdkService.DecryptString(encrypted, encryptionKey);
+
+            var isPooled = password == Passwords.GetPassword(index, strength);
+            var isUnique = UniquePasswordGenerator.Supports(strength)
+                && password == generator.UniquePassword.GenerateByIndex(index, strength);
+            Assert.True(isPooled || isUnique, $"The login at index {index} has neither the pooled nor the unique password of strength {strength}");
+
+            strengthsSeen.Add(strength);
+        }
+
+        Assert.Equal(Enum.GetValues<PasswordStrength>().Order(), strengthsSeen.Order());
     }
 }
