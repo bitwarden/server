@@ -638,7 +638,7 @@ public class RegisterUserCommandTests
             .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
             .Returns(callInfo =>
             {
-                callInfo[1] = new RegistrationEmailVerificationTokenable(user.Email, user.Name, receiveMarketingMaterials);
+                callInfo[1] = new RegistrationEmailVerificationTokenable(user.Email, user.Name, receiveMarketingMaterials, emailSent: true);
                 return true;
             });
 
@@ -659,6 +659,50 @@ public class RegisterUserCommandTests
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
             .SendWelcomeEmailAsync(user);
+    }
+
+    [Theory]
+    [BitAutoData(true, false, true)]
+    [BitAutoData(false, true, false)]
+    // TODO: PM-45479 - Delete the two null-EmailSent rows.
+    [BitAutoData(new object?[] { null, true, true })]
+    [BitAutoData(new object?[] { null, false, false })]
+    public async Task RegisterUserViaEmailVerificationToken_SetsEmailVerifiedFromTokenEmailSent(
+        bool? emailSent, bool enableEmailVerification, bool expectedEmailVerified,
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string emailVerificationToken)
+    {
+        // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IGlobalSettings>()
+            .EnableEmailVerification = enableEmailVerification;
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new RegistrationEmailVerificationTokenable(user.Email, user.Name) { EmailSent = emailSent };
+                return true;
+            });
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, registerFinishData)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaEmailVerificationToken(user, registerFinishData, emailVerificationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .CreateUserAsync(Arg.Is<User>(u => u.EmailVerified == expectedEmailVerified), registerFinishData);
     }
 
     [Theory]
@@ -753,6 +797,61 @@ public class RegisterUserCommandTests
         await sutProvider.GetDependency<IOrganizationDomainRepository>()
             .Received(1)
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), organizationId);
+    }
+
+    [Theory]
+    [BitAutoData(true, false, true)]
+    [BitAutoData(false, true, false)]
+    // TODO: PM-45479 - Delete the two null-EmailSent rows.
+    [BitAutoData(new object?[] { null, true, true })]
+    [BitAutoData(new object?[] { null, false, false })]
+    public async Task RegisterUserViaEmailVerificationTokenAndOpenOrgInvite_SetsEmailVerifiedFromTokenEmailSent(
+        bool? emailSent, bool enableEmailVerification, bool expectedEmailVerified,
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string emailVerificationToken, Guid organizationId, Guid code,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy)
+    {
+        // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+        var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organizationId, Code = code };
+
+        sutProvider.GetDependency<IGlobalSettings>()
+            .EnableEmailVerification = enableEmailVerification;
+
+        sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
+            .Returns(new CommandResult(new None()));
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new RegistrationEmailVerificationTokenable(user.Email, user.Name) { EmailSent = emailSent };
+                return true;
+            });
+
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organizationId, PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, registerFinishData)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(
+            user, registerFinishData, emailVerificationToken, openOrgInvite);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .CreateUserAsync(Arg.Is<User>(u => u.EmailVerified == expectedEmailVerified), registerFinishData);
     }
 
     [Theory]

@@ -1,6 +1,5 @@
 ﻿using Bit.Core;
 using Bit.Core.Auth.Identity;
-using Bit.ExceptionHandling;
 using Bit.Invoicing;
 using Bit.OrganizationAuthorization;
 using Bit.Subscriptions.Organization.Filters;
@@ -25,20 +24,8 @@ public static class OrganizationSubscriptionEndpointsExtensions
     /// </summary>
     public static RouteGroupBuilder MapOrganizationSubscriptionEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var group = endpoints.MapGroup("");
-        group.WithTags("OrganizationSubscriptions");
-        group.WithGroupName("internal");
-        group.RequireAuthorization(Policies.Application);
-        group.RequireAuthorization(new AuthorizeAttribute<OrganizationBillingRequirement>());
-        group.WithBasicExceptionHandling();
+        var group = endpoints.MapOrganizationScopedGroup();
         group.AddEndpointFilter<RouteGroupBuilder, StripeCardErrorEndpointFilter>();
-
-        // Responses are per-organization billing data; keep them out of any shared or browser cache.
-        group.AddEndpointFilter(async (context, next) =>
-        {
-            context.HttpContext.Response.Headers.CacheControl = "no-store";
-            return await next(context);
-        });
 
         group.MapGet("preview",
                 async ([FromRoute] Guid organizationId, [FromServices] GetOrganizationSubscriptionPreviewHandler handler) => await handler.HandleAsync(organizationId))

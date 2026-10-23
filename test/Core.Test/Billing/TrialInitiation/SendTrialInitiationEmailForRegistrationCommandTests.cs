@@ -195,6 +195,9 @@ public class SendTrialInitiationEmailForRegistrationCommandTests
 
         Assert.Equal("protected-token", result);
         await AssertNoEmailSent(sutProvider);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .Received(1)
+            .Protect(Arg.Is<RegistrationEmailVerificationTokenable>(t => t.EmailSent == false));
     }
 
     [Theory]
@@ -232,6 +235,9 @@ public class SendTrialInitiationEmailForRegistrationCommandTests
         await sutProvider.GetDependency<IMailService>().Received(1).SendTrialInitiationSignupEmailAsync(
             false, email, "protected-token", ProductTierType.Enterprise,
             Arg.Any<IEnumerable<ProductType>>(), 7, false, null);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .Received(1)
+            .Protect(Arg.Is<RegistrationEmailVerificationTokenable>(t => t.EmailSent == true));
     }
 
     private static async Task AssertNoEmailSent(SutProvider<SendTrialInitiationEmailForRegistrationCommand> sutProvider)

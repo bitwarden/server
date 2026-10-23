@@ -122,7 +122,7 @@ public class PreviewOrganizationRestartCommandTests
         Assert.Equal(NotEndedMessage, exception.Message);
         await _getOrganizationRestartQuery.DidNotReceiveWithAnyArgs().Run(default!, default!);
         await _invoicePreviewService.DidNotReceiveWithAnyArgs()
-            .GetInvoicePreviewAsync(default(InvoiceCreatePreviewOptions)!, default, default);
+            .GetInvoicePreviewForBillingAddressAsync(default(InvoiceCreatePreviewOptions)!, default, default);
     }
 
     [Fact]
@@ -153,7 +153,7 @@ public class PreviewOrganizationRestartCommandTests
 
         await _sut.Run(organization, Request());
 
-        await _invoicePreviewService.Received(1).GetInvoicePreviewAsync(
+        await _invoicePreviewService.Received(1).GetInvoicePreviewForBillingAddressAsync(
             Arg.Any<InvoiceCreatePreviewOptions>(), expectedTier, expectedCadence);
     }
 
@@ -184,7 +184,7 @@ public class PreviewOrganizationRestartCommandTests
     {
         var organization = ArrangeCanceledOrganization();
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns<InvoicePreview>(_ => throw new StripeException
             {
                 StripeError = new StripeError { Code = StripeConstants.ErrorCodes.CustomerTaxLocationInvalid }
@@ -194,7 +194,7 @@ public class PreviewOrganizationRestartCommandTests
 
         Assert.Equal(
             "Your location wasn't recognized. Please ensure your country and postal code are valid and try again.",
-            exception.Message);
+            exception.ModelState![BillingErrorKeys.BillingAddress]!.Errors.Single().ErrorMessage);
     }
 
     [Fact]
@@ -202,7 +202,7 @@ public class PreviewOrganizationRestartCommandTests
     {
         var organization = ArrangeCanceledOrganization();
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns<InvoicePreview>(_ => throw new StripeException
             {
                 StripeError = new StripeError { Code = StripeConstants.ErrorCodes.TaxIdInvalid }
@@ -212,7 +212,7 @@ public class PreviewOrganizationRestartCommandTests
 
         Assert.Equal(
             "Your tax ID wasn't recognized for your selected country. Please ensure your country and tax ID are valid.",
-            exception.Message);
+            exception.ModelState![BillingErrorKeys.BillingAddress]!.Errors.Single().ErrorMessage);
     }
 
     private OrganizationEntity ArrangeCanceledOrganization()
@@ -229,7 +229,7 @@ public class PreviewOrganizationRestartCommandTests
     {
         var captured = new Captured<InvoiceCreatePreviewOptions>();
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => captured.Value = o),
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => captured.Value = o),
                 Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns(SampleInvoicePreview());
         return captured;

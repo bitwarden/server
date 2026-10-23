@@ -6,6 +6,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Stripe;
+using Plan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Core.Billing.Extensions;
 
@@ -87,4 +88,20 @@ public static class BillingExtensions
 
     public static bool SupportsConsolidatedBilling(this PlanType planType)
         => planType is PlanType.TeamsMonthly or PlanType.EnterpriseMonthly or PlanType.EnterpriseAnnually;
+
+    public static bool IsOnPrivilegedControlsSalesInitiatedTrial(
+        this Organization organization,
+        Plan plan,
+        bool subscriptionHasPrivilegedControlsSeats)
+        => plan.SupportsPrivilegedControls && organization.UsePam && !subscriptionHasPrivilegedControlsSeats;
+
+    public static int GetPrivilegedControlsSeatMinimum(this Organization organization, Plan plan)
+    {
+        if (!plan.SupportsPrivilegedControls)
+        {
+            throw new ArgumentException($"Plan {plan.Type} does not support Privileged Controls.", nameof(plan));
+        }
+
+        return organization.PamSeatMinimum ?? plan.PrivilegedControls.DefaultSeatMinimum;
+    }
 }

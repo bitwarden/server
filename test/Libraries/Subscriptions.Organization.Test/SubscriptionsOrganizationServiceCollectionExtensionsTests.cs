@@ -37,6 +37,27 @@ public class SubscriptionsOrganizationServiceCollectionExtensionsTests
     }
 
     [Fact]
+    public void AddOrganizationSubscriptions_RegistersThePrivilegedControlsTrialQueryAndSeatChangeHandler()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(Substitute.For<IPricingClient>());
+        services.AddSingleton(Substitute.For<IStripeAdapter>());
+        services.AddSingleton(Substitute.For<IOrganizationRepository>());
+        services.AddSingleton(Substitute.For<IOrganizationUserRepository>());
+        services.AddSingleton(Substitute.For<IUpdateOrganizationSubscriptionCommand>());
+        services.AddSingleton(Substitute.For<IOrganizationService>());
+        services.AddSingleton(Substitute.For<IBitwardenEnvironment>());
+        services.AddLogging();
+
+        services.AddOrganizationSubscriptions();
+        using var scope = services.BuildServiceProvider().CreateScope();
+
+        Assert.IsType<IsOnPrivilegedControlsSalesInitiatedTrialQuery>(
+            scope.ServiceProvider.GetService<IIsOnPrivilegedControlsSalesInitiatedTrialQuery>());
+        Assert.NotNull(scope.ServiceProvider.GetService<ChangePrivilegedControlsSeatsHandler>());
+    }
+
+    [Fact]
     public void AddOrganizationSubscriptions_RegistersTheAutoscalePrivilegedControlsSeatsCommandAsScoped()
     {
         var services = new ServiceCollection();
