@@ -63,6 +63,21 @@ public class ReservePrivilegedControlsSeatsCommandTests
 
     [Theory]
     [BitAutoData]
+    public async Task RunAsync_PamSeatsZero_ReturnsReservedWithoutCallingAutoscale(
+        Organization organization, SutProvider<ReservePrivilegedControlsSeatsCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        organization.PamSeats = 0;
+
+        var result = await sutProvider.Sut.RunAsync(organization, 2);
+
+        Assert.Equal(PrivilegedControlsSeatReservation.Reserved, result);
+        await sutProvider.GetDependency<IAutoscalePrivilegedControlsSeatsCommand>()
+            .DidNotReceiveWithAnyArgs().Run(default!, default);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task RunAsync_SelfHosted_Shortfall_ReturnsSelfHostedShortfall(
         Organization organization, SutProvider<ReservePrivilegedControlsSeatsCommand> sutProvider)
     {

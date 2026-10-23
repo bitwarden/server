@@ -6,7 +6,8 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Privilege
 public enum PrivilegedControlsSeatReservation
 {
     /// <summary>
-    /// Seats are available, or the organization is not subject to a Privileged Controls seat limit.
+    /// Seats are available, or the organization is not subject to a Privileged Controls seat limit (it has no
+    /// Privileged Controls seats at all).
     /// </summary>
     Reserved,
     /// <summary>

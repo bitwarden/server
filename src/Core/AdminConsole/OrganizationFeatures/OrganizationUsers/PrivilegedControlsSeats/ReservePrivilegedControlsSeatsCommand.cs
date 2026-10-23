@@ -12,7 +12,7 @@ public class ReservePrivilegedControlsSeatsCommand(
 {
     public async Task<PrivilegedControlsSeatReservation> RunAsync(Organization organization, int membersTakingSeats)
     {
-        if (membersTakingSeats < 1 || !organization.UsePam || organization.PamSeats is null)
+        if (membersTakingSeats < 1 || !organization.UsePam || organization.PamSeats is null or < 1)
         {
             return PrivilegedControlsSeatReservation.Reserved;
         }
