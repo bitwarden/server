@@ -4,7 +4,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Billing.Enums;
