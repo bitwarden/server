@@ -14,7 +14,8 @@ public interface IAutoscalePrivilegedControlsSeatsCommand
     /// <summary>
     /// Adds Privileged Controls seats when the seats in use plus <paramref name="seatsToAdd"/> exceed the seats the
     /// organization has bought. Nothing changes when the bought seats already cover that total. When a limit is set
-    /// and the total equals it, the organization's Owners are emailed.
+    /// and the total equals it, the organization's Owners are emailed. On a trial the seats are raised on the
+    /// organization only, with no change to Stripe.
     /// </summary>
     /// <param name="organization">The organization that already has Privileged Controls.</param>
     /// <param name="seatsToAdd">
@@ -25,8 +26,7 @@ public interface IAutoscalePrivilegedControlsSeatsCommand
     /// </returns>
     /// <exception cref="BadRequestException">
     /// Thrown on a self-hosted instance, when <paramref name="seatsToAdd"/> is below 1, when the organization does
-    /// not have Privileged Controls or has no subscription, or when the seat change or
-    /// subscription update is rejected.
+    /// not have Privileged Controls, or when the seat change or subscription update is rejected.
     /// </exception>
     /// <exception cref="ConflictException">Thrown when the organization's subscription is in a state that prevents the change.</exception>
     Task<AutoscalePrivilegedControlsSeatsResult> Run(OrganizationEntity organization, int seatsToAdd);

@@ -9,6 +9,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Subscriptions.Organization.Queries;
 using Bitwarden.Server.Sdk.Environment;
 using Microsoft.Extensions.Logging;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
@@ -20,6 +21,7 @@ internal sealed class AutoscalePrivilegedControlsSeatsCommand(
     IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
     IOrganizationService organizationService,
     IOrganizationUserRepository organizationUserRepository,
+    IIsOnPrivilegedControlsSalesInitiatedTrialQuery isOnTrialQuery,
     IMailer mailer,
     IGlobalSettings globalSettings,
     IBitwardenEnvironment environment,
@@ -42,11 +44,6 @@ internal sealed class AutoscalePrivilegedControlsSeatsCommand(
             throw new BadRequestException("Your organization doesn't have Privileged Controls.");
         }
 
-        if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
-        {
-            throw new BadRequestException("No subscription found.");
-        }
-
         var seatsNeeded =
             await organizationUserRepository.GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id) + seatsToAdd;
 
@@ -57,8 +54,11 @@ internal sealed class AutoscalePrivilegedControlsSeatsCommand(
                 return new AutoscalePrivilegedControlsSeatsResult(false, organization.MaxAutoscalePamSeats);
             }
 
-            var changeSet = await seatChangeSetFactory.CreateAsync(organization, seatsNeeded);
-            (await updateOrganizationSubscriptionCommand.Run(organization, changeSet)).GetValueOrThrowHttpException();
+            if (!await isOnTrialQuery.Run(organization))
+            {
+                var changeSet = await seatChangeSetFactory.CreateAsync(organization, seatsNeeded);
+                (await updateOrganizationSubscriptionCommand.Run(organization, changeSet)).GetValueOrThrowHttpException();
+            }
 
             organization.PamSeats = seatsNeeded;
             await organizationService.ReplaceAndUpdateCacheAsync(organization);
