@@ -275,6 +275,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .ExecuteDeleteAsync();
             await dbContext.ApiKeys.Where(ak => ak.ServiceAccount.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
+            await dbContext.ApiKeys.Where(ak => ak.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
             await dbContext.ServiceAccount.Where(sa => sa.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
 

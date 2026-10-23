@@ -20,7 +20,7 @@ public class ApiKeyRepository : Repository<Core.SecretsManager.Entities.ApiKey, 
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var entity = await GetDbSet(dbContext)
-            .Where(apiKey => apiKey.Id == id)
+            .Where(apiKey => apiKey.Id == id && apiKey.ServiceAccountId != null)
             .Include(apiKey => apiKey.ServiceAccount)
             .Select(apiKey => new ServiceAccountApiKeyDetails(apiKey, apiKey.ServiceAccount.OrganizationId))
             .FirstOrDefaultAsync();
@@ -33,6 +33,15 @@ public class ApiKeyRepository : Repository<Core.SecretsManager.Entities.ApiKey, 
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var apiKeys = await GetDbSet(dbContext).Where(e => e.ServiceAccountId == id).ToListAsync();
+
+        return Mapper.Map<List<Core.SecretsManager.Entities.ApiKey>>(apiKeys);
+    }
+
+    public async Task<ICollection<Core.SecretsManager.Entities.ApiKey>> GetManyByOrganizationIdAsync(Guid organizationId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var apiKeys = await GetDbSet(dbContext).Where(e => e.OrganizationId == organizationId).ToListAsync();
 
         return Mapper.Map<List<Core.SecretsManager.Entities.ApiKey>>(apiKeys);
     }

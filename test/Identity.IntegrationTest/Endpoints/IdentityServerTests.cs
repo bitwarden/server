@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
@@ -8,6 +10,8 @@ using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Platform.Installations;
 using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Test.Auth.AutoFixture;
 using Bit.Identity.IdentityServer;
 using Bit.Identity.IdentityServer.RequestValidators;
@@ -371,6 +375,44 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         Assert.Equal("invalid_client", error);
     }
 
+    [Fact]
+    public async Task TokenEndpoint_GrantTypeClientCredentials_AsSecretsManagerApiKey_OrganizationKey_Fails()
+    {
+        const string clientSecret = "organization-key-secret";
+        var organization = await _factory.Services.GetRequiredService<IOrganizationRepository>().CreateAsync(
+            new Organization
+            {
+                Name = "Org",
+                BillingEmail = "billing@example.com",
+                Plan = "Enterprise",
+                Enabled = true,
+                UseApi = true,
+                UseSecretsManager = true,
+            });
+        var apiKey = await _factory.Services.GetRequiredService<IApiKeyRepository>().CreateAsync(new ApiKey
+        {
+            OrganizationId = organization.Id,
+            Name = "Organization key",
+            ClientSecretHash = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(clientSecret))),
+            Scope = "[\"api.secrets\"]",
+        });
+
+        using var content = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "grant_type", "client_credentials" },
+            { "client_id", $"apikey.{apiKey.Id}" },
+            { "client_secret", clientSecret },
+            { "scope", "api.secrets" },
+        });
+        var context = await _factory.Server.PostAsync("/connect/token", content);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+
+        var errorBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var error = AssertHelper.AssertJsonProperty(errorBody.RootElement, "error", JsonValueKind.String).GetString();
+        Assert.Equal("invalid_client", error);
+    }
+
     [Theory, BitAutoData]
     public async Task TokenEndpoint_GrantTypeClientCredentials_AsInstallation_InstallationExists_Succeeds(Installation installation)
     {
@@ -631,6 +673,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     private void ReinitializeDbForTests(IdentityApplicationFactory factory)
     {
         var databaseContext = factory.GetDatabaseContext();
+        databaseContext.ApiKeys.RemoveRange(databaseContext.ApiKeys);
         databaseContext.Policies.RemoveRange(databaseContext.Policies);
         databaseContext.OrganizationUsers.RemoveRange(databaseContext.OrganizationUsers);
         databaseContext.Organizations.RemoveRange(databaseContext.Organizations);
