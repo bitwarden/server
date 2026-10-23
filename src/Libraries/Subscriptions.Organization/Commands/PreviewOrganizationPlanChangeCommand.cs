@@ -107,18 +107,20 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
 
         try
         {
-            return await invoicePreviewService.GetInvoicePreviewAsync(options, tier, cadence);
+            return await invoicePreviewService.GetInvoicePreviewForBillingAddressAsync(options, tier, cadence);
         }
         catch (StripeException stripeException)
             when (stripeException.StripeError?.Code == ErrorCodes.CustomerTaxLocationInvalid)
         {
             throw new BadRequestException(
+                BillingErrorKeys.BillingAddress,
                 "Your location wasn't recognized. Please ensure your country and postal code are valid and try again.");
         }
         catch (StripeException stripeException)
             when (stripeException.StripeError?.Code == ErrorCodes.TaxIdInvalid)
         {
             throw new BadRequestException(
+                BillingErrorKeys.BillingAddress,
                 "Your tax ID wasn't recognized for your selected country. Please ensure your country and tax ID are valid.");
         }
     }
