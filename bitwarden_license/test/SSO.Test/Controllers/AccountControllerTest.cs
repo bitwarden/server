@@ -12,6 +12,7 @@ using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -1142,6 +1143,27 @@ public class AccountControllerTest
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .ReplaceAsync(Arg.Any<OrganizationUser>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_NewUserStagedWithPam_PamStepThrows_ThrowsNoSeatsAvailableWithoutCreatingUser(
+        SutProvider<AccountController> sutProvider)
+    {
+        var orgId = Guid.NewGuid();
+        var email = "staged.new.user@example.com";
+        var organization = new Organization { Id = orgId, Name = "Org", Seats = null };
+        var orgUser = BuildStagedOrgUserWithPam(orgId, email);
+        ArrangeStagedMember(sutProvider, organization, null, orgUser, email);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatForJoiningMemberCommand>()
+            .RunAsync(Arg.Any<Organization>(), Arg.Any<OrganizationUser>(), Arg.Any<string>())
+            .Throws(new BadRequestException("seat failure"));
+
+        await Assert.ThrowsAsync<SsoAuthnNoSeatsAvailableException>(
+            () => InvokeCreateUserAndOrgUserConditionallyAsync(sutProvider, orgId, email));
+
+        await sutProvider.GetDependency<IRegisterUserCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RegisterSSOAutoProvisionedUserAsync(Arg.Any<User>(), Arg.Any<Organization>());
     }
 
     [Theory, BitAutoData]

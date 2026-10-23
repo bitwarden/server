@@ -701,6 +701,14 @@ public class AccountController : Controller
         if (possibleOrgUser == null || willPromoteStagedOrgUser)
         {
             await EnsureSeatAvailableAsync(organization);
+
+            if (willPromoteStagedOrgUser)
+            {
+                // The email claim has not been validated yet at this point, so fall back to it only when the
+                // staged row has no email of its own.
+                await ReservePrivilegedControlsSeatForStagedMemberAsync(
+                    organization, possibleOrgUser!, possibleOrgUser!.Email ?? email!);
+            }
         }
 
         // If the email domain is verified, we can mark the email as verified
@@ -776,9 +784,9 @@ public class AccountController : Controller
 
             if (possibleOrgUser.Status == OrganizationUserStatusType.Staged)
             {
-                // Seat availability was verified up-front before user creation so safe to consume this seat.
-                await ReservePrivilegedControlsSeatForStagedMemberAsync(
-                    organization, possibleOrgUser, possibleOrgUser.Email ?? email);
+                // The member seat and the Privileged Controls seat were both reserved up-front before user
+                // creation, so it is safe to consume them here. The Privileged Controls step may have cleared
+                // AccessPam on this instance, which the ReplaceAsync below saves.
                 possibleOrgUser.Status = OrganizationUserStatusType.Invited;
             }
 
