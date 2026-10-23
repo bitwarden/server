@@ -32,6 +32,7 @@ using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Stripe;
@@ -1336,6 +1337,30 @@ public class ProviderServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task InitiateDeleteAsync_IssuesTokenValidFor48Hours(Provider provider, User providerAdmin
+        , ProviderUser providerUser)
+    {
+        var sutProvider = new SutProvider<ProviderService>()
+            .WithFakeTimeProvider()
+            .Create();
+        var now = new DateTime(2026, 10, 21, 12, 0, 0, DateTimeKind.Utc);
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(now);
+
+        providerUser.Status = ProviderUserStatusType.Confirmed;
+        providerUser.Type = ProviderUserType.ProviderAdmin;
+
+        sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(providerAdmin.Email).Returns(providerAdmin);
+        sutProvider.GetDependency<IProviderUserRepository>().GetByProviderUserAsync(provider.Id, providerAdmin.Id).Returns(providerUser);
+
+        await sutProvider.Sut.InitiateDeleteAsync(provider, providerAdmin.Email);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<ProviderDeleteTokenable>>().Received(1)
+            .Protect(Arg.Is<ProviderDeleteTokenable>(t =>
+                t.Id == provider.Id &&
+                t.ExpirationDate == now.AddHours(48)));
+    }
+
+    [Theory, BitAutoData]
     public async Task DeleteAsync_ThrowsBadRequestException_WhenInvalidToken(Provider provider, string invalidToken
     , SutProvider<ProviderService> sutProvider)
     {
@@ -1362,7 +1387,7 @@ public class ProviderServiceTests
     {
         // Arrange
         // Token has a matching provider Id but an expiration date two hours in the past.
-        var expiredTokenData = new ProviderDeleteTokenable(provider, -2);
+        var expiredTokenData = new ProviderDeleteTokenable { Id = provider.Id, ExpirationDate = DateTime.UtcNow.AddHours(-2) };
         var providerDeleteTokenDataFactory = sutProvider.GetDependency<IDataProtectorTokenFactory<ProviderDeleteTokenable>>();
         providerDeleteTokenDataFactory.TryUnprotect(expiredToken, out expiredTokenData).Returns(true);
 

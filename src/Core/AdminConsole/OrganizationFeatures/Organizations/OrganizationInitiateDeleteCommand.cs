@@ -15,6 +15,7 @@ public class OrganizationInitiateDeleteCommand : IOrganizationInitiateDeleteComm
     private readonly IUserRepository _userRepository;
     private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
     private readonly IMailService _mailService;
+    private readonly TimeProvider _timeProvider;
 
     public const string OrganizationAdminNotFoundErrorMessage = "Org admin not found.";
 
@@ -22,12 +23,14 @@ public class OrganizationInitiateDeleteCommand : IOrganizationInitiateDeleteComm
         IOrganizationUserRepository organizationUserRepository,
         IUserRepository userRepository,
         IDataProtectorTokenFactory<OrgDeleteTokenable> orgDeleteTokenDataFactory,
-        IMailService mailService)
+        IMailService mailService,
+        TimeProvider timeProvider)
     {
         _organizationUserRepository = organizationUserRepository;
         _userRepository = userRepository;
         _orgDeleteTokenDataFactory = orgDeleteTokenDataFactory;
         _mailService = mailService;
+        _timeProvider = timeProvider;
     }
 
     public async Task InitiateDeleteAsync(Organization organization, string orgAdminEmail)
@@ -43,7 +46,7 @@ public class OrganizationInitiateDeleteCommand : IOrganizationInitiateDeleteComm
         {
             throw new BadRequestException(OrganizationAdminNotFoundErrorMessage);
         }
-        var token = _orgDeleteTokenDataFactory.Protect(new OrgDeleteTokenable(organization, 1));
+        var token = _orgDeleteTokenDataFactory.Protect(new OrgDeleteTokenable(organization, _timeProvider));
         await _mailService.SendInitiateDeleteOrganzationEmailAsync(orgAdminEmail, organization, token);
     }
 }
