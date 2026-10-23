@@ -68,7 +68,8 @@ CREATE PROCEDURE [dbo].[Organization_Create]
     @UsePam BIT = 0,
     @PamSeats INT = null,
     @MaxAutoscalePamSeats INT = null,
-    @PamSeatMinimum INT = null
+    @PamSeatMinimum INT = null,
+    @OrganizationKeyId VARCHAR(32) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -145,7 +146,8 @@ BEGIN
         [UsePam],
         [PamSeats],
         [MaxAutoscalePamSeats],
-        [PamSeatMinimum]
+        [PamSeatMinimum],
+        [OrganizationKeyId]
     )
     VALUES
         (
@@ -219,6 +221,7 @@ BEGIN
             @UsePam,
             @PamSeats,
             @MaxAutoscalePamSeats,
-            @PamSeatMinimum
+            @PamSeatMinimum,
+            @OrganizationKeyId
         );
 END

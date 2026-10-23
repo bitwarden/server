@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Billing.Enums;
-using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Options;
@@ -173,14 +172,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
 
         if (options.StripeBilling is not null)
         {
-            var address = options.StripeBilling.Address;
-            if (address.TaxId is not null)
-            {
-                var withoutTaxId = Enum.GetValues<StripeTestAddress>().Where(a => a.TaxId is null).Select(a => a.Name);
-                throw new InvalidOperationException(
-                    $"The '{address.Name}' test address carries a tax ID, and a premium user's personal account " +
-                    $"takes none. Use one of: {string.Join(", ", withoutTaxId)}.");
-            }
+            options.StripeBilling.ValidateForPersonalAccount();
 
             RequireBillingService(deps.UserStripeBillingService).ValidateConfiguration();
 

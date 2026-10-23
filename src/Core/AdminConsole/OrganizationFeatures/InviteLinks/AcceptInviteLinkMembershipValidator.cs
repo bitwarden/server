@@ -6,7 +6,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
@@ -33,26 +32,12 @@ public class AcceptInviteLinkMembershipValidator(
     public async Task<ValidationResult<AcceptInviteLinkMembershipValidationRequest>> ValidateAsync(
         AcceptInviteLinkMembershipValidationRequest request)
     {
-        var user = request.User;
         var organization = request.Organization;
 
-        // Check membership status first for a friendlier message if they're already in the organization
-        var membershipStatusError = ValidateExistingMembershipStatus(request.ExistingMembership, organization.DisplayName());
+        var membershipStatusError = InviteLinkRules.ValidateAcceptMembershipStatus(organization, request.ExistingMembership);
         if (membershipStatusError is not null)
         {
             return Invalid(request, membershipStatusError);
-        }
-
-        // Security: allowed domains only provide protection if the user has proven control over their email address.
-        if (!user.EmailVerified)
-        {
-            return Invalid(request, new EmailNotVerified());
-        }
-
-        // Security: check the user is part of an allowed domain.
-        if (!InviteLinkDomainValidator.IsEmailDomainAllowed(user.Email, request.AllowedDomains))
-        {
-            return Invalid(request, new EmailDomainNotAllowed(organization.DisplayName()));
         }
 
         // An email invite can carry an Admin/Owner role, so the "one admin of a Free org" rule (a plan
@@ -184,12 +169,4 @@ public class AcceptInviteLinkMembershipValidator(
     /// </summary>
     private async Task<bool> IsPolicyEnabledForOrganizationAsync(Organization organization, PolicyType policyType)
         => organization.UsePolicies && (await policyQuery.RunAsync(organization.Id, policyType)).Enabled;
-
-    private static Error? ValidateExistingMembershipStatus(OrganizationUser? existingOrganizationUser, string orgName) =>
-        existingOrganizationUser?.Status switch
-        {
-            OrganizationUserStatusType.Revoked => new OrganizationAccessRevoked(orgName),
-            OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed => new AlreadyOrganizationMember(orgName),
-            _ => null
-        };
 }

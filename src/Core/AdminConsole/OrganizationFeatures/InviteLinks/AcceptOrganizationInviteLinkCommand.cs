@@ -41,21 +41,18 @@ public class AcceptOrganizationInviteLinkCommand(
         var user = request.User;
 
         var link = await organizationInviteLinkRepository.GetByOrganizationIdAsync(request.OrganizationId);
-        if (link is null || !link.CodeMatches(request.Code.ToString()))
+        var existingOrganization = link is null
+            ? null
+            : await organizationRepository.GetByIdAsync(link.OrganizationId);
+
+        var eligibilityError = InviteLinkRules.ValidateEligibility(link, request.Code, existingOrganization, user);
+        if (eligibilityError is not null)
         {
-            return new InviteLinkNotFound();
+            return eligibilityError;
         }
 
-        var organization = await organizationRepository.GetByIdAsync(link.OrganizationId);
-        if (organization is null or { Enabled: false })
-        {
-            return new InviteLinkNotFound();
-        }
-
-        if (!organization.UseInviteLinks)
-        {
-            return new InviteLinkNotAvailable();
-        }
+        // ValidateEligibility guarantees the organization exists.
+        var organization = existingOrganization!;
 
         var existingOrganizationUser = await ResolveExistingOrganizationUserAsync(organization, user);
 
@@ -70,7 +67,6 @@ public class AcceptOrganizationInviteLinkCommand(
             {
                 Organization = organization,
                 User = user,
-                AllowedDomains = link.GetAllowedDomains(),
                 ExistingMembership = existingOrganizationUser,
                 ResetPasswordKey = request.ResetPasswordKey,
                 AutoConfirmPolicyEnabled = autoConfirmPolicyEnabled,
