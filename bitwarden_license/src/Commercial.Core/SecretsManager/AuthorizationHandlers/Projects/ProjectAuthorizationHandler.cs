@@ -1,5 +1,4 @@
-﻿using Bit.Core.Context;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Queries.Interfaces;
@@ -11,13 +10,13 @@ namespace Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.Projects;
 public class ProjectAuthorizationHandler : AuthorizationHandler<ProjectOperationRequirement, Project>
 {
     private readonly IAccessClientQuery _accessClientQuery;
-    private readonly ICurrentContext _currentContext;
+    private readonly ISecretsManagerAccessQuery _secretsManagerAccessQuery;
     private readonly IProjectRepository _projectRepository;
 
-    public ProjectAuthorizationHandler(ICurrentContext currentContext, IAccessClientQuery accessClientQuery,
+    public ProjectAuthorizationHandler(ISecretsManagerAccessQuery secretsManagerAccessQuery, IAccessClientQuery accessClientQuery,
         IProjectRepository projectRepository)
     {
-        _currentContext = currentContext;
+        _secretsManagerAccessQuery = secretsManagerAccessQuery;
         _accessClientQuery = accessClientQuery;
         _projectRepository = projectRepository;
     }
@@ -26,7 +25,7 @@ public class ProjectAuthorizationHandler : AuthorizationHandler<ProjectOperation
         ProjectOperationRequirement requirement,
         Project resource)
     {
-        if (!_currentContext.AccessSecretsManager(resource.OrganizationId))
+        if (!await _secretsManagerAccessQuery.HasAccessAsync(resource.OrganizationId))
         {
             return;
         }

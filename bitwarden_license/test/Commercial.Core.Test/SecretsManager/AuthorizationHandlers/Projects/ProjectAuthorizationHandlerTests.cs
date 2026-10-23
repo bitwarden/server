@@ -2,7 +2,6 @@
 using System.Security.Claims;
 using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.Projects;
 using Bit.Commercial.Core.Test.SecretsManager.Enums;
-using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Entities;
@@ -24,7 +23,7 @@ public class ProjectAuthorizationHandlerTests
     private static void SetupPermission(SutProvider<ProjectAuthorizationHandler> sutProvider,
         PermissionType permissionType, Guid organizationId, Guid userId = new())
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(organizationId)
             .Returns(true);
 
         switch (permissionType)
@@ -62,7 +61,7 @@ public class ProjectAuthorizationHandlerTests
     public async Task Handler_UnsupportedProjectOperationRequirement_Throws(
         SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(project.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(project.OrganizationId)
             .Returns(true);
         var requirement = new ProjectOperationRequirement();
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
@@ -76,7 +75,7 @@ public class ProjectAuthorizationHandlerTests
     public async Task Handler_SupportedProjectOperationRequirement_DoesNotThrow(
         SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(project.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(project.OrganizationId)
             .Returns(true);
 
         var requirements = typeof(ProjectOperations).GetFields(BindingFlags.Public | BindingFlags.Static)
@@ -96,7 +95,7 @@ public class ProjectAuthorizationHandlerTests
     public async Task CanCreateProject_AccessToSecretsManagerFalse_DoesNotSucceed(
         SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(project.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(project.OrganizationId)
             .Returns(false);
         var requirement = ProjectOperations.Create;
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
@@ -112,7 +111,7 @@ public class ProjectAuthorizationHandlerTests
     public async Task CanCreateProject_NotSupportedClientTypes_DoesNotSucceed(AccessClientType clientType,
         SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(project.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(project.OrganizationId)
             .Returns(true);
         sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, project.OrganizationId)
             .ReturnsForAnyArgs(
@@ -149,7 +148,7 @@ public class ProjectAuthorizationHandlerTests
     public async Task CanUpdateProject_AccessToSecretsManagerFalse_DoesNotSucceed(
         SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(project.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(project.OrganizationId)
             .Returns(false);
         var requirement = ProjectOperations.Update;
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
@@ -166,7 +165,7 @@ public class ProjectAuthorizationHandlerTests
         SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal,
         Guid userId)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(project.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(project.OrganizationId)
             .Returns(true);
         SetupPermission(sutProvider, PermissionType.RunAsAdmin, project.OrganizationId);
         sutProvider.GetDependency<IProjectRepository>()
@@ -186,9 +185,8 @@ public class ProjectAuthorizationHandlerTests
     public async Task CanUpdateProject_NotSupportedClientType_DoesNotSucceed(
         SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(project.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(project.OrganizationId)
             .Returns(true);
-        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(project.OrganizationId).Returns(false);
         sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, project.OrganizationId)
             .ReturnsForAnyArgs(
                 (AccessClientType.Organization, new Guid()));
@@ -237,7 +235,7 @@ public class ProjectAuthorizationHandlerTests
         ClaimsPrincipal claimsPrincipal)
     {
         var requirement = ProjectOperations.Delete;
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(project.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(project.OrganizationId)
             .Returns(false);
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, project);
@@ -270,9 +268,8 @@ public class ProjectAuthorizationHandlerTests
         SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal)
     {
         var requirement = ProjectOperations.Delete;
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(project.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(project.OrganizationId)
             .Returns(true);
-        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(project.OrganizationId).Returns(false);
         sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, project.OrganizationId)
             .ReturnsForAnyArgs(
                 (AccessClientType.Organization, new Guid()));

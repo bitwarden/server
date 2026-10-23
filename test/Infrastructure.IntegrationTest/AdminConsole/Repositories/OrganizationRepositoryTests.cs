@@ -726,6 +726,7 @@ public class OrganizationRepositoryTests
         Assert.Equal(organization.UseDisableSmAdsForUsers, result.UseDisableSmAdsForUsers);
         Assert.Equal(organization.UsePhishingBlocker, result.UsePhishingBlocker);
         Assert.Equal(organization.UseMyItems, result.UseMyItems);
+        Assert.Equal(organization.UseSecretsManager, result.UseSecretsManager);
     }
 
     [Theory, DatabaseData]

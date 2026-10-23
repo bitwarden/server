@@ -27,6 +27,7 @@ namespace Bit.Api.SecretsManager.Controllers;
 public class SecretsController : Controller
 {
     private readonly ICurrentContext _currentContext;
+    private readonly ISecretsManagerAccessQuery _secretsManagerAccessQuery;
     private readonly IProjectRepository _projectRepository;
     private readonly ISecretRepository _secretRepository;
     private readonly ICreateSecretCommand _createSecretCommand;
@@ -41,6 +42,7 @@ public class SecretsController : Controller
 
     public SecretsController(
         ICurrentContext currentContext,
+        ISecretsManagerAccessQuery secretsManagerAccessQuery,
         IProjectRepository projectRepository,
         ISecretRepository secretRepository,
         ICreateSecretCommand createSecretCommand,
@@ -54,6 +56,7 @@ public class SecretsController : Controller
         IAuthorizationService authorizationService)
     {
         _currentContext = currentContext;
+        _secretsManagerAccessQuery = secretsManagerAccessQuery;
         _projectRepository = projectRepository;
         _secretRepository = secretRepository;
         _createSecretCommand = createSecretCommand;
@@ -70,7 +73,7 @@ public class SecretsController : Controller
     [HttpGet("organizations/{organizationId}/secrets")]
     public async Task<SecretWithProjectsListResponseModel> ListByOrganizationAsync([FromRoute] Guid organizationId)
     {
-        if (!_currentContext.AccessSecretsManager(organizationId))
+        if (!await _secretsManagerAccessQuery.HasAccessAsync(organizationId))
         {
             throw new NotFoundException();
         }
@@ -122,7 +125,7 @@ public class SecretsController : Controller
     {
         var secret = await _secretRepository.GetByIdAsync(id);
 
-        if (secret == null || !_currentContext.AccessSecretsManager(secret.OrganizationId))
+        if (secret == null || !await _secretsManagerAccessQuery.HasAccessAsync(secret.OrganizationId))
         {
             throw new NotFoundException();
         }
@@ -147,7 +150,7 @@ public class SecretsController : Controller
     public async Task<SecretWithProjectsListResponseModel> GetSecretsByProjectAsync([FromRoute] Guid projectId)
     {
         var project = await _projectRepository.GetByIdAsync(projectId);
-        if (project == null || !_currentContext.AccessSecretsManager(project.OrganizationId))
+        if (project == null || !await _secretsManagerAccessQuery.HasAccessAsync(project.OrganizationId))
         {
             throw new NotFoundException();
         }
@@ -211,7 +214,7 @@ public class SecretsController : Controller
         // Ensure all secrets belong to the same organization.
         var organizationId = secrets.First().OrganizationId;
         if (secrets.Any(secret => secret.OrganizationId != organizationId) ||
-            !_currentContext.AccessSecretsManager(organizationId))
+            !await _secretsManagerAccessQuery.HasAccessAsync(organizationId))
         {
             throw new NotFoundException();
         }
@@ -271,7 +274,7 @@ public class SecretsController : Controller
             throw new BadRequestException("Last synced date must be in the past.");
         }
 
-        if (!_currentContext.AccessSecretsManager(organizationId))
+        if (!await _secretsManagerAccessQuery.HasAccessAsync(organizationId))
         {
             throw new NotFoundException();
         }

@@ -2,6 +2,7 @@
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.SecretsManager.Models.Request;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
@@ -49,6 +50,7 @@ public class ServiceAccountsControllerCreateSelfHostTests
         _organization.UseSecretsManager = true;
         _organization.SmServiceAccounts = 0;
         await organizationRepository.ReplaceAsync(_organization);
+        await _factory.GetService<IOrganizationAbilityCacheService>().UpsertOrganizationAbilityAsync(_organization);
 
         var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
         owner.AccessSecretsManager = true;
