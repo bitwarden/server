@@ -425,6 +425,16 @@ public class CipherComposerTests
         Assert.InRange(lengths.Count(length => length >= 1_800) * 100.0 / noteCount, 5 - tolerance, 5 + tolerance);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void LoginNotesGenerator_NonPositiveRankCount_Throws(int rankCount)
+    {
+        var generator = new LoginNotesGenerator(42);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => generator.GenerateByIndex(0, 0, rankCount, "Engineering"));
+    }
+
     // The largest login count whose site target, total * AppsPer100Logins / 100 rounded down, still fits in one pass
     private static int OnePassLoginLimit => ((Companies.All.Length + 1) * 100 - 1) / CipherComposer.AppsPer100Logins;
 

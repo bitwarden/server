@@ -19,8 +19,11 @@ internal sealed class LoginNotesGenerator(int seed)
     /// <param name="rank">Position of the login among the note-bearing logins, from 0 to <paramref name="rankCount"/> - 1; picks the length tier.</param>
     /// <param name="rankCount">How many ranks there are.</param>
     /// <param name="team">Replaces the <c>{team}</c> placeholder in the note lines.</param>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="rankCount"/> is zero or negative.</exception>
     internal string GenerateByIndex(int index, int rank, int rankCount, string team)
     {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(rankCount);
+
         var faker = _threadFaker.Value!;
         faker.Random = new Randomizer(ItemSeedMixer.Mix(seed, index));
 
