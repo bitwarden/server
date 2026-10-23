@@ -22,7 +22,7 @@ internal sealed class LoginNotesGenerator(int seed)
     internal string GenerateByIndex(int index, int rank, int rankCount, string team)
     {
         var faker = _threadFaker.Value!;
-        faker.Random = new Randomizer(seed + index);
+        faker.Random = new Randomizer(ItemSeedMixer.Mix(seed, index));
 
         // The midpoint of this login's slice of the note-bearing logins, as a percentile
         var percentile = (rank * 100 + 50) / rankCount;

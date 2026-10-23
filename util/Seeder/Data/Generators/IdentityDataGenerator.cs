@@ -26,7 +26,7 @@ internal sealed class IdentityDataGenerator(int seed, GeographicRegion region = 
     internal IdentityViewDto GenerateByIndex(int index)
     {
         var seededFaker = _threadFaker.Value!;
-        seededFaker.Random = new Randomizer(seed + index);
+        seededFaker.Random = new Randomizer(ItemSeedMixer.Mix(seed, index));
         var titles = _regionalTitles[region];
         var firstName = seededFaker.Name.FirstName();
         var lastName = seededFaker.Name.LastName();

@@ -17,16 +17,12 @@ internal sealed class UniquePasswordGenerator(int seed)
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="strength"/> is VeryWeak or Weak.</exception>
     internal string GenerateByIndex(int index, PasswordStrength strength)
     {
-        // SplitMix64 rather than the siblings' Randomizer(_seed + index): System.Random reseeded with consecutive
-        // values gives correlated first draws. Mixing the (seed, index) pair first keeps neighbouring indices from
-        // sharing one stream offset by a step
-        var start = ((ulong)(uint)seed << 32) | (uint)index;
-        var state = Next(ref start);
+        var state = ItemSeedMixer.StartStream(seed, index);
 
         return strength switch
         {
             // zxcvbn 4.4.2 scores this shape 2 for 73% of indices, 1 for 5% and 3 for 22%; the Fair pool scores 1-3
-            PasswordStrength.Fair => $"{Capitalize(PasswordWords.All[(int)(Next(ref state) % (ulong)PasswordWords.All.Length)])}{Next(ref state) % 100_000}",
+            PasswordStrength.Fair => $"{Capitalize(PasswordWords.All[(int)(ItemSeedMixer.NextValue(ref state) % (ulong)PasswordWords.All.Length)])}{ItemSeedMixer.NextValue(ref state) % 100_000}",
             PasswordStrength.Strong => RandomChars(ref state, 16),
             PasswordStrength.VeryStrong => RandomChars(ref state, 22),
             _ => throw new ArgumentOutOfRangeException(nameof(strength), strength, null)
@@ -40,16 +36,8 @@ internal sealed class UniquePasswordGenerator(int seed)
         var chars = new char[length];
         for (var i = 0; i < length; i++)
         {
-            chars[i] = Alphabets.UnambiguousPassword[(int)(Next(ref state) % (ulong)Alphabets.UnambiguousPassword.Length)];
+            chars[i] = Alphabets.UnambiguousPassword[(int)(ItemSeedMixer.NextValue(ref state) % (ulong)Alphabets.UnambiguousPassword.Length)];
         }
         return new string(chars);
-    }
-
-    private static ulong Next(ref ulong state)
-    {
-        var z = state += 0x9E3779B97F4A7C15UL;
-        z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9UL;
-        z = (z ^ (z >> 27)) * 0x94D049BB133111EBUL;
-        return z ^ (z >> 31);
     }
 }

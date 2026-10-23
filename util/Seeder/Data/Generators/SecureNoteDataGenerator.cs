@@ -34,7 +34,7 @@ internal sealed class SecureNoteDataGenerator(int seed)
     {
         var category = _noteCategories[index % _noteCategories.Length];
         var seededFaker = _threadFaker.Value!;
-        seededFaker.Random = new Randomizer(seed + index);
+        seededFaker.Random = new Randomizer(ItemSeedMixer.Mix(seed, index));
         return (GenerateNoteName(category, seededFaker), GenerateNoteContent(category, seededFaker));
     }
 

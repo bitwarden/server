@@ -81,7 +81,7 @@ internal sealed class CipherUsernameGenerator
     {
         var category = _distribution.Select(index, totalHint);
         var seededFaker = _threadFaker.Value!;
-        seededFaker.Random = new Randomizer(_seed + index);
+        seededFaker.Random = new Randomizer(ItemSeedMixer.Mix(_seed, index));
 
         var offset = GetDeterministicOffset(index);
         var firstName = _firstNames[(index + offset) % _firstNames.Length];

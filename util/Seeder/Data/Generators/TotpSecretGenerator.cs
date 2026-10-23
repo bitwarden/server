@@ -16,7 +16,7 @@ internal sealed class TotpSecretGenerator(int seed)
     internal string GenerateByIndex(int index)
     {
         var faker = _threadFaker.Value!;
-        faker.Random = new Randomizer(seed + index);
+        faker.Random = new Randomizer(ItemSeedMixer.Mix(seed, index));
         return faker.Random.String2(32, Alphabets.Base32);
     }
 }

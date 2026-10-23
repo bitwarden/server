@@ -26,7 +26,7 @@ internal sealed class CardDataGenerator(int seed, GeographicRegion region = Geog
     internal CardViewDto GenerateByIndex(int index)
     {
         var seededFaker = _threadFaker.Value!;
-        seededFaker.Random = new Randomizer(seed + index);
+        seededFaker.Random = new Randomizer(ItemSeedMixer.Mix(seed, index));
         var brands = _regionalBrands[region];
         var brand = brands[index % brands.Length];
 

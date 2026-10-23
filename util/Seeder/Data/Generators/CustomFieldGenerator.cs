@@ -19,7 +19,7 @@ internal sealed class CustomFieldGenerator(int seed)
     internal List<FieldViewDto> GenerateByIndex(int index)
     {
         var faker = _threadFaker.Value!;
-        faker.Random = new Randomizer(seed + index);
+        faker.Random = new Randomizer(ItemSeedMixer.Mix(seed, index));
 
         var names = faker.PickRandom(CustomFieldNames.All, faker.Random.Number(1, 3)).ToList();
         return [.. names
