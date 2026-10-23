@@ -76,13 +76,43 @@ internal static class CipherComposer
     /// Composes one encrypted cipher of the given type for an organization or a personal vault.
     /// </summary>
     /// <param name="index">
-    /// Position of the item. A login's username and pooled password come from <c>index % total</c>, so they repeat
-    /// every <paramref name="total"/> items; the other cipher types use <paramref name="index"/> directly.
+    /// Position of the item in the vault. Drives which items carry URIs, notes, custom fields, a TOTP secret, a
+    /// passkey, a password history or their own item key, and the generated content of each, including a login's
+    /// company, site pass and unique password. A login's username, password strength and pooled password come from
+    /// <c>index % total</c> instead, so they repeat every <paramref name="total"/> items.
     /// May be at or above <paramref name="total"/>.
     /// </param>
     /// <param name="total">
-    /// Modulus for a login's username and password. The steps pass <see cref="CountLogins"/>, so logins cover
+    /// Modulus for a login's username, password strength and pooled password, and the vault size that
+    /// <see cref="SiteDomain"/> uses to count site passes. The steps pass <see cref="CountLogins"/>, so logins cover
     /// the whole distribution. Must be positive.
+    /// </param>
+    /// <param name="cipherType">
+    /// The type to compose: Login, Card, Identity, SecureNote or SSHKey. Any other type throws.
+    /// </param>
+    /// <param name="encryptionKey">
+    /// The org key or user key that encrypts the cipher. For a cipher with its own item key, it wraps that key.
+    /// </param>
+    /// <param name="companies">
+    /// The company pool. A login takes the company at <c>index % companies.Length</c> for its name, category and
+    /// site; other types ignore it. Must not be empty for logins.
+    /// </param>
+    /// <param name="generator">
+    /// The source of generated data: usernames, notes, custom fields, TOTP secrets, unique passwords, cards,
+    /// identities and secure notes.
+    /// </param>
+    /// <param name="passwordDistribution">
+    /// The mix of password strengths for logins. The slot <c>index % total</c> picks the strength, and with it the
+    /// pooled password and the password history. Other types ignore it.
+    /// </param>
+    /// <param name="organizationId">
+    /// The owning organization of an org cipher. Null for a personal-vault cipher.
+    /// </param>
+    /// <param name="userId">
+    /// The owning user of a personal-vault cipher. Null for an org cipher.
+    /// </param>
+    /// <param name="reprompt">
+    /// Whether opening the item asks for the master password again.
     /// </param>
     internal static Cipher Compose(
         int index,
@@ -209,7 +239,21 @@ internal static class CipherComposer
     /// The first pass uses each company's domain; later passes use <c>{name}-{pass}.example</c>, so each pass adds
     /// distinct applications to the Access Intelligence report.
     /// </summary>
-    /// <param name="total">The number of logins, which sets how many passes there are.</param>
+    /// <param name="company">
+    /// The login's company. Its domain is the site on the first pass, and its first label names the site on later
+    /// passes.
+    /// </param>
+    /// <param name="index">
+    /// Position of the login. It picks the pass: each run of <paramref name="companyCount"/> logins is one pass, and
+    /// the passes repeat once they are used up.
+    /// </param>
+    /// <param name="total">
+    /// The number of logins, which sets how many passes there are: about <see cref="AppsPer100Logins"/> sites per
+    /// 100 logins, rounded up to whole passes, and at least one.
+    /// </param>
+    /// <param name="companyCount">
+    /// The size of the company list that one pass covers.
+    /// </param>
     internal static string SiteDomain(Company company, int index, int total, int companyCount)
     {
         var passes = Math.Max(1, (total * AppsPer100Logins / 100 + companyCount - 1) / companyCount);
