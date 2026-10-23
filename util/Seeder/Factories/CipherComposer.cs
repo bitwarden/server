@@ -6,6 +6,7 @@ using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Data.Generators;
 using Bit.Seeder.Data.Static;
+using Bit.Seeder.Enums;
 using Bit.Seeder.Models;
 
 namespace Bit.Seeder.Factories;
@@ -14,19 +15,104 @@ namespace Bit.Seeder.Factories;
 /// Composes cipher entities from generated data, handling encryption and ownership assignment.
 /// Used by generation steps to create realistic ciphers for organizations or personal vaults.
 /// </summary>
+/// <remarks>
+/// The values of the <c>*Per100</c> constants and their sources are in
+/// <c>Data/README.md#calibrated-login-rates</c>.
+/// </remarks>
 internal static class CipherComposer
 {
+    /// <summary>
+    /// Logins per 100 that carry a FIDO2 passkey.
+    /// </summary>
+    internal const int PasskeysPer100Logins = 1;
+
+    /// <summary>
+    /// Logins per 100 that carry a password history.
+    /// </summary>
+    internal const int PasswordHistoryPer100Logins = 6;
+
+    /// <summary>
+    /// Logins per 100 that carry at least one URI.
+    /// </summary>
+    internal const int UriPer100Logins = 32;
+
+    /// <summary>
+    /// Logins per 100 that carry two URIs, counted inside <see cref="UriPer100Logins"/>.
+    /// </summary>
+    internal const int MultiUriPer100Logins = 1;
+
+    /// <summary>
+    /// Logins per 100 that carry notes.
+    /// </summary>
+    internal const int NotesPer100Logins = 37;
+
+    /// <summary>
+    /// Logins per 100 that carry custom fields.
+    /// </summary>
+    internal const int FieldsPer100Logins = 6;
+
+    /// <summary>
+    /// Logins per 100 that carry a TOTP secret.
+    /// </summary>
+    internal const int TotpPer100Logins = 2;
+
+    /// <summary>
+    /// Generated items per 100, of every type, encrypted with their own key wrapped by the org or user key.
+    /// </summary>
+    internal const int ItemKeysPer100 = 55;
+
+    /// <summary>
+    /// Distinct sites per 100 logins, rounded up to whole passes over the company list.
+    /// </summary>
+    internal const int AppsPer100Logins = 24;
+
+    /// <summary>
+    /// Logins per 100, among those drawn Fair or stronger, whose password is practically unique. VeryWeak and Weak
+    /// draws always use the shared pools.
+    /// </summary>
+    internal const int UniquePasswordsPer100FairOrStronger = 80;
+
     /// <summary>
     /// Composes one encrypted cipher of the given type for an organization or a personal vault.
     /// </summary>
     /// <param name="index">
-    /// Position of the item. A login's username and password come from <c>index % total</c>, so they repeat
-    /// every <paramref name="total"/> items; the other cipher types use <paramref name="index"/> directly.
+    /// Position of the item in the vault. Drives which items carry URIs, notes, custom fields, a TOTP secret, a
+    /// passkey, a password history or their own item key, and the generated content of each, including a login's
+    /// company, site pass and unique password. A login's username, password strength and pooled password come from
+    /// <c>index % total</c> instead, so they repeat every <paramref name="total"/> items.
     /// May be at or above <paramref name="total"/>.
     /// </param>
     /// <param name="total">
-    /// Modulus for a login's username and password. The steps pass <see cref="CountLogins"/>, so logins cover
+    /// Modulus for a login's username, password strength and pooled password, and the vault size that
+    /// <see cref="SiteDomain"/> uses to count site passes. The steps pass <see cref="CountLogins"/>, so logins cover
     /// the whole distribution. Must be positive.
+    /// </param>
+    /// <param name="cipherType">
+    /// The type to compose: Login, Card, Identity, SecureNote or SSHKey. Any other type throws.
+    /// </param>
+    /// <param name="encryptionKey">
+    /// The org key or user key that encrypts the cipher. For a cipher with its own item key, it wraps that key.
+    /// </param>
+    /// <param name="companies">
+    /// The company pool. A login takes the company at <c>index % companies.Length</c> for its name, category and
+    /// site; other types ignore it. Must not be empty for logins.
+    /// </param>
+    /// <param name="generator">
+    /// The source of generated data: usernames, notes, custom fields, TOTP secrets, unique passwords, cards,
+    /// identities and secure notes.
+    /// </param>
+    /// <param name="passwordDistribution">
+    /// The mix of password strengths for logins. The slot <c>index % total</c> picks the strength, and with it the
+    /// pooled password and the password history. Other types ignore it.
+    /// </param>
+    /// <param name="organizationId">
+    /// The owning organization of an org cipher. Null for a personal-vault cipher.
+    /// </param>
+    /// <param name="userId">
+    /// The owning user of a personal-vault cipher. Null for an org cipher.
+    /// </param>
+    /// <param name="reprompt">
+    /// Whether opening the item asks for the master password again.
     /// </param>
     internal static Cipher Compose(
         int index,
@@ -81,37 +167,100 @@ internal static class CipherComposer
         CipherRepromptType reprompt = CipherRepromptType.None)
     {
         var company = companies[index % companies.Length];
-        var uri = $"https://{company.Domain}";
+        var domain = SiteDomain(company, index, total, companies.Length);
         var slot = index % total;
-        var username = generator.Username.GenerateByIndex(slot, totalHint: total, domain: company.Domain);
+        var strength = passwordDistribution.Select(slot, total);
+        var username = generator.Username.GenerateByIndex(slot, totalHint: total, domain: domain);
 
-        // ~20% of logins get a FIDO2 passkey; ~40% get a 1-3 entry password history. Deterministic by index.
-        var fido2Credentials = index % 5 == 0
-            ? new List<Fido2CredentialViewDto> { LoginCipherSeeder.CreateFido2Credential(company.Domain, company.Name, username) }
+        // Offset 7 puts the passkey on a login that also has a URI, as real passkey logins do, and its own key
+        var fido2Credentials = Spread(index, 31, 7) < PasskeysPer100Logins
+            ? new List<Fido2CredentialViewDto> { LoginCipherSeeder.CreateFido2Credential(domain, company.Name, username) }
             : null;
 
-        var passwordHistory = index % 5 < 2
+        var passwordHistory = Spread(index, 41, 17) < PasswordHistoryPer100Logins
             ? BuildPasswordHistory(slot, 1 + (index % 3), total, passwordDistribution)
             : null;
 
+        // Each pass over the companies moves a login's URI position by companies.Length * 9 % 100. A shift near 0 or
+        // 100, as stride 7 gives, would leave most companies without a URI-bearing login
+        List<LoginUriViewDto>? uris = Spread(index, 9, 3) switch
+        {
+            < MultiUriPer100Logins => [new LoginUriViewDto { Uri = $"https://{domain}" }, new LoginUriViewDto { Uri = $"https://login.{domain}" }],
+            < UriPer100Logins => [new LoginUriViewDto { Uri = $"https://{domain}" }],
+            _ => null
+        };
+
+        var noteRank = Spread(index, 13, 5);
         return LoginCipherSeeder.Create(new CipherSeed
         {
             Type = CipherType.Login,
             Name = $"{company.Name} ({company.Category})",
+            Notes = noteRank < NotesPer100Logins
+                ? generator.LoginNotes.GenerateByIndex(index, noteRank, NotesPer100Logins, company.Category.ToString())
+                : null,
+            Fields = Spread(index, 17, 7) < FieldsPer100Logins ? generator.CustomField.GenerateByIndex(index) : null,
             EncryptionKey = encryptionKey,
+            CipherEncryption = EncryptionFor(index),
             OrganizationId = organizationId,
             UserId = userId,
             Reprompt = reprompt,
             Login = new LoginViewDto
             {
                 Username = username,
-                Password = Passwords.GetPassword(slot, total, passwordDistribution),
-                Uris = [new LoginUriViewDto { Uri = uri }],
+                Password = ComposePassword(index, slot, strength, generator),
+                Totp = Spread(index, 23, 19) < TotpPer100Logins ? generator.TotpSecret.GenerateByIndex(index) : null,
+                Uris = uris,
                 Fido2Credentials = fido2Credentials,
                 PasswordHistory = passwordHistory
             }
         });
     }
+
+    private static string ComposePassword(
+        int index,
+        int slot,
+        PasswordStrength strength,
+        GeneratorContext generator) =>
+        UniquePasswordGenerator.Supports(strength)
+            && Spread(index, 43, 29) < UniquePasswordsPer100FairOrStronger
+                ? generator.UniquePassword.GenerateByIndex(index, strength)
+                : Passwords.GetPassword(slot, strength);
+
+    // A stride coprime with 100 hits every residue once per block of 100 logins, so each rate is exact;
+    // a different stride per content kind keeps the kinds from piling onto the same logins
+    private static int Spread(int index, int stride, int offset) => (index * stride + offset) % 100;
+
+    /// <summary>
+    /// Picks the site of the login at <paramref name="index"/>. The site pool grows with the vault: about
+    /// <see cref="AppsPer100Logins"/> sites per 100 logins, rounded up to whole passes over the company list.
+    /// The first pass uses each company's domain; later passes use <c>{name}-{pass}.example</c>, so each pass adds
+    /// distinct applications to the Access Intelligence report.
+    /// </summary>
+    /// <param name="company">
+    /// The login's company. Its domain is the site on the first pass, and its first label names the site on later
+    /// passes.
+    /// </param>
+    /// <param name="index">
+    /// Position of the login. It picks the pass: each run of <paramref name="companyCount"/> logins is one pass, and
+    /// the passes repeat once they are used up.
+    /// </param>
+    /// <param name="total">
+    /// The number of logins, which sets how many passes there are: about <see cref="AppsPer100Logins"/> sites per
+    /// 100 logins, rounded up to whole passes, and at least one.
+    /// </param>
+    /// <param name="companyCount">
+    /// The size of the company list that one pass covers.
+    /// </param>
+    internal static string SiteDomain(Company company, int index, int total, int companyCount)
+    {
+        var passes = Math.Max(1, (total * AppsPer100Logins / 100 + companyCount - 1) / companyCount);
+        var pass = index % (passes * companyCount) / companyCount;
+        return pass == 0 ? company.Domain : $"{company.Domain.Split('.')[0]}-{pass}.example";
+    }
+
+    // Each cipher type is one contiguous run of indices, so a stride on the raw index reaches every type
+    private static CipherEncryptionType EncryptionFor(int index) =>
+        Spread(index, 37, 11) < ItemKeysPer100 ? CipherEncryptionType.CipherKey : CipherEncryptionType.UserKey;
 
     internal static List<PasswordHistoryViewDto> BuildPasswordHistory(
         int index,
@@ -163,6 +312,7 @@ internal static class CipherComposer
             Type = CipherType.Card,
             Name = $"{card.CardholderName}'s {card.Brand}",
             EncryptionKey = encryptionKey,
+            CipherEncryption = EncryptionFor(index),
             OrganizationId = organizationId,
             UserId = userId,
             Reprompt = reprompt,
@@ -189,6 +339,7 @@ internal static class CipherComposer
             Type = CipherType.Identity,
             Name = name,
             EncryptionKey = encryptionKey,
+            CipherEncryption = EncryptionFor(index),
             OrganizationId = organizationId,
             UserId = userId,
             Reprompt = reprompt,
@@ -211,6 +362,7 @@ internal static class CipherComposer
             Name = name,
             Notes = notes,
             EncryptionKey = encryptionKey,
+            CipherEncryption = EncryptionFor(index),
             OrganizationId = organizationId,
             UserId = userId,
             Reprompt = reprompt
@@ -230,6 +382,7 @@ internal static class CipherComposer
             Type = CipherType.SSHKey,
             Name = $"SSH Key {index + 1}",
             EncryptionKey = encryptionKey,
+            CipherEncryption = EncryptionFor(index),
             OrganizationId = organizationId,
             UserId = userId,
             Reprompt = reprompt,
