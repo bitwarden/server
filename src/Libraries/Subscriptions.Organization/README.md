@@ -10,9 +10,9 @@ See [LIBRARY.md](../LIBRARY.md) for the shape all libraries under `src/Libraries
 
 `AddOrganizationSubscriptions()` registers the group's services — a scoped handler class per endpoint
 (`GetOrganizationSubscriptionPreviewHandler`, `PreviewOrganizationPlanChangeHandler`, `PreviewOrganizationRestartHandler`, `PreviewOrganizationSubscriptionPurchaseHandler`, `PurchasePrivilegedControlsHandler`, `ChangePrivilegedControlsSeatsHandler`), each depending
-on `IOrganizationRepository` (or `IUserService` for purchase previews) and the query or command it runs (`PurchasePrivilegedControlsHandler` also depends on `IPricingClient`,
-and `IStripeAdapter` for its gating checks, and `ChangePrivilegedControlsSeatsHandler` on the shared
-trial query `IIsOnPrivilegedControlsSalesInitiatedTrialQuery`); the plan-change command
+on `IOrganizationRepository` (or `IUserService` for purchase previews) and the query or command it runs (both Privileged Controls handlers also depend on
+the shared trial query `IIsOnPrivilegedControlsSalesInitiatedTrialQuery`, and `PurchasePrivilegedControlsHandler` on
+`IPricingClient` for its plan check); the plan-change command
 (`IPreviewOrganizationPlanChangeCommand`), the restart preview command (`IPreviewOrganizationRestartCommand`), the first Privileged Controls purchase command
 (`IAddPrivilegedControlsToExistingSubscriptionCommand`), the Privileged Controls seat change command
 (`IChangePrivilegedControlsSeatsCommand`), the Privileged Controls autoscale command
@@ -192,9 +192,9 @@ representative); its plan is an Enterprise plan that supports Privileged Control
 subscription (400). The trial check runs first because a trial organization may have no Stripe
 subscription, which the later checks would otherwise report. The handler does not check for a payment
 method: an invoiced customer may legitimately have none, and a missing one on an automatically charged
-subscription fails at the charge, in Stripe, with no extra lookups. Trial detection is `BillingExtensions.IsOnPrivilegedControlsSalesInitiatedTrial`, shared with the
-subscription response; the handler reads the subscription through `IStripeAdapter` only when the plan
-supports Privileged Controls and the organization already has the capability turned on.
+subscription fails at the charge, in Stripe, with no extra lookups. Trial detection is
+`IIsOnPrivilegedControlsSalesInitiatedTrialQuery`, shared with the seat change endpoint, so the subscription is read
+from Stripe under the same conditions and a subscription id Stripe no longer has is the same 409.
 
 The command rejects a seat count below the minimum and an autoscale limit below the seat count, each as
 a `BadRequestException` that passes through the handler unchanged. A
@@ -243,7 +243,7 @@ Stripe prorates the change when it is committed. Success returns 204 and the cli
 
 This library **reads** Stripe data directly through `IStripeAdapter` (fetching the organization's
 subscription and its customer's tax ids while building a plan-change preview, and the subscription's
-seat lines for the Privileged Controls purchase's trial check). That is allowed for now;
+seat lines for the Privileged Controls trial query). That is allowed for now;
 the ideal end state is that these Stripe calls happen in a lower-level library instead. Until that
 library exists, customer-specific read logic lives here. The final preview call — turning the composed
 `InvoiceCreatePreviewOptions` into an `InvoicePreview` — still goes through `Bit.Invoicing`'s
@@ -263,7 +263,7 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | `CurrentContextOrganization` (`Bit.Core.Context`), `OrganizationUserType` (`Bit.Core.Enums`) | Evaluating the org-billing requirement (Owner vs. confirmed provider user) |
 | `IProviderOrganizationRepository` (`Bit.Core.AdminConsole.Repositories`) | The provider-managed-organization check behind `StandaloneOrganizationOwnerRequirement` |
 | `IUserService`, `User` (`Bit.Core.Services`, `Bit.Core.Entities`) | Resolving the purchase preview's caller |
-| `IStripeAdapter` (`Bit.Core.Billing.Services`), `OrganizationSubscriptionHelpers` (`Bit.Core.Billing.Organizations.Helpers`) | Reading the organization's subscription (and its customer's tax ids) for the plan-change preview, the subscription's seat lines for the Privileged Controls purchase's trial check, and its subscription for the Privileged Controls trial query |
+| `IStripeAdapter` (`Bit.Core.Billing.Services`) | Reading the organization's subscription (and its customer's tax ids) for the plan-change preview, and its subscription for the Privileged Controls trial query |
 | `ISubscriberService` (`Bit.Core.Billing.Services`) | Reading the organization's canceled subscription for the restart preview |
 | `IGetOrganizationRestartQuery`, `OrganizationRestart` (`Bit.Core.Billing.Subscriptions.Queries`, `Bit.Core.Billing.Subscriptions.Models`) | Resolving the restart preview's plan and line items with the same query restart uses |
 | `PlanConstants` (`Bit.Core.Billing.Constants`) | The most of any one purchasable item that can be bought at once, for the purchase preview's checks and the Privileged Controls purchase request's ranges |

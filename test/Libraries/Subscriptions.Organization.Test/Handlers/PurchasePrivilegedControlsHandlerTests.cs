@@ -1,16 +1,12 @@
-﻿using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Enums;
+﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Subscriptions.Organization.Commands;
 using Bit.Subscriptions.Organization.Handlers;
 using Bit.Subscriptions.Organization.Models.Requests;
-using Microsoft.Extensions.Logging.Abstractions;
+using Bit.Subscriptions.Organization.Queries;
 using NSubstitute;
-using NSubstitute.ExceptionExtensions;
-using Stripe;
 using Xunit;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
 using PlanFeatures = Bit.Core.Models.StaticStore.Plan;
@@ -24,7 +20,7 @@ public class PurchasePrivilegedControlsHandlerTests
 
     private readonly IOrganizationRepository _organizationRepository = Substitute.For<IOrganizationRepository>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
-    private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
+    private readonly FakeIsOnPrivilegedControlsSalesInitiatedTrialQuery _trialQuery = new();
     private readonly FakeAddPrivilegedControlsCommand _command = new();
     private readonly PurchasePrivilegedControlsHandler _sut;
 
@@ -32,48 +28,39 @@ public class PurchasePrivilegedControlsHandlerTests
         _sut = new PurchasePrivilegedControlsHandler(
             _organizationRepository,
             _pricingClient,
-            _stripeAdapter,
-            NullLogger<PurchasePrivilegedControlsHandler>.Instance,
+            _trialQuery,
             _command);
 
     [Fact]
-    public async Task HandleAsync_OrganizationMissing_ThrowsNotFound()
+    public async Task HandleAsync_OrganizationMissing_ThrowsNotFoundWithoutCheckingTrialOrCallingCommand()
     {
         var organizationId = Guid.NewGuid();
         _organizationRepository.GetByIdAsync(organizationId).Returns((OrganizationEntity?)null);
 
         await Assert.ThrowsAsync<NotFoundException>(() => _sut.HandleAsync(organizationId, Request()));
+
+        Assert.Null(_trialQuery.ReceivedOrganization);
+        Assert.False(_command.WasCalled);
     }
 
     [Fact]
     public async Task HandleAsync_SalesInitiatedTrial_ThrowsBadRequestWithRepresentativeMessage()
     {
-        var organization = Arrange(CreateOrganization(usePam: true));
-        ArrangeSubscription(StripeConstants.PurchasableReferences.PasswordManagerSeat);
+        var organization = Arrange(CreateOrganization());
+        _trialQuery.Result = true;
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.HandleAsync(organization.Id, Request()));
 
         Assert.Equal(_representativeMessage, exception.Message);
+        Assert.Same(organization, _trialQuery.ReceivedOrganization);
         Assert.False(_command.WasCalled);
     }
 
     [Fact]
     public async Task HandleAsync_SalesInitiatedTrialWithNoGatewaySubscriptionId_ThrowsRepresentativeMessageNotNoSubscription()
     {
-        var organization = Arrange(CreateOrganization(usePam: true, gatewaySubscriptionId: null));
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.HandleAsync(organization.Id, Request()));
-
-        Assert.Equal(_representativeMessage, exception.Message);
-        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
-    }
-
-    [Fact]
-    public async Task HandleAsync_SalesInitiatedTrialWithSubscriptionMissingInStripe_ThrowsRepresentativeMessage()
-    {
-        var organization = Arrange(CreateOrganization(usePam: true));
-        _stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId!, Arg.Any<SubscriptionGetOptions>())
-            .Throws(new StripeException { StripeError = new StripeError { Code = StripeConstants.ErrorCodes.ResourceMissing } });
+        var organization = Arrange(CreateOrganization(gatewaySubscriptionId: null));
+        _trialQuery.Result = true;
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.HandleAsync(organization.Id, Request()));
 
@@ -81,14 +68,17 @@ public class PurchasePrivilegedControlsHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_SubscriptionHasPrivilegedControlsLine_IsNotTreatedAsSalesInitiatedTrial()
+    public async Task HandleAsync_TrialQueryThrowsConflict_PropagatesWithoutCallingCommand()
     {
-        var organization = Arrange(CreateOrganization(usePam: true));
-        ArrangeSubscription(StripeConstants.PurchasableReferences.PrivilegedControlsSeat);
+        var organization = Arrange(CreateOrganization());
+        var thrown = new ConflictException(
+            "Your organization's subscription is in an invalid state. Please contact support for assistance.");
+        _trialQuery.ExceptionToThrow = thrown;
 
-        await _sut.HandleAsync(organization.Id, Request());
+        var exception = await Assert.ThrowsAsync<ConflictException>(() => _sut.HandleAsync(organization.Id, Request()));
 
-        Assert.True(_command.WasCalled);
+        Assert.Same(thrown, exception);
+        Assert.False(_command.WasCalled);
     }
 
     [Fact]
@@ -101,7 +91,6 @@ public class PurchasePrivilegedControlsHandlerTests
 
         Assert.Equal("Privileged Controls is only available on Enterprise organizations.", exception.Message);
         Assert.False(_command.WasCalled);
-        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
     }
 
     [Fact]
@@ -128,16 +117,6 @@ public class PurchasePrivilegedControlsHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_ValidOrganizationWithPamOff_DoesNotFetchSubscriptionFromStripe()
-    {
-        var organization = Arrange(CreateOrganization(usePam: false));
-
-        await _sut.HandleAsync(organization.Id, Request());
-
-        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
-    }
-
-    [Fact]
     public async Task HandleAsync_CommandThrowsBadRequest_PropagatesUnchanged()
     {
         var organization = Arrange(CreateOrganization());
@@ -157,36 +136,12 @@ public class PurchasePrivilegedControlsHandlerTests
         return organization;
     }
 
-    private void ArrangeSubscription(string purchasableReference) =>
-        _stripeAdapter.GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>())
-            .Returns(new Subscription
-            {
-                Items = new StripeList<SubscriptionItem>
-                {
-                    Data =
-                    [
-                        new SubscriptionItem
-                        {
-                            Price = new Price
-                            {
-                                Metadata = new Dictionary<string, string>
-                                {
-                                    [StripeConstants.MetadataKeys.PurchasableReference] = purchasableReference
-                                }
-                            }
-                        }
-                    ]
-                }
-            });
-
     private static OrganizationEntity CreateOrganization(
         PlanType planType = PlanType.EnterpriseAnnually,
-        bool usePam = false,
         string? gatewaySubscriptionId = "sub_123") => new()
         {
             Id = Guid.NewGuid(),
             PlanType = planType,
-            UsePam = usePam,
             GatewayCustomerId = "cus_123",
             GatewaySubscriptionId = gatewaySubscriptionId
         };
@@ -207,6 +162,19 @@ public class PurchasePrivilegedControlsHandlerTests
                     DefaultSeatMinimum = 10
                 };
             }
+        }
+    }
+
+    private sealed class FakeIsOnPrivilegedControlsSalesInitiatedTrialQuery : IIsOnPrivilegedControlsSalesInitiatedTrialQuery
+    {
+        public bool Result { get; set; }
+        public Exception? ExceptionToThrow { get; set; }
+        public OrganizationEntity? ReceivedOrganization { get; private set; }
+
+        public Task<bool> Run(OrganizationEntity organization)
+        {
+            ReceivedOrganization = organization;
+            return ExceptionToThrow is null ? Task.FromResult(Result) : Task.FromException<bool>(ExceptionToThrow);
         }
     }
 
