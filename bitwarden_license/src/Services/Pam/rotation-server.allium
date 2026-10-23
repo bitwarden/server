@@ -835,7 +835,14 @@ rule UpdateRotationConfig {
     when: UpdateRotationConfig(actor, rotation_config, sealed_data, wrapped_key, schedule, rotate_on_access_end)
     requires: not rotation_config.has_active_job
         or (sealed_data = rotation_config.sealed_data and wrapped_key = rotation_config.wrapped_key)
-    let next = if schedule != null: NextScheduledTime(schedule, now)
+    -- A manual obligation that is already due (scheduled or raised by an access-end). Checked
+    -- directly rather than via awaiting_manual_rotation, which is false while paused, so an
+    -- edit during a pause cannot erase the obligation ResumeRotation would otherwise restore.
+    let manual_obligation_due = rotation_config.target_system.method = manual
+                                and rotation_config.next_rotation_at != null
+                                and rotation_config.next_rotation_at <= now
+    let next = if manual_obligation_due: rotation_config.next_rotation_at
+               else if schedule != null: NextScheduledTime(schedule, now)
                else: null
     ensures: rotation_config.sealed_data = sealed_data
     ensures: rotation_config.wrapped_key = wrapped_key
@@ -848,6 +855,10 @@ rule UpdateRotationConfig {
         -- account identity and termination opt-in (RotationConfigSealedV1, a fresh content
         -- key per re-seal -- same mechanic as TargetSystem's ReSealTargetSystem), and the
         -- triggers (schedule + access-event opt-in), recomputed-on-edit.
+        --
+        -- A due manual obligation is the exception: only RecordManualRotation clears it, so an
+        -- edit keeps next_rotation_at as-is (keeping the AlertManualObligationOverdue timing too)
+        -- and the new schedule takes effect once the rotation is recorded.
         --
         -- A changed blob is refused while a job is active: the claim snapshot already
         -- carried the old sealed blob, and re-sealing mid-attempt would make the audit trail
