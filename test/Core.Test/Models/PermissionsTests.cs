@@ -21,7 +21,8 @@ public class PermissionsTests
         "\"manageUsers\": false,",
         "\"manageResetPassword\": false,",
         "\"manageScim\": false,",
-        "\"manageAccessRules\": false",
+        "\"manageAccessRules\": false,",
+        "\"manageRotation\": false",
         "}");
 
     [Fact]
@@ -42,6 +43,7 @@ public class PermissionsTests
             ManageResetPassword = false,
             ManageScim = false,
             ManageAccessRules = false,
+            ManageRotation = false,
         };
 
         // minify expected json
