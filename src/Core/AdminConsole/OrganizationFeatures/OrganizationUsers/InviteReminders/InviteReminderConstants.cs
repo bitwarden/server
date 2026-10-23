@@ -8,8 +8,8 @@ public static class InviteReminderConstants
     public const int ReminderIntervalDays = 5;
 
     /// <summary>
-    /// How many days late a reminder can still go out. An older reminder is skipped and the sequence stops, so the
-    /// first run after a long outage does not send reminders for stale invites.
+    /// The most days a reminder can be late and still be sent. A later reminder is skipped, and the member gets no
+    /// more reminders. This stops the first run after an outage from sending reminders for old invites.
     /// </summary>
     public const int MaxLatenessDays = 4;
 

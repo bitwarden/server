@@ -61,7 +61,7 @@ public class SendInviteRemindersCommand(
         if (claimed.Count >= batchSize)
         {
             logger.LogInformation(
-                "Invite reminder claim filled the batch size of {BatchSize}. More reminders may be due for the next run.",
+                "Invite reminder run filled the batch size of {BatchSize}. More reminders may be due.",
                 batchSize);
         }
 
@@ -111,8 +111,8 @@ public class SendInviteRemindersCommand(
     }
 
     /// <summary>
-    /// Reads everything the reminder emails need in bulk, before any mail call, as
-    /// <see cref="InviteUsers.SendOrganizationInvitesCommand"/> does for 1 organization.
+    /// Reads all the data the reminder emails need in bulk, before any mail call.
+    /// <see cref="InviteUsers.SendOrganizationInvitesCommand"/> does the same for one organization.
     /// </summary>
     private async Task<InvitesInfoContext> GetInvitesInfoContextAsync(ICollection<OrganizationUserInviteReminder> claimed)
     {
@@ -144,8 +144,8 @@ public class SendInviteRemindersCommand(
     private async Task<HashSet<Guid>> GetRequireSsoOrganizationIdsAsync(IEnumerable<Organization> organizations,
         HashSet<Guid> ssoEnabledOrganizationIds)
     {
-        // An organization that downgrades its plan keeps its policy rows, so the policy only counts while the
-        // organization can still use policies.
+        // An organization that downgrades its plan keeps its policy rows. Only count the policy when the
+        // organization can use policies.
         var usePoliciesOrganizationIds = organizations
             .Where(o => o.UsePolicies && ssoEnabledOrganizationIds.Contains(o.Id))
             .Select(o => o.Id)
