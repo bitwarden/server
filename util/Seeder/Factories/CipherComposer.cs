@@ -169,6 +169,7 @@ internal static class CipherComposer
         var company = companies[index % companies.Length];
         var domain = SiteDomain(company, index, total, companies.Length);
         var slot = index % total;
+        var strength = passwordDistribution.Select(slot, total);
         var username = generator.Username.GenerateByIndex(slot, totalHint: total, domain: domain);
 
         // Offset 7 puts the passkey on a login that also has a URI, as real passkey logins do, and its own key
@@ -206,7 +207,7 @@ internal static class CipherComposer
             Login = new LoginViewDto
             {
                 Username = username,
-                Password = ComposePassword(index, slot, total, generator, passwordDistribution),
+                Password = ComposePassword(index, slot, strength, generator),
                 Totp = Spread(index, 23, 19) < TotpPer100Logins ? generator.TotpSecret.GenerateByIndex(index) : null,
                 Uris = uris,
                 Fido2Credentials = fido2Credentials,
@@ -218,16 +219,12 @@ internal static class CipherComposer
     private static string ComposePassword(
         int index,
         int slot,
-        int total,
-        GeneratorContext generator,
-        Distribution<PasswordStrength> passwordDistribution)
-    {
-        var strength = passwordDistribution.Select(slot, total);
-        return strength is not (PasswordStrength.VeryWeak or PasswordStrength.Weak)
+        PasswordStrength strength,
+        GeneratorContext generator) =>
+        UniquePasswordGenerator.Supports(strength)
             && Spread(index, 43, 29) < UniquePasswordsPer100FairOrStronger
                 ? generator.UniquePassword.GenerateByIndex(index, strength)
-                : Passwords.GetPassword(slot, total, passwordDistribution);
-    }
+                : Passwords.GetPassword(slot, strength);
 
     // A stride coprime with 100 hits every residue once per block of 100 logins, so each rate is exact;
     // a different stride per content kind keeps the kinds from piling onto the same logins

@@ -11,6 +11,12 @@ namespace Bit.Seeder.Data.Generators;
 internal sealed class UniquePasswordGenerator(int seed)
 {
     /// <summary>
+    /// Whether <see cref="GenerateByIndex"/> has a shape for <paramref name="strength"/>: Fair, Strong and VeryStrong.
+    /// </summary>
+    internal static bool Supports(PasswordStrength strength) =>
+        strength is PasswordStrength.Fair or PasswordStrength.Strong or PasswordStrength.VeryStrong;
+
+    /// <summary>
     /// Builds the password of the login at <paramref name="index"/> in the shape of <paramref name="strength"/>.
     /// The same seed, index and strength always give the same password.
     /// </summary>
