@@ -233,6 +233,55 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
     }
 
     [Fact]
+    public async Task GetList_SearchDisplayName_Ne_Success()
+    {
+        string filter = "displayName ne Test Group 2";
+        int? itemsPerPage = 10;
+        int? startIndex = 1;
+
+        var context = await _factory.GroupsGetListAsync(ScimApplicationFactory.TestOrganizationId1, filter, itemsPerPage, startIndex);
+
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+
+        var responseModel = JsonSerializer.Deserialize<ScimListResponseModel<ScimGroupResponseModel>>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        Assert.Equal(ScimApplicationFactory.InitialGroupCount - 1, responseModel.TotalResults);
+        Assert.DoesNotContain(responseModel.Resources, r => r.DisplayName == "Test Group 2");
+    }
+
+    [Fact]
+    public async Task GetList_SearchDisplayName_Co_Success()
+    {
+        string filter = "displayName co Group 2";
+        int? itemsPerPage = 10;
+        int? startIndex = 1;
+
+        var context = await _factory.GroupsGetListAsync(ScimApplicationFactory.TestOrganizationId1, filter, itemsPerPage, startIndex);
+
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+
+        var responseModel = JsonSerializer.Deserialize<ScimListResponseModel<ScimGroupResponseModel>>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        Assert.Equal(1, responseModel.TotalResults);
+        Assert.Contains(responseModel.Resources, r => r.DisplayName == "Test Group 2");
+    }
+
+    [Fact]
+    public async Task GetList_SearchDisplayName_Sw_WithPagination_Success()
+    {
+        // All 3 groups match "sw Test", but pagination limits to 2
+        string filter = "displayName sw Test";
+        int? itemsPerPage = 2;
+        int? startIndex = 1;
+
+        var context = await _factory.GroupsGetListAsync(ScimApplicationFactory.TestOrganizationId1, filter, itemsPerPage, startIndex);
+
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+
+        var responseModel = JsonSerializer.Deserialize<ScimListResponseModel<ScimGroupResponseModel>>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        Assert.Equal(ScimApplicationFactory.InitialGroupCount, responseModel.TotalResults);
+        Assert.Equal(2, responseModel.Resources.Count);
+    }
+
+    [Fact]
     public async Task Post_Success()
     {
         var organizationId = ScimApplicationFactory.TestOrganizationId1;
