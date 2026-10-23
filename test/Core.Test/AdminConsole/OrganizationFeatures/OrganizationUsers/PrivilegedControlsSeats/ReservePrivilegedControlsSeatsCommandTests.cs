@@ -9,7 +9,6 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
-using SeatHelper = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats.PrivilegedControlsSeats;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
 
@@ -138,6 +137,6 @@ public class ReservePrivilegedControlsSeatsCommandTests
     [BitAutoData(OrganizationUserStatusType.Staged, false)]
     public void OccupiesSeat_TrueOnlyForInvitedAcceptedConfirmed(OrganizationUserStatusType status, bool expected)
     {
-        Assert.Equal(expected, SeatHelper.OccupiesSeat(status));
+        Assert.Equal(expected, PrivilegedControlsSeatOccupancy.OccupiesSeat(status));
     }
 }

@@ -32,7 +32,7 @@ public interface IReservePrivilegedControlsSeatsCommand
     Task<PrivilegedControlsSeatReservation> RunAsync(Organization organization, int membersTakingSeats);
 }
 
-public static class PrivilegedControlsSeats
+public static class PrivilegedControlsSeatOccupancy
 {
     /// <summary>
     /// Whether a member with this status occupies a Privileged Controls seat once granted access.
