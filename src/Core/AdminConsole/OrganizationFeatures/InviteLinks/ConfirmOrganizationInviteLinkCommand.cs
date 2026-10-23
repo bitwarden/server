@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -37,6 +38,7 @@ public class ConfirmOrganizationInviteLinkCommand(
     IStripePaymentService stripePaymentService,
     IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand,
     IPushNotificationService pushNotificationService,
+    IReservePrivilegedControlsSeatForJoiningMemberCommand reservePrivilegedControlsSeatForJoiningMemberCommand,
     IEventService eventService,
     ILogger<ConfirmOrganizationInviteLinkCommand> logger)
     : IConfirmOrganizationInviteLinkCommand
@@ -122,6 +124,13 @@ public class ConfirmOrganizationInviteLinkCommand(
             {
                 return seatReservationError;
             }
+
+            var privilegedControlsError = await ReservePrivilegedControlsSeatAsync(
+                organization, existingOrganizationUser, existingOrganizationUser.Email ?? user.Email);
+            if (privilegedControlsError is not null)
+            {
+                return privilegedControlsError;
+            }
         }
 
         existingOrganizationUser.Status = OrganizationUserStatusType.Confirmed;
@@ -133,6 +142,25 @@ public class ConfirmOrganizationInviteLinkCommand(
         await organizationUserRepository.ReplaceAsync(existingOrganizationUser);
 
         return existingOrganizationUser;
+    }
+
+    /// <summary>
+    /// A staged member who has Privileged Controls access keeps it only when a seat for it can be reserved;
+    /// otherwise the member joins without it and the Owners are notified.
+    /// </summary>
+    private async Task<Error?> ReservePrivilegedControlsSeatAsync(
+        Organization organization, OrganizationUser organizationUser, string memberEmail)
+    {
+        try
+        {
+            await reservePrivilegedControlsSeatForJoiningMemberCommand.RunAsync(organization, organizationUser, memberEmail);
+            return null;
+        }
+        catch (Exception ex) when (ex is BadRequestException or GatewayException)
+        {
+            logger.LogWarning(ex, "Could not reserve a Privileged Controls seat while confirming invite link for organization {OrganizationId}", organization.Id);
+            return new ConfirmSeatAddFailed();
+        }
     }
 
     /// <summary>
