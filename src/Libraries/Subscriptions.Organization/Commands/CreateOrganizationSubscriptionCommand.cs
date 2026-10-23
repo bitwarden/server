@@ -3,7 +3,6 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Organizations.Commands;
-using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
@@ -126,7 +125,10 @@ internal sealed class CreateOrganizationSubscriptionCommand(
             throw new BadRequestException("Invalid Privileged Controls plan selected.");
         }
 
-        return PrivilegedControlsSeatMinimumResolver.Resolve(plan.PrivilegedControls, purchase.PrivilegedControls.RequestedSeatMinimum);
+        return purchase.PrivilegedControls.RequestedSeatMinimum is { } minimum &&
+               plan.PrivilegedControls.PromotionalSeatMinimums?.Contains(minimum) == true
+            ? minimum
+            : plan.PrivilegedControls.DefaultSeatMinimum;
     }
 
     private async Task<Customer> CreateCustomerAsync(OrganizationEntity organization, CustomerSetup customerSetup,
