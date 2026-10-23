@@ -39,6 +39,13 @@ public static class UserServiceCollectionExtensions
         services.AddTwoFactorCommandsQueries();
         services.AddUserApiKeyCommands();
         services.AddUserEmailCommands();
+        services.AddSsoJitProvisionTrustedDeviceCommands();
+    }
+
+    private static void AddSsoJitProvisionTrustedDeviceCommands(this IServiceCollection services)
+    {
+        services.TryAddScoped<DeviceTrust.IFinishSsoJitProvisionTrustedDeviceCommand,
+            DeviceTrust.FinishSsoJitProvisionTrustedDeviceCommand>();
     }
 
     private static void AddUserEmailCommands(this IServiceCollection services)
