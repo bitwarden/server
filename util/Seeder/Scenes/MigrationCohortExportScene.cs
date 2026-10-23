@@ -6,8 +6,10 @@ using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Seeder.Extensions;
 using LinqToDB.EntityFrameworkCore;
 using CoreCohort = Bit.Core.Billing.Organizations.PlanMigration.Entities.OrganizationPlanMigrationCohort;
 using CoreCohortAssignment = Bit.Core.Billing.Organizations.PlanMigration.Entities.OrganizationPlanMigrationCohortAssignment;
@@ -61,7 +63,8 @@ public class MigrationCohortExportScene(
     DatabaseContext db,
     IMapper mapper,
     IPlayIdService playIdService,
-    IOrganizationPlanMigrationCohortRepository cohortRepository)
+    IOrganizationPlanMigrationCohortRepository cohortRepository,
+    IGlobalSettings globalSettings)
     : IScene<MigrationCohortExportScene.Request, MigrationCohortExportSceneResult>
 {
     /// <summary>
@@ -104,6 +107,8 @@ public class MigrationCohortExportScene(
 
     public async Task<SceneResult<MigrationCohortExportSceneResult>> SeedAsync(Request request)
     {
+        globalSettings.ThrowIfSelfHosted("Plan migration cohorts");
+
         if (request.OrgCount is < MinOrgCount or > MaxOrgCount)
         {
             throw new ArgumentOutOfRangeException(

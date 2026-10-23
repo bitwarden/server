@@ -26,7 +26,7 @@ internal interface IPreviewOrganizationRestartCommand
      * <param name="request">The request containing the billing address.</param>
      * <returns>An <see cref="InvoicePreview"/> of what restarting the subscription would charge.</returns>
      *
-     * <exception cref="BadRequestException">Thrown when the billing address is invalid or the subscription is not canceled.</exception>
+     * <exception cref="BadRequestException">Thrown when the billing address is invalid or the subscription has not ended (is not canceled or incomplete_expired).</exception>
      * <exception cref="ConflictException">Thrown when the canceled subscription can't be mapped to a plan and items.</exception>
      */
     Task<InvoicePreview> Run(OrganizationEntity organization, PreviewOrganizationRestartRequest request);
@@ -46,9 +46,9 @@ internal sealed class PreviewOrganizationRestartCommand(
 
         var canceledSubscription = await subscriberService.GetSubscription(organization);
 
-        if (canceledSubscription is not { Status: SubscriptionStatus.Canceled })
+        if (canceledSubscription is not { Status: SubscriptionStatus.Canceled or SubscriptionStatus.IncompleteExpired })
         {
-            throw new BadRequestException("Cannot restart a subscription that is not canceled.");
+            throw new BadRequestException("Cannot restart a subscription that has not ended.");
         }
 
         var restart = await getOrganizationRestartQuery.Run(organization, canceledSubscription);
@@ -85,18 +85,20 @@ internal sealed class PreviewOrganizationRestartCommand(
 
         try
         {
-            return await invoicePreviewService.GetInvoicePreviewAsync(options, tier, cadence);
+            return await invoicePreviewService.GetInvoicePreviewForBillingAddressAsync(options, tier, cadence);
         }
         catch (StripeException stripeException)
             when (stripeException.StripeError?.Code == ErrorCodes.CustomerTaxLocationInvalid)
         {
             throw new BadRequestException(
+                BillingErrorKeys.BillingAddress,
                 "Your location wasn't recognized. Please ensure your country and postal code are valid and try again.");
         }
         catch (StripeException stripeException)
             when (stripeException.StripeError?.Code == ErrorCodes.TaxIdInvalid)
         {
             throw new BadRequestException(
+                BillingErrorKeys.BillingAddress,
                 "Your tax ID wasn't recognized for your selected country. Please ensure your country and tax ID are valid.");
         }
     }

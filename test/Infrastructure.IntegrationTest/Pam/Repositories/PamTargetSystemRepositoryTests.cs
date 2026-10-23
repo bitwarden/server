@@ -29,7 +29,8 @@ public class PamTargetSystemRepositoryTests
             OrganizationId = organization.Id,
             Name = "prod-mssql",
             Method = PamTargetSystemMethod.Automatic,
-            SealedData = """{"formatVersion":1,"wrappedCek":"...","envelope":"..."}""",
+            SealedData = "sealed-envelope",
+            WrappedKey = "2.iv|ct|mac",
             Status = PamTargetSystemStatus.Active,
             CreationDate = now,
             RevisionDate = now,
@@ -41,7 +42,8 @@ public class PamTargetSystemRepositoryTests
         Assert.Equal(organization.Id, persisted!.OrganizationId);
         Assert.Equal("prod-mssql", persisted.Name);
         Assert.Equal(PamTargetSystemMethod.Automatic, persisted.Method);
-        Assert.Contains("formatVersion", persisted.SealedData);
+        Assert.Equal("sealed-envelope", persisted.SealedData);
+        Assert.Equal("2.iv|ct|mac", persisted.WrappedKey);
         Assert.Equal(PamTargetSystemStatus.Active, persisted.Status);
     }
 
@@ -64,6 +66,7 @@ public class PamTargetSystemRepositoryTests
             RevisionDate = now,
         });
         Assert.Null(target.SealedData);
+        Assert.Null(target.WrappedKey);
 
         target.Name = "manual-vault-renamed";
         target.Status = PamTargetSystemStatus.Disabled;
@@ -76,6 +79,7 @@ public class PamTargetSystemRepositoryTests
         Assert.Equal(PamTargetSystemStatus.Disabled, persisted.Status);
         Assert.Equal(now.AddMinutes(5), persisted.RevisionDate, LaxDateTimeComparer.Default);
         Assert.Null(persisted.SealedData);
+        Assert.Null(persisted.WrappedKey);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -130,6 +134,7 @@ public class PamTargetSystemRepositoryTests
             CipherId = cipher.Id,
             TargetSystemId = target.Id,
             SealedData = "sealed-blob",
+            WrappedKey = "wrapped-key",
             RotateOnAccessEnd = false,
             Enabled = true,
             CreationDate = now,

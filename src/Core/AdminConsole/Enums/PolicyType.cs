@@ -32,6 +32,7 @@ public enum PolicyType : byte
     /// </summary>
     SendControls = 21,
     FillAssist = 22,
+    AutotypeGaPolicy = 23,
 }
 
 public static class PolicyTypeExtensions
@@ -68,6 +69,7 @@ public static class PolicyTypeExtensions
             PolicyType.RestrictedItemTypesPolicy => "Remove card item type",
             PolicyType.UriMatchDefaults => "Default URI match detection",
             PolicyType.AutotypeDefaultSetting => "Desktop autotype default setting",
+            PolicyType.AutotypeGaPolicy => "Desktop app autofill",
             PolicyType.AutomaticUserConfirmation => "Automatic user confirmation",
             PolicyType.BlockClaimedDomainAccountCreation => "Block account creation for claimed domains",
             PolicyType.OrganizationUserNotification => "Vault banner",

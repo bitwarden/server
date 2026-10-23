@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Enums;
+﻿using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Services;
@@ -260,7 +261,7 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
 
         Assert.Same(preview, result);
         await _pricingClient.Received(1).GetPlan(expectedPlanType);
-        await _invoicePreviewService.Received(1).GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), expectedTier, cadence);
+        await _invoicePreviewService.Received(1).GetInvoicePreviewForBillingAddressAsync(Arg.Any<InvoiceCreatePreviewOptions>(), expectedTier, cadence);
     }
 
     [Fact]
@@ -274,7 +275,7 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
         var error = Assert.Single(_logger.Errors);
         Assert.Contains("TeamsAnnually", error);
         await _invoicePreviewService.DidNotReceiveWithAnyArgs()
-            .GetInvoicePreviewAsync(default(InvoiceCreatePreviewOptions)!, default, default);
+            .GetInvoicePreviewForBillingAddressAsync(default(InvoiceCreatePreviewOptions)!, default, default);
     }
 
     [Fact]
@@ -442,7 +443,7 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
     {
         var sponsoredPreview = SponsoredPreview();
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), PlanTierType.Families, PlanCadenceType.Annually)
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Any<InvoiceCreatePreviewOptions>(), PlanTierType.Families, PlanCadenceType.Annually)
             .Returns(sponsoredPreview);
 
         var result = await _sut.Run(User(), Request(Purchase(ProductTierType.Families) with
@@ -466,7 +467,7 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
     public async Task Run_ForSponsoredFamiliesWithStorage_AddsTheFamiliesStorageItem()
     {
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), PlanTierType.Families, PlanCadenceType.Annually)
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Any<InvoiceCreatePreviewOptions>(), PlanTierType.Families, PlanCadenceType.Annually)
             .Returns(SponsoredPreview());
 
         await _sut.Run(User(), Request(Purchase(ProductTierType.Families) with
@@ -560,7 +561,9 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(User(), Request(Purchase(ProductTierType.Teams))));
 
-        Assert.Contains("Your location wasn't recognized", exception.Message);
+        Assert.Equal(
+            "Your location wasn't recognized. Please ensure your country and postal code are valid and try again.",
+            ErrorFor(exception, BillingErrorKeys.BillingAddress));
     }
 
     [Fact]
@@ -570,7 +573,9 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(User(), Request(Purchase(ProductTierType.Teams))));
 
-        Assert.Equal("The tax ID number you provided was invalid. Please try again or contact support for assistance.", exception.Message);
+        Assert.Equal(
+            "The tax ID number you provided was invalid. Please try again or contact support for assistance.",
+            ErrorFor(exception, BillingErrorKeys.BillingAddress));
     }
 
     [Fact]
@@ -613,7 +618,7 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
 
     private void ArrangePreviewWithoutSeats(PlanTierType planTier) =>
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), planTier, Arg.Any<PlanCadenceType>())
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Any<InvoiceCreatePreviewOptions>(), planTier, Arg.Any<PlanCadenceType>())
             .Returns(new InvoicePreview
             {
                 PlanTier = planTier,
@@ -644,7 +649,7 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
     {
         await _pricingClient.DidNotReceiveWithAnyArgs().GetPlan(default);
         await _invoicePreviewService.DidNotReceiveWithAnyArgs()
-            .GetInvoicePreviewAsync(default(InvoiceCreatePreviewOptions)!, default, default);
+            .GetInvoicePreviewForBillingAddressAsync(default(InvoiceCreatePreviewOptions)!, default, default);
         await _subscriptionDiscountService.DidNotReceiveWithAnyArgs()
             .ValidateDiscountEligibilityForUserAsync(default!, default!, default);
     }
@@ -664,14 +669,14 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
             AmountDue = 518.4m
         };
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns(preview);
         return preview;
     }
 
     private void ArrangePreviewFailure(string code) =>
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns<InvoicePreview>(_ => throw new StripeException { StripeError = new StripeError { Code = code } });
 
     private InvoiceCreatePreviewOptions CapturedOptions() =>

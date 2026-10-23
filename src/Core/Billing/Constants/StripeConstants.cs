@@ -86,6 +86,11 @@ public static class StripeConstants
         public const string Year = "year";
     }
 
+    public static class InvoiceAutomaticTaxStatus
+    {
+        public const string Complete = "complete";
+    }
+
     public static class InvoiceStatus
     {
         public const string Draft = "draft";

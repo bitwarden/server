@@ -681,7 +681,7 @@ jobs:
 
   trigger-downstream-build:
     name: Trigger downstream build
-    if: github.event_name == 'push' && contains(fromJSON('["refs/heads/main", "refs/heads/rc", "refs/heads/hotfix-rc"]'), github.ref)
+    if: github.event_name == 'push' && contains(fromJSON('["refs/heads/rc", "refs/heads/hotfix-rc"]'), github.ref)
     runs-on: ubuntu-24.04
     permissions:
       id-token: write

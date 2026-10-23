@@ -2,7 +2,9 @@
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Bit.RustSDK;
+using Bit.Seeder.Extensions;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Services;
 
@@ -22,6 +24,7 @@ public class ProviderUserScene(
     IUserRepository userRepository,
     IProviderRepository providerRepository,
     IProviderUserRepository providerUserRepository,
+    IGlobalSettings globalSettings,
     IManglerService manglerService) : IScene<ProviderUserScene.Request, ProviderUserSceneResult>
 {
     public class Request
@@ -40,6 +43,8 @@ public class ProviderUserScene(
 
     public async Task<SceneResult<ProviderUserSceneResult>> SeedAsync(Request request)
     {
+        globalSettings.ThrowIfSelfHosted("Provider users");
+
         var user = await userRepository.GetByIdAsync(request.UserId);
         if (user == null)
         {

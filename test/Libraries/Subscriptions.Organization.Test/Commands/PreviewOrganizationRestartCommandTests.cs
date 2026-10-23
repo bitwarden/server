@@ -20,7 +20,7 @@ namespace Bit.Subscriptions.Organization.Test.Commands;
 
 public class PreviewOrganizationRestartCommandTests
 {
-    private const string NotCanceledMessage = "Cannot restart a subscription that is not canceled.";
+    private const string NotEndedMessage = "Cannot restart a subscription that has not ended.";
 
     private readonly ISubscriberService _subscriberService = Substitute.For<ISubscriberService>();
     private readonly IGetOrganizationRestartQuery _getOrganizationRestartQuery = Substitute.For<IGetOrganizationRestartQuery>();
@@ -60,6 +60,25 @@ public class PreviewOrganizationRestartCommandTests
     }
 
     [Fact]
+    public async Task Run_IncompleteExpiredSubscription_PreviewsRestartItemsAgainstCustomer()
+    {
+        var organization = new OrganizationEntity { Id = Guid.NewGuid() };
+        var subscription = new Subscription { Status = StripeConstants.SubscriptionStatus.IncompleteExpired, CustomerId = "cus_1" };
+        _subscriberService.GetSubscription(organization).Returns(subscription);
+        _getOrganizationRestartQuery.Run(organization, subscription).Returns(
+            Restart(PlanType.TeamsAnnually, ProductTierType.Teams, true, ("price_seat", 5), ("price_storage", 2)));
+        var options = CaptureOptions();
+
+        await _sut.Run(organization, Request());
+
+        Assert.NotNull(options.Value);
+        Assert.Equal("cus_1", options.Value!.Customer);
+        Assert.Equal(
+            [("price_seat", 5L), ("price_storage", 2L)],
+            options.Value.SubscriptionDetails.Items.Select(item => (item.Price, item.Quantity!.Value)));
+    }
+
+    [Fact]
     public async Task Run_NoTaxIdInRequest_LeavesTaxIdsNull()
     {
         var organization = ArrangeCanceledOrganization();
@@ -90,8 +109,9 @@ public class PreviewOrganizationRestartCommandTests
     [InlineData(StripeConstants.SubscriptionStatus.Active)]
     [InlineData(StripeConstants.SubscriptionStatus.PastDue)]
     [InlineData(StripeConstants.SubscriptionStatus.Unpaid)]
-    [InlineData(StripeConstants.SubscriptionStatus.IncompleteExpired)]
-    public async Task Run_SubscriptionNotCanceled_ThrowsBadRequest(string status)
+    [InlineData(StripeConstants.SubscriptionStatus.Trialing)]
+    [InlineData(StripeConstants.SubscriptionStatus.Incomplete)]
+    public async Task Run_SubscriptionNotEnded_ThrowsBadRequest(string status)
     {
         var organization = new OrganizationEntity { Id = Guid.NewGuid() };
         _subscriberService.GetSubscription(organization)
@@ -99,10 +119,10 @@ public class PreviewOrganizationRestartCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, Request()));
 
-        Assert.Equal(NotCanceledMessage, exception.Message);
+        Assert.Equal(NotEndedMessage, exception.Message);
         await _getOrganizationRestartQuery.DidNotReceiveWithAnyArgs().Run(default!, default!);
         await _invoicePreviewService.DidNotReceiveWithAnyArgs()
-            .GetInvoicePreviewAsync(default(InvoiceCreatePreviewOptions)!, default, default);
+            .GetInvoicePreviewForBillingAddressAsync(default(InvoiceCreatePreviewOptions)!, default, default);
     }
 
     [Fact]
@@ -113,7 +133,7 @@ public class PreviewOrganizationRestartCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, Request()));
 
-        Assert.Equal(NotCanceledMessage, exception.Message);
+        Assert.Equal(NotEndedMessage, exception.Message);
     }
 
     [Theory]
@@ -133,7 +153,7 @@ public class PreviewOrganizationRestartCommandTests
 
         await _sut.Run(organization, Request());
 
-        await _invoicePreviewService.Received(1).GetInvoicePreviewAsync(
+        await _invoicePreviewService.Received(1).GetInvoicePreviewForBillingAddressAsync(
             Arg.Any<InvoiceCreatePreviewOptions>(), expectedTier, expectedCadence);
     }
 
@@ -164,7 +184,7 @@ public class PreviewOrganizationRestartCommandTests
     {
         var organization = ArrangeCanceledOrganization();
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns<InvoicePreview>(_ => throw new StripeException
             {
                 StripeError = new StripeError { Code = StripeConstants.ErrorCodes.CustomerTaxLocationInvalid }
@@ -174,7 +194,7 @@ public class PreviewOrganizationRestartCommandTests
 
         Assert.Equal(
             "Your location wasn't recognized. Please ensure your country and postal code are valid and try again.",
-            exception.Message);
+            exception.ModelState![BillingErrorKeys.BillingAddress]!.Errors.Single().ErrorMessage);
     }
 
     [Fact]
@@ -182,7 +202,7 @@ public class PreviewOrganizationRestartCommandTests
     {
         var organization = ArrangeCanceledOrganization();
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns<InvoicePreview>(_ => throw new StripeException
             {
                 StripeError = new StripeError { Code = StripeConstants.ErrorCodes.TaxIdInvalid }
@@ -192,7 +212,7 @@ public class PreviewOrganizationRestartCommandTests
 
         Assert.Equal(
             "Your tax ID wasn't recognized for your selected country. Please ensure your country and tax ID are valid.",
-            exception.Message);
+            exception.ModelState![BillingErrorKeys.BillingAddress]!.Errors.Single().ErrorMessage);
     }
 
     private OrganizationEntity ArrangeCanceledOrganization()
@@ -209,7 +229,7 @@ public class PreviewOrganizationRestartCommandTests
     {
         var captured = new Captured<InvoiceCreatePreviewOptions>();
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => captured.Value = o),
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => captured.Value = o),
                 Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns(SampleInvoicePreview());
         return captured;
