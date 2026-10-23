@@ -36,11 +36,9 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
 
     public async Task<InvoicePreview> Run(UserEntity user, PreviewOrganizationSubscriptionPurchaseRequest request)
     {
-        // Drop the Privileged Controls selection up front when billing is disabled, so the rest of the
-        // flow treats a disabled flag exactly like an absent selection.
-        var requestedPurchase = request.Purchase is { PrivilegedControls: not null } p &&
+        var requestedPurchase = request.Purchase is { PrivilegedControls: not null } purchaseSelections &&
                                 !featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support)
-            ? p with { PrivilegedControls = null }
+            ? purchaseSelections with { PrivilegedControls = null }
             : request.Purchase;
 
         var (purchase, tier, cadence, passwordManager) = ValidatePurchase(requestedPurchase);
