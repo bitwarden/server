@@ -6,9 +6,7 @@ using Bit.Core.Vault.Entities;
 namespace Bit.Core.Pam.Services;
 
 /// <summary>
-/// Open-source fallback for <see cref="ICipherLeaseGate"/>. Every cipher is fully readable and freely
-/// mutable, matching the behaviour when the PAM feature flag is off. The real gating logic lives in the
-/// commercial Pam library.
+/// Open-source fallback for <see cref="ICipherLeaseGate"/> that gates nothing, as when the PAM feature flag is off.
 /// </summary>
 public class UnrestrictedCipherLeaseGate : ICipherLeaseGate
 {
@@ -45,6 +43,8 @@ public class UnrestrictedCipherLeaseGate : ICipherLeaseGate
         Guid organizationId,
         IEnumerable<Cipher> ciphers)
         => Task.FromResult(FullCipherAccess.Unrestricted());
+
+    public FullCipherAccess AuthorizeAccessConnectorRotationRead(Cipher cipher) => FullCipherAccess.Unrestricted();
 
     public FullCipherAccess UnrestrictedForWholeVaultExport() => FullCipherAccess.Unrestricted();
 }

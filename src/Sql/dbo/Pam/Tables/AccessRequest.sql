@@ -28,7 +28,6 @@ CREATE NONCLUSTERED INDEX [IX_AccessRequest_OrganizationId_Action]
 GO
 
 -- Supports the approver's pending inbox; [NotAfter] lets the clock check seek, not scan.
--- Mirrors IX_AccessLease_CollectionId_Action's access pattern.
 CREATE NONCLUSTERED INDEX [IX_AccessRequest_CollectionId_Action_NotAfter]
     ON [dbo].[AccessRequest] ([CollectionId] ASC, [Action] ASC, [NotAfter] ASC);
 GO
