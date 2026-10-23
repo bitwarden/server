@@ -2,7 +2,6 @@
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Services;
@@ -391,10 +390,15 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
         // Run rejects a selection on a plan without Privileged Controls support before this runs.
         if (privilegedControls is not null)
         {
+            var requestedMinimum = privilegedControls.RequestedSeatMinimum is { } minimum &&
+                plan.PrivilegedControls.PromotionalSeatMinimums?.Contains(minimum) == true
+                ? minimum
+                : plan.PrivilegedControls.DefaultSeatMinimum;
+
             items.Add(new InvoiceSubscriptionDetailsItemOptions
             {
                 Price = plan.PrivilegedControls.StripeSeatPlanId,
-                Quantity = PrivilegedControlsSeatMinimumResolver.Resolve(plan.PrivilegedControls, privilegedControls.RequestedSeatMinimum)
+                Quantity = requestedMinimum
             });
         }
 
