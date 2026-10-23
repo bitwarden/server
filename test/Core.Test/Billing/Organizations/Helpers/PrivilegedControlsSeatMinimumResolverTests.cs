@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Organizations.Helpers;
+﻿using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Models.StaticStore;
 using Xunit;
 
