@@ -1,4 +1,5 @@
 ﻿using System.Data.Common;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
@@ -83,6 +84,10 @@ public class InitPendingOrganizationCommandTests
         await sutProvider.GetDependency<IOrganizationRepository>()
             .DidNotReceive()
             .InitializeOrganizationAsync(Arg.Any<Organization>(), Arg.Any<Func<DbConnection, DbTransaction, Task>>());
+
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .DidNotReceive()
+            .UpsertOrganizationAbilityAsync(Arg.Any<Organization>());
     }
 
     [Theory, BitAutoData]
@@ -108,6 +113,10 @@ public class InitPendingOrganizationCommandTests
                     o.PublicKey == requestWithCollection.OrganizationKeys.PublicKey &&
                     o.PrivateKey == requestWithCollection.OrganizationKeys.WrappedPrivateKey),
                 Arg.Any<Func<DbConnection, DbTransaction, Task>>());
+
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .Received(1)
+            .UpsertOrganizationAbilityAsync(Arg.Is<Organization>(o => o.Id == org.Id && o.Enabled));
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
