@@ -77,23 +77,32 @@ public class InviteStagedOrganizationUsersCommand(
             return pamSeatReservationError;
         }
 
-        var seatReservationError = await ReserveSeatsAsync(organization, seatsToAdd);
-        if (seatReservationError is not null)
-        {
-            await ReleasePrivilegedControlsSeatsAsync(organization, initialPamSeats);
-            return seatReservationError;
-        }
-
         // Captured before the subscription grows, because a successful update writes the new total onto the entity.
         var initialSecretsManagerSeats = organization.SmSeats;
 
-        // Password Manager seats first: the subscription rejects more Secrets Manager seats than it has PM seats.
-        var secretsManagerSeatReservationError = await AdjustSecretsManagerSeatsAsync(organization, secretsManagerSeatsToAdd, dryRun: false);
-        if (secretsManagerSeatReservationError is not null)
+        try
         {
-            await ReleaseSeatsAsync(organization, seatsToAdd);
+            var seatReservationError = await ReserveSeatsAsync(organization, seatsToAdd);
+            if (seatReservationError is not null)
+            {
+                await ReleasePrivilegedControlsSeatsAsync(organization, initialPamSeats);
+                return seatReservationError;
+            }
+
+            // Password Manager seats first: the subscription rejects more Secrets Manager seats than it has PM seats.
+            var secretsManagerSeatReservationError = await AdjustSecretsManagerSeatsAsync(organization, secretsManagerSeatsToAdd, dryRun: false);
+            if (secretsManagerSeatReservationError is not null)
+            {
+                await ReleaseSeatsAsync(organization, seatsToAdd);
+                await ReleasePrivilegedControlsSeatsAsync(organization, initialPamSeats);
+                return secretsManagerSeatReservationError;
+            }
+        }
+        catch
+        {
+            // Only unexpected exceptions land here: the known failures above return an error after releasing.
             await ReleasePrivilegedControlsSeatsAsync(organization, initialPamSeats);
-            return secretsManagerSeatReservationError;
+            throw;
         }
 
         try

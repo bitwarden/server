@@ -844,6 +844,26 @@ public class InviteStagedOrganizationUsersCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task RunAsync_PasswordManagerReservationThrowsUnexpectedly_RevertsPamSeatsAndRethrows(
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        organization.MaxAutoscaleSeats = 100;
+        var request = Arrange(sutProvider, organization, organizationUsers, performedBy, seats: 10, occupiedSeats: 10);
+        ArrangePrivilegedControls(organization, organizationUsers, membersWithAccess: 2, pamSeats: 5);
+        AutoscalePamSeatsTo(sutProvider, organization, 7);
+        sutProvider.GetDependency<IOrganizationService>()
+            .AutoAddSeatsAsync(organization, Arg.Any<int>())
+            .ThrowsAsync(new InvalidOperationException("Unexpected failure."));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.RunAsync(request));
+
+        await sutProvider.GetDependency<IRevertPrivilegedControlsSeatsCommand>()
+            .Received(1)
+            .Run(organization, 5);
+    }
+
+    [Theory, BitAutoData]
     public async Task RunAsync_InviteSendFails_RevertsPamSeatsAndRethrows(
         Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
     {
