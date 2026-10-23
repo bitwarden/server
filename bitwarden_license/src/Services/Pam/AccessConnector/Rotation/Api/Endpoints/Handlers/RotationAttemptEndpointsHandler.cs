@@ -1,12 +1,10 @@
 ﻿using Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Request;
-using Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints.Handlers;
 
 /// <summary>
-/// Handler for the <c>access-connectors/rotation/attempts/{id}</c> connector-facing actions: reading and writing back
-/// the claimed attempt's cipher, and reporting its outcome. The Minimal API endpoints (see
-/// <c>RotationAttemptEndpoints</c>) resolve this handler from DI.
+/// Handler for the connector-facing <c>access-connectors/rotation/attempts/{id}</c> report actions. The Minimal API
+/// endpoints (see <c>RotationAttemptEndpoints</c>) resolve this handler from DI.
 /// </summary>
 /// <remarks>
 /// Scaffold only: the method signatures define the wire contract (request/response models, status codes) that the
@@ -15,12 +13,6 @@ namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints.Handlers;
 /// </remarks>
 public class RotationAttemptEndpointsHandler
 {
-    public Task<RotationCipherResponseModel> GetCipher(Guid id)
-        => throw new NotImplementedException();
-
-    public Task PutCipher(Guid id, SubmitCipherUpdateRequestModel model)
-        => throw new NotImplementedException();
-
     public Task Success(Guid id, ReportRotationSucceededRequestModel model)
         => throw new NotImplementedException();
 

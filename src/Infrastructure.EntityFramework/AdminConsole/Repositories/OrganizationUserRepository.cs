@@ -23,6 +23,7 @@ namespace Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 public class OrganizationUserRepository : Repository<Core.Entities.OrganizationUser, OrganizationUser, Guid>, IOrganizationUserRepository
 {
     private const int MaxConsecutiveInviteReminderClaimMisses = 3;
+    private const int MaxInviteReminders = 3;
 
     public OrganizationUserRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.OrganizationUsers)
@@ -914,7 +915,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                           ou.InviteReminderDueDate != null &&
                           ou.InviteReminderDueDate <= now &&
                           ou.InviteReminderDueDate >= oldestDueDate &&
-                          ou.InviteRemindersSentCount < 3 &&
+                          ou.InviteRemindersSentCount < MaxInviteReminders &&
                           o.Enabled
                     orderby ou.InviteReminderDueDate
                     select new
@@ -932,6 +933,10 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 break;
             }
 
+            // The last reminder clears the due date. The member then leaves the reminder sequence.
+            var nextCount = (byte)(candidate.InviteRemindersSentCount!.Value + 1);
+            DateTime? candidateNextDueDate = nextCount >= MaxInviteReminders ? null : nextDueDate;
+
             var updated = await dbContext.OrganizationUsers
                 .Where(ou => ou.Id == candidate.Id &&
                              ou.Status == OrganizationUserStatusType.Invited &&
@@ -939,7 +944,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                              ou.InviteRemindersSentCount == candidate.InviteRemindersSentCount)
                 .ExecuteUpdateAsync(s => s
                     .SetProperty(ou => ou.InviteRemindersSentCount, ou => (byte?)(ou.InviteRemindersSentCount + 1))
-                    .SetProperty(ou => ou.InviteReminderDueDate, nextDueDate));
+                    .SetProperty(ou => ou.InviteReminderDueDate, candidateNextDueDate));
 
             if (updated == 0)
             {
@@ -955,7 +960,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 Id = candidate.Id,
                 OrganizationId = candidate.OrganizationId,
                 Email = candidate.Email,
-                InviteRemindersSentCount = (byte)(candidate.InviteRemindersSentCount.Value + 1)
+                InviteRemindersSentCount = nextCount
             });
         }
 

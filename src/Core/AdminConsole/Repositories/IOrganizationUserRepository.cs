@@ -127,6 +127,7 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// <summary>
     /// Claims the invited members whose reminder is due, oldest first. Adds 1 to each count and sets the due date
     /// to <paramref name="nextDueDate"/>. Thus, a second claim cannot get the same member.
+    /// The 3rd claim clears the due date instead, which ends the sequence.
     /// Skips members without an email, members of disabled organizations, and members with 3 reminders.
     /// </summary>
     /// <param name="now">The latest due date to claim.</param>

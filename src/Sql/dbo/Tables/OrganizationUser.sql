@@ -50,10 +50,9 @@ CREATE NONCLUSTERED INDEX [IX_OrganizationUser_UserId_Status_Filtered]
 GO
 
 CREATE NONCLUSTERED INDEX [IX_OrganizationUser_InviteReminders_Filtered]
-    ON [dbo].[OrganizationUser]([InviteReminderDueDate] ASC, [InviteRemindersSentCount] ASC)
-    INCLUDE ([OrganizationId], [Email])
+    ON [dbo].[OrganizationUser]([InviteReminderDueDate] ASC)
+    INCLUDE ([OrganizationId], [Email], [InviteRemindersSentCount])
     WHERE [Status] = 0 -- 0 = Invited
-        AND [InviteReminderDueDate] IS NOT NULL
-        AND [InviteRemindersSentCount] < 3;
+        AND [InviteReminderDueDate] IS NOT NULL;
 
 GO

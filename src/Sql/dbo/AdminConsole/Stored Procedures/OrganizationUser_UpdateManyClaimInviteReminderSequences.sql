@@ -7,8 +7,10 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Status and the reminder limit are literal values. With parameters, SQL Server cannot use
+    -- Status is a literal value. With a parameter, SQL Server cannot use
     -- the filtered index IX_OrganizationUser_InviteReminders_Filtered.
+    -- The last reminder clears the due date, which removes the member from the index.
+    -- The reminder limit 3 is in the WHERE and the SET. Change both together.
     ;WITH [Due] AS (
         SELECT TOP (@BatchSize)
             OU.[Id],
@@ -35,7 +37,11 @@ BEGIN
         [Due]
     SET
         [InviteRemindersSentCount] = [InviteRemindersSentCount] + 1,
-        [InviteReminderDueDate] = @NextDueDate
+        [InviteReminderDueDate] = CASE
+            WHEN [InviteRemindersSentCount] + 1 >= 3
+            THEN NULL
+            ELSE @NextDueDate
+        END
     OUTPUT
         inserted.[Id],
         inserted.[OrganizationId],
