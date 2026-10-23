@@ -29,18 +29,25 @@ public class GetUsersListQuery : IGetUsersListQuery
 
         if (!string.IsNullOrWhiteSpace(filter))
         {
-            var filterLower = filter.ToLowerInvariant();
-            if (filterLower.StartsWith("username eq "))
+            if (!ScimFilterHelper.TryParseEqualityFilter(filter, out var attribute, out var value))
             {
-                usernameFilter = filterLower.Substring(12).Trim('"');
-                if (usernameFilter.Contains("@"))
-                {
-                    emailFilter = usernameFilter;
-                }
+                throw new ScimInvalidFilterException(ScimFilterHelper.GetUnsupportedFilterMessage(filter));
             }
-            else if (filterLower.StartsWith("externalid eq "))
+
+            switch (attribute)
             {
-                externalIdFilter = filter.Substring(14).Trim('"');
+                case "username":
+                    usernameFilter = value.ToLowerInvariant();
+                    if (usernameFilter.Contains("@"))
+                    {
+                        emailFilter = usernameFilter;
+                    }
+                    break;
+                case "externalid":
+                    externalIdFilter = value;
+                    break;
+                default:
+                    throw new ScimInvalidFilterException(ScimFilterHelper.GetUnsupportedFilterMessage(filter));
             }
         }
 

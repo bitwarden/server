@@ -115,6 +115,25 @@ public class GetGroupsListCommandTests
         Assert.Equal(expectedTotalResults, result.totalResults);
     }
 
+    [Theory]
+    [BitAutoData("active eq true")]
+    [BitAutoData("displayName pr")]
+    [BitAutoData("displayName eq \"Test\" and externalId eq \"abc\"")]
+    [BitAutoData("displayName eq \"Test\" or externalId eq \"abc\"")]
+    [BitAutoData("members[value eq \"abc\"]")]
+    public async Task GetGroupsList_UnsupportedFilter_ThrowsInvalidFilter(string filter, SutProvider<GetGroupsListQuery> sutProvider, Guid organizationId)
+    {
+        var exception = await Assert.ThrowsAsync<ScimInvalidFilterException>(() =>
+            sutProvider.Sut.GetGroupsListAsync(organizationId, new GetGroupsQueryParamModel { Filter = filter }));
+
+        Assert.False(string.IsNullOrWhiteSpace(exception.Message));
+
+        // The repository should never be queried for an unsupported filter.
+        await sutProvider.GetDependency<IGroupRepository>()
+            .DidNotReceive()
+            .GetManyByOrganizationIdAsync(Arg.Any<Guid>());
+    }
+
     private IList<Group> SetGroupsOrganizationId(IList<Group> groups, Guid organizationId)
     {
         return groups.Select(g =>
