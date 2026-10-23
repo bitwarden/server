@@ -3,6 +3,8 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -33,7 +35,9 @@ public class RestoreOrganizationUserCommand(
     ICollectionRepository collectionRepository,
     IAutomaticUserConfirmationPolicyEnforcementHandler automaticUserConfirmationPolicyEnforcementHandler,
     IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand,
-    TimeProvider timeProvider) : IRestoreOrganizationUserCommand
+    TimeProvider timeProvider,
+    IReservePrivilegedControlsSeatsCommand reservePrivilegedControlsSeatsCommand,
+    IReservePrivilegedControlsSeatForJoiningMemberCommand reservePrivilegedControlsSeatForJoiningMemberCommand) : IRestoreOrganizationUserCommand
 {
     public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, string defaultCollectionName)
     {
@@ -54,7 +58,7 @@ public class RestoreOrganizationUserCommand(
             throw new BadRequestException(new CustomUsersCannotRestoreAdmins().Message);
         }
 
-        await RepositoryRestoreUserAsync(organizationUser, defaultCollectionName);
+        await RepositoryRestoreUserAsync(organizationUser, defaultCollectionName, null);
         await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
 
         if (organizationUser.UserId.HasValue)
@@ -65,7 +69,7 @@ public class RestoreOrganizationUserCommand(
 
     public async Task RestoreUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser)
     {
-        await RepositoryRestoreUserAsync(organizationUser, null); // users stored by a system user will not get a default collection at this point.
+        await RepositoryRestoreUserAsync(organizationUser, null, systemUser); // users stored by a system user will not get a default collection at this point.
         await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored,
             systemUser);
 
@@ -75,7 +79,8 @@ public class RestoreOrganizationUserCommand(
         }
     }
 
-    private async Task RepositoryRestoreUserAsync(OrganizationUser organizationUser, string defaultCollectionName)
+    private async Task RepositoryRestoreUserAsync(OrganizationUser organizationUser, string defaultCollectionName,
+        EventSystemUser? systemUser)
     {
         if (organizationUser.Status != OrganizationUserStatusType.Revoked)
         {
@@ -110,6 +115,26 @@ public class RestoreOrganizationUserCommand(
 
         var status = organizationUser.GetPriorActiveOrganizationUserStatusType();
 
+        if (organization.UsePam && organizationUser.AccessPam && PrivilegedControlsSeatOccupancy.OccupiesSeat(status))
+        {
+            if (systemUser is null)
+            {
+                await ReservePrivilegedControlsSeatsAsync(organization, 1);
+            }
+            else if (systemUser == EventSystemUser.SCIM)
+            {
+                var memberEmail = organizationUser.Email
+                                  ?? (await userRepository.GetByIdAsync(organizationUser.UserId!.Value)).Email;
+                var keepsAccess = await reservePrivilegedControlsSeatForJoiningMemberCommand.RunAsync(
+                    organization, organizationUser, memberEmail);
+                if (!keepsAccess)
+                {
+                    // RestoreAsync only writes the status, so the removed access has to be saved separately.
+                    await organizationUserRepository.ReplaceAsync(organizationUser);
+                }
+            }
+        }
+
         await organizationUserRepository.RestoreAsync(organizationUser.Id, status);
 
         if (status == OrganizationUserStatusType.Invited)
@@ -127,6 +152,18 @@ public class RestoreOrganizationUserCommand(
             await collectionRepository.CreateDefaultCollectionsAsync(organizationUser.OrganizationId,
                 [organizationUser.Id],
                 defaultCollectionName);
+        }
+    }
+
+    private async Task ReservePrivilegedControlsSeatsAsync(Organization organization, int membersTakingSeats)
+    {
+        var reservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, membersTakingSeats);
+        switch (reservation)
+        {
+            case PrivilegedControlsSeatReservation.LimitReached:
+                throw new BadRequestException(new PrivilegedControlsSeatLimitReached().Message);
+            case PrivilegedControlsSeatReservation.SelfHostedShortfall:
+                throw new BadRequestException(new CannotAutoscalePamSeatsOnSelfHost().Message);
         }
     }
 
@@ -196,6 +233,15 @@ public class RestoreOrganizationUserCommand(
         var availableSeats = organization.Seats.GetValueOrDefault(0) - seatCounts.Total;
         var newSeatsRequired = organizationUserIds.Count() - availableSeats;
         await organizationService.AutoAddSeatsAsync(organization, newSeatsRequired);
+
+        if (organization.UsePam)
+        {
+            var membersTakingPamSeats = filteredUsers.Count(u =>
+                u.Status == OrganizationUserStatusType.Revoked
+                && u.AccessPam
+                && PrivilegedControlsSeatOccupancy.OccupiesSeat(u.GetPriorActiveOrganizationUserStatusType()));
+            await ReservePrivilegedControlsSeatsAsync(organization, membersTakingPamSeats);
+        }
 
         var restoringUserIsOwner = false;
         var restoringUserIsAdminOrHigher = false;
