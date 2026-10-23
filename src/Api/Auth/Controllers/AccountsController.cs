@@ -888,7 +888,7 @@ public class AccountsController : Controller
         // precedes the secret check, so a 400 never signals whether the secret was correct.
         if (deviceIdentifier?.Length > Device.MaxIdentifierLength)
         {
-            throw new BadRequestException("Device-Identifier", "Invalid device identifier.");
+            throw new BadRequestException(RequestHeaderNames.DeviceIdentifier, "Invalid device identifier.");
         }
 
         var user = await _userRepository.GetByEmailAsync(request.Email);

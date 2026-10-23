@@ -1,6 +1,7 @@
-﻿using System.Globalization;
-using Bit.Core.Auth.Identity;
+﻿using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Identity.TokenProviders;
+using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Core.Tools.Models.Data;
 using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
@@ -16,6 +17,8 @@ namespace Bit.Identity.Test.IdentityServer.SendAccess;
 [SutProviderCustomize]
 public class SendEmailOtpRequestValidatorTests
 {
+    private const string DeviceIdentifier = "d1f10175-45f1-474f-9e08-7056e64f7475";
+
     [Theory, BitAutoData]
     public async Task ValidateRequestAsync_MissingEmail_ReturnsInvalidRequest(
         SutProvider<SendEmailOtpRequestValidator> sutProvider,
@@ -29,6 +32,7 @@ public class SendEmailOtpRequestValidatorTests
         {
             Request = tokenRequest
         };
+        ArrangeDeviceIdentifier(sutProvider);
 
         // Act
         var result = await sutProvider.Sut.ValidateRequestAsync(context, emailOtp, sendId);
@@ -41,7 +45,7 @@ public class SendEmailOtpRequestValidatorTests
         // Verify no OTP generation or email sending occurred
         await sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
             .DidNotReceive()
-            .GenerateTokenAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+            .GenerateTokenAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
 
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceive()
@@ -62,6 +66,7 @@ public class SendEmailOtpRequestValidatorTests
         {
             Request = tokenRequest
         };
+        ArrangeDeviceIdentifier(sutProvider);
 
         // Act
         var result = await sutProvider.Sut.ValidateRequestAsync(context, emailOtp, sendId);
@@ -74,7 +79,7 @@ public class SendEmailOtpRequestValidatorTests
         // Verify no OTP generation or email sending occurred
         await sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
             .DidNotReceive()
-            .GenerateTokenAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+            .GenerateTokenAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
 
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceive()
@@ -96,8 +101,9 @@ public class SendEmailOtpRequestValidatorTests
         {
             Request = tokenRequest
         };
+        ArrangeDeviceIdentifier(sutProvider);
 
-        var expectedUniqueId = string.Format(CultureInfo.InvariantCulture, SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email);
+        var expectedUniqueId = SendAccessTestUtilities.ExpectedOtpUniqueIdentifier(sendId, email, DeviceIdentifier);
 
         sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
             .GenerateTokenAsync(
@@ -144,11 +150,12 @@ public class SendEmailOtpRequestValidatorTests
         {
             Request = tokenRequest
         };
+        ArrangeDeviceIdentifier(sutProvider);
 
         emailOtp = emailOtp with { emails = [email] };
 
         sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
-            .GenerateTokenAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+            .GenerateTokenAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
             .Returns((string)null); // Generation fails
 
         // Act
@@ -179,10 +186,11 @@ public class SendEmailOtpRequestValidatorTests
         {
             Request = tokenRequest
         };
+        ArrangeDeviceIdentifier(sutProvider);
 
         emailOtp = emailOtp with { emails = [email] };
 
-        var expectedUniqueId = string.Format(CultureInfo.InvariantCulture, SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email);
+        var expectedUniqueId = SendAccessTestUtilities.ExpectedOtpUniqueIdentifier(sendId, email, DeviceIdentifier);
 
         sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
             .ValidateTokenAsync(
@@ -233,13 +241,14 @@ public class SendEmailOtpRequestValidatorTests
         {
             Request = tokenRequest
         };
+        ArrangeDeviceIdentifier(sutProvider);
 
         // The allow-list keeps the original casing; the case-insensitive membership check must still
         // match after the request email is normalized.
         emailOtp = emailOtp with { emails = [mixedCaseEmail.Trim()] };
 
         // The OTP cache key is built from the normalized email, so the stub must key off it.
-        var expectedUniqueId = string.Format(CultureInfo.InvariantCulture, SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, normalizedEmail);
+        var expectedUniqueId = SendAccessTestUtilities.ExpectedOtpUniqueIdentifier(sendId, normalizedEmail, DeviceIdentifier);
 
         sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
             .ValidateTokenAsync(
@@ -280,10 +289,11 @@ public class SendEmailOtpRequestValidatorTests
         {
             Request = tokenRequest
         };
+        ArrangeDeviceIdentifier(sutProvider);
 
         emailOtp = emailOtp with { emails = [email] };
 
-        var expectedUniqueId = string.Format(CultureInfo.InvariantCulture, SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email);
+        var expectedUniqueId = SendAccessTestUtilities.ExpectedOtpUniqueIdentifier(sendId, email, DeviceIdentifier);
 
         sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
             .ValidateTokenAsync(invalidOtp,
@@ -309,6 +319,194 @@ public class SendEmailOtpRequestValidatorTests
                 expectedUniqueId);
     }
 
+    [Theory]
+    [BitAutoData((string)null)]
+    [BitAutoData("")]
+    [BitAutoData("   ")]
+    public async Task ValidateRequestAsync_MissingDeviceIdentifier_ReturnsDeviceIdentifierRequiredWithoutSendingOtp(
+        string deviceIdentifier,
+        SutProvider<SendEmailOtpRequestValidator> sutProvider,
+        [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        EmailOtp emailOtp,
+        Guid sendId,
+        string email)
+    {
+        // Arrange
+        tokenRequest.Raw = SendAccessTestUtilities.CreateValidatedTokenRequest(sendId, email);
+        var context = new ExtensionGrantValidationContext
+        {
+            Request = tokenRequest
+        };
+        sutProvider.GetDependency<ICurrentContext>().DeviceIdentifier.Returns(deviceIdentifier);
+
+        emailOtp = emailOtp with { emails = [email] };
+
+        // Act
+        var result = await sutProvider.Sut.ValidateRequestAsync(context, emailOtp, sendId);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.Equal(OidcConstants.TokenErrors.InvalidRequest, result.Error);
+        Assert.Equal("Device-Identifier header is required.", result.ErrorDescription);
+        Assert.Equal(
+            SendAccessConstants.EmailOtpValidatorResults.DeviceIdentifierRequired,
+            result.CustomResponse[SendAccessConstants.SendAccessError]);
+
+        await sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
+            .DidNotReceive()
+            .GenerateTokenAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceive()
+            .SendSendEmailOtpEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateRequestAsync_MissingDeviceIdentifier_WithOtp_DoesNotValidateOtp(
+        SutProvider<SendEmailOtpRequestValidator> sutProvider,
+        [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        EmailOtp emailOtp,
+        Guid sendId,
+        string email,
+        string otp)
+    {
+        // Arrange
+        tokenRequest.Raw = SendAccessTestUtilities.CreateValidatedTokenRequest(sendId, email, otp);
+        var context = new ExtensionGrantValidationContext
+        {
+            Request = tokenRequest
+        };
+        sutProvider.GetDependency<ICurrentContext>().DeviceIdentifier.Returns((string)null);
+
+        emailOtp = emailOtp with { emails = [email] };
+
+        // Act
+        var result = await sutProvider.Sut.ValidateRequestAsync(context, emailOtp, sendId);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.Equal(OidcConstants.TokenErrors.InvalidRequest, result.Error);
+        Assert.Equal(
+            SendAccessConstants.EmailOtpValidatorResults.DeviceIdentifierRequired,
+            result.CustomResponse[SendAccessConstants.SendAccessError]);
+
+        await sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
+            .DidNotReceive()
+            .ValidateTokenAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateRequestAsync_DeviceIdentifierTooLong_ReturnsDeviceIdentifierInvalidWithoutSendingOtp(
+        SutProvider<SendEmailOtpRequestValidator> sutProvider,
+        [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        EmailOtp emailOtp,
+        Guid sendId,
+        string email)
+    {
+        // Arrange
+        tokenRequest.Raw = SendAccessTestUtilities.CreateValidatedTokenRequest(sendId, email);
+        var context = new ExtensionGrantValidationContext
+        {
+            Request = tokenRequest
+        };
+        sutProvider.GetDependency<ICurrentContext>().DeviceIdentifier
+            .Returns(new string('a', Device.MaxIdentifierLength + 1));
+
+        emailOtp = emailOtp with { emails = [email] };
+
+        // Act
+        var result = await sutProvider.Sut.ValidateRequestAsync(context, emailOtp, sendId);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.Equal(OidcConstants.TokenErrors.InvalidRequest, result.Error);
+        Assert.Equal("Device-Identifier header is invalid.", result.ErrorDescription);
+        Assert.Equal(
+            SendAccessConstants.EmailOtpValidatorResults.DeviceIdentifierInvalid,
+            result.CustomResponse[SendAccessConstants.SendAccessError]);
+
+        await sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
+            .DidNotReceive()
+            .GenerateTokenAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceive()
+            .SendSendEmailOtpEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateRequestAsync_DeviceIdentifierAtMaxLength_GeneratesOtp(
+        SutProvider<SendEmailOtpRequestValidator> sutProvider,
+        [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        EmailOtp emailOtp,
+        Guid sendId,
+        string email,
+        string generatedToken)
+    {
+        // Arrange
+        tokenRequest.Raw = SendAccessTestUtilities.CreateValidatedTokenRequest(sendId, email);
+        var context = new ExtensionGrantValidationContext
+        {
+            Request = tokenRequest
+        };
+        var maxLengthDeviceIdentifier = new string('a', Device.MaxIdentifierLength);
+        sutProvider.GetDependency<ICurrentContext>().DeviceIdentifier.Returns(maxLengthDeviceIdentifier);
+
+        emailOtp = emailOtp with { emails = [email] };
+
+        sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
+            .GenerateTokenAsync(
+                SendAccessConstants.OtpToken.TokenProviderName,
+                SendAccessConstants.OtpToken.Purpose,
+                SendAccessTestUtilities.ExpectedOtpUniqueIdentifier(sendId, email, maxLengthDeviceIdentifier))
+            .Returns(generatedToken);
+
+        // Act
+        var result = await sutProvider.Sut.ValidateRequestAsync(context, emailOtp, sendId);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.Equal("email and otp are required.", result.ErrorDescription);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendSendEmailOtpEmailAsync(email, generatedToken, Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateRequestAsync_DeviceIdentifierWithReservedCharacters_KeysOtpByHexHash(
+        SutProvider<SendEmailOtpRequestValidator> sutProvider,
+        [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        EmailOtp emailOtp,
+        Guid sendId,
+        string email)
+    {
+        // Arrange
+        tokenRequest.Raw = SendAccessTestUtilities.CreateValidatedTokenRequest(sendId, email);
+        var context = new ExtensionGrantValidationContext
+        {
+            Request = tokenRequest
+        };
+        const string reservedCharacterDeviceIdentifier = "device/with\\reserved?#characters";
+        sutProvider.GetDependency<ICurrentContext>().DeviceIdentifier.Returns(reservedCharacterDeviceIdentifier);
+
+        emailOtp = emailOtp with { emails = [email] };
+
+        string? uniqueIdentifier = null;
+        sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
+            .GenerateTokenAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Do<string>(id => uniqueIdentifier = id))
+            .Returns("123456");
+
+        // Act
+        await sutProvider.Sut.ValidateRequestAsync(context, emailOtp, sendId);
+
+        // Assert
+        Assert.NotNull(uniqueIdentifier);
+        Assert.DoesNotContain("/", uniqueIdentifier);
+        Assert.DoesNotContain("\\", uniqueIdentifier);
+        Assert.Matches("_[0-9A-F]{64}$", uniqueIdentifier);
+    }
+
     [Fact]
     public void Constructor_WithValidParameters_CreatesInstance()
     {
@@ -316,10 +514,16 @@ public class SendEmailOtpRequestValidatorTests
         var otpTokenProvider = Substitute.For<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>();
         var mailService = Substitute.For<IMailService>();
         var logger = Substitute.For<Microsoft.Extensions.Logging.ILogger<SendEmailOtpRequestValidator>>();
+        var currentContext = Substitute.For<ICurrentContext>();
         // Act
-        var validator = new SendEmailOtpRequestValidator(logger, otpTokenProvider, mailService);
+        var validator = new SendEmailOtpRequestValidator(logger, otpTokenProvider, mailService, currentContext);
 
         // Assert
         Assert.NotNull(validator);
+    }
+
+    private static void ArrangeDeviceIdentifier(SutProvider<SendEmailOtpRequestValidator> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().DeviceIdentifier.Returns(DeviceIdentifier);
     }
 }
