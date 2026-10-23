@@ -10,6 +10,7 @@ public class AzureServiceBusIntegrationListenerService<TConfiguration> : Backgro
 {
     private readonly int _maxRetries;
     private readonly IAzureServiceBusService _serviceBusService;
+    private readonly IIntegrationCircuitBreaker _circuitBreaker;
     private readonly IIntegrationHandler _handler;
     private readonly ServiceBusProcessor _processor;
     private readonly ILogger _logger;
@@ -18,10 +19,12 @@ public class AzureServiceBusIntegrationListenerService<TConfiguration> : Backgro
         TConfiguration configuration,
         IIntegrationHandler handler,
         IAzureServiceBusService serviceBusService,
+        IIntegrationCircuitBreaker circuitBreaker,
         ServiceBusProcessorOptions serviceBusOptions,
         ILoggerFactory loggerFactory)
     {
         _handler = handler;
+        _circuitBreaker = circuitBreaker;
         _logger = loggerFactory.CreateLogger(
             categoryName: $"Bit.Core.Dirt.Services.Implementations.AzureServiceBusIntegrationListenerService.{configuration.IntegrationSubscriptionName}");
         _maxRetries = configuration.MaxRetries;
@@ -69,6 +72,7 @@ public class AzureServiceBusIntegrationListenerService<TConfiguration> : Backgro
             if (result.Success)
             {
                 // Successful integration. Return true to indicate the message has been handled
+                await _circuitBreaker.RecordResultAsync(result);
                 return true;
             }
 
@@ -98,6 +102,9 @@ public class AzureServiceBusIntegrationListenerService<TConfiguration> : Backgro
                 result.FailureReason,
                 message.RetryCount,
                 _maxRetries);
+
+            await _circuitBreaker.RecordResultAsync(result);
+
             return false;
         }
         catch (Exception ex)

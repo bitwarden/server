@@ -9,6 +9,7 @@ public class IntegrationMessage : IIntegrationMessage
     public required string MessageId { get; set; }
     public string? OrganizationId { get; set; }
     public required string RenderedTemplate { get; set; }
+    public Guid? ConfigurationId { get; set; }
     public int RetryCount { get; set; } = 0;
     public DateTime? DelayUntilDate { get; set; }
 

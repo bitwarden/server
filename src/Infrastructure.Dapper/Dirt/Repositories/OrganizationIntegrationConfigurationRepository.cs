@@ -68,4 +68,48 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Organiz
             return results.ToList();
         }
     }
+
+    public async Task<bool> DisableAsync(
+        Guid organizationId,
+        Guid id,
+        DateTime disabledDate,
+        IntegrationFailureCategory disabledReason)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var rowsAffected = await connection.ExecuteScalarAsync<int>(
+                "[dbo].[OrganizationIntegrationConfiguration_Disable]",
+                new
+                {
+                    OrganizationId = organizationId,
+                    Id = id,
+                    DisabledDate = disabledDate,
+                    DisabledReason = disabledReason,
+                    RevisionDate = disabledDate
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return rowsAffected > 0;
+        }
+    }
+
+    public async Task<int> ClearDisabledByIntegrationAsync(
+        Guid organizationId,
+        Guid organizationIntegrationId,
+        DateTime revisionDate)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            return await connection.ExecuteScalarAsync<int>(
+                "[dbo].[OrganizationIntegrationConfiguration_ClearDisabledByIntegrationId]",
+                new
+                {
+                    OrganizationId = organizationId,
+                    OrganizationIntegrationId = organizationIntegrationId,
+                    RevisionDate = revisionDate
+                },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
 }
