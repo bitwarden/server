@@ -4,7 +4,7 @@ namespace Bit.Seeder.Extensions;
 
 internal static class SeederEnvironmentGuardExtensions
 {
-    public static void ThrowIfSelfHosted(this IGlobalSettings globalSettings, string subject)
+    internal static void ThrowIfSelfHosted(this IGlobalSettings globalSettings, string subject)
     {
         if (globalSettings.SelfHosted)
         {
@@ -14,7 +14,7 @@ internal static class SeederEnvironmentGuardExtensions
         }
     }
 
-    public static void ThrowIfSelfHostedWithGatewayIds(
+    internal static void ThrowIfSelfHostedWithGatewayIds(
         this IGlobalSettings globalSettings, string? gatewayCustomerId, string? gatewaySubscriptionId)
     {
         if (!string.IsNullOrEmpty(gatewayCustomerId) || !string.IsNullOrEmpty(gatewaySubscriptionId))
@@ -23,7 +23,7 @@ internal static class SeederEnvironmentGuardExtensions
         }
     }
 
-    public static void ThrowIfNotSelfHosted(this IGlobalSettings globalSettings, string subject)
+    internal static void ThrowIfNotSelfHosted(this IGlobalSettings globalSettings, string subject)
     {
         if (!globalSettings.SelfHosted)
         {
