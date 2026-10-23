@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -189,6 +190,50 @@ public class SeederRepositoryGuardExtensionsTests
         await repository.ThrowIfFolderNotOwnedByUserAsync(null, _ownerId);
 
         await repository.DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
+    }
+
+    [Theory]
+    [MemberData(nameof(NullOrEmptyIds))]
+    public async Task ThrowIfOrganizationsLinkedToProviderAsync_NullOrEmpty_DoesNotQuery(Guid[]? ids)
+    {
+        var repository = Substitute.For<IProviderOrganizationRepository>();
+
+        await repository.ThrowIfOrganizationsLinkedToProviderAsync(ids);
+
+        await repository.DidNotReceiveWithAnyArgs().GetCountByOrganizationIdsAsync(default!);
+        await repository.DidNotReceiveWithAnyArgs().GetByOrganizationId(default);
+    }
+
+    [Fact]
+    public async Task ThrowIfOrganizationsLinkedToProviderAsync_NotLinked_Passes()
+    {
+        var repository = Substitute.For<IProviderOrganizationRepository>();
+        repository.GetCountByOrganizationIdsAsync(Arg.Any<IEnumerable<Guid>>()).Returns(0);
+
+        await repository.ThrowIfOrganizationsLinkedToProviderAsync([Guid.NewGuid(), Guid.NewGuid()]);
+
+        await repository.Received(1).GetCountByOrganizationIdsAsync(Arg.Any<IEnumerable<Guid>>());
+        await repository.DidNotReceiveWithAnyArgs().GetByOrganizationId(default);
+    }
+
+    [Fact]
+    public async Task ThrowIfOrganizationsLinkedToProviderAsync_Linked_ThrowsWithOrganizationId()
+    {
+        var unlinkedId = Guid.NewGuid();
+        var linkedId = Guid.NewGuid();
+        var repository = Substitute.For<IProviderOrganizationRepository>();
+        repository.GetCountByOrganizationIdsAsync(Arg.Any<IEnumerable<Guid>>()).Returns(1);
+        repository.GetByOrganizationId(linkedId)
+            .Returns(new ProviderOrganization { ProviderId = Guid.NewGuid(), OrganizationId = linkedId });
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => repository.ThrowIfOrganizationsLinkedToProviderAsync([unlinkedId, linkedId, linkedId]));
+
+        Assert.Contains("already belongs to a provider", exception.Message);
+        Assert.Contains(linkedId.ToString(), exception.Message);
+        await repository.Received(1).GetCountByOrganizationIdsAsync(
+            Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(new[] { unlinkedId, linkedId })));
+        await repository.Received(1).GetByOrganizationId(linkedId);
     }
 
     private static Group NewGroup(Guid organizationId) =>
