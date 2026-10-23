@@ -17,6 +17,14 @@ public class PrivilegedControlsSeatMinimumResolverTests
         Assert.Equal(PromotionalSeatMinimum, result);
     }
 
+    [Fact]
+    public void Resolve_WithoutAPromotionalMinimumList_ReturnsTheDefault()
+    {
+        var result = PrivilegedControlsSeatMinimumResolver.Resolve(PrivilegedControls() with { PromotionalSeatMinimums = null! }, PromotionalSeatMinimum);
+
+        Assert.Equal(DefaultSeatMinimum, result);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData(PromotionalSeatMinimum - 1)]

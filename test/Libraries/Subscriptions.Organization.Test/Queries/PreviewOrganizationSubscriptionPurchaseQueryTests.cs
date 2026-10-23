@@ -511,6 +511,23 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
         Assert.DoesNotContain(CapturedOptions().SubscriptionDetails.Items, item => item.Price == "pam-seat-annually");
     }
 
+    [Fact]
+    public async Task Run_WithPrivilegedControlsOnAPlanWithoutSupport_ThrowsBadRequest()
+    {
+        _pricingClient.GetPlan(PlanType.EnterpriseAnnually).Returns(TestPlan.SeatBased("enterprise-seat-annually", "storage-gb-annually", "sm-enterprise-seat-annually", "sm-enterprise-sa-annually"));
+
+        var request = Request(Purchase(ProductTierType.Enterprise) with
+        {
+            PrivilegedControls = new PrivilegedControlsSelections(null)
+        });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(User(), request));
+
+        Assert.Equal("Invalid Privileged Controls plan selected.", ErrorFor(exception, "Purchase.PrivilegedControls"));
+        await _invoicePreviewService.DidNotReceiveWithAnyArgs()
+            .GetInvoicePreviewForBillingAddressAsync(default(InvoiceCreatePreviewOptions)!, default, default);
+    }
+
     [Theory]
     [InlineData(ProductTierType.Teams)]
     [InlineData(ProductTierType.Families)]
