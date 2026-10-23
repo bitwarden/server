@@ -502,6 +502,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                                         OrganizationUseTotp = false,
                                         Key = c.Key,
                                         ArchivedDate = c.ArchivedDate,
+                                        ExcludedFromReports = c.ExcludedFromReports,
                                     };
             }
 
@@ -558,6 +559,22 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             });
             await dbContext.UserBumpAccountRevisionDateAsync(userId);
             await dbContext.SaveChangesAsync();
+        }
+    }
+
+    public override async Task ReplaceAsync(Core.Vault.Entities.Cipher cipher)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var entity = await dbContext.Ciphers.FindAsync(cipher.Id);
+            if (entity != null)
+            {
+                var mappedEntity = Mapper.Map<Cipher>(cipher);
+                dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
+                dbContext.Entry(entity).Property(c => c.ReportExclusions).IsModified = false;
+                await dbContext.SaveChangesAsync();
+            }
         }
     }
 
@@ -634,6 +651,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
 
                 var mappedEntity = Mapper.Map<Cipher>(cipher);
                 dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
+                dbContext.Entry(entity).Property(c => c.ReportExclusions).IsModified = false;
 
                 if (cipher.OrganizationId.HasValue)
                 {
