@@ -170,6 +170,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IBulkAutomaticallyConfirmOrganizationUsersCommand, BulkAutomaticallyConfirmOrganizationUsersCommand>();
         services.TryAddScoped<IBulkEnablePamCommand, BulkEnablePamCommand>();
         services.TryAddScoped<IReservePrivilegedControlsSeatsCommand, ReservePrivilegedControlsSeatsCommand>();
+        services.TryAddScoped<IReservePrivilegedControlsSeatForJoiningMemberCommand, ReservePrivilegedControlsSeatForJoiningMemberCommand>();
 
         services.AddScoped<IDeleteClaimedOrganizationUserAccountCommand, DeleteClaimedOrganizationUserAccountCommand>();
         services.AddScoped<IDeleteClaimedOrganizationUserAccountValidator, DeleteClaimedOrganizationUserAccountValidator>();
