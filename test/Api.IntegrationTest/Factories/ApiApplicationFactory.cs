@@ -1,6 +1,12 @@
-﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
+﻿using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
+using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Repositories;
+using Bit.Core.Utilities;
 using Bit.IntegrationTestCommon;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.Constants;
@@ -100,5 +106,24 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
     public async Task<string> LoginWithOrganizationApiKeyAsync(string clientId, string clientSecret)
     {
         return await _identityApplicationFactory.TokenFromOrganizationApiKeyAsync(clientId, clientSecret);
+    }
+
+    /// <summary>
+    /// Creates a scoped organization API key with the given scopes and returns an access token for it.
+    /// Requires the scoped organization API keys feature flag, see <see cref="ScopedOrganizationApiKeysApiApplicationFactory"/>.
+    /// </summary>
+    public async Task<string> LoginWithScopedOrganizationApiKeyAsync(Guid organizationId, params string[] scopes)
+    {
+        var clientSecret = CoreHelpers.SecureRandomString(30);
+        var key = await GetService<IApiKeyRepository>().CreateAsync(new ApiKey
+        {
+            OrganizationId = organizationId,
+            Name = "Integration test key",
+            ClientSecretHash = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(clientSecret))),
+            Scope = JsonSerializer.Serialize(scopes),
+        });
+
+        return await _identityApplicationFactory.TokenFromOrganizationApiKeyAsync(
+            $"organization.{organizationId}.{key.Id}", clientSecret, scope: string.Join(' ', scopes));
     }
 }
