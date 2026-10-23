@@ -39,11 +39,6 @@ internal sealed class RemovePrivilegedControlsCommand(
             throw new BadRequestException("Your organization doesn't have Privileged Controls.");
         }
 
-        if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
-        {
-            throw new BadRequestException("No payment method found.");
-        }
-
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
             throw new BadRequestException("No subscription found.");

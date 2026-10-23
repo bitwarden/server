@@ -25,7 +25,7 @@ public static class StripeSettingValidator
             throw new InvalidOperationException(
                 "Stripe billing was requested but no Stripe API key is configured. Set " +
                 $"'globalSettings:stripe:apiKey' to a test-mode key ('{TestKeyPrefix}…') in the " +
-                "'bitwarden-seeder-utility' user secrets.");
+                "host's user secrets ('bitwarden-seeder-utility' for the CLI, 'bitwarden-seeder-api' for the SeederApi).");
         }
 
         if (!apiKey.StartsWith(TestKeyPrefix, StringComparison.Ordinal))
@@ -39,8 +39,8 @@ public static class StripeSettingValidator
         {
             throw new InvalidOperationException(
                 "Stripe billing requires 'globalSettings:pricingUri' so plan pricing can be resolved. " +
-                "Run the CLI with ASPNETCORE_ENVIRONMENT=Development to pick up " +
-                "'util/SeederUtility/appsettings.Development.json', or set the value in user secrets.");
+                "Run the host with ASPNETCORE_ENVIRONMENT=Development so its appsettings.Development.json is " +
+                "loaded, or set the value in user secrets.");
         }
 
         if (globalSettings.SelfHosted)

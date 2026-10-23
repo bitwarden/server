@@ -37,7 +37,6 @@ public class SendValidationServiceTests
         send.Type = SendType.File;
         user.Premium = false;
         user.Storage = 1024L * 1024L * 1024L; // 1 GB used
-        user.EmailVerified = true;
 
         sutProvider.GetDependency<Bit.Core.Settings.GlobalSettings>().SelfHosted = false;
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).Returns(user);
@@ -69,7 +68,6 @@ public class SendValidationServiceTests
         send.Type = SendType.File;
         user.Premium = true;
         user.MaxStorageGb = 10;
-        user.EmailVerified = true;
 
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).Returns(user);
         sutProvider.GetDependency<IUserService>().CanAccessPremium(user).Returns(true);
@@ -79,6 +77,31 @@ public class SendValidationServiceTests
 
         // Assert - should NOT call pricing service for individual premium users
         await sutProvider.GetDependency<IPricingClient>().DidNotReceive().GetAvailablePremiumPlan();
+    }
+
+    [Theory, BitAutoData]
+    public async Task StorageRemainingForSendAsync_EmailNotVerified_ReturnsStorage(
+        SutProvider<SendValidationService> sutProvider,
+        Send send,
+        User user)
+    {
+        // Arrange
+        send.UserId = user.Id;
+        send.OrganizationId = null;
+        send.Type = SendType.File;
+        user.Premium = true;
+        user.MaxStorageGb = 10;
+        user.Storage = 0;
+        user.EmailVerified = false;
+
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).Returns(user);
+        sutProvider.GetDependency<IUserService>().CanAccessPremium(user).Returns(true);
+
+        // Act
+        var result = await sutProvider.Sut.StorageRemainingForSendAsync(send);
+
+        // Assert
+        Assert.True(result > 0);
     }
 
     [Theory, BitAutoData]
@@ -92,7 +115,6 @@ public class SendValidationServiceTests
         send.OrganizationId = null;
         send.Type = SendType.File;
         user.Premium = false;
-        user.EmailVerified = true;
 
         sutProvider.GetDependency<Bit.Core.Settings.GlobalSettings>().SelfHosted = true;
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).Returns(user);
