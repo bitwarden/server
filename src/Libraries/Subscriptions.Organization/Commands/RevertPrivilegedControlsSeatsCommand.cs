@@ -29,8 +29,8 @@ internal sealed class RevertPrivilegedControlsSeatsCommand(
 
         if (!await isOnTrialQuery.Run(organization))
         {
-            var seatChange = await seatChangeSetFactory.CreateAsync(organization, seats);
-            (await updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet)).GetValueOrThrowHttpException();
+            var changeSet = await seatChangeSetFactory.CreateAsync(organization, seats);
+            (await updateOrganizationSubscriptionCommand.Run(organization, changeSet)).GetValueOrThrowHttpException();
         }
 
         organization.PamSeats = seats;

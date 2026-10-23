@@ -1743,6 +1743,9 @@
           "ZiggyCreatures.FusionCache.Serialization.SystemTextJson": "[2.0.2, 2.0.2]"
         }
       },
+      "currentuser": {
+        "type": "Project"
+      },
       "data": {
         "type": "Project"
       },
@@ -1778,12 +1781,28 @@
           "linq2db.EntityFrameworkCore": "[8.8.0, 8.8.0]"
         }
       },
+      "invoicing": {
+        "type": "Project",
+        "dependencies": {
+          "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
+          "Bitwarden.Server.Sdk.Features": "[1.5.0, )",
+          "Core": "[2026.10.1, )",
+          "Stripe.net": "[52.1.0, 52.1.0]"
+        }
+      },
       "maildelivery": {
         "type": "Project",
         "dependencies": {
           "AWSSDK.SimpleEmail": "[4.0.2.5, 4.0.2.5]",
           "MailKit": "[4.17.0, 4.17.0]",
           "SendGrid": "[9.29.3, 9.29.3]"
+        }
+      },
+      "organizationauthorization": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.10.1, )",
+          "CurrentUser": "[0.0.1, )"
         }
       },
       "pam.domain": {
@@ -1809,7 +1828,8 @@
           "OpenTelemetry.Instrumentation.Http": "[1.15.1, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.15.1, )",
           "OpenTelemetry.Instrumentation.SqlClient": "[1.15.2, )",
-          "SharedWeb": "[2026.10.1, )"
+          "SharedWeb": "[2026.10.1, )",
+          "Subscriptions.Organization": "[0.0.1, )"
         }
       },
       "serilogfilelogging": {
@@ -1832,6 +1852,15 @@
       },
       "ssrfprotection": {
         "type": "Project"
+      },
+      "subscriptions.organization": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.10.1, )",
+          "ExceptionHandling": "[0.0.1, )",
+          "Invoicing": "[0.0.1, )",
+          "OrganizationAuthorization": "[0.0.1, )"
+        }
       }
     }
   }

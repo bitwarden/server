@@ -1863,6 +1863,9 @@
           "ZiggyCreatures.FusionCache.Serialization.SystemTextJson": "[2.0.2, 2.0.2]"
         }
       },
+      "currentuser": {
+        "type": "Project"
+      },
       "data": {
         "type": "Project"
       },
@@ -1907,7 +1910,8 @@
           "OpenTelemetry.Instrumentation.Runtime": "[1.15.1, )",
           "OpenTelemetry.Instrumentation.SqlClient": "[1.15.2, )",
           "Pam.Domain": "[2026.10.1, )",
-          "SharedWeb": "[2026.10.1, )"
+          "SharedWeb": "[2026.10.1, )",
+          "Subscriptions.Organization": "[0.0.1, )"
         }
       },
       "infrastructure.dapper": {
@@ -1944,6 +1948,15 @@
           "Seeder": "[2026.10.1, )"
         }
       },
+      "invoicing": {
+        "type": "Project",
+        "dependencies": {
+          "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
+          "Bitwarden.Server.Sdk.Features": "[1.5.0, )",
+          "Core": "[2026.10.1, )",
+          "Stripe.net": "[52.1.0, 52.1.0]"
+        }
+      },
       "maildelivery": {
         "type": "Project",
         "dependencies": {
@@ -1958,6 +1971,13 @@
           "Core": "[2026.10.1, )",
           "Microsoft.Extensions.Logging": "[10.0.10, 10.0.10]",
           "dbup-sqlserver": "[7.2.0, 7.2.0]"
+        }
+      },
+      "organizationauthorization": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.10.1, )",
+          "CurrentUser": "[0.0.1, )"
         }
       },
       "pam.domain": {
@@ -2002,6 +2022,15 @@
       },
       "ssrfprotection": {
         "type": "Project"
+      },
+      "subscriptions.organization": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.10.1, )",
+          "ExceptionHandling": "[0.0.1, )",
+          "Invoicing": "[0.0.1, )",
+          "OrganizationAuthorization": "[0.0.1, )"
+        }
       }
     }
   }

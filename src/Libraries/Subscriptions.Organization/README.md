@@ -25,8 +25,11 @@ It also registers the implementation of `IPrivilegedControlsSeatChangeSetFactory
 `Core` so Admin Console operations, which `Core` cannot reference this library to reach, can inject it; the
 implementation stays internal here. `IAutoscalePrivilegedControlsSeatsCommand` and its
 `AutoscalePrivilegedControlsSeatsResult` follow the same split: they live in `Core` so hosts and Admin Console
-operations can resolve the command, and this library implements it. A host that resolves it must call
-`AddOrganizationSubscriptions()`.
+operations can resolve the command, and this library implements it.
+`IRevertPrivilegedControlsSeatsCommand` follows the same split: its contract lives in `Core` and this library
+implements it. A host that resolves either command without mapping the endpoints calls
+`AddPrivilegedControlsSeatAutoscaling()`, which registers the autoscale and revert commands, the trial query, and the
+seat change set factory. `AddOrganizationSubscriptions()` calls it, so the Api host needs only that one.
 
 `MapOrganizationSubscriptionEndpoints()` attaches the group's cross-cutting chain and maps its
 endpoints to an empty group; the host owns the route prefix and mounts it at

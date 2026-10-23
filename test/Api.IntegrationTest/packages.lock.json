@@ -1558,7 +1558,8 @@
           "OpenTelemetry.Instrumentation.Runtime": "[1.15.1, )",
           "OpenTelemetry.Instrumentation.SqlClient": "[1.15.2, )",
           "Pam.Domain": "[2026.10.1, )",
-          "SharedWeb": "[2026.10.1, )"
+          "SharedWeb": "[2026.10.1, )",
+          "Subscriptions.Organization": "[0.0.1, )"
         }
       },
       "infrastructure.dapper": {

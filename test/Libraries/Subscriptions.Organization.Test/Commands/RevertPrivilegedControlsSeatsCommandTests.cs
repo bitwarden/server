@@ -67,21 +67,19 @@ public class RevertPrivilegedControlsSeatsCommandTests
     {
         var organization = CreateOrganization(pamSeats: 7);
         _isOnTrialQuery.Run(organization).Returns(false);
-        var seatChange = new PrivilegedControlsSeatChange(
-            new OrganizationSubscriptionChangeSet
-            {
-                Changes = [new UpdateItemQuantity("privileged-controls-enterprise-seat-annually", 5)]
-            },
-            5);
-        _seatChangeSetFactory.CreateAsync(organization, 5).Returns(seatChange);
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity("privileged-controls-enterprise-seat-annually", 5)]
+        };
+        _seatChangeSetFactory.CreateAsync(organization, 5).Returns(changeSet);
         _updateOrganizationSubscriptionCommand
-            .Run(organization, seatChange.ChangeSet, Arg.Any<Subscription?>())
+            .Run(organization, changeSet, Arg.Any<Subscription?>())
             .Returns(new Subscription());
 
         await _sut.Run(organization, 5);
 
         await _seatChangeSetFactory.Received(1).CreateAsync(organization, 5);
-        await _updateOrganizationSubscriptionCommand.Received(1).Run(organization, seatChange.ChangeSet);
+        await _updateOrganizationSubscriptionCommand.Received(1).Run(organization, changeSet);
         Assert.Equal(5, organization.PamSeats);
         await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(organization);
     }

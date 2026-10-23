@@ -21,6 +21,7 @@ public static class SubscriptionsOrganizationServiceCollectionExtensions
     {
         services.AddInvoicing();
         services.AddOrganizationAuthorization();
+        services.AddPrivilegedControlsSeatAutoscaling();
         services.TryAddScoped<GetOrganizationSubscriptionPreviewHandler>();
         services.TryAddScoped<IPreviewOrganizationSubscriptionPurchaseQuery, PreviewOrganizationSubscriptionPurchaseQuery>();
         services.TryAddScoped<PreviewOrganizationSubscriptionPurchaseHandler>();
@@ -29,17 +30,28 @@ public static class SubscriptionsOrganizationServiceCollectionExtensions
         services.TryAddScoped<IPreviewOrganizationPlanChangeCommand, PreviewOrganizationPlanChangeCommand>();
         services.TryAddScoped<PreviewOrganizationRestartHandler>();
         services.TryAddScoped<IPreviewOrganizationRestartCommand, PreviewOrganizationRestartCommand>();
-        services.TryAddScoped<IPrivilegedControlsSeatChangeSetFactory, PrivilegedControlsSeatChangeSetFactory>();
         services.TryAddScoped<IAddPrivilegedControlsToExistingSubscriptionCommand, AddPrivilegedControlsToExistingSubscriptionCommand>();
         services.TryAddScoped<IChangePrivilegedControlsSeatsCommand, ChangePrivilegedControlsSeatsCommand>();
         services.TryAddScoped<ChangePrivilegedControlsSeatsHandler>();
         services.TryAddScoped<RemovePrivilegedControlsHandler>();
-        services.TryAddScoped<IIsOnPrivilegedControlsSalesInitiatedTrialQuery, IsOnPrivilegedControlsSalesInitiatedTrialQuery>();
         services.TryAddScoped<IRemovePrivilegedControlsCommand, RemovePrivilegedControlsCommand>();
-        services.TryAddScoped<IAutoscalePrivilegedControlsSeatsCommand, AutoscalePrivilegedControlsSeatsCommand>();
         services.TryAddScoped<ICreateOrganizationSubscriptionCommand, CreateOrganizationSubscriptionCommand>();
         services.TryAddEnumerable(
             ServiceDescriptor.Scoped<IAuthorizationHandler, StandaloneOrganizationOwnerRequirementHandler>());
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the Privileged Controls seat autoscale and revert commands and the services they use. A host that
+    /// resolves <see cref="IAutoscalePrivilegedControlsSeatsCommand"/> or
+    /// <see cref="IRevertPrivilegedControlsSeatsCommand"/> without mapping the endpoints calls this.
+    /// </summary>
+    public static IServiceCollection AddPrivilegedControlsSeatAutoscaling(this IServiceCollection services)
+    {
+        services.TryAddScoped<IPrivilegedControlsSeatChangeSetFactory, PrivilegedControlsSeatChangeSetFactory>();
+        services.TryAddScoped<IIsOnPrivilegedControlsSalesInitiatedTrialQuery, IsOnPrivilegedControlsSalesInitiatedTrialQuery>();
+        services.TryAddScoped<IAutoscalePrivilegedControlsSeatsCommand, AutoscalePrivilegedControlsSeatsCommand>();
+        services.TryAddScoped<IRevertPrivilegedControlsSeatsCommand, RevertPrivilegedControlsSeatsCommand>();
         return services;
     }
 }

@@ -2,8 +2,10 @@
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Services;
+using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Subscriptions.Organization.Commands;
 using Bit.Subscriptions.Organization.Handlers;
 using Bit.Subscriptions.Organization.Queries;
@@ -110,5 +112,28 @@ public class SubscriptionsOrganizationServiceCollectionExtensionsTests
         using var scope = services.BuildServiceProvider().CreateScope();
 
         Assert.NotNull(scope.ServiceProvider.GetService<RemovePrivilegedControlsHandler>());
+    }
+
+    [Fact]
+    public void AddPrivilegedControlsSeatAutoscaling_ResolvesAutoscaleAndRevertCommands()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(Substitute.For<IStripeAdapter>());
+        services.AddSingleton(Substitute.For<IPricingClient>());
+        services.AddSingleton(Substitute.For<IOrganizationService>());
+        services.AddSingleton(Substitute.For<IOrganizationUserRepository>());
+        services.AddSingleton(Substitute.For<IUpdateOrganizationSubscriptionCommand>());
+        services.AddSingleton(Substitute.For<IMailer>());
+        services.AddSingleton(Substitute.For<IGlobalSettings>());
+        services.AddSingleton(Substitute.For<IBitwardenEnvironment>());
+        services.AddLogging();
+
+        services.AddPrivilegedControlsSeatAutoscaling();
+        using var scope = services.BuildServiceProvider().CreateScope();
+
+        Assert.IsType<AutoscalePrivilegedControlsSeatsCommand>(
+            scope.ServiceProvider.GetService<IAutoscalePrivilegedControlsSeatsCommand>());
+        Assert.IsType<RevertPrivilegedControlsSeatsCommand>(
+            scope.ServiceProvider.GetService<IRevertPrivilegedControlsSeatsCommand>());
     }
 }
