@@ -7,8 +7,10 @@ namespace Bit.Seeder.Data.Generators;
 /// a password. Breach checks run once per distinct password, so a vault built only from the shared pools understates
 /// them. VeryWeak and Weak have no generator: zxcvbn scores no unique password as low as the pooled ones.
 /// </summary>
-internal static class UniquePasswordGenerator
+internal sealed class UniquePasswordGenerator(int seed)
 {
+    private readonly int _seed = seed;
+
     private static readonly string[] _words =
     [
         "dragon", "monkey", "sunshine", "football", "shadow", "master", "flower", "summer", "winter", "spring",
@@ -22,14 +24,16 @@ internal static class UniquePasswordGenerator
 
     /// <summary>
     /// Builds the password of the login at <paramref name="index"/> in the shape of <paramref name="strength"/>.
-    /// The same index and strength always give the same password.
+    /// The same seed, index and strength always give the same password.
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="strength"/> is VeryWeak or Weak.</exception>
-    internal static string Generate(int index, PasswordStrength strength)
+    internal string GenerateByIndex(int index, PasswordStrength strength)
     {
-        // Mixing the index first keeps neighbouring indices from sharing one stream offset by a step
-        var seed = (ulong)(uint)index;
-        var state = Next(ref seed);
+        // SplitMix64 rather than the siblings' Randomizer(_seed + index): System.Random reseeded with consecutive
+        // values gives correlated first draws. Mixing the (seed, index) pair first keeps neighbouring indices from
+        // sharing one stream offset by a step
+        var start = ((ulong)(uint)_seed << 32) | (uint)index;
+        var state = Next(ref start);
 
         return strength switch
         {

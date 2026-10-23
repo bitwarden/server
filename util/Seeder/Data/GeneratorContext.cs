@@ -79,4 +79,12 @@ internal sealed class GeneratorContext
     private SecureNoteDataGenerator? _secureNote;
 
     public SecureNoteDataGenerator SecureNote => _secureNote ??= new(_seed);
+
+    private UniquePasswordGenerator? _uniquePassword;
+
+    public UniquePasswordGenerator UniquePassword => _uniquePassword ??= new(_seed);
+
+    private LoginExtrasGenerator? _loginExtras;
+
+    public LoginExtrasGenerator LoginExtras => _loginExtras ??= new(_seed);
 }

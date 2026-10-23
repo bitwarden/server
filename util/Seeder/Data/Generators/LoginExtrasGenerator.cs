@@ -1,15 +1,19 @@
 ﻿using System.Text;
 using Bit.Core.Vault.Enums;
 using Bit.Seeder.Models;
+using Bogus;
 
-namespace Bit.Seeder.Data.Static;
+namespace Bit.Seeder.Data.Generators;
 
 /// <summary>
 /// Deterministic notes, custom fields and TOTP secrets for generated logins.
-/// Every method is a pure function of its arguments, so parallel generation steps can call it without coordination.
 /// </summary>
-internal static class LoginExtras
+internal sealed class LoginExtrasGenerator(int seed)
 {
+    private static readonly ThreadLocal<Faker> _threadFaker = new(() => new Faker());
+
+    private readonly int _seed = seed;
+
     private static readonly string[] _noteLines =
     [
         "Shared account owned by the {team} team. Ask before changing the password.",
@@ -34,39 +38,49 @@ internal static class LoginExtras
     /// Builds a note for the login at <paramref name="index"/>, with a long tail of lengths:
     /// 70% one or two lines, 25% a paragraph, 5% a runbook-sized note.
     /// </summary>
-    /// <param name="index">Position of the login; picks the length tier and the starting line.</param>
+    /// <param name="index">Position of the login; seeds the length within its tier and the starting line.</param>
+    /// <param name="rank">Position of the login among the note-bearing logins, from 0 to <paramref name="rankCount"/> - 1; picks the length tier.</param>
+    /// <param name="rankCount">How many ranks there are.</param>
     /// <param name="team">Replaces the <c>{team}</c> placeholder in the note lines.</param>
-    internal static string Notes(int index, string team)
+    internal string GenerateNotes(int index, int rank, int rankCount, string team)
     {
-        var tier = (index * 29 + 3) % 20;
-        var targetLength = tier switch
+        var faker = _threadFaker.Value!;
+        faker.Random = new Randomizer(_seed + index);
+
+        // The midpoint of this login's slice of the note-bearing logins, as a percentile
+        var percentile = (rank * 100 + 50) / rankCount;
+        var targetLength = percentile switch
         {
-            < 14 => 30 + (index % 80),
-            < 19 => 200 + (index % 300),
-            _ => 1_800 + (index % 2_200)
+            < 70 => faker.Random.Number(30, 109),
+            < 95 => faker.Random.Number(200, 499),
+            _ => faker.Random.Number(1_800, 3_999)
         };
+        var startLine = faker.Random.Number(0, _noteLines.Length - 1);
 
         var text = new StringBuilder(targetLength + 120);
         for (var line = 0; text.Length < targetLength; line++)
         {
-            text.Append(_noteLines[(index + line) % _noteLines.Length].Replace("{team}", team)).Append('\n');
+            text.Append(_noteLines[(startLine + line) % _noteLines.Length].Replace("{team}", team)).Append('\n');
         }
         return text.ToString().TrimEnd();
     }
 
     /// <summary>
-    /// Builds one to three custom fields for the login at <paramref name="index"/>.
+    /// Builds one to three custom fields with distinct names for the login at <paramref name="index"/>.
     /// The last field is hidden; the others are text.
     /// </summary>
-    internal static List<FieldViewDto> Fields(int index)
+    internal List<FieldViewDto> GenerateFields(int index)
     {
-        var count = 1 + (index % 3);
-        return Enumerable.Range(0, count)
-            .Select(i => new FieldViewDto
+        var faker = _threadFaker.Value!;
+        faker.Random = new Randomizer(_seed + index);
+
+        var names = faker.PickRandom(_fieldNames, faker.Random.Number(1, 3)).ToList();
+        return names
+            .Select((name, i) => new FieldViewDto
             {
-                Name = _fieldNames[(index + i) % _fieldNames.Length],
-                Value = $"{((uint)index * 7919u + (uint)i * 104_729u) % 100_000_000u:D8}",
-                Type = i == count - 1 ? (int)FieldType.Hidden : (int)FieldType.Text
+                Name = name,
+                Value = faker.Random.ReplaceNumbers("########"),
+                Type = i == names.Count - 1 ? (int)FieldType.Hidden : (int)FieldType.Text
             })
             .ToList();
     }
@@ -74,15 +88,10 @@ internal static class LoginExtras
     /// <summary>
     /// Builds a 32-character base32 TOTP secret for the login at <paramref name="index"/>.
     /// </summary>
-    internal static string TotpSecret(int index)
+    internal string GenerateTotpSecret(int index)
     {
-        var secret = new char[32];
-        var state = (uint)index * 2_654_435_761u + 1;
-        for (var i = 0; i < secret.Length; i++)
-        {
-            state = state * 1_664_525u + 1_013_904_223u;
-            secret[i] = Base32Alphabet[(int)(state >> 27)];
-        }
-        return new string(secret);
+        var faker = _threadFaker.Value!;
+        faker.Random = new Randomizer(_seed + index);
+        return faker.Random.String2(32, Base32Alphabet);
     }
 }

@@ -275,7 +275,7 @@ public class CipherComposerTests
     [Theory]
     [InlineData(CipherType.Login, 1_000)]
     [InlineData(CipherType.Card, 100)]
-    public void Compose_Items_FiftyFivePercentHaveTheirOwnKey(CipherType cipherType, int total)
+    public void Compose_Items_ItemKeyShareMatchesTheConstant(CipherType cipherType, int total)
     {
         var items = ComposeItems(cipherType, total, RustSdkService.GenerateOrganizationKeys().Key);
 
@@ -285,8 +285,7 @@ public class CipherComposerTests
     [Fact]
     public void SiteDomain_SmallVault_KeepsCompanyDomains()
     {
-        // 1,312 logins is the largest vault whose 24-per-100 site target still fits in one pass over 314 companies
-        const int total = 1_312;
+        var total = OnePassLoginLimit;
         var companies = Companies.All;
 
         Assert.All(Enumerable.Range(0, total), index =>
@@ -302,7 +301,7 @@ public class CipherComposerTests
         var companies = Companies.All;
         var company = companies[0];
 
-        var domain = CipherComposer.SiteDomain(company, companies.Length, 1_313, companies.Length);
+        var domain = CipherComposer.SiteDomain(company, companies.Length, OnePassLoginLimit + 1, companies.Length);
 
         Assert.Equal($"{company.Domain.Split('.')[0]}-1.example", domain);
     }
@@ -311,7 +310,7 @@ public class CipherComposerTests
     public void Compose_OnePassVault_GivesEveryCompanyAUriBearingLogin()
     {
         // Logins pick their company by index % companies.Length, so the URI-bearing indices name the companies covered
-        const int total = 1_312;
+        var total = OnePassLoginLimit;
         var companies = Companies.All;
 
         var companiesWithUris = ComposeItems(CipherType.Login, total, RustSdkService.GenerateOrganizationKeys().Key)
@@ -362,7 +361,10 @@ public class CipherComposerTests
 
         var generated = passwords.Where(password => !Passwords.All.Contains(password)).ToList();
 
-        Assert.InRange(generated.Count, passwords.Count * 70 / 100, passwords.Count * 90 / 100);
+        Assert.InRange(
+            generated.Count,
+            passwords.Count * (CipherComposer.UniquePasswordsPer100FairOrStronger - 10) / 100,
+            passwords.Count * (CipherComposer.UniquePasswordsPer100FairOrStronger + 10) / 100);
         Assert.Equal(generated.Count, generated.Distinct().Count());
     }
 
@@ -370,10 +372,13 @@ public class CipherComposerTests
     [InlineData(PasswordStrength.Fair)]
     [InlineData(PasswordStrength.Strong)]
     [InlineData(PasswordStrength.VeryStrong)]
-    public void UniquePasswordGenerator_SameIndexAndTier_GivesSamePassword(PasswordStrength strength)
+    public void UniquePasswordGenerator_SameSeedIndexAndTier_GivesSamePassword(PasswordStrength strength)
     {
+        var first = new UniquePasswordGenerator(42);
+        var second = new UniquePasswordGenerator(42);
+
         Assert.All(Enumerable.Range(0, 1_000), index =>
-            Assert.Equal(UniquePasswordGenerator.Generate(index, strength), UniquePasswordGenerator.Generate(index, strength)));
+            Assert.Equal(first.GenerateByIndex(index, strength), second.GenerateByIndex(index, strength)));
     }
 
     [Theory]
@@ -382,10 +387,46 @@ public class CipherComposerTests
     [InlineData(PasswordStrength.VeryStrong)]
     public void UniquePasswordGenerator_DifferentIndices_RarelyRepeat(PasswordStrength strength)
     {
-        var passwords = Enumerable.Range(0, 20_000).Select(index => UniquePasswordGenerator.Generate(index, strength));
+        var generator = new UniquePasswordGenerator(42);
+        var passwords = Enumerable.Range(0, 20_000).Select(index => generator.GenerateByIndex(index, strength));
 
         Assert.True(passwords.Distinct().Count() >= 19_900);
     }
+
+    [Theory]
+    [InlineData(PasswordStrength.Fair)]
+    [InlineData(PasswordStrength.Strong)]
+    [InlineData(PasswordStrength.VeryStrong)]
+    public void UniquePasswordGenerator_DifferentSeeds_GiveDifferentPasswords(PasswordStrength strength)
+    {
+        var first = new UniquePasswordGenerator(1);
+        var second = new UniquePasswordGenerator(2);
+
+        var shared = Enumerable.Range(0, 1_000)
+            .Count(index => first.GenerateByIndex(index, strength) == second.GenerateByIndex(index, strength));
+
+        Assert.True(shared <= 10, $"Expected different orgs to get different passwords; {shared} of 1,000 matched.");
+    }
+
+    [Fact]
+    public void LoginExtrasGenerator_NoteLengths_KeepTheirTierShares()
+    {
+        const int noteCount = CipherComposer.NotesPer100Logins;
+        var generator = new LoginExtrasGenerator(42);
+
+        var lengths = Enumerable.Range(0, noteCount)
+            .Select(rank => generator.GenerateNotes(rank, rank, noteCount, "Engineering").Length)
+            .ToList();
+
+        // One note is 100 / noteCount points of share, so rounding to whole notes moves a share by at most half that
+        var tolerance = 50.0 / noteCount;
+        Assert.InRange(lengths.Count(length => length < 200) * 100.0 / noteCount, 70 - tolerance, 70 + tolerance);
+        Assert.InRange(lengths.Count(length => length is >= 200 and < 1_800) * 100.0 / noteCount, 25 - tolerance, 25 + tolerance);
+        Assert.InRange(lengths.Count(length => length >= 1_800) * 100.0 / noteCount, 5 - tolerance, 5 + tolerance);
+    }
+
+    // The largest login count whose site target, total * AppsPer100Logins / 100 rounded down, still fits in one pass
+    private static int OnePassLoginLimit => ((Companies.All.Length + 1) * 100 - 1) / CipherComposer.AppsPer100Logins;
 
     // Logins with their own key are skipped: the org key alone cannot decrypt them
     private static List<(PasswordStrength Strength, string Password)> DecryptUserKeyPasswordsByDrawnStrength(int total)

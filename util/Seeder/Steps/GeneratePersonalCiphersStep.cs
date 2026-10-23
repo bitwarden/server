@@ -43,7 +43,7 @@ internal sealed class GeneratePersonalCiphersStep(
         var userFolderIds = context.Registry.UserFolderIds;
 
         // Force lazy generator init before parallel loop (prevents ??= data race)
-        _ = (generator.Username, generator.Card, generator.Identity, generator.SecureNote);
+        _ = (generator.Username, generator.Card, generator.Identity, generator.SecureNote, generator.UniquePassword, generator.LoginExtras);
 
         // Pre-compute per-user counts and globalIndex offsets
         var userCounts = new int[userDigests.Count];
