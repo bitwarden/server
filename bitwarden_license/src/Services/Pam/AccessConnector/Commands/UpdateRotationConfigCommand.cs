@@ -66,6 +66,12 @@ public class UpdateRotationConfigCommand : IUpdateRotationConfigCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
+        var nextRotationAt =
+            details.TargetSystemMethod == PamTargetSystemMethod.Manual
+            && details.NextRotationDate is { } nextRotationDue && nextRotationDue <= now
+                ? nextRotationDue
+                : _scheduleCalculator.GetNextOccurrence(scheduleCron, now);
+
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RotationConfigUpdated,
@@ -91,7 +97,7 @@ public class UpdateRotationConfigCommand : IUpdateRotationConfigCommand
             WrappedKey = wrappedKey,
             ScheduleCron = scheduleCron,
             RotateOnAccessEnd = rotateOnAccessEnd,
-            NextRotationDate = _scheduleCalculator.GetNextOccurrence(scheduleCron, now),
+            NextRotationDate = nextRotationAt,
             Enabled = details.Enabled,
             LastRotationDate = details.LastRotationDate,
             CreationDate = details.CreationDate,
