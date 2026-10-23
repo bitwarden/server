@@ -127,14 +127,16 @@ public class OrganizationSponsorshipsController : Controller
 
         var sponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrgId);
         var filteredSponsorship = sponsorships.FirstOrDefault(s =>
-            (s.IsAdminInitiated || s.SponsoringOrganizationUserId == sponsoringOrgUser?.Id) &&
+            s.IsAdminInitiated &&
             s.FriendlyName != null && s.FriendlyName.Equals(sponsoredFriendlyName, StringComparison.OrdinalIgnoreCase));
-        if (filteredSponsorship != null)
+        if (filteredSponsorship == null)
         {
-            await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(
-                await _organizationRepository.GetByIdAsync(sponsoringOrgId),
-                sponsoringOrgUser, filteredSponsorship);
+            throw new BadRequestException("The specified sponsored organization could not be found under the given sponsoring organization.");
         }
+
+        await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(
+            await _organizationRepository.GetByIdAsync(sponsoringOrgId),
+            sponsoringOrgUser, filteredSponsorship);
     }
 
     [Authorize("Application")]

@@ -75,6 +75,11 @@ public class OrganizationNoPaymentCreateRequest
     [Required]
     public bool UseSecretsManager { get; set; }
 
+    public bool UsePrivilegedControls { get; set; }
+
+    [Range(1, int.MaxValue)]
+    public int? PamSeatMinimum { get; set; }
+
     public bool IsFromSecretsManagerTrial { get; set; }
 
     public string InitiationPath { get; set; }
@@ -102,6 +107,8 @@ public class OrganizationNoPaymentCreateRequest
             AdditionalSmSeats = AdditionalSmSeats.GetValueOrDefault(),
             AdditionalServiceAccounts = AdditionalServiceAccounts.GetValueOrDefault(),
             UseSecretsManager = UseSecretsManager,
+            UsePrivilegedControls = UsePrivilegedControls,
+            PamSeatMinimum = PamSeatMinimum,
             IsFromSecretsManagerTrial = IsFromSecretsManagerTrial,
             TaxInfo = new TaxInfo
             {

@@ -70,6 +70,7 @@ CREATE TABLE [dbo].[Organization] (
     [PamSeats]                      INT              NULL,
     [MaxAutoscalePamSeats]          INT              NULL,
     [PamSeatMinimum]                INT              NULL,
+    [OrganizationKeyId]             VARCHAR (32)     NULL,
     CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
