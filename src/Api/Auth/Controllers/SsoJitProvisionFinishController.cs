@@ -31,16 +31,22 @@ public class SsoJitProvisionFinishController(
     /// <summary>
     /// Sets the initial master password and account keys for an SSO JIT provisioned user in an organization
     /// that uses master password decryption. Accepts the pending organization invite only when
-    /// <see cref="SsoJitProvisionFinishSetInitialPasswordRequestModel.AcceptOrganizationInvite"/> is <c>true</c>.
+    /// <see cref="SsoJitProvisionFinishPasswordRequestModel.AcceptOrganizationInvite"/> is <c>true</c>.
     /// </summary>
     /// <remarks>
     /// Accepts MPAD + MPUD with exactly one keypair: V2 encryption (AccountKeys, V2 MP JIT flag on)
     /// or V1 encryption (legacy Keys).
     /// </remarks>
     [HttpPost("password")]
-    public async Task FinishMasterPasswordAsync([FromBody] SsoJitProvisionFinishSetInitialPasswordRequestModel model)
+    public async Task FinishJitProvisionForPasswordAsync([FromBody] SsoJitProvisionFinishPasswordRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
+
+        // TODO: eventually move this into the FinishSsoJitProvisionMasterPasswordCommand
+        if (user.PublicKey != null || user.PrivateKey != null)
+        {
+            throw new BadRequestException("User account keys are already initialized.");
+        }
 
         // Require AccountKeys so V1 requests (legacy Keys) still route to V1 when the flag is on.
         if (model.AccountKeys != null &&
@@ -51,16 +57,25 @@ public class SsoJitProvisionFinishController(
             return;
         }
 
-        await SetInitialPasswordV1Async(user, model);
+        await FinishJitProvisionForPasswordV1Async(user, model);
     }
 
     /// <summary>
-    /// V1 encryption path. Mirrors <c>AccountsController.SetInitialPasswordV1Async</c> with option of not accepting
-    /// the organization invite. Remove with it once the conditions documented there are met.
+    /// Handles finishing JIT provisioning for V1 users in the following scenario:
+    /// 1. MP JIT user where request contains MPAD + MPUD + legacy Keys (not AccountKeys)
+    ///
+    /// Mirrors <c>AccountsController.SetInitialPasswordV1Async</c> with the option of not accepting the
+    /// organization invite. Unlike that method, this endpoint accepts no legacy-shape requests.
     /// </summary>
-    private async Task SetInitialPasswordV1Async(
+    /// <remarks>
+    /// TODO: In order to remove this method, the scenario above needs to become unused. This means removal can
+    /// only happen when the EnableAccountEncryptionV2JitPasswordRegistration feature flag has been unwound in
+    /// https://bitwarden.atlassian.net/browse/PM-27327 and the client-side portion of the flag removal has aged
+    /// out according to the Bitwarden release support policy.
+    /// </remarks>
+    private async Task FinishJitProvisionForPasswordV1Async(
         User user,
-        SsoJitProvisionFinishSetInitialPasswordRequestModel model)
+        SsoJitProvisionFinishPasswordRequestModel model)
     {
         // V1 cannot consume AccountKeys (the new key shape). Fail instead of silently dropping the keypair.
         if (model.AccountKeys != null)

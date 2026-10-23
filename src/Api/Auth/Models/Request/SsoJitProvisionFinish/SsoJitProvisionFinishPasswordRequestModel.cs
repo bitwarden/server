@@ -12,7 +12,7 @@ namespace Bit.Api.Auth.Models.Request.SsoJitProvisionFinish;
 /// Accepts only the modern MPAD + MPUD shape: unlike <c>accounts/set-password</c>, this endpoint has no legacy
 /// clients to stay compatible with.
 /// </summary>
-public class SsoJitProvisionFinishSetInitialPasswordRequestModel : IValidatableObject
+public class SsoJitProvisionFinishPasswordRequestModel : IValidatableObject
 {
     [Required]
     public required MasterPasswordAuthenticationDataRequestModel MasterPasswordAuthentication { get; set; }
@@ -39,7 +39,7 @@ public class SsoJitProvisionFinishSetInitialPasswordRequestModel : IValidatableO
     /// </summary>
     public required bool AcceptOrganizationInvite { get; set; }
 
-    // TODO: Can be removed when its only consumer, SsoJitProvisionFinishController.SetInitialPasswordV1Async(),
+    // TODO: Can be removed when its only consumer, SsoJitProvisionFinishController.FinishJitProvisionForPasswordV1Async(),
     // is removed with the V2 MP JIT feature flag.
     public User ToUser(User existingUser)
     {

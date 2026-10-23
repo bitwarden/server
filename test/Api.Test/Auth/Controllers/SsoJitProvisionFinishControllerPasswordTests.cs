@@ -27,7 +27,7 @@ public class SsoJitProvisionFinishControllerPasswordTests
 
     [Theory]
     [BitAutoData]
-    public async Task FinishMasterPasswordAsync_UserNull_ThrowsUnauthorizedAccessException(
+    public async Task FinishJitProvisionForPasswordAsync_UserNull_ThrowsUnauthorizedAccessException(
         SutProvider<SsoJitProvisionFinishController> sutProvider, User user)
     {
         // Arrange
@@ -37,14 +37,61 @@ public class SsoJitProvisionFinishControllerPasswordTests
             .Returns((User?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.FinishMasterPasswordAsync(model));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.FinishJitProvisionForPasswordAsync(model));
+        await AssertNoCommandCalledAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData(true, false)]
+    [BitAutoData(false, true)]
+    [BitAutoData(true, true)]
+    public async Task FinishJitProvisionForPasswordAsync_AccountKeysAlreadyInitialized_ThrowsBadRequestException(
+        bool hasPublicKey, bool hasPrivateKey,
+        SutProvider<SsoJitProvisionFinishController> sutProvider, User user)
+    {
+        // Arrange
+        var model = CreateV2Model(user, acceptOrganizationInvite: false);
+        ArrangeUser(sutProvider, user);
+        user.PublicKey = hasPublicKey ? "existingPublicKey" : null;
+        user.PrivateKey = hasPrivateKey ? "existingPrivateKey" : null;
+        ArrangeV2Flag(sutProvider, enabled: true);
+
+        // Act
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.FinishJitProvisionForPasswordAsync(model));
+
+        // Assert
+        Assert.Equal("User account keys are already initialized.", exception.Message);
+        await AssertNoCommandCalledAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData(true, false)]
+    [BitAutoData(false, true)]
+    [BitAutoData(true, true)]
+    public async Task FinishJitProvisionForPasswordAsync_V1_AccountKeysAlreadyInitialized_ThrowsBadRequestException(
+        bool hasPublicKey, bool hasPrivateKey,
+        SutProvider<SsoJitProvisionFinishController> sutProvider, User user)
+    {
+        // Arrange
+        var model = CreateV1Model(user, acceptOrganizationInvite: false);
+        ArrangeUser(sutProvider, user);
+        user.PublicKey = hasPublicKey ? "existingPublicKey" : null;
+        user.PrivateKey = hasPrivateKey ? "existingPrivateKey" : null;
+
+        // Act
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.FinishJitProvisionForPasswordAsync(model));
+
+        // Assert
+        Assert.Equal("User account keys are already initialized.", exception.Message);
         await AssertNoCommandCalledAsync(sutProvider);
     }
 
     [Theory]
     [BitAutoData(false)]
     [BitAutoData(true)]
-    public async Task FinishMasterPasswordAsync_V2_PassesAcceptOrganizationInviteToCommand(
+    public async Task FinishJitProvisionForPasswordAsync_V2_PassesAcceptOrganizationInviteToCommand(
         bool acceptOrganizationInvite,
         SutProvider<SsoJitProvisionFinishController> sutProvider, User user)
     {
@@ -54,7 +101,7 @@ public class SsoJitProvisionFinishControllerPasswordTests
         ArrangeV2Flag(sutProvider, enabled: true);
 
         // Act
-        await sutProvider.Sut.FinishMasterPasswordAsync(model);
+        await sutProvider.Sut.FinishJitProvisionForPasswordAsync(model);
 
         // Assert
         await sutProvider.GetDependency<IFinishSsoJitProvisionMasterPasswordCommand>().Received(1)
@@ -72,7 +119,7 @@ public class SsoJitProvisionFinishControllerPasswordTests
 
     [Theory]
     [BitAutoData]
-    public async Task FinishMasterPasswordAsync_V2FlagOff_WithAccountKeys_ThrowsBadRequestException(
+    public async Task FinishJitProvisionForPasswordAsync_V2FlagOff_WithAccountKeys_ThrowsBadRequestException(
         SutProvider<SsoJitProvisionFinishController> sutProvider, User user)
     {
         // Arrange
@@ -82,7 +129,7 @@ public class SsoJitProvisionFinishControllerPasswordTests
 
         // Act
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.FinishMasterPasswordAsync(model));
+            () => sutProvider.Sut.FinishJitProvisionForPasswordAsync(model));
 
         // Assert
         Assert.Equal("Request includes V2 AccountKeys but V2 encryption is not enabled.", exception.Message);
@@ -94,7 +141,7 @@ public class SsoJitProvisionFinishControllerPasswordTests
     [BitAutoData(false, true)]
     [BitAutoData(true, false)]
     [BitAutoData(true, true)]
-    public async Task FinishMasterPasswordAsync_V1_PassesAcceptOrganizationInviteToV1Command(
+    public async Task FinishJitProvisionForPasswordAsync_V1_PassesAcceptOrganizationInviteToV1Command(
         bool acceptOrganizationInvite, bool v2FlagEnabled,
         SutProvider<SsoJitProvisionFinishController> sutProvider, User user)
     {
@@ -105,7 +152,7 @@ public class SsoJitProvisionFinishControllerPasswordTests
         ArrangeV1CommandResult(sutProvider, IdentityResult.Success);
 
         // Act
-        await sutProvider.Sut.FinishMasterPasswordAsync(model);
+        await sutProvider.Sut.FinishJitProvisionForPasswordAsync(model);
 
         // Assert
         await sutProvider.GetDependency<ISetInitialMasterPasswordCommandV1>().Received(1)
@@ -125,7 +172,7 @@ public class SsoJitProvisionFinishControllerPasswordTests
 
     [Theory]
     [BitAutoData]
-    public async Task FinishMasterPasswordAsync_V1_CommandFails_ThrowsBadRequestException(
+    public async Task FinishJitProvisionForPasswordAsync_V1_CommandFails_ThrowsBadRequestException(
         SutProvider<SsoJitProvisionFinishController> sutProvider, User user)
     {
         // Arrange
@@ -134,12 +181,12 @@ public class SsoJitProvisionFinishControllerPasswordTests
         ArrangeV1CommandResult(sutProvider, IdentityResult.Failed(new IdentityError { Description = "failed" }));
 
         // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.FinishMasterPasswordAsync(model));
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.FinishJitProvisionForPasswordAsync(model));
     }
 
     [Theory]
     [BitAutoData]
-    public async Task FinishMasterPasswordAsync_V1_SaltDiffers_ThrowsBadRequestException(
+    public async Task FinishJitProvisionForPasswordAsync_V1_SaltDiffers_ThrowsBadRequestException(
         SutProvider<SsoJitProvisionFinishController> sutProvider, User user)
     {
         // Arrange
@@ -147,7 +194,7 @@ public class SsoJitProvisionFinishControllerPasswordTests
         ArrangeUser(sutProvider, user);
 
         // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.FinishMasterPasswordAsync(model));
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.FinishJitProvisionForPasswordAsync(model));
         await AssertNoCommandCalledAsync(sutProvider);
     }
 
@@ -186,7 +233,7 @@ public class SsoJitProvisionFinishControllerPasswordTests
             .SetInitialMasterPasswordAsync(default!, default!, default!, default!, default);
     }
 
-    private static SsoJitProvisionFinishSetInitialPasswordRequestModel CreateV2Model(User user,
+    private static SsoJitProvisionFinishPasswordRequestModel CreateV2Model(User user,
         bool acceptOrganizationInvite)
     {
         var model = CreateModernModel(user.GetMasterPasswordSalt(), acceptOrganizationInvite);
@@ -198,7 +245,7 @@ public class SsoJitProvisionFinishControllerPasswordTests
         return model;
     }
 
-    private static SsoJitProvisionFinishSetInitialPasswordRequestModel CreateV1Model(User user,
+    private static SsoJitProvisionFinishPasswordRequestModel CreateV1Model(User user,
         bool acceptOrganizationInvite, string? salt = null)
     {
         var model = CreateModernModel(salt ?? user.GetMasterPasswordSalt(), acceptOrganizationInvite);
@@ -212,11 +259,11 @@ public class SsoJitProvisionFinishControllerPasswordTests
         return model;
     }
 
-    private static SsoJitProvisionFinishSetInitialPasswordRequestModel CreateModernModel(string salt,
+    private static SsoJitProvisionFinishPasswordRequestModel CreateModernModel(string salt,
         bool acceptOrganizationInvite)
     {
         var kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600000 };
-        return new SsoJitProvisionFinishSetInitialPasswordRequestModel
+        return new SsoJitProvisionFinishPasswordRequestModel
         {
             OrgIdentifier = _orgIdentifier,
             AcceptOrganizationInvite = acceptOrganizationInvite,
