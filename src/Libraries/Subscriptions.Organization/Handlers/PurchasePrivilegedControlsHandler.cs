@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
@@ -31,7 +32,7 @@ internal sealed class PurchasePrivilegedControlsHandler(
                 ? await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(stripeAdapter, logger, organization)
                 : null;
 
-        if (PrivilegedControlsTrialHelpers.IsOnSalesInitiatedTrial(organization, plan, subscription))
+        if (organization.IsOnPrivilegedControlsSalesInitiatedTrial(plan, subscription?.HasPrivilegedControlsSeats() ?? false))
         {
             throw new BadRequestException(
                 "Work with your customer service representative to purchase Privileged Controls.");

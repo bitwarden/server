@@ -52,10 +52,10 @@ them.
 
 `MapOrganizationPrivilegedControlsEndpoints()` attaches a third group, mounted at the same
 `/organizations/{organizationId:guid}/billing/subscription` prefix. It shares the organization-scoped chain
-(`OrganizationScopedEndpointGroup.MapOrganizationScopedGroup()`) but is gated by
-`FeatureFlagKeys.PM39883_Pam_Billing_Support`, not `PM36631_PreviewDrivenCart`. An endpoint can't opt out of its
-group's gate, so a separate group keeps Privileged Controls billing off the cart rollout. Like the other subscription
-groups, the host maps it on cloud only.
+(`OrganizationScopedEndpointGroup.MapOrganizationScopedGroup()`) and gates the whole group on
+`FeatureFlagKeys.PM39883_Pam_Billing_Support`. It maps the Privileged Controls seat change endpoint; the Privileged
+Controls purchase endpoint is in the organization-scoped subscription group above, carrying the same flag on the
+endpoint itself. Like the other subscription groups, the host maps it on cloud only.
 
 ### Authorization
 
@@ -192,7 +192,7 @@ representative); its plan is an Enterprise plan that supports Privileged Control
 subscription (400). The trial check runs first because a trial organization may have no Stripe
 subscription, which the later checks would otherwise report. The handler does not check for a payment
 method: an invoiced customer may legitimately have none, and a missing one on an automatically charged
-subscription fails at the charge, in Stripe, with no extra lookups. Trial detection is `PrivilegedControlsTrialHelpers.IsOnSalesInitiatedTrial`, shared with the
+subscription fails at the charge, in Stripe, with no extra lookups. Trial detection is `BillingExtensions.IsOnPrivilegedControlsSalesInitiatedTrial`, shared with the
 subscription response; the handler reads the subscription through `IStripeAdapter` only when the plan
 supports Privileged Controls and the organization already has the capability turned on.
 
@@ -204,8 +204,8 @@ handler. No upper seat cap against Password Manager seats is enforced.
 ### Privileged Controls seat change
 
 `PUT .../privileged-controls` sets the organization's Privileged Controls seat total and autoscale limit. Its body,
-`PrivilegedControlsSeatsRequest` (`seats`, and `maxAutoscaleSeats` null for no limit), is written for the purchase
-endpoint (PM-43273) to reuse. Both values are absolute totals, so repeating the request is idempotent. The handler adds
+`PrivilegedControlsSeatsRequest` (`seats`, and `maxAutoscaleSeats` null for no limit), holds absolute totals, so
+repeating the request is idempotent. The handler adds
 no validation of its own: the command and `PrivilegedControlsSeatChangeSetFactory` own every seat rule, so an omitted
 `seats` is forwarded as 0 and rejected by the factory with its own message rather than by binding with none.
 
@@ -256,7 +256,7 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | From Core | Used for |
 | --- | --- |
 | `Policies.Application` (`Bit.Core.Auth.Identity`) | Requiring the standard user authorization policy on the group |
-| `FeatureFlagKeys` (`Bit.Core`) | Gating the Privileged Controls group on `PM39883_Pam_Billing_Support` |
+| `FeatureFlagKeys` (`Bit.Core`) | Gating the Privileged Controls group and the Privileged Controls purchase endpoint on `PM39883_Pam_Billing_Support` |
 | `BillingExtensions.IsOnPrivilegedControlsSalesInitiatedTrial`, `GetPrivilegedControlsSeatMinimum`, `SubscriptionExtensions.HasPrivilegedControlsSeats` (`Bit.Core.Billing.Extensions`) | The trial definition and effective seat minimum shared with the Api subscription response, and detecting the Stripe Privileged Controls seat line |
 | `IOrganizationRepository` (`Bit.Core.Repositories`) | Resolving the organization the preview is for |
 | `Organization` (`Bit.Core.AdminConsole.Entities`) | The subscriber passed to the preview query; the entity the Privileged Controls command and factory read and update |
@@ -266,8 +266,6 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | `IStripeAdapter` (`Bit.Core.Billing.Services`), `OrganizationSubscriptionHelpers` (`Bit.Core.Billing.Organizations.Helpers`) | Reading the organization's subscription (and its customer's tax ids) for the plan-change preview, the subscription's seat lines for the Privileged Controls purchase's trial check, and its subscription for the Privileged Controls trial query |
 | `ISubscriberService` (`Bit.Core.Billing.Services`) | Reading the organization's canceled subscription for the restart preview |
 | `IGetOrganizationRestartQuery`, `OrganizationRestart` (`Bit.Core.Billing.Subscriptions.Queries`, `Bit.Core.Billing.Subscriptions.Models`) | Resolving the restart preview's plan and line items with the same query restart uses |
-| `PrivilegedControlsTrialHelpers` (`Bit.Core.Billing.Organizations.Helpers`) | Gating the Privileged Controls purchase on the sales-initiated trial rule the subscription response also uses |
-| `FeatureFlagKeys` (`Bit.Core`) | The `PM39883_Pam_Billing_Support` gate on the Privileged Controls purchase endpoint |
 | `PlanConstants` (`Bit.Core.Billing.Constants`) | The most of any one purchasable item that can be bought at once, for the purchase preview's checks and the Privileged Controls purchase request's ranges |
 | `IPricingClient` (`Bit.Core.Billing.Pricing`), `Plan` (`Bit.Core.Models.StaticStore`) | Resolving the current and target plans' Stripe price ids and seat/flat shape; reading a plan's Privileged Controls support and default seat minimum |
 | `OrganizationSubscriptionChangeSet` (`Bit.Core.Billing.Organizations.Models`) | Composing the plan change the same way the real upgrade does, then translating it into preview line items; building the Privileged Controls seat change |
