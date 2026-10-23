@@ -20,6 +20,7 @@ using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.Models;
+using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -1600,6 +1601,143 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(false, false, "Organization invalid.")]
+    [InlineData(false, true, "User not found within organization.")]
+    [InlineData(true, false, "Organization invalid.")]
+    [InlineData(true, true, "User not found within organization.")]
+    public async Task PostSetPasswordAsync_V1_OrgValidationFails_DoesNotPersistMasterPasswordOrKey(
+        bool useModernShape, bool organizationExists, string expectedErrorMessage)
+    {
+        // Arrange - optionally create an SSO organization that the user is NOT a member of
+        var orgIdentifier = $"sso-org-{Guid.NewGuid()}";
+        if (organizationExists)
+        {
+            var ownerEmail = $"owner-{Guid.NewGuid()}@bitwarden.com";
+            await _factory.LoginWithNewAccount(ownerEmail);
+
+            var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
+                ownerEmail: ownerEmail,
+                name: "Test Org");
+            organization.UseSso = true;
+            organization.Identifier = orgIdentifier;
+            await _organizationRepository.ReplaceAsync(organization);
+        }
+
+        // Create user with password initially, so we can login
+        var userEmail = $"user-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(userEmail);
+
+        // Login as the user
+        await _loginHelper.LoginAsync(userEmail);
+
+        // Remove the master password and key to simulate a user who has never set one.
+        // Legacy shape: a TDE user, who already has a keypair (scenario #1).
+        // Modern shape: a newly JIT-provisioned SSO user, who has no keypair yet (scenario #3).
+        var user = await _userRepository.GetByEmailAsync(userEmail);
+        Assert.NotNull(user);
+        user.MasterPassword = null;
+        user.Key = null;
+        if (useModernShape)
+        {
+            user.PublicKey = null;
+            user.PrivateKey = null;
+        }
+        await _userRepository.ReplaceAsync(user);
+
+        var expectedPublicKey = user.PublicKey;
+        var expectedPrivateKey = user.PrivateKey;
+
+        var jsonRequest = useModernShape
+            ? BuildModernV1SetPasswordRequestJson(userEmail, orgIdentifier)
+            : BuildLegacySetPasswordRequestJson(orgIdentifier);
+
+        // Act
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/set-password");
+        message.Content = new StringContent(jsonRequest, System.Text.Encoding.UTF8, "application/json");
+        var response = await _client.SendAsync(message);
+
+        // Assert - the request is rejected for the expected reason...
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var error = await response.Content.ReadFromJsonAsync<ErrorResponseModel>();
+        Assert.Equal(expectedErrorMessage, error?.Message);
+
+        // ...and the rejected request must leave the account untouched.
+        var updatedUser = await _userRepository.GetByEmailAsync(userEmail);
+        Assert.NotNull(updatedUser);
+        Assert.Null(updatedUser.MasterPassword);
+        Assert.Null(updatedUser.Key);
+        Assert.Null(updatedUser.MasterPasswordHint);
+        Assert.Equal(expectedPublicKey, updatedUser.PublicKey);
+        Assert.Equal(expectedPrivateKey, updatedUser.PrivateKey);
+
+        // No password-change event may be logged for a rejected request.
+        var events = await _eventRepository.GetManyByUserAsync(updatedUser.Id, DateTime.UtcNow.AddMinutes(-5), DateTime.UtcNow.AddMinutes(1), new PageOptions { PageSize = 100 });
+        Assert.NotNull(events);
+        Assert.DoesNotContain(events.Data, e => e.Type == EventType.User_ChangedPassword && e.UserId == updatedUser.Id);
+
+        // The submitted password must not verify.
+        var verifyResponse = await _client.PostAsJsonAsync("/accounts/verify-password",
+            new { masterPasswordHash = _newMasterPasswordHash });
+        Assert.Equal(HttpStatusCode.BadRequest, verifyResponse.StatusCode);
+    }
+
+    // Legacy-shape request: hash + key + KDF, no keypair.
+    // Routes to SetInitialPasswordV1Async scenario #1.
+    private static string BuildLegacySetPasswordRequestJson(string orgIdentifier)
+    {
+        var request = new
+        {
+            masterPasswordHash = _newMasterPasswordHash,
+            key = _masterKeyWrappedUserKey,
+            kdf = (int)KdfType.PBKDF2_SHA256,
+            kdfIterations = 600000,
+            masterPasswordHint = "hint",
+            orgIdentifier
+        };
+
+        return JsonSerializer.Serialize(request, JsonHelpers.CamelCase);
+    }
+
+    // Modern-shape request that still routes to the V1 command: MPAD + MPUD + legacy Keys, no
+    // AccountKeys (SetInitialPasswordV1Async scenario #3). Salt must equal the email during
+    // Stage 1 (PM-27044) or ValidateSaltUnchangedForUser rejects the request before the command runs.
+    private static string BuildModernV1SetPasswordRequestJson(string userEmail, string orgIdentifier)
+    {
+        var request = new
+        {
+            masterPasswordAuthentication = new
+            {
+                kdf = new
+                {
+                    kdfType = (int)KdfType.PBKDF2_SHA256,
+                    iterations = 600000
+                },
+                masterPasswordAuthenticationHash = _newMasterPasswordHash,
+                salt = userEmail
+            },
+            masterPasswordUnlock = new
+            {
+                kdf = new
+                {
+                    kdfType = (int)KdfType.PBKDF2_SHA256,
+                    iterations = 600000
+                },
+                masterKeyWrappedUserKey = _masterKeyWrappedUserKey,
+                salt = userEmail
+            },
+            keys = new
+            {
+                publicKey = "publicKey",
+                encryptedPrivateKey = "encryptedPrivateKey"
+            },
+            masterPasswordHint = "hint",
+            orgIdentifier
+        };
+
+        return JsonSerializer.Serialize(request, JsonHelpers.CamelCase);
     }
 
     // ===== Email change: legacy path (PM30806_SelfServiceChangeEmailCommand flag OFF) =====

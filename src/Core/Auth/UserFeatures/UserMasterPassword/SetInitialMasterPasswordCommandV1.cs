@@ -56,19 +56,6 @@ public class SetInitialMasterPasswordCommandV1 : ISetInitialMasterPasswordComman
             return IdentityResult.Failed(_identityErrorDescriber.UserAlreadyHasPassword());
         }
 
-        var result = await _userService.UpdatePasswordHash(user, masterPassword, validatePassword: true, refreshStamp: false);
-        if (!result.Succeeded)
-        {
-            return result;
-        }
-
-        user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
-        user.Key = key;
-
-        await _userRepository.ReplaceAsync(user);
-        await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
-
-
         if (string.IsNullOrWhiteSpace(orgSsoIdentifier))
         {
             throw new BadRequestException("Organization SSO Identifier required.");
@@ -87,6 +74,18 @@ public class SetInitialMasterPasswordCommandV1 : ISetInitialMasterPasswordComman
         {
             throw new BadRequestException("User not found within organization.");
         }
+
+        var result = await _userService.UpdatePasswordHash(user, masterPassword, validatePassword: true, refreshStamp: false);
+        if (!result.Succeeded)
+        {
+            return result;
+        }
+
+        user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
+        user.Key = key;
+
+        await _userRepository.ReplaceAsync(user);
+        await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
 
         // TDE users who go from a user without admin acct recovery permission to having it will be
         // required to set a MP for the first time and we don't want to re-execute the accept logic
