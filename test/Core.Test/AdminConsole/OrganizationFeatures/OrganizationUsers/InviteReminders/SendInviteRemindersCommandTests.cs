@@ -28,73 +28,8 @@ public class SendInviteRemindersCommandTests
 {
     private const int _batchSize = 100;
 
-    private static SutProvider<SendInviteRemindersCommand> GetSutProvider(bool flagEnabled = true,
-        int batchSize = _batchSize)
-    {
-        var sutProvider = new SutProvider<SendInviteRemindersCommand>()
-            .WithFakeTimeProvider()
-            .Create();
-
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.AutoReinviteUsers).Returns(flagEnabled);
-        sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteReminderBatchSize.Returns(batchSize);
-        sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
-            .CreateToken(Arg.Any<OrganizationUser>())
-            .Returns(info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
-            {
-                ExpirationDate = DateTime.UtcNow.AddDays(7)
-            });
-
-        return sutProvider;
-    }
-
-    /// <summary>
-    /// Makes the claim return <paramref name="claimed"/>, and the organization read return
-    /// <paramref name="organizations"/>.
-    /// </summary>
-    private static void ArrangeClaim(SutProvider<SendInviteRemindersCommand> sutProvider,
-        ICollection<OrganizationUserInviteReminder> claimed, params Organization[] organizations)
-    {
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ClaimInviteReminderSequencesAsync(Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<DateTime>(),
-                Arg.Any<int>())
-            .Returns(claimed);
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetManyByIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(organizations.ToList());
-    }
-
-    private static void FailMailCallsFor(SutProvider<SendInviteRemindersCommand> sutProvider,
-        Organization organization) =>
-        sutProvider.GetDependency<IMailService>()
-            .SendOrganizationInviteReminderEmailsAsync(
-                Arg.Is<OrganizationInvitesInfo>(info => info.OrganizationName == organization.DisplayName()),
-                Arg.Any<int>())
-            .ThrowsAsync(new InvalidOperationException("SMTP is down."));
-
-    private static void ArrangeSsoOrgWithoutUsePolicies(SutProvider<SendInviteRemindersCommand> sutProvider,
-        Organization organization, SsoConfig ssoConfig)
-    {
-        organization.UseSso = true;
-        organization.UsePolicies = false;
-        ssoConfig.OrganizationId = organization.Id;
-        ssoConfig.Enabled = true;
-        ArrangeClaim(sutProvider, [Reminder(organization, 1)], organization);
-        sutProvider.GetDependency<ISsoConfigRepository>()
-            .GetManyByOrganizationIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns([ssoConfig]);
-    }
-
-    private static OrganizationUserInviteReminder Reminder(Organization organization, byte reminderNumber) =>
-        new()
-        {
-            Id = CombGuid.Generate(),
-            OrganizationId = organization.Id,
-            Email = $"{Guid.NewGuid()}@example.com",
-            InviteRemindersSentCount = reminderNumber
-        };
-
     [Theory, BitAutoData]
-    public async Task SendInviteRemindersAsync_WhenFlagIsOff_MakesNoDatabaseCall(Organization organization)
+    public async Task SendInviteRemindersAsync_WhenFlagIsOff_SkipsTheRunAndLogsInformation(Organization organization)
     {
         var sutProvider = GetSutProvider(flagEnabled: false);
         ArrangeClaim(sutProvider, [Reminder(organization, 1)], organization);
@@ -104,15 +39,6 @@ public class SendInviteRemindersCommandTests
         Assert.Equal(0, result.Claimed);
         await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
             .ClaimInviteReminderSequencesAsync(default, default, default, default);
-    }
-
-    [Fact]
-    public async Task SendInviteRemindersAsync_WhenFlagIsOff_LogsInformation()
-    {
-        var sutProvider = GetSutProvider(flagEnabled: false);
-
-        await sutProvider.Sut.SendInviteRemindersAsync();
-
         sutProvider.GetDependency<ILogger<SendInviteRemindersCommand>>().Received(1).Log(
             LogLevel.Information,
             Arg.Any<EventId>(),
@@ -122,7 +48,7 @@ public class SendInviteRemindersCommandTests
     }
 
     [Fact]
-    public async Task SendInviteRemindersAsync_WhenBatchSizeIsZero_DoesNotClaim()
+    public async Task SendInviteRemindersAsync_WhenBatchSizeIsZero_SkipsTheRunAndLogsInformation()
     {
         var sutProvider = GetSutProvider(batchSize: 0);
 
@@ -131,15 +57,6 @@ public class SendInviteRemindersCommandTests
         Assert.Equal(0, result.Claimed);
         await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
             .ClaimInviteReminderSequencesAsync(default, default, default, default);
-    }
-
-    [Fact]
-    public async Task SendInviteRemindersAsync_WhenBatchSizeIsZero_LogsInformation()
-    {
-        var sutProvider = GetSutProvider(batchSize: 0);
-
-        await sutProvider.Sut.SendInviteRemindersAsync();
-
         sutProvider.GetDependency<ILogger<SendInviteRemindersCommand>>().Received(1).Log(
             LogLevel.Information,
             Arg.Any<EventId>(),
@@ -149,7 +66,7 @@ public class SendInviteRemindersCommandTests
     }
 
     [Fact]
-    public async Task SendInviteRemindersAsync_WhenBatchSizeIsBelowZero_ClaimsWithDefault()
+    public async Task SendInviteRemindersAsync_WhenBatchSizeIsBelowZero_ClaimsWithDefaultAndLogsWarning()
     {
         var sutProvider = GetSutProvider(batchSize: -1);
         ArrangeClaim(sutProvider, []);
@@ -159,16 +76,6 @@ public class SendInviteRemindersCommandTests
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
             .ClaimInviteReminderSequencesAsync(Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<DateTime>(),
                 InviteReminderConstants.DefaultBatchSize);
-    }
-
-    [Fact]
-    public async Task SendInviteRemindersAsync_WhenBatchSizeIsBelowZero_LogsWarning()
-    {
-        var sutProvider = GetSutProvider(batchSize: -1);
-        ArrangeClaim(sutProvider, []);
-
-        await sutProvider.Sut.SendInviteRemindersAsync();
-
         sutProvider.GetDependency<ILogger<SendInviteRemindersCommand>>().Received(1).Log(
             LogLevel.Warning,
             Arg.Any<EventId>(),
@@ -330,27 +237,23 @@ public class SendInviteRemindersCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SendInviteRemindersAsync_SsoOrgWithoutUsePolicies_MakesNoPolicyRead(
+    public async Task SendInviteRemindersAsync_SsoOrgWithoutUsePolicies_SendsWithoutSsoRequiredOrPolicyRead(
         Organization organization, SsoConfig ssoConfig)
     {
         var sutProvider = GetSutProvider();
-        ArrangeSsoOrgWithoutUsePolicies(sutProvider, organization, ssoConfig);
+        organization.UseSso = true;
+        organization.UsePolicies = false;
+        ssoConfig.OrganizationId = organization.Id;
+        ssoConfig.Enabled = true;
+        ArrangeClaim(sutProvider, [Reminder(organization, 1)], organization);
+        sutProvider.GetDependency<ISsoConfigRepository>()
+            .GetManyByOrganizationIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([ssoConfig]);
 
         await sutProvider.Sut.SendInviteRemindersAsync();
 
         await sutProvider.GetDependency<IPolicyRepository>().DidNotReceiveWithAnyArgs()
             .GetManyByOrganizationIdsTypeAsync(default!, default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SendInviteRemindersAsync_SsoOrgWithoutUsePolicies_SendsWithoutSsoRequired(
-        Organization organization, SsoConfig ssoConfig)
-    {
-        var sutProvider = GetSutProvider();
-        ArrangeSsoOrgWithoutUsePolicies(sutProvider, organization, ssoConfig);
-
-        await sutProvider.Sut.SendInviteRemindersAsync();
-
         await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationInviteReminderEmailsAsync(
             Arg.Is<OrganizationInvitesInfo>(info => info.OrgSsoEnabled && !info.OrgSsoLoginRequiredPolicyEnabled),
             1);
@@ -400,25 +303,7 @@ public class SendInviteRemindersCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SendInviteRemindersAsync_WhenOneMailCallFails_StillMakesTheOtherMailCalls(
-        Organization failingOrganization, Organization organization)
-    {
-        var sutProvider = GetSutProvider();
-        ArrangeClaim(sutProvider, [Reminder(failingOrganization, 1), Reminder(organization, 1), Reminder(organization, 2)],
-            failingOrganization, organization);
-        FailMailCallsFor(sutProvider, failingOrganization);
-
-        await sutProvider.Sut.SendInviteRemindersAsync();
-
-        var mailService = sutProvider.GetDependency<IMailService>();
-        await mailService.Received(1).SendOrganizationInviteReminderEmailsAsync(
-            Arg.Is<OrganizationInvitesInfo>(info => info.OrganizationName == organization.DisplayName()), 1);
-        await mailService.Received(1).SendOrganizationInviteReminderEmailsAsync(
-            Arg.Is<OrganizationInvitesInfo>(info => info.OrganizationName == organization.DisplayName()), 2);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SendInviteRemindersAsync_WhenOneMailCallFails_ReturnsCountsWithoutTheFailedMembers(
+    public async Task SendInviteRemindersAsync_WhenOneMailCallFails_StillSendsTheOthersAndCountsTheFailure(
         Organization failingOrganization, Organization organization)
     {
         var sutProvider = GetSutProvider();
@@ -430,6 +315,11 @@ public class SendInviteRemindersCommandTests
 
         var result = await sutProvider.Sut.SendInviteRemindersAsync();
 
+        var mailService = sutProvider.GetDependency<IMailService>();
+        await mailService.Received(1).SendOrganizationInviteReminderEmailsAsync(
+            Arg.Is<OrganizationInvitesInfo>(info => info.OrganizationName == organization.DisplayName()), 1);
+        await mailService.Received(1).SendOrganizationInviteReminderEmailsAsync(
+            Arg.Is<OrganizationInvitesInfo>(info => info.OrganizationName == organization.DisplayName()), 2);
         Assert.Equal(3, result.Claimed);
         Assert.Equal(2, result.Sent);
         Assert.Equal(1, result.Failed);
@@ -473,4 +363,56 @@ public class SendInviteRemindersCommandTests
         Assert.Equal(1, result.Failed);
         Assert.Equal([reminder.Id], result.SentMembers.Select(m => m.Id));
     }
+
+    private static SutProvider<SendInviteRemindersCommand> GetSutProvider(bool flagEnabled = true,
+        int batchSize = _batchSize)
+    {
+        var sutProvider = new SutProvider<SendInviteRemindersCommand>()
+            .WithFakeTimeProvider()
+            .Create();
+
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.AutoReinviteUsers).Returns(flagEnabled);
+        sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteReminderBatchSize.Returns(batchSize);
+        sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
+            .CreateToken(Arg.Any<OrganizationUser>())
+            .Returns(info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
+            {
+                ExpirationDate = DateTime.UtcNow.AddDays(7)
+            });
+
+        return sutProvider;
+    }
+
+    /// <summary>
+    /// Makes the claim return <paramref name="claimed"/>, and the organization read return
+    /// <paramref name="organizations"/>.
+    /// </summary>
+    private static void ArrangeClaim(SutProvider<SendInviteRemindersCommand> sutProvider,
+        ICollection<OrganizationUserInviteReminder> claimed, params Organization[] organizations)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .ClaimInviteReminderSequencesAsync(Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<DateTime>(),
+                Arg.Any<int>())
+            .Returns(claimed);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetManyByIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(organizations.ToList());
+    }
+
+    private static void FailMailCallsFor(SutProvider<SendInviteRemindersCommand> sutProvider,
+        Organization organization) =>
+        sutProvider.GetDependency<IMailService>()
+            .SendOrganizationInviteReminderEmailsAsync(
+                Arg.Is<OrganizationInvitesInfo>(info => info.OrganizationName == organization.DisplayName()),
+                Arg.Any<int>())
+            .ThrowsAsync(new InvalidOperationException("SMTP is down."));
+
+    private static OrganizationUserInviteReminder Reminder(Organization organization, byte reminderNumber) =>
+        new()
+        {
+            Id = CombGuid.Generate(),
+            OrganizationId = organization.Id,
+            Email = $"{Guid.NewGuid()}@example.com",
+            InviteRemindersSentCount = reminderNumber
+        };
 }
