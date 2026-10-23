@@ -13,6 +13,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Licenses;
@@ -67,6 +68,7 @@ public class UserService : UserManager<User>, IUserService
     private readonly IStripeSyncService _stripeSyncService;
     private readonly IRevokeNonCompliantOrganizationUserCommand _revokeNonCompliantOrganizationUserCommand;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
+    private readonly IRevokeTwoFactorRememberTokensCommand _revokeTwoFactorRememberTokensCommand;
     private readonly IDistributedCache _distributedCache;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
@@ -100,6 +102,7 @@ public class UserService : UserManager<User>, IUserService
         IStripeSyncService stripeSyncService,
         IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+        IRevokeTwoFactorRememberTokensCommand revokeTwoFactorRememberTokensCommand,
         IDistributedCache distributedCache,
         IPolicyRequirementQuery policyRequirementQuery,
         IHasPremiumAccessQuery hasPremiumAccessQuery,
@@ -137,6 +140,7 @@ public class UserService : UserManager<User>, IUserService
         _stripeSyncService = stripeSyncService;
         _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
+        _revokeTwoFactorRememberTokensCommand = revokeTwoFactorRememberTokensCommand;
         _distributedCache = distributedCache;
         _policyRequirementQuery = policyRequirementQuery;
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
@@ -731,11 +735,22 @@ public class UserService : UserManager<User>, IUserService
 
         providers.Remove(type);
         user.SetTwoFactorProviders(providers);
+
+        // Evaluated before the save, against the in-memory user that no longer has the provider.
+        // Revoking before the save means a failed revoke leaves the provider in place, so the user can
+        // simply retry. If evaluated after the save, the early return at the top would block any retry.
+        var removedLastProvider = !await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
+        if (removedLastProvider)
+        {
+            await _revokeTwoFactorRememberTokensCommand.RevokeAllForUserAsync(user.Id);
+        }
+
         await SaveUserAsync(user);
         await _eventService.LogUserEventAsync(user.Id, EventType.User_Disabled2fa);
 
-        if (!await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
+        if (removedLastProvider)
         {
+            // Revokes the user from organizations that require 2FA.
             await CheckPoliciesOnTwoFactorRemovalAsync(user);
         }
     }
@@ -748,6 +763,11 @@ public class UserService : UserManager<User>, IUserService
         {
             return false;
         }
+
+        // Sits after the recovery-code comparison so an unverified request cannot rotate stamps.
+        // Sits before SaveUserAsync, which consumes the recovery code: a failure here leaves the
+        // code usable, so a retry re-runs both steps.
+        await _revokeTwoFactorRememberTokensCommand.RevokeAllForUserAsync(user.Id);
 
         user.TwoFactorProviders = null;
         user.TwoFactorRecoveryCode = CoreHelpers.SecureRandomString(32, upper: false, special: false);
