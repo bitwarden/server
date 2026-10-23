@@ -8,7 +8,7 @@ using Xunit;
 namespace Bit.Api.Test.Auth.Models.Request.SsoJitProvisionFinish;
 
 #pragma warning disable CS0618 // exercising the legacy Keys while they still exist
-public class SsoJitProvisionFinishSetInitialPasswordRequestModelTests
+public class SsoJitProvisionFinishPasswordRequestModelTests
 {
     private const string _salt = "user@bitwarden.com";
     private const string _keypairError = "Must specify exactly one of AccountKeys or Keys.";
@@ -100,10 +100,10 @@ public class SsoJitProvisionFinishSetInitialPasswordRequestModelTests
         Assert.Single(result);
     }
 
-    private static SsoJitProvisionFinishSetInitialPasswordRequestModel CreateModel(
+    private static SsoJitProvisionFinishPasswordRequestModel CreateModel(
         int unlockIterations = 600000, string unlockSalt = _salt)
     {
-        return new SsoJitProvisionFinishSetInitialPasswordRequestModel
+        return new SsoJitProvisionFinishPasswordRequestModel
         {
             OrgIdentifier = "orgIdentifier",
             AcceptOrganizationInvite = false,

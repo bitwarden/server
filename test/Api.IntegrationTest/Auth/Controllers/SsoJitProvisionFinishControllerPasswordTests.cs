@@ -70,7 +70,7 @@ public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApp
     [Theory]
     [InlineData(false, OrganizationUserStatusType.Invited)]
     [InlineData(true, OrganizationUserStatusType.Accepted)]
-    public async Task FinishMasterPassword_V2_SetsPasswordAndKeys_AppliesAcceptOrganizationInvite(
+    public async Task FinishJitProvisionForPassword_V2_SetsPasswordAndKeys_AppliesAcceptOrganizationInvite(
         bool acceptOrganizationInvite, OrganizationUserStatusType expectedStatus)
     {
         // Arrange
@@ -95,7 +95,7 @@ public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApp
     [Theory]
     [InlineData(false, OrganizationUserStatusType.Invited)]
     [InlineData(true, OrganizationUserStatusType.Accepted)]
-    public async Task FinishMasterPassword_V1_SetsPasswordAndKeys_AppliesAcceptOrganizationInvite(
+    public async Task FinishJitProvisionForPassword_V1_SetsPasswordAndKeys_AppliesAcceptOrganizationInvite(
         bool acceptOrganizationInvite, OrganizationUserStatusType expectedStatus)
     {
         // Arrange - legacy Keys routes to the V1 command.
@@ -116,7 +116,7 @@ public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApp
     }
 
     [Fact]
-    public async Task FinishMasterPassword_AcceptOrganizationInviteOmitted_ReturnsBadRequest()
+    public async Task FinishJitProvisionForPassword_AcceptOrganizationInviteOmitted_ReturnsBadRequest()
     {
         // Arrange
         SetV2MpJitFlag(true);
@@ -133,7 +133,7 @@ public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApp
     }
 
     [Fact]
-    public async Task FinishMasterPassword_V2FlagOff_WithAccountKeys_ReturnsBadRequest()
+    public async Task FinishJitProvisionForPassword_V2FlagOff_WithAccountKeys_ReturnsBadRequest()
     {
         // Arrange
         SetV2MpJitFlag(false);
@@ -156,7 +156,7 @@ public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApp
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task FinishMasterPassword_WithoutKeypair_ReturnsBadRequest(bool v2FlagEnabled)
+    public async Task FinishJitProvisionForPassword_WithoutKeypair_ReturnsBadRequest(bool v2FlagEnabled)
     {
         // Arrange
         SetV2MpJitFlag(v2FlagEnabled);
@@ -172,8 +172,70 @@ public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApp
         await AssertUserUnchangedAsync(organization.Id, userEmail);
     }
 
+    [Theory]
+    [InlineData("masterPasswordAuthentication", false)]
+    [InlineData("masterPasswordAuthentication", true)]
+    [InlineData("masterPasswordUnlock", false)]
+    [InlineData("masterPasswordUnlock", true)]
+    public async Task FinishJitProvisionForPassword_MasterPasswordDataMissing_ReturnsBadRequest(
+        string propertyName, bool sendExplicitNull)
+    {
+        // Arrange
+        SetV2MpJitFlag(true);
+        var (organization, userEmail) = await ArrangeInvitedSsoJitMasterPasswordUserAsync();
+        var request = CreateModernRequest(userEmail, organization.Identifier!, acceptOrganizationInvite: true,
+            includeAccountKeys: true);
+        if (sendExplicitNull)
+        {
+            request[propertyName] = null;
+        }
+        else
+        {
+            request.Remove(propertyName);
+        }
+
+        // Act
+        var response = await PostAsync(JsonSerializer.Serialize(request));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await AssertUserUnchangedAsync(organization.Id, userEmail);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task FinishJitProvisionForPassword_AccountKeysAlreadyInitialized_ReturnsBadRequest(
+        bool v2FlagEnabled)
+    {
+        // Arrange
+        SetV2MpJitFlag(v2FlagEnabled);
+        var (organization, userEmail) = await ArrangeInvitedSsoJitMasterPasswordUserAsync();
+        var user = await _userRepository.GetByEmailAsync(userEmail);
+        Assert.NotNull(user);
+        user.PublicKey = "existingPublicKey";
+        user.PrivateKey = "existingPrivateKey";
+        await _userRepository.ReplaceAsync(user);
+
+        var json = CreateModernRequestJson(userEmail, organization.Identifier!, acceptOrganizationInvite: true,
+            includeAccountKeys: v2FlagEnabled, includeLegacyKeys: !v2FlagEnabled);
+
+        // Act
+        var response = await PostAsync(json);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var updatedUser = await _userRepository.GetByEmailAsync(userEmail);
+        Assert.NotNull(updatedUser);
+        Assert.Null(updatedUser.MasterPassword);
+        Assert.Null(updatedUser.Key);
+        Assert.Equal("existingPublicKey", updatedUser.PublicKey);
+        Assert.Equal("existingPrivateKey", updatedUser.PrivateKey);
+        await AssertOrgUserStatusAsync(organization.Id, updatedUser.Id, OrganizationUserStatusType.Invited);
+    }
+
     [Fact]
-    public async Task FinishMasterPassword_Unauthenticated_ReturnsUnauthorized()
+    public async Task FinishJitProvisionForPassword_Unauthenticated_ReturnsUnauthorized()
     {
         // Arrange - no login
         var json = CreateModernRequestJson("test@bitwarden.com", "test-org-identifier", acceptOrganizationInvite: false,
@@ -297,8 +359,15 @@ public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApp
         }
     }
 
-    // Salt equals the email because Stage 1 (PM-27044) requires salt == email on initial set.
     private static string CreateModernRequestJson(string userEmail, string orgIdentifier,
+        bool? acceptOrganizationInvite, bool includeAccountKeys, bool includeLegacyKeys = false)
+    {
+        return JsonSerializer.Serialize(CreateModernRequest(userEmail, orgIdentifier, acceptOrganizationInvite,
+            includeAccountKeys, includeLegacyKeys));
+    }
+
+    // Salt equals the email because Stage 1 (PM-27044) requires salt == email on initial set.
+    private static Dictionary<string, object?> CreateModernRequest(string userEmail, string orgIdentifier,
         bool? acceptOrganizationInvite, bool includeAccountKeys, bool includeLegacyKeys = false)
     {
         var kdf = new { kdfType = (int)KdfType.PBKDF2_SHA256, iterations = 600000 };
@@ -353,6 +422,6 @@ public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApp
 
         AddAcceptOrganizationInvite(request, acceptOrganizationInvite);
 
-        return JsonSerializer.Serialize(request);
+        return request;
     }
 }
