@@ -67,7 +67,7 @@ internal static class CipherComposer
     internal const int AppsPer100Logins = 24;
 
     /// <summary>
-    /// Logins per 100, among those drawn Fair or stronger, whose password no other login shares. VeryWeak and Weak
+    /// Logins per 100, among those drawn Fair or stronger, whose password is practically unique. VeryWeak and Weak
     /// draws always use the shared pools.
     /// </summary>
     internal const int UniquePasswordsPer100FairOrStronger = 80;

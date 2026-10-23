@@ -408,6 +408,50 @@ public class CipherComposerTests
         Assert.True(shared <= 10, $"Expected different orgs to get different passwords; {shared} of 1,000 matched.");
     }
 
+    [Theory]
+    [InlineData(PasswordStrength.Strong, 16, 3, 3)]
+    [InlineData(PasswordStrength.VeryStrong, 22, 4, 5)]
+    public void UniquePasswordGenerator_StrongAndVeryStrong_HalfArePassphrases(
+        PasswordStrength strength, int randomLength, int minWords, int maxWords)
+    {
+        const string separators = "-.#@$";
+        var generator = new UniquePasswordGenerator(42);
+        var passwords = Enumerable.Range(0, 2_000).Select(index => generator.GenerateByIndex(index, strength)).ToList();
+
+        var passphrases = passwords.Where(password => password.All(character => char.IsAsciiLetterLower(character) || separators.Contains(character))).ToList();
+        var random = passwords.Except(passphrases).ToList();
+
+        Assert.InRange(passphrases.Count, 900, 1_100);
+        Assert.All(random, password => Assert.Equal(randomLength, password.Length));
+        Assert.All(passphrases, password =>
+        {
+            var words = password.Split(separators.ToCharArray());
+            Assert.InRange(words.Length, minWords, maxWords);
+            Assert.All(words, word => Assert.Contains(word, PasswordWords.All));
+            Assert.Single(password.Where(separators.Contains).Distinct());
+        });
+    }
+
+    [Fact]
+    public void PasswordWords_All_AreDistinctLowercaseLetters()
+    {
+        Assert.Equal(256, PasswordWords.All.Length);
+        Assert.Equal(PasswordWords.All.Length, PasswordWords.All.Distinct().Count());
+        Assert.All(PasswordWords.All, word => Assert.True(word.All(char.IsAsciiLetterLower), word));
+    }
+
+    [Fact]
+    public void PasswordWords_All_CannotSpellAPooledPassphrase()
+    {
+        // A passphrase has at least 3 words, so single-word pool entries such as "monkey" cannot collide
+        var spellable = Passwords.All
+            .Select(password => (password, parts: password.Split('-', '.', '#', '@', '$')))
+            .Where(entry => entry.parts.Length >= 3 && entry.parts.All(part => PasswordWords.All.Contains(part.ToLowerInvariant())))
+            .Select(entry => entry.password);
+
+        Assert.Empty(spellable);
+    }
+
     [Fact]
     public void LoginNotesGenerator_NoteLengths_KeepTheirTierShares()
     {
