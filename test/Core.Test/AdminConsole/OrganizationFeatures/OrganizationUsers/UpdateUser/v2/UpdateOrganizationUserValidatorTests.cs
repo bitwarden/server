@@ -306,7 +306,7 @@ public class UpdateOrganizationUserValidatorTests
             performedBy: new StandardUser(Guid.NewGuid(), isProvider: false, OrganizationUserType.Custom));
 
         sutProvider.GetDependency<IOrganizationUserValidationService>()
-            .CanManageRoleChange(Arg.Any<IActingUser>(), Arg.Any<IOrganizationUserRole>(),
+            .ValidateAuthorityForRoleChange(Arg.Any<IActingUser>(), Arg.Any<IOrganizationUserRole>(),
                 Arg.Any<IOrganizationUserRole>())
             .Returns(new CustomUsersCannotManageAdminsOrOwners());
 

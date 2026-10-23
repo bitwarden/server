@@ -1,6 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Utilities.v2;
-using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -12,42 +11,62 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Organizat
 public class OrganizationUserValidationService(
     IOrganizationUserRepository organizationUserRepository) : IOrganizationUserValidationService
 {
-    public Error? CanManage(IOrganizationUserRole? actingUser, IOrganizationUserRole targetUser) =>
-        IsAuthorizedByRole(actingUser, targetUser.Type) ? null : CannotManageError(targetUser.Type);
-
-    public Error? CanManageRoleChange(IOrganizationUserRole actingUser, IOrganizationUserRole targetUser, IOrganizationUserRole newTargetUser)
+    public Error? ValidateAuthorityOver(IActingUser actingUser, IOrganizationUserRole targetUser)
     {
-        // Must be able to manage both the current and requested role.
-        var authorizedByRole = IsAuthorizedByRole(actingUser, targetUser.Type)
-                               && IsAuthorizedByRole(actingUser, newTargetUser.Type);
-
-        return authorizedByRole
-            ? ValidateCustomPermissionsGrant(actingUser, newTargetUser)
-            : CannotManageError(targetUser.Type, newTargetUser.Type);
-    }
-
-    public Error? CanManageRoleChange(IActingUser performedBy, IOrganizationUserRole targetUser, IOrganizationUserRole newTargetUser)
-    {
-        // SystemUsers exist outside the organization hierarchy.
-        if (performedBy is not StandardUser standardUser)
+        // SystemUsers exist outside the organization hierarchy and skip the check.
+        if (actingUser is SystemUser)
         {
             return null;
         }
 
-        return GetActingUser(standardUser, targetUser.OrganizationId)
-            .Match(
-                error => error,
-                role => CanManageRoleChange(role, targetUser, newTargetUser));
+        // Narrow to StandardUsers only - anything else is unhandled and would require an update
+        if (actingUser is not StandardUser standardUser)
+        {
+            throw new ArgumentOutOfRangeException(nameof(actingUser));
+        }
+
+        // Providers act with Owner authority, so they can manage anyone.
+        if (standardUser.IsProvider)
+        {
+            return null;
+        }
+
+        // A caller who is neither a member nor a provider has no standing to act on members.
+        if (standardUser.OrganizationUserType is null)
+        {
+            return new ActingUserMustBeMemberOrProvider();
+        }
+
+        var actingType = standardUser.OrganizationUserType;
+        return targetUser.Type switch
+        {
+            // Only an Owner can manage another Owner.
+            OrganizationUserType.Owner
+                when actingType is not OrganizationUserType.Owner
+                => new OnlyOwnersCanManageOwners(),
+
+            // Owners and Admins can manage Admins.
+            OrganizationUserType.Admin
+                when actingType is not (OrganizationUserType.Owner or OrganizationUserType.Admin)
+                => new CustomUsersCannotManageAdminsOrOwners(),
+
+            // Users and Custom members can be managed by Owners, Admins, or Custom users with ManageUsers.
+            OrganizationUserType.User or OrganizationUserType.Custom
+                when standardUser is not (
+                    { OrganizationUserType: OrganizationUserType.Owner or OrganizationUserType.Admin }
+                    or { OrganizationUserType: OrganizationUserType.Custom, Permissions.ManageUsers: true })
+                => new CustomUsersCannotManageAdminsOrOwners(),
+
+            // Any actor not rejected above is authorized for this target.
+            _ => null
+        };
     }
 
-    private static CommandResult<OrganizationUserRole> GetActingUser(StandardUser standardUser, Guid organizationId) =>
-        standardUser switch
-        {
-            // Providers can act as owners when managing organization members
-            { IsProvider: true } => new OrganizationUserRole(OrganizationUserType.Owner, organizationId),
-            { OrganizationUserType: not null } => new OrganizationUserRole(standardUser.OrganizationUserType.Value, organizationId, standardUser.Permissions),
-            _ => new ActingUserMustBeMemberOrProvider()
-        };
+    public Error? ValidateAuthorityForRoleChange(IActingUser actingUser, IOrganizationUserRole targetUser, IOrganizationUserRole newTargetUser) =>
+        // Must be able to manage both the current and requested role, and only grant permissions the actor holds.
+        ValidateAuthorityOver(actingUser, targetUser)
+        ?? ValidateAuthorityOver(actingUser, newTargetUser)
+        ?? ValidateCustomPermissionsGrant(actingUser, newTargetUser);
 
     public async Task<Error?> ValidateFreeOrgAdminLimitAsync(Guid? userId, PlanType planType,
         OrganizationUserType currentUserType, OrganizationUserType newUserType)
@@ -68,19 +87,20 @@ public class OrganizationUserValidationService(
     }
 
     private static CustomUsersCanOnlyGrantOwnPermissions? ValidateCustomPermissionsGrant(
-        IOrganizationUserRole actingUser, IOrganizationUserRole newTargetUser)
+        IActingUser actingUser, IOrganizationUserRole newTargetUser)
     {
         var newTargetPermissions = newTargetUser.GetPermissions();
 
-        // Owners and Admins can grant any custom permission; the check only applies to a Custom grantor.
+        // The check only applies to a Custom grantor acting as a member. Owners, Admins, providers, and system
+        // users can grant any custom permission.
         if (newTargetUser.Type != OrganizationUserType.Custom
             || newTargetPermissions is null
-            || actingUser.Type is OrganizationUserType.Owner or OrganizationUserType.Admin)
+            || actingUser is not StandardUser { IsProvider: false, OrganizationUserType: OrganizationUserType.Custom } customActor)
         {
             return null;
         }
 
-        var actorClaims = (actingUser.GetPermissions() ?? new Permissions())
+        var actorClaims = (customActor.Permissions ?? new Permissions())
             .ClaimsMap.ToDictionary(c => c.ClaimName, c => c.Permission);
 
         // The acting user must also hold every granted permission.
@@ -88,19 +108,4 @@ public class OrganizationUserValidationService(
             ? new CustomUsersCanOnlyGrantOwnPermissions()
             : null;
     }
-
-    private static BadRequestError CannotManageError(params OrganizationUserType[] targetTypes) =>
-        targetTypes.Contains(OrganizationUserType.Owner)
-            ? new OnlyOwnersCanManageOwners()
-            : new CustomUsersCannotManageAdminsOrOwners();
-
-    private static bool IsAuthorizedByRole(IOrganizationUserRole? actingUser, OrganizationUserType targetType) =>
-        actingUser switch
-        {
-            { Type: OrganizationUserType.Owner } => true,
-            { Type: OrganizationUserType.Admin } => targetType is not OrganizationUserType.Owner,
-            { Type: OrganizationUserType.Custom } when actingUser.GetPermissions()?.ManageUsers is true =>
-                targetType is OrganizationUserType.User or OrganizationUserType.Custom,
-            _ => false
-        };
 }
