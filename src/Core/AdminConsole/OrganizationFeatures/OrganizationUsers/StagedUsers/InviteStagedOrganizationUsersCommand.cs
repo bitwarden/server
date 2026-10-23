@@ -2,8 +2,11 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
+using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -26,6 +29,8 @@ public class InviteStagedOrganizationUsersCommand(
     IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
     IStripePaymentService stripePaymentService,
     IPricingClient pricingClient,
+    IReservePrivilegedControlsSeatsCommand reservePrivilegedControlsSeatsCommand,
+    IRevertPrivilegedControlsSeatsCommand revertPrivilegedControlsSeatsCommand,
     ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
     IEventService eventService,
     TimeProvider timeProvider,
@@ -63,9 +68,19 @@ public class InviteStagedOrganizationUsersCommand(
             return secretsManagerValidationError;
         }
 
+        // Captured before the reservation, because a successful autoscale writes the new total onto the entity.
+        var initialPamSeats = organization.PamSeats;
+
+        var pamSeatReservationError = await ReservePrivilegedControlsSeatsAsync(organization, eligible);
+        if (pamSeatReservationError is not null)
+        {
+            return pamSeatReservationError;
+        }
+
         var seatReservationError = await ReserveSeatsAsync(organization, seatsToAdd);
         if (seatReservationError is not null)
         {
+            await ReleasePrivilegedControlsSeatsAsync(organization, initialPamSeats);
             return seatReservationError;
         }
 
@@ -77,6 +92,7 @@ public class InviteStagedOrganizationUsersCommand(
         if (secretsManagerSeatReservationError is not null)
         {
             await ReleaseSeatsAsync(organization, seatsToAdd);
+            await ReleasePrivilegedControlsSeatsAsync(organization, initialPamSeats);
             return secretsManagerSeatReservationError;
         }
 
@@ -88,6 +104,7 @@ public class InviteStagedOrganizationUsersCommand(
         {
             await ReleaseSecretsManagerSeatsAsync(organization, secretsManagerSeatsToAdd, initialSecretsManagerSeats);
             await ReleaseSeatsAsync(organization, seatsToAdd);
+            await ReleasePrivilegedControlsSeatsAsync(organization, initialPamSeats);
             throw;
         }
 
@@ -389,6 +406,49 @@ public class InviteStagedOrganizationUsersCommand(
             logger.LogError(ex,
                 "Failed to release {SeatsToRelease} auto-added seat(s) for organization {OrganizationId}",
                 seatsToRelease, organization.Id);
+        }
+    }
+
+    /// <summary>
+    /// Reserves a Privileged Controls seat for each eligible member who already has access to it.
+    /// </summary>
+    private async Task<Error?> ReservePrivilegedControlsSeatsAsync(
+        Organization organization,
+        List<OrganizationUser> organizationUsers)
+    {
+        var membersWithPrivilegedControls = organization.UsePam
+            ? organizationUsers.Count(organizationUser => organizationUser.AccessPam)
+            : 0;
+
+        var reservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, membersWithPrivilegedControls);
+        return reservation switch
+        {
+            PrivilegedControlsSeatReservation.LimitReached => new PrivilegedControlsSeatLimitReached(),
+            PrivilegedControlsSeatReservation.SelfHostedShortfall => new CannotAutoscalePamSeatsOnSelfHost(),
+            _ => null
+        };
+    }
+
+    /// <summary>
+    /// Restores the Privileged Controls seat count captured before the reservation when a later step means
+    /// nobody will be invited.
+    /// </summary>
+    private async Task ReleasePrivilegedControlsSeatsAsync(Organization organization, int? initialPamSeats)
+    {
+        if (initialPamSeats is null || initialPamSeats == organization.PamSeats)
+        {
+            return;
+        }
+
+        try
+        {
+            await revertPrivilegedControlsSeatsCommand.Run(organization, initialPamSeats.Value);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Failed to release Privileged Controls seat(s) for organization {OrganizationId}",
+                organization.Id);
         }
     }
 }

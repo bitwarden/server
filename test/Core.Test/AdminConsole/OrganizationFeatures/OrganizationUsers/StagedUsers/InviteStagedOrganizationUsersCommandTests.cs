@@ -2,10 +2,13 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -711,6 +714,182 @@ public class InviteStagedOrganizationUsersCommandTests
         Assert.True(result.IsSuccess);
         // The discount grants access, it never revokes what was provisioned.
         Assert.All(organizationUsers, organizationUser => Assert.True(organizationUser.AccessSecretsManager));
+    }
+
+    /// <summary>
+    /// Gives the organization Privileged Controls with <paramref name="pamSeats"/> seats and the first
+    /// <paramref name="membersWithAccess"/> members access to it.
+    /// </summary>
+    private static void ArrangePrivilegedControls(
+        Organization organization,
+        List<OrganizationUser> organizationUsers,
+        int membersWithAccess,
+        int pamSeats = 5)
+    {
+        organization.UsePam = true;
+        organization.PamSeats = pamSeats;
+
+        for (var i = 0; i < organizationUsers.Count; i++)
+        {
+            organizationUsers[i].AccessPam = i < membersWithAccess;
+        }
+    }
+
+    /// <summary>
+    /// Makes the reservation behave like a successful autoscale, which writes the grown total onto the entity.
+    /// </summary>
+    private static void AutoscalePamSeatsTo(
+        SutProvider<InviteStagedOrganizationUsersCommand> sutProvider, Organization organization, int newPamSeats) =>
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, Arg.Any<int>())
+            .Returns(callInfo =>
+            {
+                organization.PamSeats = newPamSeats;
+                return PrivilegedControlsSeatReservation.Reserved;
+            });
+
+    [Theory, BitAutoData]
+    public async Task RunAsync_StagedMembersWithPam_ReservesTheirCount(
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        var request = Arrange(sutProvider, organization, organizationUsers, performedBy);
+        ArrangePrivilegedControls(organization, organizationUsers, membersWithAccess: 2);
+
+        await sutProvider.Sut.RunAsync(request);
+
+        await sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .Received(1)
+            .RunAsync(organization, 2);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RunAsync_PamAtLimit_ReturnsSeatLimitReachedBeforeReservingPasswordManagerSeats(
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        organization.MaxAutoscaleSeats = 100;
+        var request = Arrange(sutProvider, organization, organizationUsers, performedBy, seats: 10, occupiedSeats: 9);
+        ArrangePrivilegedControls(organization, organizationUsers, membersWithAccess: 2);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, Arg.Any<int>())
+            .Returns(PrivilegedControlsSeatReservation.LimitReached);
+
+        var result = await sutProvider.Sut.RunAsync(request);
+
+        Assert.IsType<PrivilegedControlsSeatLimitReached>(result.AsError);
+        await sutProvider.GetDependency<IOrganizationService>()
+            .DidNotReceiveWithAnyArgs()
+            .AutoAddSeatsAsync(default!, default);
+        await AssertNothingHappenedAsync(sutProvider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RunAsync_PamSelfHostedShortfall_ReturnsCannotAutoscaleOnSelfHost(
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        var request = Arrange(sutProvider, organization, organizationUsers, performedBy);
+        ArrangePrivilegedControls(organization, organizationUsers, membersWithAccess: 2);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, Arg.Any<int>())
+            .Returns(PrivilegedControlsSeatReservation.SelfHostedShortfall);
+
+        var result = await sutProvider.Sut.RunAsync(request);
+
+        Assert.IsType<CannotAutoscalePamSeatsOnSelfHost>(result.AsError);
+        await AssertNothingHappenedAsync(sutProvider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RunAsync_PasswordManagerReservationFails_RevertsPamSeats(
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        organization.MaxAutoscaleSeats = 100;
+        var request = Arrange(sutProvider, organization, organizationUsers, performedBy, seats: 10, occupiedSeats: 10);
+        ArrangePrivilegedControls(organization, organizationUsers, membersWithAccess: 2, pamSeats: 5);
+        AutoscalePamSeatsTo(sutProvider, organization, 7);
+        sutProvider.GetDependency<IOrganizationService>()
+            .AutoAddSeatsAsync(organization, Arg.Any<int>())
+            .ThrowsAsync(new BadRequestException("Seat limit has been reached."));
+
+        var result = await sutProvider.Sut.RunAsync(request);
+
+        Assert.True(result.IsError);
+        await sutProvider.GetDependency<IRevertPrivilegedControlsSeatsCommand>()
+            .Received(1)
+            .Run(organization, 5);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RunAsync_SecretsManagerAdjustFails_RevertsPamSeats(
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        var request = ArrangeWithSecretsManager(sutProvider, organization, organizationUsers, performedBy,
+            seats: 10, occupiedSeats: 9);
+        ArrangePrivilegedControls(organization, organizationUsers, membersWithAccess: 2, pamSeats: 5);
+        AutoscalePamSeatsTo(sutProvider, organization, 7);
+        sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+            .UpdateSubscriptionAsync(Arg.Any<SecretsManagerSubscriptionUpdate>())
+            .ThrowsAsync(new GatewayException("Stripe rejected the subscription change."));
+
+        var result = await sutProvider.Sut.RunAsync(request);
+
+        Assert.IsType<SecretsManagerSeatExpansionFailed>(result.AsError);
+        await sutProvider.GetDependency<IRevertPrivilegedControlsSeatsCommand>()
+            .Received(1)
+            .Run(organization, 5);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RunAsync_InviteSendFails_RevertsPamSeatsAndRethrows(
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        var request = Arrange(sutProvider, organization, organizationUsers, performedBy);
+        ArrangePrivilegedControls(organization, organizationUsers, membersWithAccess: 2, pamSeats: 5);
+        AutoscalePamSeatsTo(sutProvider, organization, 7);
+        FailInviteSend(sutProvider);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.RunAsync(request));
+
+        await sutProvider.GetDependency<IRevertPrivilegedControlsSeatsCommand>()
+            .Received(1)
+            .Run(organization, 5);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RunAsync_PamRevertFails_StillRethrowsTheSendFailure(
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        var request = Arrange(sutProvider, organization, organizationUsers, performedBy);
+        ArrangePrivilegedControls(organization, organizationUsers, membersWithAccess: 2, pamSeats: 5);
+        AutoscalePamSeatsTo(sutProvider, organization, 7);
+        FailInviteSend(sutProvider);
+        sutProvider.GetDependency<IRevertPrivilegedControlsSeatsCommand>()
+            .Run(organization, 5)
+            .ThrowsAsync(new GatewayException("Stripe is unreachable."));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.RunAsync(request));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RunAsync_NoPamSeatsAdded_DoesNotRevert(
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        var request = Arrange(sutProvider, organization, organizationUsers, performedBy);
+        ArrangePrivilegedControls(organization, organizationUsers, membersWithAccess: 2, pamSeats: 5);
+        FailInviteSend(sutProvider);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.RunAsync(request));
+
+        await sutProvider.GetDependency<IRevertPrivilegedControlsSeatsCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .Run(default!, default);
     }
 
     /// <summary>Asserts the request succeeded overall but reported <typeparamref name="TError"/> for one member.</summary>
