@@ -119,7 +119,7 @@ public class SendInviteRemindersCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SendInviteRemindersAsync_WhenClaimFillsBatch_LogsWarning(Organization organization)
+    public async Task SendInviteRemindersAsync_WhenClaimFillsBatch_LogsInformation(Organization organization)
     {
         var sutProvider = GetSutProvider(batchSize: 2);
         ArrangeClaim(sutProvider, [Reminder(organization, 1), Reminder(organization, 1)], organization);
@@ -127,7 +127,7 @@ public class SendInviteRemindersCommandTests
         await sutProvider.Sut.SendInviteRemindersAsync();
 
         sutProvider.GetDependency<ILogger<SendInviteRemindersCommand>>().Received(1).Log(
-            LogLevel.Warning,
+            LogLevel.Information,
             Arg.Any<EventId>(),
             Arg.Is<object>(state => state.ToString()!.Contains("filled the batch size of 2")),
             null,

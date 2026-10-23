@@ -60,7 +60,8 @@ public class SendInviteRemindersCommand(
 
         if (claimed.Count >= batchSize)
         {
-            logger.LogWarning("Invite reminder claim filled the batch size of {BatchSize}. A backlog exists.",
+            logger.LogInformation(
+                "Invite reminder claim filled the batch size of {BatchSize}. More reminders may be due for the next run.",
                 batchSize);
         }
 
