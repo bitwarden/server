@@ -79,7 +79,7 @@ public class SendInviteRemindersCommandTests
         sutProvider.GetDependency<ILogger<SendInviteRemindersCommand>>().Received(1).Log(
             LogLevel.Warning,
             Arg.Any<EventId>(),
-            Arg.Is<object>(state => state.ToString()!.Contains("-1")),
+            Arg.Is<object>(state => state.ToString()!.Contains("batch size -1 is below 0")),
             null,
             Arg.Any<Func<object, Exception?, string>>());
     }
