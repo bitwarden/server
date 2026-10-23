@@ -1,11 +1,11 @@
 ﻿using Bit.Core.AdminConsole.Models.Mail.Mailer.MemberEmailChanged;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.UserFeatures.UserEmail;
-using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -27,7 +27,7 @@ public class UpdateOrganizationUserCommand(
     IOrganizationUserRepository organizationUserRepository,
     IUpdateOrganizationUserValidator validator,
     ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
-    ICountNewPamSeatsRequiredQuery countNewPamSeatsRequiredQuery,
+    IReservePrivilegedControlsSeatsCommand reservePrivilegedControlsSeatsCommand,
     IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
     IPricingClient pricingClient,
     IEventService eventService,
@@ -204,15 +204,19 @@ public class UpdateOrganizationUserCommand(
 
     private async Task<CommandError?> TryEnablingPamAsync(UpdateOrganizationUserRequest request)
     {
-        var additionalPamSeatsRequired =
-            await countNewPamSeatsRequiredQuery.CountNewPamSeatsRequiredAsync(request.Organization, 1);
-        // Only self-hosted instances are limited here: they cannot change their subscription. Cloud grants are not seat-limited by this command.
-        if (additionalPamSeatsRequired > 0 && globalSettings.SelfHosted)
+        // Only members who occupy a seat need one reserved. Revoked and staged members are given access without one.
+        if (!PrivilegedControlsSeatOccupancy.OccupiesSeat(request.OrganizationUserToUpdate.Status))
         {
-            return new CannotAutoscalePamSeatsOnSelfHost();
+            return null;
         }
 
-        return null;
+        var reservation = await reservePrivilegedControlsSeatsCommand.RunAsync(request.Organization, 1);
+        return reservation switch
+        {
+            PrivilegedControlsSeatReservation.LimitReached => new PrivilegedControlsSeatLimitReached(),
+            PrivilegedControlsSeatReservation.SelfHostedShortfall => new CannotAutoscalePamSeatsOnSelfHost(),
+            _ => null
+        };
     }
 
     private async Task<UpdateOrganizationUserRequest> LoadUserToUpdateAsync(UpdateOrganizationUserRequest request)
