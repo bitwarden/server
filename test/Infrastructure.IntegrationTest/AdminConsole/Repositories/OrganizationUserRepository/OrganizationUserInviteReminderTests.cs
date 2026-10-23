@@ -133,6 +133,25 @@ public class OrganizationUserInviteReminderTests
     }
 
     [Theory, DatabaseData]
+    public async Task ClaimInviteReminderSequencesAsync_LastReminder_ClearsDueDate(
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        // Arrange
+        var (now, oldestDueDate, nextDueDate) = CreateClaimWindow();
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var orgUser = await CreateInvitedAsync(organizationUserRepository, organization, now.AddDays(-1), 2);
+
+        // Act
+        var claimed = await organizationUserRepository.ClaimInviteReminderSequencesAsync(
+            now, oldestDueDate, nextDueDate, BatchSize);
+
+        // Assert
+        Assert.Equal(3, Assert.Single(claimed, c => c.Id == orgUser.Id).InviteRemindersSentCount);
+        await AssertSequenceAsync(organizationUserRepository, orgUser.Id, null, 3);
+    }
+
+    [Theory, DatabaseData]
     public async Task ClaimInviteReminderSequencesAsync_ConcurrentClaims_ClaimEachMemberOnce(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository)
