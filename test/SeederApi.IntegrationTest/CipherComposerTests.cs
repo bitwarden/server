@@ -409,13 +409,13 @@ public class CipherComposerTests
     }
 
     [Fact]
-    public void LoginExtrasGenerator_NoteLengths_KeepTheirTierShares()
+    public void LoginNotesGenerator_NoteLengths_KeepTheirTierShares()
     {
         const int noteCount = CipherComposer.NotesPer100Logins;
-        var generator = new LoginExtrasGenerator(42);
+        var generator = new LoginNotesGenerator(42);
 
         var lengths = Enumerable.Range(0, noteCount)
-            .Select(rank => generator.GenerateNotes(rank, rank, noteCount, "Engineering").Length)
+            .Select(rank => generator.GenerateByIndex(rank, rank, noteCount, "Engineering").Length)
             .ToList();
 
         // One note is 100 / noteCount points of share, so rounding to whole notes moves a share by at most half that

@@ -165,9 +165,9 @@ internal static class CipherComposer
             Type = CipherType.Login,
             Name = $"{company.Name} ({company.Category})",
             Notes = noteRank < NotesPer100Logins
-                ? generator.LoginExtras.GenerateNotes(index, noteRank, NotesPer100Logins, company.Category.ToString())
+                ? generator.LoginNotes.GenerateByIndex(index, noteRank, NotesPer100Logins, company.Category.ToString())
                 : null,
-            Fields = Spread(index, 17, 7) < FieldsPer100Logins ? generator.LoginExtras.GenerateFields(index) : null,
+            Fields = Spread(index, 17, 7) < FieldsPer100Logins ? generator.CustomField.GenerateByIndex(index) : null,
             EncryptionKey = encryptionKey,
             CipherEncryption = EncryptionFor(index),
             OrganizationId = organizationId,
@@ -177,7 +177,7 @@ internal static class CipherComposer
             {
                 Username = username,
                 Password = ComposePassword(index, slot, total, generator, passwordDistribution),
-                Totp = Spread(index, 23, 19) < TotpPer100Logins ? generator.LoginExtras.GenerateTotpSecret(index) : null,
+                Totp = Spread(index, 23, 19) < TotpPer100Logins ? generator.TotpSecret.GenerateByIndex(index) : null,
                 Uris = uris,
                 Fido2Credentials = fido2Credentials,
                 PasswordHistory = passwordHistory

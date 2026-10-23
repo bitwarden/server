@@ -5,12 +5,9 @@ using Bogus;
 
 namespace Bit.Seeder.Data.Generators;
 
-internal sealed class CardDataGenerator
+internal sealed class CardDataGenerator(int seed, GeographicRegion region = GeographicRegion.Global)
 {
     private static readonly ThreadLocal<Faker> _threadFaker = new(() => new Faker());
-
-    private readonly int _seed;
-    private readonly GeographicRegion _region;
 
     private static readonly Dictionary<GeographicRegion, string[]> _regionalBrands = new()
     {
@@ -23,20 +20,14 @@ internal sealed class CardDataGenerator
         [GeographicRegion.Global] = ["Visa", "Mastercard", "Amex", "Discover", "JCB", "UnionPay", "Maestro", "Elo"]
     };
 
-    internal CardDataGenerator(int seed, GeographicRegion region = GeographicRegion.Global)
-    {
-        _seed = seed;
-        _region = region;
-    }
-
     /// <summary>
     /// Generates a deterministic card based on index.
     /// </summary>
     internal CardViewDto GenerateByIndex(int index)
     {
         var seededFaker = _threadFaker.Value!;
-        seededFaker.Random = new Randomizer(_seed + index);
-        var brands = _regionalBrands[_region];
+        seededFaker.Random = new Randomizer(seed + index);
+        var brands = _regionalBrands[region];
         var brand = brands[index % brands.Length];
 
         return new CardViewDto
