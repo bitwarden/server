@@ -9,7 +9,9 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Bit.RustSDK;
+using Bit.Seeder.Extensions;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Services;
@@ -33,9 +35,9 @@ public struct SingleProviderSceneResult
 /// entity changes as <c>ProviderBillingService.AddExistingOrganization</c>, and each plan's allocated seats are the
 /// summed seats of its linked clients; Pending and Reseller links leave the organization unchanged. Type/status pairs
 /// production cannot create (Reseller not Created, MSP/Business Unit Created) are rejected, as are Stripe IDs on a
-/// Pending provider. The scene makes no Stripe
-/// calls: it does not cancel client subscriptions or move customer balances, and it only links caller-supplied
-/// Stripe customer/subscription IDs to the provider.
+/// Pending provider, and any request on a self-hosted instance. The scene makes no Stripe calls: it does not cancel
+/// client subscriptions or move customer balances, and it only links caller-supplied Stripe customer/subscription
+/// IDs to the provider.
 /// </summary>
 public class SingleProviderScene(
     IUserRepository userRepository,
@@ -44,6 +46,7 @@ public class SingleProviderScene(
     IProviderUserRepository providerUserRepository,
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderPlanRepository providerPlanRepository,
+    IGlobalSettings globalSettings,
     IManglerService manglerService) : IScene<SingleProviderScene.Request, SingleProviderSceneResult>
 {
     public class Request
@@ -82,6 +85,8 @@ public class SingleProviderScene(
 
     public async Task<SceneResult<SingleProviderSceneResult>> SeedAsync(Request request)
     {
+        globalSettings.ThrowIfSelfHosted("Providers");
+
         var status = ResolveStatus(request);
         var convertsToManagedClient =
             request.Type.SupportsConsolidatedBilling() && status == ProviderStatusType.Billable;

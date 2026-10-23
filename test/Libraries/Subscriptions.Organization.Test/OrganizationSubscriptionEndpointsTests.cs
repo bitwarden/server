@@ -1,4 +1,6 @@
-﻿using Bit.Core.Auth.Identity;
+﻿using Bit.Core;
+using Bit.Core.Auth.Identity;
+using Bit.Invoicing;
 using Bit.OrganizationAuthorization;
 using Bit.Subscriptions.Organization.Requirements;
 using Bitwarden.Server.Sdk.Features;
@@ -7,6 +9,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Routing;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Subscriptions.Organization.Test;
@@ -37,6 +40,12 @@ public class OrganizationSubscriptionEndpointsTests
         // delegate, not a flag-name string — presence guards against a dropped RequireFeature.
         var feature = endpoint.Metadata.GetMetadata<IFeatureMetadata>();
         Assert.NotNull(feature);
+
+        var featureService = Substitute.For<IFeatureService>();
+        featureService.IsEnabled(Arg.Any<string>(), Arg.Any<bool>()).Returns(true);
+        Assert.True(feature!.FeatureCheck(featureService));
+        featureService.Received().IsEnabled(InvoicingFeatureFlags.PM36631_PreviewDrivenCart, Arg.Any<bool>());
+        featureService.DidNotReceive().IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support, Arg.Any<bool>());
 
         var tags = endpoint.Metadata.GetMetadata<ITagsMetadata>();
         Assert.NotNull(tags);
