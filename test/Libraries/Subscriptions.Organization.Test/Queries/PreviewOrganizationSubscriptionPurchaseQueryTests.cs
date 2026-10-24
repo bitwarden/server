@@ -498,6 +498,24 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
     }
 
     [Fact]
+    public async Task Run_WhenThePlanHasNoPromotionalMinimumList_FallsBackToTheDefault()
+    {
+        _pricingClient.GetPlan(PlanType.EnterpriseAnnually).Returns(TestPlan.SeatBased("enterprise-seat-annually", "storage-gb-annually", "sm-enterprise-seat-annually", "sm-enterprise-sa-annually", PrivilegedControls("pam-seat-annually") with
+        {
+            PromotionalSeatMinimums = null!
+        }));
+        ArrangePreview();
+
+        await _sut.Run(User(), Request(Purchase(ProductTierType.Enterprise) with
+        {
+            PrivilegedControls = new PrivilegedControlsSelections(PamPromotionalSeatMinimum)
+        }));
+
+        Assert.Single(CapturedOptions().SubscriptionDetails.Items,
+            item => item.Price == "pam-seat-annually" && item.Quantity == PamDefaultSeatMinimum);
+    }
+
+    [Fact]
     public async Task Run_WhenPrivilegedControlsBillingIsDisabled_IgnoresTheSelection()
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(false);

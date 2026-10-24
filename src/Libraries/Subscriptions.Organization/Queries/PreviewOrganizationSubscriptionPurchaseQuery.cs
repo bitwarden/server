@@ -386,24 +386,24 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
             }
         }
 
-        // Trials bill Privileged Controls at the resolved seat minimum, matching subscription creation.
         // Run rejects a selection on a plan without Privileged Controls support before this runs.
         if (privilegedControls is not null)
         {
-            var requestedMinimum = privilegedControls.RequestedSeatMinimum is { } minimum &&
-                plan.PrivilegedControls.PromotionalSeatMinimums?.Contains(minimum) == true
-                ? minimum
-                : plan.PrivilegedControls.DefaultSeatMinimum;
-
             items.Add(new InvoiceSubscriptionDetailsItemOptions
             {
                 Price = plan.PrivilegedControls.StripeSeatPlanId,
-                Quantity = requestedMinimum
+                Quantity = ResolvePrivilegedControlsSeatMinimum(plan, privilegedControls)
             });
         }
 
         return items;
     }
+
+    private static int ResolvePrivilegedControlsSeatMinimum(OrganizationPlan plan, PrivilegedControlsSelections privilegedControls) =>
+        privilegedControls.RequestedSeatMinimum is { } minimum &&
+        plan.PrivilegedControls.PromotionalSeatMinimums?.Contains(minimum) == true
+            ? minimum
+            : plan.PrivilegedControls.DefaultSeatMinimum;
 
     // All-or-nothing: an ineligible coupon drops every coupon rather than failing the preview.
     private async Task<List<InvoiceDiscountOptions>?> ResolveEligibleFamiliesDiscountsAsync(UserEntity user, string[]? coupons)
