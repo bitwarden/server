@@ -126,7 +126,7 @@ internal sealed class CreateOrganizationSubscriptionCommand(
         }
 
         return purchase.PrivilegedControls.RequestedSeatMinimum is { } minimum &&
-               plan.PrivilegedControls.PromotionalSeatMinimums.Contains(minimum)
+               plan.PrivilegedControls.PromotionalSeatMinimums?.Contains(minimum) == true
             ? minimum
             : plan.PrivilegedControls.DefaultSeatMinimum;
     }

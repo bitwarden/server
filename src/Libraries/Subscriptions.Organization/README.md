@@ -116,6 +116,13 @@ Enterprise bill their seat price at `seats`. Coupons apply only to Families and 
 they apply only when `ISubscriptionDiscountService` finds every one eligible for the Families
 discount tier, and otherwise they are dropped silently.
 
+Privileged Controls is Enterprise-only and gated by `pm-39883-pam-billing-support`. With the flag
+off the `PrivilegedControls` selection is ignored entirely — no line and no error. With it on, the
+query rejects Privileged Controls on a non-Enterprise tier or alongside a standalone Secrets Manager
+trial with a 400 keyed to `Purchase.PrivilegedControls`, and otherwise bills the resolved seat
+minimum at the Privileged Controls seat price — the requested minimum when it's on the plan's
+approved promotional list, otherwise the plan default — matching what subscription creation bills.
+
 The Stripe tax ID type is derived with `ITaxService`. If it can't be derived, the query falls back
 to the client's code and logs a warning naming only the country and that code, never the tax ID
 value. A missing seats line or a plan the pricing service doesn't have is a catalog fault the user
