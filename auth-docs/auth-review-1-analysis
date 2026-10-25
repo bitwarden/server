@@ -1,0 +1,7 @@
+# code location 1
+location - client side
+libs/auth/src/angular/login/login.component.ts
+Line - 198
+Line -227
+From line 198 to line 227 the constructor defaultOnInit is labeled as private where the  activatedRoute.queryParams are passed to this.loginComponentService.handleQueryParamErrors. This component of the code waits for query parameters that are attached to the login email of the user. These lines deal with reading the URL query parameters and coordinating to check whether there are any special instructions attached to it such as a token or error messages. 
+This part of code can prevent some risks such as opening unintended redirect vulnerabilities by centralizing query evaluation through controlled helper service which is (LoginComponentService). Rather than approving every url login attempts, this application prevents attackers from using malicious login attempts.
