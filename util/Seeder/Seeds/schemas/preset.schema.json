@@ -535,7 +535,7 @@
           "properties": {
             "shape": {
               "type": "string",
-              "enum": ["realistic", "lightUsage", "heavyUsage"],
+              "enum": ["realistic", "lightUsage", "heavyUsage", "pendingMigration"],
               "description": "Named distribution for personal cipher counts per user. Default: flat countPerUser."
             }
           }

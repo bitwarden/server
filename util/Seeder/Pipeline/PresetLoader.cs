@@ -424,8 +424,9 @@ internal static class PresetLoader
             "realistic" => PersonalCipherDistributions.Realistic,
             "lightusage" => PersonalCipherDistributions.LightUsage,
             "heavyusage" => PersonalCipherDistributions.HeavyUsage,
+            "pendingmigration" => PersonalCipherDistributions.PendingMigration,
             _ => throw new InvalidOperationException(
-                $"Unknown personal cipher distribution '{shape}'. Valid values: realistic, lightUsage, heavyUsage."),
+                $"Unknown personal cipher distribution '{shape}'. Valid values: realistic, lightUsage, heavyUsage, pendingMigration."),
         };
     }
 
