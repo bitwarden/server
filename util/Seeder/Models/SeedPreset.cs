@@ -68,6 +68,19 @@ internal record SeedPresetUsers
 {
     public int Count { get; init; }
     public bool RealisticStatusMix { get; init; }
+    public SeedPresetStatusMix? StatusMix { get; init; }
+    public int AdminCount { get; init; }
+}
+
+/// <summary>
+/// Relative member status weights; the loader normalizes them, so they need not sum to 1.
+/// </summary>
+internal record SeedPresetStatusMix
+{
+    public double Confirmed { get; init; }
+    public double Invited { get; init; }
+    public double Accepted { get; init; }
+    public double Revoked { get; init; }
 }
 
 internal record SeedPresetGroups

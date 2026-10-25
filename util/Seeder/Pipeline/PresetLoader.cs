@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Enums;
 using Bit.Core.Vault.Enums;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
@@ -180,7 +181,11 @@ internal static class PresetLoader
 
         if (preset.Users is not null)
         {
-            builder.AddUsers(preset.Users.Count, preset.Users.RealisticStatusMix);
+            builder.AddUsers(
+                preset.Users.Count,
+                preset.Users.RealisticStatusMix,
+                ParseStatusMix(preset.Users.StatusMix),
+                preset.Users.AdminCount);
         }
 
         if (preset.Groups is not null)
@@ -250,6 +255,26 @@ internal static class PresetLoader
         LimitCollectionCreation = org.LimitCollectionCreation,
         LimitCollectionDeletion = org.LimitCollectionDeletion,
     };
+
+    /// <summary>
+    /// Normalizes the preset's status weights into a distribution. <see cref="PresetValidator"/> has already
+    /// rejected negative weights and a mix with no positive weight.
+    /// </summary>
+    private static Distribution<OrganizationUserStatusType>? ParseStatusMix(SeedPresetStatusMix? mix)
+    {
+        if (mix is null)
+        {
+            return null;
+        }
+
+        var total = mix.Confirmed + mix.Invited + mix.Accepted + mix.Revoked;
+
+        return new Distribution<OrganizationUserStatusType>(
+            (OrganizationUserStatusType.Confirmed, mix.Confirmed / total),
+            (OrganizationUserStatusType.Invited, mix.Invited / total),
+            (OrganizationUserStatusType.Accepted, mix.Accepted / total),
+            (OrganizationUserStatusType.Revoked, mix.Revoked / total));
+    }
 
     /// <summary>
     /// Converts the preset's policy names to rows. <see cref="PresetValidator"/> has already rejected unknown

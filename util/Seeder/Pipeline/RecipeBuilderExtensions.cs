@@ -2,6 +2,7 @@
 using Bit.Core.Auth.Enums;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Services;
+using Bit.Core.Enums;
 using Bit.Core.Vault.Enums;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
@@ -253,9 +254,16 @@ public static class RecipeBuilderExtensions
     /// <param name="builder">The recipe builder</param>
     /// <param name="count">Number of users to generate</param>
     /// <param name="realisticStatusMix">If true, includes revoked/invited users; if false, all confirmed</param>
+    /// <param name="statusMix">Explicit status distribution; takes precedence over <paramref name="realisticStatusMix"/></param>
+    /// <param name="adminCount">Number of Confirmed members created as Admins (the rest are Users)</param>
     /// <returns>The builder for fluent chaining</returns>
     /// <exception cref="InvalidOperationException">Thrown when UseRoster() was already called</exception>
-    public static RecipeBuilder AddUsers(this RecipeBuilder builder, int count, bool realisticStatusMix = false)
+    public static RecipeBuilder AddUsers(
+        this RecipeBuilder builder,
+        int count,
+        bool realisticStatusMix = false,
+        Distribution<OrganizationUserStatusType>? statusMix = null,
+        int adminCount = 0)
     {
         if (builder.HasRosterUsers)
         {
@@ -264,7 +272,7 @@ public static class RecipeBuilderExtensions
         }
 
         builder.HasGeneratedUsers = true;
-        builder.AddStep(_ => new CreateUsersStep(count, realisticStatusMix));
+        builder.AddStep(_ => new CreateUsersStep(count, realisticStatusMix, statusMix, adminCount));
         return builder;
     }
 

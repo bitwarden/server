@@ -10,6 +10,7 @@ public class PresetValidatorTests
     private const string _presetPrefix = "presets.";
     private const string _policyEnterprise = "features.policy-enterprise";
     private const string _ssoEnterprise = "features.sso-enterprise";
+    private const string _sterlingCooper = "scale.md-balanced-sterling-cooper";
 
     private readonly SeedReader _reader = new();
 
@@ -80,6 +81,62 @@ public class PresetValidatorTests
         var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _ssoEnterprise));
 
         Assert.Contains("enables RequireSso without singleOrg", ex.Message);
+    }
+
+    [Fact]
+    public void Users_StatusMixWithRealisticStatusMix_Throws()
+    {
+        var preset = ReadPreset(_sterlingCooper);
+        preset = preset with { Users = preset.Users! with { StatusMix = new SeedPresetStatusMix { Confirmed = 1 } } };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _sterlingCooper));
+
+        Assert.Contains("sets both 'users.statusMix' and 'users.realisticStatusMix'", ex.Message);
+    }
+
+    [Fact]
+    public void Users_StatusMixWithoutPositiveWeight_Throws()
+    {
+        var preset = ReadPreset(_sterlingCooper);
+        preset = preset with
+        {
+            Users = preset.Users! with { RealisticStatusMix = false, StatusMix = new SeedPresetStatusMix() }
+        };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _sterlingCooper));
+
+        Assert.Contains("'users.statusMix' with no positive weight", ex.Message);
+    }
+
+    [Fact]
+    public void Users_StatusMixWithNegativeWeight_Throws()
+    {
+        var preset = ReadPreset(_sterlingCooper);
+        preset = preset with
+        {
+            Users = preset.Users! with
+            {
+                RealisticStatusMix = false,
+                StatusMix = new SeedPresetStatusMix { Confirmed = 1, Accepted = -0.5 }
+            }
+        };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _sterlingCooper));
+
+        Assert.Contains("'users.statusMix' with a negative weight for accepted", ex.Message);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(11)]
+    public void Users_AdminCountOutsideRange_Throws(int adminCount)
+    {
+        var preset = ReadPreset(_sterlingCooper);
+        preset = preset with { Users = preset.Users! with { Count = 10, AdminCount = adminCount } };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _sterlingCooper));
+
+        Assert.Contains($"'users.adminCount' {adminCount}; it must be between 0 and 'users.count'", ex.Message);
     }
 
     private SeedPreset ReadPreset(string presetName) => _reader.Read<SeedPreset>($"{_presetPrefix}{presetName}");

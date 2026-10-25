@@ -103,6 +103,23 @@
           "type": "boolean",
           "default": false,
           "description": "When true and count >= 10, creates realistic mix: 85% Confirmed, 5% Invited, 5% Accepted, 5% Revoked."
+        },
+        "adminCount": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Number of Confirmed generated members created as Admins (the first ones); the rest are Users. Must not exceed count."
+        },
+        "statusMix": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Explicit member status weights, normalized to sum to 1. Applies at any count (the count >= 10 guard belongs to realisticStatusMix only). Cannot be combined with realisticStatusMix.",
+          "properties": {
+            "confirmed": { "type": "number", "minimum": 0 },
+            "invited": { "type": "number", "minimum": 0 },
+            "accepted": { "type": "number", "minimum": 0 },
+            "revoked": { "type": "number", "minimum": 0 }
+          }
         }
       },
       "required": ["count"]

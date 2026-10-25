@@ -51,6 +51,65 @@ internal static class PresetValidator
         else
         {
             ValidatePolicies(preset, presetName);
+            ValidateUsers(preset, presetName);
+        }
+    }
+
+    private static void ValidateUsers(Models.SeedPreset preset, string presetName)
+    {
+        var users = preset.Users;
+        if (users is null)
+        {
+            return;
+        }
+
+        if (users.StatusMix is not null)
+        {
+            if (users.RealisticStatusMix)
+            {
+                throw new InvalidOperationException(
+                    $"Preset '{presetName}' sets both 'users.statusMix' and 'users.realisticStatusMix'. " +
+                    "Use one: 'statusMix' gives explicit weights, 'realisticStatusMix' the built-in 85/5/5/5 mix.");
+            }
+
+            ValidateStatusMixWeights(users.StatusMix, presetName);
+        }
+
+        if (users.AdminCount < 0 || users.AdminCount > users.Count)
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' has 'users.adminCount' {users.AdminCount}; " +
+                $"it must be between 0 and 'users.count' ({users.Count}).");
+        }
+    }
+
+    /// <summary>
+    /// Rejects weights that would make the normalized distribution invalid: a negative weight gives a negative
+    /// bucket count, and an all-zero mix divides by zero.
+    /// </summary>
+    private static void ValidateStatusMixWeights(Models.SeedPresetStatusMix mix, string presetName)
+    {
+        (string Field, double Weight)[] weights =
+        [
+            ("confirmed", mix.Confirmed),
+            ("invited", mix.Invited),
+            ("accepted", mix.Accepted),
+            ("revoked", mix.Revoked),
+        ];
+
+        var negative = weights.Where(w => w.Weight < 0).Select(w => w.Field).ToList();
+        if (negative.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' has 'users.statusMix' with a negative weight for {string.Join(", ", negative)}. " +
+                "Weights must be 0 or more.");
+        }
+
+        if (weights.All(w => w.Weight <= 0))
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' has 'users.statusMix' with no positive weight. " +
+                "Give at least one of confirmed, invited, accepted, revoked a weight above 0.");
         }
     }
 
