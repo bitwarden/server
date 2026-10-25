@@ -100,7 +100,7 @@ internal static class PresetLoader
     /// Builds a recipe from preset configuration, resolving fixtures and generation counts.
     /// </summary>
     /// <remarks>
-    /// Resolution order: Org → OrgApiKey → Policies → ClaimedDomains → Roster → Owner (if no roster owner) → Generator → Users → Groups → Collections → Folders → Ciphers → CipherAttachments → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
+    /// Resolution order: Org → OrgApiKey → Policies → ClaimedDomains → Roster → Owner (if no roster owner) → Generator → Users → Groups → Collections → Folders → Ciphers → CipherAttachments → CipherCollections → CipherFolders → CipherFavorites → DefaultCollections → PersonalCiphers
     /// </remarks>
     private static void BuildRecipe(
         string presetName,
@@ -173,6 +173,7 @@ internal static class PresetLoader
             preset.Ciphers?.Count > 0 ||
             preset.PersonalCiphers?.CountPerUser > 0 ||
             preset.Folders == true ||
+            preset.DefaultCollections is not null ||
             density?.FolderDistribution is not null ||
             density?.PersonalCipherDistribution is not null))
         {
@@ -228,6 +229,16 @@ internal static class PresetLoader
         if (preset.FavoriteAssignments is { Count: > 0 })
         {
             builder.CreateCipherFavorites(preset.FavoriteAssignments);
+        }
+
+        if (preset.DefaultCollections is not null)
+        {
+            // Fixed seed until the access-shape story supplies one from accessShape.seed.
+            builder.AddDefaultCollections(
+                preset.DefaultCollections,
+                DateTime.UtcNow.Date.AddDays(-(preset.DefaultCollections.PolicyEnabledDaysAgo ?? 14)),
+                seed: 1,
+                density?.CipherTypeDistribution);
         }
 
         if (preset.PersonalCiphers is not null && preset.PersonalCiphers.CountPerUser > 0)

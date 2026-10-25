@@ -1,4 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.Billing.Enums;
+using Bit.Seeder.Factories;
 
 namespace Bit.Seeder.Pipeline;
 
@@ -52,6 +54,61 @@ internal static class PresetValidator
         {
             ValidatePolicies(preset, presetName);
             ValidateUsers(preset, presetName);
+            ValidateDefaultCollections(preset, presetName);
+        }
+    }
+
+    /// <summary>
+    /// Default collections exist only because the Organization Data Ownership policy created them, and only on
+    /// plans with My Items.
+    /// </summary>
+    /// <remarks>
+    /// The preset's <c>organization.planType</c> is the effective plan for inline and fixture orgs alike:
+    /// organization fixtures carry no plan, and a missing planType means EnterpriseAnnually.
+    /// </remarks>
+    private static void ValidateDefaultCollections(Models.SeedPreset preset, string presetName)
+    {
+        var defaultCollections = preset.DefaultCollections;
+        if (defaultCollections is null)
+        {
+            return;
+        }
+
+        if (!ParsePolicyTypes(preset.Policies?.Enable, presetName).Contains(PolicyType.OrganizationDataOwnership))
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' has 'defaultCollections' but doesn't enable organizationDataOwnership, " +
+                "the policy that creates default collections. Add it to 'policies.enable'.");
+        }
+
+        var planType = preset.Organization!.PlanType;
+        if (PlanFeatures.Parse(planType) is not (PlanType.EnterpriseAnnually or PlanType.EnterpriseMonthly))
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' has 'defaultCollections' on plan '{planType}', which has no My Items. " +
+                "Use an enterprise plan.");
+        }
+
+        if (defaultCollections.NonEmptyRate is < 0 or > 1)
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' has 'defaultCollections.nonEmptyRate' {defaultCollections.NonEmptyRate}; " +
+                "it must be between 0 and 1.");
+        }
+
+        if (defaultCollections.DeletedRate is < 0)
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' has 'defaultCollections.deletedRate' {defaultCollections.DeletedRate}; " +
+                "it must be 0 or more.");
+        }
+
+        var tooSmall = (defaultCollections.Largest ?? []).Where(n => n < 1).ToList();
+        if (tooSmall.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' has 'defaultCollections.largest' entries {string.Join(", ", tooSmall)}; " +
+                "every entry must be at least 1.");
         }
     }
 
@@ -245,6 +302,11 @@ internal static class PresetValidator
         if (preset.Policies is not null)
         {
             invalidFields.Add("policies");
+        }
+
+        if (preset.DefaultCollections is not null)
+        {
+            invalidFields.Add("defaultCollections");
         }
 
         if (invalidFields.Count > 0)

@@ -11,6 +11,7 @@ internal record SeedPreset
     public SeedPresetCollections? Collections { get; init; }
     public SeedPresetSso? Sso { get; init; }
     public SeedPresetPolicies? Policies { get; init; }
+    public SeedPresetDefaultCollections? DefaultCollections { get; init; }
     public bool? Folders { get; init; }
     public List<string>? FolderNames { get; init; }
     public SeedPresetCiphers? Ciphers { get; init; }
@@ -57,6 +58,27 @@ internal record SeedPresetPolicies
     public List<string>? Enable { get; init; }
     public List<string>? Disable { get; init; }
     public Dictionary<string, JsonElement>? Data { get; init; }
+}
+
+/// <summary>
+/// Default user collections ("My Items") as the Organization Data Ownership policy creates them, with the personal
+/// items members have already migrated into them.
+/// </summary>
+internal record SeedPresetDefaultCollections
+{
+    public string? Name { get; init; }
+    public double? NonEmptyRate { get; init; }
+    public List<SeedPresetSizeBucket>? Sizes { get; init; }
+    public List<int>? Largest { get; init; }
+    public double? DeletedRate { get; init; }
+    public int? PolicyEnabledDaysAgo { get; init; }
+}
+
+internal record SeedPresetSizeBucket
+{
+    public int Min { get; init; }
+    public int Max { get; init; }
+    public double Weight { get; init; }
 }
 
 internal record SeedPresetRoster

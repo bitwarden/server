@@ -11,6 +11,7 @@ public class PresetValidatorTests
     private const string _policyEnterprise = "features.policy-enterprise";
     private const string _ssoEnterprise = "features.sso-enterprise";
     private const string _sterlingCooper = "scale.md-balanced-sterling-cooper";
+    private const string _defaultCollectionsEnterprise = "features.default-collections-enterprise";
 
     private readonly SeedReader _reader = new();
 
@@ -137,6 +138,65 @@ public class PresetValidatorTests
         var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _sterlingCooper));
 
         Assert.Contains($"'users.adminCount' {adminCount}; it must be between 0 and 'users.count'", ex.Message);
+    }
+
+    [Fact]
+    public void DefaultCollections_WithoutOrganizationDataOwnership_Throws()
+    {
+        var preset = ReadPreset(_defaultCollectionsEnterprise);
+        preset = preset with { Policies = preset.Policies! with { Enable = ["singleOrg"] } };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _defaultCollectionsEnterprise));
+
+        Assert.Contains("has 'defaultCollections' but doesn't enable organizationDataOwnership", ex.Message);
+    }
+
+    [Fact]
+    public void DefaultCollections_NonEnterprisePlan_Throws()
+    {
+        var preset = ReadPreset(_defaultCollectionsEnterprise);
+        preset = preset with { Organization = preset.Organization! with { PlanType = "teams-annually" } };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _defaultCollectionsEnterprise));
+
+        Assert.Contains("has 'defaultCollections' on plan 'teams-annually', which has no My Items", ex.Message);
+    }
+
+    [Theory]
+    [InlineData(-0.1)]
+    [InlineData(1.1)]
+    public void DefaultCollections_NonEmptyRateOutsideRange_Throws(double nonEmptyRate)
+    {
+        var preset = ReadPreset(_defaultCollectionsEnterprise);
+        preset = preset with { DefaultCollections = preset.DefaultCollections! with { NonEmptyRate = nonEmptyRate } };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _defaultCollectionsEnterprise));
+
+        Assert.Contains("'defaultCollections.nonEmptyRate'", ex.Message);
+        Assert.Contains("it must be between 0 and 1", ex.Message);
+    }
+
+    [Fact]
+    public void DefaultCollections_NegativeDeletedRate_Throws()
+    {
+        var preset = ReadPreset(_defaultCollectionsEnterprise);
+        preset = preset with { DefaultCollections = preset.DefaultCollections! with { DeletedRate = -0.1 } };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _defaultCollectionsEnterprise));
+
+        Assert.Contains("'defaultCollections.deletedRate'", ex.Message);
+        Assert.Contains("it must be 0 or more", ex.Message);
+    }
+
+    [Fact]
+    public void DefaultCollections_LargestEntryBelowOne_Throws()
+    {
+        var preset = ReadPreset(_defaultCollectionsEnterprise);
+        preset = preset with { DefaultCollections = preset.DefaultCollections! with { Largest = [120, 0] } };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _defaultCollectionsEnterprise));
+
+        Assert.Contains("'defaultCollections.largest' entries 0; every entry must be at least 1", ex.Message);
     }
 
     private SeedPreset ReadPreset(string presetName) => _reader.Read<SeedPreset>($"{_presetPrefix}{presetName}");

@@ -553,6 +553,33 @@ public static class RecipeBuilderExtensions
     }
 
     /// <summary>
+    /// Create one default user collection per Confirmed User or Custom member, filled with migrated items.
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <param name="options">Default collection settings from the preset</param>
+    /// <param name="policyEnabledDate">When the Organization Data Ownership policy was enabled; the collections' dates</param>
+    /// <param name="seed">Seed for the per-member item counts, member choice and dates</param>
+    /// <param name="typeDist">Distribution of cipher types. Uses realistic defaults if null.</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <exception cref="InvalidOperationException">Thrown when WithGenerator() was not called</exception>
+    internal static RecipeBuilder AddDefaultCollections(
+        this RecipeBuilder builder,
+        SeedPresetDefaultCollections options,
+        DateTime policyEnabledDate,
+        int seed,
+        Distribution<CipherType>? typeDist = null)
+    {
+        if (!builder.HasGenerator)
+        {
+            throw new InvalidOperationException(
+                "Default collections require a generator. Call WithGenerator() first.");
+        }
+
+        builder.AddStep(_ => new CreateDefaultCollectionsStep(options, policyEnabledDate, seed, typeDist));
+        return builder;
+    }
+
+    /// <summary>
     /// Generate personal ciphers for each user, encrypted with their individual symmetric key.
     /// </summary>
     /// <param name="builder">The recipe builder</param>

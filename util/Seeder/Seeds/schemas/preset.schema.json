@@ -260,6 +260,56 @@
         }
       }
     },
+    "defaultCollections": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Default user (My Items) collections for every Confirmed User or Custom member, as the Organization Data Ownership policy creates them, filled with already-migrated items. Requires organizationDataOwnership in policies.enable and an enterprise plan. Owners and Admins get none.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "default": "My Items",
+          "description": "Plaintext collection name, encrypted once with the org key and shared by every default collection."
+        },
+        "nonEmptyRate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Fraction of default collections holding at least one active item."
+        },
+        "sizes": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Active item-count histogram for non-empty default collections, after the largest entries. Without it, each gets 1 item.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["min", "max", "weight"],
+            "properties": {
+              "min": { "type": "integer", "minimum": 0 },
+              "max": { "type": "integer", "minimum": 0 },
+              "weight": { "type": "number", "minimum": 0 }
+            }
+          }
+        },
+        "largest": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1 },
+          "description": "Exact active item counts for the heaviest members. Must not have more entries than there are non-empty collections."
+        },
+        "deletedRate": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Trashed items added per member, as a fraction of that member's active items."
+        },
+        "policyEnabledDaysAgo": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 14,
+          "description": "Days before today the policy was enabled. Collections are dated then; items migrate between then and now."
+        }
+      }
+    },
     "collectionAssignments": {
       "type": "array",
       "description": "Maps ciphers to specific collections. Each entry is a (cipher, collection) tuple. When present, replaces round-robin collection assignment.",
