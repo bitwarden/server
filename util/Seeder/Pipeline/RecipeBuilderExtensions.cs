@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Enums;
+﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Services;
 using Bit.Core.Vault.Enums;
@@ -77,6 +78,27 @@ public static class RecipeBuilderExtensions
         }
 
         builder.AddStep(_ => new CreateOrganizationApiKeyStep());
+        return builder;
+    }
+
+    /// <summary>
+    /// Create organization policy rows, enabled or disabled, with optional per-type Data JSON.
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <param name="policies">Policy type, enabled flag and Data JSON (null uses the step's default) per row</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no organization exists</exception>
+    internal static RecipeBuilder AddPolicies(
+        this RecipeBuilder builder,
+        IReadOnlyList<(PolicyType Type, bool Enabled, string? Data)> policies)
+    {
+        if (!builder.HasOrg)
+        {
+            throw new InvalidOperationException(
+                "Policies require an organization. Call CreateOrganization() or UseOrganization() first.");
+        }
+
+        builder.AddStep(_ => new CreatePoliciesStep(policies));
         return builder;
     }
 

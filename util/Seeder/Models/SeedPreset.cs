@@ -1,4 +1,6 @@
-﻿namespace Bit.Seeder.Models;
+﻿using System.Text.Json;
+
+namespace Bit.Seeder.Models;
 
 internal record SeedPreset
 {
@@ -8,6 +10,7 @@ internal record SeedPreset
     public SeedPresetGroups? Groups { get; init; }
     public SeedPresetCollections? Collections { get; init; }
     public SeedPresetSso? Sso { get; init; }
+    public SeedPresetPolicies? Policies { get; init; }
     public bool? Folders { get; init; }
     public List<string>? FolderNames { get; init; }
     public SeedPresetCiphers? Ciphers { get; init; }
@@ -41,6 +44,19 @@ internal record SeedPresetSso
     public string? Identifier { get; init; }
     public string? EncryptionType { get; init; }
     public string? Provider { get; init; }
+}
+
+/// <summary>
+/// Policy rows to create, keyed by <c>PolicyType</c> name. <see cref="EnableAll"/> and <see cref="Except"/> are
+/// not supported; they exist only so <c>PresetValidator</c> can reject them instead of silently dropping them.
+/// </summary>
+internal record SeedPresetPolicies
+{
+    public bool? EnableAll { get; init; }
+    public List<string>? Except { get; init; }
+    public List<string>? Enable { get; init; }
+    public List<string>? Disable { get; init; }
+    public Dictionary<string, JsonElement>? Data { get; init; }
 }
 
 internal record SeedPresetRoster

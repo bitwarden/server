@@ -1,10 +1,29 @@
-﻿namespace Bit.Seeder.Pipeline;
+﻿using Bit.Core.AdminConsole.Enums;
+
+namespace Bit.Seeder.Pipeline;
 
 /// <summary>
-/// Validates that a preset targets exactly one of organization or individual user.
+/// Validates that a preset targets exactly one of organization or individual user,
+/// and rejects organization settings that would build an invalid or silently incomplete recipe.
 /// </summary>
 internal static class PresetValidator
 {
+    /// <summary>
+    /// Policies whose server event handlers declare <c>RequiredPolicies => [PolicyType.SingleOrg]</c>:
+    /// RequireSso, ResetPassword, MaximumVaultTimeout, UriMatchDefault, AutomaticUserConfirmation,
+    /// OrganizationUserNotification and FillAssist PolicyEventHandler.
+    /// </summary>
+    private static readonly HashSet<PolicyType> _requiresSingleOrg =
+    [
+        PolicyType.RequireSso,
+        PolicyType.ResetPassword,
+        PolicyType.MaximumVaultTimeout,
+        PolicyType.UriMatchDefaults,
+        PolicyType.AutomaticUserConfirmation,
+        PolicyType.OrganizationUserNotification,
+        PolicyType.FillAssist,
+    ];
+
     internal static void Validate(Models.SeedPreset preset, string presetName)
     {
         var hasOrg = preset.Organization is not null;
@@ -29,6 +48,89 @@ internal static class PresetValidator
             ValidateIndividualFields(preset, presetName);
             ValidateNoOrganizationFields(preset, presetName);
         }
+        else
+        {
+            ValidatePolicies(preset, presetName);
+        }
+    }
+
+    private static void ValidatePolicies(Models.SeedPreset preset, string presetName)
+    {
+        var policies = preset.Policies;
+        if (policies is null)
+        {
+            return;
+        }
+
+        if (policies.EnableAll is not null || policies.Except is not null)
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' uses 'policies.enableAll'/'except', which are not supported. " +
+                "List the policies in 'policies.enable' instead.");
+        }
+
+        var enabled = ParseDistinctPolicyTypes(policies.Enable, "policies.enable", presetName);
+        var disabled = ParseDistinctPolicyTypes(policies.Disable, "policies.disable", presetName);
+
+        var both = enabled.Intersect(disabled).ToList();
+        if (both.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' lists {string.Join(", ", both)} in both 'policies.enable' and 'policies.disable'.");
+        }
+
+        var orphanData = ParsePolicyTypes(policies.Data?.Keys, presetName).Except(enabled).Except(disabled).ToList();
+        if (orphanData.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' has 'policies.data' for {string.Join(", ", orphanData)}, " +
+                "which is in neither 'policies.enable' nor 'policies.disable'.");
+        }
+
+        var missingSingleOrg = enabled.Intersect(_requiresSingleOrg).ToList();
+        if (missingSingleOrg.Count > 0 && !enabled.Contains(PolicyType.SingleOrg))
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' enables {string.Join(", ", missingSingleOrg)} without singleOrg. " +
+                "The server requires the Single Organization policy for these; add 'singleOrg' to 'policies.enable'.");
+        }
+    }
+
+    /// <summary>
+    /// Parses one policy list and rejects repeated names, which would otherwise create two rows of one type
+    /// and fail the (OrganizationId, Type) unique index at commit time.
+    /// </summary>
+    private static HashSet<PolicyType> ParseDistinctPolicyTypes(IEnumerable<string>? names, string field, string presetName)
+    {
+        var types = ParsePolicyTypes(names, presetName);
+        var repeated = types.GroupBy(t => t).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+        if (repeated.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' lists {string.Join(", ", repeated)} more than once in '{field}'.");
+        }
+
+        return types.ToHashSet();
+    }
+
+    private static List<PolicyType> ParsePolicyTypes(IEnumerable<string>? names, string presetName) =>
+        (names ?? []).Select(name => ParsePolicyType(name, presetName)).ToList();
+
+    /// <summary>
+    /// Matches the name case-insensitively against <see cref="PolicyType"/> member names only, so a numeric
+    /// string such as "5" is rejected rather than parsed as a raw value.
+    /// </summary>
+    private static PolicyType ParsePolicyType(string name, string presetName)
+    {
+        var validNames = Enum.GetNames<PolicyType>();
+        var match = validNames.FirstOrDefault(n => string.Equals(n, name, StringComparison.OrdinalIgnoreCase));
+        if (match is null)
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' has unknown policy '{name}'. Valid values: {string.Join(", ", validNames)}.");
+        }
+
+        return Enum.Parse<PolicyType>(match);
     }
 
     private static void ValidateIndividualFields(Models.SeedPreset preset, string presetName)
@@ -79,6 +181,11 @@ internal static class PresetValidator
         if (preset.CollectionAssignments is { Count: > 0 })
         {
             invalidFields.Add("collectionAssignments");
+        }
+
+        if (preset.Policies is not null)
+        {
+            invalidFields.Add("policies");
         }
 
         if (invalidFields.Count > 0)

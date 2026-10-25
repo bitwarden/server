@@ -198,17 +198,27 @@
         "enableAll": {
           "type": "boolean",
           "default": false,
-          "description": "When true, enables all policy types."
+          "description": "Not supported: a preset that sets it fails to load. List types in 'enable' instead."
         },
         "except": {
           "type": "array",
           "items": { "type": "string" },
-          "description": "Policy types to exclude when enableAll is true."
+          "description": "Not supported: a preset that sets it fails to load. List types in 'enable' instead."
         },
         "enable": {
           "type": "array",
           "items": { "type": "string" },
-          "description": "Specific policy types to enable (alternative to enableAll)."
+          "description": "Policy types to create as enabled rows."
+        },
+        "disable": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Policy types to create as disabled rows."
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Policy Data JSON keyed by PolicyType name; overrides the built-in default."
         }
       }
     },

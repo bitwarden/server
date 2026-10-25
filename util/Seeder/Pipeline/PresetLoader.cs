@@ -1,4 +1,6 @@
-﻿using Bit.Core.Auth.Enums;
+﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Vault.Enums;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
@@ -97,7 +99,7 @@ internal static class PresetLoader
     /// Builds a recipe from preset configuration, resolving fixtures and generation counts.
     /// </summary>
     /// <remarks>
-    /// Resolution order: Org → OrgApiKey → ClaimedDomains → Roster → Owner (if no roster owner) → Generator → Users → Groups → Collections → Folders → Ciphers → CipherAttachments → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
+    /// Resolution order: Org → OrgApiKey → Policies → ClaimedDomains → Roster → Owner (if no roster owner) → Generator → Users → Groups → Collections → Folders → Ciphers → CipherAttachments → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
     /// </remarks>
     private static void BuildRecipe(
         string presetName,
@@ -131,6 +133,12 @@ internal static class PresetLoader
         }
 
         builder.AddOrganizationApiKey();
+
+        var policies = ParsePolicies(preset.Policies);
+        if (policies.Count > 0)
+        {
+            builder.AddPolicies(policies);
+        }
 
         if (org.ClaimedDomains is { Count: > 0 })
         {
@@ -242,6 +250,37 @@ internal static class PresetLoader
         LimitCollectionCreation = org.LimitCollectionCreation,
         LimitCollectionDeletion = org.LimitCollectionDeletion,
     };
+
+    /// <summary>
+    /// Converts the preset's policy names to rows. <see cref="PresetValidator"/> has already rejected unknown
+    /// names, repeats and enable/disable overlaps.
+    /// </summary>
+    /// <remarks>
+    /// Data is re-serialized compact, as the server writes it. Keys stay camelCase because the server reads
+    /// policy data with a camelCase, case-sensitive policy.
+    /// </remarks>
+    private static List<(PolicyType Type, bool Enabled, string? Data)> ParsePolicies(SeedPresetPolicies? policies)
+    {
+        if (policies is null)
+        {
+            return [];
+        }
+
+        var data = new Dictionary<PolicyType, string>();
+        foreach (var (name, json) in policies.Data ?? [])
+        {
+            data[ParseEnum<PolicyType>(name, default)] = JsonSerializer.Serialize(json);
+        }
+
+        return (policies.Enable ?? []).Select(name => (name, enabled: true))
+            .Concat((policies.Disable ?? []).Select(name => (name, enabled: false)))
+            .Select(p =>
+            {
+                var type = ParseEnum<PolicyType>(p.name, default);
+                return (type, p.enabled, data.GetValueOrDefault(type));
+            })
+            .ToList();
+    }
 
     private static MemberDecryptionType ParseMemberDecryptionType(string? encryptionType) =>
         encryptionType?.ToLowerInvariant() switch
