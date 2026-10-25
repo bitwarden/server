@@ -1,3 +1,3 @@
 # Authentication code review
 
-This assigment focuses on reviewing authentication codes, identifying important code locations, explaining what they do and possible security implications associated with it.
+This assignment focuses on reviewing authentication codes, identifying important code locations,explaining their functional mechanics and assessing their security implications.
