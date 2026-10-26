@@ -6,7 +6,7 @@ using Bit.SeederApi.Models.Response;
 using Duende.IdentityModel.Client;
 using Xunit;
 
-namespace Bit.SeederApi.IntegrationTest;
+namespace Bit.SeederApi.IntegrationTest.Controllers;
 
 public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, IAsyncLifetime
 {

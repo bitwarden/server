@@ -13,7 +13,7 @@ using Bit.Seeder.Factories;
 using Bit.Seeder.Options;
 using Xunit;
 
-namespace Bit.SeederApi.IntegrationTest;
+namespace Bit.SeederApi.IntegrationTest.Factories;
 
 public class CipherComposerTests
 {
