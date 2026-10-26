@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Enums;
+﻿using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
@@ -166,7 +167,7 @@ public class GetSubscriptionPurchasePreviewQueryTests
         var result = await _sut.Run(User(), Request());
 
         Assert.Same(preview, result);
-        await _invoicePreviewService.Received(1).GetInvoicePreviewAsync(
+        await _invoicePreviewService.Received(1).GetInvoicePreviewForBillingAddressAsync(
             Arg.Any<InvoiceCreatePreviewOptions>(), PlanTierType.Premium, PlanCadenceType.Annually);
     }
 
@@ -177,7 +178,9 @@ public class GetSubscriptionPurchasePreviewQueryTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(User(), Request()));
 
-        Assert.Contains("Your location wasn't recognized", exception.Message);
+        Assert.Equal(
+            "Your location wasn't recognized. Please ensure your country and postal code are valid and try again.",
+            exception.ModelState![BillingErrorKeys.BillingAddress]!.Errors.Single().ErrorMessage);
     }
 
     [Fact]
@@ -192,7 +195,7 @@ public class GetSubscriptionPurchasePreviewQueryTests
     public async Task Run_WhenThePreviewResolvesNoSeatLine_ThrowsConflictAndLogsTheFault()
     {
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns(PreviewWithoutSeats());
 
         var exception = await Assert.ThrowsAsync<ConflictException>(() => _sut.Run(User(), Request(additionalStorage: 2)));
@@ -221,7 +224,7 @@ public class GetSubscriptionPurchasePreviewQueryTests
     {
         await _pricingClient.DidNotReceive().GetAvailablePremiumPlan();
         await _invoicePreviewService.DidNotReceiveWithAnyArgs()
-            .GetInvoicePreviewAsync(default(InvoiceCreatePreviewOptions)!, default, default);
+            .GetInvoicePreviewForBillingAddressAsync(default(InvoiceCreatePreviewOptions)!, default, default);
     }
 
     private InvoicePreview ArrangePreview()
@@ -239,14 +242,14 @@ public class GetSubscriptionPurchasePreviewQueryTests
             AmountDue = 21.56m
         };
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns(preview);
         return preview;
     }
 
     private void ArrangePreviewFailure(string code) =>
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns<InvoicePreview>(_ => throw new StripeException { StripeError = new StripeError { Code = code } });
 
     private InvoiceCreatePreviewOptions CapturedOptions() =>

@@ -775,6 +775,11 @@ public class GlobalSettings : IGlobalSettings
         public int CacheLifetimeInSeconds { get; set; } = 60;
         public double SsoTokenLifetimeInSeconds { get; set; } = 5;
         public bool EnforceSsoPolicyForAllUsers { get; set; }
+        /// <summary>
+        /// Minimum number of days between RSA 1.5 deprecation emails to one organization.
+        /// The default is 7. A value of 0 or less turns the email off.
+        /// </summary>
+        public int Rsa15DeprecationEmailCooldownInDays { get; set; } = 7;
     }
 
     public class StripeSettings

@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Text;
 using System.Xml;
 using Bit.Core;
+using Bit.Core.Settings;
 using Bitwarden.Server.Sdk.Features;
 using Sustainsys.Saml2;
 using Sustainsys.Saml2.AspNetCore2;
@@ -92,7 +93,10 @@ public static class Saml2OptionsExtensions
             return false;
         }
 
-        Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
+        // Check and notify before signature verification. A signature failure should not fail notification on an unapproved
+        // key transport algorithm. Any request, including a forged, unsigned, or improperly-constructed one 
+        // that satisfies the notification criteria, should notify.
+        NotifyWhenRsa15Deprecated(envelope, scheme, context);
 
         if (options.SPOptions.WantAssertionsSigned)
         {
@@ -121,4 +125,35 @@ public static class Saml2OptionsExtensions
         return true;
     }
 
+    /// <summary>
+    /// Queues the RSA 1.5 deprecation notice for the organization when the assertion uses RSA 1.5 key transport.
+    /// This method never throws, because a throw blocks single sign-on (SSO) login.
+    /// </summary>
+    private static void NotifyWhenRsa15Deprecated(XmlElement envelope, string scheme, HttpContext context)
+    {
+        try
+        {
+            // This is checked again later inside the command which handles the notification.
+            // A value of 0 means "no email is sent," not "send any number of emails without regard
+            // for a cooldown." This stands in for a feature flag, and 
+            // ensures notification also works for self-hosted instances.
+            var globalSettings = context.RequestServices.GetRequiredService<IGlobalSettings>();
+            if (globalSettings.Sso.Rsa15DeprecationEmailCooldownInDays <= 0)
+            {
+                return;
+            }
+
+            if (!Saml2EncryptedAssertionInspector.UsesRsa15KeyTransport(envelope) ||
+                !Guid.TryParse(scheme, out var organizationId))
+            {
+                return;
+            }
+
+            context.RequestServices.GetRequiredService<ISaml2Rsa15DeprecationNotifier>().TryQueue(organizationId);
+        }
+        catch
+        {
+            // The notice is best effort. It must never block login, and it must not log the organization ID.
+        }
+    }
 }

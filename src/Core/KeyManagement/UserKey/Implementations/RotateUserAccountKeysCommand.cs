@@ -312,6 +312,8 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
     private async Task<bool> BaseRotateUserAccountKeysAsync(BaseRotateUserAccountKeysData baseModel, User user,
         List<DatabaseTransactionAction> saveEncryptedDataActions)
     {
+        baseModel.ValidateOldUserKeyIdForUser(user);
+
         var now = DateTime.UtcNow;
         user.RevisionDate = user.AccountRevisionDate = now;
         user.LastKeyRotationDate = now;

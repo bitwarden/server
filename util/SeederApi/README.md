@@ -225,6 +225,21 @@ can then be billed again. An organization keeps that customer ID, so the scene r
 instead. An organization whose first charge failed (`card: "fails-on-charge"` with `skipTrial`) shows a blank
 billing page unless the `pm-36631-preview-driven-cart` flag is on.
 
+### Cloud-only and Self-hosted-only Scenes
+
+Scenes refuse to seed data that cannot exist on the instance type the Seeder API runs as
+(`globalSettings:selfHosted`). A refused request returns HTTP 400 and writes nothing.
+
+| Scene | Rejected on a self-hosted Seeder API |
+| --- | --- |
+| `SingleProviderScene`, `ProviderUserScene` | Always: providers are cloud-only |
+| `MigrationCohortExportScene` | Always: plan migration cohorts are cloud-only |
+| `SingleOrganizationScene`, `SingleUserScene` | When `gatewayCustomerId` or `gatewaySubscriptionId` is set |
+| `OrganizationStripeBillingScene`, `UserStripeBillingScene` | Always: Stripe billing requires cloud mode |
+
+In the other direction, `SingleUserScene` with `selfHosted: true` and `premium: true` is rejected on a cloud Seeder
+API, because a self-hosted premium license can only be written on a self-hosted instance.
+
 ### Querying Data
 
 Send a POST request to `/query` to execute read-only queries:

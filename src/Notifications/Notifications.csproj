@@ -3,22 +3,33 @@
 
   <PropertyGroup>
     <UserSecretsId>bitwarden-Notifications</UserSecretsId>
+    <BitIncludeAuthentication>true</BitIncludeAuthentication>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Notifications' " />
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Notifications-SelfHost' " />
   <ItemGroup>
+    <PackageReference Include="Azure.Storage.Queues" Version="[12.27.1]" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="[10.0.10]" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="[10.0.10]" />
   </ItemGroup>
 
   <ItemGroup Label="Pinned transitive dependencies">
     <PackageReference Include="MessagePack" Version="[3.1.12]" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="[10.0.8]" />
+    <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="[8.23.0]" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="[8.23.0]" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Core\Core.csproj" />
-    <ProjectReference Include="..\SharedWeb\SharedWeb.csproj" />
+    <ProjectReference Include="..\Libraries\Clients\Clients.csproj" />
+    <ProjectReference Include="..\Libraries\GlobalSettingsBridge\GlobalSettingsBridge.csproj" />
+    <ProjectReference Include="..\Libraries\Push.Infrastructure\Push.Infrastructure.csproj" />
+    <ProjectReference Include="..\Libraries\SerilogFileLogging\SerilogFileLogging.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Notifications.Test" />
   </ItemGroup>
 
 </Project>

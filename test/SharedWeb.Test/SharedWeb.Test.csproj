@@ -20,5 +20,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\SharedWeb\SharedWeb.csproj" />
+    <ProjectReference Include="..\..\src\Libraries\GlobalSettingsBridge\GlobalSettingsBridge.csproj" />
   </ItemGroup>
 </Project>

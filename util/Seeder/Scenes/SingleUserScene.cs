@@ -5,6 +5,7 @@ using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Seeder.Extensions;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Services;
@@ -68,13 +69,12 @@ public class SingleUserScene(
                 $"KdfIterations must be between {MinKdfIterations:N0} and {KdfConstants.PBKDF2_ITERATIONS.Max:N0}.");
         }
 
-        if (request.SelfHosted && request.Premium && !globalSettings.SelfHosted)
+        if (request.SelfHosted && request.Premium)
         {
-            throw new InvalidOperationException(
-                "SelfHosted premium was requested, but this Seeder API is running in cloud mode " +
-                "('globalSettings:selfHosted' is false), so no self-hosted license can be written. " +
-                "Target a self-hosted Seeder API or set SelfHosted=false.");
+            globalSettings.ThrowIfNotSelfHosted("A SelfHosted premium user");
         }
+
+        globalSettings.ThrowIfSelfHostedWithGatewayIds(request.GatewayCustomerId, request.GatewaySubscriptionId);
 
         var (user, keys) = UserSeeder.Create(
             new UserSeed
