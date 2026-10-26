@@ -115,6 +115,25 @@ internal static class SeederRepositoryGuardExtensions
                 userId),
             $"One or more folders are not owned by user {userId}.");
 
+    public static async Task ThrowIfOrganizationsLinkedToProviderAsync(
+        this IProviderOrganizationRepository providerOrganizationRepository, IEnumerable<Guid>? organizationIds)
+    {
+        var distinctIds = organizationIds?.Distinct().ToList();
+        if (distinctIds is not { Count: > 0 } ||
+            await providerOrganizationRepository.GetCountByOrganizationIdsAsync(distinctIds) == 0)
+        {
+            return;
+        }
+
+        foreach (var organizationId in distinctIds)
+        {
+            if (await providerOrganizationRepository.GetByOrganizationId(organizationId) != null)
+            {
+                throw new InvalidOperationException($"Organization {organizationId} already belongs to a provider.");
+            }
+        }
+    }
+
     private static async Task ThrowIfAnyNotOwnedAsync(
         IEnumerable<Guid>? ids, Func<List<Guid>, Task<bool>> allOwnedAsync, string message)
     {
