@@ -19,6 +19,14 @@ public interface IPolicyRepository : IRepository<Policy, Guid>
     /// </remarks>
     Task<Policy?> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType type);
     Task<ICollection<Policy>> GetManyByOrganizationIdAsync(Guid organizationId);
+    /// <summary>
+    /// Gets the policies of one type for many organizations. Also returns disabled policies.
+    /// Does not check if the organization can use policies.
+    /// </summary>
+    /// <remarks>
+    /// Do not use this to enforce a policy on a user. Use <see cref="IPolicyRequirementQuery"/>.
+    /// </remarks>
+    Task<ICollection<Policy>> GetManyByOrganizationIdsTypeAsync(IEnumerable<Guid> organizationIds, PolicyType type);
 
     /// <summary>
     /// Gets all policies for a user across organizations where the user is in the Confirmed status.
