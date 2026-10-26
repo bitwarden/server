@@ -21,6 +21,30 @@ echo "Bitwarden PostgreSQL env vars OK" || echo "MISSING Bitwarden PostgreSQL en
 
 Connect as the read-only login in `BW_POSTGRES_USERNAME` (`bitwarden_data_reader`, `SELECT`-only). As defense-in-depth, also open every session with `SET default_transaction_read_only = on;` (verified: writes then fail with `cannot execute INSERT in a read-only transaction`). This guard is per-session, so it only holds if the statement is actually issued.
 
+Before the session's first query, confirm the login is read-only. A read-only login returns `t` for `can_read` and `f` everywhere else. If any other column is `t`, stop and tell the user. PostgreSQL 14 lets every role create tables in `public` unless the setup below revokes it.
+
+```sql
+SET default_transaction_read_only = on;
+SELECT r.rolsuper AS is_superuser,
+       r.rolcreaterole AS can_create_role,
+       has_database_privilege(current_database(), 'CREATE') AS can_create_schema,
+       has_schema_privilege('public', 'CREATE') AS can_create_in_public,
+       (SELECT COALESCE(bool_or(has_table_privilege(c.oid, 'INSERT, UPDATE, DELETE, TRUNCATE')), false)
+          FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+         WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')) AS can_write_tables,
+       has_table_privilege('public."Cipher"', 'SELECT') AS can_read
+FROM pg_roles r WHERE r.rolname = current_user;
+```
+
+### One-time setup (the user runs this as `postgres`, connected to the database; never run it from this skill)
+
+```sql
+CREATE ROLE bitwarden_data_reader LOGIN PASSWORD '<pick one>';
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO bitwarden_data_reader;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT ON TABLES TO bitwarden_data_reader;
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+```
+
 ## Connecting
 
 Prefer host `psql` with the env vars above when installed (check with `which psql`); otherwise go through the container. Either form connects as `BW_POSTGRES_USERNAME` and keeps the `SET` guard.

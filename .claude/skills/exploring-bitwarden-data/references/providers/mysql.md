@@ -21,6 +21,23 @@ echo "Bitwarden MySQL env vars OK" || echo "MISSING Bitwarden MySQL env var"
 
 Connect as the read-only user in `BW_MYSQL_USERNAME` (`bitwarden_data_reader`, `SELECT`-only). As defense-in-depth, also open every session with `SET SESSION TRANSACTION READ ONLY;` (verified: writes then fail with `ERROR 1792: Cannot execute statement in a READ ONLY transaction`; autocommit statements are implicit transactions, so plain INSERTs are covered). This guard is per-session, so it only holds if the statement is actually issued.
 
+Before the session's first query, confirm the login is read-only. A read-only login returns exactly two rows: `USAGE` on `*.*` and `SELECT` on the database. Any other row means it can write, so stop and tell the user.
+
+```sql
+SET SESSION TRANSACTION READ ONLY;
+SELECT PRIVILEGE_TYPE, '*.*' AS Scope FROM information_schema.USER_PRIVILEGES
+UNION ALL SELECT PRIVILEGE_TYPE, CONCAT(TABLE_SCHEMA, '.*') FROM information_schema.SCHEMA_PRIVILEGES
+UNION ALL SELECT PRIVILEGE_TYPE, CONCAT(TABLE_SCHEMA, '.', TABLE_NAME) FROM information_schema.TABLE_PRIVILEGES
+UNION ALL SELECT 'ROLE', CURRENT_ROLE() FROM DUAL WHERE CURRENT_ROLE() <> 'NONE';
+```
+
+### One-time setup (the user runs this as `root`; never run it from this skill)
+
+```sql
+CREATE USER 'bitwarden_data_reader'@'%' IDENTIFIED BY '<pick one>';
+GRANT SELECT ON `<database>`.* TO 'bitwarden_data_reader'@'%';
+```
+
 ## Connecting
 
 Prefer host `mysql` with the env vars above when installed (check with `which mysql`); otherwise go through the container. Either form connects as `BW_MYSQL_USERNAME` and keeps the `SET` guard. Pass the password via `MYSQL_PWD` (never `-p`, which prints a warning). The client is **silent on success and prints errors to stderr** — don't blanket-suppress stderr, or failures vanish.
