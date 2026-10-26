@@ -42,6 +42,6 @@ Anything not listed: browse `src/Sql/dbo/` (tables live under both `Tables/` and
 | AuthRequestType               | `AuthRequest.Type`                                               | `src/Core/Auth/Enums/AuthRequestType.cs`                    |
 | RevocationReason              | `OrganizationUser.RevocationReason`                              | `src/Core/AdminConsole/Enums/RevocationReason.cs`           |
 | PlanType                      | `Organization.PlanType`                                          | `src/Core/Billing/Enums/PlanType.cs`                        |
-| DeviceType                    | `Device.Type`, `AuthRequest.RequestDeviceType`                   | `src/Core/Enums/DeviceType.cs`                              |
+| DeviceType                    | `Device.Type`, `AuthRequest.RequestDeviceType`                   | `src/Libraries/Clients/DeviceType.cs`                       |
 | EventType                     | `Event.Type`                                                     | `src/Core/Dirt/Enums/EventType.cs`                          |
 | Custom permissions JSON shape | `OrganizationUser.Permissions` (only meaningful when `Type = 4`) | `src/Core/AdminConsole/Models/Data/Permissions.cs`          |
