@@ -2,27 +2,26 @@
 
 #nullable disable
 
-namespace Bit.MySqlMigrations.Migrations;
+namespace Bit.PostgresMigrations.Migrations;
 
 /// <inheritdoc />
-public partial class AddCipherReportExclusions : Migration
+public partial class AddCipherBrowserHealthExclusions : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.AddColumn<string>(
-            name: "ReportExclusions",
+            name: "BrowserHealthExclusions",
             table: "Cipher",
-            type: "longtext",
-            nullable: true)
-            .Annotation("MySql:CharSet", "utf8mb4");
+            type: "text",
+            nullable: true);
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropColumn(
-            name: "ReportExclusions",
+            name: "BrowserHealthExclusions",
             table: "Cipher");
     }
 }

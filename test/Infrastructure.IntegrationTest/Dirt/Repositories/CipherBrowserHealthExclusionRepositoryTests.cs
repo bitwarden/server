@@ -10,11 +10,11 @@ using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Dirt.Repositories;
 
-public class CipherReportExclusionRepositoryTests
+public class CipherBrowserHealthExclusionRepositoryTests
 {
     [DatabaseTheory, DatabaseData]
-    public async Task ExcludeAsync_PersonalLogin_ReturnsOneAndSetsUsersExcludedFromReports(
-        ICipherReportExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
+    public async Task ExcludeAsync_PersonalLogin_ReturnsOneAndSetsUsersExcludedFromBrowserHealth(
+        ICipherBrowserHealthExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
     {
         var user = await userRepository.CreateTestUserAsync();
         var cipher = await CreateCipherAsync(cipherRepository, user.Id);
@@ -23,12 +23,12 @@ public class CipherReportExclusionRepositoryTests
 
         Assert.Equal(1, excluded);
         var details = await cipherRepository.GetByIdAsync(cipher.Id, user.Id);
-        Assert.True(details.ExcludedFromReports);
+        Assert.True(details.ExcludedFromBrowserHealth);
     }
 
     [DatabaseTheory, DatabaseData]
     public async Task ExcludeAsync_OrganizationCipher_ReturnsZero(
-        ICipherReportExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository,
+        ICipherBrowserHealthExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository,
         IOrganizationRepository organizationRepository)
     {
         var user = await userRepository.CreateTestUserAsync();
@@ -46,7 +46,7 @@ public class CipherReportExclusionRepositoryTests
 
     [DatabaseTheory, DatabaseData]
     public async Task ExcludeAsync_NonLoginCipher_ReturnsZero(
-        ICipherReportExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
+        ICipherBrowserHealthExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
     {
         var user = await userRepository.CreateTestUserAsync();
         var cipher = await CreateCipherAsync(cipherRepository, user.Id, CipherType.SecureNote);
@@ -56,7 +56,7 @@ public class CipherReportExclusionRepositoryTests
 
     [DatabaseTheory, DatabaseData]
     public async Task ExcludeAsync_DeletedCipher_ReturnsZero(
-        ICipherReportExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
+        ICipherBrowserHealthExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
     {
         var user = await userRepository.CreateTestUserAsync();
         var cipher = await CreateCipherAsync(cipherRepository, user.Id);
@@ -67,19 +67,19 @@ public class CipherReportExclusionRepositoryTests
 
     [DatabaseTheory, DatabaseData]
     public async Task ExcludeAsync_OtherUsersCipher_ReturnsZero(
-        ICipherReportExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
+        ICipherBrowserHealthExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
     {
         var owner = await userRepository.CreateTestUserAsync();
         var otherUser = await userRepository.CreateTestUserAsync();
         var cipher = await CreateCipherAsync(cipherRepository, owner.Id);
 
         Assert.Equal(0, await sut.ExcludeAsync([cipher.Id], otherUser.Id));
-        Assert.False((await cipherRepository.GetByIdAsync(cipher.Id, owner.Id)).ExcludedFromReports);
+        Assert.False((await cipherRepository.GetByIdAsync(cipher.Id, owner.Id)).ExcludedFromBrowserHealth);
     }
 
     [DatabaseTheory, DatabaseData]
     public async Task ExcludeAsync_AlreadyExcluded_ReturnsOne(
-        ICipherReportExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
+        ICipherBrowserHealthExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
     {
         var user = await userRepository.CreateTestUserAsync();
         var cipher = await CreateCipherAsync(cipherRepository, user.Id);
@@ -90,7 +90,7 @@ public class CipherReportExclusionRepositoryTests
 
     [DatabaseTheory, DatabaseData]
     public async Task ExcludeAsync_DoesNotChangeCipherRevisionDate(
-        ICipherReportExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
+        ICipherBrowserHealthExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
     {
         var user = await userRepository.CreateTestUserAsync();
         var cipher = await CreateCipherAsync(cipherRepository, user.Id);
@@ -103,7 +103,7 @@ public class CipherReportExclusionRepositoryTests
 
     [DatabaseTheory, DatabaseData]
     public async Task ExcludeAsync_BumpsAccountRevisionDate(
-        ICipherReportExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
+        ICipherBrowserHealthExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
     {
         var user = await userRepository.CreateTestUserAsync();
         var cipher = await CreateCipherAsync(cipherRepository, user.Id);
@@ -115,8 +115,8 @@ public class CipherReportExclusionRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task GetManyByUserIdAsync_ReturnsExcludedFromReports(
-        ICipherReportExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
+    public async Task GetManyByUserIdAsync_ReturnsExcludedFromBrowserHealth(
+        ICipherBrowserHealthExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
     {
         var user = await userRepository.CreateTestUserAsync();
         var excludedCipher = await CreateCipherAsync(cipherRepository, user.Id);
@@ -125,13 +125,13 @@ public class CipherReportExclusionRepositoryTests
         await sut.ExcludeAsync([excludedCipher.Id], user.Id);
 
         var ciphers = await cipherRepository.GetManyByUserIdAsync(user.Id);
-        Assert.True(ciphers.Single(c => c.Id == excludedCipher.Id).ExcludedFromReports);
-        Assert.False(ciphers.Single(c => c.Id == otherCipher.Id).ExcludedFromReports);
+        Assert.True(ciphers.Single(c => c.Id == excludedCipher.Id).ExcludedFromBrowserHealth);
+        Assert.False(ciphers.Single(c => c.Id == otherCipher.Id).ExcludedFromBrowserHealth);
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task GetManyByUserIdAsync_WithoutOrganizations_ReturnsExcludedFromReports(
-        ICipherReportExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
+    public async Task GetManyByUserIdAsync_WithoutOrganizations_ReturnsExcludedFromBrowserHealth(
+        ICipherBrowserHealthExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
     {
         var user = await userRepository.CreateTestUserAsync();
         var cipher = await CreateCipherAsync(cipherRepository, user.Id);
@@ -139,12 +139,12 @@ public class CipherReportExclusionRepositoryTests
         await sut.ExcludeAsync([cipher.Id], user.Id);
 
         var ciphers = await cipherRepository.GetManyByUserIdAsync(user.Id, withOrganizations: false);
-        Assert.True(ciphers.Single(c => c.Id == cipher.Id).ExcludedFromReports);
+        Assert.True(ciphers.Single(c => c.Id == cipher.Id).ExcludedFromBrowserHealth);
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task ReplaceAsync_CipherDetails_PreservesReportExclusions(
-        ICipherReportExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
+    public async Task ReplaceAsync_CipherDetails_PreservesBrowserHealthExclusions(
+        ICipherBrowserHealthExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
     {
         var user = await userRepository.CreateTestUserAsync();
         var cipher = await CreateCipherAsync(cipherRepository, user.Id);
@@ -154,12 +154,12 @@ public class CipherReportExclusionRepositoryTests
         details.Data = "{\"updated\":true}";
         await cipherRepository.ReplaceAsync(details);
 
-        Assert.True((await cipherRepository.GetByIdAsync(cipher.Id, user.Id)).ExcludedFromReports);
+        Assert.True((await cipherRepository.GetByIdAsync(cipher.Id, user.Id)).ExcludedFromBrowserHealth);
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task ReplaceAsync_Cipher_PreservesReportExclusions(
-        ICipherReportExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
+    public async Task ReplaceAsync_Cipher_PreservesBrowserHealthExclusions(
+        ICipherBrowserHealthExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
     {
         var user = await userRepository.CreateTestUserAsync();
         var cipher = await CreateCipherAsync(cipherRepository, user.Id);
@@ -168,12 +168,12 @@ public class CipherReportExclusionRepositoryTests
         cipher.Data = "{\"updated\":true}";
         await cipherRepository.ReplaceAsync(cipher);
 
-        Assert.True((await cipherRepository.GetByIdAsync(cipher.Id, user.Id)).ExcludedFromReports);
+        Assert.True((await cipherRepository.GetByIdAsync(cipher.Id, user.Id)).ExcludedFromBrowserHealth);
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task SoftDeleteAsync_KeepsReportExclusion(
-        ICipherReportExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
+    public async Task SoftDeleteAsync_KeepsBrowserHealthExclusion(
+        ICipherBrowserHealthExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
     {
         var user = await userRepository.CreateTestUserAsync();
         var cipher = await CreateCipherAsync(cipherRepository, user.Id);
@@ -181,12 +181,12 @@ public class CipherReportExclusionRepositoryTests
 
         await cipherRepository.SoftDeleteAsync([cipher.Id], user.Id);
 
-        Assert.True((await cipherRepository.GetByIdAsync(cipher.Id, user.Id)).ExcludedFromReports);
+        Assert.True((await cipherRepository.GetByIdAsync(cipher.Id, user.Id)).ExcludedFromBrowserHealth);
     }
 
     [DatabaseTheory, DatabaseData]
     public async Task ReplaceAsync_ShareToOrg_KeepsOwnersExclusionOnly(
-        ICipherReportExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository,
+        ICipherBrowserHealthExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository,
         IOrganizationRepository organizationRepository, IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
@@ -207,8 +207,8 @@ public class CipherReportExclusionRepositoryTests
         cipher.OrganizationId = org.Id;
         await cipherRepository.ReplaceAsync(cipher, [collection.Id]);
 
-        Assert.True((await cipherRepository.GetByIdAsync(cipher.Id, owner.Id)).ExcludedFromReports);
-        Assert.False((await cipherRepository.GetManyByUserIdAsync(member.Id)).Single(c => c.Id == cipher.Id).ExcludedFromReports);
+        Assert.True((await cipherRepository.GetByIdAsync(cipher.Id, owner.Id)).ExcludedFromBrowserHealth);
+        Assert.False((await cipherRepository.GetManyByUserIdAsync(member.Id)).Single(c => c.Id == cipher.Id).ExcludedFromBrowserHealth);
     }
     private static Task<Cipher> CreateCipherAsync(ICipherRepository cipherRepository, Guid userId,
         CipherType type = CipherType.Login) =>

@@ -8,9 +8,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.EntityFramework.Dirt;
 
-public class CipherReportExclusionRepository : BaseEntityFrameworkRepository, ICipherReportExclusionRepository
+public class CipherBrowserHealthExclusionRepository : BaseEntityFrameworkRepository, ICipherBrowserHealthExclusionRepository
 {
-    public CipherReportExclusionRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
+    public CipherBrowserHealthExclusionRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper)
     {
     }
@@ -27,12 +27,12 @@ public class CipherReportExclusionRepository : BaseEntityFrameworkRepository, IC
 
         foreach (var cipher in ciphers)
         {
-            var exclusions = string.IsNullOrWhiteSpace(cipher.ReportExclusions)
+            var exclusions = string.IsNullOrWhiteSpace(cipher.BrowserHealthExclusions)
                 ? new Dictionary<Guid, bool>()
-                : CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, bool>>(cipher.ReportExclusions)
+                : CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, bool>>(cipher.BrowserHealthExclusions)
                   ?? new Dictionary<Guid, bool>();
             exclusions[userId] = true;
-            cipher.ReportExclusions = CoreHelpers.ClassToJsonData(exclusions);
+            cipher.BrowserHealthExclusions = CoreHelpers.ClassToJsonData(exclusions);
         }
 
         if (ciphers.Count > 0)

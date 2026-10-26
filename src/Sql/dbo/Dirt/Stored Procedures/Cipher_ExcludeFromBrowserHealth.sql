@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[Cipher_ExcludeFromReports]
+CREATE PROCEDURE [dbo].[Cipher_ExcludeFromBrowserHealth]
     @Ids AS [dbo].[GuidIdArray] READONLY,
     @UserId AS UNIQUEIDENTIFIER
 AS
@@ -8,8 +8,8 @@ BEGIN
     UPDATE
         C
     SET
-        [ReportExclusions] = JSON_MODIFY(
-            COALESCE(C.[ReportExclusions], N'{}'),
+        [BrowserHealthExclusions] = JSON_MODIFY(
+            COALESCE(C.[BrowserHealthExclusions], N'{}'),
             CONCAT('$."', @UserId, '"'),
             CAST(1 AS BIT)
         )

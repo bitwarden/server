@@ -1,7 +1,7 @@
-IF COL_LENGTH('[dbo].[Cipher]', 'ReportExclusions') IS NULL
+IF COL_LENGTH('[dbo].[Cipher]', 'BrowserHealthExclusions') IS NULL
 BEGIN
     ALTER TABLE [dbo].[Cipher]
-        ADD [ReportExclusions] NVARCHAR(MAX) NULL;
+        ADD [BrowserHealthExclusions] NVARCHAR(MAX) NULL;
 END
 GO
 
@@ -45,11 +45,11 @@ SELECT
     CASE
         WHEN
             @UserId IS NULL
-            OR C.[ReportExclusions] IS NULL
-            OR JSON_VALUE(C.[ReportExclusions], CONCAT('$."', @UserId, '"')) IS NULL
+            OR C.[BrowserHealthExclusions] IS NULL
+            OR JSON_VALUE(C.[BrowserHealthExclusions], CONCAT('$."', @UserId, '"')) IS NULL
         THEN 0
         ELSE 1
-    END [ExcludedFromReports]
+    END [ExcludedFromBrowserHealth]
 FROM
     [dbo].[Cipher] C;
 GO
@@ -75,7 +75,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Cipher_Create]
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
     @Archives NVARCHAR(MAX) = NULL,
-    @ReportExclusions NVARCHAR(MAX) = NULL -- not used
+    @BrowserHealthExclusions NVARCHAR(MAX) = NULL -- not used
 AS
 BEGIN
     SET NOCOUNT ON
@@ -139,7 +139,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Cipher_Update]
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
     @Archives NVARCHAR(MAX) = NULL,
-    @ReportExclusions NVARCHAR(MAX) = NULL -- not used
+    @BrowserHealthExclusions NVARCHAR(MAX) = NULL -- not used
 AS
 BEGIN
     SET NOCOUNT ON
@@ -189,7 +189,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Cipher_CreateWithCollections]
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
     @Archives NVARCHAR(MAX) = NULL,
-    @ReportExclusions NVARCHAR(MAX) = NULL, -- not used
+    @BrowserHealthExclusions NVARCHAR(MAX) = NULL, -- not used
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
@@ -224,7 +224,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Cipher_UpdateWithCollections]
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
     @Archives NVARCHAR(MAX) = NULL,
-    @ReportExclusions NVARCHAR(MAX) = NULL, -- not used
+    @BrowserHealthExclusions NVARCHAR(MAX) = NULL, -- not used
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
@@ -296,8 +296,8 @@ CREATE OR ALTER PROCEDURE [dbo].[CipherDetails_Create]
     @Key VARCHAR(MAX) = NULL,
     @ArchivedDate DATETIME2(7) = NULL,
     @Archives NVARCHAR(MAX) = NULL, -- not used
-    @ExcludedFromReports BIT = NULL, -- not used
-    @ReportExclusions NVARCHAR(MAX) = NULL -- not used
+    @ExcludedFromBrowserHealth BIT = NULL, -- not used
+    @BrowserHealthExclusions NVARCHAR(MAX) = NULL -- not used
 AS
 BEGIN
     SET NOCOUNT ON
@@ -371,8 +371,8 @@ CREATE OR ALTER PROCEDURE [dbo].[CipherDetails_CreateWithCollections]
     @Key VARCHAR(MAX) = NULL,
     @ArchivedDate DATETIME2(7) = NULL,
     @Archives NVARCHAR(MAX) = NULL, -- not used
-    @ExcludedFromReports BIT = NULL, -- not used
-    @ReportExclusions NVARCHAR(MAX) = NULL, -- not used
+    @ExcludedFromBrowserHealth BIT = NULL, -- not used
+    @BrowserHealthExclusions NVARCHAR(MAX) = NULL, -- not used
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
@@ -415,8 +415,8 @@ CREATE OR ALTER PROCEDURE [dbo].[CipherDetails_Update]
     @Key VARCHAR(MAX) = NULL,
     @ArchivedDate DATETIME2(7) = NULL,
     @Archives NVARCHAR(MAX) = NULL, -- not used
-    @ExcludedFromReports BIT = NULL, -- not used
-    @ReportExclusions NVARCHAR(MAX) = NULL -- not used
+    @ExcludedFromBrowserHealth BIT = NULL, -- not used
+    @BrowserHealthExclusions NVARCHAR(MAX) = NULL -- not used
 AS
 BEGIN
     SET NOCOUNT ON
@@ -501,7 +501,7 @@ SELECT
         [Key],
         [OrganizationUseTotp],
         [ArchivedDate],
-        [ExcludedFromReports],
+        [ExcludedFromBrowserHealth],
         MAX ([Edit]) AS [Edit],
         MAX ([ViewPassword]) AS [ViewPassword],
         MAX ([Manage]) AS [Manage]
@@ -525,11 +525,11 @@ SELECT
         [Key],
         [OrganizationUseTotp],
         [ArchivedDate],
-        [ExcludedFromReports]
+        [ExcludedFromBrowserHealth]
 END
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[Cipher_ExcludeFromReports]
+CREATE OR ALTER PROCEDURE [dbo].[Cipher_ExcludeFromBrowserHealth]
     @Ids AS [dbo].[GuidIdArray] READONLY,
     @UserId AS UNIQUEIDENTIFIER
 AS
@@ -539,8 +539,8 @@ BEGIN
     UPDATE
         C
     SET
-        [ReportExclusions] = JSON_MODIFY(
-            COALESCE(C.[ReportExclusions], N'{}'),
+        [BrowserHealthExclusions] = JSON_MODIFY(
+            COALESCE(C.[BrowserHealthExclusions], N'{}'),
             CONCAT('$."', @UserId, '"'),
             CAST(1 AS BIT)
         )

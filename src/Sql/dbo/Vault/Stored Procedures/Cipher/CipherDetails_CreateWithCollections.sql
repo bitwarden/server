@@ -20,8 +20,8 @@
     @Key VARCHAR(MAX) = NULL,
     @ArchivedDate DATETIME2(7) = NULL,
     @Archives NVARCHAR(MAX) = NULL, -- not used
-    @ExcludedFromReports BIT = NULL, -- not used
-    @ReportExclusions NVARCHAR(MAX) = NULL, -- not used
+    @ExcludedFromBrowserHealth BIT = NULL, -- not used
+    @BrowserHealthExclusions NVARCHAR(MAX) = NULL, -- not used
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN

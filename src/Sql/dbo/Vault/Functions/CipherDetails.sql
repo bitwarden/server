@@ -38,10 +38,10 @@ SELECT
     CASE
         WHEN
             @UserId IS NULL
-            OR C.[ReportExclusions] IS NULL
-            OR JSON_VALUE(C.[ReportExclusions], CONCAT('$."', @UserId, '"')) IS NULL
+            OR C.[BrowserHealthExclusions] IS NULL
+            OR JSON_VALUE(C.[BrowserHealthExclusions], CONCAT('$."', @UserId, '"')) IS NULL
         THEN 0
         ELSE 1
-    END [ExcludedFromReports]
+    END [ExcludedFromBrowserHealth]
 FROM
     [dbo].[Cipher] C;

@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20261023152935_AddCipherReportExclusions")]
-    partial class AddCipherReportExclusions
+    [Migration("20261026190223_AddCipherBrowserHealthExclusions")]
+    partial class AddCipherBrowserHealthExclusions
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -3331,6 +3331,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<string>("Attachments")
                         .HasColumnType("text");
 
+                    b.Property<string>("BrowserHealthExclusions")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -3351,9 +3354,6 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<Guid?>("OrganizationId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("ReportExclusions")
-                        .HasColumnType("text");
 
                     b.Property<byte?>("Reprompt")
                         .HasColumnType("smallint");

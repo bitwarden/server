@@ -96,7 +96,7 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IOrganizationApplicationRepository, OrganizationApplicationRepository>();
         services.AddSingleton<IOrganizationDeleteTaskRepository, OrganizationDeleteTaskRepository>();
         services.AddSingleton<IOrganizationMemberBaseDetailRepository, OrganizationMemberBaseDetailRepository>();
-        services.AddSingleton<ICipherReportExclusionRepository, CipherReportExclusionRepository>();
+        services.AddSingleton<ICipherBrowserHealthExclusionRepository, CipherBrowserHealthExclusionRepository>();
 
         if (selfHosted)
         {
