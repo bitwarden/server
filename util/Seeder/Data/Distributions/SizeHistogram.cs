@@ -13,7 +13,7 @@ internal sealed class SizeHistogram
     /// Normalizes the bucket weights into a distribution.
     /// </summary>
     /// <exception cref="ArgumentException">Thrown when there are no buckets, or a bucket has a negative bound,
-    /// <c>Max</c> below <c>Min</c>, or a negative weight.</exception>
+    /// <c>Max</c> below <c>Min</c>, or a negative weight, or the weights total zero.</exception>
     internal SizeHistogram(IEnumerable<(int Min, int Max, double Weight)> buckets)
     {
         var list = buckets.ToList();
@@ -28,6 +28,11 @@ internal sealed class SizeHistogram
         }
 
         var total = list.Sum(b => b.Weight);
+        if (total == 0)
+        {
+            throw new ArgumentException("Histogram buckets need a positive total weight.");
+        }
+
         _distribution = new Distribution<(int Min, int Max)>(
             list.Select(b => ((b.Min, b.Max), b.Weight / total)).ToArray());
     }
