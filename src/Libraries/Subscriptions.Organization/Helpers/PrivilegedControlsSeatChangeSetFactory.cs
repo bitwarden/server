@@ -28,15 +28,14 @@ internal sealed class PrivilegedControlsSeatChangeSetFactory(
             throw new BadRequestException("At least one Privileged Controls seat is required.");
         }
 
-        var currentSeats = organization.PamSeats.GetValueOrDefault();
-
-        // A decrease is never blocked by the cap, so an organization already over it can move back under it.
-        if (seats > organization.Seats.GetValueOrDefault() && seats > currentSeats)
+        if (seats > organization.Seats.GetValueOrDefault())
         {
             throw new BadRequestException(new PrivilegedControlsSeatsMustNotExceedPasswordManagerSeatsError().Message);
         }
 
         var builder = OrganizationSubscriptionChangeSet.Builder(plan);
+
+        var currentSeats = organization.PamSeats.GetValueOrDefault();
 
         // No seats saved, or none left, means there is no seat line item on the subscription to update.
         if (currentSeats < 1)

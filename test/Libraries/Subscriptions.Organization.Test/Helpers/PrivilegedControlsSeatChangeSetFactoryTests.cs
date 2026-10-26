@@ -62,26 +62,6 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
     }
 
     [Fact]
-    public async Task CreateAsync_DecreaseWhileAbovePasswordManagerSeats_BuildsUpdateChange()
-    {
-        var organization = CreateOrganization(pamSeats: 12, seats: 5);
-
-        var result = await _factory.CreateAsync(organization, 4);
-
-        Assert.Equal(4, Assert.Single(result.Changes).AsT3.Quantity);
-    }
-
-    [Fact]
-    public async Task CreateAsync_DecreaseStillAbovePasswordManagerSeats_BuildsUpdateChange()
-    {
-        var organization = CreateOrganization(pamSeats: 10, seats: 5);
-
-        var result = await _factory.CreateAsync(organization, 8);
-
-        Assert.Equal(8, Assert.Single(result.Changes).AsT3.Quantity);
-    }
-
-    [Fact]
     public async Task CreateAsync_ZeroSavedSeats_BuildsAddChange()
     {
         var organization = CreateOrganization(pamSeats: 0);
