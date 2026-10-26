@@ -111,8 +111,8 @@ public class SendInviteRemindersCommand(
     }
 
     /// <summary>
-    /// Reads all the data the reminder emails need in bulk, before any mail call.
-    /// <see cref="InviteUsers.SendOrganizationInvitesCommand"/> does the same for one organization.
+    /// Loads everything the reminder emails need in a few bulk reads, before sending any mail.
+    /// <see cref="InviteUsers.SendOrganizationInvitesCommand"/> does the same thing for a single organization.
     /// </summary>
     private async Task<InvitesInfoContext> GetInvitesInfoContextAsync(ICollection<OrganizationUserInviteReminder> claimed)
     {
@@ -144,8 +144,8 @@ public class SendInviteRemindersCommand(
     private async Task<HashSet<Guid>> GetRequireSsoOrganizationIdsAsync(IEnumerable<Organization> organizations,
         HashSet<Guid> ssoEnabledOrganizationIds)
     {
-        // An organization that downgrades its plan keeps its policy rows. Only count the policy when the
-        // organization can use policies.
+        // Policy rows stay in place when an organization downgrades its plan, so only count the policy if the
+        // organization can still use policies.
         var usePoliciesOrganizationIds = organizations
             .Where(o => o.UsePolicies && ssoEnabledOrganizationIds.Contains(o.Id))
             .Select(o => o.Id)
@@ -163,7 +163,8 @@ public class SendInviteRemindersCommand(
     private OrganizationInvitesInfo BuildOrganizationInvitesInfo(Organization organization,
         List<OrganizationUserInviteReminder> members, InvitesInfoContext context)
     {
-        // The invite token and the invite link only read the member's ID, organization ID, and email.
+        // The invite token and link only use the member's ID, organization ID, and email, so a partial
+        // OrganizationUser is enough.
         var orgUsers = members.Select(m => new OrganizationUser
         {
             Id = m.Id,

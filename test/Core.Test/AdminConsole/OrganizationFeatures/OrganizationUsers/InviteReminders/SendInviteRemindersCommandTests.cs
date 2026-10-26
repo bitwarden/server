@@ -384,7 +384,7 @@ public class SendInviteRemindersCommandTests
     }
 
     /// <summary>
-    /// Sets the claim to return <paramref name="claimed"/> and the organization read to return
+    /// Makes the claim return <paramref name="claimed"/> and the organization lookup return
     /// <paramref name="organizations"/>.
     /// </summary>
     private static void ArrangeClaim(SutProvider<SendInviteRemindersCommand> sutProvider,

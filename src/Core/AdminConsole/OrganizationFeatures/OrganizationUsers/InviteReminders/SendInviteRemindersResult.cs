@@ -3,11 +3,11 @@
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteReminders;
 
 /// <summary>
-/// The result of one invite reminder run.
+/// What one invite reminder run did.
 /// </summary>
-/// <param name="Claimed">The number of members the run claimed.</param>
-/// <param name="Failed">The number of claimed members whose reminder was not sent.</param>
-/// <param name="SentMembers">The members whose reminder email was sent.</param>
+/// <param name="Claimed">How many members the run claimed.</param>
+/// <param name="Failed">How many claimed members didn't get their reminder.</param>
+/// <param name="SentMembers">The members who got their reminder email.</param>
 public record SendInviteRemindersResult(
     int Claimed,
     int Failed,
@@ -18,7 +18,7 @@ public record SendInviteRemindersResult(
     public int Sent => SentMembers.Count;
 
     /// <summary>
-    /// The number of members that got each reminder, by reminder number.
+    /// How many members got each reminder, keyed by reminder number.
     /// </summary>
     public IReadOnlyDictionary<int, int> SentByReminderNumber =>
         SentMembers.GroupBy(m => (int)m.InviteRemindersSentCount).ToDictionary(g => g.Key, g => g.Count());

@@ -3,8 +3,8 @@
 public interface ISendInviteRemindersCommand
 {
     /// <summary>
-    /// Claims the invited members whose reminder is due, up to the batch size. Sends each member the reminder email
-    /// with a new invite link. Does nothing when the feature flag is off.
+    /// Finds the invited members who are due a reminder, up to the batch size, and claims them so a second run can't
+    /// pick them up. Then emails each one a reminder with a new invite link. Does nothing if the feature flag is off.
     /// </summary>
     Task<SendInviteRemindersResult> SendInviteRemindersAsync();
 }

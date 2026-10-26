@@ -50,7 +50,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual bool EnableNewDeviceVerification { get; set; }
     public virtual bool EnableCloudCommunication { get; set; } = false;
     public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
-    public virtual int OrganizationInviteReminderBatchSize { get; set; } = 500; // 0 turns the invite reminders off
+    public virtual int OrganizationInviteReminderBatchSize { get; set; } = 500; // Set to 0 to turn off invite reminders
     public virtual int TwoFactorUserVerificationTokenLifetimeInMinutes { get; set; } = 30;
     public virtual int TwoFactorRememberTokenLifetimeInDays { get; set; } = 30;
     public virtual int DeviceLastActivityCacheTtlHours { get; set; } = 120; // 5 days
