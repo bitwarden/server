@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[Cipher_ExcludeFromBrowserHealth]
+CREATE PROCEDURE [dbo].[Cipher_UpdateManyBrowserHealthExclusions]
     @Ids AS [dbo].[GuidIdArray] READONLY,
     @UserId AS UNIQUEIDENTIFIER
 AS

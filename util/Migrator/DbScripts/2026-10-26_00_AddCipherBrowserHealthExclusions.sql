@@ -529,7 +529,7 @@ SELECT
 END
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[Cipher_ExcludeFromBrowserHealth]
+CREATE OR ALTER PROCEDURE [dbo].[Cipher_UpdateManyBrowserHealthExclusions]
     @Ids AS [dbo].[GuidIdArray] READONLY,
     @UserId AS UNIQUEIDENTIFIER
 AS
