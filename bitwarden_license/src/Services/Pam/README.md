@@ -13,7 +13,7 @@ standing access to. It has two halves:
 **Audience:** server engineers working on PAM, and AI agents editing this subtree.
 
 The two halves meet at one place: a lease ending can trigger a rotation, so the credential a member
-just held stops working. See [`Rotation/README.md`](AccessConnector/README.md) for that half — this file is
+just held stops working. See [`AccessConnector/README.md`](AccessConnector/README.md) for that half — this file is
 the map.
 
 ## The invariant that shapes everything
