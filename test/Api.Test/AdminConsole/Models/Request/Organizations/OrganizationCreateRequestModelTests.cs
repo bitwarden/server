@@ -208,6 +208,29 @@ public class OrganizationCreateRequestModelTests
         Assert.Equal(6, signup.PamSeats);
     }
 
+    [Fact]
+    public void Validate_PamSeats_BelowRange_FailsValidation()
+    {
+        var model = new OrganizationCreateRequestModel
+        {
+            Name = "Test Org",
+            BillingEmail = "test@example.com",
+            Key = "test-key",
+            UseSecretsManager = false,
+            Keys = new OrganizationKeysRequestModel
+            {
+                PublicKey = "test-public-key",
+                EncryptedPrivateKey = "test-encrypted-private-key"
+            },
+            UsePrivilegedControls = true,
+            PamSeats = 0
+        };
+
+        var results = ValidateModel(model);
+
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(OrganizationCreateRequestModel.PamSeats)));
+    }
+
     [Theory]
     [InlineData(CountryAbbreviations.UnitedStates)]
     [InlineData(CountryAbbreviations.Switzerland)]

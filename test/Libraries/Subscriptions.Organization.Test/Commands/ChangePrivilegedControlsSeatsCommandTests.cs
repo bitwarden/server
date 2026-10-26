@@ -200,6 +200,22 @@ public class ChangePrivilegedControlsSeatsCommandTests
     }
 
     [Fact]
+    public async Task Run_SeatsUnchangedWithPamLimitAbovePmLimit_ThrowsBadRequest()
+    {
+        var organization = CreateOrganization(maxAutoscaleSeats: 20);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => _sut.Run(organization, _currentSeats, 21));
+
+        Assert.Equal(
+            "You cannot set a Privileged Controls autoscale limit higher than the Password Manager autoscale limit.",
+            exception.Message);
+        Assert.Null(organization.MaxAutoscalePamSeats);
+        await _organizationService.DidNotReceive()
+            .ReplaceAndUpdateCacheAsync(Arg.Any<OrganizationEntity>(), Arg.Any<Bit.Core.Enums.EventType?>());
+    }
+
+    [Fact]
     public async Task Run_SeatChange_LeavesThePrivilegedControlsFlagAlone()
     {
         var organization = CreateOrganization();

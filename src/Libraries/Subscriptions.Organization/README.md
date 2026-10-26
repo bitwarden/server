@@ -197,7 +197,7 @@ and any new caller must run the trial query first. The cost is one extra Stripe 
 | Subscription id no longer in Stripe | 409, logged with the organization and subscription ids |
 | Plan not in the pricing service | 404 (pricing client), the same as the subscription response |
 | Privileged Controls off, `maxAutoscaleSeats` below `seats`, or `maxAutoscaleSeats` above the Password Manager autoscale limit | 400 (command) |
-| Plan without Privileged Controls, fewer than one seat, an increase above Password Manager seats, or a decrease below occupied seats | 400 (factory) |
+| Plan without Privileged Controls, fewer than one seat, more seats than Password Manager seats, or a decrease below occupied seats | 400 (factory) |
 | Subscription not `trialing`, `active`, or `past_due`, or a Stripe input error | 400 (subscription update) |
 | Subscription schedule with no updatable phase, or another conflict inside the update | 409 (subscription update) |
 | Unmapped Stripe or unexpected error | 500 |

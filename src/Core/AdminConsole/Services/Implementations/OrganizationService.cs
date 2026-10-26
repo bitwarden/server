@@ -283,7 +283,7 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
         }
 
-        // Only a decrease is blocked, so an organization already over the cap can still add seats.
+        // Only decreases are checked; adding seats is never blocked by this rule.
         if (organization.UsePam &&
             seatAdjustment < 0 &&
             newSeatTotal < organization.PamSeats &&
