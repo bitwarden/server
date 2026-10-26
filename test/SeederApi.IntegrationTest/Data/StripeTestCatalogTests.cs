@@ -2,7 +2,7 @@
 using Bit.Seeder.Options;
 using Xunit;
 
-namespace Bit.SeederApi.IntegrationTest;
+namespace Bit.SeederApi.IntegrationTest.Data;
 
 public class StripeTestCatalogTests
 {

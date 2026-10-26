@@ -3,7 +3,7 @@ using Bit.SeederApi.Models.Request;
 using Duende.IdentityModel.Client;
 using Xunit;
 
-namespace Bit.SeederApi.IntegrationTest;
+namespace Bit.SeederApi.IntegrationTest.Controllers;
 
 public class QueryControllerTests : IClassFixture<SeederApiApplicationFactory>, IAsyncLifetime
 {

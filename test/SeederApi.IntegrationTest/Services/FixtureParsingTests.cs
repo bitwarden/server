@@ -2,7 +2,7 @@
 using Bit.Seeder.Services;
 using Xunit;
 
-namespace Bit.SeederApi.IntegrationTest;
+namespace Bit.SeederApi.IntegrationTest.Services;
 
 /// <summary>
 /// Parses the encryption-mode fixtures/presets through the real <see cref="SeedReader"/> so a malformed

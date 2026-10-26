@@ -21,6 +21,8 @@ dotnet test test/SeederApi.IntegrationTest/
 dotnet test test/SeederApi.IntegrationTest/ --filter "FullyQualifiedName~TestMethodName"
 ```
 
+Put each test in the `test/SeederApi.IntegrationTest/` folder named after the top-level source folder of the code it tests (a test of `util/Seeder/Steps/CreateCiphersStep.cs` goes in `Steps/`). Only shared test infrastructure belongs at the project root.
+
 ## Pattern Decision Tree
 
 ```text

@@ -4,7 +4,7 @@ using Bit.SeederApi.Models.Request;
 using Duende.IdentityModel.Client;
 using Xunit;
 
-namespace Bit.SeederApi.IntegrationTest;
+namespace Bit.SeederApi.IntegrationTest.Utilities;
 
 public class BasicAuthenticationHandlerTests : IClassFixture<SeederApiApplicationFactory>, IAsyncLifetime
 {

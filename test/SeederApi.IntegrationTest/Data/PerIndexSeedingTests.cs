@@ -1,7 +1,7 @@
 ﻿using Bit.Seeder.Data.Generators;
 using Xunit;
 
-namespace Bit.SeederApi.IntegrationTest;
+namespace Bit.SeederApi.IntegrationTest.Data;
 
 public class PerIndexSeedingTests
 {
