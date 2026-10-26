@@ -17,9 +17,14 @@ public class CipherBrowserHealthExclusionRepository : BaseEntityFrameworkReposit
 
     public async Task<int> ExcludeAsync(IEnumerable<Guid> cipherIds, Guid userId)
     {
+        var ids = cipherIds.ToList();
+        if (ids.Count == 0)
+        {
+            return 0;
+        }
+
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
-        var ids = cipherIds.ToList();
         var ciphers = await dbContext.Ciphers
             .Where(c => ids.Contains(c.Id) && c.UserId == userId && c.OrganizationId == null
                 && c.Type == CipherType.Login && c.DeletedDate == null)
