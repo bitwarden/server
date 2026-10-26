@@ -2,7 +2,7 @@
 using Bit.Seeder.Models;
 using Xunit;
 
-namespace Bit.SeederApi.IntegrationTest;
+namespace Bit.SeederApi.IntegrationTest.Attributes;
 
 public sealed class EncryptPropertyAttributeTests
 {

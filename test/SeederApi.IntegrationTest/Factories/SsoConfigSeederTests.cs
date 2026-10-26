@@ -2,7 +2,7 @@
 using Bit.Seeder.Factories;
 using Xunit;
 
-namespace Bit.SeederApi.IntegrationTest;
+namespace Bit.SeederApi.IntegrationTest.Factories;
 
 public class SsoConfigSeederTests
 {

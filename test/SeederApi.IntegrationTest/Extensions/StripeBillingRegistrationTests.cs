@@ -1,7 +1,7 @@
 ﻿using Bit.Seeder.Services;
 using Xunit;
 
-namespace Bit.SeederApi.IntegrationTest;
+namespace Bit.SeederApi.IntegrationTest.Extensions;
 
 /// <summary>
 /// Startup validation already proves the SeederApi's Stripe billing registrations resolve, except for the real

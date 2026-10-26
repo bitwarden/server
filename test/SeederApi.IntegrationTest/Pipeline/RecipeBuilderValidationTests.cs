@@ -7,7 +7,7 @@ using Bit.Seeder.Services;
 using Bit.Seeder.Steps;
 using Xunit;
 
-namespace Bit.SeederApi.IntegrationTest;
+namespace Bit.SeederApi.IntegrationTest.Pipeline;
 
 public class RecipeBuilderValidationTests
 {
