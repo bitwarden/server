@@ -9,16 +9,16 @@ using Xunit;
 
 namespace Bit.Api.Test.KeyManagement.Controllers;
 
-[ControllerCustomize(typeof(OrganizationKeyManagementController))]
+[ControllerCustomize(typeof(OrganizationKeysController))]
 [SutProviderCustomize]
-public class OrganizationKeyManagementControllerTests
+public class OrganizationKeysControllerTests
 {
     private const string _organizationKeyId = "0123456789abcdef0123456789abcdef";
 
     [Theory, BitAutoData]
     public async Task PostOrganizationKeyIdAsync_CallsCommandWithParsedKeyId(
         Guid orgId,
-        SutProvider<OrganizationKeyManagementController> sutProvider)
+        SutProvider<OrganizationKeysController> sutProvider)
     {
         var request = new SetOrganizationKeyIdRequestModel { OrganizationKeyId = _organizationKeyId };
 

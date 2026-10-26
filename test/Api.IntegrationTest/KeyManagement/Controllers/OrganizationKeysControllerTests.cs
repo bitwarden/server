@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Bit.Api.IntegrationTest.KeyManagement.Controllers;
 
-public class OrganizationKeyManagementControllerTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class OrganizationKeysControllerTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private const string _organizationKeyId = "0123456789abcdef0123456789abcdef";
     private const string _otherOrganizationKeyId = "fedcba9876543210fedcba9876543210";
@@ -25,7 +25,7 @@ public class OrganizationKeyManagementControllerTests : IClassFixture<ApiApplica
     private string _ownerEmail = null!;
     private Organization _organization = null!;
 
-    public OrganizationKeyManagementControllerTests(ApiApplicationFactory factory)
+    public OrganizationKeysControllerTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         _client = factory.CreateClient();
@@ -161,7 +161,7 @@ public class OrganizationKeyManagementControllerTests : IClassFixture<ApiApplica
     }
 
     private string OrganizationKeyIdUri() =>
-        $"/organizations/{_organization.Id}/key-management/organization-key-id";
+        $"/organizations/{_organization.Id}/keys/organization-key-id";
 
     private static SetOrganizationKeyIdRequestModel RequestFor(string organizationKeyId) =>
         new() { OrganizationKeyId = organizationKeyId };

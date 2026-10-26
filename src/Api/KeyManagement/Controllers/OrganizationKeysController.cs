@@ -10,13 +10,13 @@ namespace Bit.Api.KeyManagement.Controllers;
 /// <summary>
 /// Endpoints for the organization's own key material.
 /// </summary>
-[Route("organizations/{orgId}/key-management")]
+[Route("organizations/{orgId}/keys")]
 [Authorize("Application")]
-public class OrganizationKeyManagementController : Controller
+public class OrganizationKeysController : Controller
 {
     private readonly ISetOrganizationKeyIdCommand _setOrganizationKeyIdCommand;
 
-    public OrganizationKeyManagementController(ISetOrganizationKeyIdCommand setOrganizationKeyIdCommand)
+    public OrganizationKeysController(ISetOrganizationKeyIdCommand setOrganizationKeyIdCommand)
     {
         _setOrganizationKeyIdCommand = setOrganizationKeyIdCommand;
     }

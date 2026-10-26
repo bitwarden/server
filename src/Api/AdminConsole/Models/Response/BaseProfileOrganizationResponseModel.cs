@@ -119,7 +119,7 @@ public abstract class BaseProfileOrganizationResponseModel : ResponseModel
     public bool HasPublicAndPrivateKeys { get; set; }
     /// <summary>
     /// Key id of the organization key, or null when it is not recorded yet. An Owner or Admin client reports it
-    /// through <c>POST organizations/{orgId}/key-management/organization-key-id</c>.
+    /// through <c>POST organizations/{orgId}/keys/organization-key-id</c>.
     /// </summary>
     public string? OrganizationKeyId { get; set; }
     public bool SsoBound { get; set; }
