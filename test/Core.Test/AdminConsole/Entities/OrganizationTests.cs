@@ -7,6 +7,8 @@ using Bit.Core.Auth.Models;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Test.Common.Helpers;
+using Bitwarden.Server.Sdk.Features;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Core.Test.Entities;
@@ -253,5 +255,18 @@ public class OrganizationTests
         Assert.True(
             !missingApplications.Any(),
             $"\n{errorMessage}");
+    }
+
+    [Theory]
+    [InlineData(25)]
+    [InlineData(null)]
+    public void UpdateFromLicense_CopiesPamSeats(int? pamSeats)
+    {
+        var organization = new Organization { PamSeats = 10 };
+        var license = new OrganizationLicense { PamSeats = pamSeats };
+
+        organization.UpdateFromLicense(license, Substitute.For<IFeatureService>());
+
+        Assert.Equal(pamSeats, organization.PamSeats);
     }
 }

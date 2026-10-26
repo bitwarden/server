@@ -100,6 +100,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IDeleteAccessConnectorCommand, DeleteAccessConnectorCommand>();
         services.AddScoped<IAssignAccessConnectorToTargetCommand, AssignAccessConnectorToTargetCommand>();
         services.AddScoped<IUnassignAccessConnectorFromTargetCommand, UnassignAccessConnectorFromTargetCommand>();
+        services.AddScoped<IRegisterTargetSystemCommand, RegisterTargetSystemCommand>();
+        services.AddScoped<ISetTargetSystemStatusCommand, SetTargetSystemStatusCommand>();
+        services.AddScoped<IUpdateTargetSystemCommand, UpdateTargetSystemCommand>();
+        services.AddScoped<IDeleteTargetSystemCommand, DeleteTargetSystemCommand>();
 
         services.AddScoped<IListAccessConnectorsQuery, ListAccessConnectorsQuery>();
         services.AddScoped<IGetAccessConnectorDetailsQuery, GetAccessConnectorDetailsQuery>();

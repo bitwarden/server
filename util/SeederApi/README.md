@@ -141,6 +141,105 @@ curl -X POST http://localhost:5000/seed \
   }'
 ```
 
+### Creating Real Stripe Billing for a Seeded Organization or User
+
+By default the SeederApi makes no Stripe calls. The `gateway*` fields above link identifiers the caller created
+itself. Two opt-in scenes instead create the Stripe customer and subscription in the shared test account, the same
+way the CLI's `--stripe-billing` does. Seed the organization or user first, then post its ID to the billing scene.
+
+Each scene refuses an organization or user that already has a gateway ID, so it bills once. The organization scene
+also refuses a provider-managed client, which its provider bills. The arguments mirror the CLI flags; see the
+[card and address catalogs](../SeederUtility/README.md#cards) for the valid names.
+
+| Scene                            | Argument                                 | Effect                                                              |
+| -------------------------------- | ---------------------------------------- | ------------------------------------------------------------------- |
+| `OrganizationStripeBillingScene` | `organizationId` (required)              | Organization to bill. Not a Free plan; no gateway ID set.           |
+|                                  | `skipTrial` (default `false`)            | Subscription starts `active` and charges the test card immediately. |
+|                                  | `trialDays` (default `30`)               | Trial length, 1–30. Not valid with `skipTrial`.                     |
+|                                  | `card`, `address` (default `visa`, `us`) | Test card and billing address.                                      |
+| `UserStripeBillingScene`         | `userId` (required)                      | User to bill as premium. No gateway ID set.                         |
+|                                  | `card`, `address` (default `visa`, `us`) | Test card and billing address. An address with a tax ID is refused. |
+
+```bash
+curl -X POST http://localhost:5000/seed \
+  -H "Content-Type: application/json" \
+  -H "X-Play-Id: test-run-123" \
+  -d '{
+    "template": "OrganizationStripeBillingScene",
+    "arguments": {
+      "organizationId": "<organizationId from SingleOrganizationScene>",
+      "trialDays": 7,
+      "card": "mastercard",
+      "address": "de-vat"
+    }
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "mangleMap": {},
+  "result": {
+    "organizationId": "0f5a3c3e-6d1b-4a7e-9b8e-b3b700acc664",
+    "gatewayCustomerId": "cus_QxYz123",
+    "gatewaySubscriptionId": "sub_1PqRs456"
+  }
+}
+```
+
+```bash
+curl -X POST http://localhost:5000/seed \
+  -H "Content-Type: application/json" \
+  -H "X-Play-Id: test-run-123" \
+  -d '{
+    "template": "UserStripeBillingScene",
+    "arguments": {
+      "userId": "<userId from SingleUserScene>"
+    }
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "mangleMap": {},
+  "result": {
+    "userId": "42bcf05d-7ad0-4e27-8b53-b3b700acc664",
+    "gatewayCustomerId": "cus_QxYz789",
+    "gatewaySubscriptionId": "sub_1PqRs012",
+    "premiumExpirationDate": "2027-10-20T14:03:11Z"
+  }
+}
+```
+
+**Prerequisites.** The same three checks as the [CLI](../SeederUtility/README.md#prerequisites) run before any
+Stripe call: a `sk_test_` key at `globalSettings:stripe:apiKey` in the `bitwarden-seeder-api` user secrets,
+`globalSettings:pricingUri` (shipped in `appsettings.Development.json`), and `globalSettings:selfHosted` false.
+
+**Caveats.** `DELETE /seed/{playId}` removes database rows only; the Stripe customer and subscription stay until
+Stripe's test-mode auto-cancel, about 90 days. The shared account has rate limits, so bill only what a test needs.
+When Stripe fails part-way, the error's `details` names any customer already created; cancel it in Stripe. A user
+can then be billed again. An organization keeps that customer ID, so the scene refuses it; seed a fresh organization
+instead. An organization whose first charge failed (`card: "fails-on-charge"` with `skipTrial`) shows a blank
+billing page unless the `pm-36631-preview-driven-cart` flag is on.
+
+### Cloud-only and Self-hosted-only Scenes
+
+Scenes refuse to seed data that cannot exist on the instance type the Seeder API runs as
+(`globalSettings:selfHosted`). A refused request returns HTTP 400 and writes nothing.
+
+| Scene | Rejected on a self-hosted Seeder API |
+| --- | --- |
+| `SingleProviderScene`, `ProviderUserScene` | Always: providers are cloud-only |
+| `MigrationCohortExportScene` | Always: plan migration cohorts are cloud-only |
+| `SingleOrganizationScene`, `SingleUserScene` | When `gatewayCustomerId` or `gatewaySubscriptionId` is set |
+| `OrganizationStripeBillingScene`, `UserStripeBillingScene` | Always: Stripe billing requires cloud mode |
+
+In the other direction, `SingleUserScene` with `selfHosted: true` and `premium: true` is rejected on a cloud Seeder
+API, because a self-hosted premium license can only be written on a self-hosted instance.
+
 ### Querying Data
 
 Send a POST request to `/query` to execute read-only queries:

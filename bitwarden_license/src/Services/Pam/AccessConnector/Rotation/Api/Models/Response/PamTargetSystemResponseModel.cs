@@ -1,14 +1,27 @@
 ﻿using Bit.HttpExtensions;
+using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Services.Pam.Api.Models.Response;
 
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 
 /// <summary>A registered target system.</summary>
 public class PamTargetSystemResponseModel : ResponseModel
 {
-    public PamTargetSystemResponseModel()
+    public PamTargetSystemResponseModel(PamTargetSystem targetSystem)
         : base("pamTargetSystem")
     {
+        ArgumentNullException.ThrowIfNull(targetSystem);
+
+        Id = targetSystem.Id;
+        OrganizationId = targetSystem.OrganizationId;
+        Name = targetSystem.Name;
+        Method = targetSystem.Method;
+        Status = targetSystem.Status;
+        SealedData = targetSystem.SealedData;
+        WrappedKey = targetSystem.WrappedKey;
+        CreationDate = targetSystem.CreationDate.AsUtc();
+        RevisionDate = targetSystem.RevisionDate.AsUtc();
     }
 
     public Guid Id { get; set; }

@@ -267,6 +267,8 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// <summary>
     /// The number of Privileged Access Management seats included in the organization's subscription.
     /// NULL if the organization does not have access to Privileged Access Management.
+    /// Also NULL on a self-hosted instance whose license predates the seat count. A NULL value is treated as no
+    /// seat limit until a license carrying the count is applied.
     /// </summary>
     public int? PamSeats { get; set; }
     /// <summary>
@@ -612,6 +614,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
         UseSecretsManager = license.UseSecretsManager;
         SmSeats = license.SmSeats;
         SmServiceAccounts = license.SmServiceAccounts;
+        PamSeats = license.PamSeats;
         UseRiskInsights = license.UseRiskInsights;
         UseOrganizationDomains = license.UseOrganizationDomains;
         UseAdminSponsoredFamilies = license.UseAdminSponsoredFamilies;
