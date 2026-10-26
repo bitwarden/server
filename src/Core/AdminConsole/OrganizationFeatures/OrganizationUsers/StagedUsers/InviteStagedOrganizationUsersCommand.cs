@@ -67,41 +67,30 @@ public class InviteStagedOrganizationUsersCommand(
             return secretsManagerValidationError;
         }
 
-        // Captured before the reservation, because a successful autoscale writes the new total onto the entity.
-        var initialPamSeats = organization.PamSeats;
-
-        var pamSeatReservationError = await ReservePrivilegedControlsSeatsAsync(organization, eligible);
-        if (pamSeatReservationError is not null)
+        var seatReservationError = await ReserveSeatsAsync(organization, seatsToAdd);
+        if (seatReservationError is not null)
         {
-            return pamSeatReservationError;
+            return seatReservationError;
         }
 
         // Captured before the subscription grows, because a successful update writes the new total onto the entity.
         var initialSecretsManagerSeats = organization.SmSeats;
+        var initialPamSeats = organization.PamSeats;
 
-        try
+        // Password Manager seats first: the subscription rejects more Secrets Manager seats than it has PM seats.
+        var secretsManagerSeatReservationError = await AdjustSecretsManagerSeatsAsync(organization, secretsManagerSeatsToAdd, dryRun: false);
+        if (secretsManagerSeatReservationError is not null)
         {
-            var seatReservationError = await ReserveSeatsAsync(organization, seatsToAdd);
-            if (seatReservationError is not null)
-            {
-                await ReleasePrivilegedControlsSeatsAsync(organization, initialPamSeats);
-                return seatReservationError;
-            }
-
-            // Password Manager seats first: the subscription rejects more Secrets Manager seats than it has PM seats.
-            var secretsManagerSeatReservationError = await AdjustSecretsManagerSeatsAsync(organization, secretsManagerSeatsToAdd, dryRun: false);
-            if (secretsManagerSeatReservationError is not null)
-            {
-                await ReleaseSeatsAsync(organization, seatsToAdd);
-                await ReleasePrivilegedControlsSeatsAsync(organization, initialPamSeats);
-                return secretsManagerSeatReservationError;
-            }
+            await ReleaseSeatsAsync(organization, seatsToAdd);
+            return secretsManagerSeatReservationError;
         }
-        catch
+
+        var pamSeatReservationError = await ReservePrivilegedControlsSeatsAsync(organization, eligible);
+        if (pamSeatReservationError is not null)
         {
-            // Only unexpected exceptions land here: the known failures above return an error after releasing.
-            await ReleasePrivilegedControlsSeatsAsync(organization, initialPamSeats);
-            throw;
+            await ReleaseSecretsManagerSeatsAsync(organization, secretsManagerSeatsToAdd, initialSecretsManagerSeats);
+            await ReleaseSeatsAsync(organization, seatsToAdd);
+            return pamSeatReservationError;
         }
 
         try
@@ -428,13 +417,23 @@ public class InviteStagedOrganizationUsersCommand(
             ? organizationUsers.Count(organizationUser => organizationUser.AccessPam)
             : 0;
 
-        var reservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, membersWithPrivilegedControls);
-        return reservation switch
+        try
         {
-            PrivilegedControlsSeatReservation.LimitReached => new PrivilegedControlsSeatLimitReached(),
-            PrivilegedControlsSeatReservation.SelfHostedShortfall => new CannotAutoscalePamSeatsOnSelfHost(),
-            _ => null
-        };
+            var reservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, membersWithPrivilegedControls);
+            return reservation switch
+            {
+                PrivilegedControlsSeatReservation.LimitReached => new PrivilegedControlsSeatLimitReached(),
+                PrivilegedControlsSeatReservation.SelfHostedShortfall => new CannotAutoscalePamSeatsOnSelfHost(),
+                _ => null
+            };
+        }
+        catch (Exception ex) when (ex is BadRequestException or GatewayException)
+        {
+            logger.LogWarning(ex,
+                "Could not add {SeatsToAdd} Privileged Controls seat(s) while inviting staged members for organization {OrganizationId}",
+                membersWithPrivilegedControls, organization.Id);
+            return new PrivilegedControlsSeatExpansionFailed(ex.Message);
+        }
     }
 
     /// <summary>
