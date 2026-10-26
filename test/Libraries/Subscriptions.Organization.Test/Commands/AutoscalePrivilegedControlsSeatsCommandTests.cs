@@ -13,7 +13,6 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Subscriptions.Organization.Commands;
-using Bit.Subscriptions.Organization.Queries;
 using Bitwarden.Server.Sdk.Environment;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -38,8 +37,7 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
         Substitute.For<IOrganizationUserRepository>();
     private readonly IMailer _mailer = Substitute.For<IMailer>();
     private readonly GlobalSettings _globalSettings = new();
-    private readonly IIsOnPrivilegedControlsSalesInitiatedTrialQuery _isOnTrialQuery =
-        Substitute.For<IIsOnPrivilegedControlsSalesInitiatedTrialQuery>();
+    private readonly FakeIsOnPrivilegedControlsSalesInitiatedTrialQuery _isOnTrialQuery = new();
     private readonly IBitwardenEnvironment _environment = Substitute.For<IBitwardenEnvironment>();
     private readonly AutoscalePrivilegedControlsSeatsCommand _sut;
 
@@ -101,12 +99,28 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
         await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, 1));
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    public async Task Run_NoGatewaySubscription_ThrowsBadRequestWithoutReadingSeatsInUse(string? gatewaySubscriptionId)
+    {
+        var organization = CreateOrganization(gatewaySubscriptionId: gatewaySubscriptionId);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, 1));
+
+        Assert.Equal("No subscription found.", exception.Message);
+        await _organizationUserRepository.DidNotReceive()
+            .GetOccupiedPamSeatCountByOrganizationIdAsync(Arg.Any<Guid>());
+        await _seatChangeSetFactory.DidNotReceive().CreateAsync(Arg.Any<OrganizationEntity>(), Arg.Any<int>());
+    }
+
     [Fact]
     public async Task Run_OnTrial_SeatsShort_WithinLimit_SavesSeatsWithoutTouchingStripe()
     {
         var organization = CreateOrganization(pamSeats: 5, maxAutoscalePamSeats: 10);
         SetSeatsInUse(organization, 5);
-        _isOnTrialQuery.Run(organization).Returns(true);
+        _isOnTrialQuery.Result = true;
 
         var result = await _sut.Run(organization, 2);
 
@@ -123,7 +137,7 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
     {
         var organization = CreateOrganization(pamSeats: 5, maxAutoscalePamSeats: 6);
         SetSeatsInUse(organization, 5);
-        _isOnTrialQuery.Run(organization).Returns(true);
+        _isOnTrialQuery.Result = true;
 
         var result = await _sut.Run(organization, 2);
 
@@ -138,27 +152,11 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
     {
         var organization = CreateOrganization(pamSeats: 5, maxAutoscalePamSeats: 7);
         SetSeatsInUse(organization, 5);
-        _isOnTrialQuery.Run(organization).Returns(true);
+        _isOnTrialQuery.Result = true;
 
         await _sut.Run(organization, 2);
 
         await _mailer.Received(1).SendEmail(Arg.Any<PrivilegedControlsSeatLimitReachedMail>());
-    }
-
-    [Fact]
-    public async Task Run_NoSubscriptionId_TreatedAsTrial_SavesSeats()
-    {
-        var organization = CreateOrganization(pamSeats: 5, maxAutoscalePamSeats: 10, gatewaySubscriptionId: null);
-        SetSeatsInUse(organization, 5);
-        _isOnTrialQuery.Run(organization).Returns(true);
-
-        var result = await _sut.Run(organization, 2);
-
-        Assert.True(result.Success);
-        Assert.Equal(7, organization.PamSeats);
-        await _seatChangeSetFactory.DidNotReceive().CreateAsync(Arg.Any<OrganizationEntity>(), Arg.Any<int>());
-        await _updateOrganizationSubscriptionCommand.DidNotReceive()
-            .Run(Arg.Any<OrganizationEntity>(), Arg.Any<OrganizationSubscriptionChangeSet>(), Arg.Any<Subscription?>());
     }
 
     [Fact]
@@ -169,7 +167,7 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
 
         await _sut.Run(organization, 1);
 
-        await _isOnTrialQuery.DidNotReceive().Run(Arg.Any<OrganizationEntity>());
+        Assert.Equal(0, _isOnTrialQuery.Calls);
     }
 
     [Fact]

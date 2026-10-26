@@ -5,7 +5,6 @@ using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Subscriptions.Organization.Commands;
-using Bit.Subscriptions.Organization.Queries;
 using Bitwarden.Server.Sdk.Environment;
 using NSubstitute;
 using Stripe;
@@ -21,8 +20,7 @@ public class RevertPrivilegedControlsSeatsCommandTests
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand =
         Substitute.For<IUpdateOrganizationSubscriptionCommand>();
     private readonly IOrganizationService _organizationService = Substitute.For<IOrganizationService>();
-    private readonly IIsOnPrivilegedControlsSalesInitiatedTrialQuery _isOnTrialQuery =
-        Substitute.For<IIsOnPrivilegedControlsSalesInitiatedTrialQuery>();
+    private readonly FakeIsOnPrivilegedControlsSalesInitiatedTrialQuery _isOnTrialQuery = new();
     private readonly IBitwardenEnvironment _environment = Substitute.For<IBitwardenEnvironment>();
     private readonly RevertPrivilegedControlsSeatsCommand _sut;
 
@@ -51,7 +49,7 @@ public class RevertPrivilegedControlsSeatsCommandTests
     public async Task Run_OnTrial_ResetsSeatsOnOrganizationOnly()
     {
         var organization = CreateOrganization(pamSeats: 7);
-        _isOnTrialQuery.Run(organization).Returns(true);
+        _isOnTrialQuery.Result = true;
 
         await _sut.Run(organization, 5);
 
@@ -66,7 +64,7 @@ public class RevertPrivilegedControlsSeatsCommandTests
     public async Task Run_Paid_UpdatesSubscriptionThenSaves()
     {
         var organization = CreateOrganization(pamSeats: 7);
-        _isOnTrialQuery.Run(organization).Returns(false);
+        _isOnTrialQuery.Result = false;
         var changeSet = new OrganizationSubscriptionChangeSet
         {
             Changes = [new UpdateItemQuantity("privileged-controls-enterprise-seat-annually", 5)]
