@@ -28,7 +28,7 @@ internal sealed class PrivilegedControlsSeatChangeSetFactory(
             throw new BadRequestException("At least one Privileged Controls seat is required.");
         }
 
-        if (seats > organization.Seats.GetValueOrDefault())
+        if (organization.Seats is { } passwordManagerSeats && seats > passwordManagerSeats)
         {
             throw new BadRequestException(new PrivilegedControlsSeatsMustNotExceedPasswordManagerSeatsError().Message);
         }

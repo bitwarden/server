@@ -52,6 +52,16 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
     }
 
     [Fact]
+    public async Task CreateAsync_NoPasswordManagerSeatLimit_BuildsAddChange()
+    {
+        var organization = CreateOrganization(seats: null);
+
+        var result = await _factory.CreateAsync(organization, 500);
+
+        Assert.Equal(500, Assert.Single(result.Changes).AsT0.Quantity);
+    }
+
+    [Fact]
     public async Task CreateAsync_IncreaseAbovePasswordManagerSeats_ThrowsBadRequest()
     {
         var organization = CreateOrganization(pamSeats: 3, seats: 5);
