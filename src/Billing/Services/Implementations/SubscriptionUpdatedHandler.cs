@@ -647,7 +647,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 organization.Seats = (int)Math.Max(Math.Max(1L, billedSeatQuantity), (long)(organization.SmSeats ?? 0));
             }
 
-            await _organizationRepository.ReplaceAsync(organization);
+            await _organizationService.ReplaceAndUpdateCacheAsync(organization);
 
             var sourceProvidedServiceAccounts = sourcePlan.SecretsManager?.BaseServiceAccount ?? 0;
             var targetProvidedServiceAccounts = targetPlan.SecretsManager?.BaseServiceAccount ?? 0;
@@ -787,7 +787,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             }
 
             organization.ChangePlan(targetPlan);
-            await _organizationRepository.ReplaceAsync(organization);
+            await _organizationService.ReplaceAndUpdateCacheAsync(organization);
 
             _logger.LogInformation(
                 "Schedule-triggered annual upgrade applied for organization ({OrganizationId}): PlanType {SourcePlanType} -> {TargetPlanType}",
