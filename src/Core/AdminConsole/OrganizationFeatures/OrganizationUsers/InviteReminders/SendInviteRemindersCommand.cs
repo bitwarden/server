@@ -106,8 +106,8 @@ public class SendInviteRemindersCommand(
 
         logger.LogWarning(
             "Invite reminder batch size {ConfiguredBatchSize} is below 0. Using the default of {DefaultBatchSize}.",
-            batchSize, InviteReminderConstants.DefaultBatchSize);
-        return InviteReminderConstants.DefaultBatchSize;
+            batchSize, GlobalSettings.DefaultOrganizationInviteReminderBatchSize);
+        return GlobalSettings.DefaultOrganizationInviteReminderBatchSize;
     }
 
     /// <summary>

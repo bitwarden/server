@@ -1,6 +1,4 @@
-﻿using Bit.Core.Settings;
-
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteReminders;
+﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteReminders;
 
 public static class InviteReminderConstants
 {
@@ -14,10 +12,4 @@ public static class InviteReminderConstants
     /// gets no more reminders. This keeps the first run after an outage from emailing people about old invites.
     /// </summary>
     public const int MaxLatenessDays = 4;
-
-    /// <summary>
-    /// The default batch size, used when <see cref="IGlobalSettings.OrganizationInviteReminderBatchSize"/> is missing
-    /// from the config or set to a negative number. Keep it in sync with the default in <see cref="GlobalSettings"/>.
-    /// </summary>
-    public const int DefaultBatchSize = 500;
 }

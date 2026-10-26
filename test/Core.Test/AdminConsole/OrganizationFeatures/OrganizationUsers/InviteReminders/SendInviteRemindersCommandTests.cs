@@ -75,7 +75,7 @@ public class SendInviteRemindersCommandTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
             .ClaimInviteReminderSequencesAsync(Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<DateTime>(),
-                InviteReminderConstants.DefaultBatchSize);
+                Core.Settings.GlobalSettings.DefaultOrganizationInviteReminderBatchSize);
         sutProvider.GetDependency<ILogger<SendInviteRemindersCommand>>().Received(1).Log(
             LogLevel.Warning,
             Arg.Any<EventId>(),
