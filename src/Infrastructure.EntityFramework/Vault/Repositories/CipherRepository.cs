@@ -502,7 +502,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                                         OrganizationUseTotp = false,
                                         Key = c.Key,
                                         ArchivedDate = c.ArchivedDate,
-                                        ExcludedFromReports = c.ExcludedFromReports,
+                                        ExcludedFromBrowserHealth = c.ExcludedFromBrowserHealth,
                                     };
             }
 
@@ -572,7 +572,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             {
                 var mappedEntity = Mapper.Map<Cipher>(cipher);
                 dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
-                dbContext.Entry(entity).Property(c => c.ReportExclusions).IsModified = false;
+                dbContext.Entry(entity).Property(c => c.BrowserHealthExclusions).IsModified = false;
                 await dbContext.SaveChangesAsync();
             }
         }
@@ -651,7 +651,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
 
                 var mappedEntity = Mapper.Map<Cipher>(cipher);
                 dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
-                dbContext.Entry(entity).Property(c => c.ReportExclusions).IsModified = false;
+                dbContext.Entry(entity).Property(c => c.BrowserHealthExclusions).IsModified = false;
 
                 if (cipher.OrganizationId.HasValue)
                 {

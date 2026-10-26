@@ -7,9 +7,9 @@ using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Dirt;
 
-public class CipherReportExclusionRepository : BaseRepository, ICipherReportExclusionRepository
+public class CipherBrowserHealthExclusionRepository : BaseRepository, ICipherBrowserHealthExclusionRepository
 {
-    public CipherReportExclusionRepository(GlobalSettings globalSettings)
+    public CipherBrowserHealthExclusionRepository(GlobalSettings globalSettings)
         : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     {
     }
@@ -18,7 +18,7 @@ public class CipherReportExclusionRepository : BaseRepository, ICipherReportExcl
     {
         await using var connection = new SqlConnection(ConnectionString);
         return await connection.ExecuteScalarAsync<int>(
-            "[dbo].[Cipher_ExcludeFromReports]",
+            "[dbo].[Cipher_ExcludeFromBrowserHealth]",
             new { Ids = cipherIds.ToGuidIdArrayTVP(), UserId = userId },
             commandType: CommandType.StoredProcedure);
     }

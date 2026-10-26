@@ -21,7 +21,7 @@ SELECT
         [Key],
         [OrganizationUseTotp],
         [ArchivedDate],
-        [ExcludedFromReports],
+        [ExcludedFromBrowserHealth],
         MAX ([Edit]) AS [Edit],
         MAX ([ViewPassword]) AS [ViewPassword],
         MAX ([Manage]) AS [Manage]
@@ -45,5 +45,5 @@ SELECT
         [Key],
         [OrganizationUseTotp],
         [ArchivedDate],
-        [ExcludedFromReports]
+        [ExcludedFromBrowserHealth]
 END

@@ -11,8 +11,8 @@ public class CipherDetails : CipherOrganizationDetails
     public bool Manage { get; set; }
     // Per-user archived date from Archives JSON.
     public DateTime? ArchivedDate { get; set; }
-    // Per-user health report exclusion flag from ReportExclusions JSON.
-    public bool ExcludedFromReports { get; set; }
+    // Per-user browser health exclusion flag from BrowserHealthExclusions JSON.
+    public bool ExcludedFromBrowserHealth { get; set; }
     public CipherDetails() { }
 
     public CipherDetails(CipherOrganizationDetails cipher)
@@ -55,7 +55,7 @@ public class CipherDetailsWithCollections : CipherDetails
         Key = cipher.Key;
         FolderId = cipher.FolderId;
         ArchivedDate = cipher.ArchivedDate;
-        ExcludedFromReports = cipher.ExcludedFromReports;
+        ExcludedFromBrowserHealth = cipher.ExcludedFromBrowserHealth;
         Favorite = cipher.Favorite;
         Edit = cipher.Edit;
         ViewPassword = cipher.ViewPassword;
