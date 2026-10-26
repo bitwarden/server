@@ -103,21 +103,37 @@ public class OrganizationKeysControllerTests : IClassFixture<ApiApplicationFacto
         await AssertOrganizationKeyIdAsync(null);
     }
 
-    [Fact]
-    public async Task PostOrganizationKeyIdAsync_Admin_StoresTheKeyId()
+    [Theory]
+    [InlineData(OrganizationUserType.Owner)]
+    [InlineData(OrganizationUserType.Admin)]
+    public async Task PostOrganizationKeyIdAsync_OwnerOrAdmin_StoresTheKeyId(OrganizationUserType type)
     {
-        var adminEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
-        await _factory.LoginWithNewAccount(adminEmail);
-        var admin = await OrganizationTestHelpers.CreateUserAsync(_factory, _organization.Id, adminEmail,
-            OrganizationUserType.Admin);
-        admin.Key = _wrappedOrganizationKey;
-        await _organizationUserRepository.ReplaceAsync(admin);
-        await _loginHelper.LoginAsync(adminEmail);
+        await LoginAsMemberWithOrganizationKeyAsync(type);
 
         var response = await _client.PostAsJsonAsync(OrganizationKeyIdUri(), RequestFor(_organizationKeyId));
 
         response.EnsureSuccessStatusCode();
         await AssertOrganizationKeyIdAsync(_organizationKeyId);
+    }
+
+    [Theory]
+    [InlineData(OrganizationUserType.Owner)]
+    [InlineData(OrganizationUserType.Admin)]
+    public async Task PostOrganizationKeyIdAsync_OwnerOrAdmin_SyncReturnsTheKeyId(OrganizationUserType type)
+    {
+        await LoginAsMemberWithOrganizationKeyAsync(type);
+
+        var syncBefore = await _client.GetAsync("/sync");
+        syncBefore.EnsureSuccessStatusCode();
+        Assert.Contains("\"organizationKeyId\":null", await syncBefore.Content.ReadAsStringAsync());
+
+        var response = await _client.PostAsJsonAsync(OrganizationKeyIdUri(), RequestFor(_organizationKeyId));
+        response.EnsureSuccessStatusCode();
+
+        var syncAfter = await _client.GetAsync("/sync");
+        syncAfter.EnsureSuccessStatusCode();
+        Assert.Contains($"\"organizationKeyId\":\"{_organizationKeyId}\"",
+            await syncAfter.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -133,26 +149,6 @@ public class OrganizationKeysControllerTests : IClassFixture<ApiApplicationFacto
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         await AssertOrganizationKeyIdAsync(null);
-    }
-
-    [Fact]
-    public async Task PostOrganizationKeyIdAsync_Owner_BackfillsAndSyncReturnsTheKeyId()
-    {
-        await _loginHelper.LoginAsync(_ownerEmail);
-
-        var syncBefore = await _client.GetAsync("/sync");
-        syncBefore.EnsureSuccessStatusCode();
-        Assert.Contains("\"organizationKeyId\":null", await syncBefore.Content.ReadAsStringAsync());
-
-        var response = await _client.PostAsJsonAsync(OrganizationKeyIdUri(), RequestFor(_organizationKeyId));
-
-        response.EnsureSuccessStatusCode();
-        await AssertOrganizationKeyIdAsync(_organizationKeyId);
-
-        var syncAfter = await _client.GetAsync("/sync");
-        syncAfter.EnsureSuccessStatusCode();
-        Assert.Contains($"\"organizationKeyId\":\"{_organizationKeyId}\"",
-            await syncAfter.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -186,6 +182,16 @@ public class OrganizationKeysControllerTests : IClassFixture<ApiApplicationFacto
 
     private static SetOrganizationKeyIdRequestModel RequestFor(string organizationKeyId) =>
         new() { OrganizationKeyId = organizationKeyId };
+
+    private async Task LoginAsMemberWithOrganizationKeyAsync(OrganizationUserType type)
+    {
+        var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(email);
+        var organizationUser = await OrganizationTestHelpers.CreateUserAsync(_factory, _organization.Id, email, type);
+        organizationUser.Key = _wrappedOrganizationKey;
+        await _organizationUserRepository.ReplaceAsync(organizationUser);
+        await _loginHelper.LoginAsync(email);
+    }
 
     private async Task AssertOrganizationKeyIdAsync(string? expected)
     {
