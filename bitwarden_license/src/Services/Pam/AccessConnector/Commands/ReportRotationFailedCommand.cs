@@ -51,6 +51,7 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
         var accessConnector = await _accessConnectorRepository.GetByIdAsync(accessConnectorId);
 
         if (attempt is null
+            || job is null
             || config is null
             || accessConnector is null
             || config.OrganizationId != accessConnector.OrganizationId)
@@ -74,7 +75,7 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
                 ActorId = null,
                 AccessConnectorId = accessConnectorId,
                 AccessConnectorName = accessConnector.Name,
-                RotationJobId = job?.Id,
+                RotationJobId = job.Id,
                 RotationConfigId = config.Id,
                 CipherId = config.CipherId,
                 Detail = "Stale failure report: the attempt is no longer executing under this access connector's claim.",
@@ -104,10 +105,10 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
                 ActorId = null,
                 AccessConnectorId = accessConnectorId,
                 AccessConnectorName = accessConnector.Name,
-                RotationJobId = job?.Id,
+                RotationJobId = job.Id,
                 RotationConfigId = config.Id,
                 CipherId = config.CipherId,
-                RotationSource = job?.Source,
+                RotationSource = job.Source,
                 SyncState = syncState,
                 Detail = truncatedReason,
             };
@@ -124,10 +125,10 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
                 ActorId = null,
                 AccessConnectorId = accessConnectorId,
                 AccessConnectorName = accessConnector.Name,
-                RotationJobId = job?.Id,
+                RotationJobId = job.Id,
                 RotationConfigId = config.Id,
                 CipherId = config.CipherId,
-                RotationSource = job?.Source,
+                RotationSource = job.Source,
                 SyncState = syncState,
                 Detail = truncatedReason,
             };
