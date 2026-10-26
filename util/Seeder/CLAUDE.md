@@ -61,7 +61,7 @@ See `Pipeline/` folder for implementation.
 
 ## Parallelism
 
-Steps execute sequentially (phase order preserved by RecipeExecutor). Async steps are awaited one at a time and MUST NOT be batched with `Task.WhenAll`, because each step reads state written by the ones before it. Within a step, `CreateUsersStep` and `GeneratePersonalCiphersStep` use `Parallel.For` internally for CPU-bound Rust FFI work (key generation, encryption).
+Steps execute sequentially (phase order preserved by RecipeExecutor). Async steps are awaited one at a time and MUST NOT be batched with `Task.WhenAll`, because each step reads state written by the ones before it. Within a step, `CreateUsersStep`, `GeneratePersonalCiphersStep` and `CreateDefaultCollectionsStep` use `Parallel.For` internally for CPU-bound Rust FFI work (key generation, encryption).
 
 **Thread-safety requirements:**
 
