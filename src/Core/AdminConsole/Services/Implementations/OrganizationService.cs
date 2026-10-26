@@ -151,6 +151,7 @@ public class OrganizationService : IOrganizationService
         }
 
         if (organization.UsePam &&
+            maxAutoscaleSeats != organization.MaxAutoscaleSeats &&
             _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support) &&
             !BillingExtensions.PrivilegedControlsAutoscaleLimitFits(organization.MaxAutoscalePamSeats, maxAutoscaleSeats))
         {
@@ -203,7 +204,7 @@ public class OrganizationService : IOrganizationService
         await ReplaceAndUpdateCacheAsync(organization);
     }
 
-    public async Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment)
+    public async Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment, bool isRollback = false)
     {
         var organization = await GetOrgById(organizationId);
         if (organization == null)
@@ -211,11 +212,11 @@ public class OrganizationService : IOrganizationService
             throw new NotFoundException();
         }
 
-        return await AdjustSeatsAsync(organization, seatAdjustment);
+        return await AdjustSeatsAsync(organization, seatAdjustment, isRollback: isRollback);
     }
 
     private async Task<string> AdjustSeatsAsync(Organization organization, int seatAdjustment,
-        IEnumerable<string> ownerEmails = null)
+        IEnumerable<string> ownerEmails = null, bool isRollback = false)
     {
         if (organization.Seats == null)
         {
@@ -285,6 +286,7 @@ public class OrganizationService : IOrganizationService
 
         // Only a decrease is blocked, so an organization already over the cap can still add seats.
         if (organization.UsePam &&
+            !isRollback &&
             seatAdjustment < 0 &&
             newSeatTotal < organization.PamSeats &&
             _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support))
@@ -767,7 +769,8 @@ public class OrganizationService : IOrganizationService
             if (initialSeatCount.HasValue && currentOrganization.Seats.HasValue &&
                 currentOrganization.Seats.Value != initialSeatCount.Value)
             {
-                await AdjustSeatsAsync(organization, initialSeatCount.Value - currentOrganization.Seats.Value);
+                await AdjustSeatsAsync(organization, initialSeatCount.Value - currentOrganization.Seats.Value,
+                    isRollback: true);
             }
 
             exceptions.Add(e);

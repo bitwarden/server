@@ -382,7 +382,7 @@ public class InviteStagedOrganizationUsersCommand(
 
         try
         {
-            await organizationService.AdjustSeatsAsync(organization.Id, -seatsToRelease);
+            await organizationService.AdjustSeatsAsync(organization.Id, -seatsToRelease, isRollback: true);
         }
         catch (Exception ex)
         {

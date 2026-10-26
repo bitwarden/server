@@ -513,7 +513,7 @@ public class InviteStagedOrganizationUsersCommandTests
         // Nobody was invited, so the organization must not keep paying for the seats it just bought.
         await sutProvider.GetDependency<IOrganizationService>()
             .Received(1)
-            .AdjustSeatsAsync(organization.Id, -(organizationUsers.Count - 1));
+            .AdjustSeatsAsync(organization.Id, -(organizationUsers.Count - 1), true);
         Assert.All(organizationUsers, organizationUser =>
             Assert.Equal(OrganizationUserStatusType.Staged, organizationUser.Status));
     }
@@ -534,7 +534,7 @@ public class InviteStagedOrganizationUsersCommandTests
             .UpdateSubscriptionAsync(Arg.Any<SecretsManagerSubscriptionUpdate>())
             .ThrowsAsync(new BadRequestException("Secrets Manager seat limit has been reached."));
         sutProvider.GetDependency<IOrganizationService>()
-            .AdjustSeatsAsync(organization.Id, Arg.Any<int>())
+            .AdjustSeatsAsync(organization.Id, Arg.Any<int>(), Arg.Any<bool>())
             .ThrowsAsync(new GatewayException("Stripe is unreachable."));
 
         var result = await sutProvider.Sut.RunAsync(request);
@@ -589,7 +589,7 @@ public class InviteStagedOrganizationUsersCommandTests
                 .UpdateSubscriptionAsync(Arg.Is<SecretsManagerSubscriptionUpdate>(update =>
                     update.SmSeats == 5 && !update.Autoscaling));
             sutProvider.GetDependency<IOrganizationService>()
-                .AdjustSeatsAsync(organization.Id, -(organizationUsers.Count - 1));
+                .AdjustSeatsAsync(organization.Id, -(organizationUsers.Count - 1), true);
         });
 
         Assert.All(organizationUsers, organizationUser =>
@@ -610,7 +610,7 @@ public class InviteStagedOrganizationUsersCommandTests
 
         await sutProvider.GetDependency<IOrganizationService>()
             .Received(1)
-            .AdjustSeatsAsync(organization.Id, -(organizationUsers.Count - 1));
+            .AdjustSeatsAsync(organization.Id, -(organizationUsers.Count - 1), true);
         // Nothing was bought there, so there is nothing to give back.
         await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
             .DidNotReceiveWithAnyArgs()
@@ -639,7 +639,7 @@ public class InviteStagedOrganizationUsersCommandTests
         // A failed Secrets Manager release must not stop the Password Manager seats coming back.
         await sutProvider.GetDependency<IOrganizationService>()
             .Received(1)
-            .AdjustSeatsAsync(organization.Id, -(organizationUsers.Count - 1));
+            .AdjustSeatsAsync(organization.Id, -(organizationUsers.Count - 1), true);
     }
 
     [Theory, BitAutoData]
@@ -655,7 +655,7 @@ public class InviteStagedOrganizationUsersCommandTests
         Assert.True(result.IsSuccess);
         await sutProvider.GetDependency<IOrganizationService>()
             .DidNotReceiveWithAnyArgs()
-            .AdjustSeatsAsync(default, default);
+            .AdjustSeatsAsync(default, default, default);
         await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
             .DidNotReceive()
             .UpdateSubscriptionAsync(Arg.Is<SecretsManagerSubscriptionUpdate>(update => !update.Autoscaling));
@@ -747,6 +747,6 @@ public class InviteStagedOrganizationUsersCommandTests
             .LogOrganizationUserEventsAsync(default(IEnumerable<(OrganizationUser, EventType, DateTime?)>)!);
         await sutProvider.GetDependency<IOrganizationService>()
             .DidNotReceiveWithAnyArgs()
-            .AdjustSeatsAsync(default, default);
+            .AdjustSeatsAsync(default, default, default);
     }
 }

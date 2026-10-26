@@ -828,7 +828,7 @@ public class AccountController : Controller
             if (organization.Seats.Value != initialSeatCount)
             {
                 await _organizationService.AdjustSeatsAsync(organization.Id,
-                    initialSeatCount - organization.Seats.Value);
+                    initialSeatCount - organization.Seats.Value, isRollback: true);
             }
 
             _logger.LogInformation(e, "SSO auto provisioning failed");
