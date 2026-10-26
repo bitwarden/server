@@ -15,11 +15,7 @@ public interface IOrganizationService
     Task<string> AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb);
     Task UpdateSubscription(Guid organizationId, int seatAdjustment, int? maxAutoscaleSeats);
     Task AutoAddSeatsAsync(Organization organization, int seatsToAdd);
-    /// <param name="isRollback">
-    /// True when undoing a seat increase from a failed operation. A rollback skips the check that Password Manager
-    /// seats stay at or above Privileged Controls seats, so it can always restore the earlier count.
-    /// </param>
-    Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment, bool isRollback = false);
+    Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment);
     Task UpdateExpirationDateAsync(Guid organizationId, DateTime? expirationDate);
     Task UpdateAsync(Organization organization, bool updateBilling = false);
     Task UpdateTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);

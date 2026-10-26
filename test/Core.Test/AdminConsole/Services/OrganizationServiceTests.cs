@@ -1477,32 +1477,6 @@ public class OrganizationServiceTests
     }
 
     [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually), BitAutoData]
-    public async Task AdjustSeatsAsync_RollbackOnOrganizationOverTheCap_Succeeds(
-        Organization organization, SutProvider<OrganizationService> sutProvider)
-    {
-        SetUpPrivilegedControlsOrganization(organization, sutProvider);
-        organization.Seats = 6;
-        organization.PamSeats = 10;
-
-        await sutProvider.Sut.AdjustSeatsAsync(organization.Id, -1, isRollback: true);
-
-        Assert.Equal((short)5, organization.Seats);
-    }
-
-    [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually), BitAutoData]
-    public async Task UpdateSubscription_SeatIncreaseWithUnchangedPmLimitBelowPamLimit_Succeeds(
-        Organization organization, SutProvider<OrganizationService> sutProvider)
-    {
-        SetUpPrivilegedControlsOrganization(organization, sutProvider);
-        organization.MaxAutoscaleSeats = 35;
-        organization.MaxAutoscalePamSeats = 40;
-
-        await sutProvider.Sut.UpdateSubscription(organization.Id, 2, 35);
-
-        Assert.Equal((short)32, organization.Seats);
-    }
-
-    [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually), BitAutoData]
     public async Task AdjustSeatsAsync_UsePamOff_DecreaseBelowPamSeats_Succeeds(
         Organization organization, SutProvider<OrganizationService> sutProvider)
     {

@@ -1,4 +1,4 @@
-# Subscriptions.Organization
+﻿# Subscriptions.Organization
 
 Feature-tier library exposing the organization subscription HTTP surface — the endpoints an
 organization admin hits to preview and manage their organization's subscription, and the endpoint a

@@ -965,7 +965,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
 
         // Assert — rollback ran with the exact delta before the redirect fired.
         var orgService = testData.Factory.Services.GetRequiredService<IOrganizationService>();
-        await orgService.Received(1).AdjustSeatsAsync(testData.Organization!.Id, -1, true);
+        await orgService.Received(1).AdjustSeatsAsync(testData.Organization!.Id, -1);
     }
 
     /*
