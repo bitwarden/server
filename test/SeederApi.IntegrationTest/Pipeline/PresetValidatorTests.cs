@@ -199,5 +199,22 @@ public class PresetValidatorTests
         Assert.Contains("'defaultCollections.largest' entries 0; every entry must be at least 1", ex.Message);
     }
 
+    [Fact]
+    public void DefaultCollections_SizesWithoutPositiveWeight_Throws()
+    {
+        var preset = ReadPreset(_defaultCollectionsEnterprise);
+        preset = preset with
+        {
+            DefaultCollections = preset.DefaultCollections! with
+            {
+                Sizes = [new SeedPresetSizeBucket { Min = 1, Max = 5, Weight = 0 }]
+            }
+        };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _defaultCollectionsEnterprise));
+
+        Assert.Contains("'defaultCollections.sizes' with no positive weight", ex.Message);
+    }
+
     private SeedPreset ReadPreset(string presetName) => _reader.Read<SeedPreset>($"{_presetPrefix}{presetName}");
 }

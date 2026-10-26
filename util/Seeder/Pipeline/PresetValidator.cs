@@ -110,6 +110,13 @@ internal static class PresetValidator
                 $"Preset '{presetName}' has 'defaultCollections.largest' entries {string.Join(", ", tooSmall)}; " +
                 "every entry must be at least 1.");
         }
+
+        if (defaultCollections.Sizes is { Count: > 0 } sizes && sizes.All(b => b.Weight <= 0))
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' has 'defaultCollections.sizes' with no positive weight. " +
+                "Give at least one bucket a weight above 0.");
+        }
     }
 
     private static void ValidateUsers(Models.SeedPreset preset, string presetName)
