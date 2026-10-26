@@ -51,6 +51,7 @@ public class SubmitCipherUpdateCommand : ISubmitCipherUpdateCommand
         var accessConnector = await _accessConnectorRepository.GetByIdAsync(accessConnectorId);
 
         if (attempt is null
+            || job is null
             || config is null
             || accessConnector is null
             || config.OrganizationId != accessConnector.OrganizationId)
@@ -72,7 +73,7 @@ public class SubmitCipherUpdateCommand : ISubmitCipherUpdateCommand
                 ActorId = null,
                 AccessConnectorId = accessConnectorId,
                 AccessConnectorName = accessConnector.Name,
-                RotationJobId = job?.Id,
+                RotationJobId = job.Id,
                 RotationConfigId = config.Id,
                 CipherId = config.CipherId,
                 Detail = outcome == PamRotationCipherWriteOutcome.RevisionMismatch
