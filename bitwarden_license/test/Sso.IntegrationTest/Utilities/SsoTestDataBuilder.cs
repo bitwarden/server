@@ -7,6 +7,8 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Platform.Mail.Delivery;
+using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -65,6 +67,9 @@ public class SsoTestDataBuilder
     private bool _mockSendOrganizationInvitesCommand = false;
     private X509Certificate2? _samlSigningCertificate;
     private bool? _wantAssertionsSignedFlagEnabled;
+    private int _rsa15DeprecationEmailCooldownInDays = 7;
+    private bool _mockMailer = false;
+    private IMailDeliveryService? _mailDeliveryService;
 
     public SsoTestDataBuilder WithOrganization(Action<Organization> configure)
     {
@@ -189,6 +194,38 @@ public class SsoTestDataBuilder
     }
 
     /// <summary>
+    /// Sets the minimum number of days between RSA 1.5 deprecation emails to one organization.
+    /// A value of 0 or less turns the email off.
+    /// </summary>
+    public SsoTestDataBuilder WithRsa15DeprecationEmailCooldownInDays(int days)
+    {
+        _rsa15DeprecationEmailCooldownInDays = days;
+        return this;
+    }
+
+    /// <summary>
+    /// Substitutes <see cref="IMailer"/> so a test can observe the emails that the host sends,
+    /// and no email is rendered or delivered. Also substitutes <see cref="IMailDeliveryService"/>
+    /// with a service that is not <see cref="NoopMailDeliveryService"/>, unless the test sets
+    /// a delivery service with <see cref="WithMailDeliveryService"/>.
+    /// </summary>
+    public SsoTestDataBuilder WithMockedMailer()
+    {
+        _mockMailer = true;
+        return this;
+    }
+
+    /// <summary>
+    /// Replaces the host's <see cref="IMailDeliveryService"/> with the given service. The real
+    /// <see cref="IMailer"/> still renders each email.
+    /// </summary>
+    public SsoTestDataBuilder WithMailDeliveryService(IMailDeliveryService deliveryService)
+    {
+        _mailDeliveryService = deliveryService;
+        return this;
+    }
+
+    /// <summary>
     /// Substitutes <see cref="ISendOrganizationInvitesCommand"/> so <c>SendInvitesAsync</c>
     /// no-ops instead of exercising the real mail pipeline. Use in tests that want to
     /// assert an invite was (or was not) issued, and to keep integration runs from
@@ -274,10 +311,11 @@ public class SsoTestDataBuilder
             }
         });
 
-        // 1.a Configure GlobalSettings for Self-Hosted and seat limit
+        // 1.a Configure GlobalSettings
         factory.SubstituteService<IGlobalSettings>(globalSettings =>
         {
             globalSettings.SelfHosted.Returns(_isSelfHosted);
+            globalSettings.Sso.Rsa15DeprecationEmailCooldownInDays = _rsa15DeprecationEmailCooldownInDays;
         });
 
         // 1.a.i Apply host configuration overrides requested by the test
@@ -343,12 +381,32 @@ public class SsoTestDataBuilder
             });
         }
 
-        // 1.f Configure IFeatureService to reflect the PM42982_WantAssertionsSigned feature flag, if requested
-        if (_wantAssertionsSignedFlagEnabled is { } wantAssertionsSignedFlagEnabled)
+        // 1.f Configure IFeatureService to reflect the feature flag the test requests. An unset flag is off.
+        if (_wantAssertionsSignedFlagEnabled.HasValue)
         {
             factory.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(svc =>
             {
-                svc.IsEnabled(FeatureFlagKeys.PM42982_WantAssertionsSigned).Returns(wantAssertionsSignedFlagEnabled);
+                svc.IsEnabled(FeatureFlagKeys.PM42982_WantAssertionsSigned)
+                    .Returns(_wantAssertionsSignedFlagEnabled ?? false);
+            });
+        }
+
+        // 1.g Configure IMailer or IMailDeliveryService, if the test requests it
+        if (_mockMailer)
+        {
+            factory.SubstituteService<IMailer>(_ => { });
+            if (_mailDeliveryService is null)
+            {
+                factory.SubstituteService<IMailDeliveryService>(_ => { });
+            }
+        }
+
+        if (_mailDeliveryService is { } mailDeliveryService)
+        {
+            factory.ConfigureServices(services =>
+            {
+                services.RemoveAll<IMailDeliveryService>();
+                services.AddSingleton(mailDeliveryService);
             });
         }
 

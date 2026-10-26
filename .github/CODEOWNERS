@@ -108,6 +108,7 @@ src/Admin/Views/Tools @bitwarden/team-billing-dev
 .github/workflows/test-database.yml @bitwarden/team-platform-dev
 .github/workflows/test.yml @bitwarden/team-platform-dev
 **/*Platform* @bitwarden/team-platform-dev
+src/Libraries/Push.Infrastructure @bitwarden/team-platform-dev
 
 # The PushType enum is expected to be editted by anyone without need for Platform review
 src/Core/Platform/Push/PushType.cs
@@ -126,6 +127,10 @@ util/RustSdk @bitwarden/team-sdk-sme @bitwarden/dept-architecture # joint owners
 **/*.dockerignore @bitwarden/team-appsec @bitwarden/dept-shot
 **/docker-compose.yml @bitwarden/team-appsec @bitwarden/dept-shot
 **/entrypoint.sh @bitwarden/team-appsec @bitwarden/dept-shot
+
+# Dissolving Core into Libraries
+src/Libraries/CurrentUser @bitwarden/team-auth-dev @bitwarden/dept-architecture # joint ownership
+test/Libraries/CurrentUser.Test @bitwarden/team-auth-dev @bitwarden/dept-architecture # joint ownership
 
 # Multiple owners - DO NOT REMOVE (BRE)
 **/packages.lock.json
