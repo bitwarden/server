@@ -316,6 +316,7 @@ public class SsoTestDataBuilder
         {
             globalSettings.SelfHosted.Returns(_isSelfHosted);
             globalSettings.Sso.Rsa15DeprecationEmailCooldownInDays = _rsa15DeprecationEmailCooldownInDays;
+            globalSettings.Sso.Rsa15DeprecationDate = new GlobalSettings.SsoSettings().Rsa15DeprecationDate;
         });
 
         // 1.a.i Apply host configuration overrides requested by the test
