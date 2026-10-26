@@ -52,6 +52,18 @@ public class CreateUsersStepTests
         Assert.Equal(confirmedIds, context.Registry.UserDigests.Select(d => d.OrgUserId));
     }
 
+    [Fact]
+    public void Execute_AdminCountAboveConfirmedCount_Throws()
+    {
+        var context = NewContext(new SeederSettings());
+        PreloadOrganization(context);
+        var step = new CreateUsersStep(20, statusMix: _statusMix, adminCount: 11);
+
+        var ex = Assert.Throws<InvalidOperationException>(() => step.Execute(context));
+
+        Assert.Contains("'users.adminCount' 11 exceeds the 10 Confirmed members", ex.Message);
+    }
+
     private static SeederContext ExecuteWithStatusMixAndTwoAdmins()
     {
         var context = NewContext(new SeederSettings());

@@ -54,6 +54,13 @@ internal sealed class CreateUsersStep(
                 : OrganizationUserType.User;
         }
 
+        if (adminsLeft > 0)
+        {
+            throw new InvalidOperationException(
+                $"'users.adminCount' {adminCount} exceeds the {adminCount - adminsLeft} Confirmed members the status mix " +
+                $"gives {count} users. Lower adminCount or raise the Confirmed weight.");
+        }
+
         var results = new (User User, OrganizationUser OrgUser, UserKeys Keys, bool IsConfirmed)[count];
 
         progress?.Report(new PhaseStarted(SeederPhases.CreatingUsers, count));

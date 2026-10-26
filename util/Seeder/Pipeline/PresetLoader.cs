@@ -238,7 +238,9 @@ internal static class PresetLoader
                 preset.DefaultCollections,
                 DateTime.UtcNow.Date.AddDays(-(preset.DefaultCollections.PolicyEnabledDaysAgo ?? 14)),
                 seed: 1,
-                density?.CipherTypeDistribution);
+                density?.CipherTypeDistribution,
+                density?.PersonalCipherDistribution,
+                preset.PersonalCiphers?.CountPerUser ?? 0);
         }
 
         if (preset.PersonalCiphers is not null && preset.PersonalCiphers.CountPerUser > 0)

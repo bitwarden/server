@@ -561,6 +561,8 @@ public static class RecipeBuilderExtensions
     /// <param name="policyEnabledDate">When the Organization Data Ownership policy was enabled; the collections' dates</param>
     /// <param name="seed">Seed for the per-member item counts, member choice and dates</param>
     /// <param name="typeDist">Distribution of cipher types. Uses realistic defaults if null.</param>
+    /// <param name="personalDist">The personal cipher distribution given to AddPersonalCiphers(); members it gives items keep an empty collection</param>
+    /// <param name="personalCountPerUser">The flat personal cipher count given to AddPersonalCiphers(); 0 when none</param>
     /// <returns>The builder for fluent chaining</returns>
     /// <exception cref="InvalidOperationException">Thrown when WithGenerator() was not called</exception>
     internal static RecipeBuilder AddDefaultCollections(
@@ -568,7 +570,9 @@ public static class RecipeBuilderExtensions
         SeedPresetDefaultCollections options,
         DateTime policyEnabledDate,
         int seed,
-        Distribution<CipherType>? typeDist = null)
+        Distribution<CipherType>? typeDist = null,
+        Distribution<(int Min, int Max)>? personalDist = null,
+        int personalCountPerUser = 0)
     {
         if (!builder.HasGenerator)
         {
@@ -576,7 +580,7 @@ public static class RecipeBuilderExtensions
                 "Default collections require a generator. Call WithGenerator() first.");
         }
 
-        builder.AddStep(_ => new CreateDefaultCollectionsStep(options, policyEnabledDate, seed, typeDist));
+        builder.AddStep(_ => new CreateDefaultCollectionsStep(options, policyEnabledDate, seed, typeDist, personalDist, personalCountPerUser));
         return builder;
     }
 

@@ -23,12 +23,16 @@ namespace Bit.Seeder.Steps;
 /// Collections are dated at <c>policyEnabledDate</c>. Migrated items keep a personal <c>CreationDate</c> before it
 /// and take a <c>RevisionDate</c> between it and now, as the server's share operation leaves them. The collections
 /// are not added to <see cref="EntityRegistry.CollectionIds"/>, so later steps never assign pool ciphers to them.
+/// Members who still hold personal items pending migration keep an empty collection, as on the server: the client
+/// moves every personal item in one pass, and the policy blocks new personal items afterwards.
 /// </remarks>
 internal sealed class CreateDefaultCollectionsStep(
     SeedPresetDefaultCollections options,
     DateTime policyEnabledDate,
     int seed,
-    Distribution<CipherType>? typeDist = null) : IStep
+    Distribution<CipherType>? typeDist = null,
+    Distribution<(int Min, int Max)>? personalDist = null,
+    int personalCountPerUser = 0) : IStep
 {
     private const string _defaultName = "My Items";
 
@@ -45,9 +49,11 @@ internal sealed class CreateDefaultCollectionsStep(
             .Select(ou => ou.Id)
             .ToHashSet();
         var members = context.Registry.UserDigests.Where(d => !exempt.Contains(d.OrgUserId)).ToList();
+        var pending = PendingOrgUserIds(context.Registry.UserDigests);
+        var candidates = Enumerable.Range(0, members.Count).Where(u => !pending.Contains(members[u].OrgUserId)).ToArray();
 
         var random = new Random(ItemSeedMixer.Mix(seed, members.Count));
-        var activeCounts = ComputeActiveCounts(members.Count, random);
+        var activeCounts = ComputeActiveCounts(members.Count, candidates, random);
         var trashCounts = ComputeTrashCounts(activeCounts, random);
         var itemCounts = activeCounts.Zip(trashCounts, (active, trash) => active + trash).ToArray();
         var total = itemCounts.Sum();
@@ -175,12 +181,31 @@ internal sealed class CreateDefaultCollectionsStep(
     }
 
     /// <summary>
+    /// Org user ids of the members that <see cref="GeneratePersonalCiphersStep"/> will give personal items, from the
+    /// same counts it computes over the same digests.
+    /// </summary>
+    private HashSet<Guid> PendingOrgUserIds(List<EntityRegistry.UserDigest> userDigests)
+    {
+        if (personalDist is null && personalCountPerUser == 0)
+        {
+            return [];
+        }
+
+        var counts = GeneratePersonalCiphersStep.ComputeUserCounts(personalDist, personalCountPerUser, userDigests.Count);
+        return userDigests.Where((_, u) => counts[u] > 0).Select(d => d.OrgUserId).ToHashSet();
+    }
+
+    /// <summary>
     /// Active item counts per member: <see cref="SeedPresetDefaultCollections.NonEmptyRate"/> of members are
     /// non-empty, the first of them get <see cref="SeedPresetDefaultCollections.Largest"/>, the rest draw from
-    /// <see cref="SeedPresetDefaultCollections.Sizes"/> (1 item each without it). Members are chosen by shuffle.
+    /// <see cref="SeedPresetDefaultCollections.Sizes"/> (1 item each without it). Non-empty members are chosen by
+    /// shuffling <paramref name="candidates"/>, the members with no pending personal items; the rest stay empty.
     /// </summary>
-    /// <exception cref="InvalidOperationException">Thrown when <c>largest</c> has more entries than non-empty members.</exception>
-    private int[] ComputeActiveCounts(int memberCount, Random random)
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when <c>largest</c> has more entries than non-empty members, or there are more non-empty members than
+    /// candidates.
+    /// </exception>
+    private int[] ComputeActiveCounts(int memberCount, int[] candidates, Random random)
     {
         var counts = new int[memberCount];
         var nonEmpty = (int)Math.Round(memberCount * (options.NonEmptyRate ?? 0));
@@ -203,13 +228,18 @@ internal sealed class CreateDefaultCollectionsStep(
             ? new SizeHistogram(options.Sizes.Select(b => (b.Min, b.Max, b.Weight))).Draw(drawCount, random)
             : Enumerable.Repeat(1, drawCount).ToArray();
 
-        var chosen = Enumerable.Range(0, memberCount).ToArray();
-        random.Shuffle(chosen);
-
         var values = largest.Concat(drawn).ToArray();
+        if (values.Length > candidates.Length)
+        {
+            throw new InvalidOperationException(
+                $"'defaultCollections.nonEmptyRate' needs {values.Length} non-empty collections but only " +
+                $"{candidates.Length} members have no pending personal items. Lower nonEmptyRate or give fewer members personal items.");
+        }
+
+        random.Shuffle(candidates);
         for (var k = 0; k < values.Length; k++)
         {
-            counts[chosen[k]] = values[k];
+            counts[candidates[k]] = values[k];
         }
 
         return counts;

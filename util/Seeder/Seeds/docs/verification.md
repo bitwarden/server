@@ -262,9 +262,10 @@ WHERE OrganizationId = @OrgId;
 
 Verifies `defaultCollections`. Default collections are `Type=1`; each has one `CollectionUser` with only `Manage` set,
 no Owner or Admin, and no groups. Migrated items are org-owned, sit in exactly one collection, were created before the
-collection and revised after it. Expected for `features.default-collections-enterprise`: 68 default and 10 shared
-collections, 1 distinct default `Name`, 68 manage-only users, 34 non-empty collections, 518 items with 48 trashed,
-top active counts 120, 60, then 40 or fewer, and 0 in every other count column.
+collection and revised after it. A member who still holds personal items has an empty collection, because the client
+moves every personal item in one pass. Expected for `features.default-collections-enterprise`: 68 default and 10 shared
+collections, 1 distinct default `Name`, 68 manage-only users, 34 non-empty collections, 517 items with 47 trashed,
+top active counts 120, 60, then 40 or fewer, and 0 in every other count column, including the pending-items check.
 
 ```sql
 DECLARE @OrgId UNIQUEIDENTIFIER = 'PASTE_ORG_ID_HERE';
@@ -323,6 +324,15 @@ INNER JOIN [dbo].[Cipher] CI WITH (NOLOCK) ON CI.Id = CC.CipherId
 WHERE C.OrganizationId = @OrgId AND C.[Type] = 1 AND CI.DeletedDate IS NULL
 GROUP BY C.Id
 ORDER BY ActiveItems DESC;
+
+-- Non-empty default collections whose member still holds personal items
+SELECT COUNT(DISTINCT C.Id) AS NonEmptyWithPendingItems
+FROM [dbo].[Collection] C WITH (NOLOCK)
+INNER JOIN [dbo].[CollectionUser] CU WITH (NOLOCK) ON CU.CollectionId = C.Id
+INNER JOIN [dbo].[OrganizationUser] OU WITH (NOLOCK) ON OU.Id = CU.OrganizationUserId
+WHERE C.OrganizationId = @OrgId AND C.[Type] = 1
+    AND EXISTS (SELECT 1 FROM [dbo].[CollectionCipher] CC WITH (NOLOCK) WHERE CC.CollectionId = C.Id)
+    AND EXISTS (SELECT 1 FROM [dbo].[Cipher] P WITH (NOLOCK) WHERE P.UserId = OU.UserId AND P.OrganizationId IS NULL);
 ```
 
 ---

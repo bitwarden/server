@@ -108,7 +108,7 @@
           "type": "integer",
           "minimum": 0,
           "default": 0,
-          "description": "Number of Confirmed generated members created as Admins (the first ones); the rest are Users. Must not exceed count."
+          "description": "Number of Confirmed generated members created as Admins (the first ones); the rest are Users. Must not exceed the number of Confirmed members."
         },
         "statusMix": {
           "type": "object",
@@ -275,7 +275,7 @@
           "type": "number",
           "minimum": 0,
           "maximum": 1,
-          "description": "Fraction of default collections holding at least one active item."
+          "description": "Fraction of default collections holding at least one active item. Members with pending personal items are never non-empty."
         },
         "sizes": {
           "type": "array",
