@@ -168,17 +168,6 @@ public class ChangePrivilegedControlsSeatsCommandTests
     }
 
     [Fact]
-    public async Task Run_MoreSeatsThanPasswordManagerSeats_Succeeds()
-    {
-        var organization = CreateOrganization(seats: 5);
-        SucceedWith();
-
-        await _sut.Run(organization, 15, null);
-
-        Assert.Equal(15, organization.PamSeats);
-    }
-
-    [Fact]
     public async Task Run_SeatsUnchanged_SkipsTheSeatChangeStepAndTheSubscriptionUpdate()
     {
         var organization = CreateOrganization();
@@ -292,6 +281,41 @@ public class ChangePrivilegedControlsSeatsCommandTests
         Assert.Same(underlying, exception);
     }
 
+    [Fact]
+    public async Task Run_PamLimitAbovePmLimit_ThrowsBadRequest()
+    {
+        var organization = CreateOrganization(maxAutoscaleSeats: 10);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, 5, 11));
+
+        Assert.Equal(
+            "You cannot set a Privileged Controls autoscale limit higher than the Password Manager autoscale limit.",
+            exception.Message);
+        await _seatChangeSetFactory.DidNotReceive().CreateAsync(Arg.Any<OrganizationEntity>(), Arg.Any<int>());
+    }
+
+    [Fact]
+    public async Task Run_PamLimitSetWithNoPmLimit_Succeeds()
+    {
+        var organization = CreateOrganization(maxAutoscaleSeats: null);
+        SucceedWith();
+
+        await _sut.Run(organization, 5, 100);
+
+        Assert.Equal(100, organization.MaxAutoscalePamSeats);
+    }
+
+    [Fact]
+    public async Task Run_NoPamLimitWithPmLimit_Succeeds()
+    {
+        var organization = CreateOrganization(maxAutoscaleSeats: 10);
+        SucceedWith();
+
+        await _sut.Run(organization, 5, null);
+
+        Assert.Null(organization.MaxAutoscalePamSeats);
+    }
+
     private OrganizationSubscriptionChangeSet SucceedWith()
     {
         var changeSet = new OrganizationSubscriptionChangeSet
@@ -307,6 +331,7 @@ public class ChangePrivilegedControlsSeatsCommandTests
 
     private static OrganizationEntity CreateOrganization(
         int? seats = 50,
+        int? maxAutoscaleSeats = null,
         bool usePam = true,
         int? pamSeats = _currentSeats,
         int? maxAutoscalePamSeats = null,
@@ -315,6 +340,7 @@ public class ChangePrivilegedControlsSeatsCommandTests
             Id = Guid.NewGuid(),
             PlanType = PlanType.EnterpriseAnnually,
             Seats = seats,
+            MaxAutoscaleSeats = maxAutoscaleSeats,
             UsePam = usePam,
             PamSeats = pamSeats,
             MaxAutoscalePamSeats = maxAutoscalePamSeats,

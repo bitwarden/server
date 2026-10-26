@@ -39,6 +39,18 @@ public class BillingExtensionsTests
         Assert.True(organization.IsOnPrivilegedControlsSalesInitiatedTrial(new EnterprisePlan(isAnnual: true), false));
     }
 
+    [Theory]
+    [InlineData(null, null, true)]
+    [InlineData(null, 10, true)]
+    [InlineData(10, null, true)]
+    [InlineData(10, 10, true)]
+    [InlineData(11, 10, false)]
+    public void PrivilegedControlsAutoscaleLimitFits(int? privilegedControlsLimit, int? passwordManagerLimit, bool expected)
+    {
+        Assert.Equal(expected,
+            BillingExtensions.PrivilegedControlsAutoscaleLimitFits(privilegedControlsLimit, passwordManagerLimit));
+    }
+
     [Fact]
     public void GetPrivilegedControlsSeatMinimum_OrganizationMinimumSet_ReturnsOrganizationMinimum()
     {

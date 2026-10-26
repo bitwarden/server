@@ -95,6 +95,13 @@ public static class BillingExtensions
         bool subscriptionHasPrivilegedControlsSeats)
         => plan.SupportsPrivilegedControls && organization.UsePam && !subscriptionHasPrivilegedControlsSeats;
 
+    /// <summary>
+    /// Whether a Privileged Controls autoscale limit is allowed next to a Password Manager autoscale limit.
+    /// A missing limit means no limit, so the rule only applies when both are set.
+    /// </summary>
+    public static bool PrivilegedControlsAutoscaleLimitFits(int? privilegedControlsLimit, int? passwordManagerLimit)
+        => privilegedControlsLimit is null || passwordManagerLimit is null || privilegedControlsLimit <= passwordManagerLimit;
+
     public static int GetPrivilegedControlsSeatMinimum(this Organization organization, Plan plan)
     {
         if (!plan.SupportsPrivilegedControls)

@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Organizations.Commands;
+﻿using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
@@ -42,6 +43,12 @@ internal sealed class AddPrivilegedControlsToExistingSubscriptionCommand(
         if (maxAutoscaleSeats < seats)
         {
             throw new BadRequestException("Cannot set max seat autoscaling below the Privileged Controls seat count.");
+        }
+
+        if (!BillingExtensions.PrivilegedControlsAutoscaleLimitFits(maxAutoscaleSeats, organization.MaxAutoscaleSeats))
+        {
+            throw new BadRequestException(
+                "You cannot set a Privileged Controls autoscale limit higher than the Password Manager autoscale limit.");
         }
 
         var changeSet = await seatChangeSetFactory.CreateAsync(organization, seats);
