@@ -1,4 +1,4 @@
-FROM mariadb:12
+FROM mariadb:13
 
 ARG PRESET_NAME=unknown
 ARG GIT_SHA=unknown
