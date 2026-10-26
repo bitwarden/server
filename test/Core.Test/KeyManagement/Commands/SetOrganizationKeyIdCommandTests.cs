@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Commands;
 using Bit.Core.KeyManagement.Models.Data;
@@ -18,58 +17,32 @@ public class SetOrganizationKeyIdCommandTests
     private const string _otherKeyId = "fedcba9876543210fedcba9876543210";
 
     [Theory, BitAutoData]
-    public async Task SetOrganizationKeyIdAsync_OrganizationNotFound_ThrowsAndWritesNothing(
+    public async Task SetOrganizationKeyIdAsync_OrganizationNotFound_Throws(
         Guid organizationId,
         KeyId organizationKeyId,
         SutProvider<SetOrganizationKeyIdCommand> sutProvider)
     {
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        organizationRepository.SetOrganizationKeyIdAsync(organizationId, organizationKeyId).Returns(false);
         organizationRepository.GetByIdAsync(organizationId).ReturnsNull();
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.SetOrganizationKeyIdAsync(organizationId, organizationKeyId));
-
-        await organizationRepository.DidNotReceiveWithAnyArgs().SetOrganizationKeyIdAsync(default, default!);
     }
 
     [Theory, BitAutoData]
-    public async Task SetOrganizationKeyIdAsync_OrganizationPending_ThrowsAndWritesNothing(
-        Organization organization,
-        KeyId organizationKeyId,
-        SutProvider<SetOrganizationKeyIdCommand> sutProvider)
-    {
-        organization.Status = OrganizationStatusType.Pending;
-        organization.OrganizationKeyId = null;
-
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SetOrganizationKeyIdAsync(organization.Id, organizationKeyId));
-
-        Assert.Equal("Organization is not initialized.", exception.Message);
-        await organizationRepository.DidNotReceiveWithAnyArgs().SetOrganizationKeyIdAsync(default, default!);
-    }
-
-    [Theory]
-    [BitAutoData(OrganizationStatusType.Created)]
-    [BitAutoData(OrganizationStatusType.Managed)]
     public async Task SetOrganizationKeyIdAsync_NoKeyIdRecorded_StoresTheKeyId(
-        OrganizationStatusType status,
-        Organization organization,
+        Guid organizationId,
         KeyId organizationKeyId,
         SutProvider<SetOrganizationKeyIdCommand> sutProvider)
     {
-        organization.Status = status;
-        organization.OrganizationKeyId = null;
-
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
-        organizationRepository.SetOrganizationKeyIdAsync(organization.Id, organizationKeyId).Returns(true);
+        organizationRepository.SetOrganizationKeyIdAsync(organizationId, organizationKeyId).Returns(true);
 
-        await sutProvider.Sut.SetOrganizationKeyIdAsync(organization.Id, organizationKeyId);
+        await sutProvider.Sut.SetOrganizationKeyIdAsync(organizationId, organizationKeyId);
 
-        await organizationRepository.Received(1).SetOrganizationKeyIdAsync(organization.Id, organizationKeyId);
+        await organizationRepository.Received(1).SetOrganizationKeyIdAsync(organizationId, organizationKeyId);
+        await organizationRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(default);
     }
 
     [Theory, BitAutoData]
@@ -78,16 +51,16 @@ public class SetOrganizationKeyIdCommandTests
         KeyId organizationKeyId,
         SutProvider<SetOrganizationKeyIdCommand> sutProvider)
     {
-        organization.Status = OrganizationStatusType.Created;
         organization.OrganizationKeyId = organizationKeyId.ToString();
 
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
         organizationRepository.SetOrganizationKeyIdAsync(organization.Id, organizationKeyId).Returns(false);
+        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
 
         await sutProvider.Sut.SetOrganizationKeyIdAsync(organization.Id, organizationKeyId);
 
         await organizationRepository.Received(1).SetOrganizationKeyIdAsync(organization.Id, organizationKeyId);
+        await organizationRepository.Received(1).GetByIdAsync(organization.Id);
     }
 
     [Theory, BitAutoData]
@@ -96,12 +69,11 @@ public class SetOrganizationKeyIdCommandTests
         KeyId organizationKeyId,
         SutProvider<SetOrganizationKeyIdCommand> sutProvider)
     {
-        organization.Status = OrganizationStatusType.Created;
         organization.OrganizationKeyId = _otherKeyId;
 
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
         organizationRepository.SetOrganizationKeyIdAsync(organization.Id, organizationKeyId).Returns(false);
+        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SetOrganizationKeyIdAsync(organization.Id, organizationKeyId));

@@ -16,11 +16,14 @@ public class OrganizationKeysControllerTests : IClassFixture<ApiApplicationFacto
 {
     private const string _organizationKeyId = "0123456789abcdef0123456789abcdef";
     private const string _otherOrganizationKeyId = "fedcba9876543210fedcba9876543210";
+    private const string _wrappedOrganizationKey =
+        "4.AOs41Hd8OQiCPXjyJKCiDA==";
 
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
     private readonly LoginHelper _loginHelper;
     private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
 
     private string _ownerEmail = null!;
     private Organization _organization = null!;
@@ -31,6 +34,7 @@ public class OrganizationKeysControllerTests : IClassFixture<ApiApplicationFacto
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
         _organizationRepository = _factory.GetService<IOrganizationRepository>();
+        _organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
     }
 
     public async Task InitializeAsync()
@@ -104,14 +108,31 @@ public class OrganizationKeysControllerTests : IClassFixture<ApiApplicationFacto
     {
         var adminEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(adminEmail);
-        await OrganizationTestHelpers.CreateUserAsync(_factory, _organization.Id, adminEmail,
+        var admin = await OrganizationTestHelpers.CreateUserAsync(_factory, _organization.Id, adminEmail,
             OrganizationUserType.Admin);
+        admin.Key = _wrappedOrganizationKey;
+        await _organizationUserRepository.ReplaceAsync(admin);
         await _loginHelper.LoginAsync(adminEmail);
 
         var response = await _client.PostAsJsonAsync(OrganizationKeyIdUri(), RequestFor(_organizationKeyId));
 
         response.EnsureSuccessStatusCode();
         await AssertOrganizationKeyIdAsync(_organizationKeyId);
+    }
+
+    [Fact]
+    public async Task PostOrganizationKeyIdAsync_AdminWithoutTheOrganizationKey_BadRequestAndKeyIdIsUnchanged()
+    {
+        var adminEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(adminEmail);
+        await OrganizationTestHelpers.CreateUserAsync(_factory, _organization.Id, adminEmail,
+            OrganizationUserType.Admin);
+        await _loginHelper.LoginAsync(adminEmail);
+
+        var response = await _client.PostAsJsonAsync(OrganizationKeyIdUri(), RequestFor(_organizationKeyId));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await AssertOrganizationKeyIdAsync(null);
     }
 
     [Fact]
