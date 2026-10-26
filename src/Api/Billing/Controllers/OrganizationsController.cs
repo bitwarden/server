@@ -84,10 +84,6 @@ public class OrganizationsController(
             ? await organizationUserRepository.GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id)
             : null;
 
-        int? pamSeatMinimum = plan.SupportsPrivilegedControls && organization.UsePam
-            ? organization.GetPrivilegedControlsSeatMinimum(plan)
-            : null;
-
         var includePrivilegedControlsPlanFeatures = featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support);
 
         if (string.IsNullOrEmpty(organization.GatewaySubscriptionId))
@@ -95,7 +91,7 @@ public class OrganizationsController(
             return new OrganizationSubscriptionResponseModel(
                 organization, plan, occupiedPamSeats,
                 organization.IsOnPrivilegedControlsSalesInitiatedTrial(plan, subscriptionHasPrivilegedControlsSeats: false),
-                pamSeatMinimum, includePrivilegedControlsPlanFeatures);
+                includePrivilegedControlsPlanFeatures);
         }
 
         var subscriptionInfo = await paymentService.GetSubscriptionAsync(organization);
@@ -116,7 +112,7 @@ public class OrganizationsController(
             organization, subscriptionInfo, plan, hideSensitiveData, pendingAnnualUpgrade, occupiedPamSeats,
             organization.IsOnPrivilegedControlsSalesInitiatedTrial(
                 plan, subscriptionInfo.Subscription?.HasPrivilegedControlsSeats == true),
-            pamSeatMinimum, includePrivilegedControlsPlanFeatures);
+            includePrivilegedControlsPlanFeatures);
     }
 
     [HttpGet("{id:guid}/license")]

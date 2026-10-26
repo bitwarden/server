@@ -560,9 +560,7 @@ public class CreateOrganizationSubscriptionCommandTests
             {
                 PrivilegedControls = new PrivilegedControlsPlanFeatures
                 {
-                    StripeSeatPlanId = "pam-seat",
-                    DefaultSeatMinimum = 10,
-                    PromotionalSeatMinimums = [4, 6, 8]
+                    StripeSeatPlanId = "pam-seat"
                 };
             }
         }

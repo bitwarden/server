@@ -101,14 +101,4 @@ public static class BillingExtensions
     /// </summary>
     public static bool PrivilegedControlsAutoscaleLimitFits(int? privilegedControlsLimit, int? passwordManagerLimit)
         => privilegedControlsLimit is null || passwordManagerLimit is null || privilegedControlsLimit <= passwordManagerLimit;
-
-    public static int GetPrivilegedControlsSeatMinimum(this Organization organization, Plan plan)
-    {
-        if (!plan.SupportsPrivilegedControls)
-        {
-            throw new ArgumentException($"Plan {plan.Type} does not support Privileged Controls.", nameof(plan));
-        }
-
-        return organization.PamSeatMinimum ?? plan.PrivilegedControls.DefaultSeatMinimum;
-    }
 }
