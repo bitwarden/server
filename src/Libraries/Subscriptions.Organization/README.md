@@ -191,15 +191,15 @@ and any new caller must run the trial query first. The cost is one extra Stripe 
 
 | Condition | Status |
 | --- | --- |
-| `seats` not an integer | 400 (binding) |
+| `seatAdjustment` not an integer | 400 (binding) |
 | Not an Owner of a standalone organization | 403 |
 | `PM39883_Pam_Billing_Support` off | 404 |
 | Organization not found (an unknown id normally fails authorization first, as 403) | 404 |
 | Sales-initiated trial, including no subscription id, or no seats saved with no seat line | 400, trial message above |
 | Subscription id no longer in Stripe | 409, logged with the organization and subscription ids |
 | Plan not in the pricing service | 404 (pricing client), the same as the subscription response |
-| Privileged Controls off, `maxAutoscaleSeats` below `seats` | 400 (command) |
-| Plan without Privileged Controls, fewer than one seat, or a decrease below the seat minimum or below occupied seats | 400 (factory) |
+| Privileged Controls off, `maxAutoscaleSeats` below the resulting seat total | 400 (command) |
+| Plan without Privileged Controls, fewer than one seat, or a decrease below occupied seats | 400 (factory) |
 | Subscription not `trialing`, `active`, or `past_due`, or a Stripe input error | 400 (subscription update) |
 | Subscription schedule with no updatable phase, or another conflict inside the update | 409 (subscription update) |
 | Unmapped Stripe or unexpected error | 500 |
