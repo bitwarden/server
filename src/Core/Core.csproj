@@ -78,8 +78,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Libraries\Clients\Clients.csproj" />
     <ProjectReference Include="..\Libraries\Data\Data.csproj" />
     <ProjectReference Include="..\Libraries\ExceptionHandling\ExceptionHandling.csproj" />
+    <ProjectReference Include="..\Libraries\Push.Infrastructure\Push.Infrastructure.csproj" />
     <ProjectReference Include="..\Libraries\SerilogFileLogging\SerilogFileLogging.csproj" />
     <ProjectReference Include="..\Libraries\SsrfProtection\SsrfProtection.csproj" />
   </ItemGroup>
