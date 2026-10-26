@@ -117,7 +117,7 @@ public class RemoveOrganizationFromProviderCommandTests
 
         await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
 
-        await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(org => org.BillingEmail == "a@example.com"));
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(org => org.BillingEmail == "a@example.com"));
 
         await sutProvider.GetDependency<IProviderOrganizationRepository>().Received(1)
             .DeleteAsync(providerOrganization);
@@ -180,7 +180,7 @@ public class RemoveOrganizationFromProviderCommandTests
 
         await sutProvider.GetDependency<ISubscriberService>().Received(1).RemovePaymentSource(organization);
 
-        await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(org => org.BillingEmail == "a@example.com"));
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(org => org.BillingEmail == "a@example.com"));
 
         await sutProvider.GetDependency<IProviderOrganizationRepository>().Received(1)
             .DeleteAsync(providerOrganization);
@@ -264,7 +264,7 @@ public class RemoveOrganizationFromProviderCommandTests
         await sutProvider.GetDependency<IProviderBillingService>().Received(1)
             .ScaleSeats(provider, organization.PlanType, -organization.Seats ?? 0);
 
-        await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(
             org =>
                 org.BillingEmail == "a@example.com" &&
                 org.GatewaySubscriptionId == "subscription_id" &&
@@ -353,7 +353,7 @@ public class RemoveOrganizationFromProviderCommandTests
         await sutProvider.GetDependency<IProviderBillingService>().Received(1)
             .ScaleSeats(provider, organization.PlanType, -organization.Seats ?? 0);
 
-        await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(
             org =>
                 org.BillingEmail == "a@example.com" &&
                 org.GatewaySubscriptionId == "subscription_id" &&
@@ -454,7 +454,7 @@ public class RemoveOrganizationFromProviderCommandTests
         await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
 
         // Assert: Verify the disabled organization is now enabled
-        await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(
             org =>
                 org.Enabled == true && // The previously disabled organization should now be enabled
                 org.Status == OrganizationStatusType.Created &&

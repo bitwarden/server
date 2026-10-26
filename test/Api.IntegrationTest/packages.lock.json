@@ -1421,6 +1421,7 @@
           "Commercial.Core": "[2026.10.1, )",
           "Commercial.Infrastructure.EntityFramework": "[2026.10.1, )",
           "Core": "[2026.10.1, )",
+          "CurrentUser": "[0.0.1, )",
           "HttpExtensions": "[2026.10.1, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.15.3, )",
           "OpenTelemetry.Extensions.Hosting": "[1.15.3, )",
@@ -1436,6 +1437,9 @@
           "Subscriptions.User": "[0.0.1, )",
           "Swashbuckle.AspNetCore": "[10.1.7, 10.1.7]"
         }
+      },
+      "clients": {
+        "type": "Project"
       },
       "commercial.core": {
         "type": "Project",
@@ -1482,6 +1486,7 @@
           "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
           "Bitwarden.Server.Sdk.Features": "[1.5.0, )",
           "Braintree": "[5.36.0, 5.36.0]",
+          "Clients": "[0.0.1, )",
           "CsvHelper": "[33.1.0, 33.1.0]",
           "Data": "[0.0.1, )",
           "DnsClient": "[1.8.0, 1.8.0]",
@@ -1509,6 +1514,7 @@
           "Newtonsoft.Json": "[13.0.3, 13.0.3]",
           "OneOf": "[3.0.271, 3.0.271]",
           "Otp.NET": "[1.4.0, 1.4.0]",
+          "Push.Infrastructure": "[0.0.1, )",
           "Quartz": "[3.15.1, 3.15.1]",
           "Quartz.Extensions.DependencyInjection": "[3.15.1, 3.15.1]",
           "Quartz.Extensions.Hosting": "[3.15.1, 3.15.1]",
@@ -1522,6 +1528,9 @@
           "ZiggyCreatures.FusionCache.Backplane.StackExchangeRedis": "[2.0.2, 2.0.2]",
           "ZiggyCreatures.FusionCache.Serialization.SystemTextJson": "[2.0.2, 2.0.2]"
         }
+      },
+      "currentuser": {
+        "type": "Project"
       },
       "data": {
         "type": "Project"
@@ -1624,6 +1633,9 @@
         "dependencies": {
           "Data": "[0.0.1, )"
         }
+      },
+      "push.infrastructure": {
+        "type": "Project"
       },
       "rustsdk": {
         "type": "Project"

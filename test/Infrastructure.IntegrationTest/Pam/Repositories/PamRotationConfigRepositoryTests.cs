@@ -34,6 +34,7 @@ public class PamRotationConfigRepositoryTests
             CipherId = cipher.Id,
             TargetSystemId = target.Id,
             SealedData = "sealed-rotation-config-blob",
+            WrappedKey = "2.iv|ct|mac",
             ScheduleCron = "0 0/15 * * * ?",
             RotateOnAccessEnd = true,
             NextRotationDate = now.AddMinutes(15),
@@ -48,6 +49,7 @@ public class PamRotationConfigRepositoryTests
         Assert.Equal(cipher.Id, persisted.CipherId);
         Assert.Equal(target.Id, persisted.TargetSystemId);
         Assert.Equal("sealed-rotation-config-blob", persisted.SealedData);
+        Assert.Equal("2.iv|ct|mac", persisted.WrappedKey);
         Assert.Equal("0 0/15 * * * ?", persisted.ScheduleCron);
         Assert.True(persisted.RotateOnAccessEnd);
         Assert.Equal(now.AddMinutes(15), persisted.NextRotationDate.Value, LaxDateTimeComparer.Default);
@@ -309,6 +311,7 @@ public class PamRotationConfigRepositoryTests
             Name = $"target-{Guid.NewGuid()}",
             Method = PamTargetSystemMethod.Automatic,
             SealedData = status == PamTargetSystemStatus.PendingSeal ? null : "sealed-blob",
+            WrappedKey = status == PamTargetSystemStatus.PendingSeal ? null : "wrapped-key",
             Status = status,
             CreationDate = now,
             RevisionDate = now,
@@ -362,6 +365,7 @@ public class PamRotationConfigRepositoryTests
             CipherId = cipherId,
             TargetSystemId = targetSystemId,
             SealedData = "sealed-blob",
+            WrappedKey = "wrapped-key",
             RotateOnAccessEnd = false,
             NextRotationDate = nextRotationDate,
             Enabled = enabled,

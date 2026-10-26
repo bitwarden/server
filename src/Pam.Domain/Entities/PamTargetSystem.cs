@@ -24,6 +24,13 @@ public class PamTargetSystem : ITableObject<Guid>
     [MaxLength(10000)]
     public string? SealedData { get; set; }
 
+    /// <summary>
+    /// The content key of SealedData, wrapped by the org key. Stored apart from SealedData so org-key rotation only
+    /// re-wraps the key. Null while PendingSeal and for rows that predate the column.
+    /// </summary>
+    [MaxLength(2000)]
+    public string? WrappedKey { get; set; }
+
     public PamTargetSystemStatus Status { get; set; }
 
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
