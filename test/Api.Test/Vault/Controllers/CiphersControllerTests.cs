@@ -229,7 +229,7 @@ public class CiphersControllerTests
         var alias = typeof(CiphersController).GetMethod(aliasName)!;
 
         var obsolete = Assert.Single(legacy.GetCustomAttributes(typeof(ObsoleteAttribute), false).Cast<ObsoleteAttribute>());
-        Assert.Equal("Replaced by /shared-folders route; retained for backwards compatibility", obsolete.Message);
+        Assert.Equal($"Replaced by /{expectedTemplate.Replace("{id}/", "")} route; retained for backwards compatibility", obsolete.Message);
         Assert.Empty(alias.GetCustomAttributes(typeof(ObsoleteAttribute), false));
 
         var legacyVerb = legacy.GetCustomAttributes(typeof(HttpMethodAttribute), false).Cast<HttpMethodAttribute>().Single();

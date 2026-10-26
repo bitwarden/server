@@ -991,7 +991,7 @@ public class CiphersController : Controller
     }
 
     [HttpPut("{id}/collections_v2")]
-    [Obsolete("Replaced by /shared-folders route; retained for backwards compatibility")]
+    [Obsolete("Replaced by /shared-folders_v2 route; retained for backwards compatibility")]
     public async Task<OptionalCipherDetailsResponseModel> PutCollections_vNext(Guid id, [FromBody] CipherCollectionsRequestModel model)
     {
         return await PutSharedFolders_vNext(id, model);
@@ -1036,7 +1036,7 @@ public class CiphersController : Controller
     }
 
     [HttpPut("{id}/collections-admin")]
-    [Obsolete("Replaced by /shared-folders route; retained for backwards compatibility")]
+    [Obsolete("Replaced by /shared-folders-admin route; retained for backwards compatibility")]
     public async Task<CipherMiniDetailsResponseModel> PutCollectionsAdmin(string id, [FromBody] CipherCollectionsRequestModel model)
     {
         return await PutSharedFoldersAdmin(id, model);
@@ -1072,7 +1072,7 @@ public class CiphersController : Controller
     }
 
     [HttpPost("bulk-collections")]
-    [Obsolete("Replaced by /shared-folders route; retained for backwards compatibility")]
+    [Obsolete("Replaced by /bulk-shared-folders route; retained for backwards compatibility")]
     public async Task PostBulkCollections([FromBody] CipherBulkUpdateCollectionsRequestModel model)
     {
         await PostBulkSharedFolders(model);
