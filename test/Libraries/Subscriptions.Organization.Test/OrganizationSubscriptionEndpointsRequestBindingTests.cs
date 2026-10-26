@@ -321,7 +321,7 @@ public class OrganizationSubscriptionEndpointsRequestBindingTests
             PrivilegedControls = new PrivilegedControlsPlanFeatures
             {
                 StripeSeatPlanId = "privileged-controls-enterprise-seat-annually",
-                DefaultSeatMinimum = 10
+                DefaultSeatMinimum = 1
             };
         }
     }
