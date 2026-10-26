@@ -1,21 +1,27 @@
-﻿using Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Request;
+﻿using Bit.Core.Context;
+using Bit.Services.Pam.AccessConnector.Commands.Interfaces;
+using Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Request;
 
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints.Handlers;
 
 /// <summary>
-/// Handler for the connector-facing <c>access-connectors/rotation/attempts/{id}</c> report actions. The Minimal API
-/// endpoints (see <c>RotationAttemptEndpoints</c>) resolve this handler from DI.
+/// Handler for the connector-facing <c>access-connectors/rotation/attempts/{id}</c> report actions. The commands throw
+/// 404 for an unknown attempt (not audited) and 409 for a stale report (audited).
 /// </summary>
-/// <remarks>
-/// Scaffold only: the method signatures define the wire contract (request/response models, status codes) that the
-/// generated OpenAPI spec and client bindings are built from. The bodies are intentionally unimplemented — the behavior
-/// lands with the rest of the rotation feature.
-/// </remarks>
-public class RotationAttemptEndpointsHandler
+public class RotationAttemptEndpointsHandler(
+    ICurrentContext currentContext,
+    IReportRotationSucceededCommand reportRotationSucceededCommand,
+    IReportRotationFailedCommand reportRotationFailedCommand)
 {
-    public Task Success(Guid id, ReportRotationSucceededRequestModel model)
-        => throw new NotImplementedException();
+    public async Task Success(Guid id, ReportRotationSucceededRequestModel model)
+    {
+        await reportRotationSucceededCommand.ReportSucceededAsync(
+            currentContext.PamAccessConnectorId!.Value, id, model.SessionTermination!.Value);
+    }
 
-    public Task Failure(Guid id, ReportRotationFailedRequestModel model)
-        => throw new NotImplementedException();
+    public async Task Failure(Guid id, ReportRotationFailedRequestModel model)
+    {
+        await reportRotationFailedCommand.ReportFailedAsync(
+            currentContext.PamAccessConnectorId!.Value, id, model.ToFailureReason(), model.SyncState!.Value);
+    }
 }
