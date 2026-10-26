@@ -196,10 +196,9 @@ subscription fails at the charge, in Stripe, with no extra lookups. Trial detect
 `IIsOnPrivilegedControlsSalesInitiatedTrialQuery`, shared with the seat change endpoint, so the subscription is read
 from Stripe under the same conditions and a subscription id Stripe no longer has is the same 409.
 
-The command rejects a seat count below the minimum and an autoscale limit below the seat count, each as
-a `BadRequestException` that passes through the handler unchanged. A
-Stripe card error from the charge is mapped by the group's `StripeCardErrorEndpointFilter`, not by the
-handler. No upper seat cap against Password Manager seats is enforced.
+The command rejects an autoscale limit below the seat count with a `BadRequestException` that passes
+through the handler unchanged. A Stripe card error from the charge is mapped by the group's
+`StripeCardErrorEndpointFilter`, not by the handler.
 
 ### Privileged Controls seat change
 
