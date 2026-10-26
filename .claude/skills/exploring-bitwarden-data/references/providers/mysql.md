@@ -23,7 +23,7 @@ Connect as the read-only user in `BW_MYSQL_USERNAME` (`bitwarden_data_reader`, `
 
 ## Connecting
 
-Prefer host `mysql` with the env vars above when installed; otherwise go through the container. Either form connects as `BW_MYSQL_USERNAME` and keeps the `SET` guard. Pass the password via `MYSQL_PWD` (never `-p`, which prints a warning). The client is **silent on success and prints errors to stderr** — don't blanket-suppress stderr, or failures vanish.
+Prefer host `mysql` with the env vars above when installed (check with `which mysql`); otherwise go through the container. Either form connects as `BW_MYSQL_USERNAME` and keeps the `SET` guard. Pass the password via `MYSQL_PWD` (never `-p`, which prints a warning). The client is **silent on success and prints errors to stderr** — don't blanket-suppress stderr, or failures vanish.
 
 Host `mysql` (when installed):
 
@@ -33,7 +33,7 @@ MYSQL_PWD="$BW_MYSQL_PASSWORD" mysql \
   -e "SET SESSION TRANSACTION READ ONLY; SELECT COUNT(*) FROM Organization;"
 ```
 
-Container fallback (host `mysql` not installed — inject the password into the container; the `@'%'` reader matches the socket, so add `-h 127.0.0.1` only if a socket connection is refused):
+Container fallback (host `mysql` not installed — inject the password into the container; the `@'%'` reader matches the socket, so add `-h 127.0.0.1` only if a socket connection is refused). The skill does not pre-approve `docker exec`, so every container form here asks the user for permission:
 
 ```bash
 docker exec -e MYSQL_PWD="$BW_MYSQL_PASSWORD" -i bitwardenserver-mysql-1 \
@@ -55,5 +55,5 @@ MYSQL
 
 - PascalCase table/column names work unquoted on the Linux containers, but **`Group` is a reserved word — backtick it** (`` `Group` ``). No `[brackets]`.
 - No `TOP n` (use `LIMIT n`), no `GETUTCDATE()` (use `UTC_TIMESTAMP()`), no `WITH (NOLOCK)`.
-- The `Archives`/`Favorites`/`Folders` per-user JSON columns are `longtext` — use `JSON_UNQUOTE(JSON_EXTRACT(col, '$."UPPERCASE-GUID"'))`.
+- The `Archives`/`Favorites`/`Folders` per-user JSON columns are `longtext`. Their keys can be either case: the EF repositories write lowercase GUIDs and the Seeder writes uppercase, and JSON paths are case-sensitive. Check both, e.g. `COALESCE(JSON_UNQUOTE(JSON_EXTRACT(col, '$."UPPERCASE-GUID"')), JSON_UNQUOTE(JSON_EXTRACT(col, '$."lowercase-guid"')))`.
 - The canonical MSSQL TVFs (`UserCipherDetails`, `UserCollectionDetails`) do not exist — EF providers have no stored procedures or functions. Rebuild their logic from the function sources in [../sources.md](../sources.md).

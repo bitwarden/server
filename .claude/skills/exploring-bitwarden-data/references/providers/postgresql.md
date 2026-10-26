@@ -23,7 +23,7 @@ Connect as the read-only login in `BW_POSTGRES_USERNAME` (`bitwarden_data_reader
 
 ## Connecting
 
-Prefer host `psql` with the env vars above when installed; otherwise go through the container. Either form connects as `BW_POSTGRES_USERNAME` and keeps the `SET` guard.
+Prefer host `psql` with the env vars above when installed (check with `which psql`); otherwise go through the container. Either form connects as `BW_POSTGRES_USERNAME` and keeps the `SET` guard.
 
 Host `psql` (when installed):
 
@@ -34,7 +34,7 @@ PGPASSWORD="$BW_POSTGRES_PASSWORD" psql \
   -c "SELECT COUNT(*) FROM \"Organization\""
 ```
 
-Container fallback (host `psql` not installed — connects as the reader over the trusted local socket):
+Container fallback (host `psql` not installed — connects as the reader over the trusted local socket). The skill does not pre-approve `docker exec`, so every container form here asks the user for permission:
 
 ```bash
 docker exec -i bitwardenserver-postgres-1 \
@@ -59,5 +59,5 @@ PSQL
 
 - **Quote every PascalCase identifier** (`"OrganizationUser"`, `"Status"`) — EF created them case-sensitive; unquoted names fold to lowercase and fail. This is the #1 error source when translating from the MSSQL reference.
 - No `[brackets]`, no `TOP n` (use `LIMIT n`), no `GETUTCDATE()` (use `now() AT TIME ZONE 'utc'`), no `WITH (NOLOCK)`.
-- String concat is `||`. The `Archives`/`Favorites`/`Folders` per-user JSON columns are `text` — use `col::jsonb ->> 'UPPERCASE-GUID'`.
+- String concat is `||`. The `Archives`/`Favorites`/`Folders` per-user JSON columns are `text`. Their keys can be either case: the EF repositories write lowercase GUIDs and the Seeder writes uppercase, and JSON keys are case-sensitive. Check both, e.g. `COALESCE(col::jsonb ->> 'UPPERCASE-GUID', col::jsonb ->> 'lowercase-guid')`.
 - The canonical MSSQL TVFs (`UserCipherDetails`, `UserCollectionDetails`) do not exist — EF providers have no stored procedures or functions. Rebuild their logic from the function sources in [../sources.md](../sources.md).

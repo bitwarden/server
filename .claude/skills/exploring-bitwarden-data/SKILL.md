@@ -3,7 +3,7 @@ name: exploring-bitwarden-data
 description: Read-only exploration of a local Bitwarden development database — answer business questions from live data, verify seeded fixtures, and introspect schema. Use whenever the user wants to query, count, look up, verify, or explore data in a local Bitwarden database ("how many orgs/users/ciphers", "show me collections", "check what the seeder created", "look up user X", "which orgs have feature Y"), even without the word SQL. Not for authoring stored procedures, migrations, or repository code (use writing-database-queries), and not for seeding or modifying data.
 argument-hint: "[mssql|mysql|postgresql] <question or SQL>"
 user-invocable: true
-allowed-tools: "Bash(which sqlcmd), Bash(sqlcmd:*), Bash(mysql:*), Bash(psql:*)"
+allowed-tools: "Bash(which sqlcmd), Bash(which mysql), Bash(which psql), Bash(sqlcmd:*), Bash(mysql:*), Bash(psql:*)"
 ---
 
 # Explore Bitwarden Database
@@ -12,8 +12,8 @@ Read-only access to a local Bitwarden database, across all three dev providers.
 
 ## Read-only, defense in depth
 
-1. Database login is read-only at the server — mutations will fail regardless of what you send.
-2. Allowed: `SELECT`, `WITH` (CTEs), and `INFORMATION_SCHEMA` / `sys.*` introspection.
+1. The login in `BW_*_USERNAME` must be read-only at the server. Writes fail because of that login's grants, not because of any connection flag. [references/providers/mssql.md](references/providers/mssql.md) has a query that confirms an MSSQL login is read-only. On MSSQL, run that check before the session's first query. If any column other than `IsDataReader` is 1, stop and tell the user.
+2. Allowed: `SELECT`, `WITH` (CTEs), `INFORMATION_SCHEMA` / `sys.*` introspection, and the session `SET` statements the provider references require (`SET NOCOUNT ON`, `SET TEXTSIZE`, `SET SESSION TRANSACTION READ ONLY`, `SET default_transaction_read_only = on`).
 
 ## Cross-provider rules
 
@@ -35,17 +35,17 @@ First arg picks the provider — `mssql` (default), `mysql`, or `postgresql`. Re
 
 Don't compose SQL from a generic mental model of how a vault schema "probably" looks — and don't expect this skill to inventory the schema for you. The repo already does, and it stays current when this file wouldn't:
 
-- **Tables and columns**: SSDT schema under `src/Sql/dbo/`, or live introspection via [references/schema-discovery-queries.md](references/schema-discovery-queries.md).
+- **Tables and columns**: SSDT schema under `src/Sql/dbo/`, or live introspection via [references/schema-discovery-queries.md](references/schema-discovery-queries.md) (MSSQL only). On MySQL, `information_schema` lists the tables under `TABLE_SCHEMA = DATABASE()`; on PostgreSQL they are in schema `public`.
 - **Enum integer values and lifecycle semantics**: the C# enum sources — their XML docs carry meaning no value table can (seat consumption, restore behavior, deprecations).
-- **Access-control logic**: prefer the canonical functions over hand-rolled joins — `[dbo].[UserCipherDetails](@UserId)` for "what can user X see", `[dbo].[UserCollectionDetails](@UserId)` for collection permissions. They encode member status, org enablement, and direct-over-group grant precedence that is easy to rebuild subtly wrong.
+- **Access-control logic**: prefer the canonical functions over hand-rolled joins — `[dbo].[UserCipherDetails](@UserId)` for "what can user X see", `[dbo].[UserCollectionDetails](@UserId)` for collection permissions. They encode member status, org enablement, and direct-over-group grant precedence that is easy to rebuild subtly wrong. Both return one row per access path, so an item reached through two collections or two groups appears twice: count `DISTINCT Id`. To merge permissions per `Id`, use `MAX(Edit)`, `MAX(ViewPassword)`, `MAX(Manage)` on `UserCipherDetails` (as `CipherDetails_ReadByIdUserId` does) and `MIN(ReadOnly)`, `MIN(HidePasswords)`, `MAX(Manage)` on `UserCollectionDetails` (as `Collection_ReadByUserId` does).
 - **Where to look**: [references/sources.md](references/sources.md) maps every concept named in this skill to its source file.
 
 ## Grounding rules
 
-Semantics the schema itself cannot tell you — each of these flipped a real eval case that unaided Claude got wrong (evidence in `evals/baseline-results.md`; that is also the bar for adding a rule here).
+Semantics the schema itself cannot tell you. Add a rule here only when it flips an eval case that unaided Claude gets wrong.
 
-1. **Active member = `OrganizationUser.Status = 2` (Confirmed).** "Active" is genuinely ambiguous — the occupied-seat definition (`Status IN (0,1,2)`, used by the seat-count procs) is a defensible rival reading, so state which one the question needs. Full lifecycle (including Staged and Revoked-with-restore) is documented in `OrganizationUserStatusType.cs`.
-2. **Archive state lives in `Cipher.Archives` — per-user JSON keyed by UPPERCASE user GUID — not in the `ArchivedDate` column.** `ArchivedDate` exists on the table but the archive flow never writes it (`Cipher_Archive` does `JSON_MODIFY` on `Archives`); querying it returns zero forever while looking perfectly reasonable. `Favorites` and `Folders` use the same per-user JSON shape, so interpolate keys from a `UNIQUEIDENTIFIER` (SQL Server renders them uppercase; JSON keys are case-sensitive).
+1. **Active member = `OrganizationUser.Status = 2` (Confirmed).** "Active" is genuinely ambiguous — the occupied-seat definition (`Status IN (0,1,2)` plus admin-initiated sponsorships, used by the seat-count procs) is a defensible rival reading, so state which one the question needs. Full lifecycle (including Staged and Revoked-with-restore) is documented in `OrganizationUserStatusType.cs`.
+2. **Archive state lives in `Cipher.Archives` — per-user JSON keyed by user GUID — not in the `ArchivedDate` column.** `ArchivedDate` exists on the table but the archive flow never writes it (`Cipher_Archive` does `JSON_MODIFY` on `Archives`); querying it returns zero forever while looking perfectly reasonable. `Favorites` and `Folders` use the same per-user JSON shape. JSON keys are case-sensitive. On SQL Server they are uppercase, so interpolate keys from a `UNIQUEIDENTIFIER`, which SQL Server renders uppercase. On MySQL and PostgreSQL they can be either case (the EF repositories write lowercase, the Seeder uppercase), so check both as the provider reference shows.
 3. **`Organization.Enabled = 1` is the active flag.** `Organization.Status` is the provider-management lifecycle (Pending/Created/Managed), and `Plan` is a display string — aggregate and filter on `PlanType`.
 
 ## Reference library
@@ -55,3 +55,5 @@ Semantics the schema itself cannot tell you — each of these flipped a real eva
 | [references/sources.md](references/sources.md)                                   | Finding the source file for any table, enum, or canonical function        |
 | [references/schema-discovery-queries.md](references/schema-discovery-queries.md) | Live introspection — list tables, describe columns, find FKs, view bodies |
 | [references/providers/mssql.md](references/providers/mssql.md)                   | MSSQL connection, sqlcmd invocation patterns, dialect notes               |
+| [references/providers/mysql.md](references/providers/mysql.md)                   | MySQL connection, mysql invocation patterns, dialect notes                |
+| [references/providers/postgresql.md](references/providers/postgresql.md)         | PostgreSQL connection, psql invocation patterns, dialect notes            |
