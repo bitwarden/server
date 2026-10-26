@@ -4,6 +4,7 @@
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
@@ -149,6 +150,14 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Cannot set max seat autoscaling below seat count.");
         }
 
+        if (organization.UsePam &&
+            _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support) &&
+            !BillingExtensions.PrivilegedControlsAutoscaleLimitFits(organization.MaxAutoscalePamSeats, maxAutoscaleSeats))
+        {
+            throw new BadRequestException(
+                "You cannot set a Password Manager autoscale limit lower than the Privileged Controls autoscale limit.");
+        }
+
         if (seatAdjustment != 0)
         {
             await AdjustSeatsAsync(organization, seatAdjustment);
@@ -272,6 +281,15 @@ public class OrganizationService : IOrganizationService
         if (organization.UseSecretsManager && organization.Seats + seatAdjustment < organization.SmSeats)
         {
             throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
+        }
+
+        // Only a decrease is blocked, so an organization already over the cap can still add seats.
+        if (organization.UsePam &&
+            seatAdjustment < 0 &&
+            newSeatTotal < organization.PamSeats &&
+            _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support))
+        {
+            throw new BadRequestException(new PrivilegedControlsSeatsMustNotExceedPasswordManagerSeatsError().Message);
         }
 
         _logger.LogInformation("{Method}: Invoking _paymentService.AdjustSeatsAsync with {AdditionalSeats} additional seats for Organization ({OrganizationID})",
