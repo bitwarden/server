@@ -5,11 +5,9 @@ using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Pam.AccessConnector.Commands;
 using Bit.Core.Pam.AccessConnector.Queries;
-using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Authorization;
 using Bit.Core.Vault.Entities;
@@ -49,14 +47,13 @@ public class RotationAttemptCipherEndpointsTests
     private readonly ICurrentContext _currentContext = Substitute.For<ICurrentContext>();
     private readonly IGetRotationCipherQuery _query = Substitute.For<IGetRotationCipherQuery>();
     private readonly ISubmitCipherUpdateCommand _command = Substitute.For<ISubmitCipherUpdateCommand>();
-    private readonly IOrganizationRepository _organizationRepository = Substitute.For<IOrganizationRepository>();
 
     public RotationAttemptCipherEndpointsTests()
     {
         _currentContext.PamAccessConnectorId.Returns(_connectorId);
     }
 
-    private static Cipher ExistingLogin(string? key = "2.key|wrapped") => new()
+    private static CipherOrganizationDetails ExistingLogin(string? key = "2.key|wrapped") => new()
     {
         Id = Guid.NewGuid(),
         OrganizationId = _organizationId,
@@ -76,7 +73,7 @@ public class RotationAttemptCipherEndpointsTests
         LastKnownRevisionDate = _revision,
     };
 
-    private void Reads(Cipher cipher) =>
+    private void Reads(CipherOrganizationDetails cipher) =>
         _query.GetAsync(_connectorId, _attemptId)
             .Returns(new RotationCipherAccess(cipher, FullCipherAccess.ForCipher(cipher.Id)));
 
@@ -87,12 +84,11 @@ public class RotationAttemptCipherEndpointsTests
     public async Task GetCipher_ReturnsTheFullMiniResponse()
     {
         var cipher = ExistingLogin();
+        cipher.OrganizationUseTotp = true;
         Reads(cipher);
-        _organizationRepository.GetByIdAsync(_organizationId)
-            .Returns(new Organization { Id = _organizationId, UseTotp = true });
 
         var result = await RotationAttemptCipherEndpoints.GetCipherAsync(
-            _attemptId, _currentContext, _query, _organizationRepository, new GlobalSettings());
+            _attemptId, _currentContext, _query, new GlobalSettings());
 
         var response = Assert.IsType<FullCipherMiniResponseModel>(
             Assert.IsType<JsonHttpResult<FullCipherMiniResponseModel>>(result).Value);
@@ -109,7 +105,7 @@ public class RotationAttemptCipherEndpointsTests
         _query.GetAsync(_connectorId, _attemptId).Returns<RotationCipherAccess>(_ => throw new NotFoundException());
 
         await Assert.ThrowsAsync<NotFoundException>(() => RotationAttemptCipherEndpoints.GetCipherAsync(
-            _attemptId, _currentContext, _query, _organizationRepository, new GlobalSettings()));
+            _attemptId, _currentContext, _query, new GlobalSettings()));
     }
 
     [Fact]
@@ -281,7 +277,6 @@ public class RotationAttemptCipherEndpointsTests
         builder.Services.AddSingleton(_currentContext);
         builder.Services.AddSingleton(_query);
         builder.Services.AddSingleton(_command);
-        builder.Services.AddSingleton(_organizationRepository);
         builder.Services.AddSingleton<IGlobalSettings>(new GlobalSettings());
         var app = builder.Build();
         app.MapGroup("/access-connectors/rotation/attempts").MapRotationAttemptCipherEndpoints();
@@ -319,7 +314,6 @@ public class RotationAttemptCipherEndpointsTests
         builder.Services.AddSingleton(_currentContext);
         builder.Services.AddSingleton(_query);
         builder.Services.AddSingleton(_command);
-        builder.Services.AddSingleton(_organizationRepository);
         builder.Services.AddSingleton<IGlobalSettings>(new GlobalSettings());
         var app = builder.Build();
         app.MapGroup("/access-connectors/rotation/attempts")
@@ -348,7 +342,6 @@ public class RotationAttemptCipherEndpointsTests
             services.AddSingleton(TimeProvider.System);
             services.AddSingleton(_query);
             services.AddSingleton(_command);
-            services.AddSingleton(_organizationRepository);
             services.AddSingleton<IGlobalSettings>(new GlobalSettings());
             _currentContext.PamAccessConnectorId.Returns((Guid?)null);
             var httpContext = new DefaultHttpContext
