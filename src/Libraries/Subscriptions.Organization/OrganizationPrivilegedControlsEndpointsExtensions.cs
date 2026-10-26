@@ -31,7 +31,7 @@ public static class OrganizationPrivilegedControlsEndpointsExtensions
                 })
             .RequireAuthorization(new AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>())
             .WithName("ChangePrivilegedControlsSeats")
-            .WithDescription("Sets the organization's Privileged Controls seat total and autoscale limit.");
+            .WithDescription("Adjusts the organization's Privileged Controls seats by a relative amount and sets the autoscale limit.");
 
         return group;
     }

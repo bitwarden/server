@@ -169,11 +169,13 @@ no Password Manager line item, is a **409**. A missing organization is a **404**
 
 ### Privileged Controls seat change
 
-`PUT .../privileged-controls` sets the organization's Privileged Controls seat total and autoscale limit. Its body,
-`PrivilegedControlsSeatsRequest` (`seats`, and `maxAutoscaleSeats` null for no limit), is written for the purchase
-endpoint (PM-43273) to reuse. Both values are absolute totals, so repeating the request is idempotent. The handler adds
-no validation of its own: the command and `PrivilegedControlsSeatChangeSetFactory` own every seat rule, so an omitted
-`seats` is forwarded as 0 and rejected by the factory with its own message rather than by binding with none.
+`PUT .../privileged-controls` adjusts the organization's Privileged Controls seats by a relative amount and sets the
+autoscale limit. Its body, `PrivilegedControlsSeatsRequest`, carries `seatAdjustment` (seats to add, negative to remove;
+null or omitted leaves the count unchanged) and `maxAutoscaleSeats` (null for no limit). The handler adds the adjustment
+to the seats the organization holds now, so a client working from a stale count cannot undo a concurrent autoscale or
+another owner's change; a limit-only request sends an adjustment of 0 and never reaches Stripe. The handler adds no
+other validation of its own: the command and `PrivilegedControlsSeatChangeSetFactory` own every seat rule and reject
+the resulting total with their own messages.
 
 The handler resolves the organization (404), runs `IIsOnPrivilegedControlsSalesInitiatedTrialQuery`, and rejects a
 sales-initiated trial with a 400 ("Work with your customer service representative to change your Privileged Controls
