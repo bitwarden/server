@@ -84,6 +84,9 @@ public class CipherLeaseGateRegistrationTests
             IEnumerable<Cipher> ciphers) =>
             throw new NotSupportedException();
 
+        public FullCipherAccess AuthorizeAccessConnectorRotationRead(Cipher cipher) =>
+            throw new NotSupportedException();
+
         public FullCipherAccess UnrestrictedForWholeVaultExport() => throw new NotSupportedException();
     }
 }
