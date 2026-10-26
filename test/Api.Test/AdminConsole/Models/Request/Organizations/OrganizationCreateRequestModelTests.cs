@@ -199,13 +199,13 @@ public class OrganizationCreateRequestModelTests
                 EncryptedPrivateKey = "test-encrypted-private-key"
             },
             UsePrivilegedControls = true,
-            PamSeatMinimum = 6
+            PamSeats = 6
         };
 
         var signup = model.ToOrganizationSignup(new Bit.Core.Entities.User());
 
         Assert.True(signup.UsePrivilegedControls);
-        Assert.Equal(6, signup.PamSeatMinimum);
+        Assert.Equal(6, signup.PamSeats);
     }
 
     [Theory]

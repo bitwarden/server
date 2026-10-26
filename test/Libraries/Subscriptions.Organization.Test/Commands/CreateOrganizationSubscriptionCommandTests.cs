@@ -53,7 +53,7 @@ public class CreateOrganizationSubscriptionCommandTests
 
         var organization = Organization();
 
-        var subscription = await _command.Run(organization, Creation(privilegedControlsRequested: true, requestedSeatMinimum: 6));
+        var subscription = await _command.Run(organization, Creation(privilegedControlsRequested: true, privilegedControlsSeats: 6));
 
         Assert.Equal("sub_test", subscription.Id);
         Assert.Equal(GatewayType.Stripe, organization.Gateway);
@@ -63,22 +63,19 @@ public class CreateOrganizationSubscriptionCommandTests
         Assert.True(organization.UsePam);
     }
 
-    [Theory]
-    [InlineData(6, 6)]      // approved promotional minimum is honored
-    [InlineData(7, 10)]     // unapproved minimum falls back to the default
-    [InlineData(null, 10)]  // no minimum falls back to the default
-    public async Task Run_ResolvesPrivilegedControlsSeatMinimum(int? requested, int expected)
+    [Fact]
+    public async Task Run_PrivilegedControls_UsesRequestedSeats()
     {
         StubSuccessfulPurchase();
 
         var organization = Organization();
 
-        await _command.Run(organization, Creation(privilegedControlsRequested: true, requestedSeatMinimum: requested));
+        await _command.Run(organization, Creation(privilegedControlsRequested: true, privilegedControlsSeats: 7));
 
-        Assert.Equal(expected, organization.PamSeats);
-        Assert.Equal(expected, organization.PamSeatMinimum);
+        Assert.Equal(7, organization.PamSeats);
+        Assert.Null(organization.PamSeatMinimum);
         Assert.NotNull(_capturedSubscriptionOptions);
-        Assert.Contains(_capturedSubscriptionOptions!.Items, i => i.Price == "pam-seat" && i.Quantity == expected);
+        Assert.Contains(_capturedSubscriptionOptions!.Items, i => i.Price == "pam-seat" && i.Quantity == 7);
     }
 
     [Fact]
@@ -89,7 +86,7 @@ public class CreateOrganizationSubscriptionCommandTests
         var organization = Organization();
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => _command.Run(organization, Creation(planType: PlanType.TeamsAnnually, privilegedControlsRequested: true, requestedSeatMinimum: 6)));
+            () => _command.Run(organization, Creation(planType: PlanType.TeamsAnnually, privilegedControlsRequested: true, privilegedControlsSeats: 6)));
         Assert.Contains("Invalid Privileged Controls plan selected", exception.Message);
         await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateCustomerAsync(default!);
         await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateSubscriptionAsync(default!);
@@ -100,7 +97,7 @@ public class CreateOrganizationSubscriptionCommandTests
     {
         StubSuccessfulPurchase();
 
-        var creation = Creation(privilegedControlsRequested: true, requestedSeatMinimum: 6, secretManagerRequested: true) with
+        var creation = Creation(privilegedControlsRequested: true, privilegedControlsSeats: 6, secretManagerRequested: true) with
         {
             IsFromSecretsManagerTrial = true
         };
@@ -119,7 +116,7 @@ public class CreateOrganizationSubscriptionCommandTests
 
         // SM + PC together is allowed on a net-new purchase; only the trial-initiation flow (upstream) forbids it.
         await _command.Run(organization,
-            Creation(privilegedControlsRequested: true, requestedSeatMinimum: 6, secretManagerRequested: true));
+            Creation(privilegedControlsRequested: true, privilegedControlsSeats: 6, secretManagerRequested: true));
 
         Assert.NotNull(_capturedSubscriptionOptions);
         Assert.Contains(_capturedSubscriptionOptions!.Items, i => i.Price == "sm-seat");
@@ -295,7 +292,7 @@ public class CreateOrganizationSubscriptionCommandTests
 
         var organization = Organization();
 
-        await _command.Run(organization, Creation(privilegedControlsRequested: true, requestedSeatMinimum: 6));
+        await _command.Run(organization, Creation(privilegedControlsRequested: true, privilegedControlsSeats: 6));
 
         Assert.Equal(7, _capturedSubscriptionOptions!.TrialPeriodDays);
     }
@@ -308,7 +305,7 @@ public class CreateOrganizationSubscriptionCommandTests
         var organization = Organization();
 
         await _command.Run(organization,
-            Creation(privilegedControlsRequested: true, requestedSeatMinimum: 6, trialDays: 0));
+            Creation(privilegedControlsRequested: true, privilegedControlsSeats: 6, trialDays: 0));
 
         Assert.Equal(0, _capturedSubscriptionOptions!.TrialPeriodDays);
         // No trial means no missing-payment-method cancel behavior, even without a payment method.
@@ -517,7 +514,7 @@ public class CreateOrganizationSubscriptionCommandTests
     private static OrganizationSubscriptionCreation Creation(
         PlanType? planType = null,
         bool privilegedControlsRequested = false,
-        int? requestedSeatMinimum = null,
+        int privilegedControlsSeats = 10,
         bool secretManagerRequested = false,
         short? storage = null,
         bool premiumAccess = false,
@@ -534,7 +531,7 @@ public class CreateOrganizationSubscriptionCommandTests
             ? new OrganizationSubscriptionCreation.SecretsManagerPurchase { Seats = 4, ServiceAccounts = 5 }
             : null,
             PrivilegedControls = privilegedControlsRequested
-            ? new OrganizationSubscriptionCreation.PrivilegedControlsPurchase { RequestedSeatMinimum = requestedSeatMinimum }
+            ? new OrganizationSubscriptionCreation.PrivilegedControlsPurchase { Seats = privilegedControlsSeats }
             : null,
             CustomerSetup = new CustomerSetup(),
             CloudRegion = "US",
