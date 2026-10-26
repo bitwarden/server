@@ -3,13 +3,14 @@ using System.Text.Json;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
+using Bit.Seeder.Extensions;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Services;
 
 namespace Bit.Seeder.Scenes;
 
-public class UserDriversLicenseCipherScene(IUserRepository userRepository, ICipherRepository cipherRepository, IManglerService manglerService) : IScene<UserDriversLicenseCipherScene.Request, UserDriversLicenseCipherScene.Result>
+public class UserDriversLicenseCipherScene(IUserRepository userRepository, ICipherRepository cipherRepository, IFolderRepository folderRepository, IManglerService manglerService) : IScene<UserDriversLicenseCipherScene.Request, UserDriversLicenseCipherScene.Result>
 {
     public class Request
     {
@@ -48,6 +49,8 @@ public class UserDriversLicenseCipherScene(IUserRepository userRepository, ICiph
         {
             throw new Exception($"User with ID {request.UserId} not found.");
         }
+
+        await folderRepository.ThrowIfFolderNotOwnedByUserAsync(request.FolderId, request.UserId);
 
         var driversLicense = new DriversLicenseViewDto
         {

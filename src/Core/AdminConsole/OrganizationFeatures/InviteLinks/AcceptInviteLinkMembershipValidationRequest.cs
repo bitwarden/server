@@ -12,7 +12,6 @@ public record AcceptInviteLinkMembershipValidationRequest
 {
     public required Organization Organization { get; init; }
     public required User User { get; init; }
-    public required IEnumerable<string> AllowedDomains { get; init; }
 
     /// <summary>
     /// The user's existing membership in the organization, if any. Non-null only for a pending email

@@ -9,6 +9,10 @@ public class RotateUserKeysRequestModel
     public required AccountDataRequestModel AccountData { get; set; }
     public required UnlockMethodRequestModel UnlockMethodData { get; set; }
 
+    // The Key ID of the key that is being rotated away from.
+    [KeyId]
+    public string? OldUserKeyId { get; set; }
+
     // The Key ID of the key that is being rotated to.
     [KeyId]
     public string? NewUserKeyId { get; set; }

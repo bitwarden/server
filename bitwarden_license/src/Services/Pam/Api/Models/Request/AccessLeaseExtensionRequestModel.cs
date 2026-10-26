@@ -4,8 +4,8 @@ using Bit.Services.Pam.Models;
 namespace Bit.Services.Pam.Api.Models.Request;
 
 /// <summary>
-/// A request to extend an active lease, identified by the route's lease id. Extensions are always auto-approved,
-/// subject to the governing rule allowing extensions and the per-lease maximum not being reached.
+/// A request to extend the routed lease. Extensions are approved automatically, once per lease, when the governing
+/// rule allows them.
 /// </summary>
 public class AccessLeaseExtensionRequestModel
 {
@@ -16,9 +16,7 @@ public class AccessLeaseExtensionRequestModel
     [Range(1, int.MaxValue)]
     public int DurationSeconds { get; set; }
 
-    /// <summary>
-    /// The justification recorded with the extension.
-    /// </summary>
+    /// <summary>The justification recorded with the extension.</summary>
     [Required]
     public string? Reason { get; set; }
 
