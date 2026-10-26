@@ -32,6 +32,7 @@ using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
 using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
+using Dirt.Reports.ReportFeatures.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -58,6 +59,7 @@ public class CiphersController : Controller
     private readonly IUnarchiveCiphersCommand _unarchiveCiphersCommand;
     private readonly ICipherLeaseGate _cipherLeaseGate;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IUpdateCipherBrowserHealthExclusionCommand _updateCipherBrowserHealthExclusionCommand;
 
     public CiphersController(
         ICipherRepository cipherRepository,
@@ -74,7 +76,8 @@ public class CiphersController : Controller
         IArchiveCiphersCommand archiveCiphersCommand,
         IUnarchiveCiphersCommand unarchiveCiphersCommand,
         ICipherLeaseGate cipherLeaseGate,
-        IAuthorizationService authorizationService)
+        IAuthorizationService authorizationService,
+        IUpdateCipherBrowserHealthExclusionCommand updateCipherBrowserHealthExclusionCommand)
     {
         _cipherRepository = cipherRepository;
         _collectionCipherRepository = collectionCipherRepository;
@@ -91,6 +94,7 @@ public class CiphersController : Controller
         _unarchiveCiphersCommand = unarchiveCiphersCommand;
         _cipherLeaseGate = cipherLeaseGate;
         _authorizationService = authorizationService;
+        _updateCipherBrowserHealthExclusionCommand = updateCipherBrowserHealthExclusionCommand;
     }
 
     /// <summary>
@@ -1502,6 +1506,19 @@ public class CiphersController : Controller
             }
             await _cipherService.PurgeAsync(organizationId!.Value);
         }
+    }
+
+    [HttpPut("{id}/unexclude")]
+    public async Task<CipherResponseModel> UnexcludeCipher(Guid id)
+    {
+        var userId = _userService.GetProperUserId(User).Value;
+
+        var cipher = await _updateCipherBrowserHealthExclusionCommand.UnexcludeAsync(id, userId);
+
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        var response = await BuildWriteReturnResponseAsync(cipher, user);
+
+        return response;
     }
 
     [HttpPost("{id}/attachment/v2")]
