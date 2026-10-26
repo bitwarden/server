@@ -32,7 +32,18 @@ SELECT
   HAS_PERMS_BY_NAME('dbo', 'SCHEMA', 'ALTER') AS CanAlterDbo;
 ```
 
-A read-only login returns 1 for `IsDataReader` and 0 everywhere else. If any other column is 1, stop and tell the user.
+A read-only login returns 1 for `IsDataReader` and 0 everywhere else. If any other column is 1, stop and point the user to the one-time setup below.
+
+### One-time setup (the user runs this as `SA`; never run it from this skill)
+
+Create a reader login once, then point `BW_MSSQL_USERNAME` / `BW_MSSQL_PASSWORD` at it. Replace `<database>` with the database in `BW_MSSQL_DB_NAME`, and repeat the last three lines for each database the skill should read:
+
+```sql
+CREATE LOGIN bitwarden_data_reader WITH PASSWORD = '<pick one>';
+USE [<database>];
+CREATE USER bitwarden_data_reader FOR LOGIN bitwarden_data_reader;
+ALTER ROLE db_datareader ADD MEMBER bitwarden_data_reader;
+```
 
 ## Required tooling
 
