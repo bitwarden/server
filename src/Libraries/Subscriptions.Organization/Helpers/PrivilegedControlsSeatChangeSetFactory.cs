@@ -1,4 +1,4 @@
-﻿using Bit.Core.Billing.Extensions;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Pricing;
@@ -12,7 +12,7 @@ internal sealed class PrivilegedControlsSeatChangeSetFactory(
     IOrganizationUserRepository organizationUserRepository,
     IPricingClient pricingClient) : IPrivilegedControlsSeatChangeSetFactory
 {
-    public async Task<PrivilegedControlsSeatChange> CreateAsync(
+    public async Task<OrganizationSubscriptionChangeSet> CreateAsync(
         OrganizationEntity organization,
         int seats)
     {
@@ -28,20 +28,20 @@ internal sealed class PrivilegedControlsSeatChangeSetFactory(
             throw new BadRequestException("At least one Privileged Controls seat is required.");
         }
 
-        var minimum = organization.GetPrivilegedControlsSeatMinimum(plan);
-        var builder = OrganizationSubscriptionChangeSet.Builder(plan);
-
         var currentSeats = organization.PamSeats.GetValueOrDefault();
+
+        // A decrease is never blocked by the cap, so an organization already over it can move back under it.
+        if (seats > organization.Seats.GetValueOrDefault() && seats > currentSeats)
+        {
+            throw new BadRequestException(new PrivilegedControlsSeatsMustNotExceedPasswordManagerSeatsError().Message);
+        }
+
+        var builder = OrganizationSubscriptionChangeSet.Builder(plan);
 
         // No seats saved, or none left, means there is no seat line item on the subscription to update.
         if (currentSeats < 1)
         {
-            if (seats < minimum)
-            {
-                throw BelowMinimum(minimum);
-            }
-
-            return new PrivilegedControlsSeatChange(builder.AddPrivilegedControlsSeats(seats).Build(), minimum);
+            return builder.AddPrivilegedControlsSeats(seats).Build();
         }
 
         if (seats == currentSeats)
@@ -51,11 +51,6 @@ internal sealed class PrivilegedControlsSeatChangeSetFactory(
 
         if (seats < currentSeats)
         {
-            if (seats < minimum)
-            {
-                throw BelowMinimum(minimum);
-            }
-
             var occupiedSeats = await organizationUserRepository.GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id);
 
             if (occupiedSeats > seats)
@@ -66,9 +61,6 @@ internal sealed class PrivilegedControlsSeatChangeSetFactory(
             }
         }
 
-        return new PrivilegedControlsSeatChange(builder.UpdatePrivilegedControlsSeats(seats).Build(), minimum);
+        return builder.UpdatePrivilegedControlsSeats(seats).Build();
     }
-
-    private static BadRequestException BelowMinimum(int minimum) =>
-        new($"Privileged Controls requires at least {minimum} seats.");
 }

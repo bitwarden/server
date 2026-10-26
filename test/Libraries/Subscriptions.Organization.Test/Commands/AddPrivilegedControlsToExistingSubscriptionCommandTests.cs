@@ -17,8 +17,6 @@ namespace Bit.Subscriptions.Organization.Test.Commands;
 
 public class AddPrivilegedControlsToExistingSubscriptionCommandTests
 {
-    private const int _seatMinimum = 10;
-
     private readonly IPrivilegedControlsSeatChangeSetFactory _seatChangeSetFactory =
         Substitute.For<IPrivilegedControlsSeatChangeSetFactory>();
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand =
@@ -60,11 +58,11 @@ public class AddPrivilegedControlsToExistingSubscriptionCommandTests
     public async Task Run_FirstPurchase_AppliesTheChangeSetFromTheSeatChangeStep()
     {
         var organization = CreateOrganization();
-        var seatChange = SucceedWith();
+        var changeSet = SucceedWith();
 
         await _sut.Run(organization, 15, 20);
 
-        await _updateOrganizationSubscriptionCommand.Received(1).Run(organization, seatChange.ChangeSet);
+        await _updateOrganizationSubscriptionCommand.Received(1).Run(organization, changeSet);
     }
 
     [Fact]
@@ -79,28 +77,6 @@ public class AddPrivilegedControlsToExistingSubscriptionCommandTests
         Assert.Equal(20, organization.MaxAutoscalePamSeats);
         Assert.True(organization.UsePam);
         await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(organization);
-    }
-
-    [Fact]
-    public async Task Run_FirstPurchase_SavesTheSeatMinimumFromTheSeatChangeStep()
-    {
-        var organization = CreateOrganization(pamSeatMinimum: null);
-        SucceedWith();
-
-        await _sut.Run(organization, 15, null);
-
-        Assert.Equal(_seatMinimum, organization.PamSeatMinimum);
-    }
-
-    [Fact]
-    public async Task Run_SavedMinimum_KeepsItWhenTheSeatChangeStepReturnsIt()
-    {
-        var organization = CreateOrganization(pamSeatMinimum: 6);
-        SucceedWith(minimum: 6);
-
-        await _sut.Run(organization, 15, null);
-
-        Assert.Equal(6, organization.PamSeatMinimum);
     }
 
     [Fact]
@@ -196,8 +172,8 @@ public class AddPrivilegedControlsToExistingSubscriptionCommandTests
     public async Task Run_SubscriptionUpdateRejected_ThrowsBadRequestWithItsMessage()
     {
         var organization = CreateOrganization();
-        var seatChange = SucceedWith();
-        _updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet)
+        var changeSet = SucceedWith();
+        _updateOrganizationSubscriptionCommand.Run(organization, changeSet)
             .Returns(new BadRequest("Your card was declined."));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, 15, null));
@@ -209,15 +185,14 @@ public class AddPrivilegedControlsToExistingSubscriptionCommandTests
     public async Task Run_SubscriptionUpdateFails_LeavesTheOrganizationUntouchedAndUnsaved()
     {
         var organization = CreateOrganization();
-        var seatChange = SucceedWith();
-        _updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet)
+        var changeSet = SucceedWith();
+        _updateOrganizationSubscriptionCommand.Run(organization, changeSet)
             .Returns(new BadRequest("Your card was declined."));
 
         await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, 15, 20));
 
         Assert.Null(organization.PamSeats);
         Assert.Null(organization.MaxAutoscalePamSeats);
-        Assert.Null(organization.PamSeatMinimum);
         Assert.False(organization.UsePam);
         await _organizationService.DidNotReceive()
             .ReplaceAndUpdateCacheAsync(Arg.Any<OrganizationEntity>(), Arg.Any<Bit.Core.Enums.EventType?>());
@@ -227,9 +202,9 @@ public class AddPrivilegedControlsToExistingSubscriptionCommandTests
     public async Task Run_SubscriptionUpdateHitsAnUnhandledError_RethrowsTheUnderlyingException()
     {
         var organization = CreateOrganization();
-        var seatChange = SucceedWith();
+        var changeSet = SucceedWith();
         var underlying = new InvalidOperationException("Stripe is down.");
-        _updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet)
+        _updateOrganizationSubscriptionCommand.Run(organization, changeSet)
             .Returns(new Unhandled(underlying));
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.Run(organization, 15, null));
@@ -237,33 +212,29 @@ public class AddPrivilegedControlsToExistingSubscriptionCommandTests
         Assert.Same(underlying, exception);
     }
 
-    private PrivilegedControlsSeatChange SucceedWith(int minimum = _seatMinimum)
+    private OrganizationSubscriptionChangeSet SucceedWith()
     {
-        var seatChange = new PrivilegedControlsSeatChange(
-            new OrganizationSubscriptionChangeSet
-            {
-                Changes = [new AddItem("privileged-controls-enterprise-seat-annually", 15)],
-                ChargeImmediately = true
-            },
-            minimum);
-        _seatChangeSetFactory.CreateAsync(Arg.Any<OrganizationEntity>(), Arg.Any<int>()).Returns(seatChange);
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new AddItem("privileged-controls-enterprise-seat-annually", 15)],
+            ChargeImmediately = true
+        };
+        _seatChangeSetFactory.CreateAsync(Arg.Any<OrganizationEntity>(), Arg.Any<int>()).Returns(changeSet);
         _updateOrganizationSubscriptionCommand
-            .Run(Arg.Any<OrganizationEntity>(), seatChange.ChangeSet, Arg.Any<Subscription?>())
+            .Run(Arg.Any<OrganizationEntity>(), changeSet, Arg.Any<Subscription?>())
             .Returns(new Subscription());
-        return seatChange;
+        return changeSet;
     }
 
     private static OrganizationEntity CreateOrganization(
         int? seats = 50,
         int? pamSeats = null,
-        int? pamSeatMinimum = null,
         bool usePam = false) => new()
         {
             Id = Guid.NewGuid(),
             PlanType = PlanType.EnterpriseAnnually,
             Seats = seats,
             PamSeats = pamSeats,
-            PamSeatMinimum = pamSeatMinimum,
             UsePam = usePam
         };
 }

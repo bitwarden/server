@@ -18,8 +18,6 @@ namespace Bit.Subscriptions.Organization.Test.Commands;
 public class ChangePrivilegedControlsSeatsCommandTests
 {
     private const int _currentSeats = 12;
-    private const int _seatMinimum = 10;
-
     private readonly IPrivilegedControlsSeatChangeSetFactory _seatChangeSetFactory =
         Substitute.For<IPrivilegedControlsSeatChangeSetFactory>();
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand =
@@ -136,11 +134,11 @@ public class ChangePrivilegedControlsSeatsCommandTests
     public async Task Run_SeatIncrease_AppliesTheChangeSetFromTheSeatChangeStep()
     {
         var organization = CreateOrganization();
-        var seatChange = SucceedWith();
+        var changeSet = SucceedWith();
 
         await _sut.Run(organization, 15, null);
 
-        await _updateOrganizationSubscriptionCommand.Received(1).Run(organization, seatChange.ChangeSet);
+        await _updateOrganizationSubscriptionCommand.Received(1).Run(organization, changeSet);
     }
 
     [Fact]
@@ -213,14 +211,13 @@ public class ChangePrivilegedControlsSeatsCommandTests
     }
 
     [Fact]
-    public async Task Run_SeatChange_LeavesTheSeatMinimumAndPrivilegedControlsFlagAlone()
+    public async Task Run_SeatChange_LeavesThePrivilegedControlsFlagAlone()
     {
         var organization = CreateOrganization();
-        SucceedWith(minimum: 7);
+        SucceedWith();
 
         await _sut.Run(organization, 15, null);
 
-        Assert.Equal(_seatMinimum, organization.PamSeatMinimum);
         Assert.True(organization.UsePam);
     }
 
@@ -256,8 +253,8 @@ public class ChangePrivilegedControlsSeatsCommandTests
     public async Task Run_SubscriptionUpdateRejected_ThrowsBadRequestWithItsMessage()
     {
         var organization = CreateOrganization();
-        var seatChange = SucceedWith();
-        _updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet)
+        var changeSet = SucceedWith();
+        _updateOrganizationSubscriptionCommand.Run(organization, changeSet)
             .Returns(new BadRequest("Your card was declined."));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, 15, null));
@@ -269,8 +266,8 @@ public class ChangePrivilegedControlsSeatsCommandTests
     public async Task Run_SubscriptionUpdateFails_LeavesTheOrganizationUntouchedAndUnsaved()
     {
         var organization = CreateOrganization(maxAutoscalePamSeats: 30);
-        var seatChange = SucceedWith();
-        _updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet)
+        var changeSet = SucceedWith();
+        _updateOrganizationSubscriptionCommand.Run(organization, changeSet)
             .Returns(new BadRequest("Your card was declined."));
 
         await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, 15, 20));
@@ -285,9 +282,9 @@ public class ChangePrivilegedControlsSeatsCommandTests
     public async Task Run_SubscriptionUpdateHitsAnUnhandledError_RethrowsTheUnderlyingException()
     {
         var organization = CreateOrganization();
-        var seatChange = SucceedWith();
+        var changeSet = SucceedWith();
         var underlying = new InvalidOperationException("Stripe is down.");
-        _updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet)
+        _updateOrganizationSubscriptionCommand.Run(organization, changeSet)
             .Returns(new Unhandled(underlying));
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.Run(organization, 15, null));
@@ -295,19 +292,17 @@ public class ChangePrivilegedControlsSeatsCommandTests
         Assert.Same(underlying, exception);
     }
 
-    private PrivilegedControlsSeatChange SucceedWith(int minimum = _seatMinimum)
+    private OrganizationSubscriptionChangeSet SucceedWith()
     {
-        var seatChange = new PrivilegedControlsSeatChange(
-            new OrganizationSubscriptionChangeSet
-            {
-                Changes = [new UpdateItemQuantity("privileged-controls-enterprise-seat-annually", 15)]
-            },
-            minimum);
-        _seatChangeSetFactory.CreateAsync(Arg.Any<OrganizationEntity>(), Arg.Any<int>()).Returns(seatChange);
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity("privileged-controls-enterprise-seat-annually", 15)]
+        };
+        _seatChangeSetFactory.CreateAsync(Arg.Any<OrganizationEntity>(), Arg.Any<int>()).Returns(changeSet);
         _updateOrganizationSubscriptionCommand
-            .Run(Arg.Any<OrganizationEntity>(), seatChange.ChangeSet, Arg.Any<Subscription?>())
+            .Run(Arg.Any<OrganizationEntity>(), changeSet, Arg.Any<Subscription?>())
             .Returns(new Subscription());
-        return seatChange;
+        return changeSet;
     }
 
     private static OrganizationEntity CreateOrganization(
@@ -322,7 +317,6 @@ public class ChangePrivilegedControlsSeatsCommandTests
             Seats = seats,
             UsePam = usePam,
             PamSeats = pamSeats,
-            PamSeatMinimum = _seatMinimum,
             MaxAutoscalePamSeats = maxAutoscalePamSeats,
             GatewayCustomerId = "cus_123",
             GatewaySubscriptionId = gatewaySubscriptionId

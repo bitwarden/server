@@ -12,7 +12,7 @@ internal interface IChangePrivilegedControlsSeatsCommand
     /// <summary>
     /// Sets an organization's Privileged Controls seat count and autoscale limit. The subscription is only
     /// updated, and prorated, when the seat count changes; a call that changes only the limit saves it without
-    /// touching Stripe. The seat minimum is never changed.
+    /// touching Stripe.
     /// </summary>
     /// <param name="organization">The organization that already has Privileged Controls.</param>
     /// <param name="seats">The total number of Privileged Controls seats being requested.</param>
@@ -54,8 +54,8 @@ internal sealed class ChangePrivilegedControlsSeatsCommand(
 
         if (seats != organization.PamSeats)
         {
-            var seatChange = await seatChangeSetFactory.CreateAsync(organization, seats);
-            (await updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet)).GetValueOrThrowHttpException();
+            var changeSet = await seatChangeSetFactory.CreateAsync(organization, seats);
+            (await updateOrganizationSubscriptionCommand.Run(organization, changeSet)).GetValueOrThrowHttpException();
         }
 
         organization.PamSeats = seats;
