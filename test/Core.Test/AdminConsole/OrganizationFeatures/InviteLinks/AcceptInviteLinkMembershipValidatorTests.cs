@@ -25,64 +25,6 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.InviteLinks;
 public class AcceptInviteLinkMembershipValidatorTests
 {
     [Theory, BitAutoData]
-    public async Task ValidateAsync_WithUnverifiedEmail_ReturnsEmailNotVerified(
-        Organization organization, User user,
-        SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
-    {
-        SetupValidDependencies(sutProvider, organization, user);
-        user.EmailVerified = false;
-
-        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user));
-
-        Assert.True(result.IsError);
-        Assert.IsType<EmailNotVerified>(result.AsError);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_WithDisallowedEmailDomain_ReturnsEmailDomainNotAllowed(
-        Organization organization, User user,
-        SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
-    {
-        SetupValidDependencies(sutProvider, organization, user);
-
-        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user, allowedDomains: ["allowed.com"]));
-
-        Assert.True(result.IsError);
-        Assert.IsType<EmailDomainNotAllowed>(result.AsError);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_WithRevokedExistingMembership_ReturnsOrganizationAccessRevoked(
-        Organization organization, User user, OrganizationUser existingMembership,
-        SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
-    {
-        SetupValidDependencies(sutProvider, organization, user);
-        existingMembership.Status = OrganizationUserStatusType.Revoked;
-
-        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user, existing: existingMembership));
-
-        Assert.True(result.IsError);
-        Assert.IsType<OrganizationAccessRevoked>(result.AsError);
-    }
-
-    [Theory]
-    [BitAutoData(OrganizationUserStatusType.Accepted)]
-    [BitAutoData(OrganizationUserStatusType.Confirmed)]
-    public async Task ValidateAsync_WithAlreadyMember_ReturnsAlreadyOrganizationMember(
-        OrganizationUserStatusType status,
-        Organization organization, User user, OrganizationUser existingMembership,
-        SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
-    {
-        SetupValidDependencies(sutProvider, organization, user);
-        existingMembership.Status = status;
-
-        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(organization, user, existing: existingMembership));
-
-        Assert.True(result.IsError);
-        Assert.IsType<AlreadyOrganizationMember>(result.AsError);
-    }
-
-    [Theory, BitAutoData]
     public async Task ValidateAsync_NewMember_AutoConfirmEnabled_AndMemberOfAnotherOrg_ReturnsError(
         Organization organization, User user,
         SutProvider<AcceptInviteLinkMembershipValidator> sutProvider)
@@ -491,7 +433,6 @@ public class AcceptInviteLinkMembershipValidatorTests
     private static AcceptInviteLinkMembershipValidationRequest BuildRequest(
         Organization organization,
         User user,
-        IEnumerable<string>? allowedDomains = null,
         OrganizationUser? existing = null,
         string? resetPasswordKey = null,
         bool autoConfirmPolicyEnabled = false,
@@ -500,7 +441,6 @@ public class AcceptInviteLinkMembershipValidatorTests
         {
             Organization = organization,
             User = user,
-            AllowedDomains = allowedDomains ?? ["example.com"],
             ExistingMembership = existing,
             ResetPasswordKey = resetPasswordKey,
             AutoConfirmPolicyEnabled = autoConfirmPolicyEnabled,
@@ -557,13 +497,12 @@ public class AcceptInviteLinkMembershipValidatorTests
             .GetManyByUserAsync(user.Id)
             .Returns([new ProviderOrganizationProviderDetails { OrganizationId = organizationId }]);
 
-    // Valid baseline: verified email, allowed domain, no provider, no policies enabled, no 2FA required,
-    // no other organization memberships, empty cross-org requirements.
+    // Valid baseline: no provider, no policies enabled, no 2FA required, no other organization memberships,
+    // empty cross-org requirements.
     private static void SetupValidDependencies(
         SutProvider<AcceptInviteLinkMembershipValidator> sutProvider, Organization organization, User user)
     {
         organization.UsePolicies = true;
-        user.EmailVerified = true;
         user.Email = "user@example.com";
 
         sutProvider.GetDependency<IProviderUserRepository>().GetManyByUserAsync(user.Id).Returns([]);

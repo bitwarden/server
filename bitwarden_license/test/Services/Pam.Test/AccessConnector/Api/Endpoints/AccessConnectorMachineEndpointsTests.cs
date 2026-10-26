@@ -67,11 +67,12 @@ public class AccessConnectorMachineEndpointsTests
             .ToList();
 
     [Fact]
-    public void MapPamEndpoints_RegistersTheSixConnectorRoutes_InTheInternalDoc()
+    public void MapPamEndpoints_RegistersTheFourPamConnectorRoutes_InTheInternalDoc()
     {
         var endpoints = ConnectorEndpoints();
 
-        Assert.Equal(6, endpoints.Count);
+        // The two cipher routes are mapped by Bit.Api, not here.
+        Assert.Equal(4, endpoints.Count);
         Assert.All(endpoints, endpoint =>
             Assert.Equal("internal", endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>()?.EndpointGroupName));
     }
@@ -79,10 +80,6 @@ public class AccessConnectorMachineEndpointsTests
     [Theory]
     [InlineData("Pam_AccessConnectors_Rotation_Jobs_GetAll", "GET", "access-connectors/rotation/jobs")]
     [InlineData("Pam_AccessConnectors_Rotation_Jobs_Claim", "POST", "access-connectors/rotation/jobs/{id:guid}/claim")]
-    [InlineData("Pam_AccessConnectors_Rotation_Attempts_GetCipher", "GET",
-        "access-connectors/rotation/attempts/{id:guid}/cipher")]
-    [InlineData("Pam_AccessConnectors_Rotation_Attempts_PutCipher", "PUT",
-        "access-connectors/rotation/attempts/{id:guid}/cipher")]
     [InlineData("Pam_AccessConnectors_Rotation_Attempts_Success", "POST",
         "access-connectors/rotation/attempts/{id:guid}/success")]
     [InlineData("Pam_AccessConnectors_Rotation_Attempts_Failure", "POST",
@@ -173,10 +170,6 @@ public class AccessConnectorMachineEndpointsTests
         typeof(Task<ListResponseModel<ClaimableRotationJobResponseModel>>))]
     [InlineData(typeof(RotationJobEndpointsHandler), nameof(RotationJobEndpointsHandler.Claim),
         typeof(Task<RotationClaimResponseModel>))]
-    [InlineData(typeof(RotationAttemptEndpointsHandler), nameof(RotationAttemptEndpointsHandler.GetCipher),
-        typeof(Task<RotationCipherResponseModel>))]
-    [InlineData(typeof(RotationAttemptEndpointsHandler), nameof(RotationAttemptEndpointsHandler.PutCipher),
-        typeof(Task))]
     [InlineData(typeof(RotationAttemptEndpointsHandler), nameof(RotationAttemptEndpointsHandler.Success),
         typeof(Task))]
     [InlineData(typeof(RotationAttemptEndpointsHandler), nameof(RotationAttemptEndpointsHandler.Failure),

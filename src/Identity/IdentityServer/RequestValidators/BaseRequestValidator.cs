@@ -324,7 +324,7 @@ public abstract class BaseRequestValidator<T> where T : class
         var twoFactorTokenValid =
             await _twoFactorAuthenticationValidator
                 .VerifyTwoFactorAsync(validatorContext.User, twoFactorOrganization, twoFactorProviderType,
-                    twoFactorToken);
+                    twoFactorToken, request.Raw["DeviceIdentifier"]);
 
         // 3b. Response for 2FA required but request is not valid or remember token expired state.
         if (!twoFactorTokenValid)

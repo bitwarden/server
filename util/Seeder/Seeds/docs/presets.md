@@ -12,6 +12,18 @@ These options apply to any preset that uses generated (count-based) ciphers — 
 | ------------------------ | ------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `repromptEveryNthCipher` | integer | 0       | Set `Reprompt=Password` on every Nth generated cipher. `0` = disabled. Example: `5` flags ciphers at indices 0, 5, 10, … ≈ 20% reprompt rate. |
 
+## Organization blocks
+
+Org presets only. Rejections happen when the preset loads (`Pipeline/PresetValidator.cs`). Schema reference: `Seeds/schemas/preset.schema.json`.
+
+| Block                         | What it seeds                                                                                                                                                                                                                                                                                                                   |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `users.statusMix`             | Relative weights for Confirmed, Invited, Accepted and Revoked generated members, at any count. Can't be combined with `realisticStatusMix`. Weights must be 0 or more with at least one above 0.                                                                                                                                |
+| `users.adminCount`            | The first N Confirmed generated members are Admins; the rest are Users. Between 0 and the number of Confirmed members.                                                                                                                                                                                                          |
+| `policies.enable` / `disable` | One `Policy` row per `PolicyType` name, enabled or disabled. Rows only: no server side effects run. Names may not repeat or appear in both lists. Policies the server requires Single Organization for (requireSso, resetPassword, maximumVaultTimeout and others) need `singleOrg` enabled. `enableAll`/`except` are rejected. |
+| `policies.data`               | Policy `Data` JSON keyed by `PolicyType` name, camelCase keys as the server stores them. `organizationDataOwnership` defaults to `{"enableIndividualItemsTransfer":true}`, the flag clients need to run the item transfer.                                                                                                      |
+| `defaultCollections`          | One "My Items" default collection per Confirmed User or Custom member (none for the Owner or Admins), filled with migrated org items. Needs `organizationDataOwnership` enabled and an enterprise plan. Knobs: `name`, `nonEmptyRate`, `sizes`, `largest`, `deletedRate`, `policyEnabledDaysAgo`.                               |
+
 ## Developer
 
 Day-to-day local development: one org with memorable role-based logins, production-shaped collections, and a realistic vault. No attachments, so no Azurite required.
@@ -41,14 +53,19 @@ Test specific Bitwarden features. Fixture-based data for deterministic results.
 dotnet run -- preset --name features.{name} --mangle
 ```
 
-| Preset            | Features Enabled                                                    | Org Fixture      | Roster           | Ciphers          |
-| ----------------- | ------------------------------------------------------------------- | ---------------- | ---------------- | ---------------- |
-| sso-enterprise    | requireSso policy (OIDC SSO config is not seeded by the Seeder yet) | verdant-health   | starter-team     | enterprise-basic |
-| tde-enterprise    | requireSso policy (OIDC SSO config is not seeded by the Seeder yet) | obsidian-labs    | starter-team     | enterprise-basic |
-| local-sso         | SSO (SAML 2.0, masterPassword) — local-IdP login org                | verdant-health   | enterprise-basic | enterprise-basic |
-| policy-enterprise | All policies except requireSso and require2fa                       | pinnacle-designs | starter-team     | —                |
+| Preset                         | Features Enabled                                                                                                 | Org Fixture      | Roster           | Ciphers          |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------- | ---------------- | ---------------- | ---------------- |
+| sso-enterprise                 | singleOrg and requireSso policies (OIDC SSO config is not seeded by the Seeder yet)                              | verdant-health   | starter-team     | enterprise-basic |
+| tde-enterprise                 | singleOrg, requireSso and resetPassword (auto-enroll) policies (OIDC SSO config is not seeded by the Seeder yet) | obsidian-labs    | starter-team     | enterprise-basic |
+| local-sso                      | SSO (SAML 2.0, masterPassword) — local-IdP login org                                                             | verdant-health   | enterprise-basic | enterprise-basic |
+| policy-enterprise              | 7 enterprise policies with data                                                                                  | pinnacle-designs | starter-team     | —                |
+| default-collections-enterprise | Organization Data Ownership after the migration: default collections, member status mix, pending personal items  | — (inline)       | 80 generated     | 300 generated    |
 
 `policy-enterprise` has no ciphers — it exists purely for testing policy enforcement.
+
+`tde-enterprise` enables the three policies the server turns on when a trusted-device-encryption SSO config is saved: Single Organization, Require SSO, and Account recovery administration with automatic enrollment.
+
+`default-collections-enterprise` (**Massive Dynamic**) is an enterprise org after the Organization Data Ownership policy migrated members' items. 80 members: 70 Confirmed (2 of them Admins), 4 Invited, 2 Accepted, 4 Revoked. Each Confirmed User gets a "My Items" default collection; the Owner and Admins don't, as on the server. Half the collections hold migrated items (the two largest 120 and 60, some trashed), and 14 members still have personal items waiting to migrate (`pendingMigration`). Their "My Items" stays empty, as on the server.
 
 `local-sso` is a clean-slate SAML 2.0 SSO org wired to the bundled SimpleSAMLphp IdP. Each seed generates a **fresh org GUID**, which the CLI prints in an "SSO wiring" block — relay its `IDP_SP_ENTITY_ID` / `IDP_SP_ACS_URL` values into `dev/.env` and restart the IdP (`docker compose --profile idp up -d`). Add `--mangle` to seed multiple SSO orgs without collisions; `--org-name` overrides the org display name and `--owner-email` overrides the owner login email (both compose with `--mangle`). Log in via the IdP as `owner` / `password` → `dana.whitfield@verdant.example` (the roster owner), who owns the department collections so the vault is populated on first login. A single no-mangle seed still matches the default `dana.whitfield@verdant.example` entry in `dev/authsources.php.example`, so only the GUID must be relayed; a mangled seed (or `--owner-email` override) prints its own authsources snippet to paste. Because the `enterprise-basic` cipher fixture carries attachments, Azurite (or a local attachment dir) must be configured to seed it. Wiring: `dev/authsources.php.example`, `dev/.env.example`.
 
@@ -100,7 +117,7 @@ dotnet run -- preset --name scale.{name} --mangle
 
 - The XS preset uses `families-annually`, which hides the Groups UI even though the seeder creates groups.
 - **Cipher types**: Most use `realistic` (60% Login, 15% SecureNote, 12% Card, 10% Identity, 3% SSHKey). Umbrella Corp uses `documentationHeavy` (40/40 Login/SecureNote). Tyrell Corp uses `developerFocused` (50% Login, 20% SSHKey).
-- **Personal ciphers**: Sterling Cooper and Wayne Enterprises use `realistic` distribution. Weyland-Yutani uses `lightUsage`. Use `heavyUsage` only for small/mid orgs — at XL scale it produces 300K+ ciphers and will timeout.
+- **Personal ciphers**: Sterling Cooper and Wayne Enterprises use `realistic` distribution. Weyland-Yutani uses `lightUsage`. Use `heavyUsage` only for small/mid orgs — at XL scale it produces 300K+ ciphers and will timeout. `pendingMigration` models personal items still waiting for the Organization Data Ownership migration: ~80% of confirmed members have none and a few have over 1,000 (`features.default-collections-enterprise` uses it).
 - **Folders**: Wayne Enterprises uses `enterprise` folder distribution. Weyland-Yutani uses `minimal`.
 - **Archive & delete**: All nine presets set `cipherAssignment.deletedRate` (2-5%, capped at 25) and `archivedRate` (4-8%, capped at 50), tuned to each org's orphan-rate/permission story — tidier orgs (Central Perk) trend lower, locked-down/hierarchical orgs (Bluth Company, Tyrell Corp) and Initech's high-orphan mega-dump trend higher. Both rates apply to org ciphers (archived-for a round-robin-selected org member); the three presets with personal ciphers enabled (Sterling Cooper, Wayne Enterprises, Weyland-Yutani) apply the same rates a second time against their personal-cipher pool, so those three seed archived/deleted items in both places.
 

@@ -77,8 +77,10 @@ BEGIN
                 CAST(NULL AS UNIQUEIDENTIFIER) AS [TargetSystemId],
                 CAST(NULL AS NVARCHAR(200)) AS [TargetSystemName],
                 CAST(NULL AS NVARCHAR(MAX)) AS [TargetSystemSealedData],
+                CAST(NULL AS NVARCHAR(MAX)) AS [TargetSystemWrappedKey],
                 CAST(NULL AS UNIQUEIDENTIFIER) AS [CipherId],
                 CAST(NULL AS NVARCHAR(MAX)) AS [RotationConfigSealedData],
+                CAST(NULL AS NVARCHAR(MAX)) AS [RotationConfigWrappedKey],
                 CAST(NULL AS DATETIME2(7)) AS [ExecuteBy]
             RETURN
         END
@@ -123,8 +125,10 @@ BEGIN
             T.[Id] AS [TargetSystemId],
             T.[Name] AS [TargetSystemName],
             T.[SealedData] AS [TargetSystemSealedData],
+            T.[WrappedKey] AS [TargetSystemWrappedKey],
             C.[CipherId],
             C.[SealedData] AS [RotationConfigSealedData],
+            C.[WrappedKey] AS [RotationConfigWrappedKey],
             DATEADD(SECOND, @ReleaseDelaySeconds, @Now) AS [ExecuteBy]
         FROM
             [dbo].[PamRotationJob] J

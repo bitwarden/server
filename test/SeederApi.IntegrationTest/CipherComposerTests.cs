@@ -1,9 +1,16 @@
-﻿using Bit.Core.Vault.Entities;
+﻿using System.Text.Json;
+using System.Text.Json.Nodes;
+using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
+using Bit.Core.Vault.Models.Data;
+using Bit.RustSDK;
+using Bit.Seeder.Data;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
+using Bit.Seeder.Data.Generators;
 using Bit.Seeder.Data.Static;
 using Bit.Seeder.Factories;
+using Bit.Seeder.Options;
 using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest;
@@ -233,6 +240,276 @@ public class CipherComposerTests
         Assert.Equal(originalRevisionDate, cipher.RevisionDate);
         Assert.Null(cipher.Archives);
         Assert.Null(cipher.DeletedDate);
+    }
+
+    [Fact]
+    public void Compose_Logins_ContentRatesMatchTheConstants()
+    {
+        // Every stride is coprime with 100 and the total is a multiple of 100, so each count is exact
+        const int total = 1_000;
+        var logins = ComposeItems(CipherType.Login, total, RustSdkService.GenerateOrganizationKeys().Key)
+            .Select(cipher => JsonSerializer.Deserialize<CipherLoginData>(cipher.Data)!)
+            .ToList();
+
+        Assert.Equal(CipherComposer.PasskeysPer100Logins * total / 100, logins.Count(login => login.Fido2Credentials is { Length: > 0 }));
+        Assert.Equal(CipherComposer.PasswordHistoryPer100Logins * total / 100, logins.Count(login => login.PasswordHistory?.Any() == true));
+        Assert.Equal(CipherComposer.UriPer100Logins * total / 100, logins.Count(login => login.Uris?.Any() == true));
+        Assert.Equal(CipherComposer.MultiUriPer100Logins * total / 100, logins.Count(login => login.Uris?.Count() == 2));
+        Assert.Equal(CipherComposer.NotesPer100Logins * total / 100, logins.Count(login => login.Notes is not null));
+        Assert.Equal(CipherComposer.FieldsPer100Logins * total / 100, logins.Count(login => login.Fields?.Any() == true));
+        Assert.Equal(CipherComposer.TotpPer100Logins * total / 100, logins.Count(login => login.Totp is not null));
+    }
+
+    [Fact]
+    public void Compose_Login_StoresUrisWithoutTheLegacyTopLevelUri()
+    {
+        var withUris = ComposeItems(CipherType.Login, 100, RustSdkService.GenerateOrganizationKeys().Key)
+            .Select(cipher => JsonNode.Parse(cipher.Data)!.AsObject())
+            .Where(data => data.ContainsKey(nameof(CipherLoginData.Uris)))
+            .ToList();
+
+        Assert.NotEmpty(withUris);
+        Assert.All(withUris, data => Assert.False(data.ContainsKey(nameof(CipherLoginData.Uri))));
+    }
+
+    [Theory]
+    [InlineData(CipherType.Login, 1_000)]
+    [InlineData(CipherType.Card, 100)]
+    public void Compose_Items_ItemKeyShareMatchesTheConstant(CipherType cipherType, int total)
+    {
+        var items = ComposeItems(cipherType, total, RustSdkService.GenerateOrganizationKeys().Key);
+
+        Assert.Equal(CipherComposer.ItemKeysPer100 * total / 100, items.Count(cipher => cipher.Key is not null));
+    }
+
+    [Fact]
+    public void SiteDomain_SmallVault_KeepsCompanyDomains()
+    {
+        var total = OnePassLoginLimit;
+        var companies = Companies.All;
+
+        Assert.All(Enumerable.Range(0, total), index =>
+        {
+            var company = companies[index % companies.Length];
+            Assert.Equal(company.Domain, CipherComposer.SiteDomain(company, index, total, companies.Length));
+        });
+    }
+
+    [Fact]
+    public void SiteDomain_VaultPastOnePass_GivesSecondPassItsOwnDomains()
+    {
+        var companies = Companies.All;
+        var company = companies[0];
+
+        var domain = CipherComposer.SiteDomain(company, companies.Length, OnePassLoginLimit + 1, companies.Length);
+
+        Assert.Equal($"{company.Domain.Split('.')[0]}-1.example", domain);
+    }
+
+    [Fact]
+    public void Compose_OnePassVault_GivesEveryCompanyAUriBearingLogin()
+    {
+        // Logins pick their company by index % companies.Length, so the URI-bearing indices name the companies covered
+        var total = OnePassLoginLimit;
+        var companies = Companies.All;
+
+        var companiesWithUris = ComposeItems(CipherType.Login, total, RustSdkService.GenerateOrganizationKeys().Key)
+            .Select((cipher, index) => (cipher, index))
+            .Where(login => JsonNode.Parse(login.cipher.Data)!.AsObject().ContainsKey(nameof(CipherLoginData.Uris)))
+            .Select(login => login.index % companies.Length)
+            .Distinct()
+            .Count();
+
+        Assert.Equal(companies.Length, companiesWithUris);
+    }
+
+    [Fact]
+    public void Compose_LargeVault_SpreadsLoginsOverMoreSitesThanTheCompanyList()
+    {
+        const int total = 20_000;
+        var orgKey = RustSdkService.GenerateOrganizationKeys().Key;
+
+        var hosts = ComposeItems(CipherType.Login, total, orgKey)
+            .Where(cipher => cipher.Key is null)
+            .Select(cipher => JsonSerializer.Deserialize<CipherLoginData>(cipher.Data)!.Uris?.FirstOrDefault()?.Uri)
+            .OfType<string>()
+            .Select(encrypted => new Uri(RustSdkService.DecryptString(encrypted, orgKey)).Host)
+            .Distinct()
+            .Count();
+
+        Assert.True(hosts > Companies.All.Length * 3, $"Expected more than {Companies.All.Length * 3} distinct sites; got {hosts}.");
+    }
+
+    [Fact]
+    public void Compose_Logins_VeryWeakAndWeakDrawsUseThePool()
+    {
+        var passwords = DecryptUserKeyPasswordsByDrawnStrength(1_000)
+            .Where(login => login.Strength is PasswordStrength.VeryWeak or PasswordStrength.Weak)
+            .ToList();
+
+        Assert.NotEmpty(passwords);
+        Assert.All(passwords, login => Assert.Contains(login.Password, Passwords.GetByStrength(login.Strength)));
+    }
+
+    [Fact]
+    public void Compose_Logins_MostFairOrStrongerPasswordsAreUnique()
+    {
+        var passwords = DecryptUserKeyPasswordsByDrawnStrength(1_000)
+            .Where(login => login.Strength is not (PasswordStrength.VeryWeak or PasswordStrength.Weak))
+            .Select(login => login.Password)
+            .ToList();
+
+        var generated = passwords.Where(password => !Passwords.All.Contains(password)).ToList();
+
+        Assert.InRange(
+            generated.Count,
+            passwords.Count * (CipherComposer.UniquePasswordsPer100FairOrStronger - 10) / 100,
+            passwords.Count * (CipherComposer.UniquePasswordsPer100FairOrStronger + 10) / 100);
+        Assert.Equal(generated.Count, generated.Distinct().Count());
+    }
+
+    [Theory]
+    [InlineData(PasswordStrength.Fair)]
+    [InlineData(PasswordStrength.Strong)]
+    [InlineData(PasswordStrength.VeryStrong)]
+    public void UniquePasswordGenerator_SameSeedIndexAndTier_GivesSamePassword(PasswordStrength strength)
+    {
+        var first = new UniquePasswordGenerator(42);
+        var second = new UniquePasswordGenerator(42);
+
+        Assert.All(Enumerable.Range(0, 1_000), index =>
+            Assert.Equal(first.GenerateByIndex(index, strength), second.GenerateByIndex(index, strength)));
+    }
+
+    [Theory]
+    [InlineData(PasswordStrength.Fair)]
+    [InlineData(PasswordStrength.Strong)]
+    [InlineData(PasswordStrength.VeryStrong)]
+    public void UniquePasswordGenerator_DifferentIndices_RarelyRepeat(PasswordStrength strength)
+    {
+        var generator = new UniquePasswordGenerator(42);
+        var passwords = Enumerable.Range(0, 20_000).Select(index => generator.GenerateByIndex(index, strength));
+
+        Assert.True(passwords.Distinct().Count() >= 19_900);
+    }
+
+    [Theory]
+    [InlineData(PasswordStrength.Fair)]
+    [InlineData(PasswordStrength.Strong)]
+    [InlineData(PasswordStrength.VeryStrong)]
+    public void UniquePasswordGenerator_DifferentSeeds_GiveDifferentPasswords(PasswordStrength strength)
+    {
+        var first = new UniquePasswordGenerator(1);
+        var second = new UniquePasswordGenerator(2);
+
+        var shared = Enumerable.Range(0, 1_000)
+            .Count(index => first.GenerateByIndex(index, strength) == second.GenerateByIndex(index, strength));
+
+        Assert.True(shared <= 10, $"Expected different orgs to get different passwords; {shared} of 1,000 matched.");
+    }
+
+    [Theory]
+    [InlineData(PasswordStrength.Strong, 16, 3, 3)]
+    [InlineData(PasswordStrength.VeryStrong, 22, 4, 5)]
+    public void UniquePasswordGenerator_StrongAndVeryStrong_HalfArePassphrases(
+        PasswordStrength strength, int randomLength, int minWords, int maxWords)
+    {
+        const string separators = "-.#@$";
+        var generator = new UniquePasswordGenerator(42);
+        var passwords = Enumerable.Range(0, 2_000).Select(index => generator.GenerateByIndex(index, strength)).ToList();
+
+        var passphrases = passwords.Where(password => password.All(character => char.IsAsciiLetterLower(character) || separators.Contains(character))).ToList();
+        var random = passwords.Except(passphrases).ToList();
+
+        Assert.InRange(passphrases.Count, 900, 1_100);
+        Assert.All(random, password => Assert.Equal(randomLength, password.Length));
+        Assert.All(passphrases, password =>
+        {
+            var words = password.Split(separators.ToCharArray());
+            Assert.InRange(words.Length, minWords, maxWords);
+            Assert.All(words, word => Assert.Contains(word, PasswordWords.All));
+            Assert.Single(password.Where(separators.Contains).Distinct());
+        });
+    }
+
+    [Fact]
+    public void PasswordWords_All_AreDistinctLowercaseLetters()
+    {
+        Assert.Equal(256, PasswordWords.All.Length);
+        Assert.Equal(PasswordWords.All.Length, PasswordWords.All.Distinct().Count());
+        Assert.All(PasswordWords.All, word => Assert.True(word.All(char.IsAsciiLetterLower), word));
+    }
+
+    [Fact]
+    public void PasswordWords_All_CannotSpellAPooledPassphrase()
+    {
+        // A passphrase has at least 3 words, so single-word pool entries such as "monkey" cannot collide
+        var spellable = Passwords.All
+            .Select(password => (password, parts: password.Split('-', '.', '#', '@', '$')))
+            .Where(entry => entry.parts.Length >= 3 && entry.parts.All(part => PasswordWords.All.Contains(part.ToLowerInvariant())))
+            .Select(entry => entry.password);
+
+        Assert.Empty(spellable);
+    }
+
+    [Fact]
+    public void LoginNotesGenerator_NoteLengths_KeepTheirTierShares()
+    {
+        const int noteCount = CipherComposer.NotesPer100Logins;
+        var generator = new LoginNotesGenerator(42);
+
+        var lengths = Enumerable.Range(0, noteCount)
+            .Select(rank => generator.GenerateByIndex(rank, rank, noteCount, "Engineering").Length)
+            .ToList();
+
+        // One note is 100 / noteCount points of share, so rounding to whole notes moves a share by at most half that
+        var tolerance = 50.0 / noteCount;
+        Assert.InRange(lengths.Count(length => length < 200) * 100.0 / noteCount, 70 - tolerance, 70 + tolerance);
+        Assert.InRange(lengths.Count(length => length is >= 200 and < 1_800) * 100.0 / noteCount, 25 - tolerance, 25 + tolerance);
+        Assert.InRange(lengths.Count(length => length >= 1_800) * 100.0 / noteCount, 5 - tolerance, 5 + tolerance);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void LoginNotesGenerator_NonPositiveRankCount_Throws(int rankCount)
+    {
+        var generator = new LoginNotesGenerator(42);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => generator.GenerateByIndex(0, 0, rankCount, "Engineering"));
+    }
+
+    // The largest login count whose site target, total * AppsPer100Logins / 100 rounded down, still fits in one pass
+    private static int OnePassLoginLimit => ((Companies.All.Length + 1) * 100 - 1) / CipherComposer.AppsPer100Logins;
+
+    // Logins with their own key are skipped: the org key alone cannot decrypt them
+    private static List<(PasswordStrength Strength, string Password)> DecryptUserKeyPasswordsByDrawnStrength(int total)
+    {
+        var orgKey = RustSdkService.GenerateOrganizationKeys().Key;
+        return ComposeItems(CipherType.Login, total, orgKey)
+            .Select((cipher, index) => (cipher, index))
+            .Where(login => login.cipher.Key is null)
+            .Select(login => (
+                PasswordDistributions.Realistic.Select(login.index, total),
+                RustSdkService.DecryptString(JsonSerializer.Deserialize<CipherLoginData>(login.cipher.Data)!.Password!, orgKey)))
+            .ToList();
+    }
+
+    private static List<Cipher> ComposeItems(CipherType cipherType, int total, string orgKey)
+    {
+        var generator = GeneratorContext.FromOptions(new OrganizationVaultOptions
+        {
+            Name = "Composer Test",
+            Domain = "composer.example",
+            Users = 0
+        });
+        var organizationId = Guid.NewGuid();
+
+        return Enumerable.Range(0, total)
+            .Select(index => CipherComposer.Compose(
+                index, total, cipherType, orgKey, Companies.All, generator, PasswordDistributions.Realistic,
+                organizationId: organizationId))
+            .ToList();
     }
 
     private static PasswordStrength ClassifyStrength(string password)

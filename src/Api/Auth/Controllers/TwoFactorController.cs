@@ -426,15 +426,33 @@ public class TwoFactorController : Controller
     public async Task SendEmailSetup([FromBody] TwoFactorEmailSetupRequestModel model)
     {
         var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.Email);
+        var deviceIdentifier = GetEmailSetupDeviceIdentifier();
         // Add email to the user's 2FA providers, with the email address they've provided.
         model.ToUser(user);
-        await _twoFactorEmailService.SendTwoFactorSetupEmailAsync(user);
+        await _twoFactorEmailService.SendTwoFactorSetupEmailAsync(user, deviceIdentifier);
     }
 
     [AllowAnonymous]
     [HttpPost("send-email-login")]
     public async Task SendEmailLoginAsync([FromBody] TwoFactorEmailLoginRequestModel requestModel)
     {
+        // The emailed code is bound to the requesting device. This endpoint is anonymous, so the current context
+        // takes the device from the Device-Identifier header.
+        var deviceIdentifier = _currentContext.DeviceIdentifier;
+
+        // TODO: PM-44555 - Delete this body fallback, and TwoFactorEmailLoginRequestModel.DeviceIdentifier, once
+        // every supported mobile client version sends the Device-Identifier header on this request.
+        if (string.IsNullOrWhiteSpace(deviceIdentifier))
+        {
+            deviceIdentifier = requestModel.DeviceIdentifier;
+        }
+
+        // Checked before the user lookup, so this rejection never reveals whether the email or credential is valid.
+        if (string.IsNullOrWhiteSpace(deviceIdentifier) || deviceIdentifier.Length > Device.MaxIdentifierLength)
+        {
+            throw new BadRequestException("Device-Identifier", "A valid device identifier is required.");
+        }
+
         var user = await _userManager.FindByEmailAsync(requestModel.Email.ToLowerInvariant());
 
         if (user != null)
@@ -446,7 +464,7 @@ public class TwoFactorController : Controller
                 if (authRequest != null &&
                     authRequest.IsValidForAuthentication(user.Id, requestModel.AuthRequestAccessCode))
                 {
-                    await _twoFactorEmailService.SendTwoFactorEmailAsync(user);
+                    await _twoFactorEmailService.SendTwoFactorLoginEmailAsync(user, deviceIdentifier);
                     return;
                 }
             }
@@ -454,7 +472,7 @@ public class TwoFactorController : Controller
             {
                 if (ValidateSsoEmail2FaToken(requestModel.SsoEmail2FaSessionToken, user))
                 {
-                    await _twoFactorEmailService.SendTwoFactorEmailAsync(user);
+                    await _twoFactorEmailService.SendTwoFactorLoginEmailAsync(user, deviceIdentifier);
                     return;
                 }
 
@@ -463,7 +481,7 @@ public class TwoFactorController : Controller
             }
             else if (await _userService.VerifySecretAsync(user, requestModel.Secret))
             {
-                await _twoFactorEmailService.SendTwoFactorEmailAsync(user);
+                await _twoFactorEmailService.SendTwoFactorLoginEmailAsync(user, deviceIdentifier);
                 return;
             }
         }
@@ -475,10 +493,10 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorEmailUpdateResponseModel> PutEmail([FromBody] TwoFactorEmailUpdateRequestModel model)
     {
         var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.Email);
+        var deviceIdentifier = GetEmailSetupDeviceIdentifier();
         model.ToUser(user);
 
-        if (!await _userManager.VerifyTwoFactorTokenAsync(user,
-                CoreHelpers.CustomProviderName(TwoFactorProviderType.Email), model.Token))
+        if (!await _twoFactorEmailService.VerifyTwoFactorSetupTokenAsync(user, deviceIdentifier, model.Token))
         {
             throw new BadRequestException("Token", "Invalid token.");
         }
@@ -552,6 +570,25 @@ public class TwoFactorController : Controller
             throw new BadRequestException("UserVerificationToken", "User verification failed.");
         }
         return user;
+    }
+
+    /// <summary>Returns the requesting device identifier from the current context.</summary>
+    /// <remarks>
+    /// Every login issues an access token with a device claim, and refreshed access tokens keep it. A token without
+    /// one belongs to a session the user can renew by logging in again.
+    /// </remarks>
+    /// <exception cref="BadRequestException">The current context has no device identifier.</exception>
+    private string GetEmailSetupDeviceIdentifier()
+    {
+        var deviceIdentifier = _currentContext.DeviceIdentifier;
+        if (string.IsNullOrWhiteSpace(deviceIdentifier))
+        {
+            // TODO: PM-45528 - One release after this ships, replace this message with a generic missing-device
+            // message, keep the 400, drop the log-in-again remarks above, and update the NoDevice controller tests.
+            throw new BadRequestException("Log out and log back in to set up email two-step login.");
+        }
+
+        return deviceIdentifier;
     }
 
     /// <summary>Verifies the user has premium access.</summary>

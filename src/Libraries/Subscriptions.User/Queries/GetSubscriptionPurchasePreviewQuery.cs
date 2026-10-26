@@ -68,12 +68,13 @@ internal sealed class GetSubscriptionPurchasePreviewQuery(
         InvoicePreview preview;
         try
         {
-            preview = await invoicePreviewService.GetInvoicePreviewAsync(options, PlanTierType.Premium, PlanCadenceType.Annually);
+            preview = await invoicePreviewService.GetInvoicePreviewForBillingAddressAsync(options, PlanTierType.Premium, PlanCadenceType.Annually);
         }
         catch (StripeException stripeException)
             when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.CustomerTaxLocationInvalid)
         {
             throw new BadRequestException(
+                BillingErrorKeys.BillingAddress,
                 "Your location wasn't recognized. Please ensure your country and postal code are valid and try again.");
         }
 

@@ -33,28 +33,6 @@ public class PamValidationEndpointFilterTests
         Assert.True(jsonResult.Value.ValidationErrors!.ContainsKey(nameof(AccessDecisionRequestModel.Verdict)));
     }
 
-    // LastKnownRevisionDate is nullable so an omitted field fails [Required], rather than binding to DateTime.MinValue
-    // and reaching the revision-drift guard.
-    [Fact]
-    public async Task InvokeAsync_CipherUpdateWithoutLastKnownRevisionDate_Returns400()
-    {
-        var context = CreateContext(new SubmitCipherUpdateRequestModel { Data = "{\"rotated\":true}" });
-        var nextCalled = false;
-        EndpointFilterDelegate next = _ =>
-        {
-            nextCalled = true;
-            return ValueTask.FromResult<object?>("ok");
-        };
-
-        var result = await new PamValidationEndpointFilter().InvokeAsync(context, next);
-
-        Assert.False(nextCalled);
-        var jsonResult = Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
-        Assert.Equal(StatusCodes.Status400BadRequest, jsonResult.StatusCode);
-        Assert.True(jsonResult.Value!.ValidationErrors!.ContainsKey(
-            nameof(SubmitCipherUpdateRequestModel.LastKnownRevisionDate)));
-    }
-
     // The report enums are nullable for the same reason: an omitted non-nullable enum binds to its zero member, which
     // is the reassuring answer for both SyncState and SessionTermination.
     [Fact]

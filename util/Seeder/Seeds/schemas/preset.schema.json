@@ -103,6 +103,23 @@
           "type": "boolean",
           "default": false,
           "description": "When true and count >= 10, creates realistic mix: 85% Confirmed, 5% Invited, 5% Accepted, 5% Revoked."
+        },
+        "adminCount": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Number of Confirmed generated members created as Admins (the first ones); the rest are Users. Must not exceed the number of Confirmed members."
+        },
+        "statusMix": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Explicit member status weights, normalized to sum to 1. Applies at any count (the count >= 10 guard belongs to realisticStatusMix only). Cannot be combined with realisticStatusMix.",
+          "properties": {
+            "confirmed": { "type": "number", "minimum": 0 },
+            "invited": { "type": "number", "minimum": 0 },
+            "accepted": { "type": "number", "minimum": 0 },
+            "revoked": { "type": "number", "minimum": 0 }
+          }
         }
       },
       "required": ["count"]
@@ -198,17 +215,27 @@
         "enableAll": {
           "type": "boolean",
           "default": false,
-          "description": "When true, enables all policy types."
+          "description": "Not supported: a preset that sets it fails to load. List types in 'enable' instead."
         },
         "except": {
           "type": "array",
           "items": { "type": "string" },
-          "description": "Policy types to exclude when enableAll is true."
+          "description": "Not supported: a preset that sets it fails to load. List types in 'enable' instead."
         },
         "enable": {
           "type": "array",
           "items": { "type": "string" },
-          "description": "Specific policy types to enable (alternative to enableAll)."
+          "description": "Policy types to create as enabled rows."
+        },
+        "disable": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Policy types to create as disabled rows."
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Policy Data JSON keyed by PolicyType name; overrides the built-in default."
         }
       }
     },
@@ -230,6 +257,56 @@
           "type": "string",
           "enum": ["oidc", "saml"],
           "description": "Identity provider protocol."
+        }
+      }
+    },
+    "defaultCollections": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Default user (My Items) collections for every Confirmed User or Custom member, as the Organization Data Ownership policy creates them, filled with already-migrated items. Requires organizationDataOwnership in policies.enable and an enterprise plan. Owners and Admins get none.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "default": "My Items",
+          "description": "Plaintext collection name, encrypted once with the org key and shared by every default collection."
+        },
+        "nonEmptyRate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Fraction of default collections holding at least one active item. Members with pending personal items are never non-empty."
+        },
+        "sizes": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Active item-count histogram for non-empty default collections, after the largest entries. Without it, each gets 1 item.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["min", "max", "weight"],
+            "properties": {
+              "min": { "type": "integer", "minimum": 0 },
+              "max": { "type": "integer", "minimum": 0 },
+              "weight": { "type": "number", "minimum": 0 }
+            }
+          }
+        },
+        "largest": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1 },
+          "description": "Exact active item counts for the heaviest members. Must not have more entries than there are non-empty collections."
+        },
+        "deletedRate": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Trashed items added per member, as a fraction of that member's active items."
+        },
+        "policyEnabledDaysAgo": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 14,
+          "description": "Days before today the policy was enabled. Collections are dated then; items migrate between then and now."
         }
       }
     },
@@ -508,7 +585,7 @@
           "properties": {
             "shape": {
               "type": "string",
-              "enum": ["realistic", "lightUsage", "heavyUsage"],
+              "enum": ["realistic", "lightUsage", "heavyUsage", "pendingMigration"],
               "description": "Named distribution for personal cipher counts per user. Default: flat countPerUser."
             }
           }

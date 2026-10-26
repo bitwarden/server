@@ -72,20 +72,6 @@ public class RemovePrivilegedControlsCommandTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData(" ")]
-    public async Task Run_NoGatewayCustomer_ThrowsBadRequest(string? gatewayCustomerId)
-    {
-        var organization = CreateOrganization(gatewayCustomerId: gatewayCustomerId);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization));
-
-        Assert.Equal("No payment method found.", exception.Message);
-        await AssertNothingChangedOrSaved();
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData(" ")]
     public async Task Run_NoGatewaySubscription_ThrowsBadRequest(string? gatewaySubscriptionId)
     {
         var organization = CreateOrganization(gatewaySubscriptionId: gatewaySubscriptionId);
@@ -194,7 +180,6 @@ public class RemovePrivilegedControlsCommandTests
         bool usePam = true,
         int? pamSeats = 12,
         int? maxAutoscalePamSeats = null,
-        string? gatewayCustomerId = "cus_123",
         string? gatewaySubscriptionId = "sub_123") => new()
         {
             Id = Guid.NewGuid(),
@@ -203,7 +188,7 @@ public class RemovePrivilegedControlsCommandTests
             PamSeats = pamSeats,
             PamSeatMinimum = _seatMinimum,
             MaxAutoscalePamSeats = maxAutoscalePamSeats,
-            GatewayCustomerId = gatewayCustomerId,
+            GatewayCustomerId = "cus_123",
             GatewaySubscriptionId = gatewaySubscriptionId
         };
 

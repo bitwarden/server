@@ -31,13 +31,14 @@ public class ConfigureOpenIdConnectDistributedOptions : IPostConfigureOptions<Co
     {
         options.CookieManager = new DistributedCacheCookieManager();
 
-        if (name != AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
+        if (name != AuthenticationSchemes.IdentityExternalCookie &&
+            name != AuthenticationSchemes.SsoExternalCookie)
         {
             // Ignore
             return;
         }
 
-        options.Cookie.Name = AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme;
+        options.Cookie.Name = name;
         options.Cookie.IsEssential = true;
         options.Cookie.SameSite = _idsrv.Authentication.CookieSameSiteMode;
         options.TicketDataFormat = new DistributedCacheTicketDataFormatter(_distributedCache, _dataProtectionProvider, name);
