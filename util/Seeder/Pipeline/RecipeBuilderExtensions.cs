@@ -212,11 +212,12 @@ public static class RecipeBuilderExtensions
     /// <param name="builder">The recipe builder</param>
     /// <param name="domain">Organization domain (used for seeding randomness)</param>
     /// <param name="seed">Optional explicit seed. If null, domain hash is used.</param>
+    /// <param name="region">Optional region for generated names, card brands, and identity formats. If null, <see cref="GeographicRegion.Global"/> is used.</param>
     /// <returns>The builder for fluent chaining</returns>
-    public static RecipeBuilder WithGenerator(this RecipeBuilder builder, string domain, int? seed = null)
+    public static RecipeBuilder WithGenerator(this RecipeBuilder builder, string domain, int? seed = null, GeographicRegion? region = null)
     {
         builder.HasGenerator = true;
-        builder.AddStep(_ => InitGeneratorStep.FromDomain(domain, seed));
+        builder.AddStep(_ => InitGeneratorStep.FromDomain(domain, seed, region));
         return builder;
     }
 

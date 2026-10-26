@@ -145,14 +145,13 @@ The Seeder is organized around six core patterns, each with a specific responsib
 
 **Purpose:** Reusable, realistic test data collections that provide the foundation for cipher generation.
 
-**When to use:** Need realistic, filterable data for cipher content (company names, passwords, usernames).
+**When to use:** Need realistic data for cipher content (company names, passwords, usernames).
 
 **Key characteristics:**
 
 - Static readonly arrays and classes
-- Filterable by region, type, category
 - Deterministic (seeded randomness for reproducibility)
-- Composable across regions
+- `GeographicRegion` sets the name locale for login usernames, the card brands, and identity names, titles, addresses, country code and SSN format
 - Enums provide the public API
 
 See `Data/README.md` for Generators and Distributions details.

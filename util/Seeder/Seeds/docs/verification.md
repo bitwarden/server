@@ -217,9 +217,12 @@ WHERE OrganizationId = @OrgId;
 Verifies `cipherAssignment.archivedRate`, `deletedRate`, and `archivedAndDeletedOverlapRate` against the
 personal (non-org) cipher pool — see Q11 for the same rates verified against the org pool, which is archived
 independently. Only applies to presets with `density.personalCiphers` set (Sterling Cooper, Wayne Enterprises,
-Weyland-Yutani). Personal ciphers aren't tied to `OrganizationId`, so this joins through `OrganizationUser` to
-scope to the seeded org's users. Follows the same JSON-path pattern used to compute `ArchivedDate` in
-`dbo.CipherDetails`.
+Weyland-Yutani). Only confirmed members, owner included, get personal ciphers: `CreateUsersStep` adds only
+confirmed users to `UserDigests`, the list `GeneratePersonalCiphersStep` walks, so invited, accepted and revoked
+members own none. With the realistic status mix, 214 members are confirmed in Sterling Cooper, 851 in Wayne
+Enterprises and 4,251 in Weyland-Yutani, and the personal-cipher distribution still gives some of them none.
+Personal ciphers aren't tied to `OrganizationId`, so this joins through `OrganizationUser` to scope to the
+seeded org's users. Follows the same JSON-path pattern used to compute `ArchivedDate` in `dbo.CipherDetails`.
 
 ```sql
 DECLARE @OrgId UNIQUEIDENTIFIER = 'PASTE_ORG_ID_HERE';
@@ -382,8 +385,8 @@ ORDER BY ActiveItems DESC;
 | Multi-collection rate     | 20% of ~4,600 non-orphan ciphers in 2-3 collections. Max 3 per cipher.                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | Archived org ciphers      | 50 of 5,000 (6% rate = 300, clamped to the 50 cap).                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | Deleted org ciphers       | 25 of 5,000 (3% rate = 150, clamped to the 25 cap). All 25 are also archived (2% overlap = 100, clamped) — 0 are delete-only.                                                                                                                                                                                                                                                                                                                                                                               |
-| Archived personal ciphers | 50 of ~3,638 personal ciphers (6% rate = ~218, clamped to the 50 cap).                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| Deleted personal ciphers  | 25 of ~3,638 (3% rate clamped to 25). All 25 are also archived (2% overlap = ~73, clamped to `min(archivedTarget, maxDeletedCiphers)` = 25) — 0 are delete-only. See `ArchiveAndDeleteRateTests.BothTarget_NeverExceedsMaxDeletedCiphers_EvenWhenArchivedCeilingIsHigher` for the exact clamp this demonstrates. Sterling Cooper seeds archived/deleted items in _both_ the org pool and the personal pool, since `archivedRate`/`deletedRate`/`archivedAndDeletedOverlapRate` apply independently to each. |
+| Archived personal ciphers | 50 of 2,910 personal ciphers (6% rate = 174, clamped to the 50 cap).                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Deleted personal ciphers  | 25 of 2,910 (3% rate clamped to 25). All 25 are also archived (2% overlap = 58, clamped to `min(archivedTarget, maxDeletedCiphers)` = 25) — 0 are delete-only. See `ArchiveAndDeleteRateTests.BothTarget_NeverExceedsMaxDeletedCiphers_EvenWhenArchivedCeilingIsHigher` for the exact clamp this demonstrates. Sterling Cooper seeds archived/deleted items in _both_ the org pool and the personal pool, since `archivedRate`/`deletedRate`/`archivedAndDeletedOverlapRate` apply independently to each.   |
 
 ### 5. Umbrella Corp (MD)
 
@@ -413,8 +416,8 @@ ORDER BY ActiveItems DESC;
 | Multi-collection rate     | 25% of ~9,000 non-orphan ciphers in 2-4 collections. Max 4 per cipher.                                                                                                                                                                 |
 | Archived org ciphers      | 50 of 10,000 (6% rate = 600, clamped to the 50 cap).                                                                                                                                                                                   |
 | Deleted org ciphers       | 25 of 10,000 (3% rate = 300, clamped to the 25 cap). All 25 are also archived (2% overlap = 200, clamped) — 0 are delete-only.                                                                                                         |
-| Archived personal ciphers | 50 of ~14,525 personal ciphers (6% rate = ~872, clamped to the 50 cap).                                                                                                                                                                |
-| Deleted personal ciphers  | 25 of ~14,525 (3% rate clamped to 25). All 25 are also archived (2% overlap clamped the same way as Sterling Cooper) — 0 are delete-only. Wayne Enterprises seeds archived/deleted items in _both_ the org pool and the personal pool. |
+| Archived personal ciphers | 50 of 12,181 personal ciphers (6% rate = 730, clamped to the 50 cap).                                                                                                                                                                  |
+| Deleted personal ciphers  | 25 of 12,181 (3% rate clamped to 25). All 25 are also archived (2% overlap clamped the same way as Sterling Cooper) — 0 are delete-only. Wayne Enterprises seeds archived/deleted items in _both_ the org pool and the personal pool.  |
 
 ### 7. Tyrell Corp (LG)
 
@@ -445,8 +448,8 @@ ORDER BY ActiveItems DESC;
 | Multi-collection rate     | 30% of ~13,500 non-orphan ciphers in 2-5 collections. Max 5 per cipher.                                                                                                                                                 |
 | Archived org ciphers      | 50 of 15,000 (4% rate = 600, clamped to the 50 cap).                                                                                                                                                                    |
 | Deleted org ciphers       | 25 of 15,000 (3% rate = 450, clamped to the 25 cap). All 25 are also archived (1% overlap = 150, clamped) — 0 are delete-only.                                                                                          |
-| Archived personal ciphers | 50 of ~11,000 personal ciphers (4% rate = 440, clamped to the 50 cap).                                                                                                                                                  |
-| Deleted personal ciphers  | 25 of ~11,000 (3% rate clamped to 25). All 25 are also archived (1% overlap = 110, clamped the same way) — 0 are delete-only. Weyland-Yutani seeds archived/deleted items in _both_ the org pool and the personal pool. |
+| Archived personal ciphers | 50 of 9,345 personal ciphers (4% rate = 373, clamped to the 50 cap).                                                                                                                                                    |
+| Deleted personal ciphers  | 25 of 9,345 (3% rate clamped to 25). All 25 are also archived (1% overlap = 93, clamped the same way) — 0 are delete-only. Weyland-Yutani seeds archived/deleted items in _both_ the org pool and the personal pool.    |
 
 ### 9. Initech (XL)
 
