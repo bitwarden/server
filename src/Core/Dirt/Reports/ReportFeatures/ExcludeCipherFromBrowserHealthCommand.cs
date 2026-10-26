@@ -6,18 +6,18 @@ using Bit.Core.Platform.Push;
 
 namespace Bit.Core.Dirt.Reports.ReportFeatures;
 
-public class ExcludeCipherFromReportsCommand : IExcludeCipherFromReportsCommand
+public class ExcludeCipherFromBrowserHealthCommand : IExcludeCipherFromBrowserHealthCommand
 {
-    private readonly ICipherReportExclusionRepository _cipherReportExclusionRepository;
+    private readonly ICipherBrowserHealthExclusionRepository _cipherBrowserHealthExclusionRepository;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
     private readonly IPushNotificationService _pushService;
 
-    public ExcludeCipherFromReportsCommand(
-        ICipherReportExclusionRepository cipherReportExclusionRepository,
+    public ExcludeCipherFromBrowserHealthCommand(
+        ICipherBrowserHealthExclusionRepository cipherBrowserHealthExclusionRepository,
         IHasPremiumAccessQuery hasPremiumAccessQuery,
         IPushNotificationService pushService)
     {
-        _cipherReportExclusionRepository = cipherReportExclusionRepository;
+        _cipherBrowserHealthExclusionRepository = cipherBrowserHealthExclusionRepository;
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
         _pushService = pushService;
     }
@@ -26,10 +26,10 @@ public class ExcludeCipherFromReportsCommand : IExcludeCipherFromReportsCommand
     {
         if (!await _hasPremiumAccessQuery.HasPremiumAccessAsync(userId))
         {
-            throw new BadRequestException("Premium required to exclude items from reports.");
+            throw new BadRequestException("Premium required to exclude items from browser health.");
         }
 
-        var excluded = await _cipherReportExclusionRepository.ExcludeAsync([cipherId], userId);
+        var excluded = await _cipherBrowserHealthExclusionRepository.ExcludeAsync([cipherId], userId);
         if (excluded == 0)
         {
             throw new NotFoundException();
