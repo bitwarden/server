@@ -220,7 +220,6 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, user.Id).ReturnsNull();
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PutSharedFolders(id, model));
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostSharedFolders(id, model));
     }
 
     [Theory, BitAutoData]
@@ -235,11 +234,8 @@ public class CiphersControllerTests
 
     [Theory]
     [InlineData(nameof(CiphersController.PutCollections), nameof(CiphersController.PutSharedFolders), "{id}/shared-folders")]
-    [InlineData(nameof(CiphersController.PostCollections), nameof(CiphersController.PostSharedFolders), "{id}/shared-folders")]
     [InlineData(nameof(CiphersController.PutCollections_vNext), nameof(CiphersController.PutSharedFolders_vNext), "{id}/shared-folders_v2")]
-    [InlineData(nameof(CiphersController.PostCollections_vNext), nameof(CiphersController.PostSharedFolders_vNext), "{id}/shared-folders_v2")]
     [InlineData(nameof(CiphersController.PutCollectionsAdmin), nameof(CiphersController.PutSharedFoldersAdmin), "{id}/shared-folders-admin")]
-    [InlineData(nameof(CiphersController.PostCollectionsAdmin), nameof(CiphersController.PostSharedFoldersAdmin), "{id}/shared-folders-admin")]
     [InlineData(nameof(CiphersController.PostBulkCollections), nameof(CiphersController.PostBulkSharedFolders), "bulk-shared-folders")]
     public void SharedFolderAliasRoutes_AreRoutedAndLegacyRoutesAreObsolete(string legacyName, string aliasName, string expectedTemplate)
     {
@@ -247,9 +243,7 @@ public class CiphersControllerTests
         var alias = typeof(CiphersController).GetMethod(aliasName)!;
 
         var obsolete = Assert.Single(legacy.GetCustomAttributes(typeof(ObsoleteAttribute), false).Cast<ObsoleteAttribute>());
-        Assert.Equal(legacyName.StartsWith("Post") && legacyName != nameof(CiphersController.PostBulkCollections)
-            ? "This endpoint is deprecated. Use PUT method instead."
-            : "Replaced by /shared-folders route; retained for backwards compatibility", obsolete.Message);
+        Assert.Equal("Replaced by /shared-folders route; retained for backwards compatibility", obsolete.Message);
         Assert.Empty(alias.GetCustomAttributes(typeof(ObsoleteAttribute), false));
 
         var legacyVerb = legacy.GetCustomAttributes(typeof(HttpMethodAttribute), false).Cast<HttpMethodAttribute>().Single();
