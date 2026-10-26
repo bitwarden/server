@@ -697,6 +697,7 @@ public class AccountController : Controller
         // won't complete. Staged rows aren't seat-counted; a Staged→Invited promotion
         // consumes a seat and must gate here alongside the fresh-JIT case.
         var willPromoteStagedOrgUser = possibleOrgUser?.Status == OrganizationUserStatusType.Staged;
+        var privilegedControlsAccess = JoiningMemberPrivilegedControlsAccess.Kept;
 
         if (possibleOrgUser == null || willPromoteStagedOrgUser)
         {
@@ -704,10 +705,8 @@ public class AccountController : Controller
 
             if (willPromoteStagedOrgUser)
             {
-                // The email claim has not been validated yet at this point, so fall back to it only when the
-                // staged row has no email of its own.
-                await ReservePrivilegedControlsSeatForStagedMemberAsync(
-                    organization, possibleOrgUser!, possibleOrgUser!.Email ?? email!);
+                privilegedControlsAccess =
+                    await _reservePrivilegedControlsSeatForJoiningMemberCommand.RunAsync(organization, possibleOrgUser!);
             }
         }
 
@@ -793,6 +792,12 @@ public class AccountController : Controller
             possibleOrgUser.UserId = newUser.Id;
             possibleOrgUser.RevisionDate = DateTime.UtcNow;
             await _organizationUserRepository.ReplaceAsync(possibleOrgUser);
+
+            if (privilegedControlsAccess == JoiningMemberPrivilegedControlsAccess.RemovedAtSeatLimit)
+            {
+                await _reservePrivilegedControlsSeatForJoiningMemberCommand.NotifyOwnersAsync(
+                    organization, possibleOrgUser.Email ?? newUser.Email);
+            }
         }
 
         // Create the SsoUser record to link the user to the SSO provider.
@@ -851,27 +856,6 @@ public class AccountController : Controller
     }
 
     /// <summary>
-    /// Reserves a Privileged Controls seat for a staged member who has Privileged Controls access. When none can
-    /// be reserved the member's access is removed in memory for the caller to save, and the Owners are notified.
-    /// Throws <see cref="SsoAuthnNoSeatsAvailableException"/> when the seat cannot be reserved because of an error.
-    /// </summary>
-    private async Task ReservePrivilegedControlsSeatForStagedMemberAsync(
-        Organization organization,
-        OrganizationUser orgUser,
-        string memberEmail)
-    {
-        try
-        {
-            await _reservePrivilegedControlsSeatForJoiningMemberCommand.RunAsync(organization, orgUser, memberEmail);
-        }
-        catch (Exception e)
-        {
-            _logger.LogInformation(e, "SSO auto provisioning failed to reserve a Privileged Controls seat");
-            throw new SsoAuthnNoSeatsAvailableException();
-        }
-    }
-
-    /// <summary>
     /// Promotes a Staged <see cref="OrganizationUser"/> row to
     /// <see cref="OrganizationUserStatusType.Invited"/> and sends the org invite email.
     /// Mutates only <see cref="OrganizationUser.Status"/> and
@@ -888,7 +872,8 @@ public class AccountController : Controller
         var previousRevisionDate = orgUser.RevisionDate;
         var previousAccessPam = orgUser.AccessPam;
 
-        await ReservePrivilegedControlsSeatForStagedMemberAsync(organization, orgUser, orgUser.Email!);
+        var privilegedControlsAccess =
+            await _reservePrivilegedControlsSeatForJoiningMemberCommand.RunAsync(organization, orgUser);
 
         orgUser.Status = OrganizationUserStatusType.Invited;
         orgUser.RevisionDate = DateTime.UtcNow;
@@ -915,6 +900,11 @@ public class AccountController : Controller
             await _organizationUserRepository.ReplaceAsync(orgUser);
 
             throw;
+        }
+
+        if (privilegedControlsAccess == JoiningMemberPrivilegedControlsAccess.RemovedAtSeatLimit)
+        {
+            await _reservePrivilegedControlsSeatForJoiningMemberCommand.NotifyOwnersAsync(organization, orgUser.Email!);
         }
     }
 

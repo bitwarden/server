@@ -15,7 +15,6 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -1074,23 +1073,21 @@ public class AccountControllerTest
         var organization = new Organization { Id = orgId, Name = "Org", Seats = null };
         var orgUser = BuildStagedOrgUserWithPam(orgId, email);
         ArrangeStagedMember(sutProvider, organization, existingUser, orgUser, email);
-        sutProvider.GetDependency<IReservePrivilegedControlsSeatForJoiningMemberCommand>()
-            .RunAsync(organization, orgUser, email)
-            .Returns(callInfo =>
-            {
-                callInfo.Arg<OrganizationUser>().AccessPam = false;
-                return Task.FromResult(false);
-            });
+        var joiningMemberCommand = ArrangePrivilegedControlsAccessRemoved(
+            sutProvider, organization, orgUser, JoiningMemberPrivilegedControlsAccess.RemovedAtSeatLimit);
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
 
         await Assert.ThrowsAsync<SsoAuthnStagedOrgUserRequiresInviteAcceptanceException>(
             () => InvokeCreateUserAndOrgUserConditionallyAsync(sutProvider, orgId, email));
 
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .Received(1)
-            .ReplaceAsync(Arg.Is<OrganizationUser>(ou =>
+        Received.InOrder(() =>
+        {
+            organizationUserRepository.ReplaceAsync(Arg.Is<OrganizationUser>(ou =>
                 ou.Id == orgUser.Id &&
                 ou.Status == OrganizationUserStatusType.Invited &&
                 !ou.AccessPam));
+            joiningMemberCommand.NotifyOwnersAsync(organization, email);
+        });
     }
 
     [Theory, BitAutoData]
@@ -1105,26 +1102,24 @@ public class AccountControllerTest
         sutProvider.GetDependency<IPolicyQuery>()
             .RunAsync(orgId, PolicyType.TwoFactorAuthentication)
             .Returns(new PolicyStatus(orgId, PolicyType.TwoFactorAuthentication));
-        sutProvider.GetDependency<IReservePrivilegedControlsSeatForJoiningMemberCommand>()
-            .RunAsync(organization, orgUser, email)
-            .Returns(callInfo =>
-            {
-                callInfo.Arg<OrganizationUser>().AccessPam = false;
-                return Task.FromResult(false);
-            });
+        var joiningMemberCommand = ArrangePrivilegedControlsAccessRemoved(
+            sutProvider, organization, orgUser, JoiningMemberPrivilegedControlsAccess.RemovedAtSeatLimit);
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
 
         await InvokeCreateUserAndOrgUserConditionallyAsync(sutProvider, orgId, email);
 
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .Received(1)
-            .ReplaceAsync(Arg.Is<OrganizationUser>(ou =>
+        Received.InOrder(() =>
+        {
+            organizationUserRepository.ReplaceAsync(Arg.Is<OrganizationUser>(ou =>
                 ou.Id == orgUser.Id &&
                 ou.Status == OrganizationUserStatusType.Invited &&
                 !ou.AccessPam));
+            joiningMemberCommand.NotifyOwnersAsync(organization, email);
+        });
     }
 
     [Theory, BitAutoData]
-    public async Task ExternalCallback_StagedWithPam_PamStepThrows_ThrowsNoSeatsAvailable(
+    public async Task ExternalCallback_ExistingUserStagedWithPam_ReservationFailed_PromotesWithoutPamOrEmail(
         SutProvider<AccountController> sutProvider)
     {
         var orgId = Guid.NewGuid();
@@ -1133,20 +1128,23 @@ public class AccountControllerTest
         var organization = new Organization { Id = orgId, Name = "Org", Seats = null };
         var orgUser = BuildStagedOrgUserWithPam(orgId, email);
         ArrangeStagedMember(sutProvider, organization, existingUser, orgUser, email);
-        sutProvider.GetDependency<IReservePrivilegedControlsSeatForJoiningMemberCommand>()
-            .RunAsync(Arg.Any<Organization>(), Arg.Any<OrganizationUser>(), Arg.Any<string>())
-            .Throws(new BadRequestException("seat failure"));
+        var joiningMemberCommand = ArrangePrivilegedControlsAccessRemoved(
+            sutProvider, organization, orgUser, JoiningMemberPrivilegedControlsAccess.RemovedAfterError);
 
-        await Assert.ThrowsAsync<SsoAuthnNoSeatsAvailableException>(
+        await Assert.ThrowsAsync<SsoAuthnStagedOrgUserRequiresInviteAcceptanceException>(
             () => InvokeCreateUserAndOrgUserConditionallyAsync(sutProvider, orgId, email));
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .ReplaceAsync(Arg.Any<OrganizationUser>());
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou =>
+                ou.Id == orgUser.Id &&
+                ou.Status == OrganizationUserStatusType.Invited &&
+                !ou.AccessPam));
+        await joiningMemberCommand.DidNotReceiveWithAnyArgs().NotifyOwnersAsync(default!, default!);
     }
 
     [Theory, BitAutoData]
-    public async Task ExternalCallback_NewUserStagedWithPam_PamStepThrows_ThrowsNoSeatsAvailableWithoutCreatingUser(
+    public async Task ExternalCallback_NewUserStagedWithPam_ReservationFailed_ProvisionsWithoutPamOrEmail(
         SutProvider<AccountController> sutProvider)
     {
         var orgId = Guid.NewGuid();
@@ -1154,16 +1152,21 @@ public class AccountControllerTest
         var organization = new Organization { Id = orgId, Name = "Org", Seats = null };
         var orgUser = BuildStagedOrgUserWithPam(orgId, email);
         ArrangeStagedMember(sutProvider, organization, null, orgUser, email);
-        sutProvider.GetDependency<IReservePrivilegedControlsSeatForJoiningMemberCommand>()
-            .RunAsync(Arg.Any<Organization>(), Arg.Any<OrganizationUser>(), Arg.Any<string>())
-            .Throws(new BadRequestException("seat failure"));
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(orgId, PolicyType.TwoFactorAuthentication)
+            .Returns(new PolicyStatus(orgId, PolicyType.TwoFactorAuthentication));
+        var joiningMemberCommand = ArrangePrivilegedControlsAccessRemoved(
+            sutProvider, organization, orgUser, JoiningMemberPrivilegedControlsAccess.RemovedAfterError);
 
-        await Assert.ThrowsAsync<SsoAuthnNoSeatsAvailableException>(
-            () => InvokeCreateUserAndOrgUserConditionallyAsync(sutProvider, orgId, email));
+        await InvokeCreateUserAndOrgUserConditionallyAsync(sutProvider, orgId, email);
 
         await sutProvider.GetDependency<IRegisterUserCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .RegisterSSOAutoProvisionedUserAsync(Arg.Any<User>(), Arg.Any<Organization>());
+            .Received(1)
+            .RegisterSSOAutoProvisionedUserAsync(Arg.Any<User>(), organization);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou => ou.Id == orgUser.Id && !ou.AccessPam));
+        await joiningMemberCommand.DidNotReceiveWithAnyArgs().NotifyOwnersAsync(default!, default!);
     }
 
     [Theory, BitAutoData]
@@ -1176,13 +1179,8 @@ public class AccountControllerTest
         var organization = new Organization { Id = orgId, Name = "Org", Seats = null };
         var orgUser = BuildStagedOrgUserWithPam(orgId, email);
         ArrangeStagedMember(sutProvider, organization, existingUser, orgUser, email);
-        sutProvider.GetDependency<IReservePrivilegedControlsSeatForJoiningMemberCommand>()
-            .RunAsync(organization, orgUser, email)
-            .Returns(callInfo =>
-            {
-                callInfo.Arg<OrganizationUser>().AccessPam = false;
-                return Task.FromResult(false);
-            });
+        var joiningMemberCommand = ArrangePrivilegedControlsAccessRemoved(
+            sutProvider, organization, orgUser, JoiningMemberPrivilegedControlsAccess.RemovedAtSeatLimit);
         sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
             .SendInvitesAsync(Arg.Any<SendInvitesRequest>())
             .ThrowsAsync(new InvalidOperationException("mail failure"));
@@ -1197,6 +1195,24 @@ public class AccountControllerTest
                 ou.Id == orgUser.Id &&
                 ou.Status == OrganizationUserStatusType.Staged &&
                 ou.AccessPam));
+        await joiningMemberCommand.DidNotReceiveWithAnyArgs().NotifyOwnersAsync(default!, default!);
+    }
+
+    private static IReservePrivilegedControlsSeatForJoiningMemberCommand ArrangePrivilegedControlsAccessRemoved(
+        SutProvider<AccountController> sutProvider,
+        Organization organization,
+        OrganizationUser orgUser,
+        JoiningMemberPrivilegedControlsAccess outcome)
+    {
+        var joiningMemberCommand = sutProvider.GetDependency<IReservePrivilegedControlsSeatForJoiningMemberCommand>();
+        joiningMemberCommand
+            .RunAsync(organization, orgUser)
+            .Returns(callInfo =>
+            {
+                callInfo.Arg<OrganizationUser>().AccessPam = false;
+                return Task.FromResult(outcome);
+            });
+        return joiningMemberCommand;
     }
 
     private static OrganizationUser BuildStagedOrgUserWithPam(Guid orgId, string email) =>

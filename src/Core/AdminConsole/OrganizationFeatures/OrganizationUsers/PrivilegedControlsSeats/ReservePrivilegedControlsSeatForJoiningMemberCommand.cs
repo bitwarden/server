@@ -18,27 +18,42 @@ public class ReservePrivilegedControlsSeatForJoiningMemberCommand(
     ILogger<ReservePrivilegedControlsSeatForJoiningMemberCommand> logger)
     : IReservePrivilegedControlsSeatForJoiningMemberCommand
 {
-    public async Task<bool> RunAsync(Organization organization, OrganizationUser organizationUser, string memberEmail)
+    public async Task<JoiningMemberPrivilegedControlsAccess> RunAsync(Organization organization, OrganizationUser organizationUser)
     {
         if (!organization.UsePam || !organizationUser.AccessPam)
         {
-            return true;
+            return JoiningMemberPrivilegedControlsAccess.Kept;
         }
 
-        var reservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, 1);
+        PrivilegedControlsSeatReservation reservation;
+        try
+        {
+            reservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, 1);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Could not reserve a Privileged Controls seat for a member joining organization {OrganizationId}; the member joins without Privileged Controls access.",
+                organization.Id);
+            organizationUser.AccessPam = false;
+            return JoiningMemberPrivilegedControlsAccess.RemovedAfterError;
+        }
 
         if (reservation == PrivilegedControlsSeatReservation.Reserved)
         {
-            return true;
+            return JoiningMemberPrivilegedControlsAccess.Kept;
         }
 
         organizationUser.AccessPam = false;
-        await NotifyOwnersAsync(organization, memberEmail);
-        return false;
+        return JoiningMemberPrivilegedControlsAccess.RemovedAtSeatLimit;
     }
 
-    private async Task NotifyOwnersAsync(Organization organization, string memberEmail)
+    public async Task NotifyOwnersAsync(Organization organization, string memberEmail)
     {
+        if (globalSettings.SelfHosted)
+        {
+            return;
+        }
+
         try
         {
             var ownerEmails = (await organizationUserRepository.GetManyByMinimumRoleAsync(

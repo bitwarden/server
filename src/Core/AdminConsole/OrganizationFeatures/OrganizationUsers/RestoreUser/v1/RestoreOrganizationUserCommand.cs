@@ -113,6 +113,7 @@ public class RestoreOrganizationUserCommand(
         await CheckPoliciesBeforeRestoreAsync(organizationUser, userTwoFactorIsEnabled);
 
         var status = organizationUser.GetPriorActiveOrganizationUserStatusType();
+        var privilegedControlsAccess = JoiningMemberPrivilegedControlsAccess.Kept;
 
         if (organization.UsePam && organizationUser.AccessPam && PrivilegedControlsSeatOccupancy.OccupiesSeat(status))
         {
@@ -122,11 +123,9 @@ public class RestoreOrganizationUserCommand(
             }
             else if (systemUser == EventSystemUser.SCIM)
             {
-                var memberEmail = organizationUser.Email
-                                  ?? (await userRepository.GetByIdAsync(organizationUser.UserId!.Value)).Email;
-                var keepsAccess = await reservePrivilegedControlsSeatForJoiningMemberCommand.RunAsync(
-                    organization, organizationUser, memberEmail);
-                if (!keepsAccess)
+                privilegedControlsAccess = await reservePrivilegedControlsSeatForJoiningMemberCommand.RunAsync(
+                    organization, organizationUser);
+                if (privilegedControlsAccess != JoiningMemberPrivilegedControlsAccess.Kept)
                 {
                     // RestoreAsync only writes the status, so the removed access has to be saved separately.
                     await organizationUserRepository.ReplaceAsync(organizationUser);
@@ -140,6 +139,13 @@ public class RestoreOrganizationUserCommand(
         {
             await organizationUserRepository.StartInviteReminderSequencesAsync(
                 [organizationUser.Id], timeProvider.GetUtcNow().UtcDateTime);
+        }
+
+        if (privilegedControlsAccess == JoiningMemberPrivilegedControlsAccess.RemovedAtSeatLimit)
+        {
+            var memberEmail = organizationUser.Email
+                              ?? (await userRepository.GetByIdAsync(organizationUser.UserId!.Value)).Email;
+            await reservePrivilegedControlsSeatForJoiningMemberCommand.NotifyOwnersAsync(organization, memberEmail);
         }
 
         if (organizationUser.UserId.HasValue

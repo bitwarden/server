@@ -330,13 +330,48 @@ public class ConfirmOrganizationInviteLinkCommandTests
         SetupHappyPath(organization, inviteLink, user, stagedOrganizationUser, sutProvider);
         SetupStagedMembership(user, stagedOrganizationUser);
         stagedOrganizationUser.AccessPam = true;
-        var memberEmail = stagedOrganizationUser.Email;
-        sutProvider.GetDependency<IReservePrivilegedControlsSeatForJoiningMemberCommand>()
-            .RunAsync(organization, stagedOrganizationUser, memberEmail!)
+        var memberEmail = stagedOrganizationUser.Email!;
+        var joiningMemberCommand = sutProvider.GetDependency<IReservePrivilegedControlsSeatForJoiningMemberCommand>();
+        joiningMemberCommand
+            .RunAsync(organization, stagedOrganizationUser)
             .Returns(callInfo =>
             {
                 callInfo.Arg<OrganizationUser>().AccessPam = false;
-                return Task.FromResult(false);
+                return Task.FromResult(JoiningMemberPrivilegedControlsAccess.RemovedAtSeatLimit);
+            });
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+
+        var result = await sutProvider.Sut.ConfirmAsync(BuildRequest(inviteLink, user));
+
+        Assert.True(result.IsSuccess);
+        Received.InOrder(() =>
+        {
+            organizationUserRepository.ReplaceAsync(Arg.Is<OrganizationUser>(ou =>
+                ou.Id == stagedOrganizationUser.Id &&
+                ou.Status == OrganizationUserStatusType.Confirmed &&
+                !ou.AccessPam));
+            joiningMemberCommand.NotifyOwnersAsync(organization, memberEmail);
+        });
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmAsync_StagedMemberWithPam_ReservationFailed_JoinsWithoutPamOrEmail(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser stagedOrganizationUser,
+        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
+    {
+        SetupHappyPath(organization, inviteLink, user, stagedOrganizationUser, sutProvider);
+        SetupStagedMembership(user, stagedOrganizationUser);
+        stagedOrganizationUser.AccessPam = true;
+        var joiningMemberCommand = sutProvider.GetDependency<IReservePrivilegedControlsSeatForJoiningMemberCommand>();
+        joiningMemberCommand
+            .RunAsync(organization, stagedOrganizationUser)
+            .Returns(callInfo =>
+            {
+                callInfo.Arg<OrganizationUser>().AccessPam = false;
+                return Task.FromResult(JoiningMemberPrivilegedControlsAccess.RemovedAfterError);
             });
 
         var result = await sutProvider.Sut.ConfirmAsync(BuildRequest(inviteLink, user));
@@ -344,10 +379,8 @@ public class ConfirmOrganizationInviteLinkCommandTests
         Assert.True(result.IsSuccess);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
-            .ReplaceAsync(Arg.Is<OrganizationUser>(ou =>
-                ou.Id == stagedOrganizationUser.Id &&
-                ou.Status == OrganizationUserStatusType.Confirmed &&
-                !ou.AccessPam));
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou => ou.Id == stagedOrganizationUser.Id && !ou.AccessPam));
+        await joiningMemberCommand.DidNotReceiveWithAnyArgs().NotifyOwnersAsync(default!, default!);
     }
 
     [Theory, BitAutoData]
@@ -361,9 +394,10 @@ public class ConfirmOrganizationInviteLinkCommandTests
         SetupHappyPath(organization, inviteLink, user, stagedOrganizationUser, sutProvider);
         SetupStagedMembership(user, stagedOrganizationUser);
         stagedOrganizationUser.AccessPam = true;
-        sutProvider.GetDependency<IReservePrivilegedControlsSeatForJoiningMemberCommand>()
-            .RunAsync(organization, stagedOrganizationUser, Arg.Any<string>())
-            .Returns(true);
+        var joiningMemberCommand = sutProvider.GetDependency<IReservePrivilegedControlsSeatForJoiningMemberCommand>();
+        joiningMemberCommand
+            .RunAsync(organization, stagedOrganizationUser)
+            .Returns(JoiningMemberPrivilegedControlsAccess.Kept);
 
         var result = await sutProvider.Sut.ConfirmAsync(BuildRequest(inviteLink, user));
 
@@ -374,6 +408,7 @@ public class ConfirmOrganizationInviteLinkCommandTests
                 ou.Id == stagedOrganizationUser.Id &&
                 ou.Status == OrganizationUserStatusType.Confirmed &&
                 ou.AccessPam));
+        await joiningMemberCommand.DidNotReceiveWithAnyArgs().NotifyOwnersAsync(default!, default!);
     }
 
     [Theory, BitAutoData]
@@ -391,34 +426,7 @@ public class ConfirmOrganizationInviteLinkCommandTests
         Assert.True(result.IsSuccess);
         await sutProvider.GetDependency<IReservePrivilegedControlsSeatForJoiningMemberCommand>()
             .DidNotReceiveWithAnyArgs()
-            .RunAsync(Arg.Any<Organization>(), Arg.Any<OrganizationUser>(), Arg.Any<string>());
-    }
-
-    [Theory]
-    [BitAutoData(typeof(BadRequestException))]
-    [BitAutoData(typeof(GatewayException))]
-    public async Task ConfirmAsync_StagedMember_PamStepThrowsBadRequest_ReturnsConfirmSeatAddFailed(
-        Type exceptionType,
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        OrganizationUser stagedOrganizationUser,
-        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
-    {
-        SetupHappyPath(organization, inviteLink, user, stagedOrganizationUser, sutProvider);
-        SetupStagedMembership(user, stagedOrganizationUser);
-        Exception businessFailure = exceptionType == typeof(BadRequestException)
-            ? new BadRequestException("seat failure")
-            : new GatewayException("seat failure");
-        sutProvider.GetDependency<IReservePrivilegedControlsSeatForJoiningMemberCommand>()
-            .RunAsync(Arg.Any<Organization>(), Arg.Any<OrganizationUser>(), Arg.Any<string>())
-            .Throws(businessFailure);
-
-        var result = await sutProvider.Sut.ConfirmAsync(BuildRequest(inviteLink, user));
-
-        Assert.True(result.IsError);
-        Assert.IsType<ConfirmSeatAddFailed>(result.AsError);
-        AssertNoMembershipWritten(sutProvider);
+            .RunAsync(Arg.Any<Organization>(), Arg.Any<OrganizationUser>());
     }
 
     [Theory, BitAutoData]

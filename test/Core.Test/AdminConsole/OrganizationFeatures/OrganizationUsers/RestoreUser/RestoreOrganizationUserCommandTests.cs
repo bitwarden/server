@@ -1331,13 +1331,15 @@ public class RestoreOrganizationUserCommandTests
         organization.UsePam = true;
         organizationUser.AccessPam = true;
         organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        organizationUser.Email = "member@example.com";
         RestoreUser_Setup(organization, null, organizationUser, sutProvider);
-        sutProvider.GetDependency<IReservePrivilegedControlsSeatForJoiningMemberCommand>()
-            .RunAsync(organization, organizationUser, Arg.Any<string>())
+        var joiningMemberCommand = sutProvider.GetDependency<IReservePrivilegedControlsSeatForJoiningMemberCommand>();
+        joiningMemberCommand
+            .RunAsync(organization, organizationUser)
             .Returns(callInfo =>
             {
                 callInfo.Arg<OrganizationUser>().AccessPam = false;
-                return false;
+                return JoiningMemberPrivilegedControlsAccess.RemovedAtSeatLimit;
             });
 
         await sutProvider.Sut.RestoreUserAsync(organizationUser, EventSystemUser.SCIM);
@@ -1347,7 +1349,60 @@ public class RestoreOrganizationUserCommandTests
         {
             organizationUserRepository.ReplaceAsync(Arg.Is<OrganizationUser>(ou => ou.Id == organizationUser.Id && !ou.AccessPam));
             organizationUserRepository.RestoreAsync(organizationUser.Id, OrganizationUserStatusType.Confirmed);
+            joiningMemberCommand.NotifyOwnersAsync(organization, "member@example.com");
         });
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_Scim_AtLimit_LinkedMember_EmailsOwnersWithAccountEmail(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        User user,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        organizationUser.AccessPam = true;
+        organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        organizationUser.Email = null;
+        organizationUser.UserId = user.Id;
+        RestoreUser_Setup(organization, null, organizationUser, sutProvider);
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).Returns(user);
+        var joiningMemberCommand = sutProvider.GetDependency<IReservePrivilegedControlsSeatForJoiningMemberCommand>();
+        joiningMemberCommand
+            .RunAsync(organization, organizationUser)
+            .Returns(JoiningMemberPrivilegedControlsAccess.RemovedAtSeatLimit);
+
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, EventSystemUser.SCIM);
+
+        await joiningMemberCommand.Received(1).NotifyOwnersAsync(organization, user.Email);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_Scim_ReservationFailed_RestoresWithoutPamOrEmail(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        organizationUser.AccessPam = true;
+        organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        RestoreUser_Setup(organization, null, organizationUser, sutProvider);
+        var joiningMemberCommand = sutProvider.GetDependency<IReservePrivilegedControlsSeatForJoiningMemberCommand>();
+        joiningMemberCommand
+            .RunAsync(organization, organizationUser)
+            .Returns(callInfo =>
+            {
+                callInfo.Arg<OrganizationUser>().AccessPam = false;
+                return JoiningMemberPrivilegedControlsAccess.RemovedAfterError;
+            });
+
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, EventSystemUser.SCIM);
+
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        await organizationUserRepository.Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou => ou.Id == organizationUser.Id && !ou.AccessPam));
+        await organizationUserRepository.Received(1).RestoreAsync(organizationUser.Id, OrganizationUserStatusType.Confirmed);
+        await joiningMemberCommand.DidNotReceiveWithAnyArgs().NotifyOwnersAsync(default!, default!);
     }
 
     [Theory, BitAutoData]
@@ -1360,15 +1415,17 @@ public class RestoreOrganizationUserCommandTests
         organizationUser.AccessPam = true;
         organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
         RestoreUser_Setup(organization, null, organizationUser, sutProvider);
-        sutProvider.GetDependency<IReservePrivilegedControlsSeatForJoiningMemberCommand>()
-            .RunAsync(organization, organizationUser, Arg.Any<string>())
-            .Returns(true);
+        var joiningMemberCommand = sutProvider.GetDependency<IReservePrivilegedControlsSeatForJoiningMemberCommand>();
+        joiningMemberCommand
+            .RunAsync(organization, organizationUser)
+            .Returns(JoiningMemberPrivilegedControlsAccess.Kept);
 
         await sutProvider.Sut.RestoreUserAsync(organizationUser, EventSystemUser.SCIM);
 
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         await organizationUserRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
         await organizationUserRepository.Received(1).RestoreAsync(organizationUser.Id, OrganizationUserStatusType.Confirmed);
+        await joiningMemberCommand.DidNotReceiveWithAnyArgs().NotifyOwnersAsync(default!, default!);
         Assert.True(organizationUser.AccessPam);
     }
 
@@ -1390,7 +1447,7 @@ public class RestoreOrganizationUserCommandTests
             .RunAsync(default!, default);
         await sutProvider.GetDependency<IReservePrivilegedControlsSeatForJoiningMemberCommand>()
             .DidNotReceiveWithAnyArgs()
-            .RunAsync(default!, default!, default!);
+            .RunAsync(default!, default!);
         Assert.True(organizationUser.AccessPam);
     }
 
