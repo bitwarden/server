@@ -74,7 +74,7 @@ prioritised for extraction. This library sits *above* Core rather than below it,
 | `Bit.Core.AdminConsole.Repositories.IProviderUserRepository` | The provider-for-organization database check |
 | `Bit.Core.AdminConsole.Models.Data.Provider.ProviderUserOrganizationDetails` | Result of that check |
 | `Bit.Core.AdminConsole.Enums.Provider.ProviderUserStatusType` | Filtering that check to confirmed provider users |
-| `Bit.Core.Services.IUserService` | Reading the authenticated user's ID out of their claims |
+| `Bit.Core.Services.IUserService` | `OrganizationContext` resolving the authenticated user |
 
 Depending on Core is fine for now: unwinding it would mean extracting the Admin Console data models,
 identity, and organizations, which is a big-ish effort in its own right. This table exists so those
