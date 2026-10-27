@@ -1,10 +1,13 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Bit.Seeder.Extensions;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
@@ -26,6 +29,7 @@ public struct SingleUserSceneResult
     public string ApiKey { get; init; }
     public bool PremiumLicenseWritten { get; init; }
     public string? PremiumLicenseWarning { get; init; }
+    public string? TwoFactorRecoveryCode { get; init; }
 }
 
 /// <summary>
@@ -56,6 +60,10 @@ public class SingleUserScene(
         /// PBKDF2 iteration count. Null uses <see cref="UserSeed.DefaultKdfIterations"/>.
         /// </summary>
         public int? KdfIterations { get; set; }
+        /// <summary>
+        /// Enrolls the user in email two-factor authentication, delivered to the (mangled) account email.
+        /// </summary>
+        public bool EnrollInEmail2Fa { get; set; } = false;
     }
 
     private const int MinKdfIterations = 5_000;
@@ -92,6 +100,20 @@ public class SingleUserScene(
             passwordHasher,
             manglerService);
 
+        if (request.EnrollInEmail2Fa)
+        {
+            user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+            {
+                [TwoFactorProviderType.Email] = new TwoFactorProvider
+                {
+                    MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
+                    Enabled = true
+                }
+            });
+            // UserService.SetTwoFactorProvider generates a recovery code on enrollment; mirror it.
+            user.TwoFactorRecoveryCode = CoreHelpers.SecureRandomString(32, upper: false, special: false);
+        }
+
         await userRepository.CreateAsync(user);
 
         var licenseOutcome = default(LicenseWriteOutcome);
@@ -106,6 +128,7 @@ public class SingleUserScene(
                 PremiumLicenseWritten = licenseOutcome.Written,
                 PremiumLicenseWarning = licenseOutcome.Warning,
                 UserId = user.Id,
+                TwoFactorRecoveryCode = user.TwoFactorRecoveryCode,
                 Kdf = user.Kdf.ToString(),
                 KdfIterations = user.KdfIterations,
                 Key = user.Key!,
