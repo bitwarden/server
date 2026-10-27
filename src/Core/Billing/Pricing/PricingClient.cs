@@ -18,7 +18,7 @@ public class PricingClient(
 {
     public async Task<OrganizationPlan?> GetPlan(PlanType planType)
     {
-        if (globalSettings.SelfHosted)
+        if (globalSettings.SelfHosted || httpClient.BaseAddress is null)
         {
             return null;
         }

@@ -411,7 +411,7 @@ public class OrganizationsControllerTests : IDisposable
 
         _currentContext.ViewSubscription(organizationId).Returns(true);
         _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
-        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+        _pricingClient.GetPlan(organization.PlanType).Returns(plan);
 
         var response = await _sut.GetSubscription(organizationId);
 
@@ -747,7 +747,7 @@ public class OrganizationsControllerTests : IDisposable
 
         _currentContext.ViewSubscription(organizationId).Returns(true);
         _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
-        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+        _pricingClient.GetPlan(organization.PlanType).Returns(plan);
         _organizationUserRepository.GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id).Returns(3);
 
         var response = await _sut.GetSubscription(organizationId);
@@ -854,12 +854,32 @@ public class OrganizationsControllerTests : IDisposable
 
         _currentContext.ViewSubscription(organizationId).Returns(true);
         _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
-        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+        _pricingClient.GetPlan(organization.PlanType).Returns(plan);
 
         var response = await _sut.GetSubscription(organizationId);
 
         Assert.NotNull(response);
         await _paymentService.DidNotReceiveWithAnyArgs().GetSubscriptionAsync(default);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_NoGatewaySubscription_PlanUnavailable_ReturnsPlanFromOrganization(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.UsePam = true;
+        organization.GatewaySubscriptionId = null;
+
+        _currentContext.ViewSubscription(organizationId).Returns(true);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlan(organization.PlanType).Returns((Bit.Core.Models.StaticStore.Plan)null);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Equal(organization.PlanType, response.Plan.Type);
+        Assert.Null(response.Plan.PasswordManager);
+        Assert.False(response.IsOnPamSalesInitiatedTrial);
+        await _pricingClient.DidNotReceiveWithAnyArgs().GetPlanOrThrow(default);
     }
 
     private void ArrangeCloudSubscription(

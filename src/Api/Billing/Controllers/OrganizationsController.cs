@@ -78,7 +78,11 @@ public class OrganizationsController(
             return new OrganizationSubscriptionResponseModel(organization, orgLicense, claimsPrincipal);
         }
 
-        var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
+        var hasGatewaySubscription = !string.IsNullOrEmpty(organization.GatewaySubscriptionId);
+
+        var plan = hasGatewaySubscription
+            ? await pricingClient.GetPlanOrThrow(organization.PlanType)
+            : await pricingClient.GetPlan(organization.PlanType);
 
         int? occupiedPamSeats = organization.UsePam
             ? await organizationUserRepository.GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id)
@@ -86,11 +90,11 @@ public class OrganizationsController(
 
         var includePrivilegedControlsPlanFeatures = featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support);
 
-        if (string.IsNullOrEmpty(organization.GatewaySubscriptionId))
+        if (!hasGatewaySubscription)
         {
             return new OrganizationSubscriptionResponseModel(
                 organization, plan, occupiedPamSeats,
-                organization.IsOnPrivilegedControlsSalesInitiatedTrial(plan, subscriptionHasPrivilegedControlsSeats: false),
+                plan != null && organization.IsOnPrivilegedControlsSalesInitiatedTrial(plan, subscriptionHasPrivilegedControlsSeats: false),
                 includePrivilegedControlsPlanFeatures);
         }
 

@@ -195,6 +195,22 @@ public class PricingClientTests
         Assert.Null(result);
     }
 
+    [Fact]
+    public async Task GetPlan_WhenBaseAddressNotSet_ReturnsNull()
+    {
+        // Arrange
+        var globalSettings = new GlobalSettings { SelfHosted = false };
+        var httpClient = new HttpClient(new MockHttpMessageHandler());
+        var logger = Substitute.For<ILogger<PricingClient>>();
+        var pricingClient = new PricingClient(globalSettings, httpClient, logger);
+
+        // Act
+        var result = await pricingClient.GetPlan(PlanType.EnterpriseAnnually);
+
+        // Assert
+        Assert.Null(result);
+    }
+
     [Theory, BitAutoData]
     public async Task GetPlan_WhenLookupKeyNotFound_ReturnsNull(
         SutProvider<PricingClient> sutProvider)

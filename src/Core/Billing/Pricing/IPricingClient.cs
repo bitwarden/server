@@ -14,7 +14,7 @@ public interface IPricingClient
     /// Retrieve a Bitwarden plan by its <paramref name="planType"/> from the Bitwarden Pricing Service.
     /// </summary>
     /// <param name="planType">The type of plan to retrieve.</param>
-    /// <returns>A Bitwarden <see cref="Plan"/> record or null in the case the plan could not be found or the method was executed from a self-hosted instance.</returns>
+    /// <returns>A Bitwarden <see cref="Plan"/> record or null in the case the plan could not be found, the method was executed from a self-hosted instance, or no Pricing Service is configured.</returns>
     /// <exception cref="BillingException">Thrown when the request to the Pricing Service fails unexpectedly.</exception>
     Task<OrganizationPlan?> GetPlan(PlanType planType);
 
