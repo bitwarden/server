@@ -42,7 +42,10 @@ public interface IUpgradePremiumToOrganizationCommand
     /// <param name="collectionName">Optional name for the default collection.</param>
     /// <param name="targetPlanType">The target organization plan type to upgrade to.</param>
     /// <param name="billingAddress">The billing address for tax calculation.</param>
-    /// <param name="prorationDate">The proration time of the invoice preview the user confirmed. When provided, it is validated and used to price the upgrade.</param>
+    /// <param name="prorationDate">
+    /// The time the client's invoice preview was pinned to. When provided, it is validated before any change is made
+    /// (throwing <see cref="InvoicePreviewExpiredException"/> if it is stale) and used as the proration time.
+    /// </param>
     /// <returns>A billing command result containing the new organization ID on success, or error details on failure.</returns>
     Task<BillingCommandResult<Guid>> Run(
         User user,

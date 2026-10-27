@@ -12,6 +12,7 @@ public static class InvoicePreviewQuote
 
     /// <summary>
     /// The current time (the test clock's frozen time when present), in UTC, truncated to whole seconds.
+    /// Stripe stores proration dates as unix seconds, so the value returned to the client must match what Stripe used exactly.
     /// </summary>
     public static DateTime GetProrationDate(Subscription subscription) =>
         Truncate(GetNow(subscription));

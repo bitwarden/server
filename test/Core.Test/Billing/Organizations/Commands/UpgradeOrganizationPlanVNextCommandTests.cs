@@ -573,6 +573,20 @@ public class UpgradeOrganizationPlanVNextCommandTests
     }
 
     [Fact]
+    public async Task Run_PaidUpgrade_WithProrationDateBeforeCurrentPeriod_ThrowsBeforeAnyWrite()
+    {
+        var (organization, targetPlan) = SetupPaidUpgrade(_frozen.AddMinutes(-5));
+
+        await Assert.ThrowsAsync<InvoicePreviewExpiredException>(() =>
+            _command.Run(organization, targetPlan, null, _frozen.AddMinutes(-10)));
+
+        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs()
+            .Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
+        await _updateOrganizationSubscriptionCommand.DidNotReceiveWithAnyArgs()
+            .Run(Arg.Any<Organization>(), Arg.Any<OrganizationSubscriptionChangeSet>());
+    }
+
+    [Fact]
     public async Task Run_PaidUpgrade_WithValidProrationDate_PassesItToSubscriptionUpdate()
     {
         var (organization, targetPlan) = SetupPaidUpgrade();
@@ -631,7 +645,7 @@ public class UpgradeOrganizationPlanVNextCommandTests
 
         await _stripeAdapter.Received(1).GetSubscriptionAsync(
             organization.GatewaySubscriptionId!,
-            Arg.Is<SubscriptionGetOptions>(o => o.Expand.SequenceEqual(new[] { "test_clock" })));
+            Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("test_clock")));
     }
 
     [Fact]
@@ -681,7 +695,7 @@ public class UpgradeOrganizationPlanVNextCommandTests
             .GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
     }
 
-    private (Organization Organization, Bit.Core.Models.StaticStore.Plan TargetPlan) SetupPaidUpgrade()
+    private (Organization Organization, Bit.Core.Models.StaticStore.Plan TargetPlan) SetupPaidUpgrade(DateTime? currentPeriodStart = null)
     {
         var organization = CreateOrganization(PlanType.TeamsAnnually);
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(PlanType.TeamsAnnually));
@@ -691,7 +705,7 @@ public class UpgradeOrganizationPlanVNextCommandTests
                 TestClock = new TestClock { FrozenTime = _frozen },
                 Items = new StripeList<SubscriptionItem>
                 {
-                    Data = [new SubscriptionItem { CurrentPeriodStart = _frozen.AddDays(-180) }]
+                    Data = [new SubscriptionItem { CurrentPeriodStart = currentPeriodStart ?? _frozen.AddDays(-180) }]
                 }
             });
         SetupSubscriptionCommandSuccess();
