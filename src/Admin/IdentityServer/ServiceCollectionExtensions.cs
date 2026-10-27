@@ -135,8 +135,7 @@ public static class ServiceCollectionExtensions
                 // `email_verified` in the ID token. The default ClaimActions don't map
                 // `email_verified`, so add it. The handler rejects a UserInfo response whose
                 // `sub` doesn't match the ID token.
-                options.GetClaimsFromUserInfoEndpoint = true;
-                options.ClaimActions.MapUniqueJsonKey(
+                options.GetClaimsFromUserInfoEndpoint = true;                options.ClaimActions.MapUniqueJsonKey(
                     JwtRegisteredClaimNames.EmailVerified, JwtRegisteredClaimNames.EmailVerified);
 
                 options.Scope.Clear();
@@ -208,7 +207,8 @@ public static class ServiceCollectionExtensions
                 // Response-side enforcement for the MaxAge above. The handler sends max_age on
                 // the request but doesn't validate auth_time on the response, so we do it here.
                 // Fail-closed on a missing or unparseable claim, and allow MaxAge+ClockSkew of
-                // tolerance to absorb normal IdP/app clock drift.
+                // tolerance to absorb normal IdP/app clock drift. A future auth_time gets
+                // ClockSkew of tolerance.
                 options.Events.OnTokenValidated = ctx =>
                 {
                     var authTimeClaim = ctx.Principal?.FindFirst(JwtRegisteredClaimNames.AuthTime);
@@ -221,7 +221,12 @@ public static class ServiceCollectionExtensions
 
                     var authTime = DateTimeOffset.FromUnixTimeSeconds(authTimeUnix);
                     var tolerance = options.MaxAge.GetValueOrDefault() + options.TokenValidationParameters.ClockSkew;
-                    if (DateTimeOffset.UtcNow - authTime > tolerance)
+                    var age = DateTimeOffset.UtcNow - authTime;
+                    if (age < TimeSpan.Zero && -age > options.TokenValidationParameters.ClockSkew)
+                    {
+                        ctx.Fail($"{JwtRegisteredClaimNames.AuthTime} is too far in the future.");
+                    }
+                    else if (age > tolerance)
                     {
                         ctx.Fail($"{JwtRegisteredClaimNames.AuthTime} is older than MaxAge+ClockSkew.");
                     }

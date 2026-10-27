@@ -82,6 +82,38 @@ public class ServiceCollectionExtensionsTests
     }
 
     [Fact]
+    public async Task AddAdminUpstreamOidc_OnTokenValidated_FailsWhenAuthTimeFutureBeyondClockSkewAsync()
+    {
+        var options = BuildOidcOptions();
+        var authTime = DateTimeOffset.UtcNow
+            .AddSeconds(AdminSettings.OidcSettings.ClockSkewSeconds + 80)
+            .ToUnixTimeSeconds();
+
+        var ctx = BuildTokenValidatedContext(options, authTimeUnixSeconds: authTime);
+
+        await options.Events.TokenValidated(ctx);
+
+        Assert.NotNull(ctx.Result);
+        Assert.NotNull(ctx.Result.Failure);
+        Assert.Contains(JwtRegisteredClaimNames.AuthTime, ctx.Result.Failure.Message);
+    }
+
+    [Fact]
+    public async Task AddAdminUpstreamOidc_OnTokenValidated_SucceedsWhenAuthTimeFutureWithinClockSkewAsync()
+    {
+        var options = BuildOidcOptions();
+        var authTime = DateTimeOffset.UtcNow
+            .AddSeconds(AdminSettings.OidcSettings.ClockSkewSeconds - 10)
+            .ToUnixTimeSeconds();
+
+        var ctx = BuildTokenValidatedContext(options, authTimeUnixSeconds: authTime);
+
+        await options.Events.TokenValidated(ctx);
+
+        Assert.Null(ctx.Result);
+    }
+
+    [Fact]
     public void AddAdminUpstreamOidc_GetsClaimsFromUserInfoEndpoint()
     {
         var options = BuildOidcOptions();
