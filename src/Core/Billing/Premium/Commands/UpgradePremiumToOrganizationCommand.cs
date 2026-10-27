@@ -7,6 +7,7 @@ using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions;
 using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Entities;
@@ -41,6 +42,7 @@ public interface IUpgradePremiumToOrganizationCommand
     /// <param name="collectionName">Optional name for the default collection.</param>
     /// <param name="targetPlanType">The target organization plan type to upgrade to.</param>
     /// <param name="billingAddress">The billing address for tax calculation.</param>
+    /// <param name="prorationDate">The proration time of the invoice preview the user confirmed. When provided, it is validated and used to price the upgrade.</param>
     /// <returns>A billing command result containing the new organization ID on success, or error details on failure.</returns>
     Task<BillingCommandResult<Guid>> Run(
         User user,
@@ -50,7 +52,8 @@ public interface IUpgradePremiumToOrganizationCommand
         string encryptedPrivateKey,
         string? collectionName,
         PlanType targetPlanType,
-        BillingAddress billingAddress);
+        BillingAddress billingAddress,
+        DateTime? prorationDate = null);
 }
 
 public class UpgradePremiumToOrganizationCommand(
@@ -80,7 +83,8 @@ public class UpgradePremiumToOrganizationCommand(
         string encryptedPrivateKey,
         string? collectionName,
         PlanType targetPlanType,
-        BillingAddress billingAddress) => HandleAsync<Guid>(async () =>
+        BillingAddress billingAddress,
+        DateTime? prorationDate = null) => HandleAsync<Guid>(async () =>
     {
         // Validate that the user has an active Premium subscription
         if (user is not { Premium: true, GatewayCustomerId: not null and not "", GatewaySubscriptionId: not null and not "" })
@@ -100,7 +104,14 @@ public class UpgradePremiumToOrganizationCommand(
         }
 
         // Fetch the current Premium subscription from Stripe
-        var currentSubscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
+        var currentSubscription = await stripeAdapter.GetSubscriptionAsync(
+            user.GatewaySubscriptionId,
+            new SubscriptionGetOptions { Expand = ["test_clock"] });
+
+        if (prorationDate.HasValue)
+        {
+            InvoicePreviewQuote.EnsureValid(prorationDate.Value, currentSubscription);
+        }
 
         // Fetch all premium plans to find which specific plan the user is on
         var premiumPlans = await pricingClient.ListPremiumPlans();
@@ -150,7 +161,7 @@ public class UpgradePremiumToOrganizationCommand(
         // Release any scheduled price increase before updating subscription
         await priceIncreaseScheduler.Release(user.GatewayCustomerId, currentSubscription.Id);
 
-        await UpdateSubscriptionAsync(currentSubscription.Id, organizationId, customer, subscriptionItemOptions);
+        await UpdateSubscriptionAsync(currentSubscription.Id, organizationId, customer, subscriptionItemOptions, prorationDate);
 
         var organizationUser = await SaveOrganizationAsync(organization, user, key);
 
@@ -281,7 +292,8 @@ public class UpgradePremiumToOrganizationCommand(
         string subscriptionId,
         Guid organizationId,
         Customer customer,
-        List<SubscriptionItemOptions> subscriptionItemOptions)
+        List<SubscriptionItemOptions> subscriptionItemOptions,
+        DateTime? prorationDate)
     {
         var usingPayPal = customer.Metadata?.ContainsKey(BraintreeCustomerIdKey) ?? false;
 
@@ -290,6 +302,7 @@ public class UpgradePremiumToOrganizationCommand(
         {
             Items = subscriptionItemOptions,
             ProrationBehavior = ProrationBehavior.AlwaysInvoice,
+            ProrationDate = prorationDate,
             BillingCycleAnchor = SubscriptionBillingCycleAnchor.Unchanged,
             AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
             Metadata = new Dictionary<string, string>
