@@ -3817,4 +3817,42 @@ public class CiphersControllerTests
         await sutProvider.GetDependency<ICollectionCipherRepository>()
             .DidNotReceiveWithAnyArgs().RemoveCollectionsForManyCiphersAsync(default, default, default);
     }
+
+    /// <remarks>
+    /// Edit any collection reaches unassigned ciphers, which the member decision reads as not gated.
+    /// </remarks>
+    [Theory, BitAutoData]
+    public async Task PostBulkCollections_CallerCanEditAllCiphers_TakesTheAdminDecision(
+        Guid userId, Guid organizationId, Guid cipherId, Guid collectionId,
+        CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
+    {
+        organization.Id = organizationId;
+        organization.Type = OrganizationUserType.Custom;
+        organization.Permissions.EditAnyCollection = true;
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organizationId).Returns(organization);
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<Cipher> { new() { Id = cipherId, OrganizationId = organizationId } });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<Collection> { new() { Id = collectionId, OrganizationId = organizationId } });
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .EnsureCanMutateManyAsAdminAsync(userId, organizationId,
+                Arg.Is<IEnumerable<Cipher>>(c => c.Single().Id == cipherId))
+            .ThrowsAsync(new NotFoundException());
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostBulkCollections(
+            new CipherBulkUpdateCollectionsRequestModel
+            {
+                OrganizationId = organizationId,
+                CipherIds = [cipherId],
+                CollectionIds = [collectionId],
+            }));
+
+        await sutProvider.GetDependency<ICollectionCipherRepository>()
+            .DidNotReceiveWithAnyArgs().AddCollectionsForManyCiphersAsync(default, default, default);
+        await sutProvider.GetDependency<ICipherLeaseGate>()
+            .DidNotReceiveWithAnyArgs().EnsureCanMutateManyAsync(default, default!);
+    }
 }

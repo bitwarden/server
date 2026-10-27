@@ -39,6 +39,9 @@ public class CipherLeaseGateBypassCustomization : ICustomization
             .Returns(unrestricted);
         gate.EnsureCanMutateAsync(Arg.Any<Guid>(), Arg.Any<Cipher>()).Returns(unrestricted);
         gate.EnsureCanMutateManyAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Cipher>>()).Returns(unrestricted);
+        gate.EnsureCanMutateAsAdminAsync(Arg.Any<Guid>(), Arg.Any<Cipher>()).Returns(unrestricted);
+        gate.EnsureCanMutateManyAsAdminAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<IEnumerable<Cipher>>())
+            .Returns(unrestricted);
 
         fixture.Inject(gate);
     }

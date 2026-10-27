@@ -2888,6 +2888,16 @@ public class CipherServiceTests
             .EnsureCanMutateManyAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Cipher>>())
             .ThrowsAsync(new NotFoundException());
 
+    private static void RefusesAdminMutation(SutProvider<CipherService> sutProvider) =>
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .EnsureCanMutateAsAdminAsync(Arg.Any<Guid>(), Arg.Any<Cipher>())
+            .ThrowsAsync(new NotFoundException());
+
+    private static void RefusesAdminBulkMutation(SutProvider<CipherService> sutProvider) =>
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .EnsureCanMutateManyAsAdminAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<IEnumerable<Cipher>>())
+            .ThrowsAsync(new NotFoundException());
+
     private static void OwnsPersonalCipher(SutProvider<CipherService> sutProvider, CipherDetails cipher, Guid userId)
     {
         cipher.UserId = userId;
@@ -2927,15 +2937,17 @@ public class CipherServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_SkipPermissionCheck_DoesNotConsultTheGate(
+    public async Task SaveAsync_SkipPermissionCheck_TakesTheAdminDecision(
         SutProvider<CipherService> sutProvider, Cipher cipher)
     {
-        // skipPermissionCheck marks an internal/admin flow that has already been authorized out-of-band.
-        cipher.OrganizationId = null;
-        RefusesMutation(sutProvider);
+        // skipPermissionCheck marks an admin save, which reaches the cipher through org-wide permissions.
+        cipher.OrganizationId = Guid.NewGuid();
+        RefusesAdminMutation(sutProvider);
 
-        await sutProvider.Sut.SaveAsync(cipher, cipher.UserId!.Value, null, skipPermissionCheck: true);
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.SaveAsync(cipher, cipher.UserId!.Value, null, skipPermissionCheck: true));
 
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
         await DidNotGate(sutProvider).EnsureCanMutateAsync(default, default!);
     }
 
@@ -2999,12 +3011,16 @@ public class CipherServiceTests
     }
 
     [Theory, OrganizationCipherCustomize, BitAutoData]
-    public async Task DeleteAsync_OrgAdmin_DoesNotConsultTheGate(
+    public async Task DeleteAsync_OrgAdmin_TakesTheAdminDecision(
         SutProvider<CipherService> sutProvider, CipherDetails cipher, Guid deletingUserId)
     {
-        // An admin acts through org-wide permissions, not the collection path leasing gates.
-        await sutProvider.Sut.DeleteAsync(cipher, deletingUserId, orgAdmin: true);
+        // An admin acts through org-wide permissions, so leasing resolves from the organization's collections.
+        RefusesAdminMutation(sutProvider);
 
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.DeleteAsync(cipher, deletingUserId, orgAdmin: true));
+
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default!);
         await DidNotGate(sutProvider).EnsureCanMutateAsync(default, default!);
     }
 
@@ -3048,6 +3064,20 @@ public class CipherServiceTests
 
         await sutProvider.GetDependency<ICollectionCipherRepository>()
             .DidNotReceiveWithAnyArgs().UpdateCollectionsAsync(default, default, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveCollectionsAsync_OrgAdmin_GatedCipher_ThrowsAndDoesNotReassign(
+        SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId, List<Guid> collectionIds)
+    {
+        cipher.OrganizationId = Guid.NewGuid();
+        RefusesAdminMutation(sutProvider);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.SaveCollectionsAsync(cipher, collectionIds, savingUserId, orgAdmin: true));
+
+        await sutProvider.GetDependency<ICollectionCipherRepository>()
+            .DidNotReceiveWithAnyArgs().UpdateCollectionsForAdminAsync(default, default, default!);
     }
 
     [Theory, BitAutoData]
@@ -3118,6 +3148,20 @@ public class CipherServiceTests
 
         await sutProvider.GetDependency<ICipherRepository>()
             .DidNotReceiveWithAnyArgs().DeleteAsync(default(IEnumerable<Guid>)!, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteManyAsync_OrgAdmin_OneGatedCipher_ThrowsAndDeletesNothing(
+        SutProvider<CipherService> sutProvider, List<Cipher> ciphers, Guid organizationId, Guid deletingUserId)
+    {
+        sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organizationId).Returns(ciphers);
+        RefusesAdminBulkMutation(sutProvider);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteManyAsync(
+            ciphers.Select(c => c.Id), deletingUserId, organizationId, orgAdmin: true));
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .DidNotReceiveWithAnyArgs().DeleteByIdsOrganizationIdAsync(default!, default);
     }
 
     [Theory, BitAutoData]
