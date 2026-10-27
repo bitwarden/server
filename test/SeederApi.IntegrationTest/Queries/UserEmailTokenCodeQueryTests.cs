@@ -161,7 +161,9 @@ public class UserEmailTokenCodeQueryTests
     private static NewDeviceVerificationOtpStore BuildOtpStore(IDistributedCache cache)
     {
         var otpTokenProvider = new OtpTokenProvider<DefaultOtpTokenProviderOptions>(
-            cache, new OptionsWrapper<DefaultOtpTokenProviderOptions>(new DefaultOtpTokenProviderOptions()));
+            cache,
+            new OptionsWrapper<DefaultOtpTokenProviderOptions>(new DefaultOtpTokenProviderOptions()),
+            TimeProvider.System);
 
         return new NewDeviceVerificationOtpStore(otpTokenProvider, cache);
     }
