@@ -3,4 +3,5 @@
 public static class BillingErrorKeys
 {
     public const string BillingAddress = "BillingAddress";
+    public const string InvoicePreviewExpired = "InvoicePreviewExpired";
 }

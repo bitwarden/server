@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Subscriptions;
 using Bit.Core.Exceptions;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -66,6 +67,11 @@ public abstract class BaseBillingCommand<T>(
                     exception.StripeError.Code);
                 return new Unhandled(exception);
             }
+        }
+        // An expired invoice preview must bypass result mapping so it reaches the client as a keyed 400.
+        catch (InvoicePreviewExpiredException)
+        {
+            throw;
         }
         catch (ConflictException conflictException)
         {
