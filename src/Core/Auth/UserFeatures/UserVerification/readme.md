@@ -39,29 +39,6 @@ flowchart TB
 
 Each layer knows less than the layer above it. Only the bottom layer reads and writes the OTP in the cache.
 
-### `IOtpTokenProvider<TOptions>`: shared OTP generation and validation
-
-[`src/Core/Auth/Identity/TokenProviders/OtpTokenProvider/`](../../Identity/TokenProviders/OtpTokenProvider/readme.md)
-
-1. Generates a random code and stores it in the cache under `{tokenProviderName}_{purpose}_{uniqueIdentifier}`,
-   with a 5-minute expiry by default.
-2. Validates a code, binds a code to a value, and removes a code after a correct guess.
-3. `ValidateTokenWithFailureLimitAsync` also counts wrong guesses and removes the code at a limit that the
-   caller sets.
-4. Does not know about users, email, or the purpose of a code.
-
-### `IUserVerificationOtpStore`: user verification OTP key, email binding, and limits
-
-[`src/Core/Auth/Services/IUserVerificationOtpStore.cs`](../../Services/IUserVerificationOtpStore.cs)
-
-1. Sets the key parts. The unique identifier is `{userId}_{securityStamp}`, so a security stamp change
-   invalidates a pending OTP.
-2. Binds the OTP to `User.Email`, so an email change invalidates a pending OTP.
-3. Sets the limits: 5 wrong guesses for each OTP, and 5 issued OTPs for each user in a fixed 15-minute window.
-   The request counter is a separate cache entry that the store writes directly, because the provider manages
-   codes, not counters.
-4. Knows `User`, but does not send mail or write to the database.
-
 ### `IUserVerificationOtpCommand`: send and verify actions
 
 [`IUserVerificationOtpCommand.cs`](./IUserVerificationOtpCommand.cs)
@@ -72,6 +49,31 @@ This is the only layer that sends mail or writes to the database.
    a `BadRequestException` when the user has no email or has reached the request limit.
 2. `VerifyOtpAsync` validates through the store with the wrong-guess limit. A valid OTP sets
    `User.EmailVerified` and saves the user.
+
+### `IUserVerificationOtpStore`: user verification OTP key, email binding, and limits
+
+[`src/Core/Auth/Services/IUserVerificationOtpStore.cs`](../../Services/IUserVerificationOtpStore.cs)
+
+1. Sets the key parts. The unique identifier is `{userId}_{securityStamp}`, so a security stamp change
+   invalidates a pending OTP.
+2. Binds the OTP to `User.Email`. The OTP proves control of the address it was sent to, so it must not validate
+   after the address changes, even when the security stamp does not change.
+3. Sets the limits: 5 wrong guesses for each OTP, and 5 issued OTPs for each user in a fixed 15-minute window.
+   Together, these limits allow at most 100 failed attempts per user per hour.
+   The request counter is a separate cache entry that the store writes directly, because the provider manages
+   codes, not counters.
+4. Knows `User`, but does not send mail or write to the database.
+
+### `IOtpTokenProvider<TOptions>`: shared OTP generation and validation
+
+[`src/Core/Auth/Identity/TokenProviders/OtpTokenProvider/`](../../Identity/TokenProviders/OtpTokenProvider/readme.md)
+
+1. Generates a random code and stores it in the cache under `{tokenProviderName}_{purpose}_{uniqueIdentifier}`,
+   with a 5-minute expiry by default.
+2. Validates a code, binds a code to a value, and removes a code after a correct guess.
+3. `ValidateTokenWithFailureLimitAsync` also counts wrong guesses and removes the code at a limit that the
+   caller sets.
+4. Does not know about users, email, or the purpose of a code.
 
 ## Why the store is separate from the command
 
