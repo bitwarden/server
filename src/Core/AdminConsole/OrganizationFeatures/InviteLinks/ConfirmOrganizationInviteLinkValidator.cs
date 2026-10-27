@@ -95,7 +95,6 @@ public class ConfirmOrganizationInviteLinkValidator(
 
         return new ConfirmOrganizationInviteLinkValidationResult
         {
-            InviteLink = link,
             Organization = organization,
             ExistingOrganizationUser = existingOrganizationUser,
             AccountRecoveryAutoEnrollEnabled = accountRecoveryResult.AutoEnrollEnabled,

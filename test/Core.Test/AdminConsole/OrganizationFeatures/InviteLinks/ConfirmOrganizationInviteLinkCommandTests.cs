@@ -285,31 +285,6 @@ public class ConfirmOrganizationInviteLinkCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ConfirmAsync_PassesResetPasswordKeyToValidator(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        OrganizationUser existingOrganizationUser,
-        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
-    {
-        // Arrange
-        SetupHappyPath(organization, inviteLink, user, existingOrganizationUser, sutProvider);
-        var request = BuildRequest(inviteLink, user) with { ResetPasswordKey = "2.validresetpasswordkey" };
-
-        // Act
-        await sutProvider.Sut.ConfirmAsync(request);
-
-        // Assert
-        await sutProvider.GetDependency<IConfirmOrganizationInviteLinkValidator>()
-            .Received(1)
-            .ValidateAsync(Arg.Is<ConfirmOrganizationInviteLinkValidationRequest>(r =>
-                r.OrganizationId == request.OrganizationId &&
-                r.Code == request.Code &&
-                r.User == user &&
-                r.ResetPasswordKey == request.ResetPasswordKey));
-    }
-
-    [Theory, BitAutoData]
     public async Task ConfirmAsync_WhenAutoEnrollEnabled_EnrollsUser(
         Organization organization,
         OrganizationInviteLink inviteLink,
@@ -469,7 +444,6 @@ public class ConfirmOrganizationInviteLinkCommandTests
             .ValidateAsync(Arg.Any<ConfirmOrganizationInviteLinkValidationRequest>())
             .Returns(new ConfirmOrganizationInviteLinkValidationResult
             {
-                InviteLink = inviteLink,
                 Organization = organization,
                 ExistingOrganizationUser = existingOrganizationUser,
                 AccountRecoveryAutoEnrollEnabled = accountRecoveryAutoEnrollEnabled,

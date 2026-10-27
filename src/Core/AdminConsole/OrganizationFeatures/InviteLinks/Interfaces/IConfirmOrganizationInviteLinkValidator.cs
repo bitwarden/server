@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Utilities.v2.Results;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.Utilities.v2.Results;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 
@@ -13,11 +14,8 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 ///     <item><see cref="InviteLinkRules.ValidateEligibility"/>.</item>
 ///     <item>The link supports confirmation.</item>
 ///     <item><see cref="InviteLinkRules.ValidateConfirmMembershipStatus"/>.</item>
-///     <item>The free organization admin limit.</item>
-///     <item>The Automatic User Confirmation policy.</item>
-///     <item>The Single Organization policy.</item>
-///     <item>The Require Two-Factor Authentication policy.</item>
-///     <item>The Account Recovery policy.</item>
+///     <item><see cref="IInviteLinkValidationService.ValidateJoinRequirementsAsync"/>.</item>
+///     <item><see cref="IJoinOrganizationPolicyValidationService.ValidateAccountRecoveryPolicy"/>.</item>
 /// </list>
 /// </remarks>
 public interface IConfirmOrganizationInviteLinkValidator
