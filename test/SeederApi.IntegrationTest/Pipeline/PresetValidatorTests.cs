@@ -245,6 +245,16 @@ public class PresetValidatorTests
     }
 
     [Fact]
+    public void AccessShape_WithRosterAndCollections_Throws()
+    {
+        var preset = ShapedPreset(new SeedPresetDensity()) with { Roster = new SeedPresetRoster { Fixture = "starter-team" } };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _sterlingCooper));
+
+        Assert.Contains("has 'roster' and 'accessShape' with 'collections'", ex.Message);
+    }
+
+    [Fact]
     public void AccessShape_WithCipherTypesAndOrphanRate_Passes()
     {
         var preset = ShapedPreset(new SeedPresetDensity

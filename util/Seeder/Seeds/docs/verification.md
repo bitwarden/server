@@ -335,6 +335,45 @@ WHERE C.OrganizationId = @OrgId AND C.[Type] = 1
     AND EXISTS (SELECT 1 FROM [dbo].[Cipher] P WITH (NOLOCK) WHERE P.UserId = OU.UserId AND P.OrganizationId IS NULL);
 ```
 
+### Q13: Access Shape Load
+
+Verifies `accessShape` (including `inactiveAccessRate`) and `defaultCollections.deletedRate` presets by the load Access
+Intelligence puts on the org: every org item is fetched, and each item is mapped to every member who reaches it through
+a shared collection, whatever the member's status. Items in default collections map to no member on that path;
+`DefaultCollectionItems` is what a path that includes default collections would add (one pair per item).
+
+```sql
+DECLARE @OrgId UNIQUEIDENTIFIER = 'PASTE_ORG_ID_HERE';
+
+WITH Reach AS (
+    SELECT CU.OrganizationUserId, CU.CollectionId
+    FROM [dbo].[CollectionUser] CU WITH (NOLOCK)
+    INNER JOIN [dbo].[Collection] C WITH (NOLOCK) ON C.Id = CU.CollectionId AND C.OrganizationId = @OrgId AND C.[Type] = 0
+    UNION
+    SELECT GU.OrganizationUserId, CG.CollectionId
+    FROM [dbo].[GroupUser] GU WITH (NOLOCK)
+    INNER JOIN [dbo].[CollectionGroup] CG WITH (NOLOCK) ON CG.GroupId = GU.GroupId
+    INNER JOIN [dbo].[Collection] C WITH (NOLOCK) ON C.Id = CG.CollectionId AND C.OrganizationId = @OrgId AND C.[Type] = 0
+),
+Pairs AS (
+    SELECT R.OrganizationUserId, CC.CipherId
+    FROM Reach R
+    INNER JOIN [dbo].[CollectionCipher] CC WITH (NOLOCK) ON CC.CollectionId = R.CollectionId
+    GROUP BY R.OrganizationUserId, CC.CipherId
+)
+SELECT
+    (SELECT COUNT(*) FROM [dbo].[Cipher] WITH (NOLOCK) WHERE OrganizationId = @OrgId) AS ItemsFetched,
+    (SELECT COUNT(*) FROM [dbo].[Cipher] WITH (NOLOCK) WHERE OrganizationId = @OrgId AND DeletedDate IS NOT NULL) AS TrashedItems,
+    COUNT(*) AS MemberItemPairs,
+    SUM(CASE WHEN OU.[Status] = 2 THEN 1 ELSE 0 END) AS ConfirmedPairs,
+    SUM(CASE WHEN OU.[Status] <> 2 THEN 1 ELSE 0 END) AS InvitedAcceptedRevokedPairs,
+    (SELECT COUNT(*)
+     FROM [dbo].[CollectionCipher] CC WITH (NOLOCK)
+     INNER JOIN [dbo].[Collection] C WITH (NOLOCK) ON C.Id = CC.CollectionId AND C.OrganizationId = @OrgId AND C.[Type] = 1) AS DefaultCollectionItems
+FROM Pairs P
+INNER JOIN [dbo].[OrganizationUser] OU WITH (NOLOCK) ON OU.Id = P.OrganizationUserId;
+```
+
 ---
 
 ## Scale Preset Expected Values
@@ -474,6 +513,24 @@ WHERE C.OrganizationId = @OrgId AND C.[Type] = 1
 | Multi-collection rate | 15% of ~2,250 non-orphan ciphers in 2-3 collections. Max 3 per cipher.                                                         |
 | Archived org ciphers  | 50 of 15,000 (8% rate = 1,200, clamped to the 50 cap).                                                                         |
 | Deleted org ciphers   | 25 of 15,000 (5% rate = 750, clamped to the 25 cap). All 25 are also archived (3% overlap = 450, clamped) — 0 are delete-only. |
+
+### 10. Cyberdyne (XL, access shape)
+
+`scale.xl-migrated-cyberdyne` uses `accessShape`, so Q1–Q8 don't apply. Run Q9, Q12 and Q13; reruns on a fresh
+database give identical counts. Values were measured on SQL Server; `~` marks a rounded count.
+
+| Check | Expected |
+| --- | --- |
+| Groups / `CollectionGroup` rows | 465 / 27,300 |
+| Q9 deleted org ciphers | ~5.7k: 1,400 in the org pool plus ~4.3k in default collections |
+| Q13 `ItemsFetched` / `TrashedItems` | ~123k / ~5.7k |
+| Q13 `MemberItemPairs` | ~976k, of which ~883k confirmed and ~93k (9.5%) invited, accepted or revoked |
+| Q13 `DefaultCollectionItems` | ~62k (3,936 default collections, one per confirmed User member) |
+
+`scale.sm-migrated-cyberdyne` (1/10): 505 members (395 confirmed, 6 accepted, 16 invited, 88 revoked; 4 admins), 47
+groups, 990 collections (390 default collections), ~12.1k items fetched (~6.0k in default collections, ~0.6k trashed)
+and ~93k member-item pairs, ~13% of them from non-confirmed members. Groups per confirmed member P50/P90/P99/max
+1/3/6/7.
 
 ---
 

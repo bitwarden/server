@@ -241,7 +241,7 @@
     },
     "accessShape": {
       "type": "object",
-      "description": "Production-calibrated access shape (overlapping groups, long-tailed collection sizes, explicit grant pairing). When present, replaces the density group/collection/cipher-assignment algorithms.",
+      "description": "Production-calibrated access shape (overlapping groups, long-tailed collection sizes, explicit grant pairing). When present, replaces the density group/collection/cipher-assignment algorithms. See Seeds/docs/access-shape.md.",
       "additionalProperties": false,
       "properties": {
         "seed": {

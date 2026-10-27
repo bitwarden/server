@@ -38,3 +38,5 @@ The full scale catalog is in [presets.md](../presets.md#scale). Other shapes wor
 | Collection-heavy (800 collections, 8 groups) | `scale.md-highcollection-umbrella-corp` | Few groups managing many collections              |
 | High permission density                      | `scale.lg-highperm-tyrell-corp`         | 2,500 users with heavily skewed permissions       |
 | Mega corp, many collections                  | `scale.xl-broad-initech`                | 10K users, 12K collections, most ciphers unassigned |
+| Production-shaped large org, post-migration  | `scale.xl-migrated-cyberdyne`           | Access shape calibrated to a large EU org: 5K users, overlapping groups, default collections, ~1M Access Intelligence member-item pairs; see [access-shape.md](../access-shape.md) |
+| Same shape at 1/10                           | `scale.sm-migrated-cyberdyne`           | 500 users, ~12k items, ~93k member-item pairs; seeds in seconds |

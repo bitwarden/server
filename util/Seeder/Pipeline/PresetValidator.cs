@@ -62,7 +62,7 @@ internal static class PresetValidator
     /// <summary>
     /// <c>accessShape</c> replaces the density group, collection and assignment algorithms. Density settings it
     /// would silently ignore are rejected; cipher types, permissions, the orphan/archive/delete rates, personal
-    /// ciphers and folders still apply.
+    /// ciphers and folders still apply. A roster can't be combined with shaped collections.
     /// </summary>
     private static void ValidateAccessShape(Models.SeedPreset preset, string presetName)
     {
@@ -77,6 +77,14 @@ internal static class PresetValidator
             throw new InvalidOperationException(
                 $"Preset '{presetName}' has 'groups' and 'accessShape' but no 'accessShape.groups'. " +
                 "Add an 'accessShape.groups' block, or drop 'accessShape' to use density groups.");
+        }
+
+        if (preset.Roster is not null && preset.Collections is not null)
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' has 'roster' and 'accessShape' with 'collections'. " +
+                "The roster's collections are registered first, so the shaped collection sizes would land on the " +
+                "wrong collections; remove 'roster' or 'collections'.");
         }
 
         var density = preset.Density;

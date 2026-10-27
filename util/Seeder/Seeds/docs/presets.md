@@ -23,6 +23,7 @@ Org presets only. Rejections happen when the preset loads (`Pipeline/PresetValid
 | `policies.enable` / `disable` | One `Policy` row per `PolicyType` name, enabled or disabled. Rows only: no server side effects run. Names may not repeat or appear in both lists. Policies the server requires Single Organization for (requireSso, resetPassword, maximumVaultTimeout and others) need `singleOrg` enabled. `enableAll`/`except` are rejected. |
 | `policies.data`               | Policy `Data` JSON keyed by `PolicyType` name, camelCase keys as the server stores them. `organizationDataOwnership` defaults to `{"enableIndividualItemsTransfer":true}`, the flag clients need to run the item transfer.                                                                                                      |
 | `defaultCollections`          | One "My Items" default collection per Confirmed User or Custom member (none for the Owner or Admins), filled with migrated org items. Needs `organizationDataOwnership` enabled and an enterprise plan. Knobs: `name`, `nonEmptyRate`, `sizes`, `largest`, `deletedRate`, `policyEnabledDaysAgo`.                               |
+| `accessShape`                 | Production-shaped groups, collection sizes and grants for reproducing a real org's access paths. Replaces the density group, collection and cipher-assignment algorithms, so density settings it would ignore are rejected, as is `roster` with `collections`. See [access-shape.md](access-shape.md).                          |
 
 ## Developer
 
@@ -106,12 +107,14 @@ dotnet run -- preset --name scale.{name} --mangle
 | xs-central-perk                 | XS   | Family starter              | 6      | 2      | 10          | 200     |
 | sm-balanced-planet-express      | SM   | Small balanced              | 50     | 8      | 100         | 750     |
 | sm-highperm-bluth-company       | SM   | Small hierarchical          | 50     | 4      | 25          | 500     |
+| sm-migrated-cyberdyne           | SM   | Large org shape at 1/10     | 504    | 47     | 600         | 6,090   |
 | md-balanced-sterling-cooper     | MD   | Mid-market balanced         | 250    | 50     | 500         | 5,000   |
 | md-highcollection-umbrella-corp | MD   | Collection-heavy            | 200    | 8      | 800         | 3,000   |
 | lg-balanced-wayne-enterprises   | LG   | Large balanced              | 1,000  | 100    | 2,000       | 10,000  |
 | lg-highperm-tyrell-corp         | LG   | High permission density     | 2,500  | 75     | 2,300       | 17,000  |
 | xl-highperm-weyland-yutani      | XL   | Mega corp, many groups      | 5,000  | 500    | 1,200       | 15,000  |
 | xl-broad-initech                | XL   | Mega corp, many collections | 10,000 | 5      | 12,000      | 15,000  |
+| xl-migrated-cyberdyne           | XL   | Large org, post-migration   | 5,040  | 465    | 6,000       | 60,900  |
 
 **Notes:**
 
@@ -119,7 +122,7 @@ dotnet run -- preset --name scale.{name} --mangle
 - **Cipher types**: Most use `realistic` (60% Login, 15% SecureNote, 12% Card, 10% Identity, 3% SSHKey). Umbrella Corp uses `documentationHeavy` (40/40 Login/SecureNote). Tyrell Corp uses `developerFocused` (50% Login, 20% SSHKey).
 - **Personal ciphers**: Sterling Cooper and Wayne Enterprises use `realistic` distribution. Weyland-Yutani uses `lightUsage`. Use `heavyUsage` only for small/mid orgs — at XL scale it produces 300K+ ciphers and will timeout. `pendingMigration` models personal items still waiting for the Organization Data Ownership migration: ~80% of confirmed members have none and a few have over 1,000 (`features.default-collections-enterprise` uses it).
 - **Folders**: Wayne Enterprises uses `enterprise` folder distribution. Weyland-Yutani uses `minimal`.
-- **Archive & delete**: All nine presets set `cipherAssignment.deletedRate` (2-5%, capped at 25) and `archivedRate` (4-8%, capped at 50), tuned to each org's orphan-rate/permission story — tidier orgs (Central Perk) trend lower, locked-down/hierarchical orgs (Bluth Company, Tyrell Corp) and Initech's high-orphan mega-dump trend higher. Both rates apply to org ciphers (archived-for a round-robin-selected org member); the three presets with personal ciphers enabled (Sterling Cooper, Wayne Enterprises, Weyland-Yutani) apply the same rates a second time against their personal-cipher pool, so those three seed archived/deleted items in both places.
+- **Archive & delete**: The nine density presets set `cipherAssignment.deletedRate` (2-5%, capped at 25) and `archivedRate` (4-8%, capped at 50), tuned to each org's orphan-rate/permission story — tidier orgs (Central Perk) trend lower, locked-down/hierarchical orgs (Bluth Company, Tyrell Corp) and Initech's high-orphan mega-dump trend higher. Both rates apply to org ciphers (archived-for a round-robin-selected org member); the three presets with personal ciphers enabled (Sterling Cooper, Wayne Enterprises, Weyland-Yutani) apply the same rates a second time against their personal-cipher pool, so those three seed archived/deleted items in both places.
 
 For per-preset expected values and verification queries, see [verification.md](verification.md).
 

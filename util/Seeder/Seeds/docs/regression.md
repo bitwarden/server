@@ -67,6 +67,8 @@ ASPNETCORE_ENVIRONMENT=Development dotnet run -- preset --name <name> --mangle
 | `CreateUsersStep` `statusMix` / `adminCount` | `features.default-collections-enterprise`                                    | `OrganizationUser` by `Status`: 71 Confirmed (owner included), 4 Invited, 2 Accepted, 4 Revoked. By `Type`: 1 Owner, 2 Admin (both Confirmed), 78 User |
 | `CreateDefaultCollectionsStep` (`defaultCollections`) | `features.default-collections-enterprise`                                    | Q12 in [verification.md](verification.md#q12-default-collections): 68 `Collection` rows with `Type=1` (71 confirmed minus the Owner and 2 Admins), one shared `Name` starting `2.`, `CreationDate` today − 14 days, `ExternalId` and `DefaultUserCollectionEmail` NULL; one `CollectionUser` each with `Manage=1`, none for the Owner or Admins, no `CollectionGroup`. 34 non-empty; 517 items, 47 trashed; top active counts 120, 60, then 40 or fewer; no non-empty collection belongs to a member with personal items (`NonEmptyWithPendingItems` 0). Every item has `UserId` NULL and sits in exactly one collection. `Cipher.Data LIKE '%massivedynamic%'` returns no rows. **Developer logs in** as the member with 120 items and sees a decrypted "My Items" collection; an Admin sees none |
 | `pendingMigration` personal-cipher shape | `features.default-collections-enterprise`                                    | Personal ciphers (`OrganizationId IS NULL`) for the org's members: 343 items on 14 of the 71 confirmed members (user56–user69), max 121 per member; the Owner and Admins hold none. `PersonalCipherCountTests` pins the shape at 3,941 users |
+| `CreateShapedGroupsStep`, `CreateShapedCollectionsStep` (`accessShape`) | `scale.xl-migrated-cyberdyne` | 465 groups; the "Everyone" group holds ~95% of confirmed members and has no grants; 27,300 `CollectionGroup` rows; ~8,500 shared-collection `CollectionUser` rows (7,600 for confirmed members, the rest copied to the ~38% of invited/accepted/revoked members given access by `inactiveAccessRate`). Q13 in [verification.md](verification.md#q13-access-shape-load): ~976k member-item pairs, ~9.5% of them from non-confirmed members. Seeding the preset twice (fresh databases) gives identical pair, member-access report and sync row counts |
+| `GenerateCiphersStep` target-size fill | `scale.xl-migrated-cyberdyne` | Shared collections ~43% empty, largest ~1.7k items; no cipher in more than 12 collections; ~28% of the 60,900 generated pool ciphers in no collection; 1,400 trashed pool ciphers, outside the default collections |
 
 Three scale presets set `density.personalCiphers` at volume and have Q10 expected values: `scale.md-balanced-sterling-cooper`, `scale.lg-balanced-wayne-enterprises`, `scale.xl-highperm-weyland-yutani`. Sterling Cooper is the cheapest of the three. `features.default-collections-enterprise` also sets it (`pendingMigration`, 343 items) but has no archive or delete rates, so Q10 doesn't apply.
 
@@ -82,7 +84,7 @@ Attachments only exist in the `enterprise-basic` and `encryption-modes` cipher f
 
 ## Checks the density queries don't cover
 
-[verification.md](verification.md) has Q1–Q11 for distributions. These cover entity fields, run through the `exploring-bitwarden-data` skill.
+[verification.md](verification.md) has Q1–Q11 for distributions, Q12 for default collections and Q13 for access-shape load. These cover entity fields, run through the `exploring-bitwarden-data` skill.
 
 ```sql
 -- Roster display names: LooksLikeEmail must be 0
