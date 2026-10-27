@@ -118,7 +118,7 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     public byte? InviteRemindersSentCount { get; set; }
 
     /// <summary>
-    /// Clears the invite reminder schedule, ending any sequence for this member.
+    /// Clears the invite reminder schedule
     /// </summary>
     public void ClearInviteReminders()
     {
