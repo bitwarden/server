@@ -85,8 +85,6 @@ public interface IUserService
     [Obsolete("Use IRotateUserApiKeyCommand instead. This method will be removed once the PM37165_RotateUserApiKeyCommand feature flag is removed.")]
     Task RotateApiKeyAsync(User user);
     string GetUserName(ClaimsPrincipal principal);
-    Task SendOTPAsync(User user);
-    Task<bool> VerifyOTPAsync(User user, string token);
     Task<bool> VerifySecretAsync(User user, string secret);
     /// <summary>
     /// We use this method to check if the user has an active new device verification bypass

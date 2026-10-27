@@ -13,6 +13,7 @@ using Bit.Core.Auth.UserFeatures.UserApiKey.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserEmail;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
+using Bit.Core.Auth.UserFeatures.UserVerification;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin.Implementations;
 using Bit.Core.KeyManagement.UserKey;
@@ -39,6 +40,12 @@ public static class UserServiceCollectionExtensions
         services.AddTwoFactorCommandsQueries();
         services.AddUserApiKeyCommands();
         services.AddUserEmailCommands();
+        services.AddUserVerificationCommands();
+    }
+
+    private static void AddUserVerificationCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IUserVerificationOtpCommand, UserVerificationOtpCommand>();
     }
 
     private static void AddUserEmailCommands(this IServiceCollection services)

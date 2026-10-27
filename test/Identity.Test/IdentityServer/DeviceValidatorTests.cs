@@ -554,7 +554,8 @@ public class DeviceValidatorTests
         var result = await _sut.ValidateRequestDeviceAsync(request, context);
 
         // Assert
-        await _userService.Received(0).SendOTPAsync(context.User);
+        await _twoFactorEmailService.DidNotReceive()
+            .SendNewDeviceVerificationEmailAsync(Arg.Any<User>(), Arg.Any<string>());
         await _deviceService.Received(1).SaveAsync(Arg.Any<Device>());
 
         Assert.True(result);
@@ -578,7 +579,8 @@ public class DeviceValidatorTests
         var result = await _sut.ValidateRequestDeviceAsync(request, context);
 
         // Assert
-        await _userService.Received(0).SendOTPAsync(context.User);
+        await _twoFactorEmailService.DidNotReceive()
+            .SendNewDeviceVerificationEmailAsync(Arg.Any<User>(), Arg.Any<string>());
         await _deviceService.Received(1).SaveAsync(Arg.Any<Device>());
 
         Assert.True(result);
@@ -601,7 +603,8 @@ public class DeviceValidatorTests
         var result = await _sut.ValidateRequestDeviceAsync(request, context);
 
         // Assert
-        await _userService.Received(0).SendOTPAsync(context.User);
+        await _twoFactorEmailService.DidNotReceive()
+            .SendNewDeviceVerificationEmailAsync(Arg.Any<User>(), Arg.Any<string>());
         await _deviceService.Received(1).SaveAsync(Arg.Any<Device>());
 
         Assert.True(result);
@@ -631,7 +634,8 @@ public class DeviceValidatorTests
         var result = await _sut.ValidateRequestDeviceAsync(request, context);
 
         // Assert
-        await _userService.Received(0).SendOTPAsync(context.User);
+        await _twoFactorEmailService.DidNotReceive()
+            .SendNewDeviceVerificationEmailAsync(Arg.Any<User>(), Arg.Any<string>());
         await _deviceService.Received(1).SaveAsync(context.Device);
 
         Assert.True(result);
@@ -663,7 +667,8 @@ public class DeviceValidatorTests
         var result = await _sut.ValidateRequestDeviceAsync(request, context);
 
         // Assert
-        await _userService.DidNotReceive().SendOTPAsync(Arg.Any<User>());
+        await _twoFactorEmailService.DidNotReceive()
+            .SendNewDeviceVerificationEmailAsync(Arg.Any<User>(), Arg.Any<string>());
         await _deviceService.Received(0).SaveAsync(Arg.Any<Device>());
 
         Assert.False(result);
@@ -721,7 +726,8 @@ public class DeviceValidatorTests
         // Assert
         await _twoFactorEmailService.Received(0)
             .VerifyNewDeviceVerificationOtpAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>());
-        await _userService.Received(0).SendOTPAsync(Arg.Any<User>());
+        await _twoFactorEmailService.DidNotReceive()
+            .SendNewDeviceVerificationEmailAsync(Arg.Any<User>(), Arg.Any<string>());
         await _deviceService.Received(1).SaveAsync(context.Device);
 
         Assert.True(result);

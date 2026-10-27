@@ -13,6 +13,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Licenses;
@@ -72,6 +73,7 @@ public class UserService : UserManager<User>, IUserService
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
     private readonly ISubscriberService _subscriberService;
     private readonly ISendFileStorageService _sendFileStorageService;
+    private readonly IUserVerificationOtpStore _userVerificationOtpStore;
 
     public UserService(
         IUserRepository userRepository,
@@ -104,7 +106,8 @@ public class UserService : UserManager<User>, IUserService
         IPolicyRequirementQuery policyRequirementQuery,
         IHasPremiumAccessQuery hasPremiumAccessQuery,
         ISubscriberService subscriberService,
-        ISendFileStorageService sendFileStorageService)
+        ISendFileStorageService sendFileStorageService,
+        IUserVerificationOtpStore userVerificationOtpStore)
         : base(
               store,
               optionsAccessor,
@@ -142,6 +145,7 @@ public class UserService : UserManager<User>, IUserService
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
         _subscriberService = subscriberService;
         _sendFileStorageService = sendFileStorageService;
+        _userVerificationOtpStore = userVerificationOtpStore;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -1079,24 +1083,9 @@ public class UserService : UserManager<User>, IUserService
         await _userRepository.ReplaceAsync(user);
     }
 
-    public async Task SendOTPAsync(User user)
-    {
-        if (string.IsNullOrEmpty(user.Email))
-        {
-            throw new BadRequestException("No user email.");
-        }
-
-        var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
-            "otp:" + user.Email);
-        await _mailService.SendOTPEmailAsync(user.Email, token);
-    }
-
-    public async Task<bool> VerifyOTPAsync(User user, string token)
-    {
-        return await base.VerifyUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
-            "otp:" + user.Email, token);
-    }
-
+    // TODO: PM-<placeholder-typed-secret> - Take the secret's type from the request and check only that type.
+    // The request models already carry separate master password hash and OTP fields. Checking one string as
+    // both lets a wrong master password hash count as a wrong OTP.
     public async Task<bool> VerifySecretAsync(User user, string secret)
     {
         if (user.HasMasterPassword())
@@ -1105,11 +1094,12 @@ public class UserService : UserManager<User>, IUserService
             // of their password, but in certain scenarios, like when the user has logged into their
             // device without a password (trusted device encryption) but the account
             // does still have a password we will allow the use of OTP.
-            return await CheckPasswordAsync(user, secret) || await VerifyOTPAsync(user, secret);
+            return await CheckPasswordAsync(user, secret)
+                || await _userVerificationOtpStore.ValidateAndConsumeAsync(user, secret);
         }
 
         // If they don't have a password at all they can only do OTP
-        return await VerifyOTPAsync(user, secret);
+        return await _userVerificationOtpStore.ValidateAndConsumeAsync(user, secret);
     }
 
     public async Task<bool> ActiveNewDeviceVerificationException(Guid userId)
