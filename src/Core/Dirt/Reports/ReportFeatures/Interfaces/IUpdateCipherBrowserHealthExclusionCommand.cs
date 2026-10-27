@@ -1,7 +1,8 @@
 
 using Bit.Core.Vault.Models.Data;
 
-namespace Dirt.Reports.ReportFeatures.Interfaces;
+namespace Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
+
 
 /// <summary>
 ///  All commands to update user browser health excluded ciphers.

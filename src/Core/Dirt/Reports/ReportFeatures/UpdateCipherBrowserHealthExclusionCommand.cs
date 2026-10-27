@@ -1,9 +1,10 @@
 
 using Bit.Core.Dirt.Repositories;
+using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 
-namespace Dirt.Reports.ReportFeatures.Interfaces;
+namespace Bit.Core.Dirt.Reports.ReportFeatures;
 
 
 public class UpdateCipherBrowserHealthExclusionCommand : IUpdateCipherBrowserHealthExclusionCommand
