@@ -69,4 +69,26 @@ public class SubscriptionsOrganizationServiceCollectionExtensionsTests
         Assert.Equal(typeof(AutoscalePrivilegedControlsSeatsCommand), descriptor.ImplementationType);
         Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
     }
+
+    [Fact]
+    public void AddOrganizationSubscriptions_RegistersPurchasePrivilegedControlsHandler()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(Substitute.For<IStripeAdapter>());
+        services.AddSingleton(Substitute.For<IPricingClient>());
+        services.AddSingleton(Substitute.For<ISubscriptionDiscountService>());
+        services.AddSingleton(Substitute.For<ITaxService>());
+        services.AddSingleton(Substitute.For<IUserService>());
+        services.AddSingleton(Substitute.For<IBitwardenEnvironment>());
+        services.AddSingleton(Substitute.For<IOrganizationRepository>());
+        services.AddSingleton(Substitute.For<IOrganizationUserRepository>());
+        services.AddSingleton(Substitute.For<IOrganizationService>());
+        services.AddSingleton(Substitute.For<IUpdateOrganizationSubscriptionCommand>());
+        services.AddLogging();
+
+        services.AddOrganizationSubscriptions();
+        using var scope = services.BuildServiceProvider().CreateScope();
+
+        Assert.NotNull(scope.ServiceProvider.GetService<PurchasePrivilegedControlsHandler>());
+    }
 }

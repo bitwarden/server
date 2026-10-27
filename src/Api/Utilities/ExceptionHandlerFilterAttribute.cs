@@ -4,6 +4,7 @@
 using System.Text;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Billing;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -54,7 +55,7 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
                 errorMessage = badRequestException.Message;
             }
         }
-        else if (exception is StripeException { StripeError.Type: "card_error" } stripeCardErrorException)
+        else if (exception is StripeException { StripeError.Type: StripeConstants.ErrorTypes.CardError } stripeCardErrorException)
         {
             context.HttpContext.Response.StatusCode = 400;
             if (_publicApi)
