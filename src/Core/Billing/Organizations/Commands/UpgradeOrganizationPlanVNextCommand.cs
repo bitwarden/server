@@ -2,10 +2,12 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
@@ -31,6 +33,11 @@ public interface IUpgradeOrganizationPlanVNextCommand
     /// <param name="organization">The organization to upgrade.</param>
     /// <param name="plan">The target plan to upgrade to.</param>
     /// <param name="keys">Optional public key encryption key pair data to set during the upgrade.</param>
+    /// <param name="prorationDate">
+    /// The time the client's invoice preview was pinned to. When provided, it is validated before any change is made
+    /// (throwing <see cref="InvoicePreviewExpiredException"/> if it is stale) and used as the proration time.
+    /// Ignored when upgrading from Free.
+    /// </param>
     /// <returns>
     /// A <see cref="BillingCommandResult{T}"/> containing <see cref="None"/> on success,
     /// or an error result if the subscription update or feature persistence fails.
@@ -38,7 +45,8 @@ public interface IUpgradeOrganizationPlanVNextCommand
     Task<BillingCommandResult<None>> Run(
         Organization organization,
         Plan plan,
-        PublicKeyEncryptionKeyPairData? keys);
+        PublicKeyEncryptionKeyPairData? keys,
+        DateTime? prorationDate = null);
 }
 
 public class UpgradeOrganizationPlanVNextCommand(
@@ -50,12 +58,15 @@ public class UpgradeOrganizationPlanVNextCommand(
     IStripeAdapter stripeAdapter,
     IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand) : BaseBillingCommand<UpgradeOrganizationPlanVNextCommand>(logger), IUpgradeOrganizationPlanVNextCommand
 {
+    private readonly ILogger<UpgradeOrganizationPlanVNextCommand> _logger = logger;
+
     protected override Conflict DefaultConflict => new("We had a problem upgrading your plan. Please contact support for assistance.");
 
     public Task<BillingCommandResult<None>> Run(
         Organization organization,
         Plan plan,
-        PublicKeyEncryptionKeyPairData? keys) => HandleAsync(async () =>
+        PublicKeyEncryptionKeyPairData? keys,
+        DateTime? prorationDate = null) => HandleAsync(async () =>
     {
         var currentPlan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
@@ -108,6 +119,19 @@ public class UpgradeOrganizationPlanVNextCommand(
             return new None();
         }
 
+        if (prorationDate.HasValue)
+        {
+            var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
+                stripeAdapter, _logger, organization, ["test_clock"]);
+
+            if (subscription is null)
+            {
+                return new BadRequest("We couldn't find your subscription.");
+            }
+
+            InvoicePreviewQuote.EnsureValid(prorationDate.Value, subscription);
+        }
+
         await priceIncreaseScheduler.Release(organization.GatewayCustomerId, organization.GatewaySubscriptionId!, organization.Id);
 
         var builder = OrganizationSubscriptionChangeSet.Builder(currentPlan);
@@ -139,7 +163,7 @@ public class UpgradeOrganizationPlanVNextCommand(
         }
 
         var changeSet = builder.Build();
-        var result = await updateOrganizationSubscriptionCommand.Run(organization, changeSet);
+        var result = await updateOrganizationSubscriptionCommand.Run(organization, changeSet, prorationDate: prorationDate);
 
         if (!result.Success)
         {

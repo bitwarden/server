@@ -6,6 +6,7 @@ using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Services;
@@ -14,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Stripe;
+using Stripe.TestHelpers;
 using Xunit;
 using static Bit.Core.Billing.Constants.StripeConstants;
 
@@ -27,6 +29,7 @@ public class UpgradeOrganizationPlanVNextCommandTests
     private readonly IPriceIncreaseScheduler _priceIncreaseScheduler = Substitute.For<IPriceIncreaseScheduler>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand = Substitute.For<IUpdateOrganizationSubscriptionCommand>();
+    private static readonly DateTime _frozen = new(2026, 10, 27, 12, 0, 0, DateTimeKind.Utc);
     private readonly UpgradeOrganizationPlanVNextCommand _command;
 
     public UpgradeOrganizationPlanVNextCommandTests()
@@ -569,11 +572,121 @@ public class UpgradeOrganizationPlanVNextCommandTests
             .ReplaceAndUpdateCacheAsync(Arg.Any<Organization>(), Arg.Any<EventType?>());
     }
 
+    [Fact]
+    public async Task Run_PaidUpgrade_WithValidProrationDate_PassesItToSubscriptionUpdate()
+    {
+        var (organization, targetPlan) = SetupPaidUpgrade();
+        var prorationDate = _frozen.AddMinutes(-10);
+
+        var result = await _command.Run(organization, targetPlan, null, prorationDate);
+
+        Assert.True(result.IsT0);
+        await _updateOrganizationSubscriptionCommand.Received(1).Run(
+            organization,
+            Arg.Any<OrganizationSubscriptionChangeSet>(),
+            null,
+            prorationDate);
+    }
+
+    [Theory]
+    [InlineData(-31 * 60)]
+    [InlineData(1)]
+    public async Task Run_PaidUpgrade_WithInvalidProrationDate_ThrowsBeforeAnyWrite(int secondsFromFrozen)
+    {
+        var (organization, targetPlan) = SetupPaidUpgrade();
+
+        await Assert.ThrowsAsync<InvoicePreviewExpiredException>(() =>
+            _command.Run(organization, targetPlan, null, _frozen.AddSeconds(secondsFromFrozen)));
+
+        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs()
+            .Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
+        await _updateOrganizationSubscriptionCommand.DidNotReceiveWithAnyArgs()
+            .Run(Arg.Any<Organization>(), Arg.Any<OrganizationSubscriptionChangeSet>());
+        await _organizationService.DidNotReceiveWithAnyArgs()
+            .ReplaceAndUpdateCacheAsync(Arg.Any<Organization>(), Arg.Any<EventType?>());
+    }
+
+    [Fact]
+    public async Task Run_PaidUpgrade_FetchesSubscriptionWithTestClockExpanded_WhenProrationDateGiven()
+    {
+        var (organization, targetPlan) = SetupPaidUpgrade();
+
+        await _command.Run(organization, targetPlan, null, _frozen.AddMinutes(-10));
+
+        await _stripeAdapter.Received(1).GetSubscriptionAsync(
+            organization.GatewaySubscriptionId!,
+            Arg.Is<SubscriptionGetOptions>(o => o.Expand.SequenceEqual(new[] { "test_clock" })));
+    }
+
+    [Fact]
+    public async Task Run_PaidUpgrade_WithoutProrationDate_DoesNotFetchSubscriptionAndPassesNull()
+    {
+        var (organization, targetPlan) = SetupPaidUpgrade();
+
+        var result = await _command.Run(organization, targetPlan, null);
+
+        Assert.True(result.IsT0);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs()
+            .GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
+        await _updateOrganizationSubscriptionCommand.Received(1).Run(
+            organization,
+            Arg.Any<OrganizationSubscriptionChangeSet>(),
+            null,
+            null);
+    }
+
+    [Fact]
+    public async Task Run_PaidUpgrade_WithProrationDate_SubscriptionNotFound_ReturnsBadRequestBeforeAnyWrite()
+    {
+        var (organization, targetPlan) = SetupPaidUpgrade();
+        _stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId!, Arg.Any<SubscriptionGetOptions>())
+            .ThrowsAsync(new StripeException { StripeError = new StripeError { Code = ErrorCodes.ResourceMissing } });
+
+        var result = await _command.Run(organization, targetPlan, null, _frozen.AddMinutes(-10));
+
+        Assert.True(result.IsT1);
+        Assert.Equal("We couldn't find your subscription.", result.AsT1.Response);
+        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs()
+            .Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
+    }
+
+    [Fact]
+    public async Task Run_UpgradeFromFree_WithExpiredProrationDate_IgnoresIt()
+    {
+        var organization = CreateOrganization(PlanType.Free, gatewaySubscriptionId: null, seats: 2);
+        var targetPlan = MockPlans.Get(PlanType.TeamsAnnually);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(PlanType.Free));
+
+        var result = await _command.Run(organization, targetPlan, null, DateTime.UtcNow.AddDays(-1));
+
+        Assert.True(result.IsT0);
+        await _organizationBillingService.Received(1).Finalize(Arg.Any<OrganizationSale>());
+        await _stripeAdapter.DidNotReceiveWithAnyArgs()
+            .GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
+    }
+
+    private (Organization Organization, Bit.Core.Models.StaticStore.Plan TargetPlan) SetupPaidUpgrade()
+    {
+        var organization = CreateOrganization(PlanType.TeamsAnnually);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(PlanType.TeamsAnnually));
+        _stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId!, Arg.Any<SubscriptionGetOptions>())
+            .Returns(new Subscription
+            {
+                TestClock = new TestClock { FrozenTime = _frozen },
+                Items = new StripeList<SubscriptionItem>
+                {
+                    Data = [new SubscriptionItem { CurrentPeriodStart = _frozen.AddDays(-180) }]
+                }
+            });
+        SetupSubscriptionCommandSuccess();
+        return (organization, MockPlans.Get(PlanType.EnterpriseAnnually));
+    }
+
     private void SetupSubscriptionCommandSuccess()
     {
         BillingCommandResult<Subscription> successResult = new Subscription();
         _updateOrganizationSubscriptionCommand
-            .Run(Arg.Any<Organization>(), Arg.Any<OrganizationSubscriptionChangeSet>())
+            .Run(Arg.Any<Organization>(), Arg.Any<OrganizationSubscriptionChangeSet>(), Arg.Any<Subscription?>(), Arg.Any<DateTime?>())
             .Returns(successResult);
     }
 
