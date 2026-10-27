@@ -135,7 +135,8 @@ public static class ServiceCollectionExtensions
                 // `email_verified` in the ID token. The default ClaimActions don't map
                 // `email_verified`, so add it. The handler rejects a UserInfo response whose
                 // `sub` doesn't match the ID token.
-                options.GetClaimsFromUserInfoEndpoint = true;                options.ClaimActions.MapUniqueJsonKey(
+                options.GetClaimsFromUserInfoEndpoint = true;
+                options.ClaimActions.MapUniqueJsonKey(
                     JwtRegisteredClaimNames.EmailVerified, JwtRegisteredClaimNames.EmailVerified);
 
                 options.Scope.Clear();
