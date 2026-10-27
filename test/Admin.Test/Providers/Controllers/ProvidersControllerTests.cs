@@ -235,39 +235,12 @@ public class ProvidersControllerTests
     [BitAutoData]
     [SutProviderCustomize]
     [Theory]
-    public async Task CreateOrganization_PrivilegedControlsOn_FlagOn_Rejects(
+    public async Task CreateOrganization_PrivilegedControlsOn_Rejects(
         Provider provider,
         SutProvider<ProvidersController> sutProvider)
     {
         provider.Type = ProviderType.Reseller;
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
-        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
-            .IsEnabled(Bit.Core.FeatureFlagKeys.PM39883_Pam_Billing_Support)
-            .Returns(true);
-        sutProvider.Sut.TempData =
-            new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
-
-        var result = await sutProvider.Sut.CreateOrganization(provider.Id, new OrganizationEditModel { UsePam = true });
-
-        var redirect = Assert.IsType<RedirectToActionResult>(result);
-        Assert.Equal("CreateOrganization", redirect.ActionName);
-        Assert.Equal(provider.Id, redirect.RouteValues!["providerId"]);
-        await sutProvider.GetDependency<IResellerClientOrganizationSignUpCommand>().DidNotReceiveWithAnyArgs()
-            .SignUpResellerClientAsync(default, default);
-    }
-
-    [BitAutoData]
-    [SutProviderCustomize]
-    [Theory]
-    public async Task CreateOrganization_PrivilegedControlsOn_FlagOff_Rejects(
-        Provider provider,
-        SutProvider<ProvidersController> sutProvider)
-    {
-        provider.Type = ProviderType.Reseller;
-        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
-        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
-            .IsEnabled(Bit.Core.FeatureFlagKeys.PM39883_Pam_Billing_Support)
-            .Returns(false);
         sutProvider.Sut.TempData =
             new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
 
