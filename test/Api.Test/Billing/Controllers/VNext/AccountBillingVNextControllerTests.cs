@@ -1,11 +1,14 @@
 ﻿using Bit.Api.Billing.Controllers.VNext;
+using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Api.Billing.Models.Requests.Premium;
 using Bit.Api.Billing.Models.Requests.Storage;
 using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Licenses.Queries;
 using Bit.Core.Billing.Models.Api.Response;
 using Bit.Core.Billing.Models.Api.Response.Premium;
 using Bit.Core.Billing.Models.Business;
+using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Portal.Commands;
 using Bit.Core.Billing.Premium.Commands;
@@ -516,6 +519,32 @@ public class AccountBillingVNextControllerTests
         // Assert
         Assert.IsAssignableFrom<IResult>(result);
         await _createBillingPortalSessionCommand.Received(1).Run(user, expectedReturnUrl);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpgradePremiumToOrganizationAsync_PassesProrationDateToCommand(User user)
+    {
+        var prorationDate = new DateTime(2026, 10, 27, 12, 0, 0, DateTimeKind.Utc);
+        var request = new UpgradePremiumToOrganizationRequest
+        {
+            OrganizationName = "Org",
+            Key = "key",
+            PublicKey = "public-key",
+            EncryptedPrivateKey = "private-key",
+            TargetProductTierType = ProductTierType.Teams,
+            BillingAddress = new CheckoutBillingAddressRequest { Country = "US", PostalCode = "12345" },
+            ProrationDate = prorationDate
+        };
+        _upgradePremiumToOrganizationCommand
+            .Run(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+                Arg.Any<string?>(), Arg.Any<PlanType>(), Arg.Any<BillingAddress>(), Arg.Any<DateTime?>())
+            .Returns(new BillingCommandResult<Guid>(Guid.NewGuid()));
+
+        await _sut.UpgradePremiumToOrganizationAsync(user, request);
+
+        await _upgradePremiumToOrganizationCommand.Received(1).Run(
+            user, Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Any<string?>(), Arg.Any<PlanType>(), Arg.Any<BillingAddress>(), prorationDate);
     }
 
     [Theory, BitAutoData]

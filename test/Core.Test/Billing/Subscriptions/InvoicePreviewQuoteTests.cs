@@ -83,6 +83,18 @@ public class InvoicePreviewQuoteTests
     }
 
     [Fact]
+    public void EnsureValid_LocalKind_ReturnsSameInstantAsUtc()
+    {
+        var input = _frozen.AddMinutes(-5).ToLocalTime();
+        Assert.Equal(DateTimeKind.Local, input.Kind);
+
+        var result = InvoicePreviewQuote.EnsureValid(input, CreateSubscription());
+
+        Assert.Equal(DateTimeKind.Utc, result.Kind);
+        Assert.Equal(_frozen.AddMinutes(-5), result);
+    }
+
+    [Fact]
     public void InvoicePreviewExpiredException_IsKeyedBadRequest()
     {
         var exception = new InvoicePreviewExpiredException();

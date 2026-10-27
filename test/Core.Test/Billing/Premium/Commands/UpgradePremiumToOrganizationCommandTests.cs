@@ -1870,6 +1870,16 @@ public class UpgradePremiumToOrganizationCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task Run_WithProrationDateInTheFuture_ThrowsBeforeAnyWrite(User user)
+    {
+        ArrangeUpgradeWithTestClock(user, Frozen.AddDays(-180));
+
+        await Assert.ThrowsAsync<InvoicePreviewExpiredException>(() => RunUpgrade(user, Frozen.AddSeconds(1)));
+
+        await AssertNoWrites();
+    }
+
+    [Theory, BitAutoData]
     public async Task Run_WithProrationDateBeforeCurrentPeriod_ThrowsBeforeAnyWrite(User user)
     {
         ArrangeUpgradeWithTestClock(user, Frozen.AddMinutes(-5));
