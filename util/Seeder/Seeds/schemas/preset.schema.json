@@ -375,7 +375,7 @@
               "type": "number",
               "minimum": 0,
               "maximum": 1,
-              "description": "Fraction of regular groups eligible for random grants, largest first; the smallest groups get none."
+              "description": "Fraction of regular groups eligible for random grants, largest first; the smallest groups get none. Echo grants can still reach groups outside the cutoff."
             },
             "groupSizeBias": {
               "type": "number",
@@ -434,7 +434,7 @@
             "maxGrantsPerGroup": {
               "type": "integer",
               "minimum": 1,
-              "description": "Cap on random grants per group (hot and wide grants excluded)."
+              "description": "Cap on random grants per group. Hot, wide and echo grants don't count toward it."
             },
             "wideGroups": {
               "type": "object",

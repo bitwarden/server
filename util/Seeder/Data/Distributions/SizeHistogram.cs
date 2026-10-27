@@ -90,11 +90,13 @@ internal sealed class SizeHistogram
             }
         }
 
-        // Rounding drift: nudge the largest entries until the total matches
+        // Rounding drift: nudge the largest entries until the total matches. Stop only after a full pass in which
+        // no entry could move, so a reachable target is always reached.
         var diff = target - sizes.Sum();
         var order = Enumerable.Range(0, sizes.Length).Where(i => sizes[i] > 0)
             .OrderByDescending(i => sizes[i]).ToArray();
-        for (var k = 0; diff != 0 && order.Length > 0; k++)
+        var stuck = 0;
+        for (var k = 0; diff != 0 && stuck < order.Length; k++)
         {
             var i = order[k % order.Length];
             var step = Math.Sign(diff);
@@ -102,10 +104,11 @@ internal sealed class SizeHistogram
             {
                 sizes[i] += step;
                 diff -= step;
+                stuck = 0;
             }
-            else if (k > order.Length * 4)
+            else
             {
-                break;
+                stuck++;
             }
         }
     }

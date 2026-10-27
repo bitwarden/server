@@ -358,6 +358,34 @@ public static class RecipeBuilderExtensions
     }
 
     /// <summary>
+    /// Adds shared collections with long-tailed target sizes and shaped group and member grants, built from the
+    /// access shape. Replaces <see cref="AddCollections(RecipeBuilder, int, DensityProfile?)"/>.
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <param name="count">Number of collections to create</param>
+    /// <param name="shape">The preset's access shape</param>
+    /// <param name="permissions">Permission mix applied to group and direct grants</param>
+    /// <param name="seed">Random seed for the shape</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no users exist</exception>
+    internal static RecipeBuilder AddShapedCollections(
+        this RecipeBuilder builder,
+        int count,
+        SeedPresetAccessShape shape,
+        Distribution<PermissionWeight> permissions,
+        int seed)
+    {
+        if (!builder.HasRosterUsers && !builder.HasGeneratedUsers)
+        {
+            throw new InvalidOperationException(
+                "Collections require users. Call UseRoster() or AddUsers() first.");
+        }
+
+        builder.AddStep(_ => new CreateShapedCollectionsStep(count, shape, permissions, seed));
+        return builder;
+    }
+
+    /// <summary>
     /// Generate folders for each user using a configurable distribution.
     /// </summary>
     /// <param name="builder">The recipe builder</param>

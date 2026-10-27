@@ -89,6 +89,17 @@ public class SizeHistogramTests
     }
 
     [Fact]
+    public void ScaleTo_ReachableTarget_SumsExactly()
+    {
+        // ×26/21 gives [12, 12, 1], capped to [10, 10, 1] (sum 21). Only the last entry can grow, and it needs all 5.
+        int[] sizes = [10, 10, 1];
+
+        SizeHistogram.ScaleTo(sizes, 26, cap: 10);
+
+        Assert.Equal(new[] { 10, 10, 6 }, sizes);
+    }
+
+    [Fact]
     public void ScaleTo_EntriesThatWouldRoundToZeroOrExceedCap_StayWithinOneToCap()
     {
         // ×60/151: 100 → 40 (cap), 1 → 0 (raised to 1), 50 → 20

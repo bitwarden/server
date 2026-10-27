@@ -206,7 +206,15 @@ internal static class PresetLoader
 
         if (preset.Collections is not null)
         {
-            builder.AddCollections(preset.Collections.Count, density);
+            if (shape is not null)
+            {
+                builder.AddShapedCollections(preset.Collections.Count, shape,
+                    density?.PermissionDistribution ?? PermissionDistributions.Enterprise, shapeSeed);
+            }
+            else
+            {
+                builder.AddCollections(preset.Collections.Count, density);
+            }
         }
 
         if (preset.Folders == true || density?.FolderDistribution is not null)
