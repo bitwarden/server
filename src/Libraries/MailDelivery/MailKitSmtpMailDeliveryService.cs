@@ -1,42 +1,47 @@
 ﻿using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
-using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using MailKit.Net.Smtp;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MimeKit;
 
 namespace Bit.Core.Platform.Mail.Delivery;
 
-public class MailKitSmtpMailDeliveryService : IMailDeliveryService
+internal class MailKitSmtpMailDeliveryService : IMailDeliveryService
 {
-    private readonly GlobalSettings _globalSettings;
+    private readonly MailDeliveryOptions.SmtpOptions _smtp;
+    private readonly string _smtpHost;
+    private readonly string? _siteName;
     private readonly ILogger<MailKitSmtpMailDeliveryService> _logger;
     private readonly string? _replyDomain;
     private readonly string _replyEmail;
 
     public MailKitSmtpMailDeliveryService(
-        GlobalSettings globalSettings,
+        IOptions<MailDeliveryOptions> options,
         ILogger<MailKitSmtpMailDeliveryService> logger)
     {
-        if (globalSettings.Mail.Smtp?.Host == null)
+        var settings = options.Value;
+        if (settings.Smtp.Host == null)
         {
-            throw new ArgumentNullException(nameof(globalSettings.Mail.Smtp.Host));
+            throw new ArgumentNullException(nameof(settings.Smtp.Host));
         }
 
-        if (globalSettings.Mail.ReplyToEmail == null)
+        if (settings.ReplyToEmail == null)
         {
-            throw new InvalidOperationException("A GlobalSettings.Mail.ReplyToEmail is required to be set up.");
+            throw new InvalidOperationException(
+                $"{nameof(MailDeliveryOptions)}.{nameof(MailDeliveryOptions.ReplyToEmail)} is required to send mail over SMTP.");
         }
 
-        _replyEmail = CoreHelpers.PunyEncode(globalSettings.Mail.ReplyToEmail);
+        _replyEmail = PunyEncoding.PunyEncode(settings.ReplyToEmail);
 
         if (_replyEmail.Contains('@'))
         {
             _replyDomain = _replyEmail.Split('@')[1];
         }
 
-        _globalSettings = globalSettings;
+        _smtp = settings.Smtp;
+        _smtpHost = settings.Smtp.Host;
+        _siteName = settings.SiteName;
         _logger = logger;
     }
 
@@ -46,7 +51,7 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
     public async Task SendEmailAsync(Models.Mail.MailMessage message, CancellationToken cancellationToken)
     {
         var mimeMessage = new MimeMessage();
-        mimeMessage.From.Add(new MailboxAddress(_globalSettings.SiteName, _replyEmail));
+        mimeMessage.From.Add(new MailboxAddress(_siteName, _replyEmail));
         mimeMessage.Subject = message.Subject;
         if (!string.IsNullOrWhiteSpace(_replyDomain))
         {
@@ -55,7 +60,7 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
 
         foreach (var address in message.ToEmails)
         {
-            var punyencoded = CoreHelpers.PunyEncode(address);
+            var punyencoded = PunyEncoding.PunyEncode(address);
             mimeMessage.To.Add(MailboxAddress.Parse(punyencoded));
         }
 
@@ -63,14 +68,14 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
         {
             foreach (var address in message.BccEmails)
             {
-                var punyencoded = CoreHelpers.PunyEncode(address);
+                var punyencoded = PunyEncoding.PunyEncode(address);
                 mimeMessage.Bcc.Add(MailboxAddress.Parse(punyencoded));
             }
         }
 
         if (!string.IsNullOrWhiteSpace(message.ReplyToAddress))
         {
-            mimeMessage.ReplyTo.Add(MailboxAddress.Parse(CoreHelpers.PunyEncode(message.ReplyToAddress)));
+            mimeMessage.ReplyTo.Add(MailboxAddress.Parse(PunyEncoding.PunyEncode(message.ReplyToAddress)));
         }
 
         var builder = new BodyBuilder();
@@ -85,34 +90,31 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
         {
             client.ServerCertificateValidationCallback = ValidateServerCertificate;
 
-            if (!_globalSettings.Mail.Smtp.StartTls && !_globalSettings.Mail.Smtp.Ssl &&
-                _globalSettings.Mail.Smtp.Port == 25)
+            if (!_smtp.StartTls && !_smtp.Ssl && _smtp.Port == 25)
             {
                 await client.ConnectAsync(
-                    _globalSettings.Mail.Smtp.Host,
-                    _globalSettings.Mail.Smtp.Port,
+                    _smtpHost,
+                    _smtp.Port,
                     MailKit.Security.SecureSocketOptions.None,
                     cancellationToken
                 );
             }
             else
             {
-                var useSsl = _globalSettings.Mail.Smtp.Port == 587 && !_globalSettings.Mail.Smtp.SslOverride ?
-                    false : _globalSettings.Mail.Smtp.Ssl;
+                var useSsl = _smtp.Port == 587 && !_smtp.SslOverride ? false : _smtp.Ssl;
                 await client.ConnectAsync(
-                    _globalSettings.Mail.Smtp.Host,
-                    _globalSettings.Mail.Smtp.Port,
+                    _smtpHost,
+                    _smtp.Port,
                     useSsl,
                     cancellationToken
                 );
             }
 
-            if (CoreHelpers.SettingHasValue(_globalSettings.Mail.Smtp.Username) &&
-                CoreHelpers.SettingHasValue(_globalSettings.Mail.Smtp.Password))
+            if (!string.IsNullOrWhiteSpace(_smtp.Username) && !string.IsNullOrWhiteSpace(_smtp.Password))
             {
                 await client.AuthenticateAsync(
-                    _globalSettings.Mail.Smtp.Username,
-                    _globalSettings.Mail.Smtp.Password,
+                    _smtp.Username,
+                    _smtp.Password,
                     cancellationToken
                 );
             }
@@ -128,7 +130,7 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
         X509Chain? chain,
         SslPolicyErrors sslPolicyErrors)
     {
-        if (_globalSettings.Mail.Smtp.TrustServer)
+        if (_smtp.TrustServer)
         {
             return true;
         }

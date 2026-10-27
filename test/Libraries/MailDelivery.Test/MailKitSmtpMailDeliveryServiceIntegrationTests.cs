@@ -2,23 +2,23 @@
 using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Models.Mail;
 using Bit.Core.Platform.Mail.Delivery;
-using Bit.Core.Settings;
 using MailKit.Security;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MimeKit;
 using Rnwood.SmtpServer;
 using Rnwood.SmtpServer.Extensions.Auth;
 using Xunit.Abstractions;
 
-namespace Bit.Core.IntegrationTest;
+namespace Bit.MailDelivery.Test;
 
-public class MailKitSmtpMailDeliveryServiceTests
+public class MailKitSmtpMailDeliveryServiceIntegrationTests
 {
     private static int _loggingConfigured;
     private readonly X509Certificate2 _selfSignedCert;
 
-    public MailKitSmtpMailDeliveryServiceTests(ITestOutputHelper testOutputHelper)
+    public MailKitSmtpMailDeliveryServiceIntegrationTests(ITestOutputHelper testOutputHelper)
     {
         ConfigureSmtpServerLogging(testOutputHelper);
 
@@ -71,15 +71,15 @@ public class MailKitSmtpMailDeliveryServiceTests
         return Random.Shared.Next(50000, 60000);
     }
 
-    private static GlobalSettings GetSettings(Action<GlobalSettings> configure)
+    private static IOptions<MailDeliveryOptions> GetOptions(Action<MailDeliveryOptions> configure)
     {
-        var globalSettings = new GlobalSettings();
-        globalSettings.SiteName = "TestSiteName";
-        globalSettings.Mail.ReplyToEmail = "test@example.com";
-        globalSettings.Mail.Smtp.Host = "localhost";
+        var options = new MailDeliveryOptions();
+        options.SiteName = "TestSiteName";
+        options.ReplyToEmail = "test@example.com";
+        options.Smtp.Host = "localhost";
         // Set common defaults
-        configure(globalSettings);
-        return globalSettings;
+        configure(options);
+        return Options.Create(options);
     }
 
     [Fact]
@@ -95,14 +95,14 @@ public class MailKitSmtpMailDeliveryServiceTests
         using var smtpServer = new SmtpServer(behavior);
         smtpServer.Start();
 
-        var globalSettings = GetSettings(gs =>
+        var options = GetOptions(o =>
         {
-            gs.Mail.Smtp.Port = port;
-            gs.Mail.Smtp.Ssl = true;
+            o.Smtp.Port = port;
+            o.Smtp.Ssl = true;
         });
 
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
-            globalSettings,
+            options,
             NullLogger<MailKitSmtpMailDeliveryService>.Instance
         );
 
@@ -127,15 +127,15 @@ public class MailKitSmtpMailDeliveryServiceTests
         using var smtpServer = new SmtpServer(behavior);
         smtpServer.Start();
 
-        var globalSettings = GetSettings(gs =>
+        var options = GetOptions(o =>
         {
-            gs.Mail.Smtp.Port = port;
-            gs.Mail.Smtp.Ssl = true;
-            gs.Mail.Smtp.TrustServer = true;
+            o.Smtp.Port = port;
+            o.Smtp.Ssl = true;
+            o.Smtp.TrustServer = true;
         });
 
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
-            globalSettings,
+            options,
             NullLogger<MailKitSmtpMailDeliveryService>.Instance
         );
 
@@ -171,15 +171,15 @@ public class MailKitSmtpMailDeliveryServiceTests
         using var smtpServer = new SmtpServer(behavior);
         smtpServer.Start();
 
-        var globalSettings = GetSettings(gs =>
+        var options = GetOptions(o =>
         {
-            gs.Mail.Smtp.Port = port;
-            gs.Mail.Smtp.Ssl = true;
-            gs.Mail.Smtp.TrustServer = true;
+            o.Smtp.Port = port;
+            o.Smtp.Ssl = true;
+            o.Smtp.TrustServer = true;
         });
 
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
-            globalSettings,
+            options,
             NullLogger<MailKitSmtpMailDeliveryService>.Instance
         );
 
@@ -217,15 +217,15 @@ public class MailKitSmtpMailDeliveryServiceTests
         using var smtpServer = new SmtpServer(behavior);
         smtpServer.Start();
 
-        var globalSettings = GetSettings(gs =>
+        var options = GetOptions(o =>
         {
-            gs.Mail.Smtp.Port = port;
-            gs.Mail.Smtp.Ssl = true;
-            gs.Mail.Smtp.TrustServer = true;
+            o.Smtp.Port = port;
+            o.Smtp.Ssl = true;
+            o.Smtp.TrustServer = true;
         });
 
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
-            globalSettings,
+            options,
             NullLogger<MailKitSmtpMailDeliveryService>.Instance
         );
 
@@ -252,15 +252,15 @@ public class MailKitSmtpMailDeliveryServiceTests
         using var smtpServer = new SmtpServer(behavior);
         smtpServer.Start();
 
-        var globalSettings = GetSettings(gs =>
+        var options = GetOptions(o =>
         {
-            gs.Mail.Smtp.Port = port;
-            gs.Mail.Smtp.Ssl = false;
-            gs.Mail.Smtp.StartTls = false;
+            o.Smtp.Port = port;
+            o.Smtp.Ssl = false;
+            o.Smtp.StartTls = false;
         });
 
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
-            globalSettings,
+            options,
             NullLogger<MailKitSmtpMailDeliveryService>.Instance
         );
 
@@ -315,18 +315,18 @@ public class MailKitSmtpMailDeliveryServiceTests
         using var smtpServer = new SmtpServer(behavior);
         smtpServer.Start();
 
-        var globalSettings = GetSettings(gs =>
+        var options = GetOptions(o =>
         {
-            gs.Mail.Smtp.Port = port;
-            gs.Mail.Smtp.Ssl = true;
-            gs.Mail.Smtp.TrustServer = true;
+            o.Smtp.Port = port;
+            o.Smtp.Ssl = true;
+            o.Smtp.TrustServer = true;
 
-            gs.Mail.Smtp.Username = "test";
-            gs.Mail.Smtp.Password = "password";
+            o.Smtp.Username = "test";
+            o.Smtp.Password = "password";
         });
 
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
-            globalSettings,
+            options,
             NullLogger<MailKitSmtpMailDeliveryService>.Instance
         );
 

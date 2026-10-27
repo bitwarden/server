@@ -1,20 +1,16 @@
-﻿#nullable enable
-
-using Amazon;
+﻿using Amazon;
 using Amazon.SimpleEmail;
 using Amazon.SimpleEmail.Model;
 using Bit.Core.Models.Mail;
-using Bit.Core.Settings;
-using Bit.Core.Utilities;
-using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Bit.Core.Platform.Mail.Delivery;
 
-public class AmazonSesMailDeliveryService : IMailDeliveryService, IDisposable
+internal class AmazonSesMailDeliveryService : IMailDeliveryService, IDisposable
 {
-    private readonly GlobalSettings _globalSettings;
-    private readonly IWebHostEnvironment _hostingEnvironment;
+    private readonly IHostEnvironment _hostingEnvironment;
     private readonly ILogger<AmazonSesMailDeliveryService> _logger;
     private readonly IAmazonSimpleEmailService _client;
     private readonly string _source;
@@ -22,48 +18,48 @@ public class AmazonSesMailDeliveryService : IMailDeliveryService, IDisposable
     private readonly string? _configSetName;
 
     public AmazonSesMailDeliveryService(
-        GlobalSettings globalSettings,
-        IWebHostEnvironment hostingEnvironment,
+        IOptions<MailDeliveryOptions> options,
+        IHostEnvironment hostingEnvironment,
         ILogger<AmazonSesMailDeliveryService> logger)
-    : this(globalSettings, hostingEnvironment, logger,
+    : this(options, hostingEnvironment, logger,
           new AmazonSimpleEmailServiceClient(
-            globalSettings.Amazon.AccessKeyId,
-            globalSettings.Amazon.AccessKeySecret,
-            RegionEndpoint.GetBySystemName(globalSettings.Amazon.Region))
+            options.Value.Amazon.AccessKeyId,
+            options.Value.Amazon.AccessKeySecret,
+            RegionEndpoint.GetBySystemName(options.Value.Amazon.Region))
           )
     {
     }
 
-    public AmazonSesMailDeliveryService(
-        GlobalSettings globalSettings,
-        IWebHostEnvironment hostingEnvironment,
+    internal AmazonSesMailDeliveryService(
+        IOptions<MailDeliveryOptions> options,
+        IHostEnvironment hostingEnvironment,
         ILogger<AmazonSesMailDeliveryService> logger,
         IAmazonSimpleEmailService amazonSimpleEmailService)
     {
-        if (string.IsNullOrWhiteSpace(globalSettings.Amazon?.AccessKeyId))
+        var settings = options.Value;
+        if (string.IsNullOrWhiteSpace(settings.Amazon.AccessKeyId))
         {
-            throw new ArgumentNullException(nameof(globalSettings.Amazon.AccessKeyId));
+            throw new ArgumentNullException(nameof(settings.Amazon.AccessKeyId));
         }
-        if (string.IsNullOrWhiteSpace(globalSettings.Amazon?.AccessKeySecret))
+        if (string.IsNullOrWhiteSpace(settings.Amazon.AccessKeySecret))
         {
-            throw new ArgumentNullException(nameof(globalSettings.Amazon.AccessKeySecret));
+            throw new ArgumentNullException(nameof(settings.Amazon.AccessKeySecret));
         }
-        if (string.IsNullOrWhiteSpace(globalSettings.Amazon?.Region))
+        if (string.IsNullOrWhiteSpace(settings.Amazon.Region))
         {
-            throw new ArgumentNullException(nameof(globalSettings.Amazon.Region));
+            throw new ArgumentNullException(nameof(settings.Amazon.Region));
         }
 
-        var replyToEmail = CoreHelpers.PunyEncode(globalSettings.Mail.ReplyToEmail);
+        var replyToEmail = PunyEncoding.PunyEncode(settings.ReplyToEmail);
 
-        _globalSettings = globalSettings;
         _hostingEnvironment = hostingEnvironment;
         _logger = logger;
         _client = amazonSimpleEmailService;
-        _source = $"\"{globalSettings.SiteName}\" <{replyToEmail}>";
-        _senderTag = $"Server_{globalSettings.ProjectName?.Replace(' ', '_')}";
-        if (!string.IsNullOrWhiteSpace(_globalSettings.Mail.AmazonConfigSetName))
+        _source = $"\"{settings.SiteName}\" <{replyToEmail}>";
+        _senderTag = $"Server_{settings.ProjectName?.Replace(' ', '_')}";
+        if (!string.IsNullOrWhiteSpace(settings.AmazonConfigSetName))
         {
-            _configSetName = _globalSettings.Mail.AmazonConfigSetName;
+            _configSetName = settings.AmazonConfigSetName;
         }
     }
 
@@ -81,7 +77,7 @@ public class AmazonSesMailDeliveryService : IMailDeliveryService, IDisposable
             Destination = new Destination
             {
                 ToAddresses = message.ToEmails
-                    .Select(email => CoreHelpers.PunyEncode(email))
+                    .Select(email => PunyEncoding.PunyEncode(email))
                     .ToList()
             },
             Message = new Message
@@ -111,13 +107,13 @@ public class AmazonSesMailDeliveryService : IMailDeliveryService, IDisposable
         if (message.BccEmails?.Any() ?? false)
         {
             request.Destination.BccAddresses = message.BccEmails
-                .Select(email => CoreHelpers.PunyEncode(email))
+                .Select(email => PunyEncoding.PunyEncode(email))
                 .ToList();
         }
 
         if (!string.IsNullOrWhiteSpace(message.ReplyToAddress))
         {
-            request.ReplyToAddresses = [CoreHelpers.PunyEncode(message.ReplyToAddress)];
+            request.ReplyToAddresses = [PunyEncoding.PunyEncode(message.ReplyToAddress)];
         }
 
         if (!string.IsNullOrWhiteSpace(message.Category))

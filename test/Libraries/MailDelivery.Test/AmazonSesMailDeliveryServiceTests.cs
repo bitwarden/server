@@ -2,26 +2,25 @@
 using Amazon.SimpleEmail.Model;
 using Bit.Core.Models.Mail;
 using Bit.Core.Platform.Mail.Delivery;
-using Bit.Core.Settings;
-using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NSubstitute;
-using Xunit;
 
-namespace Bit.Core.Test.Services;
+namespace Bit.MailDelivery.Test;
 
 public class AmazonSesMailDeliveryServiceTests : IDisposable
 {
     private readonly AmazonSesMailDeliveryService _sut;
 
-    private readonly GlobalSettings _globalSettings;
-    private readonly IWebHostEnvironment _hostingEnvironment;
+    private readonly MailDeliveryOptions _options;
+    private readonly IHostEnvironment _hostingEnvironment;
     private readonly ILogger<AmazonSesMailDeliveryService> _logger;
     private readonly IAmazonSimpleEmailService _amazonSimpleEmailService;
 
     public AmazonSesMailDeliveryServiceTests()
     {
-        _globalSettings = new GlobalSettings
+        _options = new MailDeliveryOptions
         {
             Amazon =
                     {
@@ -29,15 +28,15 @@ public class AmazonSesMailDeliveryServiceTests : IDisposable
                         AccessKeySecret = "AccessKeySecret-AmazonSesMailDeliveryServiceTests",
                         Region = "Region-AmazonSesMailDeliveryServiceTests"
                     },
-            Mail = { ReplyToEmail = "no-reply@bitwarden.com" }
+            ReplyToEmail = "no-reply@bitwarden.com"
         };
 
-        _hostingEnvironment = Substitute.For<IWebHostEnvironment>();
+        _hostingEnvironment = Substitute.For<IHostEnvironment>();
         _logger = Substitute.For<ILogger<AmazonSesMailDeliveryService>>();
         _amazonSimpleEmailService = Substitute.For<IAmazonSimpleEmailService>();
 
         _sut = new AmazonSesMailDeliveryService(
-            _globalSettings,
+            Options.Create(_options),
             _hostingEnvironment,
             _logger,
             _amazonSimpleEmailService

@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "AWSSDK.SimpleEmail": {
+        "type": "Direct",
+        "requested": "[4.0.2.5, 4.0.2.5]",
+        "resolved": "4.0.2.5",
+        "contentHash": "LvV5mXlvpR3fTAJysO3KmUC6bR/KUZpdkcMJ5b6lYNpStlsFN+MXcaMh34TuwYaTCgIjF3bJb4oZifFkgh+Ccw==",
+        "dependencies": {
+          "AWSSDK.Core": "[4.0.3.3, 5.0.0)"
+        }
+      },
+      "MailKit": {
+        "type": "Direct",
+        "requested": "[4.17.0, 4.17.0]",
+        "resolved": "4.17.0",
+        "contentHash": "1nUAVLxM9fhT/78we6/AGsCesnpn5dRNLLeRqOfr52Wnk87pzVwo5YMTMyqnmoXrYc7piGhmayiMA/OgDluIjg==",
+        "dependencies": {
+          "MimeKit": "4.17.0"
+        }
+      },
+      "SendGrid": {
+        "type": "Direct",
+        "requested": "[9.29.3, 9.29.3]",
+        "resolved": "9.29.3",
+        "contentHash": "nb/zHePecN9U4/Bmct+O+lpgK994JklbCCNMIgGPOone/DngjQoMCHeTvkl+m0Nglvm0dqMEshmvB4fO8eF3dA==",
+        "dependencies": {
+          "Newtonsoft.Json": "13.0.1",
+          "starkbank-ecdsa": "[1.3.3, 2.0.0)"
+        }
+      },
+      "AWSSDK.Core": {
+        "type": "Transitive",
+        "resolved": "4.0.3.3",
+        "contentHash": "YQv10JuxnciWh0QwnkarSbge4gXQV1qTURf5jkBjNUH/3jYS9QrbxopA4TK1qdjfOfP37tqiJkLSrRRNqX81aw=="
+      },
+      "BouncyCastle.Cryptography": {
+        "type": "Transitive",
+        "resolved": "2.6.2",
+        "contentHash": "7oWOcvnntmMKNzDLsdxAYqApt+AjpRpP2CShjMfIa3umZ42UQMvH0tl1qAliYPNYO6vTdcGMqnRrCPmsfzTI1w=="
+      },
+      "MimeKit": {
+        "type": "Transitive",
+        "resolved": "4.17.0",
+        "contentHash": "h/KXsCreJf8RpR/PSAtlbvYtZFndp9N8Wn1Bs248AL7ITyhn+AiIY5bLTvt60tbN2mu6g8KadtBNWygTji2lqg==",
+        "dependencies": {
+          "BouncyCastle.Cryptography": "2.6.2",
+          "System.Security.Cryptography.Pkcs": "10.0.0"
+        }
+      },
+      "Newtonsoft.Json": {
+        "type": "Transitive",
+        "resolved": "13.0.1",
+        "contentHash": "ppPFpBcvxdsfUonNcvITKqLl3bqxWbDCZIzDWHzjpdAHRFfZe0Dw9HmA0+za13IdyrgJwpkDTDA9fHaxOrt20A=="
+      },
+      "starkbank-ecdsa": {
+        "type": "Transitive",
+        "resolved": "1.3.3",
+        "contentHash": "OblOaKb1enXn+dSp7tsx9yjwV+/BEKM9jFhshIkZTwCk7LuTFTp+wSon6rFzuPiIiTGtvVWQNUw2slHjGktJog=="
+      },
+      "System.Security.Cryptography.Pkcs": {
+        "type": "Transitive",
+        "resolved": "10.0.0",
+        "contentHash": "UPWqLSygJlFerRi9XNIuM0a1VC8gHUIufyP24xQ0sc+XimqUAEcjpOz9DhKpyDjH+5B/wO3RpC0KpkEeDj/ddg=="
+      }
+    }
+  }
+}
