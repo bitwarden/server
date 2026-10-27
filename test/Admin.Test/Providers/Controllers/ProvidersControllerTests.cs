@@ -1,20 +1,22 @@
 ﻿using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Providers.Controllers;
 using Bit.Admin.Providers.Models;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Services;
+using Bit.Core.Exceptions;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using NSubstitute.ReceivedExtensions;
 using Stripe;
 
@@ -233,15 +235,12 @@ public class ProvidersControllerTests
     [BitAutoData]
     [SutProviderCustomize]
     [Theory]
-    public async Task CreateOrganization_PrivilegedControlsOn_FlagOn_Rejects(
+    public async Task CreateOrganization_PrivilegedControlsOn_Rejects(
         Provider provider,
         SutProvider<ProvidersController> sutProvider)
     {
         provider.Type = ProviderType.Reseller;
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
-        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
-            .IsEnabled(Bit.Core.FeatureFlagKeys.PM39883_Pam_Billing_Support)
-            .Returns(true);
         sutProvider.Sut.TempData =
             new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
 
@@ -250,40 +249,38 @@ public class ProvidersControllerTests
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("CreateOrganization", redirect.ActionName);
         Assert.Equal(provider.Id, redirect.RouteValues!["providerId"]);
+        Assert.Equal(
+            "Organizations managed by a provider can't use Privileged Access Management",
+            (string)sutProvider.Sut.TempData["Error"]);
         await sutProvider.GetDependency<IResellerClientOrganizationSignUpCommand>().DidNotReceiveWithAnyArgs()
             .SignUpResellerClientAsync(default, default);
+        await sutProvider.GetDependency<IProviderService>().DidNotReceiveWithAnyArgs()
+            .AddOrganization(default, default, default);
     }
 
     [BitAutoData]
     [SutProviderCustomize]
     [Theory]
-    public async Task CreateOrganization_PrivilegedControlsOn_FlagOff_Creates(
-        Provider provider,
+    public async Task AddExistingOrganization_ServiceRejects_SetsErrorAndRedirectsToSearch(
+        Guid providerId,
+        Guid organizationId,
         SutProvider<ProvidersController> sutProvider)
     {
-        provider.Type = ProviderType.Reseller;
-        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
-        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
-            .IsEnabled(Bit.Core.FeatureFlagKeys.PM39883_Pam_Billing_Support)
-            .Returns(false);
-        var model = new OrganizationEditModel
+        sutProvider.GetDependency<IProviderService>()
+            .AddOrganizationsToReseller(providerId, Arg.Any<IEnumerable<Guid>>())
+            .ThrowsAsync(new BadRequestException("rejected"));
+        sutProvider.Sut.TempData =
+            new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+        var model = new OrganizationUnassignedToProviderSearchViewModel
         {
-            Name = "Reseller client",
-            PlanType = PlanType.EnterpriseAnnually,
-            Plan = "Enterprise (Annually)",
-            UsePam = true,
-            Owners = "owner@example.com"
+            Items = [new OrganizationSelectableViewModel { Id = organizationId, Selected = true }]
         };
 
-        await sutProvider.Sut.CreateOrganization(provider.Id, model);
+        var result = await sutProvider.Sut.AddExistingOrganization(providerId, model);
 
-        await sutProvider.GetDependency<IResellerClientOrganizationSignUpCommand>().Received(1)
-            .SignUpResellerClientAsync(
-                Arg.Is<Organization>(o =>
-                    o.Name == "Reseller client" &&
-                    o.PlanType == PlanType.EnterpriseAnnually &&
-                    o.Plan == "Enterprise (Annually)" &&
-                    o.UsePam),
-                "owner@example.com");
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal("AddExistingOrganization", redirect.ActionName);
+        Assert.Equal(providerId, redirect.RouteValues!["id"]);
+        Assert.Equal("rejected", sutProvider.Sut.TempData["Error"]);
     }
 }

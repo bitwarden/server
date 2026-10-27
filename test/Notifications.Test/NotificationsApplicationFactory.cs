@@ -1,8 +1,12 @@
 ﻿using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Notifications;
+using Bit.Test.Common.Constants;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.SignalR.Protocol;
@@ -31,6 +35,7 @@ public sealed class NotificationsApplicationFactory : IAsyncDisposable, IAsyncLi
     private readonly WebApplicationFactory<Bit.Notifications.Program> _notificationsFactory;
     private readonly Lazy<Task<string>> _cachedToken;
     private readonly HubInvocationRecorder _recorder = new();
+    private readonly DirectoryInfo _dataProtectionDirectory = Directory.CreateTempSubdirectory("notifications-test-");
 
     public NotificationsApplicationFactory()
     {
@@ -44,6 +49,9 @@ public sealed class NotificationsApplicationFactory : IAsyncDisposable, IAsyncLi
                 { "globalSettings:selfHosted", "true" },
                 { "globalSettings:internalIdentityKey", InternalIdentityKey },
                 { "globalSettings:installation:id", "10000000-0000-0000-0000-000000000000" },
+                // Self-hosted keeps data protection keys under /etc/bitwarden by default, which tests can't
+                // write to. Registration protects its email verification token with them.
+                { "globalSettings:dataProtection:directory", _dataProtectionDirectory.FullName },
             });
         });
 
@@ -57,8 +65,8 @@ public sealed class NotificationsApplicationFactory : IAsyncDisposable, IAsyncLi
                 config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     { "OpenTelemetry:Enabled", "false" },
-                    // SelfHosted = true activates the [SelfHosted(SelfHostedOnly = true)] filter on
-                    // SendController, and skips cloud-only background services at startup.
+                    // SelfHosted = true maps the /send endpoint, and skips cloud-only background services
+                    // at startup.
                     { "globalSettings:selfHosted", "true" },
                     // The host portion of this URI is irrelevant; all backchannel requests (OIDC discovery,
                     // JWKS) are routed directly to the Identity test server via BackchannelHttpHandler.
@@ -103,10 +111,36 @@ public sealed class NotificationsApplicationFactory : IAsyncDisposable, IAsyncLi
 
     public HttpClient CreateClient() => _notificationsFactory.CreateClient();
 
+    /// <summary>
+    /// Registers a new account with the Identity server and returns an access token for it, as a client
+    /// would hold when connecting to the hub.
+    /// </summary>
+    public async Task<string> LoginWithNewAccountAsync(string email)
+    {
+        const string masterPasswordHash = "master_password_hash";
+        await _identityFactory.RegisterNewIdentityFactoryUserAsync(new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            UserAsymmetricKeys = new KeysRequestModel
+            {
+                PublicKey = TestEncryptionConstants.PublicKey,
+                EncryptedPrivateKey = TestEncryptionConstants.AES256_CBC_HMAC_Encstring,
+            },
+            UserSymmetricKey = TestEncryptionConstants.AES256_CBC_HMAC_Encstring,
+        });
+
+        var (token, _) = await _identityFactory.TokenFromPasswordAsync(email, masterPasswordHash);
+        return token;
+    }
+
     public async ValueTask DisposeAsync()
     {
         await _notificationsFactory.DisposeAsync();
         _identityFactory.Dispose();
+        _dataProtectionDirectory.Delete(recursive: true);
     }
 
     // Lets xunit own the lifetime when this is used as a class fixture, so the app and its

@@ -83,18 +83,20 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
         InvoicePreview preview;
         try
         {
-            preview = await invoicePreviewService.GetInvoicePreviewAsync(options, planTier, cadence);
+            preview = await invoicePreviewService.GetInvoicePreviewForBillingAddressAsync(options, planTier, cadence);
         }
         catch (StripeException stripeException)
             when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.CustomerTaxLocationInvalid)
         {
             throw new BadRequestException(
+                BillingErrorKeys.BillingAddress,
                 "Your location wasn't recognized. Please ensure your country and postal code are valid and try again.");
         }
         catch (StripeException stripeException)
             when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.TaxIdInvalid)
         {
             throw new BadRequestException(
+                BillingErrorKeys.BillingAddress,
                 "The tax ID number you provided was invalid. Please try again or contact support for assistance.");
         }
 
@@ -169,7 +171,7 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
                 "Sponsorship is only available on the Families plan.");
         }
 
-        if (passwordManager.Seats is < 1 or > 100000)
+        if (passwordManager.Seats is < 1 or > PlanConstants.MaxPurchasableQuantity)
         {
             throw new BadRequestException(
                 $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.PasswordManager)}.{nameof(PasswordManagerSelections.Seats)}",
@@ -185,14 +187,14 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
 
         if (purchase.SecretsManager is { } secretsManager)
         {
-            if (secretsManager.Seats is < 1 or > 100000)
+            if (secretsManager.Seats is < 1 or > PlanConstants.MaxPurchasableQuantity)
             {
                 throw new BadRequestException(
                     $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.SecretsManager)}.{nameof(SecretsManagerSelections.Seats)}",
                     "Secrets Manager seats must be between 1 and 100,000.");
             }
 
-            if (secretsManager.AdditionalServiceAccounts is < 0 or > 100000)
+            if (secretsManager.AdditionalServiceAccounts is < 0 or > PlanConstants.MaxPurchasableQuantity)
             {
                 throw new BadRequestException(
                     $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.SecretsManager)}.{nameof(SecretsManagerSelections.AdditionalServiceAccounts)}",

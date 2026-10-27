@@ -9,7 +9,9 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Bit.RustSDK;
+using Bit.Seeder.Extensions;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Services;
@@ -33,9 +35,9 @@ public struct SingleProviderSceneResult
 /// entity changes as <c>ProviderBillingService.AddExistingOrganization</c>, and each plan's allocated seats are the
 /// summed seats of its linked clients; Pending and Reseller links leave the organization unchanged. Type/status pairs
 /// production cannot create (Reseller not Created, MSP/Business Unit Created) are rejected, as are Stripe IDs on a
-/// Pending provider. The scene makes no Stripe
-/// calls: it does not cancel client subscriptions or move customer balances, and it only links caller-supplied
-/// Stripe customer/subscription IDs to the provider.
+/// Pending provider, organizations already linked to a provider, and any request on a self-hosted instance. The scene
+/// makes no Stripe calls: it does not cancel client subscriptions or move customer balances, and it only links
+/// caller-supplied Stripe customer/subscription IDs to the provider.
 /// </summary>
 public class SingleProviderScene(
     IUserRepository userRepository,
@@ -44,6 +46,7 @@ public class SingleProviderScene(
     IProviderUserRepository providerUserRepository,
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderPlanRepository providerPlanRepository,
+    IGlobalSettings globalSettings,
     IManglerService manglerService) : IScene<SingleProviderScene.Request, SingleProviderSceneResult>
 {
     public class Request
@@ -82,7 +85,17 @@ public class SingleProviderScene(
 
     public async Task<SceneResult<SingleProviderSceneResult>> SeedAsync(Request request)
     {
+        globalSettings.ThrowIfSelfHosted("Providers");
+
         var status = ResolveStatus(request);
+        var plans = request.Plans.DistinctOrThrowIfConflicting(
+            p => p.PlanType,
+            p => p.Seats,
+            planType => $"Conflicting seat minimums requested for plan {planType}.");
+        var links = request.Organizations.DistinctOrThrowIfConflicting(
+            o => o.OrganizationId,
+            o => o.OrganizationKeyB64,
+            organizationId => $"Conflicting organization keys requested for organization {organizationId}.");
         var convertsToManagedClient =
             request.Type.SupportsConsolidatedBilling() && status == ProviderStatusType.Billable;
 
@@ -98,10 +111,13 @@ public class SingleProviderScene(
                 $"User {request.OwnerUserId} has no public key; cannot encrypt the provider key for the owner.");
         }
 
+        await providerOrganizationRepository.ThrowIfOrganizationsLinkedToProviderAsync(
+            links.Select(o => o.OrganizationId));
+
         var providerKey = RustSdkService.GenerateOrganizationKeys().Key;
 
         var clients = new List<(Organization Organization, string WrappedKey, PlanType? ManagedPlanType)>();
-        foreach (var link in request.Organizations)
+        foreach (var link in links)
         {
             var organization = await organizationRepository.GetByIdAsync(link.OrganizationId)
                 ?? throw new InvalidOperationException($"Organization {link.OrganizationId} not found.");
@@ -134,7 +150,7 @@ public class SingleProviderScene(
         var providerUser = ProviderUserSeeder.CreateConfirmedAdmin(provider, owner, providerKey);
         await providerUserRepository.CreateAsync(providerUser);
 
-        foreach (var plan in request.Plans)
+        foreach (var plan in plans)
         {
             var allocatedSeats = clients
                 .Where(c => c.ManagedPlanType == plan.PlanType)

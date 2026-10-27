@@ -65,6 +65,7 @@ public class ProviderService : IProviderService
     private readonly IPricingClient _pricingClient;
     private readonly IProviderClientOrganizationSignUpCommand _providerClientOrganizationSignUpCommand;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly TimeProvider _timeProvider;
 
     public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
         IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
@@ -77,7 +78,8 @@ public class ProviderService : IProviderService
         IProviderAbilityCacheService providerAbilityCacheService,
         IProviderBillingService providerBillingService, IPricingClient pricingClient,
         IProviderClientOrganizationSignUpCommand providerClientOrganizationSignUpCommand,
-        IPolicyRequirementQuery policyRequirementQuery)
+        IPolicyRequirementQuery policyRequirementQuery,
+        TimeProvider timeProvider)
     {
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
@@ -99,6 +101,7 @@ public class ProviderService : IProviderService
         _pricingClient = pricingClient;
         _providerClientOrganizationSignUpCommand = providerClientOrganizationSignUpCommand;
         _policyRequirementQuery = policyRequirementQuery;
+        _timeProvider = timeProvider;
     }
 
     public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key, TokenizedPaymentMethod paymentMethod, BillingAddress billingAddress)
@@ -159,6 +162,7 @@ public class ProviderService : IProviderService
         var enabledStatusChanged = existingProvider != null && existingProvider.Enabled != provider.Enabled;
 
         await _providerRepository.ReplaceAsync(provider);
+        await _providerAbilityCacheService.UpsertProviderAbilityAsync(provider);
 
         if (enabledStatusChanged && (provider.Type == ProviderType.Msp || provider.Type == ProviderType.BusinessUnit))
         {
@@ -444,6 +448,12 @@ public class ProviderService : IProviderService
 
         ThrowOnInvalidPlanType(provider.Type, organization.PlanType);
 
+        if (organization.UsePam)
+        {
+            throw new BadRequestException(
+                "Organizations managed by a provider can't use Privileged Controls. Please contact Customer Support.");
+        }
+
         if (organization.UseSecretsManager && provider.Type != ProviderType.Reseller)
         {
             throw new BadRequestException(
@@ -487,6 +497,12 @@ public class ProviderService : IProviderService
         if (existingProviderOrganizationsCount > 0)
         {
             throw new BadRequestException("Organizations must not be assigned to any Provider.");
+        }
+
+        var organizations = await _organizationRepository.GetManyByIdsAsync(orgIdsList);
+        if (organizations.Any(o => o.UsePam))
+        {
+            throw new BadRequestException("Organizations managed by a provider can't use Privileged Controls. Turn it off for the selected organizations and try again.");
         }
 
         var providerOrganizationsToInsert = orgIdsList.Select(orgId => new ProviderOrganization { ProviderId = providerId, OrganizationId = orgId });
@@ -696,7 +712,7 @@ public class ProviderService : IProviderService
             throw new BadRequestException("Org admin not found.");
         }
 
-        var token = _providerDeleteTokenDataFactory.Protect(new ProviderDeleteTokenable(provider, 1));
+        var token = _providerDeleteTokenDataFactory.Protect(new ProviderDeleteTokenable(provider, _timeProvider));
         await _mailService.SendInitiateDeletProviderEmailAsync(providerAdminEmail, provider, token);
     }
 

@@ -117,6 +117,27 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task RestoreManyAsync(IEnumerable<Guid> organizationUserIds, OrganizationUserStatusType status);
 
     /// <summary>
+    /// Starts the invite reminder sequence for the given members. Sets the count to 0.
+    /// Sets the due date to <paramref name="dueDate"/>, but keeps a later stored due date.
+    /// Does not change the account revision date.
+    /// </summary>
+    /// <param name="organizationUserIds">The member IDs.</param>
+    /// <param name="dueDate">When the next reminder is due.</param>
+    Task StartInviteReminderSequencesAsync(IEnumerable<Guid> organizationUserIds, DateTime dueDate);
+    /// <summary>
+    /// Claims the invited members whose reminder is due, oldest first. Adds 1 to each count and sets the due date
+    /// to <paramref name="nextDueDate"/>. Thus, a second claim cannot get the same member.
+    /// The 3rd claim clears the due date instead, which ends the sequence.
+    /// Skips members without an email, members of disabled organizations, and members with 3 reminders.
+    /// </summary>
+    /// <param name="now">The latest due date to claim.</param>
+    /// <param name="oldestDueDate">The earliest due date to claim. Older reminders are too late.</param>
+    /// <param name="nextDueDate">The new due date for each claimed member.</param>
+    /// <param name="batchSize">The maximum number of members to claim.</param>
+    Task<ICollection<OrganizationUserInviteReminder>> ClaimInviteReminderSequencesAsync(DateTime now,
+        DateTime oldestDueDate, DateTime nextDueDate, int batchSize);
+
+    /// <summary>
     /// Returns a list of OrganizationUsersUserDetails with the specified role.
     /// </summary>
     /// <param name="organizationId">The organization to search within</param>

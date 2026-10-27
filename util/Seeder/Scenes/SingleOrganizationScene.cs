@@ -3,8 +3,10 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.RustSDK;
+using Bit.Seeder.Extensions;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Options;
@@ -28,6 +30,7 @@ public class SingleOrganizationScene(
     IOrganizationRepository organizationRepository,
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationApiKeyRepository organizationApiKeyRepository,
+    IGlobalSettings globalSettings,
     IManglerService manglerService) : IScene<SingleOrganizationScene.Request, SingleOrganizationSceneResult>
 {
     public class Request
@@ -53,6 +56,8 @@ public class SingleOrganizationScene(
 
     public async Task<SceneResult<SingleOrganizationSceneResult>> SeedAsync(Request request)
     {
+        globalSettings.ThrowIfSelfHostedWithGatewayIds(request.GatewayCustomerId, request.GatewaySubscriptionId);
+
         var user = await userRepository.GetByIdAsync(request.OwnerUserId);
         if (user == null)
         {

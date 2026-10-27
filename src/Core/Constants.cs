@@ -127,11 +127,6 @@ public static class TokenPurposes
     public const string LinkSso = "LinkSso";
 }
 
-public static class AuthenticationSchemes
-{
-    public const string BitwardenExternalCookieAuthenticationScheme = "bw.external";
-}
-
 [FlagKeyCollection]
 public static partial class FeatureFlagKeys
 {
@@ -141,9 +136,11 @@ public static partial class FeatureFlagKeys
     public const string GenerateInviteLink = "pm-32497-generate-invite-link";
     public const string InviteLinkAutoConfirm = "pm-34429-invite-link-auto-confirm";
     public const string InviteLinkNotification = "pm-39601-invite-link-notification";
+    public const string AutoReinviteUsers = "pm-39473-auto-reinvite-users";
     public const string PM35153CollectionSdkDecryption = "pm-35153-collection-sdk-decryption";
     public const string PM43375CollectionsDecryptListFailures = "pm-43375-collections-decrypt-list-failures";
     public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
+    public const string GroupsTableV2 = "pm-43419-groups-table-v2";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
@@ -233,6 +230,7 @@ public static partial class FeatureFlagKeys
     public const string DeviceAuthKey = "pm-27581-device-auth-key";
     public const string PremiumUpgradePath = "pm-31697-premium-upgrade-path";
     public const string MobileCardScanner = "pm-34171-card-scanner";
+    public const string SdkPinUnlock = "pm-31059-sdk-pin-unlock";
 
     /* Platform Team */
     public const string WebPush = "web-push";

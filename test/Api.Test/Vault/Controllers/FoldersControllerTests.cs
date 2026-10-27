@@ -2,7 +2,6 @@
 using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core.Exceptions;
-using Bit.Core.Services;
 using Bit.Core.Vault.Commands.Interfaces;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -21,7 +20,7 @@ public class FoldersControllerTests
         SutProvider<FoldersController> sutProvider, Guid userId, Guid firstFolderId, Guid secondFolderId)
     {
         sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentUserContext>().UserId.Returns(userId);
 
         var model = new FolderBulkDeleteRequestModel { Ids = [firstFolderId, secondFolderId] };
 
@@ -49,7 +48,7 @@ public class FoldersControllerTests
         SutProvider<FoldersController> sutProvider, Guid userId)
     {
         sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentUserContext>().UserId.Returns(userId);
 
         var model = new FolderBulkDeleteRequestModel
         {
@@ -67,7 +66,7 @@ public class FoldersControllerTests
         SutProvider<FoldersController> sutProvider, Guid userId)
     {
         sutProvider.GetDependency<GlobalSettings>().SelfHosted = true;
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentUserContext>().UserId.Returns(userId);
 
         var model = new FolderBulkDeleteRequestModel
         {

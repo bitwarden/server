@@ -225,6 +225,9 @@ public class CipherLeaseGate : ICipherLeaseGate
         return FullCipherAccess.ForCiphers(authorized);
     }
 
+    public FullCipherAccess AuthorizeAccessConnectorRotationRead(Cipher cipher) =>
+        Enabled ? FullCipherAccess.ForCipher(cipher.Id) : FullCipherAccess.Unrestricted();
+
     public FullCipherAccess UnrestrictedForWholeVaultExport() => FullCipherAccess.Unrestricted();
 
     /// <summary>

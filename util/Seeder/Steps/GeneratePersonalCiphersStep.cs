@@ -43,25 +43,17 @@ internal sealed class GeneratePersonalCiphersStep(
         var userFolderIds = context.Registry.UserFolderIds;
 
         // Force lazy generator init before parallel loop (prevents ??= data race)
-        _ = (generator.Username, generator.Card, generator.Identity, generator.SecureNote);
+        _ = (generator.Username, generator.Card, generator.Identity, generator.SecureNote, generator.UniquePassword, generator.LoginNotes, generator.CustomField, generator.TotpSecret);
 
         // Pre-compute per-user counts and globalIndex offsets
-        var userCounts = new int[userDigests.Count];
+        var userCounts = ComputeUserCounts(personalDist, countPerUser, userDigests.Count);
         var offsets = new int[userDigests.Count];
         var runningOffset = 0;
 
         for (var u = 0; u < userDigests.Count; u++)
         {
-            var userCount = countPerUser;
-            if (personalDist is not null)
-            {
-                var range = personalDist.Select(u, userDigests.Count);
-                userCount = range.Min + (u % Math.Max(range.Max - range.Min + 1, 1));
-            }
-
-            userCounts[u] = userCount;
             offsets[u] = runningOffset;
-            runningOffset += userCount;
+            runningOffset += userCounts[u];
         }
 
         // Guarantee the Owner (always userDigests[0]) has at least one personal cipher to archive
@@ -166,5 +158,28 @@ internal sealed class GeneratePersonalCiphersStep(
         context.Registry.CipherIds.AddRange(cipherIds);
 
         progress?.Report(new PhaseCompleted(SeederPhases.CreatingPersonalCiphers));
+    }
+
+    /// <summary>
+    /// Computes each user's personal cipher count: the flat <paramref name="countPerUser"/>, or with a
+    /// distribution, the user's bucket minimum plus <c>u</c> modulo the bucket width.
+    /// </summary>
+    internal static int[] ComputeUserCounts(Distribution<(int Min, int Max)>? distribution, int countPerUser, int userCount)
+    {
+        var userCounts = new int[userCount];
+
+        for (var u = 0; u < userCount; u++)
+        {
+            var count = countPerUser;
+            if (distribution is not null)
+            {
+                var range = distribution.Select(u, userCount);
+                count = range.Min + (u % Math.Max(range.Max - range.Min + 1, 1));
+            }
+
+            userCounts[u] = count;
+        }
+
+        return userCounts;
     }
 }

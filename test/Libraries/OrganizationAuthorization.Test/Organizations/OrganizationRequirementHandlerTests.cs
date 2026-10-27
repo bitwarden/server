@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Bit.Api.AdminConsole.Authorization;
-using Bit.Core.Services;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Authorization;
@@ -101,12 +102,40 @@ public class OrganizationRequirementHandlerTests
         Assert.True(authContext.HasSucceeded);
     }
 
+    [Theory, BitAutoData]
+    public async Task ProviderCallback_ChecksProviderMembershipForTheCallingUser(
+        SutProvider<OrganizationRequirementHandler> sutProvider, Guid organizationId, Guid userId)
+    {
+        // Arrange
+        ArrangeRouteAndUser(sutProvider, organizationId.ToString(), userId);
+        var testRequirement = Substitute.For<IOrganizationRequirement>();
+        testRequirement
+            .AuthorizeAsync(null, Arg.Any<Func<Task<bool>>>())
+            .ReturnsForAnyArgs(call => call.Arg<Func<Task<bool>>>()());
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetManyOrganizationDetailsByUserAsync(userId, ProviderUserStatusType.Confirmed)
+            .Returns([]);
+        var authContext = new AuthorizationHandlerContext([testRequirement], new ClaimsPrincipal(), null);
+
+        // Act
+        await sutProvider.Sut.HandleAsync(authContext);
+
+        // Assert
+        await sutProvider.GetDependency<IProviderUserRepository>().Received(1)
+            .GetManyOrganizationDetailsByUserAsync(userId, ProviderUserStatusType.Confirmed);
+    }
+
     private static void ArrangeRouteAndUser(SutProvider<OrganizationRequirementHandler> sutProvider, string orgIdRouteValue,
         Guid? userId)
     {
         var httpContext = new DefaultHttpContext();
         httpContext.Request.RouteValues["orgId"] = orgIdRouteValue;
         sutProvider.GetDependency<IHttpContextAccessor>().HttpContext = httpContext;
-        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        sutProvider.GetDependency<ICurrentUserContext>().TryGetUserId(out Arg.Any<Guid>())
+            .Returns(call =>
+            {
+                call[0] = userId ?? Guid.Empty;
+                return userId.HasValue;
+            });
     }
 }

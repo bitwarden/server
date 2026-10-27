@@ -9,6 +9,8 @@ namespace Bit.Core.Settings;
 
 public class GlobalSettings : IGlobalSettings
 {
+    public const int DefaultOrganizationInviteReminderBatchSize = 500;
+
     private string _mailTemplateDirectory;
     private string _licenseDirectory;
 
@@ -53,6 +55,7 @@ public class GlobalSettings : IGlobalSettings
     /// Lifetime of organization member invite links, in hours.
     /// </summary>
     public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
+    public virtual int OrganizationInviteReminderBatchSize { get; set; } = DefaultOrganizationInviteReminderBatchSize; // Set to 0 to turn off invite reminders
     /// <summary>
     /// Lifetime of emergency access invite links, in hours.
     /// </summary>
@@ -785,6 +788,11 @@ public class GlobalSettings : IGlobalSettings
         public int CacheLifetimeInSeconds { get; set; } = 60;
         public double SsoTokenLifetimeInSeconds { get; set; } = 5;
         public bool EnforceSsoPolicyForAllUsers { get; set; }
+        /// <summary>
+        /// Minimum number of days between RSA 1.5 deprecation emails to one organization.
+        /// The default is 7. A value of 0 or less turns the email off.
+        /// </summary>
+        public int Rsa15DeprecationEmailCooldownInDays { get; set; } = 7;
     }
 
     public class StripeSettings
