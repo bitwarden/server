@@ -98,16 +98,14 @@ public class UserEmailTokenCodeQueryTests
     }
 
     /// <summary>
-    /// The user-verification OTP is written as a bare string under a different key, and stays that way. This
-    /// pins that the envelope handling added for new device verification did not change it.
+    /// The user verification OTP is bound to the user's email, which is not a device, so the response carries
+    /// no device identifier.
     /// </summary>
     [Fact]
-    public async Task Execute_UserVerification_ReturnsBareCachedCode()
+    public async Task Execute_UserVerification_ReturnsCodeWithoutDevice()
     {
         var (query, cache, user) = Arrange();
-        await cache.SetAsync(
-            $"EmailToken_{user.Id}_{user.SecurityStamp}_otp:{user.Email}",
-            Encoding.UTF8.GetBytes("123456"));
+        var issuedCode = await BuildUserVerificationOtpStore(cache).IssueAsync(user);
 
         var response = await query.Execute(new UserEmailTokenCodeQuery.Request
         {
@@ -116,8 +114,24 @@ public class UserEmailTokenCodeQueryTests
         });
 
         Assert.True(response.Found);
-        Assert.Equal("123456", response.Code);
+        Assert.Equal(issuedCode, response.Code);
         Assert.Null(response.DeviceIdentifier);
+    }
+
+    [Fact]
+    public async Task Execute_UserVerification_LeavesTheCodeRedeemable()
+    {
+        var (query, cache, user) = Arrange();
+        var store = BuildUserVerificationOtpStore(cache);
+        await store.IssueAsync(user);
+
+        var response = await query.Execute(new UserEmailTokenCodeQuery.Request
+        {
+            Email = user.Email,
+            CodeType = UserEmailTokenCodeQuery.CodeType.UserVerification,
+        });
+
+        Assert.True(await store.ValidateAndConsumeWithFailureLimitAsync(user, response.Code));
     }
 
     [Fact]
@@ -166,5 +180,15 @@ public class UserEmailTokenCodeQueryTests
             TimeProvider.System);
 
         return new NewDeviceVerificationOtpStore(otpTokenProvider, cache);
+    }
+
+    private static UserVerificationOtpStore BuildUserVerificationOtpStore(IDistributedCache cache)
+    {
+        var otpTokenProvider = new OtpTokenProvider<DefaultOtpTokenProviderOptions>(
+            cache,
+            new OptionsWrapper<DefaultOtpTokenProviderOptions>(new DefaultOtpTokenProviderOptions()),
+            TimeProvider.System);
+
+        return new UserVerificationOtpStore(otpTokenProvider, cache, TimeProvider.System);
     }
 }
