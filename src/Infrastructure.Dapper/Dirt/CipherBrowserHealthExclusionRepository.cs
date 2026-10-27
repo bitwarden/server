@@ -16,6 +16,16 @@ public class CipherBrowserHealthExclusionRepository : BaseRepository, ICipherBro
 
     public async Task<int> ExcludeAsync(IEnumerable<Guid> cipherIds, Guid userId)
     {
+        return await UpdateExclusionsAsync(cipherIds, userId, true);
+    }
+
+    public async Task<int> UnexcludeAsync(IEnumerable<Guid> cipherIds, Guid userId)
+    {
+        return await UpdateExclusionsAsync(cipherIds, userId, false);
+    }
+
+    private async Task<int> UpdateExclusionsAsync(IEnumerable<Guid> cipherIds, Guid userId, bool exclude)
+    {
         var ids = cipherIds.ToList();
         if (ids.Count == 0)
         {
@@ -25,7 +35,7 @@ public class CipherBrowserHealthExclusionRepository : BaseRepository, ICipherBro
         await using var connection = new SqlConnection(ConnectionString);
         return await connection.ExecuteScalarAsync<int>(
             "[dbo].[Cipher_UpdateManyBrowserHealthExclusions]",
-            new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
+            new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId, Exclude = exclude },
             commandType: CommandType.StoredProcedure);
     }
 }

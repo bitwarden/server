@@ -17,6 +17,16 @@ public class CipherBrowserHealthExclusionRepository : BaseEntityFrameworkReposit
 
     public async Task<int> ExcludeAsync(IEnumerable<Guid> cipherIds, Guid userId)
     {
+        return await UpdateExclusionsAsync(cipherIds, userId, true);
+    }
+
+    public async Task<int> UnexcludeAsync(IEnumerable<Guid> cipherIds, Guid userId)
+    {
+        return await UpdateExclusionsAsync(cipherIds, userId, false);
+    }
+
+    private async Task<int> UpdateExclusionsAsync(IEnumerable<Guid> cipherIds, Guid userId, bool exclude)
+    {
         var ids = cipherIds.ToList();
         if (ids.Count == 0)
         {
@@ -36,7 +46,7 @@ public class CipherBrowserHealthExclusionRepository : BaseEntityFrameworkReposit
                 ? new Dictionary<Guid, bool>()
                 : CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, bool>>(cipher.BrowserHealthExclusions)
                   ?? new Dictionary<Guid, bool>();
-            exclusions[userId] = true;
+            exclusions[userId] = exclude;
             cipher.BrowserHealthExclusions = CoreHelpers.ClassToJsonData(exclusions);
         }
 

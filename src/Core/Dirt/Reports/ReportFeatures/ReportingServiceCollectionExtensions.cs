@@ -33,5 +33,7 @@ public static class ReportingServiceCollectionExtensions
         services.AddScoped<ICreateOrganizationReportCommand, CreateOrganizationReportCommand>();
         services.AddScoped<IUpdateOrganizationReportV2Command, UpdateOrganizationReportV2Command>();
         services.AddScoped<IValidateOrganizationReportFileCommand, ValidateOrganizationReportFileCommand>();
+
+        services.AddScoped<IUpdateCipherBrowserHealthExclusionCommand, UpdateCipherBrowserHealthExclusionCommand>();
     }
 }
