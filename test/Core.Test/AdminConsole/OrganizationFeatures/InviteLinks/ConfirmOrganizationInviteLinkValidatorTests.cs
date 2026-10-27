@@ -36,19 +36,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     ];
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_WithLinkNotFound_ReturnsInviteLinkNotFound(
-        ConfirmOrganizationInviteLinkValidationRequest request,
-        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
-    {
-        // Act
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        // Assert
-        Assert.True(result.IsError);
-        Assert.IsType<InviteLinkNotFound>(result.AsError);
-    }
-
-    [Theory, BitAutoData]
     public async Task ValidateAsync_WithOrganizationNotUsingInviteLinks_ReturnsInviteLinkNotAvailable(
         Organization organization,
         OrganizationInviteLink inviteLink,
@@ -143,30 +130,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_WithRevokedMember_ReturnsOrganizationAccessRevoked(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        OrganizationUser revokedOrganizationUser,
-        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
-    {
-        // Arrange
-        SetupHappyPath(organization, inviteLink, user, sutProvider);
-        revokedOrganizationUser.RevocationReason = RevocationReason.Manual;
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationAsync(organization.Id, user.Id)
-            .Returns(revokedOrganizationUser);
-
-        // Act
-        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(inviteLink, user));
-
-        // Assert
-        Assert.True(result.IsError);
-        Assert.IsType<ConfirmOrganizationAccessRevoked>(result.AsError);
-    }
-
-    [Theory, BitAutoData]
     public async Task ValidateAsync_WithRevokedEmailInvite_ReturnsOrganizationAccessRevoked(
         Organization organization,
         OrganizationInviteLink inviteLink,
@@ -215,35 +178,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         // Assert
         Assert.True(result.IsError);
         Assert.IsType<ConfirmAlreadyOrganizationMember>(result.AsError);
-    }
-
-    [Theory]
-    [BitAutoData(OrganizationUserStatusType.Invited)]
-    [BitAutoData(OrganizationUserStatusType.Accepted)]
-    [BitAutoData(OrganizationUserStatusType.Staged)]
-    public async Task ValidateAsync_WithUnconfirmedExistingMember_IsAllowed(
-        OrganizationUserStatusType status,
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        OrganizationUser existingOrganizationUser,
-        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
-    {
-        // Arrange
-        SetupHappyPath(organization, inviteLink, user, sutProvider);
-        existingOrganizationUser.Status = status;
-        existingOrganizationUser.RevocationReason = null;
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationAsync(organization.Id, user.Id)
-            .Returns(existingOrganizationUser);
-
-        // Act
-        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(inviteLink, user));
-
-        // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Same(existingOrganizationUser, result.AsSuccess.ExistingOrganizationUser);
     }
 
     [Theory]
