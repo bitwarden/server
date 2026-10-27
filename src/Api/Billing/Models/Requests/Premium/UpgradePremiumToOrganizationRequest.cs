@@ -28,6 +28,8 @@ public class UpgradePremiumToOrganizationRequest
     [Required]
     public required CheckoutBillingAddressRequest BillingAddress { get; set; }
 
+    public DateTime? ProrationDate { get; set; }
+
     private PlanType PlanType
     {
         get

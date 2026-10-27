@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Payment.Models;
@@ -7,6 +8,7 @@ using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions;
 using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Entities;
@@ -19,6 +21,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stripe;
+using Stripe.TestHelpers;
 using Xunit;
 using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
 using PremiumPurchasable = Bit.Core.Billing.Pricing.Premium.Purchasable;
@@ -269,7 +272,7 @@ public class UpgradePremiumToOrganizationCommandTests
             stripeSeatPlanId: "teams-seat-annually"
         );
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123")
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>())
             .Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
@@ -348,7 +351,7 @@ public class UpgradePremiumToOrganizationCommandTests
             baseSeats: 6
         );
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123")
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>())
             .Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(mockPlan);
@@ -418,7 +421,7 @@ public class UpgradePremiumToOrganizationCommandTests
             stripeSeatPlanId: "teams-seat-annually"
         );
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123")
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>())
             .Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
@@ -483,7 +486,7 @@ public class UpgradePremiumToOrganizationCommandTests
             stripeSeatPlanId: "teams-seat-annually"
         );
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123")
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>())
             .Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
@@ -553,7 +556,7 @@ public class UpgradePremiumToOrganizationCommandTests
             stripeSeatPlanId: "teams-seat-annually"
         );
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123")
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>())
             .Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
@@ -611,7 +614,7 @@ public class UpgradePremiumToOrganizationCommandTests
 
         var mockPremiumPlans = CreateTestPremiumPlansList();
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123")
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>())
             .Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
 
@@ -648,7 +651,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var mockPremiumPlans = CreateTestPremiumPlansList();
         var mockPlan = CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually");
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
@@ -700,7 +703,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var mockPremiumPlans = CreateTestPremiumPlansList();
         var mockPlan = CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually");
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
@@ -750,7 +753,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var mockPremiumPlans = CreateTestPremiumPlansList();
         var mockPlan = CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually");
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
@@ -799,7 +802,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var mockPremiumPlans = CreateTestPremiumPlansList();
         var mockPlan = CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually");
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
@@ -854,7 +857,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var mockPremiumPlans = CreateTestPremiumPlansList();
         var mockPlan = CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually", hasRiskInsights: true);
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
@@ -910,7 +913,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var mockPremiumPlans = CreateTestPremiumPlansList();
         var mockPlan = CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually");
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
@@ -959,7 +962,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var mockPremiumPlans = CreateTestPremiumPlansList();
         var mockPlan = CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually");
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
@@ -1009,7 +1012,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var mockPremiumPlans = CreateTestPremiumPlansList();
         var mockPlan = CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually");
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
@@ -1056,7 +1059,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var mockPremiumPlans = CreateTestPremiumPlansList();
         var mockPlan = CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually");
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
@@ -1110,7 +1113,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var mockPremiumPlans = CreateTestPremiumPlansList();
         var mockPlan = CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually");
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
@@ -1159,7 +1162,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var mockPremiumPlans = CreateTestPremiumPlansList();
         var mockPlan = CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually");
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
@@ -1224,7 +1227,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var mockPremiumPlans = CreateTestPremiumPlansList();
         var mockPlan = CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually");
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
@@ -1274,7 +1277,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var mockPremiumPlans = CreateTestPremiumPlansList();
         var mockPlan = CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually");
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
@@ -1339,7 +1342,7 @@ public class UpgradePremiumToOrganizationCommandTests
 
         var mockInvoice = new Invoice { Id = "in_123" };
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(CreateTestPremiumPlansList());
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually"));
         _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(payPalCustomer);
@@ -1397,7 +1400,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var mockPremiumPlans = CreateTestPremiumPlansList();
         var mockPlan = CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually");
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
@@ -1548,7 +1551,7 @@ public class UpgradePremiumToOrganizationCommandTests
             Metadata = new Dictionary<string, string>()
         };
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(CreateTestPremiumPlansList());
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually)
             .Returns(CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually"));
@@ -1589,7 +1592,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var mockPremiumPlans = CreateTestPremiumPlansList();
         var mockPlan = CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually");
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
@@ -1638,7 +1641,7 @@ public class UpgradePremiumToOrganizationCommandTests
             Metadata = new Dictionary<string, string>()
         };
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(CreateTestPremiumPlansList());
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually"));
         _getPaymentMethodQuery.Run(user).Returns((MaskedPaymentMethod?)null);
@@ -1673,7 +1676,7 @@ public class UpgradePremiumToOrganizationCommandTests
         // Assert
         Assert.True(result.IsT1);
         Assert.Equal("Unverified bank accounts are not supported for upgrading to an Organization plan. Please use a card or PayPal.", result.AsT1.Response);
-        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>());
+        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
         await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 
@@ -1711,7 +1714,7 @@ public class UpgradePremiumToOrganizationCommandTests
             InvoiceSettings = new CustomerInvoiceSettings { DefaultPaymentMethodId = "pm_bank" }
         };
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(CreateTestPremiumPlansList());
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually"));
         _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
@@ -1763,7 +1766,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var mockPremiumPlans = CreateTestPremiumPlansList();
         var mockPlan = CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually");
 
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
@@ -1780,5 +1783,115 @@ public class UpgradePremiumToOrganizationCommandTests
         // Assert
         Assert.True(result.IsT0);
         await _priceIncreaseScheduler.Received(1).Release("cus_123", "sub_123");
+    }
+
+    private static readonly DateTime Frozen = new(2026, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+
+    private User ArrangeUpgradeWithTestClock(User user, DateTime currentPeriodStart)
+    {
+        user.Premium = true;
+        user.GatewaySubscriptionId = "sub_123";
+        user.GatewayCustomerId = "cus_123";
+        user.Id = Guid.NewGuid();
+
+        var mockSubscription = new Subscription
+        {
+            Id = "sub_123",
+            TestClock = new TestClock { FrozenTime = Frozen },
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Id = "si_premium",
+                        Price = new Price { Id = "premium-annually" },
+                        CurrentPeriodStart = currentPeriodStart,
+                        CurrentPeriodEnd = currentPeriodStart.AddYears(1)
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(mockSubscription);
+        _pricingClient.ListPremiumPlans().Returns(CreateTestPremiumPlansList());
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually)
+            .Returns(CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually"));
+        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(new Customer());
+        _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
+        _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
+        _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
+        _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
+
+        return user;
+    }
+
+    private Task<BillingCommandResult<Guid>> RunUpgrade(User user, DateTime? prorationDate) =>
+        _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null,
+            PlanType.TeamsAnnually, CreateTestBillingAddress(), prorationDate);
+
+    [Theory, BitAutoData]
+    public async Task Run_WithValidProrationDate_SetsItOnSubscriptionUpdate(User user)
+    {
+        ArrangeUpgradeWithTestClock(user, Frozen.AddDays(-180));
+
+        var result = await RunUpgrade(user, Frozen.AddMinutes(-10));
+
+        Assert.True(result.Success);
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync("sub_123",
+            Arg.Is<SubscriptionUpdateOptions>(o => o.ProrationDate == Frozen.AddMinutes(-10)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_WithExpiredProrationDate_ThrowsBeforeAnyWrite(User user)
+    {
+        ArrangeUpgradeWithTestClock(user, Frozen.AddDays(-180));
+
+        await Assert.ThrowsAsync<InvoicePreviewExpiredException>(() => RunUpgrade(user, Frozen.AddMinutes(-31)));
+
+        await AssertNoWrites();
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_WithProrationDateBeforeCurrentPeriod_ThrowsBeforeAnyWrite(User user)
+    {
+        ArrangeUpgradeWithTestClock(user, Frozen.AddMinutes(-5));
+
+        await Assert.ThrowsAsync<InvoicePreviewExpiredException>(() => RunUpgrade(user, Frozen.AddMinutes(-10)));
+
+        await AssertNoWrites();
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_WithoutProrationDate_LeavesProrationDateUnset(User user)
+    {
+        ArrangeUpgradeWithTestClock(user, Frozen.AddDays(-180));
+
+        var result = await RunUpgrade(user, null);
+
+        Assert.True(result.Success);
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync("sub_123",
+            Arg.Is<SubscriptionUpdateOptions>(o => o.ProrationDate == null));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_FetchesSubscriptionWithTestClockExpanded(User user)
+    {
+        ArrangeUpgradeWithTestClock(user, Frozen.AddDays(-180));
+
+        await RunUpgrade(user, Frozen.AddMinutes(-10));
+
+        await _stripeAdapter.Received(1).GetSubscriptionAsync("sub_123",
+            Arg.Is<SubscriptionGetOptions>(o => o.Expand != null && o.Expand.Contains("test_clock")));
+    }
+
+    private async Task AssertNoWrites()
+    {
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().UpdateCustomerAsync(default!, default!);
+        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs().Release(default!, default!);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().UpdateSubscriptionAsync(default!, default!);
+        await _organizationRepository.DidNotReceiveWithAnyArgs().CreateAsync(default!);
+        await _userService.DidNotReceiveWithAnyArgs().SaveUserAsync(default!);
     }
 }
