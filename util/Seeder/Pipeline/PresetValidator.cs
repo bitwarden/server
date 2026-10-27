@@ -52,9 +52,69 @@ internal static class PresetValidator
         }
         else
         {
+            ValidateAccessShape(preset, presetName);
             ValidatePolicies(preset, presetName);
             ValidateUsers(preset, presetName);
             ValidateDefaultCollections(preset, presetName);
+        }
+    }
+
+    /// <summary>
+    /// <c>accessShape</c> replaces the density group, collection and assignment algorithms. Density settings it
+    /// would silently ignore are rejected; cipher types, permissions, the orphan/archive/delete rates, personal
+    /// ciphers and folders still apply.
+    /// </summary>
+    private static void ValidateAccessShape(Models.SeedPreset preset, string presetName)
+    {
+        var shape = preset.AccessShape;
+        if (shape is null)
+        {
+            return;
+        }
+
+        if (preset.Groups is not null && shape.Groups is null)
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' has 'groups' and 'accessShape' but no 'accessShape.groups'. " +
+                "Add an 'accessShape.groups' block, or drop 'accessShape' to use density groups.");
+        }
+
+        var density = preset.Density;
+        var ignored = new List<string>();
+        if (density?.Membership is not null)
+        {
+            ignored.Add("density.membership");
+        }
+        if (density?.CollectionFanOut is not null)
+        {
+            ignored.Add("density.collectionFanOut");
+        }
+        if (density?.DirectAccessRatio is not null)
+        {
+            ignored.Add("density.directAccessRatio");
+        }
+        if (density?.UserCollections is not null)
+        {
+            ignored.Add("density.userCollections");
+        }
+        if (density?.CipherAssignment?.Skew is not null)
+        {
+            ignored.Add("density.cipherAssignment.skew");
+        }
+        if (density?.CipherAssignment?.MultiCollectionRate is not null)
+        {
+            ignored.Add("density.cipherAssignment.multiCollectionRate");
+        }
+        if (density?.CipherAssignment?.MaxCollectionsPerCipher is not null)
+        {
+            ignored.Add("density.cipherAssignment.maxCollectionsPerCipher");
+        }
+
+        if (ignored.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' uses 'accessShape', which replaces {string.Join(", ", ignored)}. " +
+                "Remove them, or set the equivalent under 'accessShape'.");
         }
     }
 
@@ -294,6 +354,11 @@ internal static class PresetValidator
         if (preset.Density is not null)
         {
             invalidFields.Add("density");
+        }
+
+        if (preset.AccessShape is not null)
+        {
+            invalidFields.Add("accessShape");
         }
 
         if (preset.PersonalCiphers is not null)

@@ -216,5 +216,66 @@ public class PresetValidatorTests
         Assert.Contains("'defaultCollections.sizes' with no positive weight", ex.Message);
     }
 
+    [Fact]
+    public void AccessShape_GroupsWithoutShapeGroups_Throws()
+    {
+        var preset = ReadPreset(_sterlingCooper);
+        preset = preset with { AccessShape = new SeedPresetAccessShape() };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _sterlingCooper));
+
+        Assert.Contains("has 'groups' and 'accessShape' but no 'accessShape.groups'", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("density.membership")]
+    [InlineData("density.collectionFanOut")]
+    [InlineData("density.directAccessRatio")]
+    [InlineData("density.userCollections")]
+    [InlineData("density.cipherAssignment.skew")]
+    [InlineData("density.cipherAssignment.multiCollectionRate")]
+    [InlineData("density.cipherAssignment.maxCollectionsPerCipher")]
+    public void AccessShape_WithReplacedDensitySetting_Throws(string setting)
+    {
+        var preset = ShapedPreset(DensityWith(setting));
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _sterlingCooper));
+
+        Assert.Contains($"uses 'accessShape', which replaces {setting}.", ex.Message);
+    }
+
+    [Fact]
+    public void AccessShape_WithCipherTypesAndOrphanRate_Passes()
+    {
+        var preset = ShapedPreset(new SeedPresetDensity
+        {
+            CipherTypes = new SeedPresetCipherTypes { Preset = "realistic" },
+            CipherAssignment = new SeedPresetCipherAssignment { OrphanRate = 0.08 },
+        });
+
+        PresetValidator.Validate(preset, _sterlingCooper);
+    }
+
+    private SeedPreset ShapedPreset(SeedPresetDensity density) =>
+        ReadPreset(_sterlingCooper) with
+        {
+            Density = density,
+            AccessShape = new SeedPresetAccessShape { Groups = new SeedPresetShapeGroups() },
+        };
+
+    private static SeedPresetDensity DensityWith(string setting) => setting switch
+    {
+        "density.membership" => new() { Membership = new SeedPresetMembership { Shape = "powerLaw" } },
+        "density.collectionFanOut" => new() { CollectionFanOut = new SeedPresetCollectionFanOut { Min = 1, Max = 5 } },
+        "density.directAccessRatio" => new() { DirectAccessRatio = 0.5 },
+        "density.userCollections" => new() { UserCollections = new SeedPresetUserCollections { Min = 1, Max = 10 } },
+        "density.cipherAssignment.skew" => new() { CipherAssignment = new SeedPresetCipherAssignment { Skew = "heavyRight" } },
+        "density.cipherAssignment.multiCollectionRate" =>
+            new() { CipherAssignment = new SeedPresetCipherAssignment { MultiCollectionRate = 0.2 } },
+        "density.cipherAssignment.maxCollectionsPerCipher" =>
+            new() { CipherAssignment = new SeedPresetCipherAssignment { MaxCollectionsPerCipher = 3 } },
+        _ => throw new ArgumentOutOfRangeException(nameof(setting), setting, null),
+    };
+
     private SeedPreset ReadPreset(string presetName) => _reader.Read<SeedPreset>($"{_presetPrefix}{presetName}");
 }

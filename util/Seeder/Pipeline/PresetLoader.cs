@@ -189,9 +189,19 @@ internal static class PresetLoader
                 preset.Users.AdminCount);
         }
 
+        var shape = preset.AccessShape;
+        var shapeSeed = shape?.Seed ?? 1;
+
         if (preset.Groups is not null)
         {
-            builder.AddGroups(preset.Groups.Count, density);
+            if (shape?.Groups is not null)
+            {
+                builder.AddShapedGroups(preset.Groups.Count, shape, shapeSeed);
+            }
+            else
+            {
+                builder.AddGroups(preset.Groups.Count, density);
+            }
         }
 
         if (preset.Collections is not null)
@@ -233,11 +243,10 @@ internal static class PresetLoader
 
         if (preset.DefaultCollections is not null)
         {
-            // Fixed seed until the access-shape story supplies one from accessShape.seed.
             builder.AddDefaultCollections(
                 preset.DefaultCollections,
                 DateTime.UtcNow.Date.AddDays(-(preset.DefaultCollections.PolicyEnabledDaysAgo ?? 14)),
-                seed: 1,
+                seed: shape is not null ? shapeSeed + 2 : 1,
                 density?.CipherTypeDistribution,
                 density?.PersonalCipherDistribution,
                 preset.PersonalCiphers?.CountPerUser ?? 0);

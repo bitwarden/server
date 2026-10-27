@@ -73,6 +73,43 @@ internal sealed class EntityRegistry
     internal Dictionary<string, Guid> FixtureCollectionNameToId { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
+    /// Member count per group. Populated by the access-shape group step for grant weighting.
+    /// </summary>
+    internal Dictionary<Guid, int> GroupMemberCounts { get; } = [];
+
+    /// <summary>
+    /// The access-shape "everyone" group, if one was created.
+    /// </summary>
+    internal Guid? EveryoneGroupId { get; set; }
+
+    /// <summary>
+    /// Access-shape hot groups, in preset order. Paired with dedicated large collections.
+    /// </summary>
+    internal List<Guid> HotGroupIds { get; } = [];
+
+    /// <summary>
+    /// Access-shape department per member, aligned with <see cref="HardenedOrgUserIds"/>.
+    /// </summary>
+    internal List<int> MemberDepartments { get; } = [];
+
+    /// <summary>
+    /// Access-shape department per group; -1 for groups outside any department, such as the everyone group.
+    /// </summary>
+    internal Dictionary<Guid, int> GroupDepartments { get; } = [];
+
+    /// <summary>
+    /// Access-shape nested groups: parent group → child groups drawn from the parent's members. When the
+    /// per-member cap leaves too few of them, the child is topped up from the parent's department, so it is
+    /// not always a strict subset.
+    /// </summary>
+    internal Dictionary<Guid, List<Guid>> GroupChildren { get; } = [];
+
+    /// <summary>
+    /// Probability that a shaped pick stays inside the home department.
+    /// </summary>
+    internal double DepartmentLocality { get; set; }
+
+    /// <summary>
     /// Clears all registry lists. Called by <see cref="RecipeExecutor"/> before each pipeline run.
     /// </summary>
     internal void Clear()
@@ -87,5 +124,12 @@ internal sealed class EntityRegistry
         UserEmailPrefixToUserId.Clear();
         FixtureCipherNameToId.Clear();
         FixtureCollectionNameToId.Clear();
+        GroupMemberCounts.Clear();
+        EveryoneGroupId = null;
+        HotGroupIds.Clear();
+        MemberDepartments.Clear();
+        GroupDepartments.Clear();
+        GroupChildren.Clear();
+        DepartmentLocality = 0;
     }
 }
