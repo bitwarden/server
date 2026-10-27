@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using System.Text.Json;
 using Bit.Admin;
 using Bit.Admin.Auth.IdentityServer;
 using Bit.Admin.IdentityServer;
@@ -78,6 +79,57 @@ public class ServiceCollectionExtensionsTests
         await options.Events.TokenValidated(ctx);
 
         Assert.Null(ctx.Result);
+    }
+
+    [Fact]
+    public void AddAdminUpstreamOidc_GetsClaimsFromUserInfoEndpoint()
+    {
+        var options = BuildOidcOptions();
+
+        Assert.True(options.GetClaimsFromUserInfoEndpoint);
+    }
+
+    [Fact]
+    public void AddAdminUpstreamOidc_UserInfoClaimActions_MapEmailVerifiedWithShortClaimTypes()
+    {
+        var options = BuildOidcOptions();
+        var identity = new ClaimsIdentity("test");
+
+        RunUserInfoClaimActions(options, identity,
+            """{"sub":"subject","email":"admin@example.com","email_verified":true,"name":"Admin"}""");
+
+        Assert.True(bool.TryParse(identity.FindFirst(JwtRegisteredClaimNames.EmailVerified)?.Value, out var verified));
+        Assert.True(verified);
+        Assert.Equal("admin@example.com", identity.FindFirst(JwtRegisteredClaimNames.Email)?.Value);
+        Assert.DoesNotContain(identity.Claims, c => c.Type.StartsWith("http://schemas.", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AddAdminUpstreamOidc_UserInfoClaimActions_PreferIdTokenClaims()
+    {
+        var options = BuildOidcOptions();
+        var identity = new ClaimsIdentity(
+        [
+            new Claim(JwtRegisteredClaimNames.Sub, "subject"),
+            new Claim(JwtRegisteredClaimNames.Email, "admin@example.com"),
+            new Claim(JwtRegisteredClaimNames.EmailVerified, "false"),
+        ], "test");
+
+        RunUserInfoClaimActions(options, identity,
+            """{"sub":"subject","email":"admin@example.com","email_verified":true}""");
+
+        Assert.Single(identity.FindAll(JwtRegisteredClaimNames.Sub));
+        Assert.Single(identity.FindAll(JwtRegisteredClaimNames.Email));
+        Assert.Equal("false", identity.FindFirst(JwtRegisteredClaimNames.EmailVerified)?.Value);
+    }
+
+    private static void RunUserInfoClaimActions(OpenIdConnectOptions options, ClaimsIdentity identity, string userInfoJson)
+    {
+        using var userInfo = JsonDocument.Parse(userInfoJson);
+        foreach (var action in options.ClaimActions)
+        {
+            action.Run(userInfo.RootElement, identity, "https://idp.example.com");
+        }
     }
 
     private static OpenIdConnectOptions BuildOidcOptions()

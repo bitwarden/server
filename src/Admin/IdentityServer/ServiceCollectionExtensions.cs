@@ -129,11 +129,15 @@ public static class ServiceCollectionExtensions
                 // `auth_time`.
                 options.MapInboundClaims = false;
 
-                // We deliberately do NOT call the UserInfo endpoint. UserInfo claims go through a
-                // separate ClaimActions pipeline that MapInboundClaims does not affect and whose
-                // defaults reintroduce the xmlsoap URIs - untangling that requires additional
-                // per-claim mapping. Rely on the ID token instead.
-                options.GetClaimsFromUserInfoEndpoint = false;
+                // Call the UserInfo endpoint after the code exchange. Some IdPs only return the
+                // full set of scope claims from UserInfo when an access token is also issued -
+                // Okta's org authorization server, for example, puts `email` but not
+                // `email_verified` in the ID token. The default ClaimActions don't map
+                // `email_verified`, so add it. The handler rejects a UserInfo response whose
+                // `sub` doesn't match the ID token.
+                options.GetClaimsFromUserInfoEndpoint = true;
+                options.ClaimActions.MapUniqueJsonKey(
+                    JwtRegisteredClaimNames.EmailVerified, JwtRegisteredClaimNames.EmailVerified);
 
                 options.Scope.Clear();
                 foreach (var scope in oidc.Scopes.Split(' ', StringSplitOptions.RemoveEmptyEntries))
