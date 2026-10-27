@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Constants;
+﻿using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Subscriptions;
 using Stripe;
 using Stripe.TestHelpers;
