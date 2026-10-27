@@ -4,6 +4,7 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Enums;
 using Bit.Core.Test.Auth.AutoFixture;
 using Bit.Core.Utilities;
 using Bit.Identity.IntegrationTest.Grants;

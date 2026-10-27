@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using System.Text.Json;
 using Bit.Core.Auth.Identity;
+using Bit.Core.Enums;
 using Bit.Test.Common.Helpers;
 using Xunit;
 

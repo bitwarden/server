@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.Helpers;

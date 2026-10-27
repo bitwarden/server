@@ -2,6 +2,7 @@
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Providers;
 using Bit.Core.AdminConsole.Context;
+using Bit.CurrentUser;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Authorization;

@@ -4,6 +4,7 @@ using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;

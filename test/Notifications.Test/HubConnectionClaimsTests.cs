@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Bit.Core.Enums;
 using Bit.Notifications;
 
 namespace Notifications.Test;

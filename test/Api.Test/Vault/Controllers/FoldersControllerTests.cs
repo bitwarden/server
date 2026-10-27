@@ -3,6 +3,7 @@ using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core.Exceptions;
 using Bit.Core.Vault.Commands.Interfaces;
+using Bit.CurrentUser;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;

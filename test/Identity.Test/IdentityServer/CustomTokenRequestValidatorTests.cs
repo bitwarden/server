@@ -8,6 +8,7 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Platform.Installations;
 using Bit.Core.Repositories;
