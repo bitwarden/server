@@ -9,6 +9,7 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -121,7 +122,7 @@ public class RegisterUserCommand : IRegisterUserCommand
     {
         TryValidateOrgInviteToken(orgInviteToken, orgUserId, user);
         var orgUser = await SetUserEmail2FaIfOrgPolicyEnabledAsync(orgUserId, user);
-        if (orgUser == null && orgUserId.HasValue)
+        if (orgUserId.HasValue && orgUser?.Status != OrganizationUserStatusType.Invited)
         {
             throw new BadRequestException("Invalid organization user invitation.");
         }
@@ -262,7 +263,7 @@ public class RegisterUserCommand : IRegisterUserCommand
 
         var tokenable = ValidateRegistrationEmailVerificationTokenable(emailVerificationToken, user.Email);
 
-        user.EmailVerified = true;
+        user.EmailVerified = WasRegistrationTokenSentByEmail(tokenable);
         user.Name = tokenable.Name;
         user.ApiKey = CoreHelpers.SecureRandomString(30); // API key can't be null.
 
@@ -292,7 +293,7 @@ public class RegisterUserCommand : IRegisterUserCommand
 
         await SetUserEmail2FaIfOrgPolicyEnabledByOrgIdAsync(openOrgInvite.OrganizationId, user);
 
-        user.EmailVerified = true;
+        user.EmailVerified = WasRegistrationTokenSentByEmail(tokenable);
         user.Name = tokenable.Name;
         user.ApiKey = CoreHelpers.SecureRandomString(30); // API key can't be null.
 
@@ -462,6 +463,17 @@ public class RegisterUserCommand : IRegisterUserCommand
 
         return tokenable;
     }
+
+    /// <summary>
+    /// Returns true when the registration token was delivered by email. Only an emailed token proves
+    /// that the registering user owns the email address; a token returned directly to the caller does not.
+    /// Tokens without <see cref="RegistrationEmailVerificationTokenable.EmailSent"/> were issued before
+    /// that property existed; at that time a token was emailed only when email verification was enabled.
+    /// </summary>
+    // TODO: PM-45479 - Drop the EnableEmailVerification fallback and the doc comment
+    // sentence about tokens issued before EmailSent existed.
+    private bool WasRegistrationTokenSentByEmail(RegistrationEmailVerificationTokenable tokenable) =>
+        tokenable.EmailSent ?? _globalSettings.EnableEmailVerification;
 
     private SalesAssistedRegistrationTokenable ValidateSalesAssistedRegistrationTokenable(
         string salesAssistedToken, string email)

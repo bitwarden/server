@@ -50,13 +50,13 @@ public class PreviewOrganizationPlanChangeCommandTests
         _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(FullSubscription());
         InvoiceCreatePreviewOptions? options = null;
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
                 Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns(SampleInvoicePreview());
 
         await _sut.Run(organization, Request(PlanTierType.Enterprise, PlanCadenceType.Annually));
 
-        await _invoicePreviewService.Received(1).GetInvoicePreviewAsync(
+        await _invoicePreviewService.Received(1).GetInvoicePreviewForBillingAddressAsync(
             Arg.Any<InvoiceCreatePreviewOptions>(), PlanTierType.Enterprise, PlanCadenceType.Annually);
         Assert.NotNull(options);
         Assert.Equal("cus_1", options!.Customer);
@@ -92,7 +92,7 @@ public class PreviewOrganizationPlanChangeCommandTests
         _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(FamiliesSubscription());
         InvoiceCreatePreviewOptions? options = null;
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
                 Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns(SampleInvoicePreview());
 
@@ -120,7 +120,7 @@ public class PreviewOrganizationPlanChangeCommandTests
         _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(Teams2019Subscription());
         InvoiceCreatePreviewOptions? options = null;
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
                 Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns(SampleInvoicePreview());
 
@@ -148,7 +148,7 @@ public class PreviewOrganizationPlanChangeCommandTests
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
         InvoiceCreatePreviewOptions? options = null;
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
                 Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns(SampleInvoicePreview());
 
@@ -183,7 +183,7 @@ public class PreviewOrganizationPlanChangeCommandTests
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
         InvoiceCreatePreviewOptions? options = null;
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
                 Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns(SampleInvoicePreview());
 
@@ -203,7 +203,7 @@ public class PreviewOrganizationPlanChangeCommandTests
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(FamiliesPlan());
         InvoiceCreatePreviewOptions? options = null;
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
                 Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns(SampleInvoicePreview());
 
@@ -234,7 +234,7 @@ public class PreviewOrganizationPlanChangeCommandTests
         _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(SecretsManagerNoServiceAccountsSubscription());
         InvoiceCreatePreviewOptions? options = null;
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
                 Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns(SampleInvoicePreview());
 
@@ -256,7 +256,7 @@ public class PreviewOrganizationPlanChangeCommandTests
         var organization = new OrganizationEntity { Id = Guid.NewGuid(), PlanType = PlanType.Free, Seats = 5 };
 
         _pricingClient.GetPlanOrThrow(expectedPlanType).Returns(tier == PlanTierType.Teams ? TeamsPlan() : EnterprisePlan());
-        _invoicePreviewService.GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), tier, cadence).Returns(SampleInvoicePreview());
+        _invoicePreviewService.GetInvoicePreviewForBillingAddressAsync(Arg.Any<InvoiceCreatePreviewOptions>(), tier, cadence).Returns(SampleInvoicePreview());
 
         await _sut.Run(organization, Request(tier, cadence));
 
@@ -272,7 +272,7 @@ public class PreviewOrganizationPlanChangeCommandTests
         _taxService.GetStripeTaxCode("DE", "DE123456789").Returns("eu_vat");
         InvoiceCreatePreviewOptions? options = null;
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
                 Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns(SampleInvoicePreview());
 
@@ -303,7 +303,7 @@ public class PreviewOrganizationPlanChangeCommandTests
         _taxService.GetStripeTaxCode("US", "DE123456789").Returns("eu_vat");
         InvoiceCreatePreviewOptions? options = null;
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
                 Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns(SampleInvoicePreview());
 
@@ -333,7 +333,7 @@ public class PreviewOrganizationPlanChangeCommandTests
         _taxService.GetStripeTaxCode("US", "12-3456789").Returns("us_ein");
         InvoiceCreatePreviewOptions? options = null;
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
                 Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns(SampleInvoicePreview());
 
@@ -355,7 +355,7 @@ public class PreviewOrganizationPlanChangeCommandTests
         _taxService.GetStripeTaxCode("ES", "A12345678").Returns(StripeConstants.TaxIdType.SpanishNIF);
         InvoiceCreatePreviewOptions? options = null;
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
                 Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns(SampleInvoicePreview());
 
@@ -564,11 +564,15 @@ public class PreviewOrganizationPlanChangeCommandTests
 
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns<InvoicePreview>(_ => throw new StripeException { StripeError = new StripeError { Code = StripeConstants.ErrorCodes.CustomerTaxLocationInvalid } });
 
-        await Assert.ThrowsAsync<BadRequestException>(() =>
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             _sut.Run(organization, Request(PlanTierType.Teams, PlanCadenceType.Annually, country: "ZZ", postalCode: "00000")));
+
+        Assert.Equal(
+            "Your location wasn't recognized. Please ensure your country and postal code are valid and try again.",
+            exception.ModelState![BillingErrorKeys.BillingAddress]!.Errors.Single().ErrorMessage);
     }
 
     [Fact]
@@ -578,12 +582,16 @@ public class PreviewOrganizationPlanChangeCommandTests
 
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns<InvoicePreview>(_ => throw new StripeException { StripeError = new StripeError { Code = StripeConstants.ErrorCodes.TaxIdInvalid } });
 
-        await Assert.ThrowsAsync<BadRequestException>(() =>
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             _sut.Run(organization, Request(PlanTierType.Teams, PlanCadenceType.Annually,
                 taxId: new TaxIdSelection("gb_vat", "invalid"))));
+
+        Assert.Equal(
+            "Your tax ID wasn't recognized for your selected country. Please ensure your country and tax ID are valid.",
+            exception.ModelState![BillingErrorKeys.BillingAddress]!.Errors.Single().ErrorMessage);
     }
 
     [Fact]
@@ -603,7 +611,7 @@ public class PreviewOrganizationPlanChangeCommandTests
         _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(TrialingSubscription());
         InvoiceCreatePreviewOptions? options = null;
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
                 Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns(SampleInvoicePreview());
 
@@ -630,7 +638,7 @@ public class PreviewOrganizationPlanChangeCommandTests
         _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(FullSubscription());
         InvoiceCreatePreviewOptions? options = null;
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
                 Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns(SampleInvoicePreview());
 
@@ -678,7 +686,7 @@ public class PreviewOrganizationPlanChangeCommandTests
         _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(EnterprisePlan());
         _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(PastDueSubscription());
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns(SampleInvoicePreview());
 
         var result = await _sut.Run(organization, Request(PlanTierType.Enterprise, PlanCadenceType.Annually));
@@ -700,7 +708,7 @@ public class PreviewOrganizationPlanChangeCommandTests
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
         InvoiceCreatePreviewOptions? options = null;
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
                 Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns(SampleInvoicePreview());
 
@@ -720,7 +728,7 @@ public class PreviewOrganizationPlanChangeCommandTests
         _taxService.GetStripeTaxCode("US", "unknown").Returns((string?)null);
         InvoiceCreatePreviewOptions? options = null;
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
                 Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns(SampleInvoicePreview());
 

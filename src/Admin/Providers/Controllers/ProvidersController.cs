@@ -8,8 +8,6 @@ using Bit.Admin.Enums;
 using Bit.Admin.Providers.Models;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
-using Bit.Core;
-using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
@@ -50,7 +48,6 @@ public class ProvidersController : Controller
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IProviderService _providerService;
     private readonly GlobalSettings _globalSettings;
-    private readonly IProviderAbilityCacheService _providerAbilityCacheService;
     private readonly ICreateProviderCommand _createProviderCommand;
     private readonly IProviderPlanRepository _providerPlanRepository;
     private readonly IProviderBillingService _providerBillingService;
@@ -68,7 +65,6 @@ public class ProvidersController : Controller
         IProviderOrganizationRepository providerOrganizationRepository,
         IProviderService providerService,
         GlobalSettings globalSettings,
-        IProviderAbilityCacheService providerAbilityCacheService,
         ICreateProviderCommand createProviderCommand,
         IProviderPlanRepository providerPlanRepository,
         IProviderBillingService providerBillingService,
@@ -87,7 +83,6 @@ public class ProvidersController : Controller
         _providerOrganizationRepository = providerOrganizationRepository;
         _providerService = providerService;
         _globalSettings = globalSettings;
-        _providerAbilityCacheService = providerAbilityCacheService;
         _createProviderCommand = createProviderCommand;
         _providerPlanRepository = providerPlanRepository;
         _providerBillingService = providerBillingService;
@@ -330,7 +325,6 @@ public class ProvidersController : Controller
             ? model.Enabled : originalProviderStatus;
 
         await _providerService.UpdateAsync(provider);
-        await _providerAbilityCacheService.UpsertProviderAbilityAsync(provider);
 
         // Sync billing email changes to Stripe
         if (!string.IsNullOrEmpty(provider.GatewayCustomerId) && originalBillingEmail != provider.BillingEmail)
@@ -517,7 +511,15 @@ public class ProvidersController : Controller
         var organizationIds = model.Items.Where(o => o.Selected).Select(o => o.Id).ToArray();
         if (organizationIds.Any())
         {
-            await _providerService.AddOrganizationsToReseller(id, organizationIds);
+            try
+            {
+                await _providerService.AddOrganizationsToReseller(id, organizationIds);
+            }
+            catch (BadRequestException ex)
+            {
+                TempData["Error"] = ex.Message;
+                return RedirectToAction("AddExistingOrganization", new { id });
+            }
         }
 
         return RedirectToAction("Edit", "Providers", new { id = id });
@@ -548,7 +550,7 @@ public class ProvidersController : Controller
             return RedirectToAction("Index");
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support) && model.UsePam)
+        if (model.UsePam)
         {
             TempData["Error"] = "Organizations managed by a provider can't use Privileged Access Management";
             return RedirectToAction("CreateOrganization", new { providerId });
