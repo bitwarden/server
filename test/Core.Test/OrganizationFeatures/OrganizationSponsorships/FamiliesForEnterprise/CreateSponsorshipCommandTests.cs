@@ -9,6 +9,7 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Test.AutoFixture.OrganizationSponsorshipFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -59,6 +60,24 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
             sutProvider.Sut.CreateSponsorshipAsync(null, orgUser, PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, default, false, null));
 
         Assert.Contains("Cannot offer a Families Organization Sponsorship to yourself. Choose a different email.", exception.Message);
+        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().DidNotReceiveWithAnyArgs()
+            .CreateAsync(null!);
+    }
+
+    [Theory]
+    [BitAutoData("Gov", false)]
+    [BitAutoData("gov", false)]
+    [BitAutoData("Gov", true)]
+    public async Task CreateSponsorship_GovRegion_ThrowsBadRequest(string cloudRegion, bool isAdminInitiated,
+        Organization org, OrganizationUser orgUser, string sponsoredEmail, SutProvider<CreateSponsorshipCommand> sutProvider)
+    {
+        org.PlanType = PlanType.EnterpriseAnnually;
+        sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri.CloudRegion.Returns(cloudRegion);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.CreateSponsorshipAsync(org, orgUser, PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, default, isAdminInitiated, null));
+
+        Assert.Contains("Families sponsorships are not available in this region.", exception.Message);
         await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().DidNotReceiveWithAnyArgs()
             .CreateAsync(null!);
     }
@@ -154,12 +173,15 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
     }
 
     [Theory]
-    [BitAutoData]
-    public async Task CreateSponsorship_CreatesSponsorship(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser, User user,
+    [BitAutoData("US")]
+    [BitAutoData("EU")]
+    [BitAutoData((string?)null)]
+    public async Task CreateSponsorship_CreatesSponsorship(string cloudRegion, Organization sponsoringOrg, OrganizationUser sponsoringOrgUser, User user,
         string sponsoredEmail, string friendlyName, Guid sponsorshipId, SutProvider<CreateSponsorshipCommand> sutProvider)
     {
         sponsoringOrg.PlanType = PlanType.EnterpriseAnnually;
         sponsoringOrgUser.Status = OrganizationUserStatusType.Confirmed;
+        sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri.CloudRegion.Returns(cloudRegion);
 
         sutProvider.GetDependency<IUserService>().GetUserByIdAsync(sponsoringOrgUser.UserId!.Value).Returns(user);
         sutProvider.GetDependency<IOrganizationSponsorshipRepository>().WhenForAnyArgs(x => x.UpsertAsync(null!)).Do(callInfo =>

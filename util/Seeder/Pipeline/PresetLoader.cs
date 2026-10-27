@@ -1,4 +1,7 @@
-﻿using Bit.Core.Auth.Enums;
+﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Enums;
 using Bit.Core.Vault.Enums;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
@@ -23,7 +26,7 @@ internal static class PresetLoader
     /// <param name="services">The service collection to register steps in</param>
     /// <param name="stripeBilling">
     /// When set, adds real Stripe test-environment billing. Organization presets only — individual presets
-    /// ignore it, and the CLI rejects the combination before reaching here (premium billing is a later task).
+    /// ignore it, and the CLI rejects the combination before reaching here.
     /// </param>
     /// <exception cref="InvalidOperationException">Thrown when preset lacks organization configuration</exception>
     internal static void RegisterRecipe(
@@ -97,7 +100,7 @@ internal static class PresetLoader
     /// Builds a recipe from preset configuration, resolving fixtures and generation counts.
     /// </summary>
     /// <remarks>
-    /// Resolution order: Org → OrgApiKey → ClaimedDomains → Roster → Owner (if no roster owner) → Generator → Users → Groups → Collections → Folders → Ciphers → CipherAttachments → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
+    /// Resolution order: Org → OrgApiKey → Policies → ClaimedDomains → Roster → Owner (if no roster owner) → Generator → Users → Groups → Collections → Folders → Ciphers → CipherAttachments → CipherCollections → CipherFolders → CipherFavorites → DefaultCollections → PersonalCiphers
     /// </remarks>
     private static void BuildRecipe(
         string presetName,
@@ -132,6 +135,12 @@ internal static class PresetLoader
 
         builder.AddOrganizationApiKey();
 
+        var policies = ParsePolicies(preset.Policies);
+        if (policies.Count > 0)
+        {
+            builder.AddPolicies(policies);
+        }
+
         if (org.ClaimedDomains is { Count: > 0 })
         {
             builder.WithOrganizationDomain(org.ClaimedDomains);
@@ -164,6 +173,7 @@ internal static class PresetLoader
             preset.Ciphers?.Count > 0 ||
             preset.PersonalCiphers?.CountPerUser > 0 ||
             preset.Folders == true ||
+            preset.DefaultCollections is not null ||
             density?.FolderDistribution is not null ||
             density?.PersonalCipherDistribution is not null))
         {
@@ -172,7 +182,11 @@ internal static class PresetLoader
 
         if (preset.Users is not null)
         {
-            builder.AddUsers(preset.Users.Count, preset.Users.RealisticStatusMix);
+            builder.AddUsers(
+                preset.Users.Count,
+                preset.Users.RealisticStatusMix,
+                ParseStatusMix(preset.Users.StatusMix),
+                preset.Users.AdminCount);
         }
 
         if (preset.Groups is not null)
@@ -217,6 +231,18 @@ internal static class PresetLoader
             builder.CreateCipherFavorites(preset.FavoriteAssignments);
         }
 
+        if (preset.DefaultCollections is not null)
+        {
+            // Fixed seed until the access-shape story supplies one from accessShape.seed.
+            builder.AddDefaultCollections(
+                preset.DefaultCollections,
+                DateTime.UtcNow.Date.AddDays(-(preset.DefaultCollections.PolicyEnabledDaysAgo ?? 14)),
+                seed: 1,
+                density?.CipherTypeDistribution,
+                density?.PersonalCipherDistribution,
+                preset.PersonalCiphers?.CountPerUser ?? 0);
+        }
+
         if (preset.PersonalCiphers is not null && preset.PersonalCiphers.CountPerUser > 0)
         {
             builder.AddPersonalCiphers(preset.PersonalCiphers.CountPerUser, density: density, repromptEveryNthCipher: preset.PersonalCiphers.RepromptEveryNthCipher);
@@ -228,7 +254,7 @@ internal static class PresetLoader
 
         if (stripeBilling is not null)
         {
-            builder.WithStripeBilling(stripeBilling);
+            builder.WithStripeOrganizationBilling(stripeBilling);
         }
 
         builder.Validate();
@@ -242,6 +268,57 @@ internal static class PresetLoader
         LimitCollectionCreation = org.LimitCollectionCreation,
         LimitCollectionDeletion = org.LimitCollectionDeletion,
     };
+
+    /// <summary>
+    /// Normalizes the preset's status weights into a distribution. <see cref="PresetValidator"/> has already
+    /// rejected negative weights and a mix with no positive weight.
+    /// </summary>
+    private static Distribution<OrganizationUserStatusType>? ParseStatusMix(SeedPresetStatusMix? mix)
+    {
+        if (mix is null)
+        {
+            return null;
+        }
+
+        var total = mix.Confirmed + mix.Invited + mix.Accepted + mix.Revoked;
+
+        return new Distribution<OrganizationUserStatusType>(
+            (OrganizationUserStatusType.Confirmed, mix.Confirmed / total),
+            (OrganizationUserStatusType.Invited, mix.Invited / total),
+            (OrganizationUserStatusType.Accepted, mix.Accepted / total),
+            (OrganizationUserStatusType.Revoked, mix.Revoked / total));
+    }
+
+    /// <summary>
+    /// Converts the preset's policy names to rows. <see cref="PresetValidator"/> has already rejected unknown
+    /// names, repeats and enable/disable overlaps.
+    /// </summary>
+    /// <remarks>
+    /// Data is re-serialized compact, as the server writes it. Keys stay camelCase because the server reads
+    /// policy data with a camelCase, case-sensitive policy.
+    /// </remarks>
+    private static List<(PolicyType Type, bool Enabled, string? Data)> ParsePolicies(SeedPresetPolicies? policies)
+    {
+        if (policies is null)
+        {
+            return [];
+        }
+
+        var data = new Dictionary<PolicyType, string>();
+        foreach (var (name, json) in policies.Data ?? [])
+        {
+            data[ParseEnum<PolicyType>(name, default)] = JsonSerializer.Serialize(json);
+        }
+
+        return (policies.Enable ?? []).Select(name => (name, enabled: true))
+            .Concat((policies.Disable ?? []).Select(name => (name, enabled: false)))
+            .Select(p =>
+            {
+                var type = ParseEnum<PolicyType>(p.name, default);
+                return (type, p.enabled, data.GetValueOrDefault(type));
+            })
+            .ToList();
+    }
 
     private static MemberDecryptionType ParseMemberDecryptionType(string? encryptionType) =>
         encryptionType?.ToLowerInvariant() switch
@@ -360,8 +437,9 @@ internal static class PresetLoader
             "realistic" => PersonalCipherDistributions.Realistic,
             "lightusage" => PersonalCipherDistributions.LightUsage,
             "heavyusage" => PersonalCipherDistributions.HeavyUsage,
+            "pendingmigration" => PersonalCipherDistributions.PendingMigration,
             _ => throw new InvalidOperationException(
-                $"Unknown personal cipher distribution '{shape}'. Valid values: realistic, lightUsage, heavyUsage."),
+                $"Unknown personal cipher distribution '{shape}'. Valid values: realistic, lightUsage, heavyUsage, pendingMigration."),
         };
     }
 

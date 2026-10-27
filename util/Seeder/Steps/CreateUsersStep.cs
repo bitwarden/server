@@ -12,8 +12,14 @@ namespace Bit.Seeder.Steps;
 /// Creates member users and links them to the current organization.
 /// When <c>realisticStatusMix</c> is enabled (and count >= 10), users receive a
 /// realistic distribution of Confirmed/Invited/Accepted/Revoked statuses.
+/// An explicit <c>statusMix</c> takes precedence at any count. The first <c>adminCount</c>
+/// Confirmed members are Admins; every other member is a User.
 /// </summary>
-internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false) : IStep
+internal sealed class CreateUsersStep(
+    int count,
+    bool realisticStatusMix = false,
+    Distribution<OrganizationUserStatusType>? statusMix = null,
+    int adminCount = 0) : IStep
 {
     private const int _rsaPoolSize = 100;
 
@@ -23,9 +29,10 @@ internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false
         var orgKey = context.RequireOrgKey();
         var domain = context.RequireDomain();
 
-        var statusDistribution = realisticStatusMix && count >= 10
-            ? UserStatusDistributions.Realistic
-            : UserStatusDistributions.AllConfirmed;
+        var statusDistribution = statusMix
+            ?? (realisticStatusMix && count >= 10
+                ? UserStatusDistributions.Realistic
+                : UserStatusDistributions.AllConfirmed);
 
         var password = context.GetPassword();
         var kdfIterations = context.GetKdfIterations();
@@ -36,10 +43,22 @@ internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false
         // Pre-compute mangled emails and statuses (ManglerService is not thread-safe)
         var mangledEmails = new string[count];
         var statuses = new OrganizationUserStatusType[count];
+        var types = new OrganizationUserType[count];
+        var adminsLeft = adminCount;
         for (var i = 0; i < count; i++)
         {
             mangledEmails[i] = mangler.Mangle($"user{i}@{domain}");
             statuses[i] = statusDistribution.Select(i, count);
+            types[i] = statuses[i] == OrganizationUserStatusType.Confirmed && adminsLeft-- > 0
+                ? OrganizationUserType.Admin
+                : OrganizationUserType.User;
+        }
+
+        if (adminsLeft > 0)
+        {
+            throw new InvalidOperationException(
+                $"'users.adminCount' {adminCount} exceeds the {adminCount - adminsLeft} Confirmed members the status mix " +
+                $"gives {count} users. Lower adminCount or raise the Confirmed weight.");
         }
 
         var results = new (User User, OrganizationUser OrgUser, UserKeys Keys, bool IsConfirmed)[count];
@@ -71,7 +90,7 @@ internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false
                     : null;
 
                 var orgUser = org.CreateOrganizationUserWithKey(
-                    user, OrganizationUserType.User, statuses[i], memberOrgKey);
+                    user, types[i], statuses[i], memberOrgKey);
 
                 results[i] = (user, orgUser, userKeys, statuses[i] == OrganizationUserStatusType.Confirmed);
 

@@ -1,7 +1,12 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
+using Bit.Core.Auth.Identity;
+using Bit.Core.Context;
 using Bit.Core.Models.Api;
 using Bit.HttpExtensions;
+using Bit.Pam.Repositories;
+using Bit.Services.Pam.AccessConnector;
 using Bit.Services.Pam.AccessConnector.Api.Endpoints.Handlers;
+using Bit.Services.Pam.AccessConnector.Commands.Interfaces;
 using Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints.Handlers;
 using Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 using Bit.Services.Pam.Api.Endpoints;
@@ -12,25 +17,23 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Services.Pam.Test.AccessConnector.Api.Endpoints;
 
 /// <summary>
-/// Locks the connector-facing rotation wire contract that the generated OpenAPI spec — and the access connector built
-/// from it — depend on. The endpoint bodies are scaffold stubs; the contract (routes, names, methods, return types,
-/// and the machine-credential policy) is the thing under test. Endpoints are materialized by mapping them onto a
-/// minimal host and reading its <see cref="EndpointDataSource"/> — the same metadata the offline OpenAPI generator
-/// inspects.
+/// Locks the connector-facing rotation wire contract (routes, names, methods, return types, and the machine-credential
+/// policy) the OpenAPI spec and the access connector depend on.
 /// </summary>
 public class AccessConnectorMachineEndpointsTests
 {
     private static List<RouteEndpoint> MaterializeEndpoints()
     {
         var builder = WebApplication.CreateSlimBuilder();
-        // The handlers must be known services so Minimal API binding treats the handler parameter as injected
-        // (not an inferred request body) — the same registration AddPamServices performs in the app.
-        // MapPamEndpoints maps every PAM group, so each group's handler has to be resolvable here.
+        // Unregistered handlers would bind as a request body.
         builder.Services.AddScoped<LeaseEndpointsHandler>();
         builder.Services.AddScoped<AccessRequestEndpointsHandler>();
         builder.Services.AddScoped<AccessRuleEndpointsHandler>();
@@ -45,20 +48,14 @@ public class AccessConnectorMachineEndpointsTests
         var app = builder.Build();
         app.MapPamEndpoints();
 
-        // Enumerating the data sources builds the endpoints — applying the route group's prefix, metadata, and
-        // conventions — without starting the request pipeline, the same set the OpenAPI generator discovers.
+        // Builds the endpoints without starting the request pipeline.
         return ((IEndpointRouteBuilder)app).DataSources
             .SelectMany(dataSource => dataSource.Endpoints)
             .OfType<RouteEndpoint>()
             .ToList();
     }
 
-    /// <summary>
-    /// Collects the authorization requirements an endpoint carries. They arrive as two shapes of metadata:
-    /// <c>AuthorizeAttribute&lt;T&gt;</c> contributes <see cref="IAuthorizationRequirementData"/>, while a policy
-    /// built inline contributes an <see cref="AuthorizationPolicy"/>. AuthorizationMiddleware combines both, so a
-    /// test asking "what must this endpoint satisfy" has to read both.
-    /// </summary>
+    /// <summary>AuthorizationMiddleware combines both metadata shapes, so both are read.</summary>
     private static List<IAuthorizationRequirement> RequirementsFor(Endpoint endpoint) =>
     [
         .. endpoint.Metadata.GetOrderedMetadata<AuthorizationPolicy>().SelectMany(policy => policy.Requirements),
@@ -71,11 +68,12 @@ public class AccessConnectorMachineEndpointsTests
             .ToList();
 
     [Fact]
-    public void MapPamEndpoints_RegistersTheSixConnectorRoutes_InTheInternalDoc()
+    public void MapPamEndpoints_RegistersTheFourPamConnectorRoutes_InTheInternalDoc()
     {
         var endpoints = ConnectorEndpoints();
 
-        Assert.Equal(6, endpoints.Count);
+        // The two cipher routes are mapped by Bit.Api, not here.
+        Assert.Equal(4, endpoints.Count);
         Assert.All(endpoints, endpoint =>
             Assert.Equal("internal", endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>()?.EndpointGroupName));
     }
@@ -83,10 +81,6 @@ public class AccessConnectorMachineEndpointsTests
     [Theory]
     [InlineData("Pam_AccessConnectors_Rotation_Jobs_GetAll", "GET", "access-connectors/rotation/jobs")]
     [InlineData("Pam_AccessConnectors_Rotation_Jobs_Claim", "POST", "access-connectors/rotation/jobs/{id:guid}/claim")]
-    [InlineData("Pam_AccessConnectors_Rotation_Attempts_GetCipher", "GET",
-        "access-connectors/rotation/attempts/{id:guid}/cipher")]
-    [InlineData("Pam_AccessConnectors_Rotation_Attempts_PutCipher", "PUT",
-        "access-connectors/rotation/attempts/{id:guid}/cipher")]
     [InlineData("Pam_AccessConnectors_Rotation_Attempts_Success", "POST",
         "access-connectors/rotation/attempts/{id:guid}/success")]
     [InlineData("Pam_AccessConnectors_Rotation_Attempts_Failure", "POST",
@@ -98,9 +92,7 @@ public class AccessConnectorMachineEndpointsTests
         var endpoint = Assert.Single(
             endpoints,
             e => e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == name);
-        // Trim slashes: the raw pattern carries routing's leading/trailing slashes
-        // (e.g. "/access-connectors/rotation/jobs")
-        // that the generated spec path does not.
+        // The raw pattern carries leading and trailing slashes.
         Assert.Equal(route, endpoint.RoutePattern.RawText?.Trim('/'));
         Assert.Contains(method, endpoint.Metadata.GetMetadata<HttpMethodMetadata>()!.HttpMethods);
     }
@@ -108,16 +100,63 @@ public class AccessConnectorMachineEndpointsTests
     [Fact]
     public void MapPamEndpoints_DoesNotGateTheConnectorSurfaceOnAnOrganizationRequirement()
     {
-        // The access connector routes carry no {orgId}, and OrganizationRequirementHandler reads the id off the route —
-        // attaching an IOrganizationRequirement here would throw rather than deny. An access
-        // connector is scoped to its own
-        // organization by its token and by the queries underneath, so this holds once the machine-credential
-        // policy replaces the placeholder Policies.Application these routes carry today.
+        // No {orgId} in these routes; authorized by Policies.AccessConnector instead of an org requirement.
         var endpoints = ConnectorEndpoints();
 
         Assert.NotEmpty(endpoints);
         Assert.All(endpoints, endpoint =>
-            Assert.DoesNotContain(RequirementsFor(endpoint), r => r is IOrganizationRequirement));
+        {
+            Assert.DoesNotContain(RequirementsFor(endpoint), r => r is IOrganizationRequirement);
+            Assert.Contains(endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>(),
+                data => data.Policy == Policies.AccessConnector);
+        });
+    }
+
+    [Fact]
+    public async Task MapPamEndpoints_RunsHeartbeatFilterAheadOfEveryConnectorRoute()
+    {
+        // AddEndpointFilter<T>() leaves no metadata, so drive each endpoint: without a PamAccessConnectorId the filter
+        // 404s, while an unfiltered route fails in its handler.
+        var endpoints = ConnectorEndpoints();
+        Assert.NotEmpty(endpoints);
+
+        foreach (var endpoint in endpoints)
+        {
+            var httpContext = new DefaultHttpContext
+            {
+                RequestServices = ConnectorRequestServices(),
+                Response = { Body = new MemoryStream() },
+            };
+
+            await endpoint.RequestDelegate!(httpContext);
+
+            Assert.Equal(StatusCodes.Status404NotFound, httpContext.Response.StatusCode);
+        }
+    }
+
+    private static IServiceProvider ConnectorRequestServices()
+    {
+        var currentContext = Substitute.For<ICurrentContext>();
+        currentContext.PamAccessConnectorId.Returns((Guid?)null);
+
+        var hostEnvironment = Substitute.For<IHostEnvironment>();
+        hostEnvironment.EnvironmentName.Returns(Environments.Production);
+
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton(hostEnvironment);
+        services.AddSingleton(currentContext);
+        services.AddSingleton(Substitute.For<IPamAccessConnectorRepository>());
+        services.AddSingleton(Substitute.For<IPamRotationJobRepository>());
+        services.AddSingleton(Substitute.For<IClaimRotationJobCommand>());
+        services.AddSingleton(Substitute.For<IReportRotationSucceededCommand>());
+        services.AddSingleton(Substitute.For<IReportRotationFailedCommand>());
+        services.AddSingleton(Options.Create(new PamRotationOptions()));
+        services.AddSingleton(TimeProvider.System);
+        services.AddScoped<RotationJobEndpointsHandler>();
+        services.AddScoped<RotationAttemptEndpointsHandler>();
+
+        return services.BuildServiceProvider();
     }
 
     [Fact]
@@ -135,10 +174,6 @@ public class AccessConnectorMachineEndpointsTests
         typeof(Task<ListResponseModel<ClaimableRotationJobResponseModel>>))]
     [InlineData(typeof(RotationJobEndpointsHandler), nameof(RotationJobEndpointsHandler.Claim),
         typeof(Task<RotationClaimResponseModel>))]
-    [InlineData(typeof(RotationAttemptEndpointsHandler), nameof(RotationAttemptEndpointsHandler.GetCipher),
-        typeof(Task<RotationCipherResponseModel>))]
-    [InlineData(typeof(RotationAttemptEndpointsHandler), nameof(RotationAttemptEndpointsHandler.PutCipher),
-        typeof(Task))]
     [InlineData(typeof(RotationAttemptEndpointsHandler), nameof(RotationAttemptEndpointsHandler.Success),
         typeof(Task))]
     [InlineData(typeof(RotationAttemptEndpointsHandler), nameof(RotationAttemptEndpointsHandler.Failure),

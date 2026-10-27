@@ -3,6 +3,7 @@ using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.AccessConnector.Commands.Interfaces;
 using Bit.Services.Pam.OrganizationFeatures.Commands;
 using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
@@ -33,7 +34,6 @@ public class RevokeAccessLeaseCommandTests
     {
         var sutProvider = Setup();
         lease.Action = AccessLeaseAction.None;
-        // userId is neither the lease holder (lease.RequesterId is a different AutoFixture Guid) nor a manager.
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByIdAsync(lease.Id).Returns(lease);
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .CanManageCollectionAsync(userId, lease.CollectionId).Returns(false);
@@ -63,6 +63,12 @@ public class RevokeAccessLeaseCommandTests
                 d.Verdict == AccessDecisionVerdict.Deny &&
                 d.Comment == "done with it"),
             _now);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
+            .NotifyCollectionApproversAsync(lease.CollectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(lease.RequesterId);
+        await sutProvider.GetDependency<ILeaseRevokedMailNotifier>().Received(1)
+            .NotifyLeaseEndedAsync(lease, AccessLeaseAction.Cancelled);
     }
 
     [Theory, BitAutoData]
@@ -115,7 +121,7 @@ public class RevokeAccessLeaseCommandTests
 
         await sutProvider.Sut.RevokeAsync(userId, lease.Id, "policy change");
 
-        // An operator (manager, not the holder) ended it → settles to Revoked.
+        // A manager who is not the holder ends it as Revoked.
         await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1).RevokeAsync(
             lease,
             AccessLeaseAction.Revoked,
@@ -126,6 +132,59 @@ public class RevokeAccessLeaseCommandTests
                 d.Verdict == AccessDecisionVerdict.Deny &&
                 d.Comment == "policy change"),
             _now);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
+            .NotifyCollectionApproversAsync(lease.CollectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(lease.RequesterId);
+        await sutProvider.GetDependency<ILeaseRevokedMailNotifier>().Received(1)
+            .NotifyLeaseEndedAsync(lease, AccessLeaseAction.Revoked);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RevokeAsync_Active_RunsTheAccessEndRotationHandler(Guid userId, AccessLease lease)
+    {
+        var sutProvider = Setup();
+        lease.Action = AccessLeaseAction.None;
+        lease.NotAfter = _now.AddHours(1);
+        SetupManageableLease(sutProvider, userId, lease);
+
+        await sutProvider.Sut.RevokeAsync(userId, lease.Id, null);
+
+        await sutProvider.GetDependency<IHandleAccessGrantEndedCommand>().Received(1).HandleAsync(lease.CipherId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RevokeAsync_AccessEndRotationHandlerThrows_StillCompletesTheRevoke(Guid userId, AccessLease lease)
+    {
+        var sutProvider = Setup();
+        lease.Action = AccessLeaseAction.None;
+        lease.NotAfter = _now.AddHours(1);
+        SetupManageableLease(sutProvider, userId, lease);
+        sutProvider.GetDependency<IHandleAccessGrantEndedCommand>().HandleAsync(lease.CipherId)
+            .ThrowsAsync(new InvalidOperationException());
+
+        await sutProvider.Sut.RevokeAsync(userId, lease.Id, null);
+
+        // The lease has already ended, so the notifications still go out.
+        await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
+            .NotifyCollectionApproversAsync(lease.CollectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(lease.RequesterId);
+        await sutProvider.GetDependency<ILeaseRevokedMailNotifier>().Received(1)
+            .NotifyLeaseEndedAsync(lease, AccessLeaseAction.Revoked);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RevokeAsync_NotActive_DoesNotRunTheAccessEndRotationHandler(Guid userId, AccessLease lease)
+    {
+        var sutProvider = Setup();
+        lease.Action = AccessLeaseAction.Revoked;
+        SetupManageableLease(sutProvider, userId, lease);
+
+        await Assert.ThrowsAsync<ConflictException>(() => sutProvider.Sut.RevokeAsync(userId, lease.Id, null));
+
+        await sutProvider.GetDependency<IHandleAccessGrantEndedCommand>().DidNotReceiveWithAnyArgs()
+            .HandleAsync(default);
     }
 
     [Theory, BitAutoData]
@@ -142,6 +201,8 @@ public class RevokeAccessLeaseCommandTests
 
         await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
             .RevokeAsync(default!, default, default!, default);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
     }
 
     [Theory, BitAutoData]

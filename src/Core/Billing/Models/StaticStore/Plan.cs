@@ -45,6 +45,8 @@ public abstract record Plan
     public PasswordManagerPlanFeatures PasswordManager { get; protected init; }
     public SecretsManagerPlanFeatures SecretsManager { get; protected init; }
     public bool SupportsSecretsManager => SecretsManager != null;
+    public PrivilegedControlsPlanFeatures PrivilegedControls { get; protected init; }
+    public bool SupportsPrivilegedControls => PrivilegedControls != null;
 
     public bool AutomaticUserConfirmation { get; init; }
 
@@ -77,6 +79,16 @@ public abstract record Plan
 
         // Features
         public int MaxProjects { get; init; }
+    }
+
+    public record PrivilegedControlsPlanFeatures
+    {
+        // Seats
+        public string StripeSeatPlanId { get; init; }
+        public decimal SeatPrice { get; init; }
+        public int BaseSeats { get; init; }
+        public int DefaultSeatMinimum { get; init; }
+        public int[] PromotionalSeatMinimums { get; init; }
     }
 
     public record PasswordManagerPlanFeatures

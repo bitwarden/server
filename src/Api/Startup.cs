@@ -1,5 +1,6 @@
 ﻿using Bit.Api.Utilities;
 using Bit.Core;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.Context;
 using Bit.Core.Settings;
 using AspNetCoreRateLimit;
@@ -37,13 +38,17 @@ using Bit.Core.Enums;
 using Bit.HttpExtensions;
 using Bit.Subscriptions.Organization;
 using Bit.Subscriptions.User;
+using Bit.CurrentUser;
 
 
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;
 using Bit.Commercial.Core.Utilities;
 using Bit.Commercial.Infrastructure.EntityFramework.SecretsManager;
+using Bit.Services.Pam.AccessConnector;
+using Bit.Api.Pam.AccessConnector;
 using Bit.Services.Pam.Api.Endpoints;
+using Bit.Services.Pam.AccessConnector.Jobs;
 using Bit.Services.Pam.Utilities;
 #endif
 
@@ -94,6 +99,7 @@ public class Startup
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+        services.AddCurrentUser();
 
         // Caching
         services.AddMemoryCache();
@@ -148,6 +154,12 @@ public class Startup
                     c.Type == JwtClaimTypes.Scope &&
                     (c.Value.Contains(ApiScopes.Api) || c.Value.Contains(ApiScopes.ApiSecrets))
                 ));
+            });
+            config.AddPolicy(Policies.AccessConnector, policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiPamCredentialRotation);
+                policy.RequireClaim(Claims.Type, IdentityClientType.AccessConnector.ToString());
             });
             config.AddPolicy(Policies.Send, configurePolicy: policy =>
             {
@@ -211,12 +223,21 @@ public class Startup
         services.AddCommercialSecretsManagerServices();
         services.AddSecretsManagerEfRepositories();
         services.AddPamServices();
+        services.Configure<PamRotationOptions>(Configuration.GetSection("globalSettings:pam:rotation"));
         Jobs.JobsHostedService.AddCommercialSecretsManagerJobServices(services);
+        services.AddPamJobServices();
+        services.AddOpenApiEndpointDataSource(MapPamRotationAttemptCipherEndpoints);
 #endif
 
         // Billing subscriptions minimal API libraries
         services.AddUserSubscriptions();
         services.AddOrganizationSubscriptions();
+
+        // Registered here rather than in the shared AddOrganizationServices/AddOrganizationSignUpCommands
+        // This command now depends on ICreateOrganizationSubscriptionCommand, which only Api registers (via AddOrganizationSubscriptions).
+        // This command is only used in the Api, so it is registered here rather than in the shared library.
+        services.AddScoped<ICloudOrganizationSignUpCommand, CloudOrganizationSignUpCommand>();
+
         if (!globalSettings.SelfHosted)
         {
             services.AddOpenApiEndpointDataSource(MapSubscriptionEndpoints);
@@ -295,6 +316,7 @@ public class Startup
 #if !OSS
             // PAM is a commercial feature; its Minimal API endpoints are only mapped in non-OSS builds.
             endpoints.MapPamEndpoints();
+            MapPamRotationAttemptCipherEndpoints(endpoints);
 #endif
 
             if (!globalSettings.SelfHosted)
@@ -406,12 +428,24 @@ public class Startup
         logger.LogInformation(Constants.BypassFiltersEventId, "{Project} started.", globalSettings.ProjectName);
     }
 
+#if !OSS
+    /// <summary>The PAM rotation cipher routes, mapped here because the PAM library cannot reference the cipher wire contract.</summary>
+    private static void MapPamRotationAttemptCipherEndpoints(IEndpointRouteBuilder endpoints)
+    {
+        endpoints.MapGroup("/access-connectors/rotation/attempts")
+            .WithPamAccessConnectorMachineDefaults()
+            .MapRotationAttemptCipherEndpoints();
+    }
+#endif
+
     private static void MapSubscriptionEndpoints(IEndpointRouteBuilder endpoints)
     {
         endpoints.MapGroup("/account/billing/subscription")
             .MapUserSubscriptionEndpoints();
         endpoints.MapGroup("/organizations/{organizationId:guid}/billing/subscription")
             .MapOrganizationSubscriptionEndpoints();
+        endpoints.MapGroup("/organizations/{organizationId:guid}/billing/subscription")
+            .MapOrganizationPrivilegedControlsEndpoints();
         endpoints.MapGroup("/organizations/billing/subscription")
             .MapOrganizationSubscriptionPurchaseEndpoints();
     }

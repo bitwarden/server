@@ -5,6 +5,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Commands;
+using Bit.Core.Billing.Subscriptions.Queries;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -30,24 +31,29 @@ public class RestartSubscriptionCommandTests
         _command = new RestartSubscriptionCommand(
             Substitute.For<Microsoft.Extensions.Logging.ILogger<RestartSubscriptionCommand>>(),
             _organizationRepository,
-            _pricingClient,
+            new GetOrganizationRestartQuery(_pricingClient),
             _stripeAdapter,
             _subscriberService);
     }
 
-    [Fact]
-    public async Task Run_SubscriptionNotCanceled_ReturnsBadRequest()
+    [Theory]
+    [InlineData(SubscriptionStatus.Active)]
+    [InlineData(SubscriptionStatus.Trialing)]
+    [InlineData(SubscriptionStatus.PastDue)]
+    [InlineData(SubscriptionStatus.Unpaid)]
+    [InlineData(SubscriptionStatus.Incomplete)]
+    public async Task Run_SubscriptionNotEnded_ReturnsBadRequest(string status)
     {
         var organization = new Organization { Id = Guid.NewGuid() };
 
-        var subscription = new Subscription { Status = SubscriptionStatus.Active };
+        var subscription = new Subscription { Status = status };
         _subscriberService.GetSubscription(organization).Returns(subscription);
 
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT1);
         var badRequest = result.AsT1;
-        Assert.Equal("Cannot restart a subscription that is not canceled.", badRequest.Response);
+        Assert.Equal("Cannot restart a subscription that has not ended.", badRequest.Response);
     }
 
     [Fact]
@@ -61,7 +67,7 @@ public class RestartSubscriptionCommandTests
 
         Assert.True(result.IsT1);
         var badRequest = result.AsT1;
-        Assert.Equal("Cannot restart a subscription that is not canceled.", badRequest.Response);
+        Assert.Equal("Cannot restart a subscription that has not ended.", badRequest.Response);
     }
 
     [Fact]
@@ -276,6 +282,58 @@ public class RestartSubscriptionCommandTests
             org.Enabled == true &&
             org.ExpirationDate == currentPeriodEnd &&
             org.PlanType == PlanType.EnterpriseAnnually));
+    }
+
+    [Fact]
+    public async Task Run_Organization_IncompleteExpiredSubscription_Success()
+    {
+        var organizationId = Guid.NewGuid();
+        var currentPeriodEnd = DateTime.UtcNow.AddMonths(1);
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.EnterpriseAnnually
+        };
+
+        var plan = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        var existingSubscription = new Subscription
+        {
+            Status = SubscriptionStatus.IncompleteExpired,
+            CustomerId = "cus_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { Price = new Price { Id = plan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { ["organizationId"] = organizationId.ToString() }
+        };
+
+        var newSubscription = new Subscription
+        {
+            Id = "sub_new",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd }]
+            }
+        };
+
+        _subscriberService.GetSubscription(organization).Returns(existingSubscription);
+        _pricingClient.ListPlans().Returns([plan]);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(options =>
+            options.Customer == "cus_123"));
+
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(org =>
+            org.GatewaySubscriptionId == "sub_new" &&
+            org.Enabled == true));
     }
 
     [Fact]

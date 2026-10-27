@@ -3,6 +3,7 @@ using AutoFixture.Xunit2;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Billing.Controllers;
 using Bit.Api.Models.Request.Organizations;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -35,6 +36,7 @@ using NSubstitute.ReturnsExtensions;
 using OneOf.Types;
 using Stripe;
 using Xunit;
+using static Bit.Core.Billing.Constants.StripeConstants;
 using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 
 namespace Bit.Api.Test.Billing.Controllers;
@@ -60,6 +62,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IPricingClient _pricingClient;
     private readonly IReinstateSubscriptionCommand _reinstateSubscriptionCommand;
     private readonly IGetPendingAnnualUpgradeQuery _getPendingAnnualUpgradeQuery;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     private readonly OrganizationsController _sut;
 
@@ -86,6 +89,7 @@ public class OrganizationsControllerTests : IDisposable
         _pricingClient = Substitute.For<IPricingClient>();
         _reinstateSubscriptionCommand = Substitute.For<IReinstateSubscriptionCommand>();
         _getPendingAnnualUpgradeQuery = Substitute.For<IGetPendingAnnualUpgradeQuery>();
+        _featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -104,7 +108,8 @@ public class OrganizationsControllerTests : IDisposable
             _organizationInstallationRepository,
             _pricingClient,
             _reinstateSubscriptionCommand,
-            _getPendingAnnualUpgradeQuery);
+            _getPendingAnnualUpgradeQuery,
+            _featureService);
     }
 
     public void Dispose()
@@ -607,5 +612,371 @@ public class OrganizationsControllerTests : IDisposable
 
         Assert.Null(response.PendingAnnualUpgrade);
         await _getPendingAnnualUpgradeQuery.DidNotReceive().Run(Arg.Any<Organization>());
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_PamOnWithoutPamLine_IsOnPamSalesInitiatedTrial(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.UsePam = true;
+        var plan = new EnterprisePlan(isAnnual: true);
+        ArrangeCloudSubscription(organizationId, organization, plan,
+            PurchasableReferences.PasswordManagerSeat, PurchasableReferences.SecretsManagerSeat);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.True(response.IsOnPamSalesInitiatedTrial);
+    }
+
+    [Theory]
+    [InlineAutoData(true)]
+    [InlineAutoData(false)]
+    public async Task GetSubscription_PamOnWithPamLine_IsNotOnPamSalesInitiatedTrialOnEitherCadence(
+        bool isAnnual,
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.UsePam = true;
+        var plan = new EnterprisePlan(isAnnual);
+        ArrangeCloudSubscription(organizationId, organization, plan,
+            PurchasableReferences.PasswordManagerSeat, PurchasableReferences.PrivilegedControlsSeat);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.False(response.IsOnPamSalesInitiatedTrial);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_PamOffWithPamLine_IsNotOnPamSalesInitiatedTrial(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.UsePam = false;
+        var plan = new EnterprisePlan(isAnnual: true);
+        ArrangeCloudSubscription(organizationId, organization, plan,
+            PurchasableReferences.PasswordManagerSeat, PurchasableReferences.PrivilegedControlsSeat);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.False(response.IsOnPamSalesInitiatedTrial);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_PamOffWithoutPamLine_IsNotOnPamSalesInitiatedTrialAndSkipsOccupiedSeatQuery(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.UsePam = false;
+        var plan = new EnterprisePlan(isAnnual: true);
+        ArrangeCloudSubscription(organizationId, organization, plan,
+            PurchasableReferences.PasswordManagerSeat, PurchasableReferences.SecretsManagerSeat);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.False(response.IsOnPamSalesInitiatedTrial);
+        Assert.Equal(organization.PamSeats, response.PamSeats);
+        Assert.Equal(organization.MaxAutoscalePamSeats, response.MaxAutoscalePamSeats);
+        Assert.Null(response.OccupiedPamSeats);
+        await _organizationUserRepository.DidNotReceiveWithAnyArgs().GetOccupiedPamSeatCountByOrganizationIdAsync(default);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_PamOn_ReturnsPamSeatsAutoscaleAndOccupiedSeats(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.UsePam = true;
+        organization.PamSeats = 12;
+        organization.MaxAutoscalePamSeats = 20;
+        var plan = new EnterprisePlan(isAnnual: true);
+        ArrangeCloudSubscription(organizationId, organization, plan, PurchasableReferences.PrivilegedControlsSeat);
+        _organizationUserRepository.GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id).Returns(7);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Equal(12, response.PamSeats);
+        Assert.Equal(20, response.MaxAutoscalePamSeats);
+        Assert.Equal(7, response.OccupiedPamSeats);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_PamOnPlanWithoutPrivilegedControls_IsNotOnPamSalesInitiatedTrial(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.UsePam = true;
+        var plan = new TeamsPlan(true);
+        ArrangeCloudSubscription(organizationId, organization, plan, PurchasableReferences.PasswordManagerSeat);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.False(response.IsOnPamSalesInitiatedTrial);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_WhenHidingSensitiveData_StillPopulatesPamFields(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.UsePam = true;
+        var plan = new EnterprisePlan(isAnnual: true);
+        ArrangeCloudSubscription(organizationId, organization, plan,
+            PurchasableReferences.PasswordManagerSeat, PurchasableReferences.PrivilegedControlsSeat);
+        _currentContext.EditSubscription(organizationId).Returns(false); // hideSensitiveData = true
+        _organizationUserRepository.GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id).Returns(7);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Null(response.Subscription.Items);
+        Assert.False(response.IsOnPamSalesInitiatedTrial);
+        Assert.Equal(7, response.OccupiedPamSeats);
+    }
+
+    [Theory]
+    [InlineAutoData(true)]
+    [InlineAutoData(false)]
+    public async Task GetSubscription_NoGatewaySubscription_PamTrialFlagFollowsUsePamAndOccupiedSeatsPopulated(
+        bool usePam,
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.UsePam = usePam;
+        organization.GatewaySubscriptionId = null;
+        var plan = new EnterprisePlan(isAnnual: true);
+
+        _currentContext.ViewSubscription(organizationId).Returns(true);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+        _organizationUserRepository.GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id).Returns(3);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Equal(usePam, response.IsOnPamSalesInitiatedTrial);
+        Assert.Equal(usePam ? 3 : null, response.OccupiedPamSeats);
+        await _paymentService.DidNotReceiveWithAnyArgs().GetSubscriptionAsync(default);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_GatewayReturnsNoSubscription_PamOn_IsOnPamSalesInitiatedTrialAndOccupiedSeatsPopulated(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.UsePam = true;
+        organization.GatewaySubscriptionId = "sub_123";
+        var plan = new EnterprisePlan(isAnnual: true);
+
+        _currentContext.ViewSubscription(organizationId).Returns(true);
+        _currentContext.EditSubscription(organizationId).Returns(true);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+        _paymentService.GetSubscriptionAsync(organization).Returns(new SubscriptionInfo { Subscription = null });
+        _organizationUserRepository.GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id).Returns(3);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Null(response.Subscription);
+        Assert.True(response.IsOnPamSalesInitiatedTrial);
+        Assert.Equal(3, response.OccupiedPamSeats);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_SelfHosted_PamTrialFlagAndOccupiedSeatsAreNull(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.UsePam = true;
+        _globalSettings.SelfHosted = true;
+        _currentContext.ViewSubscription(organizationId).Returns(true);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Null(response.IsOnPamSalesInitiatedTrial);
+        Assert.Null(response.OccupiedPamSeats);
+        await _organizationUserRepository.DidNotReceiveWithAnyArgs().GetOccupiedPamSeatCountByOrganizationIdAsync(default);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_PamOnWithOrganizationMinimum_ReturnsOrganizationMinimum(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.UsePam = true;
+        organization.PamSeatMinimum = 4;
+        var plan = new EnterprisePlan(isAnnual: true);
+        ArrangeCloudSubscription(organizationId, organization, plan, PurchasableReferences.PrivilegedControlsSeat);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Equal(4, response.PamSeatMinimum);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_PamOnWithoutOrganizationMinimum_ReturnsPlanDefaultMinimum(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.UsePam = true;
+        organization.PamSeatMinimum = null;
+        var plan = new EnterprisePlan(isAnnual: true);
+        ArrangeCloudSubscription(organizationId, organization, plan, PurchasableReferences.PrivilegedControlsSeat);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Equal(10, response.PamSeatMinimum);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_PamOff_PamSeatMinimumIsNull(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.UsePam = false;
+        organization.PamSeatMinimum = 4;
+        var plan = new EnterprisePlan(isAnnual: true);
+        ArrangeCloudSubscription(organizationId, organization, plan, PurchasableReferences.PrivilegedControlsSeat);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Null(response.PamSeatMinimum);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_PamOnPlanWithoutPrivilegedControls_PamSeatMinimumIsNull(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.UsePam = true;
+        organization.PamSeatMinimum = 4;
+        var plan = new TeamsPlan(true);
+        ArrangeCloudSubscription(organizationId, organization, plan, PurchasableReferences.PasswordManagerSeat);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Null(response.PamSeatMinimum);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_SelfHosted_PamSeatMinimumIsNull(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.UsePam = true;
+        organization.PamSeatMinimum = 4;
+        _globalSettings.SelfHosted = true;
+        _currentContext.ViewSubscription(organizationId).Returns(true);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Null(response.PamSeatMinimum);
+        await _pricingClient.DidNotReceiveWithAnyArgs().GetPlanOrThrow(default);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_PamBillingFlagOn_PlanCarriesPrivilegedControlsPricing(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.UsePam = true;
+        var plan = new EnterprisePlan(isAnnual: true);
+        ArrangeCloudSubscription(organizationId, organization, plan, PurchasableReferences.PrivilegedControlsSeat);
+        _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(true);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.NotNull(response.Plan.PrivilegedControls);
+        Assert.Equal(72, response.Plan.PrivilegedControls.SeatPrice);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_PamBillingFlagOff_PlanHidesPrivilegedControlsPricingButSeatMinimumStays(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.UsePam = true;
+        organization.PamSeatMinimum = 4;
+        var plan = new EnterprisePlan(isAnnual: true);
+        ArrangeCloudSubscription(organizationId, organization, plan, PurchasableReferences.PrivilegedControlsSeat);
+        _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(false);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Null(response.Plan.PrivilegedControls);
+        Assert.Equal(4, response.PamSeatMinimum);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_HideSensitiveData_PamSeatMinimumStillPopulated(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.UsePam = true;
+        organization.PamSeatMinimum = 4;
+        var plan = new EnterprisePlan(isAnnual: true);
+        ArrangeCloudSubscription(organizationId, organization, plan, PurchasableReferences.PrivilegedControlsSeat);
+        _currentContext.EditSubscription(organizationId).Returns(false);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Null(response.BillingEmail);
+        Assert.Equal(4, response.PamSeatMinimum);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_NoGatewaySubscription_PamOn_ReturnsPamSeatMinimum(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.UsePam = true;
+        organization.PamSeatMinimum = null;
+        organization.GatewaySubscriptionId = null;
+        var plan = new EnterprisePlan(isAnnual: true);
+
+        _currentContext.ViewSubscription(organizationId).Returns(true);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Equal(10, response.PamSeatMinimum);
+        await _paymentService.DidNotReceiveWithAnyArgs().GetSubscriptionAsync(default);
+    }
+
+    private void ArrangeCloudSubscription(
+        Guid organizationId,
+        Organization organization,
+        Bit.Core.Models.StaticStore.Plan plan,
+        params string[] purchasableReferences)
+    {
+        organization.GatewaySubscriptionId = "sub_123";
+        var subscriptionInfo = new SubscriptionInfo
+        {
+            Subscription = new SubscriptionInfo.BillingSubscription(new Subscription
+            {
+                Items = new StripeList<SubscriptionItem>
+                {
+                    Data = purchasableReferences.Select(reference => new SubscriptionItem
+                    {
+                        Price = new Price
+                        {
+                            Id = $"price_{reference}",
+                            Metadata = new Dictionary<string, string>
+                            {
+                                [MetadataKeys.PurchasableReference] = reference
+                            }
+                        },
+                        Plan = new Plan { Id = $"price_{reference}", ProductId = $"prod_{reference}" }
+                    }).ToList()
+                }
+            })
+        };
+
+        _currentContext.ViewSubscription(organizationId).Returns(true);
+        _currentContext.EditSubscription(organizationId).Returns(true);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+        _paymentService.GetSubscriptionAsync(organization).Returns(subscriptionInfo);
     }
 }

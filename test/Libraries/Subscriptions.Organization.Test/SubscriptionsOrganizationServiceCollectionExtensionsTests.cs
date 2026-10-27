@@ -1,7 +1,10 @@
-﻿using Bit.Core.Billing.Pricing;
+﻿using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Services;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Subscriptions.Organization.Commands;
 using Bit.Subscriptions.Organization.Handlers;
 using Bit.Subscriptions.Organization.Queries;
 using Bitwarden.Server.Sdk.Environment;
@@ -31,5 +34,61 @@ public class SubscriptionsOrganizationServiceCollectionExtensionsTests
         Assert.IsType<PreviewOrganizationSubscriptionPurchaseQuery>(
             scope.ServiceProvider.GetService<IPreviewOrganizationSubscriptionPurchaseQuery>());
         Assert.NotNull(scope.ServiceProvider.GetService<PreviewOrganizationSubscriptionPurchaseHandler>());
+    }
+
+    [Fact]
+    public void AddOrganizationSubscriptions_RegistersThePrivilegedControlsTrialQueryAndSeatChangeHandler()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(Substitute.For<IPricingClient>());
+        services.AddSingleton(Substitute.For<IStripeAdapter>());
+        services.AddSingleton(Substitute.For<IOrganizationRepository>());
+        services.AddSingleton(Substitute.For<IOrganizationUserRepository>());
+        services.AddSingleton(Substitute.For<IUpdateOrganizationSubscriptionCommand>());
+        services.AddSingleton(Substitute.For<IOrganizationService>());
+        services.AddSingleton(Substitute.For<IBitwardenEnvironment>());
+        services.AddLogging();
+
+        services.AddOrganizationSubscriptions();
+        using var scope = services.BuildServiceProvider().CreateScope();
+
+        Assert.IsType<IsOnPrivilegedControlsSalesInitiatedTrialQuery>(
+            scope.ServiceProvider.GetService<IIsOnPrivilegedControlsSalesInitiatedTrialQuery>());
+        Assert.NotNull(scope.ServiceProvider.GetService<ChangePrivilegedControlsSeatsHandler>());
+    }
+
+    [Fact]
+    public void AddOrganizationSubscriptions_RegistersTheAutoscalePrivilegedControlsSeatsCommandAsScoped()
+    {
+        var services = new ServiceCollection();
+
+        services.AddOrganizationSubscriptions();
+
+        var descriptor = Assert.Single(
+            services, d => d.ServiceType == typeof(IAutoscalePrivilegedControlsSeatsCommand));
+        Assert.Equal(typeof(AutoscalePrivilegedControlsSeatsCommand), descriptor.ImplementationType);
+        Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
+    }
+
+    [Fact]
+    public void AddOrganizationSubscriptions_RegistersPurchasePrivilegedControlsHandler()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(Substitute.For<IStripeAdapter>());
+        services.AddSingleton(Substitute.For<IPricingClient>());
+        services.AddSingleton(Substitute.For<ISubscriptionDiscountService>());
+        services.AddSingleton(Substitute.For<ITaxService>());
+        services.AddSingleton(Substitute.For<IUserService>());
+        services.AddSingleton(Substitute.For<IBitwardenEnvironment>());
+        services.AddSingleton(Substitute.For<IOrganizationRepository>());
+        services.AddSingleton(Substitute.For<IOrganizationUserRepository>());
+        services.AddSingleton(Substitute.For<IOrganizationService>());
+        services.AddSingleton(Substitute.For<IUpdateOrganizationSubscriptionCommand>());
+        services.AddLogging();
+
+        services.AddOrganizationSubscriptions();
+        using var scope = services.BuildServiceProvider().CreateScope();
+
+        Assert.NotNull(scope.ServiceProvider.GetService<PurchasePrivilegedControlsHandler>());
     }
 }

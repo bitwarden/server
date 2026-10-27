@@ -1,9 +1,11 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Nodes;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Fido2NetLib;
@@ -86,7 +88,11 @@ public class WebAuthnTokenProviderTests
 
         var token = await sutProvider.Sut.GenerateAsync("purpose", SubstituteUserManager(), user);
 
-        Assert.Equal(assertionOptions.ToJson(), token);
+        var tokenNode = JsonNode.Parse(token)!.AsObject();
+        var expectedAppId = CoreHelpers.U2fAppIdUrl(sutProvider.GetDependency<Bit.Core.Settings.GlobalSettings>());
+        Assert.Equal(expectedAppId, (string?)tokenNode["extensions"]!["appid"]);
+        tokenNode["extensions"]!.AsObject().Remove("appid");
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse(assertionOptions.ToJson()), tokenNode));
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
         Assert.True(provider.MetaData.ContainsKey("login"));
         await userService.Received(1)

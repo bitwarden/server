@@ -2,6 +2,7 @@
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
+using Bit.Seeder.Extensions;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Services;
@@ -11,6 +12,7 @@ namespace Bit.Seeder.Scenes;
 public class OrganizationIdentityCipherScene(
     IOrganizationRepository organizationRepository,
     ICipherRepository cipherRepository,
+    ICollectionRepository collectionRepository,
     IManglerService manglerService)
     : IScene<OrganizationIdentityCipherScene.Request, OrganizationIdentityCipherScene.Result>
 {
@@ -53,11 +55,8 @@ public class OrganizationIdentityCipherScene(
 
     public async Task<SceneResult<Result>> SeedAsync(Request request)
     {
-        var organization = await organizationRepository.GetByIdAsync(request.OrganizationId);
-        if (organization == null)
-        {
-            throw new InvalidOperationException($"Organization {request.OrganizationId} not found.");
-        }
+        var collectionIds = await organizationRepository.GetDistinctCollectionIdsOrThrowAsync(
+            collectionRepository, request.OrganizationId, request.CollectionIds);
 
         var identity = new IdentityViewDto
         {
@@ -92,7 +91,7 @@ public class OrganizationIdentityCipherScene(
             Identity = identity
         });
 
-        await cipherRepository.CreateAsync(cipher, request.CollectionIds);
+        await cipherRepository.CreateAsync(cipher, collectionIds);
 
         return new SceneResult<Result>(
             result: new Result

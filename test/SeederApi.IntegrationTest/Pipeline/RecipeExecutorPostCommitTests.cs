@@ -211,7 +211,8 @@ public sealed class RecipeExecutorPostCommitTests : IDisposable
 
         var committer = new BulkCommitter(
             _provider.GetRequiredService<DatabaseContext>(),
-            _provider.GetRequiredService<IMapper>());
+            _provider.GetRequiredService<IMapper>(),
+            disableDataProtection: false);
 
         return new RecipeExecutor(_recipe, _provider, committer);
     }
@@ -237,7 +238,9 @@ public sealed class RecipeExecutorPostCommitTests : IDisposable
         ApiKey = "test-api-key",
     };
 
-    /// <summary>What a step could see at the moment it ran.</summary>
+    /// <summary>
+    /// What a step could see at the moment it ran.
+    /// </summary>
     private sealed record Observation(
         string Label,
         int UsersInDb,
@@ -272,7 +275,9 @@ public sealed class RecipeExecutorPostCommitTests : IDisposable
         public void Execute(SeederContext context) => log.Add(Observation.Capture(label, context));
     }
 
-    /// <summary>Deliberately not <c>async</c>: CS1998 is a build error under TreatWarningsAsErrors.</summary>
+    /// <summary>
+    /// Deliberately not <c>async</c>: CS1998 is a build error under TreatWarningsAsErrors.
+    /// </summary>
     private sealed class RecordingAsyncPostCommitStep(string label, List<Observation> log) : IAsyncStep, IPostCommitStep
     {
         public Task ExecuteAsync(SeederContext context)
@@ -282,7 +287,9 @@ public sealed class RecipeExecutorPostCommitTests : IDisposable
         }
     }
 
-    /// <summary>Stands in for <c>FinalizeOrganizationBillingStep</c>: stamps gateway IDs onto the committed org.</summary>
+    /// <summary>
+    /// Stands in for <c>CreateOrganizationBillingStep</c>: stamps gateway IDs onto the committed org.
+    /// </summary>
     private sealed class GatewayStampingPostCommitStep(string customerId, string subscriptionId)
         : IAsyncStep, IPostCommitStep
     {

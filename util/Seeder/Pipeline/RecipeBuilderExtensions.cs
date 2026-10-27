@@ -1,6 +1,8 @@
-﻿using Bit.Core.Auth.Enums;
+﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Services;
+using Bit.Core.Enums;
 using Bit.Core.Vault.Enums;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
@@ -77,6 +79,27 @@ public static class RecipeBuilderExtensions
         }
 
         builder.AddStep(_ => new CreateOrganizationApiKeyStep());
+        return builder;
+    }
+
+    /// <summary>
+    /// Create organization policy rows, enabled or disabled, with optional per-type Data JSON.
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <param name="policies">Policy type, enabled flag and Data JSON (null uses the step's default) per row</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no organization exists</exception>
+    internal static RecipeBuilder AddPolicies(
+        this RecipeBuilder builder,
+        IReadOnlyList<(PolicyType Type, bool Enabled, string? Data)> policies)
+    {
+        if (!builder.HasOrg)
+        {
+            throw new InvalidOperationException(
+                "Policies require an organization. Call CreateOrganization() or UseOrganization() first.");
+        }
+
+        builder.AddStep(_ => new CreatePoliciesStep(policies));
         return builder;
     }
 
@@ -189,11 +212,12 @@ public static class RecipeBuilderExtensions
     /// <param name="builder">The recipe builder</param>
     /// <param name="domain">Organization domain (used for seeding randomness)</param>
     /// <param name="seed">Optional explicit seed. If null, domain hash is used.</param>
+    /// <param name="region">Optional region for generated names, card brands, and identity formats. If null, <see cref="GeographicRegion.Global"/> is used.</param>
     /// <returns>The builder for fluent chaining</returns>
-    public static RecipeBuilder WithGenerator(this RecipeBuilder builder, string domain, int? seed = null)
+    public static RecipeBuilder WithGenerator(this RecipeBuilder builder, string domain, int? seed = null, GeographicRegion? region = null)
     {
         builder.HasGenerator = true;
-        builder.AddStep(_ => InitGeneratorStep.FromDomain(domain, seed));
+        builder.AddStep(_ => InitGeneratorStep.FromDomain(domain, seed, region));
         return builder;
     }
 
@@ -231,9 +255,16 @@ public static class RecipeBuilderExtensions
     /// <param name="builder">The recipe builder</param>
     /// <param name="count">Number of users to generate</param>
     /// <param name="realisticStatusMix">If true, includes revoked/invited users; if false, all confirmed</param>
+    /// <param name="statusMix">Explicit status distribution; takes precedence over <paramref name="realisticStatusMix"/></param>
+    /// <param name="adminCount">Number of Confirmed members created as Admins (the rest are Users)</param>
     /// <returns>The builder for fluent chaining</returns>
     /// <exception cref="InvalidOperationException">Thrown when UseRoster() was already called</exception>
-    public static RecipeBuilder AddUsers(this RecipeBuilder builder, int count, bool realisticStatusMix = false)
+    public static RecipeBuilder AddUsers(
+        this RecipeBuilder builder,
+        int count,
+        bool realisticStatusMix = false,
+        Distribution<OrganizationUserStatusType>? statusMix = null,
+        int adminCount = 0)
     {
         if (builder.HasRosterUsers)
         {
@@ -242,7 +273,7 @@ public static class RecipeBuilderExtensions
         }
 
         builder.HasGeneratedUsers = true;
-        builder.AddStep(_ => new CreateUsersStep(count, realisticStatusMix));
+        builder.AddStep(_ => new CreateUsersStep(count, realisticStatusMix, statusMix, adminCount));
         return builder;
     }
 
@@ -523,6 +554,37 @@ public static class RecipeBuilderExtensions
     }
 
     /// <summary>
+    /// Create one default user collection per Confirmed User or Custom member, filled with migrated items.
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <param name="options">Default collection settings from the preset</param>
+    /// <param name="policyEnabledDate">When the Organization Data Ownership policy was enabled; the collections' dates</param>
+    /// <param name="seed">Seed for the per-member item counts, member choice and dates</param>
+    /// <param name="typeDist">Distribution of cipher types. Uses realistic defaults if null.</param>
+    /// <param name="personalDist">The personal cipher distribution given to AddPersonalCiphers(); members it gives items keep an empty collection</param>
+    /// <param name="personalCountPerUser">The flat personal cipher count given to AddPersonalCiphers(); 0 when none</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <exception cref="InvalidOperationException">Thrown when WithGenerator() was not called</exception>
+    internal static RecipeBuilder AddDefaultCollections(
+        this RecipeBuilder builder,
+        SeedPresetDefaultCollections options,
+        DateTime policyEnabledDate,
+        int seed,
+        Distribution<CipherType>? typeDist = null,
+        Distribution<(int Min, int Max)>? personalDist = null,
+        int personalCountPerUser = 0)
+    {
+        if (!builder.HasGenerator)
+        {
+            throw new InvalidOperationException(
+                "Default collections require a generator. Call WithGenerator() first.");
+        }
+
+        builder.AddStep(_ => new CreateDefaultCollectionsStep(options, policyEnabledDate, seed, typeDist, personalDist, personalCountPerUser));
+        return builder;
+    }
+
+    /// <summary>
     /// Generate personal ciphers for each user, encrypted with their individual symmetric key.
     /// </summary>
     /// <param name="builder">The recipe builder</param>
@@ -555,19 +617,44 @@ public static class RecipeBuilderExtensions
     /// Create a real Stripe test-environment customer and subscription for the organization after it commits.
     /// </summary>
     /// <param name="builder">The recipe builder</param>
-    /// <param name="options">Trial configuration for the subscription</param>
+    /// <param name="options">Trial configuration, test card, and billing address for the subscription</param>
     /// <returns>The builder for fluent chaining</returns>
     /// <remarks>
     /// Opt-in only. This step makes live network calls. <c>RecipeOrchestrator.ValidateBillingOptIn</c> still
     /// validates the host's Stripe configuration before any entity is created, for fast feedback — but
-    /// <see cref="IStripeBillingInitializer.InitializeOrganizationAsync"/> also self-validates, so a caller that
-    /// skips the pre-flight check fails before touching Stripe rather than after.
+    /// <see cref="IOrganizationStripeBillingService.CreateSubscriptionAsync"/> also self-validates, so a
+    /// caller that skips the pre-flight check fails before touching Stripe rather than after.
     /// </remarks>
-    public static RecipeBuilder WithStripeBilling(this RecipeBuilder builder, StripeBillingOptions options)
+    public static RecipeBuilder WithStripeOrganizationBilling(
+        this RecipeBuilder builder, StripeBillingOptions options)
     {
         builder.HasBilling = true;
-        builder.AddAsyncStep(sp => new FinalizeOrganizationBillingStep(
-            sp.GetRequiredService<IStripeBillingInitializer>(), options));
+        builder.AddAsyncStep(sp => new CreateOrganizationBillingStep(
+            sp.GetRequiredService<IOrganizationStripeBillingService>(), options));
+        return builder;
+    }
+
+    /// <summary>
+    /// Create a real Stripe test-environment customer and premium subscription for the individual user.
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <param name="profile">The test card and billing address the user pays with</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no individual user exists</exception>
+    /// <remarks>
+    /// Opt-in only. This step makes live network calls. Register it last, after every other pre-commit step,
+    /// so Stripe is called only once the rest of the seed has succeeded.
+    /// </remarks>
+    public static RecipeBuilder WithStripeUserBilling(this RecipeBuilder builder, StripeBillingProfile profile)
+    {
+        if (!builder.HasIndividualUser)
+        {
+            throw new InvalidOperationException(
+                "Stripe user billing requires an individual user. Call CreateIndividualUser() first.");
+        }
+
+        builder.AddAsyncStep(sp => new CreatePremiumSubscriptionStep(
+            sp.GetRequiredService<IUserStripeBillingService>(), profile));
         return builder;
     }
 
