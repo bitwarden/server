@@ -135,40 +135,27 @@ public class SendInviteRemindersCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SendInviteRemindersAsync_OneOrgWithTwoReminderNumbers_MakesOneMailCallForEach(
-        Organization organization)
-    {
-        var sutProvider = GetSutProvider();
-        var first = Reminder(organization, 1);
-        var third = Reminder(organization, 3);
-        ArrangeClaim(sutProvider, [first, third], organization);
-
-        await sutProvider.Sut.SendInviteRemindersAsync();
-
-        var mailService = sutProvider.GetDependency<IMailService>();
-        await mailService.Received(1).SendOrganizationInviteReminderEmailsAsync(
-            Arg.Is<OrganizationInvitesInfo>(info => info.OrgUserTokenPairs.Single().OrgUser.Id == first.Id), 1);
-        await mailService.Received(1).SendOrganizationInviteReminderEmailsAsync(
-            Arg.Is<OrganizationInvitesInfo>(info => info.OrgUserTokenPairs.Single().OrgUser.Id == third.Id), 3);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SendInviteRemindersAsync_TwoOrgsOnSameReminderNumber_MakesOneMailCallForEachOrg(
+    public async Task SendInviteRemindersAsync_MakesOneMailCallForEachOrgAndReminderNumber(
         Organization organization1, Organization organization2)
     {
         var sutProvider = GetSutProvider();
-        ArrangeClaim(sutProvider, [Reminder(organization1, 2), Reminder(organization2, 2), Reminder(organization2, 2)],
+        var first = Reminder(organization1, 1);
+        var third = Reminder(organization1, 3);
+        ArrangeClaim(sutProvider,
+            [first, third, Reminder(organization2, 1), Reminder(organization2, 1)],
             organization1, organization2);
 
         await sutProvider.Sut.SendInviteRemindersAsync();
 
         var mailService = sutProvider.GetDependency<IMailService>();
+        await mailService.ReceivedWithAnyArgs(3).SendOrganizationInviteReminderEmailsAsync(default!, default);
+        await mailService.Received(1).SendOrganizationInviteReminderEmailsAsync(
+            Arg.Is<OrganizationInvitesInfo>(info => info.OrgUserTokenPairs.Single().OrgUser.Id == first.Id), 1);
+        await mailService.Received(1).SendOrganizationInviteReminderEmailsAsync(
+            Arg.Is<OrganizationInvitesInfo>(info => info.OrgUserTokenPairs.Single().OrgUser.Id == third.Id), 3);
         await mailService.Received(1).SendOrganizationInviteReminderEmailsAsync(
             Arg.Is<OrganizationInvitesInfo>(info =>
-                info.OrganizationName == organization1.DisplayName() && info.OrgUserTokenPairs.Count() == 1), 2);
-        await mailService.Received(1).SendOrganizationInviteReminderEmailsAsync(
-            Arg.Is<OrganizationInvitesInfo>(info =>
-                info.OrganizationName == organization2.DisplayName() && info.OrgUserTokenPairs.Count() == 2), 2);
+                info.OrganizationName == organization2.DisplayName() && info.OrgUserTokenPairs.Count() == 2), 1);
     }
 
     [Theory, BitAutoData]
