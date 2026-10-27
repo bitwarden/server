@@ -1,43 +1,34 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PreAccess;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.InviteLinks;
 
+[SutProviderCustomize]
 public class GetOrganizationInviteValidatorTests
 {
-    private readonly GetOrganizationInviteValidator _sut = new();
-
     [Theory, BitAutoData]
-    public void Validate_WhenAllChecksPass_ReturnsValidRequest(
-        Organization organization, OrganizationInviteLink inviteLink, User user)
+    public async Task ValidateAsync_WhenEligibilityFails_ReturnsEligibilityError(
+        Organization organization, OrganizationInviteLink inviteLink, User user, OrganizationUser existingOrganizationUser,
+        SutProvider<GetOrganizationInviteValidator> sutProvider)
     {
         // Arrange
-        var request = BuildRequest(organization, inviteLink, user, existingOrganizationUser: null);
-
-        // Act
-        var result = _sut.Validate(request);
-
-        // Assert
-        Assert.True(result.IsValid);
-        Assert.Same(request, result.Request);
-    }
-
-    [Theory, BitAutoData]
-    public void Validate_WhenEligibilityFails_ReturnsEligibilityError(
-        Organization organization, OrganizationInviteLink inviteLink, User user, OrganizationUser existingOrganizationUser)
-    {
-        // Arrange
+        SetupJoinRequirementsPass(sutProvider);
         // Revoked would also fail the membership status check, so this proves eligibility is checked first.
         existingOrganizationUser.Status = OrganizationUserStatusType.Revoked;
         var request = BuildRequest(organization, inviteLink, user, existingOrganizationUser);
         inviteLink.AllowedDomains = "[\"allowed.com\"]";
 
         // Act
-        var result = _sut.Validate(request);
+        var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
         Assert.True(result.IsError);
@@ -45,56 +36,115 @@ public class GetOrganizationInviteValidatorTests
     }
 
     [Theory, BitAutoData]
-    public void Validate_WithAcceptLinkAndAcceptedMembership_ReturnsAlreadyOrganizationMember(
-        Organization organization, OrganizationInviteLink inviteLink, User user, OrganizationUser existingOrganizationUser)
+    public async Task ValidateAsync_WithAcceptLinkAndAcceptedMembership_ReturnsAlreadyOrganizationMember(
+        Organization organization, OrganizationInviteLink inviteLink, User user, OrganizationUser existingOrganizationUser,
+        SutProvider<GetOrganizationInviteValidator> sutProvider)
     {
         // Arrange
+        SetupJoinRequirementsPass(sutProvider);
         existingOrganizationUser.Status = OrganizationUserStatusType.Accepted;
         existingOrganizationUser.RevocationReason = null;
         var request = BuildRequest(organization, inviteLink, user, existingOrganizationUser);
 
         // Act
-        var result = _sut.Validate(request);
+        var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
         Assert.True(result.IsError);
         Assert.IsType<AlreadyOrganizationMember>(result.AsError);
+        await sutProvider.GetDependency<IInviteLinkValidationService>()
+            .DidNotReceiveWithAnyArgs()
+            .ValidateJoinRequirementsAsync(
+                Arg.Any<Organization>(),
+                Arg.Any<User>(),
+                Arg.Any<OrganizationUserType>(),
+                Arg.Any<IPreAccessPolicyEnforcer>());
     }
 
     // Confirm promotes an Accepted membership, so the same membership that blocks an accept link is allowed here.
     [Theory, BitAutoData]
-    public void Validate_WithConfirmationLinkAndAcceptedMembership_ReturnsValidRequest(
-        Organization organization, OrganizationInviteLink inviteLink, User user, OrganizationUser existingOrganizationUser)
+    public async Task ValidateAsync_WithConfirmationLinkAndAcceptedMembership_ReturnsValidRequest(
+        Organization organization, OrganizationInviteLink inviteLink, User user, OrganizationUser existingOrganizationUser,
+        SutProvider<GetOrganizationInviteValidator> sutProvider)
     {
         // Arrange
+        SetupJoinRequirementsPass(sutProvider);
         existingOrganizationUser.Status = OrganizationUserStatusType.Accepted;
         existingOrganizationUser.RevocationReason = null;
         var request = BuildRequest(organization, inviteLink, user, existingOrganizationUser);
         inviteLink.SupportsConfirmation = true;
 
         // Act
-        var result = _sut.Validate(request);
+        var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
         Assert.True(result.IsValid);
     }
 
     [Theory, BitAutoData]
-    public void Validate_WithConfirmationLinkAndRevokedMembership_ReturnsOrganizationAccessRevoked(
-        Organization organization, OrganizationInviteLink inviteLink, User user, OrganizationUser existingOrganizationUser)
+    public async Task ValidateAsync_WhenJoinRequirementsFail_ReturnsJoinRequirementsError(
+        Organization organization, OrganizationInviteLink inviteLink, User user,
+        SutProvider<GetOrganizationInviteValidator> sutProvider)
     {
         // Arrange
-        existingOrganizationUser.RevocationReason = RevocationReason.Manual;
-        var request = BuildRequest(organization, inviteLink, user, existingOrganizationUser);
-        inviteLink.SupportsConfirmation = true;
+        var request = BuildRequest(organization, inviteLink, user, existingOrganizationUser: null);
+        sutProvider.GetDependency<IInviteLinkValidationService>()
+            .ValidateJoinRequirementsAsync(
+                Arg.Any<Organization>(),
+                Arg.Any<User>(),
+                Arg.Any<OrganizationUserType>(),
+                Arg.Any<IPreAccessPolicyEnforcer>())
+            .Returns(new JoinRequirementsValidationResult(new TwoFactorRequiredForMembership(), AutoConfirmPolicyEnabled: false));
 
         // Act
-        var result = _sut.Validate(request);
+        var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<OrganizationAccessRevoked>(result.AsError);
+        Assert.IsType<TwoFactorRequiredForMembership>(result.AsError);
     }
+
+    [Theory]
+    [BitAutoData(false, OrganizationUserType.User)]
+    [BitAutoData(true, OrganizationUserType.Admin)]
+    public async Task ValidateAsync_ChecksJoinRequirementsWithProposedRoleAndEnforcer(
+        bool hasExistingMembership,
+        OrganizationUserType expectedRole,
+        Organization organization, OrganizationInviteLink inviteLink, User user, OrganizationUser existingOrganizationUser,
+        SutProvider<GetOrganizationInviteValidator> sutProvider)
+    {
+        // Arrange
+        SetupJoinRequirementsPass(sutProvider);
+        existingOrganizationUser.Type = OrganizationUserType.Admin;
+        existingOrganizationUser.Status = OrganizationUserStatusType.Invited;
+        existingOrganizationUser.RevocationReason = null;
+        var request = BuildRequest(organization, inviteLink, user,
+            hasExistingMembership ? existingOrganizationUser : null);
+
+        var policyEnforcer = Substitute.For<IPreAccessPolicyEnforcer>();
+        sutProvider.GetDependency<IPreAccessEnforcerQuery>()
+            .RunAsync(organization.Id)
+            .Returns(policyEnforcer);
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        // Assert
+        Assert.True(result.IsValid);
+        Assert.Same(request, result.Request);
+        await sutProvider.GetDependency<IInviteLinkValidationService>()
+            .Received(1)
+            .ValidateJoinRequirementsAsync(organization, user, expectedRole, policyEnforcer);
+    }
+
+    private static void SetupJoinRequirementsPass(SutProvider<GetOrganizationInviteValidator> sutProvider) =>
+        sutProvider.GetDependency<IInviteLinkValidationService>()
+            .ValidateJoinRequirementsAsync(
+                Arg.Any<Organization>(),
+                Arg.Any<User>(),
+                Arg.Any<OrganizationUserType>(),
+                Arg.Any<IPreAccessPolicyEnforcer>())
+            .Returns(new JoinRequirementsValidationResult(null, AutoConfirmPolicyEnabled: false));
 
     // Builds a request that passes every eligibility check, for an accept link.
     private static OrganizationInviteLinkValidationRequest BuildRequest(

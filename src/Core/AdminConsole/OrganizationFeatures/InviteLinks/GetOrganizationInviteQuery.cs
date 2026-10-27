@@ -23,7 +23,7 @@ public class GetOrganizationInviteQuery(
     : IGetOrganizationInviteQuery
 {
     public async Task<CommandResult<string>> GetInviteAsync(GetOrganizationInviteRequest request) =>
-        getOrganizationInviteValidator.Validate(await BuildValidationRequestAsync(request))
+        (await getOrganizationInviteValidator.ValidateAsync(await BuildValidationRequestAsync(request)))
             .MatchResult<CommandResult<string>>(
                 error => error,
                 // Validation guarantees the invite link exists.

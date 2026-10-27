@@ -40,7 +40,7 @@ public class GetOrganizationInviteQueryTests
         // Arrange
         SetupHappyPath(organization, inviteLink, user, existingOrganizationUser: null, sutProvider);
         sutProvider.GetDependency<IGetOrganizationInviteValidator>()
-            .Validate(Arg.Any<OrganizationInviteLinkValidationRequest>())
+            .ValidateAsync(Arg.Any<OrganizationInviteLinkValidationRequest>())
             .Returns(ci => Invalid(ci.Arg<OrganizationInviteLinkValidationRequest>(), new EmailNotVerified()));
 
         // Act
@@ -64,8 +64,8 @@ public class GetOrganizationInviteQueryTests
         await sutProvider.Sut.GetInviteAsync(request);
 
         // Assert
-        sutProvider.GetDependency<IGetOrganizationInviteValidator>().Received(1)
-            .Validate(Arg.Is<OrganizationInviteLinkValidationRequest>(r =>
+        await sutProvider.GetDependency<IGetOrganizationInviteValidator>().Received(1)
+            .ValidateAsync(Arg.Is<OrganizationInviteLinkValidationRequest>(r =>
                 r.ExistingInviteLink == inviteLink &&
                 r.Code == request.Code &&
                 r.Organization == organization &&
@@ -91,8 +91,8 @@ public class GetOrganizationInviteQueryTests
         await sutProvider.Sut.GetInviteAsync(BuildRequest(organization, inviteLink, user));
 
         // Assert
-        sutProvider.GetDependency<IGetOrganizationInviteValidator>().Received(1)
-            .Validate(Arg.Is<OrganizationInviteLinkValidationRequest>(r =>
+        await sutProvider.GetDependency<IGetOrganizationInviteValidator>().Received(1)
+            .ValidateAsync(Arg.Is<OrganizationInviteLinkValidationRequest>(r =>
                 r.ExistingOrganizationUser == invitedOrganizationUser));
     }
 
@@ -127,7 +127,7 @@ public class GetOrganizationInviteQueryTests
             .Returns(existingOrganizationUser);
 
         sutProvider.GetDependency<IGetOrganizationInviteValidator>()
-            .Validate(Arg.Any<OrganizationInviteLinkValidationRequest>())
+            .ValidateAsync(Arg.Any<OrganizationInviteLinkValidationRequest>())
             .Returns(ci => Valid(ci.Arg<OrganizationInviteLinkValidationRequest>()));
     }
 }
