@@ -422,6 +422,97 @@ public class UpdateOrganizationSubscriptionCommandTests
     }
 
     [Fact]
+    public async Task Run_WithProrationDate_SetsProrationDateOnSubscriptionUpdate()
+    {
+        var organization = CreateOrganization();
+        var subscription = CreateSubscription(items: [("price_seats", "si_1", 5)]);
+        var prorationDate = new DateTime(2026, 10, 27, 12, 0, 0, DateTimeKind.Utc);
+
+        SetupGetSubscription(organization, subscription);
+        SetupUpdateSubscription(subscription);
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new AddItem("price_storage", 1)],
+            ChargeImmediately = true
+        };
+
+        var result = await _command.Run(organization, changeSet, prorationDate: prorationDate);
+
+        Assert.True(result.Success);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscription.Id,
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.ProrationDate == prorationDate &&
+                options.ProrationBehavior == ProrationBehavior.AlwaysInvoice));
+    }
+
+    [Fact]
+    public async Task Run_WithoutProrationDate_LeavesProrationDateUnset()
+    {
+        var organization = CreateOrganization();
+        var subscription = CreateSubscription(items: [("price_seats", "si_1", 5)]);
+
+        SetupGetSubscription(organization, subscription);
+        SetupUpdateSubscription(subscription);
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new AddItem("price_storage", 1)],
+            ChargeImmediately = true
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscription.Id,
+            Arg.Is<SubscriptionUpdateOptions>(options => options.ProrationDate == null));
+    }
+
+    [Fact]
+    public async Task Run_AnnualUpgradeSchedule_WithProrationDate_UpdatesScheduleUnpinned()
+    {
+        var organization = CreateOrganization();
+        organization.PlanType = PlanType.EnterpriseMonthly;
+
+        var currentPlan = MockPlans.Get(PlanType.EnterpriseMonthly);
+        var annualPlan = MockPlans.Get(PlanType.EnterpriseAnnually);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseMonthly).Returns(currentPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(annualPlan);
+
+        var monthlySeat = currentPlan.PasswordManager.StripeSeatPlanId;
+        var annualSeat = annualPlan.PasswordManager.StripeSeatPlanId;
+
+        var subscription = CreateSubscription(items: [(monthlySeat, "si_1", 5)]);
+        SetupGetSubscription(organization, subscription);
+
+        var schedule = CreateMockSchedule(
+            subscription.Id, [(monthlySeat, 5)], [(annualSeat, 5)],
+            phaseMetadata: new Dictionary<string, string>
+            {
+                [MetadataKeys.AnnualUpgrade] = nameof(PlanType.EnterpriseMonthly)
+            });
+        subscription.ScheduleId = schedule.Id;
+        subscription.Schedule = schedule;
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity(monthlySeat, 10)]
+        };
+
+        var result = await _command.Run(organization, changeSet,
+            prorationDate: new DateTime(2026, 10, 27, 12, 0, 0, DateTimeKind.Utc));
+
+        Assert.True(result.Success);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id, Arg.Any<SubscriptionScheduleUpdateOptions>());
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
     public async Task Run_NotChargeImmediately_SetsCreateProrationsProration()
     {
         var organization = CreateOrganization();
