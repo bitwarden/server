@@ -1,6 +1,7 @@
 CREATE PROCEDURE [dbo].[Cipher_UpdateManyBrowserHealthExclusions]
     @Ids AS [dbo].[GuidIdArray] READONLY,
-    @UserId AS UNIQUEIDENTIFIER
+    @UserId AS UNIQUEIDENTIFIER,
+    @Exclude AS BIT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -11,7 +12,7 @@ BEGIN
         [BrowserHealthExclusions] = JSON_MODIFY(
             COALESCE(C.[BrowserHealthExclusions], N'{}'),
             CONCAT('$."', @UserId, '"'),
-            CAST(1 AS BIT)
+            IIF(@Exclude = 1, CAST(1 AS BIT), NULL) -- NULL removes the user's key
         )
     FROM
         [dbo].[Cipher] C
