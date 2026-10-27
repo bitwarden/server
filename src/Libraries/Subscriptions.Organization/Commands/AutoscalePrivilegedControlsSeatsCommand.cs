@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Models.Mail.Mailer;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.Billing.Models.Mail.Mailer;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.Models;
@@ -6,7 +7,6 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Subscriptions.Organization.Queries;
@@ -19,7 +19,7 @@ namespace Bit.Subscriptions.Organization.Commands;
 internal sealed class AutoscalePrivilegedControlsSeatsCommand(
     IPrivilegedControlsSeatChangeSetFactory seatChangeSetFactory,
     IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
-    IOrganizationService organizationService,
+    IOrganizationReplaceCommand organizationReplaceCommand,
     IOrganizationUserRepository organizationUserRepository,
     IIsOnPrivilegedControlsSalesInitiatedTrialQuery isOnTrialQuery,
     IMailer mailer,
@@ -66,7 +66,7 @@ internal sealed class AutoscalePrivilegedControlsSeatsCommand(
             }
 
             organization.PamSeats = seatsNeeded;
-            await organizationService.ReplaceAndUpdateCacheAsync(organization);
+            await organizationReplaceCommand.ReplaceAndUpdateCacheAsync(organization);
         }
 
         if (organization.MaxAutoscalePamSeats == seatsNeeded)

@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Commands;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Mail.Mailer;
 using Bit.Core.Billing.Organizations.Commands;
@@ -9,7 +10,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Subscriptions.Organization.Commands;
@@ -32,7 +32,7 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
         Substitute.For<IPrivilegedControlsSeatChangeSetFactory>();
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand =
         Substitute.For<IUpdateOrganizationSubscriptionCommand>();
-    private readonly IOrganizationService _organizationService = Substitute.For<IOrganizationService>();
+    private readonly IOrganizationReplaceCommand _organizationReplaceCommand = Substitute.For<IOrganizationReplaceCommand>();
     private readonly IOrganizationUserRepository _organizationUserRepository =
         Substitute.For<IOrganizationUserRepository>();
     private readonly IMailer _mailer = Substitute.For<IMailer>();
@@ -45,7 +45,7 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
         _sut = new AutoscalePrivilegedControlsSeatsCommand(
             _seatChangeSetFactory,
             _updateOrganizationSubscriptionCommand,
-            _organizationService,
+            _organizationReplaceCommand,
             _organizationUserRepository,
             _isOnTrialQuery,
             _mailer,
@@ -126,7 +126,7 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
 
         Assert.True(result.Success);
         Assert.Equal(7, organization.PamSeats);
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(organization);
+        await _organizationReplaceCommand.Received(1).ReplaceAndUpdateCacheAsync(organization);
         await _seatChangeSetFactory.DidNotReceive().CreateAsync(Arg.Any<OrganizationEntity>(), Arg.Any<int>());
         await _updateOrganizationSubscriptionCommand.DidNotReceive()
             .Run(Arg.Any<OrganizationEntity>(), Arg.Any<OrganizationSubscriptionChangeSet>(), Arg.Any<Subscription?>());
@@ -143,7 +143,7 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
 
         Assert.False(result.Success);
         Assert.Equal(6, result.MaxAutoscaleSeats);
-        await _organizationService.DidNotReceive()
+        await _organizationReplaceCommand.DidNotReceive()
             .ReplaceAndUpdateCacheAsync(Arg.Any<OrganizationEntity>(), Arg.Any<EventType?>());
     }
 
@@ -183,7 +183,7 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
         await _seatChangeSetFactory.DidNotReceive().CreateAsync(Arg.Any<OrganizationEntity>(), Arg.Any<int>());
         await _updateOrganizationSubscriptionCommand.DidNotReceive()
             .Run(Arg.Any<OrganizationEntity>(), Arg.Any<OrganizationSubscriptionChangeSet>(), Arg.Any<Subscription?>());
-        await _organizationService.DidNotReceive()
+        await _organizationReplaceCommand.DidNotReceive()
             .ReplaceAndUpdateCacheAsync(Arg.Any<OrganizationEntity>(), Arg.Any<EventType?>());
     }
 
@@ -235,7 +235,7 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
 
         Assert.Equal(15, organization.PamSeats);
         Assert.Equal(20, organization.MaxAutoscalePamSeats);
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(organization);
+        await _organizationReplaceCommand.Received(1).ReplaceAndUpdateCacheAsync(organization);
     }
 
     [Fact]
@@ -274,7 +274,7 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
         await _seatChangeSetFactory.DidNotReceive().CreateAsync(Arg.Any<OrganizationEntity>(), Arg.Any<int>());
         await _updateOrganizationSubscriptionCommand.DidNotReceive()
             .Run(Arg.Any<OrganizationEntity>(), Arg.Any<OrganizationSubscriptionChangeSet>(), Arg.Any<Subscription?>());
-        await _organizationService.DidNotReceive()
+        await _organizationReplaceCommand.DidNotReceive()
             .ReplaceAndUpdateCacheAsync(Arg.Any<OrganizationEntity>(), Arg.Any<EventType?>());
         await _mailer.DidNotReceive().SendEmail(Arg.Any<PrivilegedControlsSeatLimitReachedMail>());
     }
@@ -336,7 +336,7 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
 
         Assert.True(result.Success);
         Assert.Equal(15, organization.PamSeats);
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(organization);
+        await _organizationReplaceCommand.Received(1).ReplaceAndUpdateCacheAsync(organization);
     }
 
     [Fact]
@@ -351,7 +351,7 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
 
         Assert.Equal("Organization's plan does not support Privileged Controls.", exception.Message);
         Assert.Equal(_boughtSeats, organization.PamSeats);
-        await _organizationService.DidNotReceive()
+        await _organizationReplaceCommand.DidNotReceive()
             .ReplaceAndUpdateCacheAsync(Arg.Any<OrganizationEntity>(), Arg.Any<EventType?>());
     }
 
@@ -368,7 +368,7 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
 
         Assert.Equal("Your card was declined.", exception.Message);
         Assert.Equal(_boughtSeats, organization.PamSeats);
-        await _organizationService.DidNotReceive()
+        await _organizationReplaceCommand.DidNotReceive()
             .ReplaceAndUpdateCacheAsync(Arg.Any<OrganizationEntity>(), Arg.Any<EventType?>());
         await _mailer.DidNotReceive().SendEmail(Arg.Any<PrivilegedControlsSeatLimitReachedMail>());
     }

@@ -1,11 +1,12 @@
 ﻿using System.Text.Json;
-using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
@@ -1263,9 +1264,8 @@ public class OrganizationServiceTests
     {
         // Arrange
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
+        var organizationReplaceCommand = sutProvider.GetDependency<IOrganizationReplaceCommand>();
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        var eventService = sutProvider.GetDependency<IEventService>();
 
         var requestOptionsReturned = new CustomerUpdateOptions
         {
@@ -1303,16 +1303,9 @@ public class OrganizationServiceTests
                                                          && options.Description == requestOptionsReturned.Description
                                                          && options.InvoiceSettings.CustomFields.First().Name == requestOptionsReturned.InvoiceSettings.CustomFields.First().Name
                                                          && options.InvoiceSettings.CustomFields.First().Value == requestOptionsReturned.InvoiceSettings.CustomFields.First().Value)); ;
-        await organizationRepository
+        await organizationReplaceCommand
             .Received(1)
-            .ReplaceAsync(Arg.Is<Organization>(org => org == organization));
-        await organizationAbilityCacheService
-            .Received(1)
-            .UpsertOrganizationAbilityAsync(Arg.Is<Organization>(org => org == organization));
-        await eventService
-            .Received(1)
-            .LogOrganizationEventAsync(Arg.Is<Organization>(org => org == organization),
-                Arg.Is<EventType>(e => e == EventType.Organization_Updated));
+            .ReplaceAndUpdateCacheAsync(organization, EventType.Organization_Updated);
     }
 
     [Theory, BitAutoData]
@@ -1320,9 +1313,8 @@ public class OrganizationServiceTests
     {
         // Arrange
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
+        var organizationReplaceCommand = sutProvider.GetDependency<IOrganizationReplaceCommand>();
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        var eventService = sutProvider.GetDependency<IEventService>();
 
         organizationRepository
             .GetByIdentifierAsync(organization.Identifier!)
@@ -1338,16 +1330,9 @@ public class OrganizationServiceTests
         await stripeAdapter
             .DidNotReceiveWithAnyArgs()
             .UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
-        await organizationRepository
+        await organizationReplaceCommand
             .Received(1)
-            .ReplaceAsync(Arg.Is<Organization>(org => org == organization));
-        await organizationAbilityCacheService
-            .Received(1)
-            .UpsertOrganizationAbilityAsync(Arg.Is<Organization>(org => org == organization));
-        await eventService
-            .Received(1)
-            .LogOrganizationEventAsync(Arg.Is<Organization>(org => org == organization),
-                Arg.Is<EventType>(e => e == EventType.Organization_Updated));
+            .ReplaceAndUpdateCacheAsync(organization, EventType.Organization_Updated);
     }
 
     [Theory, BitAutoData]
@@ -2050,5 +2035,195 @@ public class OrganizationServiceTests
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(ids => !ids.Any()));
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
+        InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]
+    public async Task InviteUser_StagedUserWithPrivilegedControls_ReservesASeatBeforeSendingInvites(
+        Organization organization, OrganizationUserInvite invite, string externalId, OrganizationUser invitor,
+        OrganizationUser stagedUser, SutProvider<OrganizationService> sutProvider)
+    {
+        InviteUser_ArrangeStagedUserWithPrivilegedControls(organization, invite, stagedUser, sutProvider);
+        var reserveCommand = sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>();
+        reserveCommand.RunAsync(organization, 1).Returns(PrivilegedControlsSeatReservation.Reserved);
+
+        await sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, systemUser: null, invite, externalId);
+
+        Assert.True(stagedUser.AccessPam);
+        Received.InOrder(() =>
+        {
+            reserveCommand.RunAsync(organization, 1);
+            sutProvider.GetDependency<ISendOrganizationInvitesCommand>().SendInvitesAsync(Arg.Any<SendInvitesRequest>());
+        });
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
+        InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]
+    public async Task InviteUser_StagedUserWithPrivilegedControls_ReservesAfterSecretsManagerSeatsAreAdded(
+        Organization organization, OrganizationUserInvite invite, string externalId, OrganizationUser invitor,
+        OrganizationUser stagedUser, SutProvider<OrganizationService> sutProvider)
+    {
+        InviteUser_ArrangeStagedUserWithPrivilegedControls(organization, invite, stagedUser, sutProvider);
+        invite.AccessSecretsManager = true;
+        sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>()
+            .CountNewSmSeatsRequiredAsync(organization.Id, 1).Returns(1);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
+            .Returns(MockPlans.Get(organization.PlanType));
+        var reserveCommand = sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>();
+        reserveCommand.RunAsync(organization, 1).Returns(PrivilegedControlsSeatReservation.Reserved);
+
+        await sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, systemUser: null, invite, externalId);
+
+        Received.InOrder(() =>
+        {
+            sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+                .UpdateSubscriptionAsync(Arg.Any<SecretsManagerSubscriptionUpdate>());
+            reserveCommand.RunAsync(organization, 1);
+        });
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
+        InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]
+    public async Task InviteUser_StagedUserWithoutPrivilegedControls_DoesNotReserve(
+        Organization organization, OrganizationUserInvite invite, string externalId, OrganizationUser invitor,
+        OrganizationUser stagedUser, SutProvider<OrganizationService> sutProvider)
+    {
+        InviteUser_ArrangeStagedUserWithPrivilegedControls(organization, invite, stagedUser, sutProvider);
+        stagedUser.AccessPam = false;
+
+        await sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, systemUser: null, invite, externalId);
+
+        await sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default!, default);
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
+        InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]
+    public async Task InviteUser_StagedUserWithPrivilegedControls_OrganizationWithoutPrivilegedControls_DoesNotReserve(
+        Organization organization, OrganizationUserInvite invite, string externalId, OrganizationUser invitor,
+        OrganizationUser stagedUser, SutProvider<OrganizationService> sutProvider)
+    {
+        InviteUser_ArrangeStagedUserWithPrivilegedControls(organization, invite, stagedUser, sutProvider);
+        organization.UsePam = false;
+
+        await sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, systemUser: null, invite, externalId);
+
+        await sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default!, default);
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
+        InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]
+    public async Task InviteUser_StagedUserWithPrivilegedControls_AtLimit_ThrowsSeatLimitMessageWithoutInviting(
+        Organization organization, OrganizationUserInvite invite, string externalId, OrganizationUser invitor,
+        OrganizationUser stagedUser, SutProvider<OrganizationService> sutProvider)
+    {
+        InviteUser_ArrangeStagedUserWithPrivilegedControls(organization, invite, stagedUser, sutProvider);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(PrivilegedControlsSeatReservation.LimitReached);
+
+        var exception = await Assert.ThrowsAsync<AggregateException>(() => sutProvider.Sut
+            .InviteUserAsync(organization.Id, invitor.UserId, systemUser: null, invite, externalId));
+
+        Assert.Contains(exception.InnerExceptions,
+            e => e is BadRequestException && e.Message == new PrivilegedControlsSeatLimitReached().Message);
+        await sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .SendInvitesAsync(default!);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default, default(IEnumerable<CollectionAccessSelection>));
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
+        InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]
+    public async Task InviteUser_StagedUserWithPrivilegedControls_SelfHostedShortfall_ThrowsSelfHostMessage(
+        Organization organization, OrganizationUserInvite invite, string externalId, OrganizationUser invitor,
+        OrganizationUser stagedUser, SutProvider<OrganizationService> sutProvider)
+    {
+        InviteUser_ArrangeStagedUserWithPrivilegedControls(organization, invite, stagedUser, sutProvider);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(PrivilegedControlsSeatReservation.SelfHostedShortfall);
+
+        var exception = await Assert.ThrowsAsync<AggregateException>(() => sutProvider.Sut
+            .InviteUserAsync(organization.Id, invitor.UserId, systemUser: null, invite, externalId));
+
+        Assert.Contains(exception.InnerExceptions,
+            e => e is BadRequestException && e.Message == new CannotAutoscalePamSeatsOnSelfHost().Message);
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
+        InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]
+    public async Task InviteUser_StagedUserWithPrivilegedControls_InviteFailsAfterReserving_GivesTheSeatsBack(
+        Organization organization, OrganizationUserInvite invite, string externalId, OrganizationUser invitor,
+        OrganizationUser stagedUser, SutProvider<OrganizationService> sutProvider)
+    {
+        InviteUser_ArrangeStagedUserWithPrivilegedControls(organization, invite, stagedUser, sutProvider);
+        organization.PamSeats = 5;
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(PrivilegedControlsSeatReservation.Reserved)
+            .AndDoes(_ => organization.PamSeats = 6);
+        sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
+            .SendInvitesAsync(Arg.Any<SendInvitesRequest>())
+            .ThrowsAsync(new InvalidOperationException("SMTP is down."));
+
+        await Assert.ThrowsAsync<AggregateException>(() => sutProvider.Sut
+            .InviteUserAsync(organization.Id, invitor.UserId, systemUser: null, invite, externalId));
+
+        await sutProvider.GetDependency<IRevertPrivilegedControlsSeatsCommand>()
+            .Received(1)
+            .Run(organization, 5);
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
+        InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]
+    public async Task InviteUser_StagedUserWithPrivilegedControls_GivingTheSeatsBackFails_StillThrowsTheOriginalError(
+        Organization organization, OrganizationUserInvite invite, string externalId, OrganizationUser invitor,
+        OrganizationUser stagedUser, SutProvider<OrganizationService> sutProvider)
+    {
+        InviteUser_ArrangeStagedUserWithPrivilegedControls(organization, invite, stagedUser, sutProvider);
+        organization.PamSeats = 5;
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(PrivilegedControlsSeatReservation.Reserved)
+            .AndDoes(_ => organization.PamSeats = 6);
+        sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
+            .SendInvitesAsync(Arg.Any<SendInvitesRequest>())
+            .ThrowsAsync(new InvalidOperationException("SMTP is down."));
+        sutProvider.GetDependency<IRevertPrivilegedControlsSeatsCommand>()
+            .Run(organization, 5)
+            .ThrowsAsync(new GatewayException("Stripe is unavailable."));
+
+        var exception = await Assert.ThrowsAsync<AggregateException>(() => sutProvider.Sut
+            .InviteUserAsync(organization.Id, invitor.UserId, systemUser: null, invite, externalId));
+
+        Assert.Contains(exception.InnerExceptions, e => e.Message == "SMTP is down.");
+    }
+
+    /// <summary>
+    /// Arranges a single-email invite that promotes a staged member who was already given Privileged Controls access,
+    /// in an organization that uses Privileged Controls.
+    /// </summary>
+    private void InviteUser_ArrangeStagedUserWithPrivilegedControls(Organization organization,
+        OrganizationUserInvite invite, OrganizationUser stagedUser, SutProvider<OrganizationService> sutProvider)
+    {
+        organization.UsePam = true;
+        stagedUser.Status = OrganizationUserStatusType.Staged;
+        stagedUser.AccessPam = true;
+        invite.AccessSecretsManager = false;
+        InviteUser_ArrangeExistingOrgUser(organization, invite, stagedUser, sutProvider);
     }
 }

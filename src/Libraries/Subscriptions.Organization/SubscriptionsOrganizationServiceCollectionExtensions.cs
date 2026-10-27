@@ -1,4 +1,5 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Invoicing;
@@ -42,9 +43,11 @@ public static class SubscriptionsOrganizationServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers the Privileged Controls seat autoscale and revert commands and the services they use. A host that
-    /// resolves <see cref="IAutoscalePrivilegedControlsSeatsCommand"/> or
-    /// <see cref="IRevertPrivilegedControlsSeatsCommand"/> without mapping the endpoints calls this.
+    /// Registers the Privileged Controls seat reserve, autoscale, and revert commands and the services they use. A
+    /// host that resolves <see cref="IReservePrivilegedControlsSeatsCommand"/>,
+    /// <see cref="IReservePrivilegedControlsSeatForJoiningMemberCommand"/>,
+    /// <see cref="IAutoscalePrivilegedControlsSeatsCommand"/>, or <see cref="IRevertPrivilegedControlsSeatsCommand"/>
+    /// without mapping the endpoints calls this.
     /// </summary>
     public static IServiceCollection AddPrivilegedControlsSeatAutoscaling(this IServiceCollection services)
     {
@@ -52,6 +55,8 @@ public static class SubscriptionsOrganizationServiceCollectionExtensions
         services.TryAddScoped<IIsOnPrivilegedControlsSalesInitiatedTrialQuery, IsOnPrivilegedControlsSalesInitiatedTrialQuery>();
         services.TryAddScoped<IAutoscalePrivilegedControlsSeatsCommand, AutoscalePrivilegedControlsSeatsCommand>();
         services.TryAddScoped<IRevertPrivilegedControlsSeatsCommand, RevertPrivilegedControlsSeatsCommand>();
+        services.TryAddScoped<IReservePrivilegedControlsSeatsCommand, ReservePrivilegedControlsSeatsCommand>();
+        services.TryAddScoped<IReservePrivilegedControlsSeatForJoiningMemberCommand, ReservePrivilegedControlsSeatForJoiningMemberCommand>();
         return services;
     }
 }

@@ -26,10 +26,11 @@ It also registers the implementation of `IPrivilegedControlsSeatChangeSetFactory
 implementation stays internal here. `IAutoscalePrivilegedControlsSeatsCommand` and its
 `AutoscalePrivilegedControlsSeatsResult` follow the same split: they live in `Core` so hosts and Admin Console
 operations can resolve the command, and this library implements it.
-`IRevertPrivilegedControlsSeatsCommand` follows the same split: its contract lives in `Core` and this library
-implements it. A host that resolves either command without mapping the endpoints calls
-`AddPrivilegedControlsSeatAutoscaling()`, which registers the autoscale and revert commands, the trial query, and the
-seat change set factory. `AddOrganizationSubscriptions()` calls it, so the Api host needs only that one.
+`IRevertPrivilegedControlsSeatsCommand`, `IReservePrivilegedControlsSeatsCommand`, and
+`IReservePrivilegedControlsSeatForJoiningMemberCommand` follow the same split: their contracts live in `Core` and this
+library implements them. A host that resolves any of these commands without mapping the endpoints calls
+`AddPrivilegedControlsSeatAutoscaling()`, which registers the reserve, autoscale, and revert commands, the trial query,
+and the seat change set factory. `AddOrganizationSubscriptions()` calls it, so the Api host needs only that one.
 
 `MapOrganizationSubscriptionEndpoints()` attaches the group's cross-cutting chain and maps its
 endpoints to an empty group; the host owns the route prefix and mounts it at
@@ -326,9 +327,15 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | `IUpdateOrganizationSubscriptionCommand` (`Bit.Core.Billing.Organizations.Commands`), `BillingCommandResult` (`Bit.Core.Billing.Commands`) | Applying each Privileged Controls change (first purchase, seat change, autoscale, removal) to the subscription, and surfacing a failed update's message to the client through `GetValueOrThrowHttpException` |
 | `IPrivilegedControlsSeatChangeSetFactory` (`Bit.Core.Billing.Organizations.Helpers`) | The factory contract Core owns so Admin Console can inject it; this library implements it |
 | `IAutoscalePrivilegedControlsSeatsCommand` (`Bit.Core.Billing.Organizations.Commands`), `AutoscalePrivilegedControlsSeatsResult` (`Bit.Core.Billing.Organizations.Models`) | The autoscale command contract and its result, which Core owns so hosts and Admin Console can resolve the command; this library implements it |
-| `IOrganizationService` (`Bit.Core.Services`) | Saving the organization's Privileged Controls seats and flags after each Privileged Controls change (first purchase, seat change, autoscale, removal) |
-| `IOrganizationUserRepository` (`Bit.Core.Repositories`) | Counting the Privileged Controls seats in use before a seat decrease and before an autoscale; finding the Owners to email when the autoscale limit is reached |
-| `IMailer` (`Bit.Core.Platform.Mail.Mailer`), `PrivilegedControlsSeatLimitReachedMail` (`Bit.Core.Billing.Models.Mail.Mailer`) | Sending the Privileged Controls autoscale limit reached email to the Owners |
+| `IRevertPrivilegedControlsSeatsCommand` (`Bit.Core.Billing.Organizations.Commands`) | The contract for handing back autoscaled Privileged Controls seats, which Core owns so Admin Console can undo a reservation when the rest of an action fails; this library implements it |
+| `IReservePrivilegedControlsSeatsCommand`, `IReservePrivilegedControlsSeatForJoiningMemberCommand`, `PrivilegedControlsSeatReservation`, `JoiningMemberPrivilegedControlsAccess` (`Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats`) | The reserve command contracts and their results, which Core owns so Admin Console member actions can reserve seats before granting access; this library implements them |
+| `ICountNewPamSeatsRequiredQuery` (`Bit.Core.Billing.Organizations.Queries`) | Checking a self-hosted license has the Privileged Controls seats a reservation needs |
+| `OrganizationUser` (`Bit.Core.Entities`) | The joining member whose Privileged Controls access is kept or removed |
+| `IGlobalSettings` (`Bit.Core.Settings`), `CoreHelpers` (`Bit.Core.Utilities`) | Building the Owner email links and preventing auto-linking in email content |
+| `IOrganizationService` (`Bit.Core.Services`) | Saving the organization's Privileged Controls seats and flags after the first purchase, a seat change, or removal |
+| `IOrganizationReplaceCommand` (`Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces`) | Saving the organization's Privileged Controls seat count after an autoscale or a revert |
+| `IOrganizationUserRepository` (`Bit.Core.Repositories`) | Counting the Privileged Controls seats in use before a seat decrease and before an autoscale; finding the Owners to email when the autoscale limit is reached or a joining member needs a seat |
+| `IMailer` (`Bit.Core.Platform.Mail.Mailer`), `PrivilegedControlsSeatLimitReachedMail`, `PrivilegedControlsSeatNeededMail` (`Bit.Core.Billing.Models.Mail.Mailer`) | Sending the Owners the Privileged Controls autoscale limit reached email, and the email about a joining member who needs a seat |
 | `ISubscriptionDiscountService`, `DiscountTierType` (`Bit.Core.Billing.Services`, `Bit.Core.Billing.Enums`) | Eligibility-checking Families purchase coupons |
 | `ITaxService` (`Bit.Core.Billing.Tax.Services`), `StripeConstants.TaxIdType` | Deriving the Stripe tax-id code (and the Spanish-NIF EU-VAT pairing) for `CustomerDetails.TaxIds` |
 | `SponsoredPlans`, `PlanSponsorshipType` (`Bit.Core.Billing.Models`, `Bit.Core.Enums`) | The Families-for-Enterprise sponsored price |

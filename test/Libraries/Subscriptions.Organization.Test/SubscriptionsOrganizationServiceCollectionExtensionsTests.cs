@@ -1,4 +1,7 @@
-﻿using Bit.Core.Billing.Organizations.Commands;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Services;
@@ -115,12 +118,13 @@ public class SubscriptionsOrganizationServiceCollectionExtensionsTests
     }
 
     [Fact]
-    public void AddPrivilegedControlsSeatAutoscaling_ResolvesAutoscaleAndRevertCommands()
+    public void AddPrivilegedControlsSeatAutoscaling_ResolvesReserveAutoscaleAndRevertCommands()
     {
         var services = new ServiceCollection();
         services.AddSingleton(Substitute.For<IStripeAdapter>());
         services.AddSingleton(Substitute.For<IPricingClient>());
-        services.AddSingleton(Substitute.For<IOrganizationService>());
+        services.AddSingleton(Substitute.For<IOrganizationReplaceCommand>());
+        services.AddSingleton(Substitute.For<ICountNewPamSeatsRequiredQuery>());
         services.AddSingleton(Substitute.For<IOrganizationUserRepository>());
         services.AddSingleton(Substitute.For<IUpdateOrganizationSubscriptionCommand>());
         services.AddSingleton(Substitute.For<IMailer>());
@@ -135,5 +139,9 @@ public class SubscriptionsOrganizationServiceCollectionExtensionsTests
             scope.ServiceProvider.GetService<IAutoscalePrivilegedControlsSeatsCommand>());
         Assert.IsType<RevertPrivilegedControlsSeatsCommand>(
             scope.ServiceProvider.GetService<IRevertPrivilegedControlsSeatsCommand>());
+        Assert.IsType<ReservePrivilegedControlsSeatsCommand>(
+            scope.ServiceProvider.GetService<IReservePrivilegedControlsSeatsCommand>());
+        Assert.IsType<ReservePrivilegedControlsSeatForJoiningMemberCommand>(
+            scope.ServiceProvider.GetService<IReservePrivilegedControlsSeatForJoiningMemberCommand>());
     }
 }

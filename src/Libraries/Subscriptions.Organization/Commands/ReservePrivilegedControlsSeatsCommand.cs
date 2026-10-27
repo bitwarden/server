@@ -1,23 +1,24 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Queries;
-using Bit.Core.Settings;
+using Bitwarden.Server.Sdk.Environment;
+using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
+namespace Bit.Subscriptions.Organization.Commands;
 
-public class ReservePrivilegedControlsSeatsCommand(
+internal sealed class ReservePrivilegedControlsSeatsCommand(
     ICountNewPamSeatsRequiredQuery countNewPamSeatsRequiredQuery,
     IAutoscalePrivilegedControlsSeatsCommand autoscalePrivilegedControlsSeatsCommand,
-    IGlobalSettings globalSettings) : IReservePrivilegedControlsSeatsCommand
+    IBitwardenEnvironment environment) : IReservePrivilegedControlsSeatsCommand
 {
-    public async Task<PrivilegedControlsSeatReservation> RunAsync(Organization organization, int membersTakingSeats)
+    public async Task<PrivilegedControlsSeatReservation> RunAsync(OrganizationEntity organization, int membersTakingSeats)
     {
         if (membersTakingSeats < 1 || !organization.UsePam || organization.PamSeats is null or < 1)
         {
             return PrivilegedControlsSeatReservation.Reserved;
         }
 
-        if (globalSettings.SelfHosted)
+        if (environment.SelfHosted)
         {
             var seatsRequired = await countNewPamSeatsRequiredQuery
                 .CountNewPamSeatsRequiredAsync(organization, membersTakingSeats);

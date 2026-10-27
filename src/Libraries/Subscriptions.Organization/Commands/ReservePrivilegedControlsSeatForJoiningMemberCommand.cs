@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
 using Bit.Core.Billing.Models.Mail.Mailer;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -6,19 +6,22 @@ using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bitwarden.Server.Sdk.Environment;
 using Microsoft.Extensions.Logging;
+using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
+namespace Bit.Subscriptions.Organization.Commands;
 
-public class ReservePrivilegedControlsSeatForJoiningMemberCommand(
+internal sealed class ReservePrivilegedControlsSeatForJoiningMemberCommand(
     IReservePrivilegedControlsSeatsCommand reservePrivilegedControlsSeatsCommand,
     IOrganizationUserRepository organizationUserRepository,
     IMailer mailer,
     IGlobalSettings globalSettings,
+    IBitwardenEnvironment environment,
     ILogger<ReservePrivilegedControlsSeatForJoiningMemberCommand> logger)
     : IReservePrivilegedControlsSeatForJoiningMemberCommand
 {
-    public async Task<JoiningMemberPrivilegedControlsAccess> RunAsync(Organization organization, OrganizationUser organizationUser)
+    public async Task<JoiningMemberPrivilegedControlsAccess> RunAsync(OrganizationEntity organization, OrganizationUser organizationUser)
     {
         if (!organization.UsePam || !organizationUser.AccessPam)
         {
@@ -47,9 +50,9 @@ public class ReservePrivilegedControlsSeatForJoiningMemberCommand(
         return JoiningMemberPrivilegedControlsAccess.RemovedAtSeatLimit;
     }
 
-    public async Task NotifyOwnersAsync(Organization organization, string memberEmail)
+    public async Task NotifyOwnersAsync(OrganizationEntity organization, string memberEmail)
     {
-        if (globalSettings.SelfHosted)
+        if (environment.SelfHosted)
         {
             return;
         }

@@ -32,7 +32,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.V
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationConfirmation;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.SelfRevokeUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
@@ -113,6 +112,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IOrganizationUpdateKeysCommand, OrganizationUpdateKeysCommand>();
         services.AddScoped<IOrganizationUpdateCommand, OrganizationUpdateCommand>();
         services.AddScoped<IOrganizationUpdateCollectionManagementCommand, OrganizationUpdateCollectionManagementCommand>();
+        services.AddScoped<IOrganizationReplaceCommand, OrganizationReplaceCommand>();
     }
 
     private static void AddOrganizationEnableCommands(this IServiceCollection services) =>
@@ -169,8 +169,6 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IBulkAutomaticallyConfirmOrganizationUsersValidator, BulkAutomaticallyConfirmOrganizationUsersValidator>();
         services.AddScoped<IBulkAutomaticallyConfirmOrganizationUsersCommand, BulkAutomaticallyConfirmOrganizationUsersCommand>();
         services.TryAddScoped<IBulkEnablePamCommand, BulkEnablePamCommand>();
-        services.TryAddScoped<IReservePrivilegedControlsSeatsCommand, ReservePrivilegedControlsSeatsCommand>();
-        services.TryAddScoped<IReservePrivilegedControlsSeatForJoiningMemberCommand, ReservePrivilegedControlsSeatForJoiningMemberCommand>();
 
         services.AddScoped<IDeleteClaimedOrganizationUserAccountCommand, DeleteClaimedOrganizationUserAccountCommand>();
         services.AddScoped<IDeleteClaimedOrganizationUserAccountValidator, DeleteClaimedOrganizationUserAccountValidator>();

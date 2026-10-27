@@ -1,7 +1,7 @@
-﻿using Bit.Core.Billing.Organizations.Commands;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Exceptions;
-using Bit.Core.Services;
 using Bit.Subscriptions.Organization.Queries;
 using Bitwarden.Server.Sdk.Environment;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
@@ -11,7 +11,7 @@ namespace Bit.Subscriptions.Organization.Commands;
 internal sealed class RevertPrivilegedControlsSeatsCommand(
     IPrivilegedControlsSeatChangeSetFactory seatChangeSetFactory,
     IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
-    IOrganizationService organizationService,
+    IOrganizationReplaceCommand organizationReplaceCommand,
     IIsOnPrivilegedControlsSalesInitiatedTrialQuery isOnTrialQuery,
     IBitwardenEnvironment environment) : IRevertPrivilegedControlsSeatsCommand
 {
@@ -34,6 +34,6 @@ internal sealed class RevertPrivilegedControlsSeatsCommand(
         }
 
         organization.PamSeats = seats;
-        await organizationService.ReplaceAndUpdateCacheAsync(organization);
+        await organizationReplaceCommand.ReplaceAndUpdateCacheAsync(organization);
     }
 }
