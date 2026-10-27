@@ -58,7 +58,7 @@ public class SendInviteRemindersCommand(
             return SendInviteRemindersResult.Empty;
         }
 
-        if (claimed.Count >= batchSize)
+        if (claimed.Count == batchSize)
         {
             logger.LogInformation(
                 "Invite reminder run filled the batch size of {BatchSize}. More reminders may be due.",
