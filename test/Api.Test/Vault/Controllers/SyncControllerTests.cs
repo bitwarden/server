@@ -1106,9 +1106,9 @@ public class SyncControllerTests
             PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
             SignatureKeyPairData = null,
         });
-        
+
         sutProvider.GetDependency<ISendRepository>()
-            .GetManyByUserIdAsync(user.Id).Returns([ new Send { Type = Core.Tools.Enums.SendType.Item } ]);
+            .GetManyByUserIdAsync(user.Id).Returns([new Send { Type = Core.Tools.Enums.SendType.Item }]);
 
         sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.TemporaryItemSharing).Returns(false);
