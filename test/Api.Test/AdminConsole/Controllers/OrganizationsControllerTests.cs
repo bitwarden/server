@@ -30,7 +30,7 @@ using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Tokens;
-using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
+using Bit.Infrastructure.EntityFramework.Providers.Models;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -352,7 +352,7 @@ public class OrganizationsControllerTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
         // Token has a matching organization Id but an expiration date two hours in the past.
-        var expiredTokenData = new OrgDeleteTokenable(organization, -2);
+        var expiredTokenData = new OrgDeleteTokenable { Id = organization.Id, ExpirationDate = DateTime.UtcNow.AddHours(-2) };
         sutProvider.GetDependency<IDataProtectorTokenFactory<OrgDeleteTokenable>>()
             .TryUnprotect(model.Token, out expiredTokenData).Returns(true);
 

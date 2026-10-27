@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Auth.Identity;
-using Bit.ExceptionHandling;
 using Bit.Invoicing;
 using Bit.OrganizationAuthorization;
 using Bit.Subscriptions.Organization.Handlers;
@@ -23,20 +22,8 @@ public static class OrganizationSubscriptionEndpointsExtensions
     /// </summary>
     public static RouteGroupBuilder MapOrganizationSubscriptionEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var group = endpoints.MapGroup("");
-        group.WithTags("OrganizationSubscriptions");
-        group.WithGroupName("internal");
-        group.RequireAuthorization(Policies.Application);
-        group.RequireAuthorization(new AuthorizeAttribute<OrganizationBillingRequirement>());
-        group.WithBasicExceptionHandling();
+        var group = endpoints.MapOrganizationScopedGroup();
         group.RequireFeature(InvoicingFeatureFlags.PM36631_PreviewDrivenCart);
-
-        // Previews are per-organization billing data; keep them out of any shared or browser cache.
-        group.AddEndpointFilter(async (context, next) =>
-        {
-            context.HttpContext.Response.Headers.CacheControl = "no-store";
-            return await next(context);
-        });
 
         group.MapGet("preview",
                 async ([FromRoute] Guid organizationId, [FromServices] GetOrganizationSubscriptionPreviewHandler handler) => await handler.HandleAsync(organizationId))
@@ -50,6 +37,12 @@ public static class OrganizationSubscriptionEndpointsExtensions
             .RequireAuthorization(new AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>())
             .WithName("PreviewOrganizationPlanChange")
             .WithDescription("Previews the cost of changing the organization's plan.");
+
+        group.MapPost("restart/preview",
+                async ([FromRoute] Guid organizationId, [FromBody] PreviewOrganizationRestartRequest request,
+                        [FromServices] PreviewOrganizationRestartHandler handler) => await handler.HandleAsync(organizationId, request))
+            .WithName("PreviewOrganizationRestart")
+            .WithDescription("Previews the cost of restarting the organization's canceled subscription.");
 
         return group;
     }

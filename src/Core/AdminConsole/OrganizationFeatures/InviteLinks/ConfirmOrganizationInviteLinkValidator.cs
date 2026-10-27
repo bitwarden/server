@@ -7,7 +7,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
@@ -44,36 +43,24 @@ public class ConfirmOrganizationInviteLinkValidator(
     {
         var user = request.User;
 
-        var link = await organizationInviteLinkRepository.GetByOrganizationIdAsync(request.OrganizationId);
-        if (link is null || !link.CodeMatches(request.Code.ToString()))
+        var existingLink = await organizationInviteLinkRepository.GetByOrganizationIdAsync(request.OrganizationId);
+        var existingOrganization = existingLink is null
+            ? null
+            : await organizationRepository.GetByIdAsync(existingLink.OrganizationId);
+
+        var eligibilityError = InviteLinkRules.ValidateEligibility(existingLink, request.Code, existingOrganization, user);
+        if (eligibilityError is not null)
         {
-            return new InviteLinkNotFound();
+            return ToConfirmValidationError(eligibilityError);
         }
 
-        var organization = await organizationRepository.GetByIdAsync(link.OrganizationId);
-        if (organization is null or { Enabled: false })
-        {
-            return new InviteLinkNotFound();
-        }
-
-        if (!organization.UseInviteLinks)
-        {
-            return new ConfirmInviteLinkNotAvailable();
-        }
+        // ValidateEligibility guarantees the invite link and organization exist.
+        var link = existingLink!;
+        var organization = existingOrganization!;
 
         if (!link.SupportsConfirmation)
         {
             return new ConfirmInviteLinkConfirmationNotSupported();
-        }
-
-        if (!user.EmailVerified)
-        {
-            return new ConfirmEmailNotVerified();
-        }
-
-        if (!InviteLinkDomainValidator.IsEmailDomainAllowed(user.Email, link.GetAllowedDomains()))
-        {
-            return new ConfirmEmailDomainNotAllowed(organization.DisplayName());
         }
 
         // Provider users cannot confirm via invite links.
@@ -84,10 +71,10 @@ public class ConfirmOrganizationInviteLinkValidator(
 
         var existingOrganizationUser = await ResolveExistingOrganizationUserAsync(organization, user);
 
-        var membershipStatusError = ValidateExistingMembershipStatus(existingOrganizationUser, organization.DisplayName());
+        var membershipStatusError = InviteLinkRules.ValidateConfirmMembershipStatus(organization, existingOrganizationUser);
         if (membershipStatusError is not null)
         {
-            return membershipStatusError;
+            return ToConfirmValidationError(membershipStatusError);
         }
 
         var freeAdminError = await ValidateFreeOrganizationAdminLimitAsync(organization, existingOrganizationUser, user);
@@ -137,13 +124,23 @@ public class ConfirmOrganizationInviteLinkValidator(
         return await organizationUserRepository.GetByOrganizationEmailAsync(organization.Id, user.Email);
     }
 
-    private static Error? ValidateExistingMembershipStatus(OrganizationUser? existingOrganizationUser, string orgName) =>
-        existingOrganizationUser switch
-        {
-            { RevocationReason: not null } => new ConfirmOrganizationAccessRevoked(orgName),
-            { Status: OrganizationUserStatusType.Confirmed } => new ConfirmAlreadyOrganizationMember(orgName),
-            _ => null
-        };
+    /// <summary>
+    /// Translates an <see cref="InviteLinkRules"/> error into its link-confirm validation-problem variant so the
+    /// endpoint always returns the RFC 7807 shape. <see cref="InviteLinkNotFound"/> is returned unchanged.
+    /// </summary>
+    /// <exception cref="UnreachableException">
+    /// The error has no mapping. A new rule error must be mapped here rather than silently falling back to a plain 400.
+    /// </exception>
+    private static Error ToConfirmValidationError(Error error) => error switch
+    {
+        InviteLinkNotFound => error,
+        InviteLinkNotAvailable => new ConfirmInviteLinkNotAvailable(),
+        EmailDomainNotAllowed e => new ConfirmEmailDomainNotAllowed(e.OrgName),
+        EmailNotVerified => new ConfirmEmailNotVerified(),
+        OrganizationAccessRevoked e => new ConfirmOrganizationAccessRevoked(e.OrgName),
+        AlreadyOrganizationMember e => new ConfirmAlreadyOrganizationMember(e.OrgName),
+        _ => throw new UnreachableException($"Unmapped invite link rule error: {error.GetType().Name}")
+    };
 
     private async Task<Error?> ValidateFreeOrganizationAdminLimitAsync(
         Organization targetOrganization, OrganizationUser? existingOrganizationUser, User user)

@@ -1,4 +1,6 @@
-﻿using Bit.Core.Auth.Identity;
+﻿using Bit.Core;
+using Bit.Core.Auth.Identity;
+using Bit.Invoicing;
 using Bit.OrganizationAuthorization;
 using Bit.Subscriptions.Organization.Requirements;
 using Bitwarden.Server.Sdk.Features;
@@ -7,6 +9,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Routing;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Subscriptions.Organization.Test;
@@ -38,6 +41,12 @@ public class OrganizationSubscriptionEndpointsTests
         var feature = endpoint.Metadata.GetMetadata<IFeatureMetadata>();
         Assert.NotNull(feature);
 
+        var featureService = Substitute.For<IFeatureService>();
+        featureService.IsEnabled(Arg.Any<string>(), Arg.Any<bool>()).Returns(true);
+        Assert.True(feature!.FeatureCheck(featureService));
+        featureService.Received().IsEnabled(InvoicingFeatureFlags.PM36631_PreviewDrivenCart, Arg.Any<bool>());
+        featureService.DidNotReceive().IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support, Arg.Any<bool>());
+
         var tags = endpoint.Metadata.GetMetadata<ITagsMetadata>();
         Assert.NotNull(tags);
         Assert.Contains("OrganizationSubscriptions", tags!.Tags);
@@ -62,7 +71,8 @@ public class OrganizationSubscriptionEndpointsTests
             .SelectMany(dataSource => dataSource.Endpoints)
             .OfType<RouteEndpoint>()
             .Single(e => e.RoutePattern.RawText!.EndsWith("/preview")
-                         && !e.RoutePattern.RawText!.Contains("plan-change"));
+                         && !e.RoutePattern.RawText!.Contains("plan-change")
+                         && !e.RoutePattern.RawText!.Contains("restart"));
 
         var authorizeAttributes = preview.Metadata.GetOrderedMetadata<AuthorizeAttribute>();
         Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<OrganizationBillingRequirement>);
@@ -89,5 +99,31 @@ public class OrganizationSubscriptionEndpointsTests
         var authorizeAttributes = planChange.Metadata.GetOrderedMetadata<AuthorizeAttribute>();
         Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<OrganizationBillingRequirement>);
         Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>);
+    }
+
+    [Fact]
+    public void MapOrganizationSubscriptionEndpoints_RestartPreviewIsPostAndInheritsOrganizationBillingOnly()
+    {
+        var app = WebApplication.CreateBuilder().Build();
+
+        var group = app.MapGroup("/{organizationId:guid}")
+            .MapOrganizationSubscriptionEndpoints();
+
+        var restartPreview = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(dataSource => dataSource.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Single(e => e.RoutePattern.RawText!.Contains("restart/preview"));
+
+        var methods = restartPreview.Metadata.GetMetadata<IHttpMethodMetadata>();
+        Assert.NotNull(methods);
+        Assert.Contains("POST", methods!.HttpMethods);
+
+        var authorizeAttributes = restartPreview.Metadata.GetOrderedMetadata<AuthorizeAttribute>();
+        Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<OrganizationBillingRequirement>);
+        Assert.DoesNotContain(authorizeAttributes, attribute => attribute is AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>);
+
+        var name = restartPreview.Metadata.GetMetadata<IEndpointNameMetadata>();
+        Assert.NotNull(name);
+        Assert.Equal("PreviewOrganizationRestart", name!.EndpointName);
     }
 }

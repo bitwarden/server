@@ -217,9 +217,12 @@ WHERE OrganizationId = @OrgId;
 Verifies `cipherAssignment.archivedRate`, `deletedRate`, and `archivedAndDeletedOverlapRate` against the
 personal (non-org) cipher pool — see Q11 for the same rates verified against the org pool, which is archived
 independently. Only applies to presets with `density.personalCiphers` set (Sterling Cooper, Wayne Enterprises,
-Weyland-Yutani). Personal ciphers aren't tied to `OrganizationId`, so this joins through `OrganizationUser` to
-scope to the seeded org's users. Follows the same JSON-path pattern used to compute `ArchivedDate` in
-`dbo.CipherDetails`.
+Weyland-Yutani). Only confirmed members, owner included, get personal ciphers: `CreateUsersStep` adds only
+confirmed users to `UserDigests`, the list `GeneratePersonalCiphersStep` walks, so invited, accepted and revoked
+members own none. With the realistic status mix, 214 members are confirmed in Sterling Cooper, 851 in Wayne
+Enterprises and 4,251 in Weyland-Yutani, and the personal-cipher distribution still gives some of them none.
+Personal ciphers aren't tied to `OrganizationId`, so this joins through `OrganizationUser` to scope to the
+seeded org's users. Follows the same JSON-path pattern used to compute `ArchivedDate` in `dbo.CipherDetails`.
 
 ```sql
 DECLARE @OrgId UNIQUEIDENTIFIER = 'PASTE_ORG_ID_HERE';
@@ -253,6 +256,83 @@ SELECT
     SUM(CASE WHEN DeletedDate IS NOT NULL AND Archives IS NOT NULL THEN 1 ELSE 0 END) AS BothArchivedAndDeleted
 FROM [dbo].[Cipher] WITH (NOLOCK)
 WHERE OrganizationId = @OrgId;
+```
+
+### Q12: Default Collections
+
+Verifies `defaultCollections`. Default collections are `Type=1`; each has one `CollectionUser` with only `Manage` set,
+no Owner or Admin, and no groups. Migrated items are org-owned, sit in exactly one collection, were created before the
+collection and revised after it. A member who still holds personal items has an empty collection, because the client
+moves every personal item in one pass. Expected for `features.default-collections-enterprise`: 68 default and 10 shared
+collections, 1 distinct default `Name`, 68 manage-only users, 34 non-empty collections, 517 items with 47 trashed,
+top active counts 120, 60, then 40 or fewer, and 0 in every other count column, including the pending-items check.
+
+```sql
+DECLARE @OrgId UNIQUEIDENTIFIER = 'PASTE_ORG_ID_HERE';
+
+-- Collections by type
+SELECT
+    [Type],
+    COUNT(*) AS Collections,
+    COUNT(DISTINCT [Name]) AS DistinctNames,
+    SUM(CASE WHEN ExternalId IS NOT NULL OR DefaultUserCollectionEmail IS NOT NULL THEN 1 ELSE 0 END) AS WithExternalIdOrEmail,
+    MIN(CreationDate) AS FirstCreated,
+    MAX(CreationDate) AS LastCreated
+FROM [dbo].[Collection] WITH (NOLOCK)
+WHERE OrganizationId = @OrgId
+GROUP BY [Type];
+
+-- Access: one manage-only member per default collection, never an Owner (0) or Admin (1), no groups
+SELECT
+    COUNT(DISTINCT C.Id) AS DefaultCollections,
+    COUNT(CU.CollectionId) AS CollectionUsers,
+    SUM(CASE WHEN CU.Manage = 1 AND CU.ReadOnly = 0 AND CU.HidePasswords = 0 THEN 1 ELSE 0 END) AS ManageOnly,
+    SUM(CASE WHEN OU.[Type] IN (0, 1) THEN 1 ELSE 0 END) AS OwnerOrAdmin,
+    (SELECT COUNT(*)
+     FROM [dbo].[CollectionGroup] CG WITH (NOLOCK)
+     INNER JOIN [dbo].[Collection] C2 WITH (NOLOCK) ON C2.Id = CG.CollectionId
+     WHERE C2.OrganizationId = @OrgId AND C2.[Type] = 1) AS CollectionGroups
+FROM [dbo].[Collection] C WITH (NOLOCK)
+LEFT JOIN [dbo].[CollectionUser] CU WITH (NOLOCK) ON CU.CollectionId = C.Id
+LEFT JOIN [dbo].[OrganizationUser] OU WITH (NOLOCK) ON OU.Id = CU.OrganizationUserId
+WHERE C.OrganizationId = @OrgId AND C.[Type] = 1;
+
+-- Migrated items
+SELECT
+    COUNT(DISTINCT C.Id) AS NonEmptyCollections,
+    COUNT(*) AS Items,
+    SUM(CASE WHEN CI.DeletedDate IS NOT NULL THEN 1 ELSE 0 END) AS Trashed,
+    SUM(CASE WHEN CI.UserId IS NOT NULL OR CI.OrganizationId <> @OrgId THEN 1 ELSE 0 END) AS NotOrgOwned,
+    SUM(CASE WHEN L.Links > 1 THEN 1 ELSE 0 END) AS InMoreThanOneCollection,
+    SUM(CASE WHEN CI.CreationDate >= C.CreationDate OR CI.RevisionDate <= C.CreationDate THEN 1 ELSE 0 END) AS DatesOutOfOrder,
+    SUM(CASE WHEN CI.DeletedDate <= C.CreationDate THEN 1 ELSE 0 END) AS TrashedBeforeCollection
+FROM [dbo].[Collection] C WITH (NOLOCK)
+INNER JOIN [dbo].[CollectionCipher] CC WITH (NOLOCK) ON CC.CollectionId = C.Id
+INNER JOIN [dbo].[Cipher] CI WITH (NOLOCK) ON CI.Id = CC.CipherId
+INNER JOIN (
+    SELECT CipherId, COUNT(*) AS Links
+    FROM [dbo].[CollectionCipher] WITH (NOLOCK)
+    GROUP BY CipherId
+) L ON L.CipherId = CI.Id
+WHERE C.OrganizationId = @OrgId AND C.[Type] = 1;
+
+-- Heaviest default collections by active items
+SELECT TOP 5 C.Id, COUNT(*) AS ActiveItems
+FROM [dbo].[Collection] C WITH (NOLOCK)
+INNER JOIN [dbo].[CollectionCipher] CC WITH (NOLOCK) ON CC.CollectionId = C.Id
+INNER JOIN [dbo].[Cipher] CI WITH (NOLOCK) ON CI.Id = CC.CipherId
+WHERE C.OrganizationId = @OrgId AND C.[Type] = 1 AND CI.DeletedDate IS NULL
+GROUP BY C.Id
+ORDER BY ActiveItems DESC;
+
+-- Non-empty default collections whose member still holds personal items
+SELECT COUNT(DISTINCT C.Id) AS NonEmptyWithPendingItems
+FROM [dbo].[Collection] C WITH (NOLOCK)
+INNER JOIN [dbo].[CollectionUser] CU WITH (NOLOCK) ON CU.CollectionId = C.Id
+INNER JOIN [dbo].[OrganizationUser] OU WITH (NOLOCK) ON OU.Id = CU.OrganizationUserId
+WHERE C.OrganizationId = @OrgId AND C.[Type] = 1
+    AND EXISTS (SELECT 1 FROM [dbo].[CollectionCipher] CC WITH (NOLOCK) WHERE CC.CollectionId = C.Id)
+    AND EXISTS (SELECT 1 FROM [dbo].[Cipher] P WITH (NOLOCK) WHERE P.UserId = OU.UserId AND P.OrganizationId IS NULL);
 ```
 
 ---
@@ -315,8 +395,8 @@ WHERE OrganizationId = @OrgId;
 | Multi-collection rate     | 20% of ~4,600 non-orphan ciphers in 2-3 collections. Max 3 per cipher.                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | Archived org ciphers      | 50 of 5,000 (6% rate = 300, clamped to the 50 cap).                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | Deleted org ciphers       | 25 of 5,000 (3% rate = 150, clamped to the 25 cap). All 25 are also archived (2% overlap = 100, clamped) — 0 are delete-only.                                                                                                                                                                                                                                                                                                                                                                               |
-| Archived personal ciphers | 50 of ~3,638 personal ciphers (6% rate = ~218, clamped to the 50 cap).                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| Deleted personal ciphers  | 25 of ~3,638 (3% rate clamped to 25). All 25 are also archived (2% overlap = ~73, clamped to `min(archivedTarget, maxDeletedCiphers)` = 25) — 0 are delete-only. See `ArchiveAndDeleteRateTests.BothTarget_NeverExceedsMaxDeletedCiphers_EvenWhenArchivedCeilingIsHigher` for the exact clamp this demonstrates. Sterling Cooper seeds archived/deleted items in _both_ the org pool and the personal pool, since `archivedRate`/`deletedRate`/`archivedAndDeletedOverlapRate` apply independently to each. |
+| Archived personal ciphers | 50 of 2,910 personal ciphers (6% rate = 174, clamped to the 50 cap).                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Deleted personal ciphers  | 25 of 2,910 (3% rate clamped to 25). All 25 are also archived (2% overlap = 58, clamped to `min(archivedTarget, maxDeletedCiphers)` = 25) — 0 are delete-only. See `ArchiveAndDeleteRateTests.BothTarget_NeverExceedsMaxDeletedCiphers_EvenWhenArchivedCeilingIsHigher` for the exact clamp this demonstrates. Sterling Cooper seeds archived/deleted items in _both_ the org pool and the personal pool, since `archivedRate`/`deletedRate`/`archivedAndDeletedOverlapRate` apply independently to each.   |
 
 ### 5. Umbrella Corp (MD)
 
@@ -346,8 +426,8 @@ WHERE OrganizationId = @OrgId;
 | Multi-collection rate     | 25% of ~9,000 non-orphan ciphers in 2-4 collections. Max 4 per cipher.                                                                                                                                                                 |
 | Archived org ciphers      | 50 of 10,000 (6% rate = 600, clamped to the 50 cap).                                                                                                                                                                                   |
 | Deleted org ciphers       | 25 of 10,000 (3% rate = 300, clamped to the 25 cap). All 25 are also archived (2% overlap = 200, clamped) — 0 are delete-only.                                                                                                         |
-| Archived personal ciphers | 50 of ~14,525 personal ciphers (6% rate = ~872, clamped to the 50 cap).                                                                                                                                                                |
-| Deleted personal ciphers  | 25 of ~14,525 (3% rate clamped to 25). All 25 are also archived (2% overlap clamped the same way as Sterling Cooper) — 0 are delete-only. Wayne Enterprises seeds archived/deleted items in _both_ the org pool and the personal pool. |
+| Archived personal ciphers | 50 of 12,181 personal ciphers (6% rate = 730, clamped to the 50 cap).                                                                                                                                                                  |
+| Deleted personal ciphers  | 25 of 12,181 (3% rate clamped to 25). All 25 are also archived (2% overlap clamped the same way as Sterling Cooper) — 0 are delete-only. Wayne Enterprises seeds archived/deleted items in _both_ the org pool and the personal pool.  |
 
 ### 7. Tyrell Corp (LG)
 
@@ -378,8 +458,8 @@ WHERE OrganizationId = @OrgId;
 | Multi-collection rate     | 30% of ~13,500 non-orphan ciphers in 2-5 collections. Max 5 per cipher.                                                                                                                                                 |
 | Archived org ciphers      | 50 of 15,000 (4% rate = 600, clamped to the 50 cap).                                                                                                                                                                    |
 | Deleted org ciphers       | 25 of 15,000 (3% rate = 450, clamped to the 25 cap). All 25 are also archived (1% overlap = 150, clamped) — 0 are delete-only.                                                                                          |
-| Archived personal ciphers | 50 of ~11,000 personal ciphers (4% rate = 440, clamped to the 50 cap).                                                                                                                                                  |
-| Deleted personal ciphers  | 25 of ~11,000 (3% rate clamped to 25). All 25 are also archived (1% overlap = 110, clamped the same way) — 0 are delete-only. Weyland-Yutani seeds archived/deleted items in _both_ the org pool and the personal pool. |
+| Archived personal ciphers | 50 of 9,345 personal ciphers (4% rate = 373, clamped to the 50 cap).                                                                                                                                                    |
+| Deleted personal ciphers  | 25 of 9,345 (3% rate clamped to 25). All 25 are also archived (1% overlap = 93, clamped the same way) — 0 are delete-only. Weyland-Yutani seeds archived/deleted items in _both_ the org pool and the personal pool.    |
 
 ### 9. Initech (XL)
 

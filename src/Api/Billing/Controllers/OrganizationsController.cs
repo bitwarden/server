@@ -7,8 +7,10 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 using Bit.Core.Billing.Organizations.Commands;
@@ -22,8 +24,6 @@ using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business;
-using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -53,7 +53,8 @@ public class OrganizationsController(
     IOrganizationInstallationRepository organizationInstallationRepository,
     IPricingClient pricingClient,
     IReinstateSubscriptionCommand reinstateSubscriptionCommand,
-    IGetPendingAnnualUpgradeQuery getPendingAnnualUpgradeQuery)
+    IGetPendingAnnualUpgradeQuery getPendingAnnualUpgradeQuery,
+    Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     : Controller
 {
     [HttpGet("{id:guid}/subscription")]
@@ -83,10 +84,18 @@ public class OrganizationsController(
             ? await organizationUserRepository.GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id)
             : null;
 
+        int? pamSeatMinimum = plan.SupportsPrivilegedControls && organization.UsePam
+            ? organization.GetPrivilegedControlsSeatMinimum(plan)
+            : null;
+
+        var includePrivilegedControlsPlanFeatures = featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support);
+
         if (string.IsNullOrEmpty(organization.GatewaySubscriptionId))
         {
             return new OrganizationSubscriptionResponseModel(
-                organization, plan, occupiedPamSeats, IsOnPamSalesInitiatedTrial(organization, plan));
+                organization, plan, occupiedPamSeats,
+                organization.IsOnPrivilegedControlsSalesInitiatedTrial(plan, subscriptionHasPrivilegedControlsSeats: false),
+                pamSeatMinimum, includePrivilegedControlsPlanFeatures);
         }
 
         var subscriptionInfo = await paymentService.GetSubscriptionAsync(organization);
@@ -105,7 +114,9 @@ public class OrganizationsController(
 
         return new OrganizationSubscriptionResponseModel(
             organization, subscriptionInfo, plan, hideSensitiveData, pendingAnnualUpgrade, occupiedPamSeats,
-            IsOnPamSalesInitiatedTrial(organization, plan, subscriptionInfo));
+            organization.IsOnPrivilegedControlsSalesInitiatedTrial(
+                plan, subscriptionInfo.Subscription?.HasPrivilegedControlsSeats == true),
+            pamSeatMinimum, includePrivilegedControlsPlanFeatures);
     }
 
     [HttpGet("{id:guid}/license")]
@@ -351,16 +362,4 @@ public class OrganizationsController(
 
         return new ProfileOrganizationResponseModel(organizationUserDetails, organizationIdsClaimingActiveUser);
     }
-
-    /// <summary>
-    /// An organization is on a sales-initiated Privileged Controls trial when its plan supports Privileged Controls,
-    /// Privileged Controls is on, and its subscription (if it has one) carries no Privileged Controls seat line.
-    /// </summary>
-    private static bool IsOnPamSalesInitiatedTrial(
-        Organization organization,
-        Plan plan,
-        SubscriptionInfo subscriptionInfo = null) =>
-        plan.SupportsPrivilegedControls &&
-        organization.UsePam &&
-        subscriptionInfo?.Subscription?.HasPrivilegedControlsSeats != true;
 }

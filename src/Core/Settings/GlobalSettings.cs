@@ -51,6 +51,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual bool EnableCloudCommunication { get; set; } = false;
     public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
     public virtual int TwoFactorUserVerificationTokenLifetimeInMinutes { get; set; } = 30;
+    public virtual int TwoFactorRememberTokenLifetimeInDays { get; set; } = 30;
     public virtual int DeviceLastActivityCacheTtlHours { get; set; } = 120; // 5 days
     public virtual string EventGridKey { get; set; }
     public virtual bool TestPlayIdTrackingEnabled { get; set; } = false;
@@ -773,6 +774,11 @@ public class GlobalSettings : IGlobalSettings
         public int CacheLifetimeInSeconds { get; set; } = 60;
         public double SsoTokenLifetimeInSeconds { get; set; } = 5;
         public bool EnforceSsoPolicyForAllUsers { get; set; }
+        /// <summary>
+        /// Minimum number of days between RSA 1.5 deprecation emails to one organization.
+        /// The default is 7. A value of 0 or less turns the email off.
+        /// </summary>
+        public int Rsa15DeprecationEmailCooldownInDays { get; set; } = 7;
     }
 
     public class StripeSettings

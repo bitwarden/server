@@ -36,6 +36,7 @@ public class RotateUserAccountKeysCommandTests
     private static readonly string _mockEncryptedType7String = "7.AOs41Hd8OQiCPXjyJKCiDA==";
     private static readonly string _mockEncryptedType7String2 = "7.Mi1iaXR3YXJkZW4tZGF0YQo=";
     private static readonly string _mockSalt = "salt@example.com";
+    private const string _mockOldKeyId = "fedcba9876543210fedcba9876543210";
 
     [Theory, BitAutoData]
     public async Task PasswordChangeAndRotateUserAccountKeysAsync_WrongOldMasterPassword_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
@@ -1200,7 +1201,6 @@ public class RotateUserAccountKeysCommandTests
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
         SetV2ExistingUser(user, signatureRepository);
         SetV2ModelUser(model.BaseData);
-        user.SetUserKeyId(KeyId.FromHexEncodedString("fedcba9876543210fedcba9876543210"));
 
         await sutProvider.Sut.MasterPasswordRotateUserAccountKeysAsync(user, model);
 
@@ -1216,7 +1216,6 @@ public class RotateUserAccountKeysCommandTests
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
         SetV2ExistingUser(user, signatureRepository);
         SetV2ModelUser(model.BaseData);
-        user.SetUserKeyId(KeyId.FromHexEncodedString("fedcba9876543210fedcba9876543210"));
 
         await sutProvider.Sut.TdeRotateUserAccountKeysAsync(user, model);
 
@@ -1232,7 +1231,6 @@ public class RotateUserAccountKeysCommandTests
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
         SetV2ExistingUser(user, signatureRepository);
         SetV2ModelUser(model.BaseData);
-        user.SetUserKeyId(KeyId.FromHexEncodedString("fedcba9876543210fedcba9876543210"));
 
         await sutProvider.Sut.KeyConnectorRotateUserAccountKeysAsync(user, model);
 
@@ -1249,7 +1247,6 @@ public class RotateUserAccountKeysCommandTests
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
         SetV2ExistingUser(user, signatureRepository);
         SetV2ModelUser(model.BaseData);
-        user.SetUserKeyId(KeyId.FromHexEncodedString("fedcba9876543210fedcba9876543210"));
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
             .Returns(true);
         sutProvider.GetDependency<IMasterPasswordService>()
@@ -1272,13 +1269,97 @@ public class RotateUserAccountKeysCommandTests
         SetV2ModelUser(model.BaseData);
         // A client that predates the key id field sends none. The rotation still replaces the user
         // key, so the stored key id names a key that no longer exists and must not survive.
+        model.BaseData.OldUserKeyId = null;
         model.BaseData.NewUserKeyId = null;
-        user.SetUserKeyId(KeyId.FromHexEncodedString("fedcba9876543210fedcba9876543210"));
 
         await sutProvider.Sut.TdeRotateUserAccountKeysAsync(user, model);
 
         Assert.Null(user.UserKeyId);
         Assert.Null(user.GetUserKeyId());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task MasterPasswordRotateUserAccountKeysAsync_OldUserKeyIdDoesNotMatchStoredKeyId_ThrowsConflictException(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, MasterPasswordRotateUserAccountKeysData model)
+    {
+        model = SetupTestData(model);
+        SetupUserKdf(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV2ExistingUser(user, signatureRepository);
+        SetV2ModelUser(model.BaseData);
+        model.BaseData.OldUserKeyId = KeyId.FromHexEncodedString("00112233445566778899aabbccddeeff");
+
+        await Assert.ThrowsAsync<ConflictException>(() =>
+            sutProvider.Sut.MasterPasswordRotateUserAccountKeysAsync(user, model));
+
+        await AssertOldUserKeyIdRejectedAsync(sutProvider, user);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task TdeRotateUserAccountKeysAsync_OldUserKeyIdDoesNotMatchStoredKeyId_ThrowsConflictException(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, TdeRotateUserAccountKeysData model)
+    {
+        SetupTdeUser(user);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV2ExistingUser(user, signatureRepository);
+        SetV2ModelUser(model.BaseData);
+        model.BaseData.OldUserKeyId = KeyId.FromHexEncodedString("00112233445566778899aabbccddeeff");
+
+        await Assert.ThrowsAsync<ConflictException>(() =>
+            sutProvider.Sut.TdeRotateUserAccountKeysAsync(user, model));
+
+        await AssertOldUserKeyIdRejectedAsync(sutProvider, user);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task KeyConnectorRotateUserAccountKeysAsync_OldUserKeyIdDoesNotMatchStoredKeyId_ThrowsConflictException(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, KeyConnectorRotateUserAccountKeysData model)
+    {
+        SetupKeyConnectorUser(user);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV2ExistingUser(user, signatureRepository);
+        SetV2ModelUser(model.BaseData);
+        model.BaseData.OldUserKeyId = KeyId.FromHexEncodedString("00112233445566778899aabbccddeeff");
+
+        await Assert.ThrowsAsync<ConflictException>(() =>
+            sutProvider.Sut.KeyConnectorRotateUserAccountKeysAsync(user, model));
+
+        await AssertOldUserKeyIdRejectedAsync(sutProvider, user);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PasswordChangeAndRotateUserAccountKeysAsync_OldUserKeyIdDoesNotMatchStoredKeyId_ThrowsConflictException(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
+        PasswordChangeAndRotateUserAccountKeysData model)
+    {
+        SetTestKdfAndSaltForUserAndModel(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV2ExistingUser(user, signatureRepository);
+        SetV2ModelUser(model.BaseData);
+        model.BaseData.OldUserKeyId = KeyId.FromHexEncodedString("00112233445566778899aabbccddeeff");
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+
+        await Assert.ThrowsAsync<ConflictException>(() =>
+            sutProvider.Sut.PasswordChangeAndRotateUserAccountKeysAsync(user, model));
+
+        await sutProvider.GetDependency<IMasterPasswordService>().DidNotReceiveWithAnyArgs()
+            .PrepareUpdateExistingMasterPasswordAsync(Arg.Any<User>(), Arg.Any<UpdateExistingPasswordData>());
+        await AssertOldUserKeyIdRejectedAsync(sutProvider, user);
+    }
+
+    private static async Task AssertOldUserKeyIdRejectedAsync(SutProvider<RotateUserAccountKeysCommand> sutProvider,
+        User user)
+    {
+        Assert.Equal(_mockOldKeyId, user.UserKeyId);
+        await sutProvider.GetDependency<IUserRepository>().DidNotReceiveWithAnyArgs()
+            .UpdateUserKeyAndEncryptedDataV2Async(Arg.Any<User>(), Arg.Any<IEnumerable<DatabaseTransactionAction>>());
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs()
+            .PushAsync(Arg.Any<PushNotification<LogOutPushNotification>>());
     }
 
     // Helper functions to set valid test parameters that match each other to the model and user.
@@ -1321,6 +1402,7 @@ public class RotateUserAccountKeysCommandTests
         user.PrivateKey = _mockEncryptedType2String;
         user.PublicKey = "public";
         user.SignedPublicKey = null;
+        user.SetUserKeyId(KeyId.FromHexEncodedString(_mockOldKeyId));
         userSignatureKeyPairRepository.GetByUserIdAsync(user.Id).ReturnsNull();
     }
 
@@ -1329,6 +1411,7 @@ public class RotateUserAccountKeysCommandTests
         user.PrivateKey = _mockEncryptedType7String;
         user.PublicKey = "public";
         user.SignedPublicKey = "signed-public";
+        user.SetUserKeyId(KeyId.FromHexEncodedString(_mockOldKeyId));
         userSignatureKeyPairRepository.GetByUserIdAsync(user.Id).Returns(new SignatureKeyPairData(SignatureAlgorithm.Ed25519, _mockEncryptedType7String, "verifying-key"));
     }
 
@@ -1337,6 +1420,7 @@ public class RotateUserAccountKeysCommandTests
         model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(_mockEncryptedType2String, "public", null);
         model.AccountKeys.SignatureKeyPairData = null;
         model.AccountKeys.SecurityStateData = null;
+        model.OldUserKeyId = KeyId.FromHexEncodedString(_mockOldKeyId);
     }
 
     private static void SetV2ModelUser(BaseRotateUserAccountKeysData model)
@@ -1348,6 +1432,7 @@ public class RotateUserAccountKeysCommandTests
             SecurityState = "abc",
             SecurityVersion = 2,
         };
+        model.OldUserKeyId = KeyId.FromHexEncodedString(_mockOldKeyId);
     }
 
     private static MasterPasswordRotateUserAccountKeysData SetupTestData(MasterPasswordRotateUserAccountKeysData model)

@@ -1260,6 +1260,9 @@
         "resolved": "4.3.0",
         "contentHash": "A/uxsWi/Ifzkmd4ArTLISMbfFs6XpRPsXZonrIqyTY70xi8t+mDtvSM5Os0RqyRDobjMBwIDHDL4NOIbkDwf7A=="
       },
+      "clients": {
+        "type": "Project"
+      },
       "data": {
         "type": "Project"
       },
@@ -1270,6 +1273,9 @@
         }
       },
       "httpextensions": {
+        "type": "Project"
+      },
+      "push.infrastructure": {
         "type": "Project"
       },
       "serilogfilelogging": {

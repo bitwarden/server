@@ -8,6 +8,7 @@ using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Exceptions;
 using Bit.Invoicing.InvoicePreviews;
 using Bit.Invoicing.InvoicePreviews.Models;
+using Bit.Subscriptions.Organization.Helpers;
 using Bit.Subscriptions.Organization.Models.Requests;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -51,8 +52,8 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
     {
         var tier = request.Tier;
         var cadence = request.Cadence;
-        var address = ResolveBillingAddress(request.BillingAddress);
-        var requestTaxId = ValidateRequestTaxId(request.BillingAddress!.TaxId);
+        var address = BillingAddressResolver.ResolveAddress(request.BillingAddress);
+        var requestTaxId = BillingAddressResolver.ValidateTaxId(request.BillingAddress!.TaxId);
         var newPlan = await pricingClient.GetPlanOrThrow(ResolvePlanType(tier, cadence));
 
         if (organization.UseSecretsManager && !newPlan.SupportsSecretsManager)
@@ -90,7 +91,8 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
             CustomerDetails = new InvoiceCustomerDetailsOptions
             {
                 Address = address,
-                TaxIds = ResolveTaxIds(request.BillingAddress!.Country!, requestTaxId ?? onFileTaxId)
+                TaxIds = BillingAddressResolver.ResolveTaxIds(
+                    taxService, logger, request.BillingAddress!.Country!, requestTaxId ?? onFileTaxId)
             }
         };
 
@@ -105,18 +107,20 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
 
         try
         {
-            return await invoicePreviewService.GetInvoicePreviewAsync(options, tier, cadence);
+            return await invoicePreviewService.GetInvoicePreviewForBillingAddressAsync(options, tier, cadence);
         }
         catch (StripeException stripeException)
             when (stripeException.StripeError?.Code == ErrorCodes.CustomerTaxLocationInvalid)
         {
             throw new BadRequestException(
+                BillingErrorKeys.BillingAddress,
                 "Your location wasn't recognized. Please ensure your country and postal code are valid and try again.");
         }
         catch (StripeException stripeException)
             when (stripeException.StripeError?.Code == ErrorCodes.TaxIdInvalid)
         {
             throw new BadRequestException(
+                BillingErrorKeys.BillingAddress,
                 "Your tax ID wasn't recognized for your selected country. Please ensure your country and tax ID are valid.");
         }
     }
@@ -301,85 +305,6 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
                 organization.GatewaySubscriptionId, organization.Id);
             throw new ConflictException(InvalidSubscriptionMessage);
         }
-    }
-
-    private static AddressOptions ResolveBillingAddress(BillingAddressSelections? billingAddress)
-    {
-        if (billingAddress is null)
-        {
-            throw new BadRequestException(
-                nameof(PreviewOrganizationPlanChangeRequest.BillingAddress), "The BillingAddress field is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(billingAddress.Country) || billingAddress.Country.Length != 2)
-        {
-            throw new BadRequestException(
-                $"{nameof(PreviewOrganizationPlanChangeRequest.BillingAddress)}.{nameof(BillingAddressSelections.Country)}",
-                "Country code must be 2 characters long.");
-        }
-
-        if (string.IsNullOrWhiteSpace(billingAddress.PostalCode))
-        {
-            throw new BadRequestException(
-                $"{nameof(PreviewOrganizationPlanChangeRequest.BillingAddress)}.{nameof(BillingAddressSelections.PostalCode)}",
-                "The PostalCode field is required.");
-        }
-
-        return new AddressOptions { Country = billingAddress.Country, PostalCode = billingAddress.PostalCode };
-    }
-
-    private TaxID? ValidateRequestTaxId(TaxIdSelection? requestTaxId)
-    {
-        if (requestTaxId is null)
-        {
-            return null;
-        }
-
-        if (string.IsNullOrWhiteSpace(requestTaxId.Code))
-        {
-            throw new BadRequestException(
-                $"{nameof(PreviewOrganizationPlanChangeRequest.BillingAddress)}.{nameof(BillingAddressSelections.TaxId)}.{nameof(TaxIdSelection.Code)}",
-                "The Code field is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(requestTaxId.Value))
-        {
-            throw new BadRequestException(
-                $"{nameof(PreviewOrganizationPlanChangeRequest.BillingAddress)}.{nameof(BillingAddressSelections.TaxId)}.{nameof(TaxIdSelection.Value)}",
-                "The Value field is required.");
-        }
-
-        return new TaxID(requestTaxId.Code, requestTaxId.Value);
-    }
-
-    private List<InvoiceCustomerDetailsTaxIdOptions>? ResolveTaxIds(string country, TaxID? taxId)
-    {
-        if (taxId is null)
-        {
-            return null;
-        }
-
-        var derivedCode = taxService.GetStripeTaxCode(country, taxId.Value);
-        if (derivedCode is null)
-        {
-            logger.LogWarning(
-                "Could not derive Stripe tax ID type for country {Country}; falling back to client-supplied type {TaxIdType}",
-                country, taxId.Code);
-        }
-
-        var taxIdType = derivedCode ?? taxId.Code;
-        var taxIds = new List<InvoiceCustomerDetailsTaxIdOptions>
-        {
-            new() { Type = taxIdType, Value = taxId.Value }
-        };
-
-        // A Spanish NIF also needs an EU VAT entry so Stripe applies the right cross-border rate.
-        if (taxIdType == TaxIdType.SpanishNIF)
-        {
-            taxIds.Add(new InvoiceCustomerDetailsTaxIdOptions { Type = TaxIdType.EUVAT, Value = $"ES{taxId.Value}" });
-        }
-
-        return taxIds;
     }
 
     private static TaxID? ExtractOnFileTaxId(Customer? customer)
