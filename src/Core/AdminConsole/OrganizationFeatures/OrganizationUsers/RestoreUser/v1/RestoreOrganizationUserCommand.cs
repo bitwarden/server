@@ -18,6 +18,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 
@@ -36,7 +37,8 @@ public class RestoreOrganizationUserCommand(
     IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand,
     TimeProvider timeProvider,
     IReservePrivilegedControlsSeatsCommand reservePrivilegedControlsSeatsCommand,
-    IReservePrivilegedControlsSeatForJoiningMemberCommand reservePrivilegedControlsSeatForJoiningMemberCommand) : IRestoreOrganizationUserCommand
+    IReservePrivilegedControlsSeatForJoiningMemberCommand reservePrivilegedControlsSeatForJoiningMemberCommand,
+    ILogger<RestoreOrganizationUserCommand> logger) : IRestoreOrganizationUserCommand
 {
     public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, string defaultCollectionName)
     {
@@ -89,10 +91,12 @@ public class RestoreOrganizationUserCommand(
         var organization = await organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
         var seatCounts = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
         var availableSeats = organization.Seats.GetValueOrDefault(0) - seatCounts.Total;
+        var passwordManagerSeatsAdded = 0;
 
         if (availableSeats < 1)
         {
             await organizationService.AutoAddSeatsAsync(organization, 1); // Hooray
+            passwordManagerSeatsAdded = organization.Seats.HasValue ? 1 : 0;
         }
 
         var userTwoFactorIsEnabled = false;
@@ -119,7 +123,7 @@ public class RestoreOrganizationUserCommand(
         {
             if (systemUser is null)
             {
-                await ReservePrivilegedControlsSeatsAsync(organization, 1);
+                await ReservePrivilegedControlsSeatsAsync(organization, 1, passwordManagerSeatsAdded);
             }
             else if (systemUser == EventSystemUser.SCIM)
             {
@@ -160,15 +164,54 @@ public class RestoreOrganizationUserCommand(
         }
     }
 
-    private async Task ReservePrivilegedControlsSeatsAsync(Organization organization, int membersTakingSeats)
+    /// <summary>
+    /// Reserves Privileged Controls seats for members being restored with access. When the seats cannot be
+    /// reserved, the Password Manager seats bought for the same restore are handed back before the error is raised.
+    /// </summary>
+    private async Task ReservePrivilegedControlsSeatsAsync(Organization organization, int membersTakingSeats,
+        int passwordManagerSeatsAdded)
     {
-        var reservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, membersTakingSeats);
-        switch (reservation)
+        PrivilegedControlsSeatReservation reservation;
+        try
         {
-            case PrivilegedControlsSeatReservation.LimitReached:
-                throw new BadRequestException(new PrivilegedControlsSeatLimitReached().Message);
-            case PrivilegedControlsSeatReservation.SelfHostedShortfall:
-                throw new BadRequestException(new CannotAutoscalePamSeatsOnSelfHost().Message);
+            reservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, membersTakingSeats);
+        }
+        catch
+        {
+            await ReleasePasswordManagerSeatsAsync(organization, passwordManagerSeatsAdded);
+            throw;
+        }
+
+        var errorMessage = reservation switch
+        {
+            PrivilegedControlsSeatReservation.LimitReached => new PrivilegedControlsSeatLimitReached().Message,
+            PrivilegedControlsSeatReservation.SelfHostedShortfall => new CannotAutoscalePamSeatsOnSelfHost().Message,
+            _ => null
+        };
+
+        if (errorMessage is not null)
+        {
+            await ReleasePasswordManagerSeatsAsync(organization, passwordManagerSeatsAdded);
+            throw new BadRequestException(errorMessage);
+        }
+    }
+
+    private async Task ReleasePasswordManagerSeatsAsync(Organization organization, int seatsToRelease)
+    {
+        if (seatsToRelease <= 0)
+        {
+            return;
+        }
+
+        try
+        {
+            await organizationService.AdjustSeatsAsync(organization.Id, -seatsToRelease);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Failed to release {SeatsToRelease} auto-added seat(s) for organization {OrganizationId}",
+                seatsToRelease, organization.Id);
         }
     }
 
@@ -238,6 +281,7 @@ public class RestoreOrganizationUserCommand(
         var availableSeats = organization.Seats.GetValueOrDefault(0) - seatCounts.Total;
         var newSeatsRequired = organizationUserIds.Count() - availableSeats;
         await organizationService.AutoAddSeatsAsync(organization, newSeatsRequired);
+        var passwordManagerSeatsAdded = organization.Seats.HasValue ? Math.Max(newSeatsRequired, 0) : 0;
 
         if (organization.UsePam)
         {
@@ -245,7 +289,7 @@ public class RestoreOrganizationUserCommand(
                 u.Status == OrganizationUserStatusType.Revoked
                 && u.AccessPam
                 && PrivilegedControlsSeatOccupancy.OccupiesSeat(u.GetPriorActiveOrganizationUserStatusType()));
-            await ReservePrivilegedControlsSeatsAsync(organization, membersTakingPamSeats);
+            await ReservePrivilegedControlsSeatsAsync(organization, membersTakingPamSeats, passwordManagerSeatsAdded);
         }
 
         var restoringUserIsOwner = false;
