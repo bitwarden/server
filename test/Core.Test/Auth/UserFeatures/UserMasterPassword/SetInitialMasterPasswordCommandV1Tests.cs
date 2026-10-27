@@ -77,14 +77,11 @@ public class SetInitialMasterPasswordCommandV1Tests
         user.MasterPassword = null;
         string orgSsoIdentifier = null;
 
-        sutProvider.GetDependency<IUserService>()
-            .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>(), true, false)
-            .Returns(IdentityResult.Success);
-
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             async () => await sutProvider.Sut.SetInitialMasterPasswordAsync(user, masterPassword, key, orgSsoIdentifier));
         Assert.Equal("Organization SSO Identifier required.", exception.Message);
+        await AssertNoCredentialStateWrittenAsync(sutProvider);
     }
 
 
@@ -95,10 +92,6 @@ public class SetInitialMasterPasswordCommandV1Tests
         // Arrange
         user.MasterPassword = null;
 
-        sutProvider.GetDependency<IUserService>()
-            .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>(), true, false)
-            .Returns(IdentityResult.Success);
-
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdentifierAsync(orgIdentifier)
             .ReturnsNull();
@@ -106,6 +99,7 @@ public class SetInitialMasterPasswordCommandV1Tests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.SetInitialMasterPasswordAsync(user, masterPassword, key, orgIdentifier));
         Assert.Equal("Organization invalid.", exception.Message);
+        await AssertNoCredentialStateWrittenAsync(sutProvider);
     }
 
     [Theory]
@@ -114,10 +108,6 @@ public class SetInitialMasterPasswordCommandV1Tests
     {
         // Arrange
         user.MasterPassword = null;
-
-        sutProvider.GetDependency<IUserService>()
-            .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>(), true, false)
-            .Returns(IdentityResult.Success);
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdentifierAsync(Arg.Any<string>())
@@ -130,6 +120,7 @@ public class SetInitialMasterPasswordCommandV1Tests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.SetInitialMasterPasswordAsync(user, masterPassword, key, org.Identifier));
         Assert.Equal("User not found within organization.", exception.Message);
+        await AssertNoCredentialStateWrittenAsync(sutProvider);
     }
 
     [Theory]
@@ -191,4 +182,81 @@ public class SetInitialMasterPasswordCommandV1Tests
         await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(1).AcceptOrgUserAsync(orgUser, user, sutProvider.GetDependency<IUserService>());
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task SetInitialMasterPassword_PasswordValidationFails_DoesNotPersist(
+        SutProvider<SetInitialMasterPasswordCommandV1> sutProvider,
+        User user, string masterPassword, string key, string orgIdentifier, Organization org, OrganizationUser orgUser)
+    {
+        // Arrange
+        user.MasterPassword = null;
+        var originalKey = user.Key;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdentifierAsync(orgIdentifier)
+            .Returns(org);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(org.Id, user.Id)
+            .Returns(orgUser);
+
+        sutProvider.GetDependency<IUserService>()
+            .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>(), true, false)
+            .Returns(IdentityResult.Failed());
+
+        // Act
+        var result = await sutProvider.Sut.SetInitialMasterPasswordAsync(user, masterPassword, key, orgIdentifier);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Equal(originalKey, user.Key);
+        await sutProvider.GetDependency<IUserRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+        await sutProvider.GetDependency<IAcceptOrgUserCommand>().DidNotReceiveWithAnyArgs().AcceptOrgUserAsync(default, default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SetInitialMasterPassword_Success_ValidatesOrganizationBeforeWritingCredentials(
+        SutProvider<SetInitialMasterPasswordCommandV1> sutProvider,
+        User user, string masterPassword, string key, string orgIdentifier, Organization org, OrganizationUser orgUser)
+    {
+        // Arrange
+        user.MasterPassword = null;
+
+        sutProvider.GetDependency<IUserService>()
+            .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>(), true, false)
+            .Returns(IdentityResult.Success);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdentifierAsync(orgIdentifier)
+            .Returns(org);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(org.Id, user.Id)
+            .Returns(orgUser);
+
+        // Act
+        var result = await sutProvider.Sut.SetInitialMasterPasswordAsync(user, masterPassword, key, orgIdentifier);
+
+        // Assert
+        Assert.Equal(IdentityResult.Success, result);
+        Assert.Equal(key, user.Key);
+        Received.InOrder(() =>
+        {
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdentifierAsync(orgIdentifier);
+            sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(org.Id, user.Id);
+            sutProvider.GetDependency<IUserService>().UpdatePasswordHash(user, masterPassword, true, false);
+            sutProvider.GetDependency<IUserRepository>().ReplaceAsync(user);
+            sutProvider.GetDependency<IEventService>().LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
+        });
+    }
+
+    private static async Task AssertNoCredentialStateWrittenAsync(SutProvider<SetInitialMasterPasswordCommandV1> sutProvider)
+    {
+        await sutProvider.GetDependency<IUserService>().DidNotReceiveWithAnyArgs().UpdatePasswordHash(default, default, default, default);
+        await sutProvider.GetDependency<IUserRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogUserEventAsync(default, default);
+        await sutProvider.GetDependency<IAcceptOrgUserCommand>().DidNotReceiveWithAnyArgs().AcceptOrgUserAsync(default, default, default);
+    }
 }
