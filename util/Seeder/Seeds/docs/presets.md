@@ -102,27 +102,36 @@ Production-calibrated presets with density modeling. Realistic relationship patt
 dotnet run -- preset --name scale.{name} --mangle
 ```
 
-| Preset                          | Tier | Archetype                   | Users  | Groups | Collections | Ciphers |
-| ------------------------------- | ---- | --------------------------- | ------ | ------ | ----------- | ------- |
-| xs-central-perk                 | XS   | Family starter              | 6      | 2      | 10          | 200     |
-| sm-balanced-planet-express      | SM   | Small balanced              | 50     | 8      | 100         | 750     |
-| sm-highperm-bluth-company       | SM   | Small hierarchical          | 50     | 4      | 25          | 500     |
-| sm-migrated-cyberdyne           | SM   | Large org shape at 1/10     | 504    | 47     | 600         | 6,090   |
-| md-balanced-sterling-cooper     | MD   | Mid-market balanced         | 250    | 50     | 500         | 5,000   |
-| md-highcollection-umbrella-corp | MD   | Collection-heavy            | 200    | 8      | 800         | 3,000   |
-| lg-balanced-wayne-enterprises   | LG   | Large balanced              | 1,000  | 100    | 2,000       | 10,000  |
-| lg-highperm-tyrell-corp         | LG   | High permission density     | 2,500  | 75     | 2,300       | 17,000  |
-| xl-highperm-weyland-yutani      | XL   | Mega corp, many groups      | 5,000  | 500    | 1,200       | 15,000  |
-| xl-broad-initech                | XL   | Mega corp, many collections | 10,000 | 5      | 12,000      | 15,000  |
-| xl-migrated-cyberdyne           | XL   | Large org, post-migration   | 5,040  | 465    | 6,000       | 60,900  |
+| Preset                                         | Tier | Archetype                           | Users  | Groups | Collections | Ciphers |
+| ---------------------------------------------- | ---- | ----------------------------------- | ------ | ------ | ----------- | ------- |
+| xs-central-perk                                | XS   | Family starter                      | 6      | 2      | 10          | 200     |
+| sm-balanced-planet-express                     | SM   | Small balanced                      | 50     | 8      | 100         | 750     |
+| sm-highperm-bluth-company                      | SM   | Small hierarchical                  | 50     | 4      | 25          | 500     |
+| sm-migrated-cyberdyne                          | SM   | Large org shape at 1/10             | 504    | 47     | 600         | 6,090   |
+| md-balanced-sterling-cooper                    | MD   | Mid-market balanced                 | 250    | 50     | 500         | 5,000   |
+| md-highcollection-umbrella-corp                | MD   | Collection-heavy                    | 200    | 8      | 800         | 3,000   |
+| md-migrated-cyberdyne                          | MD   | Large org shape at 1/4              | 1,260  | 116    | 1,500       | 15,225  |
+| lg-balanced-wayne-enterprises                  | LG   | Large balanced                      | 1,000  | 100    | 2,000       | 10,000  |
+| lg-highperm-tyrell-corp                        | LG   | High permission density             | 2,500  | 75     | 2,300       | 17,000  |
+| lg-migrated-cyberdyne                          | LG   | Large org shape at 1/2              | 2,520  | 233    | 3,000       | 30,450  |
+| xl-highperm-weyland-yutani                     | XL   | Mega corp, many groups              | 5,000  | 500    | 1,200       | 15,000  |
+| xl-broad-initech                               | XL   | Mega corp, many collections         | 10,000 | 5      | 12,000      | 15,000  |
+| xl-migrated-cyberdyne-premigration             | XL   | Large org, mid-migration            | 5,040  | 465    | 6,000       | 60,900  |
+| xl-migrated-cyberdyne                          | XL   | Large org, post-migration           | 5,040  | 465    | 6,000       | 60,900  |
+| xl-migrated-cyberdyne-200k-default-collections | XL   | 200k, growth in default collections | 5,040  | 465    | 6,000       | 60,900  |
+| xl-migrated-cyberdyne-200k-shared              | XL   | 200k, growth in shared              | 5,040  | 465    | 6,000       | 149,800 |
 
 **Notes:**
 
 - The XS preset uses `families-annually`, which hides the Groups UI even though the seeder creates groups.
 - **Cipher types**: Most use `realistic` (60% Login, 15% SecureNote, 12% Card, 10% Identity, 3% SSHKey). Umbrella Corp uses `documentationHeavy` (40/40 Login/SecureNote). Tyrell Corp uses `developerFocused` (50% Login, 20% SSHKey).
-- **Personal ciphers**: Sterling Cooper and Wayne Enterprises use `realistic` distribution. Weyland-Yutani uses `lightUsage`. Use `heavyUsage` only for small/mid orgs — at XL scale it produces 300K+ ciphers and will timeout. `pendingMigration` models personal items still waiting for the Organization Data Ownership migration: ~80% of confirmed members have none and a few have over 1,000 (`features.default-collections-enterprise` uses it).
+- **Personal ciphers**: Sterling Cooper and Wayne Enterprises use `realistic` distribution. Weyland-Yutani uses `lightUsage`. Use `heavyUsage` only for small/mid orgs — at XL scale it produces 300K+ ciphers and will timeout. `pendingMigration` models personal items still waiting for the Organization Data Ownership migration: ~80% of confirmed members have none and a few have over 1,000 (`features.default-collections-enterprise` and `xl-migrated-cyberdyne-premigration` use it).
 - **Folders**: Wayne Enterprises uses `enterprise` folder distribution. Weyland-Yutani uses `minimal`.
-- **Archive & delete**: The nine density presets set `cipherAssignment.deletedRate` (2-5%, capped at 25) and `archivedRate` (4-8%, capped at 50), tuned to each org's orphan-rate/permission story — tidier orgs (Central Perk) trend lower, locked-down/hierarchical orgs (Bluth Company, Tyrell Corp) and Initech's high-orphan mega-dump trend higher. Both rates apply to org ciphers (archived-for a round-robin-selected org member); the three presets with personal ciphers enabled (Sterling Cooper, Wayne Enterprises, Weyland-Yutani) apply the same rates a second time against their personal-cipher pool, so those three seed archived/deleted items in both places.
+- **Archive & delete**: The nine density presets set `cipherAssignment.deletedRate` (2-5%, capped at 25) and `archivedRate` (4-8%, capped at 50), tuned to each org's orphan-rate/permission story — tidier orgs (Central Perk) trend lower, locked-down/hierarchical orgs (Bluth Company, Tyrell Corp) and Initech's high-orphan mega-dump trend higher. Both rates apply to org ciphers (archived-for a round-robin-selected org member); the three presets with personal ciphers enabled (Sterling Cooper, Wayne Enterprises, Weyland-Yutani) apply the same rates a second time against their personal-cipher pool, so those three seed archived/deleted items in both places. `xl-migrated-cyberdyne-premigration` does the same with `deletedRate` only (no `archivedRate`), so its personal pool gets deleted items but no archived ones.
+- **`md-migrated-cyberdyne`** (1/4) and **`lg-migrated-cyberdyne`** (1/2) scale `xl-migrated-cyberdyne` down the way `sm-migrated-cyberdyne` does at 1/10, keeping team-sized group and collection sizes, for environments where the XL org is too slow to seed or browse: ~254k and ~460k member-item pairs, about 9–10% from non-confirmed members. Groups per confirmed member P50/P90/P99 stay at 1/3/6.
+- **`xl-migrated-cyberdyne-premigration`** is the same org earlier in the migration: identical shared collections, groups and grants (same seed, so the same ~976k live pairs), but only ~23% of default collections are non-empty (~37k items) and ~25k personal items are still waiting in members' own vaults (`density.personalCiphers.shape: pendingMigration`: ~780 holders, 3 with over 1,000). Together with `xl-migrated-cyberdyne` and `xl-migrated-cyberdyne-200k-default-collections` it covers before, after and 4x growth of the migration.
+- **`xl-migrated-cyberdyne-200k-default-collections`** and **`xl-migrated-cyberdyne-200k-shared`** take the same org to ~200k active org items, two ways. **default-collections** grows only the default collections (about 45% of members non-empty, a tail up to 7,200 items): member-item pairs don't move (~976k) and shared-collection sync is unchanged. It exercises org-wide volume and default collections. **shared** grows shared collections ~2.5× under the same groups and grants (largest collection ~4.5k items): member-item pairs reach ~2.6M. It is the worst case for sync and the member-access report. Each uses its own email domain, so both can share one database with `xl-migrated-cyberdyne`.
+- **Cyberdyne database support.** `sm-migrated-cyberdyne` builds on PostgreSQL, MySQL, MariaDB and SQL Server in the seeded-database workflow; the other Cyberdyne presets have only been seeded on SQL Server. Locally they seed in ~10 s (sm, md), ~15 s (lg) and 30–60 s (xl and its variants). The workflow's default preset list leaves them out, but `preset=all` builds every embedded preset, these included, on all four databases.
 
 For per-preset expected values and verification queries, see [verification.md](verification.md).
 

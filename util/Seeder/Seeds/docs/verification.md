@@ -217,7 +217,7 @@ WHERE OrganizationId = @OrgId;
 Verifies `cipherAssignment.archivedRate`, `deletedRate`, and `archivedAndDeletedOverlapRate` against the
 personal (non-org) cipher pool — see Q11 for the same rates verified against the org pool, which is archived
 independently. Only applies to presets with `density.personalCiphers` set (Sterling Cooper, Wayne Enterprises,
-Weyland-Yutani). Only confirmed members, owner included, get personal ciphers: `CreateUsersStep` adds only
+Weyland-Yutani, and `xl-migrated-cyberdyne-premigration`, which sets `deletedRate` only). Only confirmed members, owner included, get personal ciphers: `CreateUsersStep` adds only
 confirmed users to `UserDigests`, the list `GeneratePersonalCiphersStep` walks, so invited, accepted and revoked
 members own none. With the realistic status mix, 214 members are confirmed in Sterling Cooper, 851 in Wayne
 Enterprises and 4,251 in Weyland-Yutani, and the personal-cipher distribution still gives some of them none.
@@ -531,6 +531,22 @@ database give identical counts. Values were measured on SQL Server; `~` marks a 
 groups, 990 collections (390 default collections), ~12.1k items fetched (~6.0k in default collections, ~0.6k trashed)
 and ~93k member-item pairs, ~13% of them from non-confirmed members. Groups per confirmed member P50/P90/P99/max
 1/3/6/7.
+
+`scale.md-migrated-cyberdyne` (1/4): 1,261 members (986 confirmed, 220 revoked), 116 groups, 2,481 collections (981
+default collections), ~29.8k items fetched (~14.6k in default collections) and ~254k member-item pairs, 9.3% not
+confirmed.
+
+`scale.lg-migrated-cyberdyne` (1/2): 2,521 members (1,971 confirmed, 440 revoked), 233 groups, 4,966 collections
+(1,966 default collections), ~61k items fetched (~30.4k in default collections) and ~460k pairs, 10.2% not confirmed.
+
+`scale.xl-migrated-cyberdyne-premigration`: the same ~976k live pairs as `xl-migrated-cyberdyne`, ~98k items fetched
+(~37k in default collections, 905 of 3,936 default collections non-empty), ~16.7k active items in no collection, and
+~24.9k personal items (`OrganizationId` NULL) on ~780 confirmed members.
+
+`scale.xl-migrated-cyberdyne-200k-default-collections` keeps the same pairs with ~218k items fetched and ~157k items in
+default collections.
+
+`scale.xl-migrated-cyberdyne-200k-shared` reaches ~2.6M pairs (8.4% not confirmed) with ~212k items fetched.
 
 ---
 
