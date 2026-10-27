@@ -285,7 +285,7 @@ public class ConfirmOrganizationInviteLinkCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ConfirmAsync_WhenAutoEnrollEnabledAndKeyMissing_ReturnsResetPasswordKeyRequired(
+    public async Task ConfirmAsync_PassesResetPasswordKeyToValidator(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
@@ -294,22 +294,23 @@ public class ConfirmOrganizationInviteLinkCommandTests
     {
         // Arrange
         SetupHappyPath(organization, inviteLink, user, existingOrganizationUser, sutProvider);
-        SetupAutoEnrollPolicy(organization, user, sutProvider);
-        var request = BuildRequest(inviteLink, user) with { ResetPasswordKey = null };
+        var request = BuildRequest(inviteLink, user) with { ResetPasswordKey = "2.validresetpasswordkey" };
 
         // Act
-        var result = await sutProvider.Sut.ConfirmAsync(request);
+        await sutProvider.Sut.ConfirmAsync(request);
 
         // Assert
-        Assert.True(result.IsError);
-        Assert.IsType<ConfirmResetPasswordKeyRequired>(result.AsError);
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .ReplaceAsync(Arg.Any<OrganizationUser>());
+        await sutProvider.GetDependency<IConfirmOrganizationInviteLinkValidator>()
+            .Received(1)
+            .ValidateAsync(Arg.Is<ConfirmOrganizationInviteLinkValidationRequest>(r =>
+                r.OrganizationId == request.OrganizationId &&
+                r.Code == request.Code &&
+                r.User == user &&
+                r.ResetPasswordKey == request.ResetPasswordKey));
     }
 
     [Theory, BitAutoData]
-    public async Task ConfirmAsync_WhenAutoEnrollEnabledWithValidKey_EnrollsUser(
+    public async Task ConfirmAsync_WhenAutoEnrollEnabled_EnrollsUser(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
@@ -317,8 +318,8 @@ public class ConfirmOrganizationInviteLinkCommandTests
         SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
     {
         // Arrange
-        SetupHappyPath(organization, inviteLink, user, existingOrganizationUser, sutProvider);
-        SetupAutoEnrollPolicy(organization, user, sutProvider);
+        SetupHappyPath(organization, inviteLink, user, existingOrganizationUser, sutProvider,
+            accountRecoveryAutoEnrollEnabled: true);
         var request = BuildRequest(inviteLink, user) with { ResetPasswordKey = "2.validresetpasswordkey" };
 
         // Act
@@ -329,6 +330,27 @@ public class ConfirmOrganizationInviteLinkCommandTests
         await sutProvider.GetDependency<IUpdateUserResetPasswordEnrollmentCommand>()
             .Received(1)
             .UpdateUserResetPasswordEnrollmentAsync(organization.Id, user.Id, request.ResetPasswordKey, user.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmAsync_WhenAutoEnrollDisabled_DoesNotEnrollUser(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser existingOrganizationUser,
+        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
+    {
+        // Arrange
+        SetupHappyPath(organization, inviteLink, user, existingOrganizationUser, sutProvider);
+
+        // Act
+        var result = await sutProvider.Sut.ConfirmAsync(BuildRequest(inviteLink, user));
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IUpdateUserResetPasswordEnrollmentCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateUserResetPasswordEnrollmentAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Guid?>());
     }
 
     [Theory, BitAutoData]
@@ -417,7 +439,8 @@ public class ConfirmOrganizationInviteLinkCommandTests
         OrganizationInviteLink inviteLink,
         User user,
         OrganizationUser? existingOrganizationUser,
-        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
+        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider,
+        bool accountRecoveryAutoEnrollEnabled = false)
     {
         if (existingOrganizationUser is not null)
         {
@@ -426,7 +449,8 @@ public class ConfirmOrganizationInviteLinkCommandTests
             existingOrganizationUser.Status = OrganizationUserStatusType.Accepted;
         }
 
-        SetupValidatedConfirmation(organization, inviteLink, user, existingOrganizationUser, sutProvider);
+        SetupValidatedConfirmation(organization, inviteLink, user, existingOrganizationUser, sutProvider,
+            accountRecoveryAutoEnrollEnabled);
     }
 
     // Stubs a successful validation that resolves to the given membership, leaving the membership untouched.
@@ -435,7 +459,8 @@ public class ConfirmOrganizationInviteLinkCommandTests
         OrganizationInviteLink inviteLink,
         User user,
         OrganizationUser? existingOrganizationUser,
-        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
+        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider,
+        bool accountRecoveryAutoEnrollEnabled = false)
     {
         inviteLink.OrganizationId = organization.Id;
         inviteLink.Code = Guid.NewGuid().ToString();
@@ -447,15 +472,12 @@ public class ConfirmOrganizationInviteLinkCommandTests
                 InviteLink = inviteLink,
                 Organization = organization,
                 ExistingOrganizationUser = existingOrganizationUser,
+                AccountRecoveryAutoEnrollEnabled = accountRecoveryAutoEnrollEnabled,
             });
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
             .Returns(new OrganizationSeatCounts { Users = 0, Sponsored = 0 });
-
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<ResetPasswordPolicyRequirement>(user.Id)
-            .Returns(new ResetPasswordPolicyRequirement([]));
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(user.Id)
@@ -485,25 +507,6 @@ public class ConfirmOrganizationInviteLinkCommandTests
         stagedOrganizationUser.Status = OrganizationUserStatusType.Staged;
         stagedOrganizationUser.Email = user.Email;
         stagedOrganizationUser.UserId = null;
-    }
-
-    private static void SetupAutoEnrollPolicy(
-        Organization organization,
-        User user,
-        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
-    {
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<ResetPasswordPolicyRequirement>(user.Id)
-            .Returns(new ResetPasswordPolicyRequirement(
-            [
-                new PolicyDetails
-                {
-                    OrganizationId = organization.Id,
-                    PolicyType = PolicyType.ResetPassword,
-                    OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
-                    PolicyData = "{\"autoEnrollEnabled\": true}"
-                }
-            ]));
     }
 
     private static void SetupDataOwnershipPolicy(

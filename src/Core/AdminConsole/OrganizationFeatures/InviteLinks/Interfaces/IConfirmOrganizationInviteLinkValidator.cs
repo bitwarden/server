@@ -12,10 +12,12 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 /// <list type="bullet">
 ///     <item><see cref="InviteLinkRules.ValidateEligibility"/>.</item>
 ///     <item>The link supports confirmation.</item>
-///     <item>The user is not a provider user.</item>
 ///     <item><see cref="InviteLinkRules.ValidateConfirmMembershipStatus"/>.</item>
-///     <item>The organization has an available seat for a new or Staged member.</item>
-///     <item>The Require Two-Factor Authentication and Single Organization policies.</item>
+///     <item>The free organization admin limit.</item>
+///     <item>The Automatic User Confirmation policy.</item>
+///     <item>The Single Organization policy.</item>
+///     <item>The Require Two-Factor Authentication policy.</item>
+///     <item>The Account Recovery policy.</item>
 /// </list>
 /// </remarks>
 public interface IConfirmOrganizationInviteLinkValidator

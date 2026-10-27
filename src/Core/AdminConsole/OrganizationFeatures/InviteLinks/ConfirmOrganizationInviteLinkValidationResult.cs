@@ -26,4 +26,9 @@ public record ConfirmOrganizationInviteLinkValidationResult
     /// not yet a member and a new membership will be created during confirmation.
     /// </summary>
     public OrganizationUser? ExistingOrganizationUser { get; init; }
+
+    /// <summary>
+    /// If true, the caller must enroll the user in account recovery once they join.
+    /// </summary>
+    public bool AccountRecoveryAutoEnrollEnabled { get; init; }
 }
