@@ -34,4 +34,7 @@ public record InvoicePreview
 
     /// <summary>When the subscriber is next charged.</summary>
     public DateTime? NextPaymentAttempt { get; init; }
+
+    /// <summary>The moment Stripe prorated this preview at; send it back on submit to be charged the same amount. Null for previews that don't prorate.</summary>
+    public DateTime? ProrationDate { get; init; }
 }

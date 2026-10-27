@@ -2,6 +2,7 @@
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions;
 using Bit.Core.Exceptions;
 using Bit.Invoicing.InvoicePreviews;
 using Bit.Invoicing.InvoicePreviews.Models;
@@ -74,6 +75,8 @@ internal sealed class GetSubscriptionUpgradePreviewQuery(
             Quantity = 1
         });
 
+        var prorationDate = InvoicePreviewQuote.GetProrationDate(subscription);
+
         var options = new InvoiceCreatePreviewOptions
         {
             AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = true },
@@ -83,13 +86,15 @@ internal sealed class GetSubscriptionUpgradePreviewQuery(
             SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
             {
                 Items = items,
-                ProrationBehavior = StripeConstants.ProrationBehavior.AlwaysInvoice
+                ProrationBehavior = StripeConstants.ProrationBehavior.AlwaysInvoice,
+                ProrationDate = prorationDate
             }
         };
 
         try
         {
-            return await invoicePreviewService.GetInvoicePreviewForBillingAddressAsync(options, targetPlanTier, PlanCadenceType.Annually);
+            var preview = await invoicePreviewService.GetInvoicePreviewForBillingAddressAsync(options, targetPlanTier, PlanCadenceType.Annually);
+            return preview with { ProrationDate = prorationDate };
         }
         catch (StripeException stripeException)
             when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.CustomerTaxLocationInvalid)
@@ -104,7 +109,8 @@ internal sealed class GetSubscriptionUpgradePreviewQuery(
     {
         try
         {
-            return await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
+            return await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId,
+                new SubscriptionGetOptions { Expand = ["test_clock"] });
         }
         catch (StripeException stripeException)
             when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.ResourceMissing)

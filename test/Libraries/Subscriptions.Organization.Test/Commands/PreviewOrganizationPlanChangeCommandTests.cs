@@ -622,6 +622,57 @@ public class PreviewOrganizationPlanChangeCommandTests
     }
 
     [Fact]
+    public async Task Run_PaidOrganization_PinsPreviewToTestClockTimeAndReturnsIt()
+    {
+        var (options, preview) = await RunPlanChangeOn(FullSubscriptionOnTestClock());
+
+        Assert.Equal(TestClockTime, options.SubscriptionDetails.ProrationDate);
+        Assert.Equal(TestClockTime, preview.ProrationDate);
+    }
+
+    [Fact]
+    public async Task Run_PaidOrganization_FetchesSubscriptionWithTestClockExpanded()
+    {
+        await RunPlanChangeOn(FullSubscriptionOnTestClock());
+
+        await _stripeAdapter.Received(1).GetSubscriptionAsync(
+            "sub_1", Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("test_clock")));
+    }
+
+    [Fact]
+    public async Task Run_TrialingOrganization_PinsPreviewToo()
+    {
+        var (options, preview) = await RunPlanChangeOn(TrialingSubscriptionOnTestClock());
+
+        Assert.Equal(TestClockTime, options.SubscriptionDetails.ProrationDate);
+        Assert.Equal(TestClockTime, preview.ProrationDate);
+        Assert.Equal("now", options.SubscriptionDetails.TrialEnd?.ToString());
+    }
+
+    [Fact]
+    public async Task Run_FreeOrganization_ReturnsNoProrationDate()
+    {
+        var organization = new OrganizationEntity
+        {
+            Id = Guid.NewGuid(),
+            PlanType = PlanType.Free,
+            Seats = 7
+        };
+
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
+        InvoiceCreatePreviewOptions? options = null;
+        _invoicePreviewService
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+                Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .Returns(SampleInvoicePreview());
+
+        var result = await _sut.Run(organization, Request(PlanTierType.Teams, PlanCadenceType.Annually));
+
+        Assert.Null(result.ProrationDate);
+        Assert.Null(options!.SubscriptionDetails.ProrationDate);
+    }
+
+    [Fact]
     public async Task Run_ActiveOrganization_DoesNotEndTrialInPreview()
     {
         var organization = new OrganizationEntity
@@ -763,6 +814,49 @@ public class PreviewOrganizationPlanChangeCommandTests
         var item = Assert.Single(items, candidate => candidate.Id == id);
         Assert.True(item.Deleted);
     }
+
+    private static readonly DateTime TestClockTime = DateTimeOffset.FromUnixTimeSeconds(1793124360).UtcDateTime;
+
+    private async Task<(InvoiceCreatePreviewOptions Options, InvoicePreview Preview)> RunPlanChangeOn(Subscription subscription)
+    {
+        var organization = new OrganizationEntity
+        {
+            Id = Guid.NewGuid(),
+            GatewayCustomerId = "cus_1",
+            GatewaySubscriptionId = "sub_1",
+            PlanType = PlanType.TeamsAnnually,
+            Seats = 5
+        };
+
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(EnterprisePlan());
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        InvoiceCreatePreviewOptions? options = null;
+        _invoicePreviewService
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+                Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .Returns(SampleInvoicePreview());
+
+        var preview = await _sut.Run(organization, Request(PlanTierType.Enterprise, PlanCadenceType.Annually));
+
+        return (options!, preview);
+    }
+
+    private static Subscription FullSubscriptionOnTestClock() => Subscription.FromJson("""
+        {
+          "id": "sub_1", "status": "active",
+          "test_clock": { "id": "clock_1", "object": "test_helpers.test_clock", "frozen_time": 1793124360 },
+          "items": { "data": [ { "id": "si_pm", "quantity": 5, "price": { "id": "price_teams_seat" } } ] }
+        }
+        """);
+
+    private static Subscription TrialingSubscriptionOnTestClock() => Subscription.FromJson("""
+        {
+          "id": "sub_1", "status": "trialing",
+          "test_clock": { "id": "clock_1", "object": "test_helpers.test_clock", "frozen_time": 1793124360 },
+          "items": { "data": [ { "id": "si_pm", "quantity": 5, "price": { "id": "price_teams_seat" } } ] }
+        }
+        """);
 
     private static Subscription FullSubscription() => Subscription.FromJson("""
         {
