@@ -26,8 +26,8 @@ public interface IAutoscalePrivilegedControlsSeatsCommand
     /// </returns>
     /// <exception cref="BadRequestException">
     /// Thrown on a self-hosted instance, when <paramref name="seatsToAdd"/> is below 1, when the organization does
-    /// not have Privileged Controls or has no subscription, or when the seat change or
-    /// subscription update is rejected.
+    /// not have Privileged Controls, when seats must be added and it has no subscription, or when the seat change
+    /// or subscription update is rejected.
     /// </exception>
     /// <exception cref="ConflictException">Thrown when the organization's subscription is in a state that prevents the change.</exception>
     Task<AutoscalePrivilegedControlsSeatsResult> Run(OrganizationEntity organization, int seatsToAdd);

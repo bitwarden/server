@@ -44,16 +44,16 @@ internal sealed class AutoscalePrivilegedControlsSeatsCommand(
             throw new BadRequestException("Your organization doesn't have Privileged Controls.");
         }
 
-        if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
-        {
-            throw new BadRequestException("No subscription found.");
-        }
-
         var seatsNeeded =
             await organizationUserRepository.GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id) + seatsToAdd;
 
         if (seatsNeeded > organization.PamSeats)
         {
+            if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
+            {
+                throw new BadRequestException("No subscription found.");
+            }
+
             if (organization.MaxAutoscalePamSeats < seatsNeeded)
             {
                 return new AutoscalePrivilegedControlsSeatsResult(false, organization.MaxAutoscalePamSeats);

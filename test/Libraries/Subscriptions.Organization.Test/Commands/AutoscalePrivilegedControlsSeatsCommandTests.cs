@@ -103,16 +103,36 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData(" ")]
-    public async Task Run_NoGatewaySubscription_ThrowsBadRequestWithoutReadingSeatsInUse(string? gatewaySubscriptionId)
+    public async Task Run_NoGatewaySubscriptionAndSeatsShort_ThrowsBadRequestAndChangesNothing(string? gatewaySubscriptionId)
     {
         var organization = CreateOrganization(gatewaySubscriptionId: gatewaySubscriptionId);
+        SetSeatsInUse(organization, _seatsInUse);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, 1));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, 3));
 
         Assert.Equal("No subscription found.", exception.Message);
-        await _organizationUserRepository.DidNotReceive()
-            .GetOccupiedPamSeatCountByOrganizationIdAsync(Arg.Any<Guid>());
+        Assert.Equal(_boughtSeats, organization.PamSeats);
         await _seatChangeSetFactory.DidNotReceive().CreateAsync(Arg.Any<OrganizationEntity>(), Arg.Any<int>());
+        await _organizationReplaceCommand.DidNotReceive()
+            .ReplaceAndUpdateCacheAsync(Arg.Any<OrganizationEntity>(), Arg.Any<EventType?>());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    public async Task Run_NoGatewaySubscriptionAndSeatsAlreadyCovered_SucceedsWithoutChangingAnything(
+        string? gatewaySubscriptionId)
+    {
+        var organization = CreateOrganization(gatewaySubscriptionId: gatewaySubscriptionId);
+        SetSeatsInUse(organization, _seatsInUse);
+
+        var result = await _sut.Run(organization, 2);
+
+        Assert.True(result.Success);
+        Assert.Equal(_boughtSeats, organization.PamSeats);
+        await _organizationReplaceCommand.DidNotReceive()
+            .ReplaceAndUpdateCacheAsync(Arg.Any<OrganizationEntity>(), Arg.Any<EventType?>());
     }
 
     [Fact]
