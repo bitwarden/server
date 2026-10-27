@@ -35,6 +35,7 @@ using Bit.Core.Vault.Services;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Bitwarden.Server.Sdk.Features;
 
 namespace Bit.Api.Vault.Controllers;
 
@@ -1509,6 +1510,7 @@ public class CiphersController : Controller
     }
 
     [HttpPut("{id}/unexclude")]
+    [RequireFeature(FeatureFlagKeys.HealthReportExclusions)]
     public async Task<CipherResponseModel> UnexcludeCipher(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
