@@ -1,6 +1,8 @@
 ﻿using Bit.Core;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Pam.Services;
@@ -27,6 +29,7 @@ public class CipherLeaseGate : ICipherLeaseGate
     private readonly ICollectionRepository _collectionRepository;
     private readonly ICollectionCipherRepository _collectionCipherRepository;
     private readonly ICurrentContext _currentContext;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly TimeProvider _timeProvider;
 
     public CipherLeaseGate(
@@ -37,6 +40,7 @@ public class CipherLeaseGate : ICipherLeaseGate
         ICollectionRepository collectionRepository,
         ICollectionCipherRepository collectionCipherRepository,
         ICurrentContext currentContext,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         TimeProvider timeProvider)
     {
         _featureService = featureService;
@@ -46,6 +50,7 @@ public class CipherLeaseGate : ICipherLeaseGate
         _collectionRepository = collectionRepository;
         _collectionCipherRepository = collectionCipherRepository;
         _currentContext = currentContext;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _timeProvider = timeProvider;
     }
 
@@ -113,6 +118,11 @@ public class CipherLeaseGate : ICipherLeaseGate
             return FullCipherAccess.Unrestricted();
         }
 
+        if (await IsExemptAsync(organizationId))
+        {
+            return FullCipherAccess.ForCipher(cipher.Id);
+        }
+
         var collectionIds = await _collectionCipherRepository.GetCollectionIdsByCipherIdAsync(cipher.Id);
         var leasingCollectionIds = await _gatingCollectionResolver.GetGatingCollectionIdsAsync(organizationId);
         return IsGated(collectionIds, leasingCollectionIds) ? null : FullCipherAccess.ForCipher(cipher.Id);
@@ -147,24 +157,7 @@ public class CipherLeaseGate : ICipherLeaseGate
         }
 
         var gated = await GetCallerGatedCipherIdsAsync(userId);
-        var gatedCipherIds = cipherIds.Where(gated.Contains).ToList();
-        if (gatedCipherIds.Count == 0)
-        {
-            return FullCipherAccess.ForCiphers(cipherIds);
-        }
-
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
-        var leasedCipherIds = (await _accessLeaseRepository.GetManyActiveByRequesterIdAsync(userId, now))
-            .Where(l => LeaseCanRelease(l.OrganizationId))
-            .Select(l => l.CipherId)
-            .ToHashSet();
-
-        // Gated with no lease; refuses the whole batch.
-        if (gatedCipherIds.Any(id => !leasedCipherIds.Contains(id)))
-        {
-            throw new NotFoundException();
-        }
-
+        await EnsureLeasedAsync(userId, cipherIds.Where(gated.Contains).ToList());
         return FullCipherAccess.ForCiphers(cipherIds);
     }
 
@@ -173,6 +166,11 @@ public class CipherLeaseGate : ICipherLeaseGate
         if (!Enabled)
         {
             return FullCipherAccess.Unrestricted();
+        }
+
+        if (await IsExemptAsync(organizationId))
+        {
+            return FullCipherAccess.ForCipher(cipher.Id);
         }
 
         var collectionIds = await _collectionCipherRepository.GetCollectionIdsByCipherIdAsync(cipher.Id);
@@ -202,27 +200,115 @@ public class CipherLeaseGate : ICipherLeaseGate
             return FullCipherAccess.Unrestricted();
         }
 
-        var leasingCollectionIds = await _gatingCollectionResolver.GetGatingCollectionIdsAsync(organizationId);
-        if (leasingCollectionIds.Count == 0)
+        if (await IsExemptAsync(organizationId))
         {
             return FullCipherAccess.ForCiphers(ciphers.Select(c => c.Id));
         }
 
-        var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(organizationId);
-        var gated = collectionCiphers
-            .GroupBy(cc => cc.CipherId)
-            .Where(g => g.All(cc => leasingCollectionIds.Contains(cc.CollectionId)))
-            .Select(g => g.Key)
-            .ToHashSet();
-
+        var gated = await GetOrganizationGatedCipherIdsAsync(organizationId);
         var authorized = ciphers.Select(c => c.Id).Where(id => !gated.Contains(id));
         return FullCipherAccess.ForCiphers(authorized);
+    }
+
+    public async Task<FullCipherAccess> EnsureCanMutateAsAdminAsync(Guid userId, Cipher cipher)
+    {
+        if (!Enabled)
+        {
+            return FullCipherAccess.Unrestricted();
+        }
+
+        // A personal cipher is never gated.
+        if (cipher.OrganizationId is not { } organizationId)
+        {
+            return FullCipherAccess.ForCipher(cipher.Id);
+        }
+
+        return await AuthorizeAdminReadAsync(userId, organizationId, cipher) ?? throw new NotFoundException();
+    }
+
+    public async Task<FullCipherAccess> EnsureCanMutateManyAsAdminAsync(
+        Guid userId,
+        Guid organizationId,
+        IEnumerable<Cipher> ciphers)
+    {
+        if (!Enabled)
+        {
+            return FullCipherAccess.Unrestricted();
+        }
+
+        var cipherIds = ciphers.Select(c => c.Id).Distinct().ToList();
+        if (cipherIds.Count == 0 || await IsExemptAsync(organizationId))
+        {
+            return FullCipherAccess.ForCiphers(cipherIds);
+        }
+
+        var gated = await GetOrganizationGatedCipherIdsAsync(organizationId);
+        await EnsureLeasedAsync(userId, cipherIds.Where(gated.Contains).ToList());
+        return FullCipherAccess.ForCiphers(cipherIds);
     }
 
     public FullCipherAccess AuthorizeAccessConnectorRotationRead(Cipher cipher) =>
         Enabled ? FullCipherAccess.ForCipher(cipher.Id) : FullCipherAccess.Unrestricted();
 
     public FullCipherAccess UnrestrictedForWholeVaultExport() => FullCipherAccess.Unrestricted();
+
+    /// <summary>
+    /// Whether the caller is an Owner or Admin of an organization that lets admins access all collection items,
+    /// and so needs no lease on the "/admin" decisions.
+    /// </summary>
+    private async Task<bool> IsExemptAsync(Guid organizationId)
+    {
+        if (_currentContext.GetOrganization(organizationId) is not
+            { Type: OrganizationUserType.Owner or OrganizationUserType.Admin })
+        {
+            return false;
+        }
+
+        var ability = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
+        return ability is { AllowAdminAccessToAllCollectionItems: true };
+    }
+
+    /// <summary>
+    /// The organization's cipher ids reachable only through leasing-enabled collections, ignoring leases.
+    /// </summary>
+    private async Task<ISet<Guid>> GetOrganizationGatedCipherIdsAsync(Guid organizationId)
+    {
+        var leasingCollectionIds = await _gatingCollectionResolver.GetGatingCollectionIdsAsync(organizationId);
+        if (leasingCollectionIds.Count == 0)
+        {
+            return new HashSet<Guid>();
+        }
+
+        var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(organizationId);
+        return collectionCiphers
+            .GroupBy(cc => cc.CipherId)
+            .Where(g => g.All(cc => leasingCollectionIds.Contains(cc.CollectionId)))
+            .Select(g => g.Key)
+            .ToHashSet();
+    }
+
+    /// <summary>
+    /// Throws <see cref="NotFoundException" /> unless the caller holds a valid active lease on every one of
+    /// <paramref name="gatedCipherIds" />, refusing the whole batch.
+    /// </summary>
+    private async Task EnsureLeasedAsync(Guid userId, IReadOnlyCollection<Guid> gatedCipherIds)
+    {
+        if (gatedCipherIds.Count == 0)
+        {
+            return;
+        }
+
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var leasedCipherIds = (await _accessLeaseRepository.GetManyActiveByRequesterIdAsync(userId, now))
+            .Where(l => LeaseCanRelease(l.OrganizationId))
+            .Select(l => l.CipherId)
+            .ToHashSet();
+
+        if (gatedCipherIds.Any(id => !leasedCipherIds.Contains(id)))
+        {
+            throw new NotFoundException();
+        }
+    }
 
     /// <summary>
     /// A cipher reachable through <paramref name="collectionIds" /> is gated only if every one of those
