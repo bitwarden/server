@@ -1844,6 +1844,22 @@ public class UpgradePremiumToOrganizationCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task Run_WithUnspecifiedKindProrationDate_SetsItOnSubscriptionUpdateAsUtc(User user)
+    {
+        ArrangeUpgradeWithTestClock(user, Frozen.AddDays(-180));
+        var unspecified = DateTime.SpecifyKind(Frozen.AddMinutes(-10), DateTimeKind.Unspecified);
+
+        var result = await RunUpgrade(user, unspecified);
+
+        Assert.True(result.Success);
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync("sub_123",
+            Arg.Is<SubscriptionUpdateOptions>(o =>
+                o.ProrationDate.HasValue &&
+                o.ProrationDate.Value.Kind == DateTimeKind.Utc &&
+                o.ProrationDate.Value.Ticks == unspecified.Ticks));
+    }
+
+    [Theory, BitAutoData]
     public async Task Run_WithExpiredProrationDate_ThrowsBeforeAnyWrite(User user)
     {
         ArrangeUpgradeWithTestClock(user, Frozen.AddDays(-180));

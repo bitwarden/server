@@ -19,8 +19,10 @@ public static class InvoicePreviewQuote
     /// <summary>
     /// Throws <see cref="InvoicePreviewExpiredException"/> if <paramref name="prorationDate"/> is in the future,
     /// older than <see cref="ValidFor"/>, or before the subscription's current period start.
+    /// Returns the date normalized to UTC; pass that value (not the input) to Stripe so the instant that was
+    /// checked is the instant that is sent.
     /// </summary>
-    public static void EnsureValid(DateTime prorationDate, Subscription subscription)
+    public static DateTime EnsureValid(DateTime prorationDate, Subscription subscription)
     {
         var time = prorationDate.Kind switch
         {
@@ -42,6 +44,8 @@ public static class InvoicePreviewQuote
         {
             throw new InvoicePreviewExpiredException();
         }
+
+        return time;
     }
 
     private static DateTime GetNow(Subscription subscription) =>

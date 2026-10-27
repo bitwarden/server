@@ -110,7 +110,7 @@ public class UpgradePremiumToOrganizationCommand(
 
         if (prorationDate.HasValue)
         {
-            InvoicePreviewQuote.EnsureValid(prorationDate.Value, currentSubscription);
+            prorationDate = InvoicePreviewQuote.EnsureValid(prorationDate.Value, currentSubscription);
         }
 
         // Fetch all premium plans to find which specific plan the user is on

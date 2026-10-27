@@ -129,7 +129,7 @@ public class UpgradeOrganizationPlanVNextCommand(
                 return new BadRequest("We couldn't find your subscription.");
             }
 
-            InvoicePreviewQuote.EnsureValid(prorationDate.Value, subscription);
+            prorationDate = InvoicePreviewQuote.EnsureValid(prorationDate.Value, subscription);
         }
 
         await priceIncreaseScheduler.Release(organization.GatewayCustomerId, organization.GatewaySubscriptionId!, organization.Id);
