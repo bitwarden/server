@@ -102,7 +102,8 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             var result = await _upgradeOrganizationPlanVNextCommand.Run(
                 organization,
                 plan,
-                upgrade.Keys);
+                upgrade.Keys,
+                upgrade.ProrationDate);
             result.GetValueOrThrow();
             return new Tuple<bool, string>(true, null);
         }
