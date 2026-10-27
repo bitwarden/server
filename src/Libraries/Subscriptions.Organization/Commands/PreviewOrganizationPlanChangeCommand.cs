@@ -4,6 +4,7 @@ using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions;
 using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Exceptions;
 using Bit.Invoicing.InvoicePreviews;
@@ -67,9 +68,10 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
 
         InvoiceSubscriptionDetailsOptions subscriptionDetails;
         TaxID? onFileTaxId = null;
+        DateTime? prorationDate = null;
         if (subscriptionId is not null)
         {
-            (subscriptionDetails, onFileTaxId) = await BuildPlanChangeDetailsAsync(organization, newPlan);
+            (subscriptionDetails, onFileTaxId, prorationDate) = await BuildPlanChangeDetailsAsync(organization, newPlan);
         }
         else if (organization.PlanType == PlanType.Free)
         {
@@ -107,7 +109,8 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
 
         try
         {
-            return await invoicePreviewService.GetInvoicePreviewForBillingAddressAsync(options, tier, cadence);
+            var preview = await invoicePreviewService.GetInvoicePreviewForBillingAddressAsync(options, tier, cadence);
+            return preview with { ProrationDate = prorationDate };
         }
         catch (StripeException stripeException)
             when (stripeException.StripeError?.Code == ErrorCodes.CustomerTaxLocationInvalid)
@@ -125,7 +128,7 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
         }
     }
 
-    private async Task<(InvoiceSubscriptionDetailsOptions SubscriptionDetails, TaxID? OnFileTaxId)>
+    private async Task<(InvoiceSubscriptionDetailsOptions SubscriptionDetails, TaxID? OnFileTaxId, DateTime ProrationDate)>
         BuildPlanChangeDetailsAsync(OrganizationEntity organization, Plan newPlan)
     {
         var currentPlan = await pricingClient.GetPlanOrThrow(organization.PlanType);
@@ -157,10 +160,13 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
             .Select(change => ToPreviewItem(change, itemsByPriceId, organization))
             .ToList();
 
+        var prorationDate = InvoicePreviewQuote.GetProrationDate(subscription);
+
         var subscriptionDetails = new InvoiceSubscriptionDetailsOptions
         {
             Items = items,
-            ProrationBehavior = ProrationBehavior.AlwaysInvoice
+            ProrationBehavior = ProrationBehavior.AlwaysInvoice,
+            ProrationDate = prorationDate
         };
 
         // A trialing subscription isn't charged for the change now (the proration is $0). End the trial in the
@@ -170,7 +176,7 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
             subscriptionDetails.TrialEnd = InvoiceSubscriptionDetailsTrialEnd.Now;
         }
 
-        return (subscriptionDetails, ExtractOnFileTaxId(subscription.Customer));
+        return (subscriptionDetails, ExtractOnFileTaxId(subscription.Customer), prorationDate);
     }
 
     private InvoiceSubscriptionDetailsOptions BuildPurchaseDetails(OrganizationEntity organization, Plan newPlan)
@@ -297,7 +303,7 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
         try
         {
             return await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
-                new SubscriptionGetOptions { Expand = ["items.data.price", "customer.tax_ids"] });
+                new SubscriptionGetOptions { Expand = ["items.data.price", "customer.tax_ids", "test_clock"] });
         }
         catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
         {
