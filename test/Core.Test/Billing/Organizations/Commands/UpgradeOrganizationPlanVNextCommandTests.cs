@@ -588,6 +588,22 @@ public class UpgradeOrganizationPlanVNextCommandTests
             prorationDate);
     }
 
+    [Fact]
+    public async Task Run_PaidUpgrade_WithUnspecifiedKindProrationDate_PassesItToSubscriptionUpdateAsUtc()
+    {
+        var (organization, targetPlan) = SetupPaidUpgrade();
+        var unspecified = DateTime.SpecifyKind(_frozen.AddMinutes(-10), DateTimeKind.Unspecified);
+
+        var result = await _command.Run(organization, targetPlan, null, unspecified);
+
+        Assert.True(result.IsT0);
+        await _updateOrganizationSubscriptionCommand.Received(1).Run(
+            organization,
+            Arg.Any<OrganizationSubscriptionChangeSet>(),
+            null,
+            Arg.Is<DateTime?>(d => d.HasValue && d.Value.Kind == DateTimeKind.Utc && d.Value.Ticks == unspecified.Ticks));
+    }
+
     [Theory]
     [InlineData(-31 * 60)]
     [InlineData(1)]

@@ -72,9 +72,15 @@ public class InvoicePreviewQuoteTests
     }
 
     [Fact]
-    public void EnsureValid_UnspecifiedKind_IsTreatedAsUtc() =>
-        InvoicePreviewQuote.EnsureValid(
-            DateTime.SpecifyKind(_frozen.AddMinutes(-5), DateTimeKind.Unspecified), CreateSubscription());
+    public void EnsureValid_UnspecifiedKind_ReturnsSameInstantAsUtc()
+    {
+        var input = DateTime.SpecifyKind(_frozen.AddMinutes(-5), DateTimeKind.Unspecified);
+
+        var result = InvoicePreviewQuote.EnsureValid(input, CreateSubscription());
+
+        Assert.Equal(DateTimeKind.Utc, result.Kind);
+        Assert.Equal(input.Ticks, result.Ticks);
+    }
 
     [Fact]
     public void InvoicePreviewExpiredException_IsKeyedBadRequest()
