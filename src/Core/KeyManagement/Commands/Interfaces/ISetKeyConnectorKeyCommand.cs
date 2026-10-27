@@ -11,10 +11,10 @@ namespace Bit.Core.KeyManagement.Commands.Interfaces;
 public interface ISetKeyConnectorKeyCommand
 {
     /// <summary>
-    /// Sets the Key Connector wrapped user key and V2 account cryptographic state for the user.
+    /// Sets the Key Connector key wrapped user key and V2 account cryptographic state for the user.
     /// </summary>
     /// <param name="user">User to set the keys for. Must be allowed to use Key Connector.</param>
-    /// <param name="keyConnectorKeysData">Key Connector wrapped user key, account keys, and org SSO identifier.</param>
+    /// <param name="keyConnectorKeysData">Key Connector key wrapped user key, account keys, and org SSO identifier.</param>
     /// <param name="acceptOrganizationInvite">
     /// True to accept the user's pending organization membership. False leaves the membership in its current state.
     /// </param>

@@ -122,7 +122,7 @@ public class SsoJitProvisionFinishController(
     }
 
     /// <summary>
-    /// Sets the Key Connector wrapped user key and account keys for an SSO JIT provisioned user in an organization
+    /// Sets the Key Connector key wrapped user key and account keys for an SSO JIT provisioned user in an organization
     /// that uses Key Connector decryption. Accepts the organization membership only when
     /// <see cref="SsoJitProvisionFinishSetKeyConnectorKeyRequestModel.AcceptOrganizationInvite"/> is true.
     /// </summary>
