@@ -66,6 +66,12 @@ public class ProviderBillingService(
             throw new ConflictException("Organization already belongs to a provider.");
         }
 
+        if (organization.UsePam)
+        {
+            throw new BadRequestException(
+                "Organizations managed by a provider can't use Privileged Controls. Please contact Customer Support.");
+        }
+
         await priceIncreaseScheduler.Release(
             organization.GatewayCustomerId,
             organization.GatewaySubscriptionId,
