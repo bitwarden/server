@@ -44,7 +44,7 @@ public class UserVerificationOtpStoreTests
     {
         var result = await _sut.IssueAsync(user);
 
-        Assert.Equal("123456", result);
+        Assert.Equal("123456", Assert.IsType<IssueOtpResult.Issued>(result).Otp);
         await _otpTokenProvider.Received(1).GenerateTokenAsync(
             TokenProviderName, Purpose, $"{user.Id}_{user.SecurityStamp}", user.Email);
     }
@@ -97,14 +97,14 @@ public class UserVerificationOtpStoreTests
     }
 
     [Theory, BitAutoData]
-    public async Task IssueAsync_RequestLimitReached_ReturnsNullAndDoesNotGenerate(User user)
+    public async Task IssueAsync_RequestLimitReached_ReturnsLimitReachedAndDoesNotGenerate(User user)
     {
         await IssueUpToLimitAsync(user);
         _otpTokenProvider.ClearReceivedCalls();
 
         var result = await _sut.IssueAsync(user);
 
-        Assert.Null(result);
+        Assert.IsType<IssueOtpResult.RequestLimitReached>(result);
         await _otpTokenProvider.DidNotReceiveWithAnyArgs().GenerateTokenAsync(default!, default!, default!);
     }
 
@@ -116,18 +116,18 @@ public class UserVerificationOtpStoreTests
 
         var result = await _sut.IssueAsync(user);
 
-        Assert.Equal("123456", result);
+        Assert.Equal("123456", Assert.IsType<IssueOtpResult.Issued>(result).Otp);
     }
 
     [Theory, BitAutoData]
-    public async Task IssueAsync_RequestLimitReached_JustBeforeWindowEnds_ReturnsNull(User user)
+    public async Task IssueAsync_RequestLimitReached_JustBeforeWindowEnds_ReturnsLimitReached(User user)
     {
         await IssueUpToLimitAsync(user);
         _timeProvider.Advance(_requestWindow - TimeSpan.FromSeconds(1));
 
         var result = await _sut.IssueAsync(user);
 
-        Assert.Null(result);
+        Assert.IsType<IssueOtpResult.RequestLimitReached>(result);
     }
 
     /// <summary>
@@ -138,29 +138,29 @@ public class UserVerificationOtpStoreTests
     {
         for (var i = 0; i < MaxRequestsPerWindow - 1; i++)
         {
-            Assert.NotNull(await _sut.IssueAsync(user));
+            Assert.IsType<IssueOtpResult.Issued>(await _sut.IssueAsync(user));
         }
         _timeProvider.Advance(_requestWindow - TimeSpan.FromMinutes(1));
-        Assert.NotNull(await _sut.IssueAsync(user));
+        Assert.IsType<IssueOtpResult.Issued>(await _sut.IssueAsync(user));
         _timeProvider.Advance(TimeSpan.FromMinutes(1));
 
         var result = await _sut.IssueAsync(user);
 
-        Assert.Equal("123456", result);
+        Assert.Equal("123456", Assert.IsType<IssueOtpResult.Issued>(result).Otp);
     }
 
     /// <summary>
     /// The request count is kept per user, not per security stamp, so a stamp change does not reset it.
     /// </summary>
     [Theory, BitAutoData]
-    public async Task IssueAsync_RequestLimitReached_SecurityStampChange_StillReturnsNull(User user)
+    public async Task IssueAsync_RequestLimitReached_SecurityStampChange_StillReturnsLimitReached(User user)
     {
         await IssueUpToLimitAsync(user);
         user.SecurityStamp = Guid.NewGuid().ToString();
 
         var result = await _sut.IssueAsync(user);
 
-        Assert.Null(result);
+        Assert.IsType<IssueOtpResult.RequestLimitReached>(result);
     }
 
     [Theory, BitAutoData]
@@ -170,14 +170,24 @@ public class UserVerificationOtpStoreTests
 
         var result = await _sut.IssueAsync(otherUser);
 
-        Assert.Equal("123456", result);
+        Assert.Equal("123456", Assert.IsType<IssueOtpResult.Issued>(result).Otp);
+    }
+
+    [Theory, BitAutoData]
+    public async Task IssueAsync_ProviderGeneratesNoOtp_Throws(User user)
+    {
+        _otpTokenProvider
+            .GenerateTokenAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>())
+            .Returns((string?)null);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.IssueAsync(user));
     }
 
     private async Task IssueUpToLimitAsync(User user)
     {
         for (var i = 0; i < MaxRequestsPerWindow; i++)
         {
-            Assert.NotNull(await _sut.IssueAsync(user));
+            Assert.IsType<IssueOtpResult.Issued>(await _sut.IssueAsync(user));
         }
     }
 }

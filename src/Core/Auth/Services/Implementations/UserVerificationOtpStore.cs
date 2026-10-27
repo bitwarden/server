@@ -22,15 +22,19 @@ public class UserVerificationOtpStore(
     private readonly TimeProvider _timeProvider = timeProvider;
 
     /// <inheritdoc />
-    public async Task<string?> IssueAsync(User user)
+    public async Task<IssueOtpResult> IssueAsync(User user)
     {
         if (!await TryCountRequestAsync(user))
         {
-            return null;
+            return new IssueOtpResult.RequestLimitReached();
         }
 
-        return await _otpTokenProvider.GenerateTokenAsync(
-            TokenProviderName, Purpose, UniqueIdentifier(user), user.Email);
+        // The provider returns null only for an empty provider name, purpose, or unique identifier, and none of
+        // these can be empty here.
+        var otp = await _otpTokenProvider.GenerateTokenAsync(
+                TokenProviderName, Purpose, UniqueIdentifier(user), user.Email)
+            ?? throw new InvalidOperationException("The OTP provider did not generate an OTP.");
+        return new IssueOtpResult.Issued(otp);
     }
 
     /// <inheritdoc />

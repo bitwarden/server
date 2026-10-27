@@ -16,8 +16,11 @@ public interface IUserVerificationOtpStore
     /// number of OTPs in a fixed time window.
     /// </summary>
     /// <param name="user">The user the OTP is being issued for</param>
-    /// <returns>The generated OTP, or <see langword="null"/> if the user has reached the request limit</returns>
-    Task<string?> IssueAsync(User user);
+    /// <returns>
+    /// <see cref="IssueOtpResult.Issued"/> with the generated OTP, or <see cref="IssueOtpResult.RequestLimitReached"/>
+    /// if the user has reached the request limit
+    /// </returns>
+    Task<IssueOtpResult> IssueAsync(User user);
 
     // TODO: PM-<placeholder-otp-limit> - Move the step-up user verification callers to
     // ValidateAndConsumeWithFailureLimitAsync, then delete this member and its implementation.

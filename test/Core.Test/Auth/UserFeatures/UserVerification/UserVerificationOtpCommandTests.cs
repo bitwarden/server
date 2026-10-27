@@ -19,7 +19,7 @@ public class UserVerificationOtpCommandTests
     [Theory, BitAutoData]
     public async Task SendOtpAsync_IssuesAndEmailsOtp(SutProvider<UserVerificationOtpCommand> sutProvider, User user)
     {
-        sutProvider.GetDependency<IUserVerificationOtpStore>().IssueAsync(user).Returns("123456");
+        sutProvider.GetDependency<IUserVerificationOtpStore>().IssueAsync(user).Returns(new IssueOtpResult.Issued("123456"));
 
         await sutProvider.Sut.SendOtpAsync(user);
 
@@ -46,7 +46,7 @@ public class UserVerificationOtpCommandTests
     public async Task SendOtpAsync_RequestLimitReached_ThrowsAndDoesNotEmail(
         SutProvider<UserVerificationOtpCommand> sutProvider, User user)
     {
-        sutProvider.GetDependency<IUserVerificationOtpStore>().IssueAsync(user).Returns((string?)null);
+        sutProvider.GetDependency<IUserVerificationOtpStore>().IssueAsync(user).Returns(new IssueOtpResult.RequestLimitReached());
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SendOtpAsync(user));
 
