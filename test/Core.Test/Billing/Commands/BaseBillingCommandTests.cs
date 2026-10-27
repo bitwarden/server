@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Commands;
+﻿using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Subscriptions;
 using Bit.Core.Exceptions;
 using Microsoft.Extensions.Logging.Abstractions;

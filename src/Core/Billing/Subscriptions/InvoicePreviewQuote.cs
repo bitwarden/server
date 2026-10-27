@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Extensions;
+﻿using Bit.Core.Billing.Extensions;
 using Stripe;
 
 namespace Bit.Core.Billing.Subscriptions;
