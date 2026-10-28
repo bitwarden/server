@@ -29,6 +29,7 @@ public class CipherLoginModel
         PasswordRevisionDate = data.PasswordRevisionDate;
         Totp = data.Totp;
         AutofillOnPageLoad = data.AutofillOnPageLoad;
+        HttpAuthenticationEnabled = data.HttpAuthenticationEnabled;
     }
 
     [EncryptedString]
@@ -63,6 +64,7 @@ public class CipherLoginModel
     [EncryptedStringLength(1000)]
     public string Totp { get; set; }
     public bool? AutofillOnPageLoad { get; set; }
+    public bool? HttpAuthenticationEnabled { get; set; }
     public CipherFido2CredentialModel[] Fido2Credentials { get; set; }
 
     public class CipherLoginUriModel
