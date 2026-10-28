@@ -68,4 +68,81 @@ internal sealed class SizeHistogram
         var value = (int)Math.Exp(lo + random.NextDouble() * (hi - lo)) - 1;
         return Math.Clamp(value, min, max);
     }
+
+    /// <summary>
+    /// Scales the non-zero entries of <paramref name="sizes"/> so they sum to <paramref name="target"/>,
+    /// keeping every non-zero entry at least 1 and at most <paramref name="cap"/>.
+    /// </summary>
+    internal static void ScaleTo(int[] sizes, int target, int cap)
+    {
+        var current = sizes.Sum(s => (long)s);
+        if (current == 0 || target <= 0)
+        {
+            return;
+        }
+
+        var factor = (double)target / current;
+        for (var i = 0; i < sizes.Length; i++)
+        {
+            if (sizes[i] > 0)
+            {
+                sizes[i] = Math.Clamp((int)Math.Round(sizes[i] * factor), 1, cap);
+            }
+        }
+
+        // Rounding drift: nudge the largest entries until the total matches. Stop only after a full pass in which
+        // no entry could move, so a reachable target is always reached.
+        var diff = target - sizes.Sum();
+        var order = Enumerable.Range(0, sizes.Length).Where(i => sizes[i] > 0)
+            .OrderByDescending(i => sizes[i]).ToArray();
+        var stuck = 0;
+        for (var k = 0; diff != 0 && stuck < order.Length; k++)
+        {
+            var i = order[k % order.Length];
+            var step = Math.Sign(diff);
+            if (sizes[i] + step >= 1 && sizes[i] + step <= cap)
+            {
+                sizes[i] += step;
+                diff -= step;
+                stuck = 0;
+            }
+            else
+            {
+                stuck++;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Pareto-distributed weights (x_min = 1), used to give members a heavy-tailed affinity.
+    /// </summary>
+    internal static double[] ParetoWeights(int count, double alpha, Random random)
+    {
+        var weights = new double[count];
+        for (var i = 0; i < count; i++)
+        {
+            weights[i] = Math.Pow(1.0 - random.NextDouble(), -1.0 / alpha);
+        }
+        return weights;
+    }
+
+    /// <summary>
+    /// Weighted sampling without replacement (Efraimidis–Spirakis). Indices whose weight is 0 or that
+    /// <paramref name="eligible"/> rejects are skipped.
+    /// </summary>
+    internal static List<int> SampleWithoutReplacement(
+        double[] weights, int take, Random random, Func<int, bool>? eligible = null)
+    {
+        var keyed = new List<(double Key, int Index)>(weights.Length);
+        for (var i = 0; i < weights.Length; i++)
+        {
+            if (weights[i] <= 0 || (eligible is not null && !eligible(i)))
+            {
+                continue;
+            }
+            keyed.Add((Math.Pow(random.NextDouble(), 1.0 / weights[i]), i));
+        }
+
+        return keyed.OrderByDescending(k => k.Key).Take(take).Select(k => k.Index).ToList();
+    }
 }
