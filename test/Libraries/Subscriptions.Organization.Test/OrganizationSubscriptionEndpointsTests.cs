@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Routing;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Subscriptions.Organization.Test;
@@ -17,7 +16,7 @@ namespace Bit.Subscriptions.Organization.Test;
 public class OrganizationSubscriptionEndpointsTests
 {
     [Fact]
-    public void MapOrganizationSubscriptionEndpoints_AppliesAuthorizationFeatureGateAndTags()
+    public void MapOrganizationSubscriptionEndpoints_AppliesAuthorizationAndTagsButNoFeatureGate()
     {
         var app = WebApplication.CreateBuilder().Build();
 
@@ -36,16 +35,9 @@ public class OrganizationSubscriptionEndpointsTests
         Assert.Contains(authorizeAttributes, attribute => attribute.Policy == Policies.Application);
         Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<OrganizationBillingRequirement>);
 
-        // Feature gate: IFeatureMetadata (Bitwarden.Server.Sdk.Features) exposes a FeatureCheck
-        // delegate, not a flag-name string — presence guards against a dropped RequireFeature.
-        var feature = endpoint.Metadata.GetMetadata<IFeatureMetadata>();
-        Assert.NotNull(feature);
-
-        var featureService = Substitute.For<IFeatureService>();
-        featureService.IsEnabled(Arg.Any<string>(), Arg.Any<bool>()).Returns(true);
-        Assert.True(feature!.FeatureCheck(featureService));
-        featureService.Received().IsEnabled(InvoicingFeatureFlags.PM36631_PreviewDrivenCart, Arg.Any<bool>());
-        featureService.DidNotReceive().IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support, Arg.Any<bool>());
+        // The group carries no feature gate: each endpoint declares its own, so a flag for one kind of endpoint
+        // (previews, a purchase) never gates another.
+        Assert.Empty(endpoint.Metadata.GetOrderedMetadata<IFeatureMetadata>());
 
         var tags = endpoint.Metadata.GetMetadata<ITagsMetadata>();
         Assert.NotNull(tags);
@@ -125,5 +117,53 @@ public class OrganizationSubscriptionEndpointsTests
         var name = restartPreview.Metadata.GetMetadata<IEndpointNameMetadata>();
         Assert.NotNull(name);
         Assert.Equal("PreviewOrganizationRestart", name!.EndpointName);
+    }
+
+    [Fact]
+    public void MapOrganizationSubscriptionEndpoints_PurchasePrivilegedControlsIsPostRequiresStandaloneOwnerAndPamFlag()
+    {
+        var app = WebApplication.CreateBuilder().Build();
+
+        var group = app.MapGroup("/{organizationId:guid}")
+            .MapOrganizationSubscriptionEndpoints();
+
+        var endpoints = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(dataSource => dataSource.Endpoints)
+            .OfType<RouteEndpoint>()
+            .ToList();
+        var purchase = endpoints.Single(e => e.RoutePattern.RawText!.Contains("privileged-controls/purchase"));
+
+        var methods = purchase.Metadata.GetMetadata<IHttpMethodMetadata>();
+        Assert.NotNull(methods);
+        Assert.Contains("POST", methods!.HttpMethods);
+
+        var authorizeAttributes = purchase.Metadata.GetOrderedMetadata<AuthorizeAttribute>();
+        Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<OrganizationBillingRequirement>);
+        Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>);
+
+        // Gated by the Privileged Controls flag alone, not by the preview flag the preview endpoints carry.
+        var feature = Assert.Single(purchase.Metadata.GetOrderedMetadata<IFeatureMetadata>());
+        Assert.Contains(FeatureFlagKeys.PM39883_Pam_Billing_Support, feature.ToString());
+        Assert.DoesNotContain(InvoicingFeatureFlags.PM36631_PreviewDrivenCart, feature.ToString());
+    }
+
+    [Theory]
+    [InlineData("preview")]
+    [InlineData("plan-change/preview")]
+    [InlineData("restart/preview")]
+    public void MapOrganizationSubscriptionEndpoints_PreviewEndpointsAreGatedByThePreviewFlagAlone(string route)
+    {
+        var app = WebApplication.CreateBuilder().Build();
+
+        var group = app.MapGroup("/{organizationId:guid}")
+            .MapOrganizationSubscriptionEndpoints();
+
+        var preview = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(dataSource => dataSource.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Single(e => e.RoutePattern.RawText!.EndsWith("}/" + route));
+
+        var feature = Assert.Single(preview.Metadata.GetOrderedMetadata<IFeatureMetadata>());
+        Assert.Contains(InvoicingFeatureFlags.PM36631_PreviewDrivenCart, feature.ToString());
     }
 }

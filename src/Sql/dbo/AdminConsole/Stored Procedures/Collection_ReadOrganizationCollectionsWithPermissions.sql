@@ -72,14 +72,18 @@ BEGIN
     -- Access Intelligence needs My Items collections to attribute items in a member's personal vault.
     SELECT
         [C].*,
-        CAST(MIN(CASE
+        CAST(ISNULL(MIN(CASE
+            -- A group with no grant on this collection is not a restriction; ignore it
+            WHEN [CU].[CollectionId] IS NULL AND [CG].[CollectionId] IS NULL THEN NULL
             WHEN COALESCE([CU].[ReadOnly], [CG].[ReadOnly], 0) = 0 THEN 0
             ELSE 1
-        END) AS BIT) AS [ReadOnly],
-        CAST(MIN(CASE
+        END), 0) AS BIT) AS [ReadOnly],
+        CAST(ISNULL(MIN(CASE
+            -- A group with no grant on this collection is not a restriction; ignore it
+            WHEN [CU].[CollectionId] IS NULL AND [CG].[CollectionId] IS NULL THEN NULL
             WHEN COALESCE([CU].[HidePasswords], [CG].[HidePasswords], 0) = 0 THEN 0
             ELSE 1
-        END) AS BIT) AS [HidePasswords],
+        END), 0) AS BIT) AS [HidePasswords],
         CAST(MAX(CASE
             WHEN COALESCE([CU].[Manage], [CG].[Manage], 0) = 0 THEN 0
             ELSE 1

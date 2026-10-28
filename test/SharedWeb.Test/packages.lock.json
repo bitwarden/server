@@ -1700,6 +1700,12 @@
           "HttpExtensions": "[2026.10.1, )"
         }
       },
+      "globalsettingsbridge": {
+        "type": "Project",
+        "dependencies": {
+          "Bitwarden.Server.Sdk.Environment": "[0.1.0, )"
+        }
+      },
       "httpextensions": {
         "type": "Project"
       },

@@ -21,6 +21,8 @@ dotnet test test/SeederApi.IntegrationTest/
 dotnet test test/SeederApi.IntegrationTest/ --filter "FullyQualifiedName~TestMethodName"
 ```
 
+Put each test in the `test/SeederApi.IntegrationTest/` folder named after the top-level source folder of the code it tests (a test of `util/Seeder/Steps/CreateCiphersStep.cs` goes in `Steps/`). Only shared test infrastructure belongs at the project root.
+
 ## Pattern Decision Tree
 
 ```text
@@ -61,7 +63,7 @@ See `Pipeline/` folder for implementation.
 
 ## Parallelism
 
-Steps execute sequentially (phase order preserved by RecipeExecutor). Async steps are awaited one at a time and MUST NOT be batched with `Task.WhenAll`, because each step reads state written by the ones before it. Within a step, `CreateUsersStep` and `GeneratePersonalCiphersStep` use `Parallel.For` internally for CPU-bound Rust FFI work (key generation, encryption).
+Steps execute sequentially (phase order preserved by RecipeExecutor). Async steps are awaited one at a time and MUST NOT be batched with `Task.WhenAll`, because each step reads state written by the ones before it. Within a step, `CreateUsersStep`, `GeneratePersonalCiphersStep` and `CreateDefaultCollectionsStep` use `Parallel.For` internally for CPU-bound Rust FFI work (key generation, encryption).
 
 **Thread-safety requirements:**
 
@@ -100,6 +102,16 @@ Density-aware steps accept an optional `DensityProfile` that controls relationsh
 **Presets**: Organized into `dev/`, `features/`, `qa/`, `scale/`, `individual/`, `validation/` folders under `Seeds/fixtures/presets/`. See `Seeds/docs/presets.md` for the full catalog.
 
 **Verification**: SQL queries for validating density algorithms are in `Seeds/docs/verification.md`.
+
+## Access Shape
+
+A preset with an `accessShape` block (the `scale.*-migrated-*` presets) replaces the density group, collection and
+cipher-assignment algorithms with `CreateShapedGroupsStep` and `CreateShapedCollectionsStep`. Presets without
+`accessShape` are unchanged. `PresetValidator.ValidateAccessShape` rejects density settings the shape would ignore;
+cipher types, permissions and orphan/archive/delete rates still apply. Shaped loops fail the run if they fall more
+than 1% short of a preset target (`ShapeTargets`).
+
+Design, knobs and calibration: `Seeds/docs/access-shape.md`.
 
 ## Regression Testing
 

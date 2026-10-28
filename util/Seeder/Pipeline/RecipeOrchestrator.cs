@@ -109,6 +109,19 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
             services.AddSingleton(deps.OrganizationStripeBillingService!());
         }
 
+        var recipeName = RegisterRecipe(options, services);
+
+        return await BuildAndExecuteAsync(recipeName, services);
+    }
+
+    /// <summary>
+    /// Registers the steps for an organization built from CLI options as a recipe.
+    /// </summary>
+    /// <param name="options">The CLI options describing the organization to seed</param>
+    /// <param name="services">The service collection to register steps in</param>
+    /// <returns>The recipe name the steps are keyed under</returns>
+    internal static string RegisterRecipe(OrganizationVaultOptions options, IServiceCollection services)
+    {
         var recipeName = "from-options";
         var builder = services.AddRecipe(recipeName);
 
@@ -121,7 +134,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         }
 
         builder.AddOwner();
-        builder.WithGenerator(options.Domain);
+        builder.WithGenerator(options.Domain, region: options.Region);
         builder.AddUsers(options.Users, options.RealisticStatusMix);
 
         if (options.Groups > 0)
@@ -155,7 +168,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
 
         builder.Validate();
 
-        return await BuildAndExecuteAsync(recipeName, services);
+        return recipeName;
     }
 
     /// <summary>
