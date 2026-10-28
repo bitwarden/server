@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models.Sales;
@@ -11,7 +12,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Braintree;
 using Microsoft.Extensions.Logging;
@@ -29,8 +29,8 @@ public class OrganizationBillingService(
     IGlobalSettings globalSettings,
     IHasPaymentMethodQuery hasPaymentMethodQuery,
     ILogger<OrganizationBillingService> logger,
+    IOrganizationAbilityCacheService organizationAbilityCacheService,
     IOrganizationRepository organizationRepository,
-    IOrganizationService organizationService,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
@@ -64,7 +64,8 @@ public class OrganizationBillingService(
         {
             organization.Enabled = true;
             organization.ExpirationDate = subscription.GetCurrentPeriodEnd();
-            await organizationService.ReplaceAndUpdateCacheAsync(organization);
+            await organizationRepository.ReplaceAsync(organization);
+            await organizationAbilityCacheService.UpsertOrganizationAbilityAsync(organization);
         }
     }
 

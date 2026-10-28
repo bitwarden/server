@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Sales;
@@ -10,7 +11,6 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -103,9 +103,9 @@ public class OrganizationBillingServiceTests
         Assert.NotNull(capturedOptions.TrialSettings.EndBehavior);
         Assert.Equal("cancel", capturedOptions.TrialSettings.EndBehavior.MissingPaymentMethod);
 
-        await sutProvider.GetDependency<IOrganizationService>()
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .Received(1)
-            .ReplaceAndUpdateCacheAsync(organization);
+            .UpsertOrganizationAbilityAsync(organization);
         Assert.True(organization.Enabled);
     }
 
