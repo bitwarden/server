@@ -30,8 +30,7 @@ public class AccountsController(
             model.ProductTier,
             model.Products,
             trialLength,
-            model.PaymentOptional,
-            model.PamSeatMinimum);
+            model.PaymentOptional);
 
         if (token != null)
         {

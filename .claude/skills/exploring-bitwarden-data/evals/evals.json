@@ -47,16 +47,12 @@
     {
       "id": 2,
       "name": "user-visible-ciphers",
-      "grounding_rules_exercised": [
-        3,
-        4,
-        5
-      ],
+      "grounding_rules_exercised": [],
       "prompt": "In my local Bitwarden database, what vault items can the user with email '{{PROBE_USER_EMAIL}}' see? Just give me the count and a breakdown by how they get access.",
-      "expected_output": "Uses [dbo].[UserCipherDetails](@UserId) (or an equivalent correct union of personal + direct-collection + group-mediated access with the Organization.Enabled gate). Count matches TVF ground truth.",
+      "expected_output": "Uses [dbo].[UserCipherDetails](@UserId) (or an equivalent correct union of personal + direct-collection + group-mediated access with the Organization.Enabled gate). The TVF returns one row per access path, so the count is COUNT(DISTINCT Id): 138, not 141, because COUNT(*) also counts the extra paths to items reached through more than one collection or group. Count matches TVF ground truth. The TVF does not filter DeletedDate, so 138 includes trashed items (137 are active).",
       "files": [],
       "assertions": [
-        "Final answer reports 138 total visible vault items for the probe user",
+        "Final answer reports 138 total visible vault items for the probe user, not 141: COUNT(*) also counts the extra paths to items reached through more than one collection or group",
         "Access resolution uses [dbo].[UserCipherDetails](@UserId) or an equivalent union covering personal + direct-collection + group-mediated access",
         "Breakdown distinguishes access paths (personal vs org/collection vs group)"
       ]
@@ -64,9 +60,7 @@
     {
       "id": 3,
       "name": "top-users-by-direct-collection-access",
-      "grounding_rules_exercised": [
-        5
-      ],
+      "grounding_rules_exercised": [],
       "references_exercised": [
         "sources.md"
       ],
@@ -82,9 +76,7 @@
     {
       "id": 4,
       "name": "active-vs-deleted-ciphers",
-      "grounding_rules_exercised": [
-        2
-      ],
+      "grounding_rules_exercised": [],
       "prompt": "How many active versus deleted vault items does org '{{ORG_NAME}}' have in my local Bitwarden database?",
       "expected_output": "Active = DeletedDate IS NULL (no IsDeleted column exists). Expected ~4975 active / 25 deleted (deletedRate clamped to 25 cap per verification.md).",
       "files": [],
@@ -97,24 +89,22 @@
       "id": 5,
       "name": "archived-org-ciphers",
       "grounding_rules_exercised": [
-        7
+        2
       ],
       "prompt": "How many of org '{{ORG_NAME}}'s vault items are archived in my local Bitwarden database?",
-      "expected_output": "Uses Archives JSON presence (per-user JSON keyed by uppercase GUID). Expected 50 (archivedRate clamped to 50 cap). Naive queries on a non-existent ArchivedDate column fail.",
+      "expected_output": "Uses Archives JSON presence (per-user JSON keyed by uppercase GUID). Expected 50 (archivedRate clamped to 50 cap). The ArchivedDate column exists but is always NULL, so a query on it silently returns 0.",
       "files": [],
       "assertions": [
         "Final answer reports 50 archived vault items",
-        "SQL detects archival via the Archives JSON column (presence or JSON_VALUE), not a non-existent ArchivedDate column"
+        "SQL detects archival via the Archives JSON column (presence or JSON_VALUE), not the ArchivedDate column (which exists but is always NULL)"
       ]
     },
     {
       "id": 6,
       "name": "personal-ciphers-of-org-members",
-      "grounding_rules_exercised": [
-        3
-      ],
+      "grounding_rules_exercised": [],
       "prompt": "How many personal (non-organization) vault items do the members of org '{{ORG_NAME}}' own in total in my local Bitwarden database?",
-      "expected_output": "Filters Cipher.OrganizationId IS NULL and scopes UserId through OrganizationUser membership. Count matches ground truth (~3,638 per verification.md, exact value recorded post-seed).",
+      "expected_output": "Filters Cipher.OrganizationId IS NULL and scopes UserId through OrganizationUser membership. Count matches ground truth: 2910 (all) or 2885 (active only).",
       "files": [],
       "assertions": [
         "Final answer reports 2910 (all personal items) or 2885 (active only), with the deleted/trash interpretation stated",
@@ -125,7 +115,7 @@
       "id": 7,
       "name": "org-plan-and-active-state",
       "grounding_rules_exercised": [
-        8
+        3
       ],
       "references_exercised": [
         "sources.md"
@@ -141,9 +131,7 @@
     {
       "id": 8,
       "name": "encrypted-column-trap",
-      "grounding_rules_exercised": [
-        9
-      ],
+      "grounding_rules_exercised": [],
       "prompt": "Search my local Bitwarden database for collections in org '{{ORG_NAME}}' whose name contains 'Finance'.",
       "expected_output": "Declines to LIKE-search Collection.Name because it is AES256-CBC ciphertext; explains why and offers what IS searchable (e.g., Group.Name, Organization.Name, User.Email are plaintext).",
       "files": [],
@@ -154,24 +142,23 @@
     },
     {
       "id": 9,
-      "name": "org-abilities-via-view",
+      "name": "org-feature-flags",
       "references_exercised": [
         "sources.md"
       ],
       "prompt": "Which features does org '{{ORG_NAME}}' have enabled \u2014 SSO, groups, API, events, that kind of thing? Query my local Bitwarden database.",
-      "expected_output": "Uses OrganizationAbilityView (or equivalent correct Use* flag read) and reports flags matching ground truth.",
+      "expected_output": "Reads UseGroups, UseSso, UseApi and UseEvents from the Organization table and reports flags matching ground truth. OrganizationAbilityView has UseSso and UseEvents but no UseGroups or UseApi, so it cannot answer alone.",
       "files": [],
       "assertions": [
         "Reports groups, SSO, API, and events as enabled (matching ground-truth Use* flags)",
-        "Reads the Use* flags from OrganizationAbilityView or the Organization table's Use* columns"
+        "Reads UseGroups and UseApi from the Organization table's Use* columns (OrganizationAbilityView has neither)"
       ]
     },
     {
       "id": 10,
       "name": "density-validation-q1-q8",
       "grounding_rules_exercised": [
-        1,
-        5
+        1
       ],
       "references_exercised": [
         "providers/mssql.md"
@@ -183,36 +170,30 @@
     {
       "id": 11,
       "name": "live-sends-shape",
-      "grounding_rules_exercised": [
-        10
-      ],
-      "weak_case": "Send table is empty in the fixture \u2014 only the SQL shape is assertable, not a behavioral difference. Prime ablation candidate per AI Review Guidelines.",
+      "grounding_rules_exercised": [],
+      "weak_case": "Liveness is relative to now, so the grader compares against live_sends from a fresh capture; sends_total_db counts every row and is a decoy. Prime ablation candidate per AI Review Guidelines.",
       "prompt": "How many Sends are currently live and accessible in my local Bitwarden database?",
-      "expected_output": "SQL composes all four liveness conditions: DeletionDate > now, ExpirationDate NULL-or-future, Disabled = 0, MaxAccessCount NULL-or-under. Returns 0 (table is empty).",
+      "expected_output": "SQL composes all four liveness conditions: DeletionDate > now, ExpirationDate NULL-or-future, Disabled = 0, MaxAccessCount NULL-or-under. Count matches ground-truth live_sends, not sends_total_db.",
       "files": []
     },
     {
       "id": 12,
       "name": "pending-auth-requests-shape",
-      "grounding_rules_exercised": [
-        11
-      ],
-      "weak_case": "AuthRequest table is empty in the fixture \u2014 only the SQL shape is assertable. Prime ablation candidate per AI Review Guidelines.",
+      "grounding_rules_exercised": [],
+      "weak_case": "Pending is relative to now (15 minutes for Type 0/1, 7 days for Type 2), so the grader compares against pending_auth_requests from a fresh capture; auth_requests_total_db counts every row and is a decoy. Prime ablation candidate per AI Review Guidelines.",
       "prompt": "Are there any pending passwordless login requests in my local Bitwarden database?",
-      "expected_output": "Does not reference a non-existent ExpirationDate column; filters ResponseDate IS NULL with a CreationDate recency offset (or uses AuthRequestPendingDetailsView). Returns 0.",
+      "expected_output": "Does not reference a non-existent ExpirationDate column; filters ResponseDate IS NULL with a CreationDate recency offset. Count matches ground-truth pending_auth_requests, not auth_requests_total_db. AuthRequestPendingDetailsView has no recency window, so its count can differ.",
       "files": []
     },
     {
       "id": 13,
       "name": "collection-permission-resolution",
-      "grounding_rules_exercised": [
-        6
-      ],
+      "grounding_rules_exercised": [],
       "prompt": "In my local Bitwarden database, how many collections can the user '{{PERM_PROBE_USER_EMAIL}}' actually edit (as opposed to just view)? They're in org '{{ORG_NAME}}'.",
-      "expected_output": "13 accessible collections, 7 editable. Effective permission resolved with direct-user-grant precedence over group grants (COALESCE(CU.ReadOnly, CG.ReadOnly, 0)); Edit = NOT ReadOnly. A most-restrictive-wins resolution answers 6.",
+      "expected_output": "13 accessible collections, 7 editable. Effective permission resolved with direct-user-grant precedence over group grants (COALESCE(CU.ReadOnly, CG.ReadOnly, 0), or MIN(ReadOnly) per collection over UserCollectionDetails, which already applies it); Edit = NOT ReadOnly. A most-restrictive-wins resolution answers 6.",
       "assertions": [
         "Final answer reports 7 editable collections (of 13 accessible)",
-        "SQL resolves the direct-vs-group conflict with direct-grant precedence (COALESCE(direct, group, 0) or equivalent), not MIN/MAX across all paths"
+        "SQL resolves the direct-vs-group conflict with direct-grant precedence (COALESCE(direct, group, 0), or MIN(ReadOnly) per collection over UserCollectionDetails, which already applies it), not MIN/MAX across all CollectionUser and CollectionGroup paths"
       ],
       "files": []
     }

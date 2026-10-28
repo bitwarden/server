@@ -171,7 +171,7 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
                 "Sponsorship is only available on the Families plan.");
         }
 
-        if (passwordManager.Seats is < 1 or > 100000)
+        if (passwordManager.Seats is < 1 or > PlanConstants.MaxPurchasableQuantity)
         {
             throw new BadRequestException(
                 $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.PasswordManager)}.{nameof(PasswordManagerSelections.Seats)}",
@@ -187,14 +187,14 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
 
         if (purchase.SecretsManager is { } secretsManager)
         {
-            if (secretsManager.Seats is < 1 or > 100000)
+            if (secretsManager.Seats is < 1 or > PlanConstants.MaxPurchasableQuantity)
             {
                 throw new BadRequestException(
                     $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.SecretsManager)}.{nameof(SecretsManagerSelections.Seats)}",
                     "Secrets Manager seats must be between 1 and 100,000.");
             }
 
-            if (secretsManager.AdditionalServiceAccounts is < 0 or > 100000)
+            if (secretsManager.AdditionalServiceAccounts is < 0 or > PlanConstants.MaxPurchasableQuantity)
             {
                 throw new BadRequestException(
                     $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.SecretsManager)}.{nameof(SecretsManagerSelections.AdditionalServiceAccounts)}",

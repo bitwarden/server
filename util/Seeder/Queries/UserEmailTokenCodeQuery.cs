@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Globalization;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Bit.Core.Repositories;
@@ -17,9 +16,8 @@ namespace Bit.Seeder.Queries;
 /// </summary>
 /// <remarks>
 /// This is a read-only query: it reads the code the login/verification flow already wrote to the persistent
-/// distributed cache (see <c>EmailTwoFactorTokenProvider</c> in <c>Bit.Core.Auth.Identity.TokenProviders</c>,
-/// <c>UserVerificationOtpStore</c>, and <c>NewDeviceVerificationOtpStore</c>) and never removes it, so the real
-/// flow can still consume the code.
+/// distributed cache (see <c>TwoFactorEmailService</c>, <c>UserVerificationOtpStore</c>, and
+/// <c>NewDeviceVerificationOtpStore</c>) and never removes it, so the real flow can still consume the code.
 /// It only succeeds when SeederApi shares the same cache backend as the server that generated the code (Redis
 /// or a SQL/EF-backed cache); with the in-memory cache fallback each process has its own cache.
 /// </remarks>
@@ -28,18 +26,15 @@ public class UserEmailTokenCodeQuery(
     [FromKeyedServices("persistent")] IDistributedCache distributedCache)
     : IQuery<UserEmailTokenCodeQuery.Request, UserEmailTokenCodeQuery.Response>
 {
-    // Keep this in sync with EmailTokenProvider, which stores the email two-factor code as a bare UTF-8 string
-    // under this key format.
-    private const string EmailTokenCacheKeyFormat = "EmailToken_{0}_{1}_{2}";
-
-    // Keep this purpose in sync with EmailTwoFactorTokenProvider: "TwoFactor" is the literal purpose
-    // UserManager.GenerateTwoFactorTokenAsync uses.
-    private const string EmailTwoFactorPurpose = "TwoFactor";
-
     // Keep this in sync with UserVerificationOtpStore, which owns this key. Restated here rather than
     // referenced, so that reading a code for a test never widens the production API of the code that issues
     // it. UserEmailTokenCodeQueryTests round-trips a real issued code through this key.
     private const string UserVerificationCacheKeyFormat = "UserVerification_EmailOtp_{0}_{1}";
+
+    // Keep this in sync with TwoFactorEmailService, which owns this key for the email two-factor login code.
+    // Restated rather than referenced, so that reading a code for a test never widens the production API of the
+    // code that issues it.
+    private const string EmailTwoFactorCacheKeyFormat = "TwoFactorEmail_LoginCode_{0}_{1}";
 
     // Keep this in sync with NewDeviceVerificationOtpStore, which owns this key. Restated here rather than
     // referenced, so that reading a code for a test never widens the production API of the code that issues
@@ -91,7 +86,8 @@ public class UserEmailTokenCodeQuery(
 
         var cacheKey = request.CodeType switch
         {
-            CodeType.EmailTwoFactor => EmailTokenCacheKey(user.Id, user.SecurityStamp, EmailTwoFactorPurpose),
+            CodeType.EmailTwoFactor => string.Format(
+                CultureInfo.InvariantCulture, EmailTwoFactorCacheKeyFormat, user.Id, user.SecurityStamp),
             CodeType.UserVerification => string.Format(
                 CultureInfo.InvariantCulture, UserVerificationCacheKeyFormat, user.Id, user.SecurityStamp),
             CodeType.NewDeviceVerification => string.Format(
@@ -105,17 +101,7 @@ public class UserEmailTokenCodeQuery(
             return NotFound();
         }
 
-        return request.CodeType switch
-        {
-            CodeType.NewDeviceVerification => ReadEnvelope(cachedValue, includeBoundDevice: true),
-            CodeType.UserVerification => ReadEnvelope(cachedValue, includeBoundDevice: false),
-            _ => new Response { Code = Encoding.UTF8.GetString(cachedValue), Found = true },
-        };
-    }
-
-    private static string EmailTokenCacheKey(Guid userId, string securityStamp, string purpose)
-    {
-        return string.Format(CultureInfo.InvariantCulture, EmailTokenCacheKeyFormat, userId, securityStamp, purpose);
+        return ReadEnvelope(cachedValue, includeBoundDevice: request.CodeType != CodeType.UserVerification);
     }
 
     /// <summary>
@@ -158,9 +144,8 @@ public class UserEmailTokenCodeQuery(
     }
 
     /// <summary>
-    /// Mirrors the envelope the token provider writes: unlike the email two-factor code, a new device
-    /// verification or user verification entry holds the code alongside the value it is bound to. The
-    /// provider keeps its own envelope type private, so this restates the shape — and the property names must
+    /// Mirrors the envelope the token provider writes, which holds the code alongside the value it is bound to.
+    /// The provider keeps its own envelope type private, so this restates the shape — and the property names must
     /// match the serialized form exactly, since deserialization is case-sensitive.
     /// </summary>
     private sealed record OtpCacheEntry(string? Token, string? BoundValue);

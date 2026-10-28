@@ -1,4 +1,6 @@
-﻿using Bit.Core.Pam.Services;
+﻿using Bit.Core.Pam.AccessConnector.Commands;
+using Bit.Core.Pam.AccessConnector.Queries;
+using Bit.Core.Pam.Services;
 using Bit.HttpExtensions;
 using Bit.Services.Pam.AccessConnector;
 using Bit.Services.Pam.AccessConnector.Api.Endpoints.Filters;
@@ -92,7 +94,8 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers credential rotation. The host registers the repositories and binds <c>PamRotationOptions</c>.
+    /// Registers credential rotation. The host registers the sweep jobs (<c>AddPamJobServices</c>) and the
+    /// repositories, and binds <c>PamRotationOptions</c>.
     /// </summary>
     private static IServiceCollection AddPamRotationServices(this IServiceCollection services)
     {
@@ -117,10 +120,16 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRecordManualRotationCommand, RecordManualRotationCommand>();
 
         services.AddScoped<IOfferRotationCommand, OfferRotationCommand>();
+        services.AddScoped<IHandleAccessGrantEndedCommand, HandleAccessGrantEndedCommand>();
+        services.AddScoped<IClaimRotationJobCommand, ClaimRotationJobCommand>();
+        services.AddScoped<IReportRotationSucceededCommand, ReportRotationSucceededCommand>();
+        services.AddScoped<IReportRotationFailedCommand, ReportRotationFailedCommand>();
+        services.AddScoped<ISubmitCipherUpdateCommand, SubmitCipherUpdateCommand>();
 
         services.AddScoped<IGetRotationConfigDetailsQuery, GetRotationConfigDetailsQuery>();
         services.AddScoped<IListAccessConnectorsQuery, ListAccessConnectorsQuery>();
         services.AddScoped<IGetAccessConnectorDetailsQuery, GetAccessConnectorDetailsQuery>();
+        services.AddScoped<IGetRotationCipherQuery, GetRotationCipherQuery>();
         services.AddScoped<ICanEditRotationCiphersQuery, CanEditRotationCiphersQuery>();
 
         return services;

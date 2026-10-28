@@ -1,10 +1,13 @@
-﻿using System.Text.Json;
+﻿using System.Net;
+using System.Text.Json;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Enums;
 using Bit.Core.Test.Auth.AutoFixture;
 using Bit.Core.Utilities;
+using Bit.Identity.IntegrationTest.Grants;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Fakes;
@@ -17,6 +20,7 @@ public class WebAuthnGrantValidatorTests(IdentityApplicationFactory _factory) : 
 {
     private const string _rpId = "localhost";
     private const string _origin = "https://localhost:8080";
+    private const DeviceType _deviceType = DeviceType.ChromeBrowser;
 
     private static readonly KeysRequestModel _testAccountKeys = new()
     {
@@ -88,6 +92,54 @@ public class WebAuthnGrantValidatorTests(IdentityApplicationFactory _factory) : 
         Assert.Contains("access_token", content);
     }
 
+    /// <summary>
+    /// The login access token names the device the user logged in on, and a refreshed access token keeps it. API
+    /// endpoints read the requesting device from these claims.
+    /// </summary>
+    [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
+    public async Task WebAuthnGrant_DeviceClaims_PersistThroughRefresh(RegisterFinishRequestModel requestModel)
+    {
+        // Arrange
+        using var context = await SetupWebAuthnLoginAsync(requestModel);
+        var loginResponse = await context.PostTokenAsync();
+        Assert.True(loginResponse.IsSuccessStatusCode, await loginResponse.Content.ReadAsStringAsync());
+        using var loginBody = await JsonDocument.ParseAsync(await loginResponse.Content.ReadAsStreamAsync());
+        var loginAccessToken = loginBody.RootElement.GetProperty("access_token").GetString()!;
+        var refreshToken = loginBody.RootElement.GetProperty("refresh_token").GetString()!;
+        AccessTokenAssertions.AssertDeviceClaims(
+            loginAccessToken, IdentityApplicationFactory.DefaultDeviceIdentifier, _deviceType);
+
+        // Act
+        var refreshResponse = await context.PostRefreshTokenAsync(refreshToken);
+
+        // Assert
+        Assert.True(refreshResponse.IsSuccessStatusCode, await refreshResponse.Content.ReadAsStringAsync());
+        using var refreshBody = await JsonDocument.ParseAsync(await refreshResponse.Content.ReadAsStreamAsync());
+        var refreshedAccessToken = refreshBody.RootElement.GetProperty("access_token").GetString()!;
+        AccessTokenAssertions.AssertDeviceClaims(
+            refreshedAccessToken, IdentityApplicationFactory.DefaultDeviceIdentifier, _deviceType);
+    }
+
+    /// <summary>
+    /// A WebAuthn login that names no device is rejected, so no access token is ever issued without device claims.
+    /// </summary>
+    [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
+    public async Task WebAuthnGrant_WithoutDevice_IsRejected(RegisterFinishRequestModel requestModel)
+    {
+        // Arrange
+        using var context = await SetupWebAuthnLoginAsync(requestModel);
+
+        // Act
+        var response = await context.PostTokenAsync(includeDevice: false);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        using var body = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
+        Assert.False(body.RootElement.TryGetProperty("access_token", out _));
+        Assert.Equal("no device information provided",
+            body.RootElement.GetProperty("ErrorModel").GetProperty("Message").GetString());
+    }
+
     [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
     public async Task WebAuthnGrant_Assertion_SecondCallRejected(RegisterFinishRequestModel requestModel)
     {
@@ -157,17 +209,21 @@ public class WebAuthnGrantValidatorTests(IdentityApplicationFactory _factory) : 
         await repo.CreateAsync(credential);
     }
 
-    private static FormUrlEncodedContent BuildTokenRequest(string? token, string? deviceResponse)
+    private static FormUrlEncodedContent BuildTokenRequest(string? token, string? deviceResponse,
+        bool includeDevice = true)
     {
         var fields = new Dictionary<string, string>
         {
             { OidcConstants.TokenRequest.GrantType, "webauthn" },
             { OidcConstants.TokenRequest.ClientId, "web" },
-            { "deviceIdentifier", IdentityApplicationFactory.DefaultDeviceIdentifier },
-            { "deviceType", "9" },
-            { "deviceName", "chrome" },
             { "scope", "api offline_access" },
         };
+        if (includeDevice)
+        {
+            fields["deviceIdentifier"] = IdentityApplicationFactory.DefaultDeviceIdentifier;
+            fields["deviceType"] = ((int)_deviceType).ToString();
+            fields["deviceName"] = "chrome";
+        }
         if (token != null)
         {
             fields["token"] = token;
@@ -186,8 +242,19 @@ public class WebAuthnGrantValidatorTests(IdentityApplicationFactory _factory) : 
         string token,
         string deviceResponseJson) : IDisposable
     {
-        public Task<HttpResponseMessage> PostTokenAsync()
-            => client.PostAsync("/connect/token", BuildTokenRequest(token, deviceResponseJson));
+        public Task<HttpResponseMessage> PostTokenAsync(bool includeDevice = true)
+            => client.PostAsync("/connect/token", BuildTokenRequest(token, deviceResponseJson, includeDevice));
+
+        public async Task<HttpResponseMessage> PostRefreshTokenAsync(string refreshToken)
+        {
+            using var content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                { OidcConstants.TokenRequest.GrantType, "refresh_token" },
+                { OidcConstants.TokenRequest.ClientId, "web" },
+                { "refresh_token", refreshToken },
+            });
+            return await client.PostAsync("/connect/token", content);
+        }
 
         public void Dispose()
         {

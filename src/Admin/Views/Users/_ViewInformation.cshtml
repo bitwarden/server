@@ -45,4 +45,25 @@
     <dt class="col-sm-4 col-lg-3">Last Password Change</dt>
     <dd class="col-sm-8 col-lg-9">@(Model.LastPasswordChangeDate?.ToString() ?? "-")</dd>
 
+    @if (Model.Crypto != null)
+    {
+        <dt class="col-sm-4 col-lg-3">User Key Id</dt>
+        <dd class="col-sm-8 col-lg-9">@if (Model.Crypto.UserKeyId != null) { <code>@Model.Crypto.UserKeyId</code> } else { <text>-</text> }</dd>
+
+        <dt class="col-sm-4 col-lg-3">Uses Encryption V2 Keys</dt>
+        <dd class="col-sm-8 col-lg-9">@(Model.Crypto.UsesV2Keys ? "Yes" : "No")</dd>
+
+        <dt class="col-sm-4 col-lg-3">Last Key Rotation From V1</dt>
+        <dd class="col-sm-8 col-lg-9">@(Model.Crypto.LastRotationFromV1 ? "Yes" : "No")</dd>
+
+        <dt class="col-sm-4 col-lg-3">Key Rotated With Password Change</dt>
+        <dd class="col-sm-8 col-lg-9">@(Model.Crypto.KeyRotatedWithPasswordChange ? "Yes" : "No")</dd>
+
+        <dt class="col-sm-4 col-lg-3">Needs Account Recovery Key V2 Update</dt>
+        <dd class="col-sm-8 col-lg-9">@(Model.Crypto.NeedsRecoveryKeyV2Update ? "Yes" : "No")</dd>
+
+        <dt class="col-sm-4 col-lg-3">Needs KDF Update</dt>
+        <dd class="col-sm-8 col-lg-9">@(Model.Crypto.NeedsKdfUpdate ? "Yes" : "No")</dd>
+    }
+
 </dl>
