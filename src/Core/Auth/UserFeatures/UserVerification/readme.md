@@ -1,4 +1,4 @@
-# User Verification OTP
+# User Verification via OTP
 
 This area covers the one-time password (OTP) that the server emails to a user to prove that the user controls
 the mailbox at their account email. Clients request the OTP through `POST /accounts/request-otp`. Users then
@@ -43,46 +43,50 @@ Each layer knows less than the layer above it. Only the bottom layer reads and w
 
 [`IUserVerificationOtpCommand.cs`](./IUserVerificationOtpCommand.cs)
 
-This is the only layer that sends mail or writes to the database.
+**Why a separate layer:** it holds what `request-otp` and `verify-otp` do with the OTP: the email, the error
+messages, and setting `EmailVerified`. Other callers check the same OTP but must not send mail or change the
+account. This is the only layer that sends mail or writes to the database.
 
-1. `SendOtpAsync` checks that the user has an email, issues an OTP through the store, and emails it. It throws
-   a `BadRequestException` when the user has no email or has reached the request limit.
-2. `VerifyOtpAsync` validates through the store with the wrong-guess limit. A valid OTP sets
+1. `SendOtpAsync` checks that the user has an email, issues an OTP through `IUserVerificationOtpStore`, and
+   emails it. It throws a `BadRequestException` when the user has no email or has reached the request limit.
+2. `VerifyOtpAsync` validates through `IUserVerificationOtpStore` with the wrong-guess limit. A valid OTP sets
    `User.EmailVerified` and saves the user.
 
 ### `IUserVerificationOtpStore`: user verification OTP key, email binding, and limits
 
 [`src/Core/Auth/Services/IUserVerificationOtpStore.cs`](../../Services/IUserVerificationOtpStore.cs)
 
-1. Sets the key parts. The unique identifier is `{userId}_{securityStamp}`, so a security stamp change
-   invalidates a pending OTP.
-2. Binds the OTP to `User.Email`. The OTP proves control of the address it was sent to, so it must not validate
-   after the address changes, even when the security stamp does not change.
-3. Sets the limits: 5 wrong guesses for each OTP, and 5 issued OTPs for each user in a fixed 15-minute window.
-   Together, these limits allow at most 100 failed attempts per user per hour.
-   The request counter is a separate cache entry that the store writes directly, because the provider manages
-   codes, not counters.
-4. Knows `User`, but does not send mail or write to the database.
+**Why a separate layer:** it holds every rule for this one kind of OTP. More than one caller checks the same
+OTP, so the rules live here once and the callers cannot drift apart.
+
+1. **One OTP for every action:** each user has at most one pending emailed OTP, and it is not tied to the
+   action that requested it. A code requested for one action is accepted by `verify-otp` and by every endpoint
+   that accepts a user verification secret. The wrong-guess count also belongs to the code, not to an action.
+   1. In the future, consider whether each action should have its own emailed OTP, with a distinct purpose.
+2. **Key:** the unique identifier is `{userId}_{securityStamp}`, so a security stamp change invalidates a
+   pending OTP.
+3. **Email binding:** the OTP is bound to `User.Email`. It proves control of the address it was sent to, so it
+   must not validate after the address changes, even when the security stamp does not change.
+4. **Limits:** 5 wrong guesses for each OTP through `ValidateAndConsumeWithFailureLimitAsync`, and 5 issued
+   OTPs for each user in a fixed 15-minute window. Together, they allow at most 100 failed attempts per user per
+   hour through that method. The request counter is a separate cache entry that `IUserVerificationOtpStore`
+   writes directly, because `IOtpTokenProvider<TOptions>` manages codes, not counters.
+5. **Options:** `IUserVerificationOtpStore` uses `DefaultOtpTokenProviderOptions`, which other OTP flows share.
+   To change the code length, character set, or expiry of this OTP only, give it its own `TOptions` class.
+6. **Callers:** both callers check the same OTP, and each chooses a validate method:
+   1. `IUserVerificationOtpCommand` uses `ValidateAndConsumeWithFailureLimitAsync`.
+   2. `UserService.VerifySecretAsync` uses `ValidateAndConsumeAsync`, which does not count wrong guesses.
 
 ### `IOtpTokenProvider<TOptions>`: shared OTP generation and validation
 
 [`src/Core/Auth/Identity/TokenProviders/OtpTokenProvider/`](../../Identity/TokenProviders/OtpTokenProvider/readme.md)
 
-1. Generates a random code and stores it in the cache under `{tokenProviderName}_{purpose}_{uniqueIdentifier}`,
-   with a 5-minute expiry by default.
-2. Validates a code, binds a code to a value, and removes a code after a correct guess.
+**Why a separate layer:** it holds the mechanics that every kind of OTP shares, and no rules for any one flow.
+Other OTP flows use it with their own rules, so a fix here helps every flow, and one flow's rules cannot affect
+another.
+
+1. Generates a secure random code and stores it under `{tokenProviderName}_{purpose}_{uniqueIdentifier}`, with
+   a 5-minute expiry by default.
+2. Validates a code with a fixed-time comparison, checks its bound value, and removes it after a correct guess.
 3. `ValidateTokenWithFailureLimitAsync` also counts wrong guesses and removes the code at a limit that the
    caller sets.
-4. Does not know about users, email, or the purpose of a code.
-
-## Why the store is separate from the command
-
-`UserService.VerifySecretAsync` must validate the same OTP that `request-otp` sends, but it must not set
-`EmailVerified` or send mail. The store holds the key, binding, and limits in one place, so both callers check
-the same OTP. Each caller chooses a validate method on the store:
-
-1. The command uses `ValidateAndConsumeWithFailureLimitAsync`.
-2. `UserService.VerifySecretAsync` uses `ValidateAndConsumeAsync`, which does not count wrong guesses.
-
-The command depends on the store, and `UserService` depends on the store. The command does not depend on
-`IUserService`, so the dependency graph has no cycle.
