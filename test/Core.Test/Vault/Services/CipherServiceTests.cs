@@ -2875,4 +2875,146 @@ public class CipherServiceTests
 
         await sutProvider.Sut.ValidateBulkCollectionAssignmentAsync(targetCollectionIds, new[] { cipher.Id }, userId, removeCollections: true);
     }
+
+    [Theory, BitAutoData]
+    public async Task SaveCollectionsAsync_OrgAdmin_CipherOnlyInAnotherUsersDefaultCollection_ThrowsNotFound(
+        SutProvider<CipherService> sutProvider,
+        Guid savingUserId,
+        Cipher cipher,
+        Collection foreignDefaultCollection,
+        List<Guid> targetCollectionIds)
+    {
+        cipher.OrganizationId = Guid.NewGuid();
+        foreignDefaultCollection.Type = CollectionType.DefaultUserCollection;
+
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetCollectionIdsByCipherIdAsync(cipher.Id)
+            .Returns(new List<Guid> { foreignDefaultCollection.Id });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection> { foreignDefaultCollection });
+        // The saving user owns no default collections.
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByUserIdAsync(savingUserId)
+            .Returns(new List<CollectionDetails>());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.SaveCollectionsAsync(cipher, targetCollectionIds, savingUserId, true));
+
+        await sutProvider.GetDependency<ICollectionCipherRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateCollectionsForAdminAsync(default, default, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveCollectionsAsync_CipherOnlyInAnotherUsersDefaultCollection_ThrowsNotFound(
+        SutProvider<CipherService> sutProvider,
+        Guid savingUserId,
+        Cipher cipher,
+        Collection foreignDefaultCollection,
+        List<Guid> targetCollectionIds)
+    {
+        cipher.OrganizationId = Guid.NewGuid();
+        foreignDefaultCollection.Type = CollectionType.DefaultUserCollection;
+
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetCollectionIdsByCipherIdAsync(cipher.Id)
+            .Returns(new List<Guid> { foreignDefaultCollection.Id });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection> { foreignDefaultCollection });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByUserIdAsync(savingUserId)
+            .Returns(new List<CollectionDetails>());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.SaveCollectionsAsync(cipher, targetCollectionIds, savingUserId, false));
+
+        await sutProvider.GetDependency<ICollectionCipherRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateCollectionsAsync(default, default, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveCollectionsAsync_OrgAdmin_CipherAlsoInSharedCollection_UpdatesCollections(
+        SutProvider<CipherService> sutProvider,
+        Guid savingUserId,
+        Cipher cipher,
+        Collection foreignDefaultCollection,
+        Collection sharedCollection,
+        List<Guid> targetCollectionIds)
+    {
+        cipher.OrganizationId = Guid.NewGuid();
+        foreignDefaultCollection.Type = CollectionType.DefaultUserCollection;
+        sharedCollection.Type = CollectionType.SharedCollection;
+
+        // The cipher already lives in a shared collection alongside another member's default collection.
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetCollectionIdsByCipherIdAsync(cipher.Id)
+            .Returns(new List<Guid> { foreignDefaultCollection.Id, sharedCollection.Id });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection> { foreignDefaultCollection, sharedCollection });
+
+        await sutProvider.Sut.SaveCollectionsAsync(cipher, targetCollectionIds, savingUserId, true);
+
+        await sutProvider.GetDependency<ICollectionCipherRepository>()
+            .Received(1)
+            .UpdateCollectionsForAdminAsync(cipher.Id, cipher.OrganizationId.Value, targetCollectionIds);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveCollectionsAsync_OrgAdmin_UnassignedCipher_UpdatesCollections(
+        SutProvider<CipherService> sutProvider,
+        Guid savingUserId,
+        Cipher cipher,
+        List<Guid> targetCollectionIds)
+    {
+        cipher.OrganizationId = Guid.NewGuid();
+
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetCollectionIdsByCipherIdAsync(cipher.Id)
+            .Returns(new List<Guid>());
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection>());
+
+        await sutProvider.Sut.SaveCollectionsAsync(cipher, targetCollectionIds, savingUserId, true);
+
+        await sutProvider.GetDependency<ICollectionCipherRepository>()
+            .Received(1)
+            .UpdateCollectionsForAdminAsync(cipher.Id, cipher.OrganizationId.Value, targetCollectionIds);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveCollectionsAsync_OrgAdmin_CipherInOwnDefaultCollection_UpdatesCollections(
+        SutProvider<CipherService> sutProvider,
+        Guid savingUserId,
+        Cipher cipher,
+        Collection ownDefaultCollection,
+        List<Guid> targetCollectionIds)
+    {
+        cipher.OrganizationId = Guid.NewGuid();
+        ownDefaultCollection.Type = CollectionType.DefaultUserCollection;
+
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetCollectionIdsByCipherIdAsync(cipher.Id)
+            .Returns(new List<Guid> { ownDefaultCollection.Id });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection> { ownDefaultCollection });
+        // The saving user owns the default collection the cipher lives in.
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByUserIdAsync(savingUserId)
+            .Returns(new List<CollectionDetails>
+            {
+                new() { Id = ownDefaultCollection.Id, Type = CollectionType.DefaultUserCollection }
+            });
+
+        await sutProvider.Sut.SaveCollectionsAsync(cipher, targetCollectionIds, savingUserId, true);
+
+        await sutProvider.GetDependency<ICollectionCipherRepository>()
+            .Received(1)
+            .UpdateCollectionsForAdminAsync(cipher.Id, cipher.OrganizationId.Value, targetCollectionIds);
+    }
 }
