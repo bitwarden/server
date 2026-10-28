@@ -60,7 +60,7 @@ public class GetRotationCipherQuery : IGetRotationCipherQuery
             throw new NotFoundException();
         }
 
-        var cipher = await _cipherRepository.GetByIdAsync(config.CipherId);
+        var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(config.CipherId);
         if (cipher is null)
         {
             throw new NotFoundException();
