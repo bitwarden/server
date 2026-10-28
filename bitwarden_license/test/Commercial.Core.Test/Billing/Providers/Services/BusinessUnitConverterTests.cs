@@ -35,7 +35,7 @@ public class BusinessUnitConverterTests
     private readonly GlobalSettings _globalSettings = new();
     private readonly ILogger<BusinessUnitConverter> _logger = Substitute.For<ILogger<BusinessUnitConverter>>();
     private readonly IMailService _mailService = Substitute.For<IMailService>();
-    private readonly IOrganizationRepository _organizationRepository = Substitute.For<IOrganizationRepository>();
+    private readonly IOrganizationService _organizationService = Substitute.For<IOrganizationService>();
     private readonly IOrganizationUserRepository _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IProviderOrganizationRepository _providerOrganizationRepository = Substitute.For<IProviderOrganizationRepository>();
@@ -51,7 +51,7 @@ public class BusinessUnitConverterTests
         _globalSettings,
         _logger,
         _mailService,
-        _organizationRepository,
+        _organizationService,
         _organizationUserRepository,
         _pricingClient,
         _providerOrganizationRepository,
@@ -157,7 +157,7 @@ public class BusinessUnitConverterTests
                 arguments.Items[1].Price == updatedPriceId &&
                 arguments.Items[1].Quantity == organization.Seats));
 
-        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(arguments =>
+        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(arguments =>
             arguments.PlanType == PlanType.EnterpriseAnnually &&
             arguments.Status == OrganizationStatusType.Managed &&
             arguments.UseRiskInsights == enterpriseAnnually.HasRiskInsights &&

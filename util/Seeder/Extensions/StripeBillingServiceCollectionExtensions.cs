@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Organizations.Services;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
@@ -33,8 +34,9 @@ public static class StripeBillingServiceCollectionExtensions
     /// seeder host provides. The closure is <c>OrganizationBillingService</c>, <c>SubscriberService</c>,
     /// <c>HasPaymentMethodQuery</c>, <c>SubscriptionDiscountService</c> and its audience filters,
     /// <c>PriceIncreaseScheduler</c>, <c>SubscriptionScheduleCreator</c>, <c>TaxService</c>, the pricing client,
-    /// the Stripe adapter, and the Braintree gateway. Repositories, <see cref="GlobalSettings"/>, and logging
-    /// come from the host. When one of these Core constructors gains a dependency, add it here.
+    /// the Stripe adapter, the Braintree gateway, and the organization ability cache, which the hosts'
+    /// <c>LicensingService</c> also uses. Repositories, <see cref="GlobalSettings"/>, and logging come from the
+    /// host. When one of these Core constructors gains a dependency, add it here.
     /// </para>
     /// <para>
     /// Lifetimes match Core's own registrations. The Seeder never changes production code for its own DI
@@ -44,6 +46,7 @@ public static class StripeBillingServiceCollectionExtensions
     public static IServiceCollection AddStripeBilling(this IServiceCollection services, GlobalSettings globalSettings)
     {
         services.AddPricingClient();
+        services.AddOrganizationAbilityCache(globalSettings);
         services.AddSingleton<ITaxService, TaxService>();
         services.AddTransient<ISubscriptionScheduleCreator, SubscriptionScheduleCreator>();
         services.AddTransient<IPriceIncreaseScheduler, PriceIncreaseScheduler>();
