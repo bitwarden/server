@@ -22,6 +22,7 @@ public interface IGlobalSettings
     bool DisableUserRegistration { get; set; }
     bool SuppressOnboardingInterstitials { get; set; }
     bool EnableEmailVerification { get; set; }
+    bool EnableOpenInviteLinkEmailVerification { get; set; }
     bool EnableNewDeviceVerification { get; set; }
     IInstallationSettings Installation { get; set; }
     IFileStorageSettings Attachment { get; set; }
