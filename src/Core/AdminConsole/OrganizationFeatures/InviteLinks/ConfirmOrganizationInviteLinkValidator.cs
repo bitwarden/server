@@ -15,7 +15,6 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.Settings;
 using PasswordManagerValidation = Bit.Core.AdminConsole.Utilities.Validation;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
@@ -37,7 +36,7 @@ public class ConfirmOrganizationInviteLinkValidator(
     IPricingClient pricingClient,
     IPolicyRequirementQuery policyRequirementQuery,
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-    IGlobalSettings globalSettings)
+    IInviteLinkRules inviteLinkRules)
     : IConfirmOrganizationInviteLinkValidator
 {
     public async Task<CommandResult<ConfirmOrganizationInviteLinkValidationResult>> ValidateAsync(
@@ -50,12 +49,11 @@ public class ConfirmOrganizationInviteLinkValidator(
             ? null
             : await organizationRepository.GetByIdAsync(existingLink.OrganizationId);
 
-        var eligibilityError = InviteLinkRules.ValidateEligibility(
+        var eligibilityError = inviteLinkRules.ValidateEligibility(
             existingLink,
             request.Code,
             existingOrganization,
-            user,
-            globalSettings);
+            user);
         if (eligibilityError is not null)
         {
             return ToConfirmValidationError(eligibilityError);

@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
-using Bit.Core.Settings;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
@@ -9,17 +8,16 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 /// <summary>
 /// See <see cref="IGetOrganizationInviteValidator"/>.
 /// </summary>
-public class GetOrganizationInviteValidator(IGlobalSettings globalSettings) : IGetOrganizationInviteValidator
+public class GetOrganizationInviteValidator(IInviteLinkRules inviteLinkRules) : IGetOrganizationInviteValidator
 {
     public ValidationResult<OrganizationInviteLinkValidationRequest> Validate(
         OrganizationInviteLinkValidationRequest request)
     {
-        var eligibilityError = InviteLinkRules.ValidateEligibility(
+        var eligibilityError = inviteLinkRules.ValidateEligibility(
             request.ExistingInviteLink,
             request.Code,
             request.Organization,
-            request.User,
-            globalSettings);
+            request.User);
         if (eligibilityError is not null)
         {
             return Invalid(request, eligibilityError);
