@@ -24,50 +24,74 @@ public static class Saml2OptionsExtensions
             return false;
         }
 
+        var featureService = context.RequestServices.GetRequiredService<IFeatureService>();
+        if (featureService.IsEnabled(FeatureFlagKeys.PM42283_Rsa15Deprecation))
+        {
+            return await CouldHandleWithOaepGateAsync(options, scheme, context);
+        }
+
+        return await CouldHandleLegacyAsync(options, scheme, context);
+    }
+
+    private static async Task<bool> CouldHandleLegacyAsync(Saml2Options options, string scheme, HttpContext context)
+    {
         var idp = options.IdentityProviders.IsEmpty ? null : options.IdentityProviders.Default;
         if (idp == null)
         {
             return false;
         }
 
-        var featureService = context.RequestServices.GetRequiredService<IFeatureService>();
-        var enforceRsa15Deprecation = featureService.IsEnabled(FeatureFlagKeys.PM42283_Rsa15Deprecation);
-        var schemeMatchesQuery = context.Request.Query["scheme"].FirstOrDefault() == scheme;
-
-        if (!enforceRsa15Deprecation && schemeMatchesQuery)
+        if (context.Request.Query["scheme"].FirstOrDefault() == scheme)
         {
             return true;
         }
 
-        XmlElement envelope;
-        if (enforceRsa15Deprecation)
+        XmlElement envelope = null;
+        try
         {
-            // The scheme query parameter identifies only a request without a SAML message, such as a metadata
-            // or login-initiation request. A request with a message must pass the inspection below.
-            try
+            if (string.Equals(context.Request.Method, "POST", StringComparison.OrdinalIgnoreCase) &&
+                context.Request.HasFormContentType)
             {
-                var requestData = context.ToHttpRequestData(new NoCookieManager(), _ => null);
-                var binding = options.Notifications.GetBinding(requestData);
-                if (binding == null)
+                string encodedMessage;
+                if (context.Request.Form.TryGetValue("SAMLResponse", out var response))
                 {
-                    return schemeMatchesQuery;
+                    encodedMessage = response.FirstOrDefault();
                 }
-                // The middleware already rejects the artifact binding. Artifact resolution needs a call to the identity
-                // provider, which this check never makes.
-                if (binding is Saml2ArtifactBinding)
+                else
+                {
+                    encodedMessage = context.Request.Form["SAMLRequest"];
+                }
+                if (string.IsNullOrWhiteSpace(encodedMessage))
                 {
                     return false;
                 }
-                envelope = binding.Unbind(requestData, null).Data;
+                envelope = XmlHelpers.XmlDocumentFromString(
+                    Encoding.UTF8.GetString(Convert.FromBase64String(encodedMessage)))?.DocumentElement;
             }
-            catch
+            else if (string.Equals(context.Request.Method, "GET", StringComparison.OrdinalIgnoreCase))
             {
-                return false;
+                var encodedPayload = context.Request.Query["SAMLRequest"].FirstOrDefault() ??
+                    context.Request.Query["SAMLResponse"].FirstOrDefault();
+                try
+                {
+                    var payload = Convert.FromBase64String(encodedPayload);
+                    using var compressed = new MemoryStream(payload);
+                    using var decompressedStream = new DeflateStream(compressed, CompressionMode.Decompress, true);
+                    using var deCompressed = new MemoryStream();
+                    await decompressedStream.CopyToAsync(deCompressed);
+
+                    envelope = XmlHelpers.XmlDocumentFromString(
+                        Encoding.UTF8.GetString(deCompressed.GetBuffer(), 0, (int)deCompressed.Length))?.DocumentElement;
+                }
+                catch (FormatException ex)
+                {
+                    throw new FormatException($"\'{encodedPayload}\' is not a valid Base64 encoded string: {ex.Message}", ex);
+                }
             }
         }
-        else
+        catch
         {
-            envelope = await ReadEnvelopeLegacyAsync(context);
+            return false;
         }
 
         if (envelope == null)
@@ -87,14 +111,9 @@ public static class Saml2OptionsExtensions
         // that satisfies the notification criteria, should notify.
         NotifyWhenRsa15Deprecated(envelope, scheme, context);
 
-        // The signature check below decrypts. Reject an unaccepted key transport algorithm first.
-        if (enforceRsa15Deprecation)
-        {
-            Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope);
-        }
-
         if (options.SPOptions.WantAssertionsSigned)
         {
+            var featureService = context.RequestServices.GetRequiredService<IFeatureService>();
             if (featureService.IsEnabled(FeatureFlagKeys.PM42982_WantAssertionsSigned))
             {
                 Saml2AssertionSignatureVerifier.EnsureAssertionsSigned(envelope, options, idp);
@@ -119,57 +138,85 @@ public static class Saml2OptionsExtensions
         return true;
     }
 
-    private static async Task<XmlElement> ReadEnvelopeLegacyAsync(HttpContext context)
+    private static async Task<bool> CouldHandleWithOaepGateAsync(Saml2Options options, string scheme, HttpContext context)
     {
+        var idp = options.IdentityProviders.IsEmpty ? null : options.IdentityProviders.Default;
+        if (idp == null)
+        {
+            return false;
+        }
+
+        var schemeMatchesQuery = context.Request.Query["scheme"].FirstOrDefault() == scheme;
+
+        XmlElement envelope;
+        // The scheme query parameter identifies only a request without a SAML message, such as a metadata
+        // or login-initiation request. A request with a message must pass the inspection below.
         try
         {
-            if (string.Equals(context.Request.Method, "POST", StringComparison.OrdinalIgnoreCase) &&
-                context.Request.HasFormContentType)
+            var requestData = context.ToHttpRequestData(new NoCookieManager(), _ => null);
+            var binding = options.Notifications.GetBinding(requestData);
+            if (binding == null)
             {
-                string encodedMessage;
-                if (context.Request.Form.TryGetValue("SAMLResponse", out var response))
-                {
-                    encodedMessage = response.FirstOrDefault();
-                }
-                else
-                {
-                    encodedMessage = context.Request.Form["SAMLRequest"];
-                }
-                if (string.IsNullOrWhiteSpace(encodedMessage))
-                {
-                    return null;
-                }
-                return XmlHelpers.XmlDocumentFromString(
-                    Encoding.UTF8.GetString(Convert.FromBase64String(encodedMessage)))?.DocumentElement;
+                return schemeMatchesQuery;
             }
-
-            if (string.Equals(context.Request.Method, "GET", StringComparison.OrdinalIgnoreCase))
+            // The middleware already rejects the artifact binding. Artifact resolution needs a call to the identity
+            // provider, which this check never makes.
+            if (binding is Saml2ArtifactBinding)
             {
-                var encodedPayload = context.Request.Query["SAMLRequest"].FirstOrDefault() ??
-                    context.Request.Query["SAMLResponse"].FirstOrDefault();
-                try
-                {
-                    var payload = Convert.FromBase64String(encodedPayload);
-                    using var compressed = new MemoryStream(payload);
-                    using var decompressedStream = new DeflateStream(compressed, CompressionMode.Decompress, true);
-                    using var deCompressed = new MemoryStream();
-                    await decompressedStream.CopyToAsync(deCompressed);
-
-                    return XmlHelpers.XmlDocumentFromString(
-                        Encoding.UTF8.GetString(deCompressed.GetBuffer(), 0, (int)deCompressed.Length))?.DocumentElement;
-                }
-                catch (FormatException ex)
-                {
-                    throw new FormatException($"\'{encodedPayload}\' is not a valid Base64 encoded string: {ex.Message}", ex);
-                }
+                return false;
             }
+            envelope = binding.Unbind(requestData, null).Data;
         }
         catch
         {
-            return null;
+            return false;
         }
 
-        return null;
+        if (envelope == null)
+        {
+            return false;
+        }
+
+        // Double check the entity Ids
+        var entityId = envelope["Issuer", Saml2Namespaces.Saml2Name]?.InnerText.Trim();
+        if (!string.Equals(entityId, idp.EntityId.Id, StringComparison.InvariantCultureIgnoreCase))
+        {
+            return false;
+        }
+
+        // Check and notify before signature verification. A signature failure should not fail notification on an unapproved
+        // key transport algorithm. Any request, including a forged, unsigned, or improperly-constructed one 
+        // that satisfies the notification criteria, should notify.
+        NotifyWhenRsa15Deprecated(envelope, scheme, context);
+
+        // The signature check below decrypts. Reject an unaccepted key transport algorithm first.
+        Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope);
+
+        if (options.SPOptions.WantAssertionsSigned)
+        {
+            var featureService = context.RequestServices.GetRequiredService<IFeatureService>();
+            if (featureService.IsEnabled(FeatureFlagKeys.PM42982_WantAssertionsSigned))
+            {
+                Saml2AssertionSignatureVerifier.EnsureAssertionsSigned(envelope, options, idp);
+            }
+            else
+            {
+                // This can throw if an IdP sends encrypted assertions in an
+                // <EncryptedAssertion> node. Both <Assertion> and <EncryptedAssertion> are
+                // allowed per OASIS spec in an encrypted case. They are mutually exclusive
+                // on a per-assertion basis.
+                // PM-42982 exists to improve this site to handle all cases.
+                var assertion = envelope["Assertion", Saml2Namespaces.Saml2Name];
+                var isAssertionSigned = assertion != null && XmlHelpers.IsSignedByAny(assertion, idp.SigningKeys,
+                    options.SPOptions.ValidateCertificates, options.SPOptions.MinIncomingSigningAlgorithm);
+                if (!isAssertionSigned)
+                {
+                    throw new Exception("Cannot verify SAML assertion signature.");
+                }
+            }
+        }
+
+        return true;
     }
 
     // Reading the message needs no cookie. A cookie reader that finds none keeps Sustainsys.Saml2 from

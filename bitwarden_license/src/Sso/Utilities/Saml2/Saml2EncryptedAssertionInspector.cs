@@ -55,7 +55,12 @@ public static class Saml2EncryptedAssertionInspector
     /// </remarks>
     public static void EnsureAcceptedKeyTransportAlgorithms(XmlElement envelope)
     {
-        foreach (var encryptedAssertion in ReadEncryptedAssertions(envelope))
+        var encryptedAssertions = envelope.ChildNodes
+            .OfType<XmlElement>()
+            .Where(e => e.LocalName == "EncryptedAssertion"
+                && e.NamespaceURI == Saml2Namespaces.Saml2Name);
+
+        foreach (var encryptedAssertion in encryptedAssertions)
         {
             var algorithms = ReadKeyEncryptionAlgorithms(encryptedAssertion).ToArray();
             if (algorithms.Length == 0 || algorithms.Any(a =>
@@ -68,16 +73,13 @@ public static class Saml2EncryptedAssertionInspector
 
     private static IEnumerable<string?> ReadEnvelopeKeyEncryptionAlgorithms(XmlElement envelope)
     {
-        return ReadEncryptedAssertions(envelope).SelectMany(ReadKeyEncryptionAlgorithms);
-    }
-
-    private static IEnumerable<XmlElement> ReadEncryptedAssertions(XmlElement envelope)
-    {
         // Only the first-child nodes are relevant. We don't need a recursive check.
-        return envelope.ChildNodes
+        var encryptedAssertions = envelope.ChildNodes
             .OfType<XmlElement>()
             .Where(e => e.LocalName == "EncryptedAssertion"
                 && e.NamespaceURI == Saml2Namespaces.Saml2Name);
+
+        return encryptedAssertions.SelectMany(ReadKeyEncryptionAlgorithms);
     }
 
     /// <summary>

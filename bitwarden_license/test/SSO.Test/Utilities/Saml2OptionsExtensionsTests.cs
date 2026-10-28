@@ -41,6 +41,23 @@ public class Saml2OptionsExtensionsTests
         Assert.False(await options.CouldHandleAsync(Scheme, context));
     }
 
+    /// <summary>
+    /// The middleware calls CouldHandleAsync for every SAML scheme on every request.
+    /// A request outside the module path of the scheme must not read any feature flag.
+    /// </summary>
+    [Fact]
+    public async Task CouldHandleAsync_PathOutsideModulePath_ReturnsFalseWithoutReadingTheFlag()
+    {
+        var options = BuildOptions(wantAssertionsSigned: false);
+        var context = BuildRawPostContext("SAMLResponse", EncodeBase64(BuildResponseXml(string.Empty)));
+        context.Request.Path = "/unrelated/" + Scheme + "/Acs";
+        var featureService = Substitute.For<IFeatureService>();
+        context.RequestServices = new ServiceCollection().AddSingleton(featureService).BuildServiceProvider();
+
+        Assert.False(await options.CouldHandleAsync(Scheme, context));
+        featureService.DidNotReceiveWithAnyArgs().IsEnabled(default!);
+    }
+
     [Fact]
     public async Task CouldHandleAsync_NoDefaultIdentityProvider_ReturnsFalse()
     {
