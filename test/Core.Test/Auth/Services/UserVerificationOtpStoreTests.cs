@@ -183,6 +183,58 @@ public class UserVerificationOtpStoreTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.IssueAsync(user));
     }
 
+    /// <summary>
+    /// The request counter's cache entry expires when its window ends. Later requests in the window keep that
+    /// expiry, so the cache removes the entry once the window is over.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task IssueAsync_RequestCounterEntry_ExpiresAtWindowEnd(User user)
+    {
+        var cache = Substitute.For<IDistributedCache>();
+        byte[]? storedCounter = null;
+        var writeOptions = new List<DistributedCacheEntryOptions>();
+        cache
+            .When(c => c.SetAsync(RequestCounterKey(user), Arg.Any<byte[]>(),
+                Arg.Any<DistributedCacheEntryOptions>(), Arg.Any<CancellationToken>()))
+            .Do(call =>
+            {
+                storedCounter = call.ArgAt<byte[]>(1);
+                writeOptions.Add(call.ArgAt<DistributedCacheEntryOptions>(2));
+            });
+        cache.GetAsync(RequestCounterKey(user), Arg.Any<CancellationToken>()).Returns(_ => storedCounter);
+        var sut = new UserVerificationOtpStore(_otpTokenProvider, cache, _timeProvider);
+        var windowEnd = _timeProvider.GetUtcNow() + _requestWindow;
+
+        await sut.IssueAsync(user);
+        _timeProvider.Advance(TimeSpan.FromMinutes(1));
+        await sut.IssueAsync(user);
+
+        Assert.Equal(2, writeOptions.Count);
+        Assert.All(writeOptions, options =>
+        {
+            Assert.Equal(windowEnd, options.AbsoluteExpiration);
+            Assert.Null(options.AbsoluteExpirationRelativeToNow);
+            Assert.Null(options.SlidingExpiration);
+        });
+    }
+
+    /// <summary>
+    /// A request counter entry that is not the expected JSON shape starts a new window, and does not fail the
+    /// request.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task IssueAsync_UnreadableRequestCounterEntry_StartsNewWindow(User user)
+    {
+        await _cache.SetAsync(RequestCounterKey(user), "not json"u8.ToArray());
+
+        await IssueUpToLimitAsync(user);
+        var result = await _sut.IssueAsync(user);
+
+        Assert.IsType<IssueOtpResult.RequestLimitReached>(result);
+    }
+
+    private static string RequestCounterKey(User user) => $"UserVerificationOtpRequests_{user.Id}";
+
     private async Task IssueUpToLimitAsync(User user)
     {
         for (var i = 0; i < MaxRequestsPerWindow; i++)

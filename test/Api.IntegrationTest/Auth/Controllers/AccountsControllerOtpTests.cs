@@ -380,6 +380,44 @@ public class AccountsControllerOtpTests : IClassFixture<ApiApplicationFactory>, 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
+    /// <summary>
+    /// Reaching the failed-attempt limit on verify-otp removes the OTP, so an endpoint that accepts a user
+    /// verification secret also rejects it.
+    /// </summary>
+    [Fact]
+    public async Task PostApiKey_FailedAttemptLimitReachedOnVerifyOtp_BadRequest()
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+        var otp = await RequestOtpAndCaptureAsync();
+        for (var i = 0; i < FailedAttemptLimit; i++)
+        {
+            await AssertInvalidTokenAsync(await PostVerifyOtpAsync(WrongOtpFor(otp)));
+        }
+
+        var response = await PostApiKeyAsync(otp: otp);
+
+        await AssertUserVerificationFailedAsync(response);
+    }
+
+    /// <summary>
+    /// Endpoints that accept a user verification secret validate the OTP without counting failed attempts, so
+    /// wrong OTPs there do not use up the verify-otp limit.
+    /// </summary>
+    [Fact]
+    public async Task PostVerifyOtp_WrongOtpsOnApiKey_DoNotCountTowardFailedAttemptLimit()
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+        var otp = await RequestOtpAndCaptureAsync();
+        for (var i = 0; i < FailedAttemptLimit; i++)
+        {
+            await AssertUserVerificationFailedAsync(await PostApiKeyAsync(otp: WrongOtpFor(otp)));
+        }
+
+        var response = await PostVerifyOtpAsync(otp);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
     [Fact]
     public async Task PostRequestOtp_RequestLimitReached_BadRequestAndNoEmail()
     {
