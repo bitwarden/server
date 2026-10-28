@@ -17,8 +17,7 @@ public interface ISetOrganizationKeyIdCommand
     /// </remarks>
     /// <param name="organizationId">The organization whose key id is being recorded.</param>
     /// <param name="organizationKeyId">Key id of the organization's current organization key.</param>
-    /// <exception cref="Bit.Core.Exceptions.NotFoundException">Thrown when the organization does not exist.</exception>
-    /// <exception cref="Bit.Core.Exceptions.BadRequestException">
+    /// <exception cref="Bit.Core.Exceptions.ConflictException">
     /// Thrown when the organization already has a different key id.
     /// </exception>
     Task SetOrganizationKeyIdAsync(Guid organizationId, KeyId organizationKeyId);

@@ -165,7 +165,7 @@ public class OrganizationKeysControllerTests : IClassFixture<ApiApplicationFacto
     }
 
     [Fact]
-    public async Task PostOrganizationKeyIdAsync_DifferentKeyIdAfterBackfill_BadRequestAndKeyIdIsUnchanged()
+    public async Task PostOrganizationKeyIdAsync_DifferentKeyIdAfterBackfill_ConflictAndKeyIdIsUnchanged()
     {
         await _loginHelper.LoginAsync(_ownerEmail);
         var first = await _client.PostAsJsonAsync(OrganizationKeyIdUri(), RequestFor(_organizationKeyId));
@@ -173,7 +173,7 @@ public class OrganizationKeysControllerTests : IClassFixture<ApiApplicationFacto
 
         var second = await _client.PostAsJsonAsync(OrganizationKeyIdUri(), RequestFor(_otherOrganizationKeyId));
 
-        Assert.Equal(HttpStatusCode.BadRequest, second.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
         await AssertOrganizationKeyIdAsync(_organizationKeyId);
     }
 

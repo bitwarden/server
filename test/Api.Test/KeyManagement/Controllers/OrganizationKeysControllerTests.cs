@@ -1,12 +1,11 @@
-﻿using System.Security.Claims;
-using Bit.Api.KeyManagement.Controllers;
+﻿using Bit.Api.KeyManagement.Controllers;
 using Bit.Api.KeyManagement.Models.Requests;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Commands.Interfaces;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -22,26 +21,12 @@ public class OrganizationKeysControllerTests
     private const string _organizationKeyId = "0123456789abcdef0123456789abcdef";
 
     [Theory, BitAutoData]
-    public async Task PostOrganizationKeyIdAsync_NoUserId_ThrowsAndDoesNotCallCommand(
-        Guid orgId,
-        SutProvider<OrganizationKeysController> sutProvider)
-    {
-        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).ReturnsNull();
-
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(
-            () => sutProvider.Sut.PostOrganizationKeyIdAsync(orgId, Request()));
-
-        await sutProvider.GetDependency<ISetOrganizationKeyIdCommand>().DidNotReceiveWithAnyArgs()
-            .SetOrganizationKeyIdAsync(default, default!);
-    }
-
-    [Theory, BitAutoData]
     public async Task PostOrganizationKeyIdAsync_NoMembership_ThrowsAndDoesNotCallCommand(
         Guid orgId,
         Guid userId,
         SutProvider<OrganizationKeysController> sutProvider)
     {
-        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(orgId, userId)
             .ReturnsNull();
 
@@ -65,7 +50,7 @@ public class OrganizationKeysControllerTests
         SutProvider<OrganizationKeysController> sutProvider)
     {
         organizationUser.Key = organizationUserKey;
-        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(orgId, userId)
             .Returns(organizationUser);
 
@@ -85,7 +70,7 @@ public class OrganizationKeysControllerTests
         SutProvider<OrganizationKeysController> sutProvider)
     {
         organizationUser.Key = "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
-        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(orgId, userId)
             .Returns(organizationUser);
 

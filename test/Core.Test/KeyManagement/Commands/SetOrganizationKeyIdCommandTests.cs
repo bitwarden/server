@@ -6,7 +6,6 @@ using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
-using NSubstitute.ReturnsExtensions;
 using Xunit;
 
 namespace Bit.Core.Test.KeyManagement.Commands;
@@ -15,20 +14,6 @@ namespace Bit.Core.Test.KeyManagement.Commands;
 public class SetOrganizationKeyIdCommandTests
 {
     private const string _otherKeyId = "fedcba9876543210fedcba9876543210";
-
-    [Theory, BitAutoData]
-    public async Task SetOrganizationKeyIdAsync_OrganizationNotFound_Throws(
-        Guid organizationId,
-        KeyId organizationKeyId,
-        SutProvider<SetOrganizationKeyIdCommand> sutProvider)
-    {
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        organizationRepository.SetOrganizationKeyIdAsync(organizationId, organizationKeyId).Returns(false);
-        organizationRepository.GetByIdAsync(organizationId).ReturnsNull();
-
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.SetOrganizationKeyIdAsync(organizationId, organizationKeyId));
-    }
 
     [Theory, BitAutoData]
     public async Task SetOrganizationKeyIdAsync_NoKeyIdRecorded_StoresTheKeyId(
@@ -75,7 +60,7 @@ public class SetOrganizationKeyIdCommandTests
         organizationRepository.SetOrganizationKeyIdAsync(organization.Id, organizationKeyId).Returns(false);
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
+        var exception = await Assert.ThrowsAsync<ConflictException>(
             () => sutProvider.Sut.SetOrganizationKeyIdAsync(organization.Id, organizationKeyId));
 
         Assert.Equal("Organization key id is already set.", exception.Message);

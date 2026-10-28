@@ -1,9 +1,9 @@
 ﻿using Bit.Api.KeyManagement.Models.Requests;
 using Bit.Api.KeyManagement.Models.Requirements;
+using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Commands.Interfaces;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.OrganizationAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,16 +19,16 @@ public class OrganizationKeysController : Controller
 {
     private readonly ISetOrganizationKeyIdCommand _setOrganizationKeyIdCommand;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IUserService _userService;
+    private readonly ICurrentContext _currentContext;
 
     public OrganizationKeysController(
         ISetOrganizationKeyIdCommand setOrganizationKeyIdCommand,
         IOrganizationUserRepository organizationUserRepository,
-        IUserService userService)
+        ICurrentContext currentContext)
     {
         _setOrganizationKeyIdCommand = setOrganizationKeyIdCommand;
         _organizationUserRepository = organizationUserRepository;
-        _userService = userService;
+        _currentContext = currentContext;
     }
 
     /// <summary>
@@ -43,7 +43,7 @@ public class OrganizationKeysController : Controller
     public async Task PostOrganizationKeyIdAsync([FromRoute] Guid orgId,
         [FromBody] SetOrganizationKeyIdRequestModel request)
     {
-        var userId = _userService.GetProperUserId(User) ?? throw new UnauthorizedAccessException();
+        var userId = _currentContext.UserId!.Value;
 
         // Only a member who holds the organization key can know its key id.
         var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(orgId, userId);
