@@ -1,8 +1,8 @@
-﻿using System.Text;
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
@@ -10,8 +10,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.Helpers;
-using Microsoft.Extensions.Caching.Distributed;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Identity.IntegrationTest.Endpoints;
@@ -24,7 +22,6 @@ public class RememberedDeviceLoginTests
 {
     private const string _testEmail = "test+rememberdevice@email.com";
     private const string _testPassword = "master_password_hash";
-    private const string _emailToken = "12345678";
     private const string _userEmailTwoFactor =
         """{"1": { "Enabled": true, "MetaData": { "Email": "test+rememberdevice@email.com"}}}""";
 
@@ -38,14 +35,6 @@ public class RememberedDeviceLoginTests
     private static async Task<(IdentityApplicationFactory Factory, User User)> CreateFactoryWithTwoFactorUserAsync()
     {
         var factory = new IdentityApplicationFactory();
-
-        // The Email provider reads its one-time code from the distributed cache; pinning it lets the
-        // test complete a real two-factor login.
-        factory.SubstituteService<IDistributedCache>(distCache =>
-        {
-            distCache.GetAsync(Arg.Is<string>(s => s.StartsWith("EmailToken_")))
-                .Returns(Task.FromResult(Encoding.UTF8.GetBytes(_emailToken)));
-        });
 
         var user = await factory.RegisterNewIdentityFactoryUserAsync(
             new RegisterFinishRequestModel
@@ -72,6 +61,18 @@ public class RememberedDeviceLoginTests
     }
 
     /// <summary>
+    /// Issues a real email two-factor login code bound to the device and returns it, as the factory's mail
+    /// substitute captured it.
+    /// </summary>
+    private static async Task<string> EmailLoginCodeAsync(
+        IdentityApplicationFactory factory, string email, string deviceIdentifier)
+    {
+        var user = await factory.GetService<IUserRepository>().GetByEmailAsync(email);
+        await factory.GetService<ITwoFactorEmailService>().SendTwoFactorLoginEmailAsync(user, deviceIdentifier);
+        return factory.TwoFactorEmailCodes[email];
+    }
+
+    /// <summary>
     /// A two-factor login that asks to be remembered gets a token back.
     /// </summary>
     [Fact]
@@ -79,8 +80,10 @@ public class RememberedDeviceLoginTests
     {
         var (factory, _) = await CreateFactoryWithTwoFactorUserAsync();
 
+        var emailCode = await EmailLoginCodeAsync(
+            factory, _testEmail, IdentityApplicationFactory.DefaultDeviceIdentifier);
         var (accessToken, rememberToken) = await factory.TokensFromPasswordWithTwoFactorAsync(
-            _testEmail, _testPassword, twoFactorProviderType: _emailProvider, twoFactorToken: _emailToken);
+            _testEmail, _testPassword, twoFactorProviderType: _emailProvider, twoFactorToken: emailCode);
 
         Assert.NotNull(accessToken);
         Assert.False(string.IsNullOrEmpty(rememberToken));
@@ -94,8 +97,10 @@ public class RememberedDeviceLoginTests
     {
         var (factory, _) = await CreateFactoryWithTwoFactorUserAsync();
 
+        var emailCode = await EmailLoginCodeAsync(
+            factory, _testEmail, IdentityApplicationFactory.DefaultDeviceIdentifier);
         var (_, rememberToken) = await factory.TokensFromPasswordWithTwoFactorAsync(
-            _testEmail, _testPassword, twoFactorProviderType: _emailProvider, twoFactorToken: _emailToken);
+            _testEmail, _testPassword, twoFactorProviderType: _emailProvider, twoFactorToken: emailCode);
         Assert.False(string.IsNullOrEmpty(rememberToken));
 
         // Clients send remember=0 when re-authenticating with a stored token.
@@ -125,8 +130,10 @@ public class RememberedDeviceLoginTests
     {
         var (factory, _) = await CreateFactoryWithTwoFactorUserAsync();
 
+        var emailCode = await EmailLoginCodeAsync(
+            factory, _testEmail, IdentityApplicationFactory.DefaultDeviceIdentifier);
         var (_, rememberToken) = await factory.TokensFromPasswordWithTwoFactorAsync(
-            _testEmail, _testPassword, twoFactorProviderType: _emailProvider, twoFactorToken: _emailToken);
+            _testEmail, _testPassword, twoFactorProviderType: _emailProvider, twoFactorToken: emailCode);
         Assert.False(string.IsNullOrEmpty(rememberToken));
 
         var context = await factory.ContextFromPasswordWithTwoFactorAsync(
@@ -206,8 +213,10 @@ public class RememberedDeviceLoginTests
     {
         var (factory, _) = await CreateFactoryWithTwoFactorUserAsync();
 
+        var emailCode = await EmailLoginCodeAsync(
+            factory, _testEmail, IdentityApplicationFactory.DefaultDeviceIdentifier);
         var (_, rememberToken) = await factory.TokensFromPasswordWithTwoFactorAsync(
-            _testEmail, _testPassword, twoFactorProviderType: _emailProvider, twoFactorToken: _emailToken);
+            _testEmail, _testPassword, twoFactorProviderType: _emailProvider, twoFactorToken: emailCode);
         Assert.False(string.IsNullOrEmpty(rememberToken));
 
         var context = await factory.ContextFromPasswordWithTwoFactorAsync(
