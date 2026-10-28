@@ -4,7 +4,6 @@ using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Pam.AccessConnector.Commands;
 using Bit.Core.Pam.AccessConnector.Queries;
-using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Enums;
 using Microsoft.AspNetCore.Mvc;
@@ -48,18 +47,12 @@ public static class RotationAttemptCipherEndpoints
         Guid id,
         ICurrentContext currentContext,
         IGetRotationCipherQuery getRotationCipherQuery,
-        IOrganizationRepository organizationRepository,
         IGlobalSettings globalSettings)
     {
         var (cipher, access) = await getRotationCipherQuery.GetAsync(currentContext.PamAccessConnectorId!.Value, id);
 
-        // OrganizationAbility lacks UseTotp.
-        var organization = cipher.OrganizationId is { } organizationId
-            ? await organizationRepository.GetByIdAsync(organizationId)
-            : null;
-
         return TypedResults.Json(
-            new FullCipherMiniResponseModel(access, cipher, globalSettings, organization?.UseTotp ?? false));
+            new FullCipherMiniResponseModel(access, cipher, globalSettings, cipher.OrganizationUseTotp));
     }
 
     public static async Task<IResult> PutCipherAsync(

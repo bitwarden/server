@@ -1,14 +1,14 @@
 ﻿using Bit.Core.Vault.Authorization;
-using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Core.Pam.AccessConnector.Queries;
 
 /// <summary>
 /// The cipher for an executing rotation attempt, with the witness that authorizes emitting its full data.
 /// </summary>
-/// <param name="Cipher">The cipher the attempt targets.</param>
+/// <param name="Cipher">The cipher the attempt targets, with its organization's <c>UseTotp</c>.</param>
 /// <param name="Access">Minted by the leasing gate for <paramref name="Cipher"/> alone.</param>
-public record RotationCipherAccess(Cipher Cipher, FullCipherAccess Access);
+public record RotationCipherAccess(CipherOrganizationDetails Cipher, FullCipherAccess Access);
 
 public interface IGetRotationCipherQuery
 {

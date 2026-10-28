@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Core.Pam.Services;
-using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
@@ -95,7 +95,7 @@ public class GetRotationCipherQueryTests
 
     [Theory, BitAutoData]
     public async Task GetAsync_HappyPath_ReturnsCipherOfConfigsCipherId(
-        Guid accessConnectorId, PamRotationAttempt attempt, PamRotationJob job, PamRotationConfig config, Cipher cipher)
+        Guid accessConnectorId, PamRotationAttempt attempt, PamRotationJob job, PamRotationConfig config, CipherOrganizationDetails cipher)
     {
         var sutProvider = Setup();
         ClaimedBy(accessConnectorId, attempt, job);
@@ -103,7 +103,7 @@ public class GetRotationCipherQueryTests
         cipher.Id = config.CipherId;
         Returns(sutProvider, attempt, job);
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetByIdAsync(config.Id).Returns(config);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(config.CipherId).Returns(cipher);
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(config.CipherId).Returns(cipher);
 
         var access = new UnrestrictedCipherLeaseGate().AuthorizeAccessConnectorRotationRead(cipher);
         sutProvider.GetDependency<ICipherLeaseGate>().AuthorizeAccessConnectorRotationRead(cipher).Returns(access);
