@@ -55,7 +55,7 @@ public class UserEmailTokenCodeQuery(
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum CodeType
     {
-        EmailTwoFactor,
+        EmailTwoFactorLogin,
         EmailTwoFactorSetup,
         UserVerification,
         NewDeviceVerification,
@@ -94,7 +94,7 @@ public class UserEmailTokenCodeQuery(
 
         var cacheKey = request.CodeType switch
         {
-            CodeType.EmailTwoFactor => string.Format(
+            CodeType.EmailTwoFactorLogin => string.Format(
                 CultureInfo.InvariantCulture, EmailTwoFactorCacheKeyFormat, user.Id, user.SecurityStamp),
             CodeType.EmailTwoFactorSetup => string.Format(
                 CultureInfo.InvariantCulture, EmailTwoFactorSetupCacheKeyFormat, user.Id, user.SecurityStamp),
