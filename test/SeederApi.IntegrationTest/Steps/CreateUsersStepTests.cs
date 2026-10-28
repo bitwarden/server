@@ -53,6 +53,17 @@ public class CreateUsersStepTests
     }
 
     [Fact]
+    public void Execute_StatusMix_RegistersNonConfirmedMembersAsInactive()
+    {
+        var context = ExecuteWithStatusMixAndTwoAdmins();
+
+        var nonConfirmedIds = context.OrganizationUsers
+            .Where(ou => ou.Status != OrganizationUserStatusType.Confirmed)
+            .Select(ou => ou.Id);
+        Assert.Equal(nonConfirmedIds, context.Registry.InactiveOrgUserIds);
+    }
+
+    [Fact]
     public void Execute_AdminCountAboveConfirmedCount_Throws()
     {
         var context = NewContext(new SeederSettings());

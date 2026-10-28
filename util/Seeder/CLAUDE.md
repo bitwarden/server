@@ -103,6 +103,16 @@ Density-aware steps accept an optional `DensityProfile` that controls relationsh
 
 **Verification**: SQL queries for validating density algorithms are in `Seeds/docs/verification.md`.
 
+## Access Shape
+
+A preset with an `accessShape` block (the `scale.*-migrated-*` presets) replaces the density group, collection and
+cipher-assignment algorithms with `CreateShapedGroupsStep` and `CreateShapedCollectionsStep`. Presets without
+`accessShape` are unchanged. `PresetValidator.ValidateAccessShape` rejects density settings the shape would ignore;
+cipher types, permissions and orphan/archive/delete rates still apply. Shaped loops fail the run if they fall more
+than 1% short of a preset target (`ShapeTargets`).
+
+Design, knobs and calibration: `Seeds/docs/access-shape.md`.
+
 ## Regression Testing
 
 Changes to `Factories/`, `Steps/`, `Scenes/`, or `Recipes/` need a regression pass against a live local SQL Server database. `Seeds/docs/regression.md` maps each changed path to the preset that reaches it and the assertion that proves it, and lists the known non-regressions. Claude drives the CLI, API, and SQL (CLI via `seeding-bitwarden-data`, SQL via `exploring-bitwarden-data`); the developer smoke-tests the web vault.
