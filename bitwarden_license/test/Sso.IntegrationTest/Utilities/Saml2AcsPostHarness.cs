@@ -24,19 +24,35 @@ public static class Saml2AcsPostHarness
     /// <summary>
     /// Seeds an organization with a SAML configuration, and builds a client that does not follow
     /// redirects. The arrangement also holds a response that carries the given assertion element.
+    /// A caller can give the identity provider certificate, to sign the assertion with its key.
+    /// A caller can give the service provider certificate, to let the handler decrypt an assertion.
+    /// A caller can allow unsolicited responses. Without this, the handler rejects a response that
+    /// answers no request before it validates the signature.
     /// </summary>
     public static async Task<Saml2AcsArrangement> ArrangeAsync(
-        string assertionElement, string issuer = IdpEntityId)
+        string assertionElement, string issuer = IdpEntityId, bool wantAssertionsSigned = false,
+        bool rsa15DeprecationFlag = false, X509Certificate2? idpCertificate = null,
+        X509Certificate2? spCertificate = null, bool allowUnsolicitedResponse = false)
     {
-        var testData = await new SsoTestDataBuilder()
+        var builder = new SsoTestDataBuilder()
             .WithSsoConfig(cfg => cfg!.SetData(new SsoConfigurationData
             {
                 ConfigType = SsoType.Saml2,
                 IdpEntityId = IdpEntityId,
                 IdpSingleSignOnServiceUrl = "https://idp.example.com/sso",
-                IdpX509PublicCert = CoreHelpers.Base64UrlEncode(BuildIdpCertificate().RawData),
-            }))
-            .BuildAsync();
+                IdpX509PublicCert = CoreHelpers.Base64UrlEncode((idpCertificate ?? BuildIdpCertificate()).RawData),
+                SpWantAssertionsSigned = wantAssertionsSigned,
+                IdpAllowUnsolicitedAuthnResponse = allowUnsolicitedResponse,
+            }));
+        if (spCertificate != null)
+        {
+            builder.WithSamlSigningCertificate(spCertificate);
+        }
+        if (rsa15DeprecationFlag)
+        {
+            builder.WithPM42283Rsa15DeprecationFlag();
+        }
+        var testData = await builder.BuildAsync();
 
         var organizationId = testData.Organization!.Id;
 
@@ -59,22 +75,32 @@ public static class Saml2AcsPostHarness
     /// Posts the Base64 encoded response in the <c>SAMLResponse</c> form field to the ACS URL of the organization.
     /// </summary>
     public static async Task<HttpResponseMessage> PostAcsAsync(
-        HttpClient client, Guid organizationId, string responseXml)
+        HttpClient client, Guid organizationId, string responseXml, bool includeSchemeQuery = false)
     {
         using var form = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             ["SAMLResponse"] = Convert.ToBase64String(Encoding.UTF8.GetBytes(responseXml)),
         });
 
-        return await client.PostAsync(SsoConfigurationData.BuildSaml2AcsUrl(null, organizationId.ToString()), form);
+        var url = SsoConfigurationData.BuildSaml2AcsUrl(null, organizationId.ToString());
+        if (includeSchemeQuery)
+        {
+            url += $"?scheme={organizationId}";
+        }
+
+        return await client.PostAsync(url, form);
     }
 
-    public static string BuildResponseXml(string assertionElement, string issuer = IdpEntityId) =>
+    public static string BuildResponseXml(
+        string assertionElement, string issuer = IdpEntityId, bool includeSuccessStatus = false) =>
         "<samlp:Response xmlns:samlp=\"urn:oasis:names:tc:SAML:2.0:protocol\" " +
         "xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\" " +
         "xmlns:xenc=\"http://www.w3.org/2001/04/xmlenc#\" " +
         "ID=\"_response\" Version=\"2.0\" IssueInstant=\"2026-01-01T00:00:00Z\">" +
         $"<saml:Issuer>{issuer}</saml:Issuer>" +
+        (includeSuccessStatus
+            ? "<samlp:Status><samlp:StatusCode Value=\"urn:oasis:names:tc:SAML:2.0:status:Success\" /></samlp:Status>"
+            : string.Empty) +
         assertionElement +
         "</samlp:Response>";
 
