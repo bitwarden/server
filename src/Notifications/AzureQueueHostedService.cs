@@ -1,6 +1,6 @@
 ﻿using Azure.Storage.Queues;
-using Bit.Core.Settings;
-using Bit.Core.Utilities;
+using Bitwarden.Server.Sdk.Environment;
+using Microsoft.Extensions.Options;
 
 namespace Bit.Notifications;
 
@@ -8,7 +8,8 @@ public class AzureQueueHostedService : IHostedService, IDisposable
 {
     private readonly ILogger _logger;
     private readonly HubHelpers _hubHelpers;
-    private readonly GlobalSettings _globalSettings;
+    private readonly IBitwardenEnvironment _environment;
+    private readonly IOptions<NotificationsSettings> _settings;
     private readonly IServiceProvider _serviceProvider;
     private readonly TimeProvider _timeProvider;
 
@@ -18,21 +19,23 @@ public class AzureQueueHostedService : IHostedService, IDisposable
     public AzureQueueHostedService(
         ILogger<AzureQueueHostedService> logger,
         HubHelpers hubHelpers,
-        GlobalSettings globalSettings,
+        IBitwardenEnvironment environment,
+        IOptions<NotificationsSettings> settings,
         IServiceProvider serviceProvider,
         TimeProvider timeProvider)
     {
         _logger = logger;
         _hubHelpers = hubHelpers;
-        _globalSettings = globalSettings;
+        _environment = environment;
+        _settings = settings;
         _serviceProvider = serviceProvider;
         _timeProvider = timeProvider;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        if (_globalSettings.SelfHosted ||
-            !CoreHelpers.SettingHasValue(_globalSettings.Notifications?.ConnectionString))
+        if (_environment.SelfHosted ||
+            string.IsNullOrWhiteSpace(_settings.Value.ConnectionString))
         {
             return Task.CompletedTask;
         }

@@ -38,6 +38,7 @@ using Bit.Core.Enums;
 using Bit.HttpExtensions;
 using Bit.Subscriptions.Organization;
 using Bit.Subscriptions.User;
+using Bit.CurrentUser;
 
 
 #if !OSS
@@ -47,6 +48,7 @@ using Bit.Commercial.Infrastructure.EntityFramework.SecretsManager;
 using Bit.Services.Pam.AccessConnector;
 using Bit.Api.Pam.AccessConnector;
 using Bit.Services.Pam.Api.Endpoints;
+using Bit.Services.Pam.AccessConnector.Jobs;
 using Bit.Services.Pam.Utilities;
 #endif
 
@@ -97,6 +99,7 @@ public class Startup
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+        services.AddCurrentUser();
 
         // Caching
         services.AddMemoryCache();
@@ -222,6 +225,7 @@ public class Startup
         services.AddPamServices();
         services.Configure<PamRotationOptions>(Configuration.GetSection("globalSettings:pam:rotation"));
         Jobs.JobsHostedService.AddCommercialSecretsManagerJobServices(services);
+        services.AddPamJobServices();
         services.AddOpenApiEndpointDataSource(MapPamRotationAttemptCipherEndpoints);
 #endif
 

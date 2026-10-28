@@ -1785,6 +1785,12 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("varchar(300)");
 
+                    b.Property<DateTime?>("InviteReminderDueDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<byte?>("InviteRemindersSentCount")
+                        .HasColumnType("tinyint unsigned");
+
                     b.Property<string>("Key")
                         .HasColumnType("longtext");
 

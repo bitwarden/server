@@ -532,6 +532,181 @@ public class SingleProviderSceneTests : IClassFixture<InPlaySeederApiApplication
         });
     }
 
+    [Fact]
+    public async Task SingleProviderScene_OrganizationAlreadyLinkedToProvider_ReturnsBadRequestWithoutWrites()
+    {
+        var playId = Guid.NewGuid().ToString();
+        var secondProviderName = $"Second Provider {Guid.NewGuid():N}";
+
+        var firstAdminUserId = await SeedUserAsync(playId);
+        var secondAdminUserId = await SeedUserAsync(playId);
+        var orgOwnerUserId = await SeedUserAsync(playId);
+        var (organizationId, organizationKeyB64) = await SeedClientOrganizationAsync(playId, orgOwnerUserId);
+
+        await PostSceneAsync(playId, nameof(SingleProviderScene), new SingleProviderScene.Request
+        {
+            OwnerUserId = firstAdminUserId,
+            Name = "First Provider",
+            Type = ProviderType.Msp,
+            Status = ProviderStatusType.Pending,
+            Organizations = [Link(organizationId, organizationKeyB64)]
+        });
+
+        var response = await _client.PostSceneRequestAsync(playId, nameof(SingleProviderScene), new SingleProviderScene.Request
+        {
+            OwnerUserId = secondAdminUserId,
+            Name = secondProviderName,
+            Type = ProviderType.Msp,
+            Status = ProviderStatusType.Pending,
+            Organizations = [Link(organizationId, organizationKeyB64)]
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("already belongs to a provider", await response.Content.ReadAsStringAsync());
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+
+        Assert.False(await db.Providers.AnyAsync(p => p.Name!.EndsWith(secondProviderName)));
+        Assert.False(await db.ProviderUsers.AnyAsync(pu => pu.UserId == secondAdminUserId));
+        Assert.Equal(1, await db.ProviderOrganizations.CountAsync(po => po.OrganizationId == organizationId));
+    }
+
+    [Fact]
+    public async Task SingleProviderScene_DuplicateIdenticalOrganizationLinks_LinksOrganizationOnce()
+    {
+        var playId = Guid.NewGuid().ToString();
+
+        var providerAdminUserId = await SeedUserAsync(playId);
+        var orgOwnerUserId = await SeedUserAsync(playId);
+        var (organizationId, organizationKeyB64) =
+            await SeedClientOrganizationAsync(playId, orgOwnerUserId, seats: 7);
+
+        var providerResult = await PostSceneAsync(playId, nameof(SingleProviderScene), new SingleProviderScene.Request
+        {
+            OwnerUserId = providerAdminUserId,
+            Name = "Duplicate Link MSP",
+            Type = ProviderType.Msp,
+            Plans = [new SingleProviderScene.PlanConfig { PlanType = PlanType.EnterpriseMonthly, Seats = 5 }],
+            Organizations = [Link(organizationId, organizationKeyB64), Link(organizationId, organizationKeyB64)]
+        });
+        var providerId = providerResult.GetProperty("providerId").GetGuid();
+        Assert.Single(providerResult.GetProperty("providerOrganizationIds").EnumerateArray());
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+
+        Assert.Equal(1, await db.ProviderOrganizations.CountAsync(po => po.OrganizationId == organizationId));
+        var plan = await db.ProviderPlans.SingleAsync(pp => pp.ProviderId == providerId);
+        Assert.Equal(7, plan.AllocatedSeats);
+    }
+
+    [Fact]
+    public async Task SingleProviderScene_ConflictingOrganizationKeys_ReturnsBadRequestWithoutWrites()
+    {
+        var playId = Guid.NewGuid().ToString();
+        var providerName = $"Conflicting Keys {Guid.NewGuid():N}";
+
+        var providerAdminUserId = await SeedUserAsync(playId);
+        var orgOwnerUserId = await SeedUserAsync(playId);
+        var (organizationId, organizationKeyB64) = await SeedClientOrganizationAsync(playId, orgOwnerUserId);
+        var (_, otherOrganizationKeyB64) = await SeedClientOrganizationAsync(playId, orgOwnerUserId);
+
+        var response = await _client.PostSceneRequestAsync(playId, nameof(SingleProviderScene), new SingleProviderScene.Request
+        {
+            OwnerUserId = providerAdminUserId,
+            Name = providerName,
+            Type = ProviderType.Msp,
+            Plans = [new SingleProviderScene.PlanConfig { PlanType = PlanType.EnterpriseMonthly, Seats = 5 }],
+            Organizations =
+            [
+                Link(organizationId, organizationKeyB64),
+                Link(organizationId, otherOrganizationKeyB64)
+            ]
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains($"Conflicting organization keys requested for organization {organizationId}.", body);
+        Assert.DoesNotContain(organizationKeyB64, body);
+        Assert.DoesNotContain(otherOrganizationKeyB64, body);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+
+        Assert.False(await db.Providers.AnyAsync(p => p.Name!.EndsWith(providerName)));
+        Assert.False(await db.ProviderUsers.AnyAsync(pu => pu.UserId == providerAdminUserId));
+        Assert.False(await db.ProviderOrganizations.AnyAsync(po => po.OrganizationId == organizationId));
+        var organization = await db.Organizations.SingleAsync(o => o.Id == organizationId);
+        Assert.Equal(OrganizationStatusType.Created, organization.Status);
+    }
+
+    [Fact]
+    public async Task SingleProviderScene_DuplicateIdenticalPlans_SeedsPlanOnce()
+    {
+        var playId = Guid.NewGuid().ToString();
+
+        var providerAdminUserId = await SeedUserAsync(playId);
+
+        var providerResult = await PostSceneAsync(playId, nameof(SingleProviderScene), new SingleProviderScene.Request
+        {
+            OwnerUserId = providerAdminUserId,
+            Name = "Duplicate Plan MSP",
+            Type = ProviderType.Msp,
+            Plans =
+            [
+                new SingleProviderScene.PlanConfig { PlanType = PlanType.EnterpriseMonthly, Seats = 10 },
+                new SingleProviderScene.PlanConfig { PlanType = PlanType.EnterpriseMonthly, Seats = 10 }
+            ]
+        });
+        var providerId = providerResult.GetProperty("providerId").GetGuid();
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+
+        var plan = await db.ProviderPlans.SingleAsync(pp => pp.ProviderId == providerId);
+        Assert.Equal(PlanType.EnterpriseMonthly, plan.PlanType);
+        Assert.Equal(10, plan.SeatMinimum);
+    }
+
+    [Fact]
+    public async Task SingleProviderScene_ConflictingPlanSeatMinimums_ReturnsBadRequestWithoutWrites()
+    {
+        var playId = Guid.NewGuid().ToString();
+        var providerName = $"Conflicting Plans {Guid.NewGuid():N}";
+
+        var providerAdminUserId = await SeedUserAsync(playId);
+        var orgOwnerUserId = await SeedUserAsync(playId);
+        var (organizationId, organizationKeyB64) = await SeedClientOrganizationAsync(playId, orgOwnerUserId);
+
+        var response = await _client.PostSceneRequestAsync(playId, nameof(SingleProviderScene), new SingleProviderScene.Request
+        {
+            OwnerUserId = providerAdminUserId,
+            Name = providerName,
+            Type = ProviderType.Msp,
+            Plans =
+            [
+                new SingleProviderScene.PlanConfig { PlanType = PlanType.EnterpriseMonthly, Seats = 5 },
+                new SingleProviderScene.PlanConfig { PlanType = PlanType.EnterpriseMonthly, Seats = 10 }
+            ],
+            Organizations = [Link(organizationId, organizationKeyB64)]
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains(
+            $"Conflicting seat minimums requested for plan {PlanType.EnterpriseMonthly}.",
+            await response.Content.ReadAsStringAsync());
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+
+        Assert.False(await db.Providers.AnyAsync(p => p.Name!.EndsWith(providerName)));
+        Assert.False(await db.ProviderUsers.AnyAsync(pu => pu.UserId == providerAdminUserId));
+        Assert.False(await db.ProviderOrganizations.AnyAsync(po => po.OrganizationId == organizationId));
+        var organization = await db.Organizations.SingleAsync(o => o.Id == organizationId);
+        Assert.Equal(OrganizationStatusType.Created, organization.Status);
+    }
+
     [Theory]
     [InlineData(ProviderUserType.ServiceUser, ProviderUserStatusType.Confirmed)]
     [InlineData(ProviderUserType.ProviderAdmin, ProviderUserStatusType.Accepted)]
@@ -604,17 +779,7 @@ public class SingleProviderSceneTests : IClassFixture<InPlaySeederApiApplication
     private static SingleProviderScene.OrganizationLink Link(Guid organizationId, string organizationKeyB64) =>
         new() { OrganizationId = organizationId, OrganizationKeyB64 = organizationKeyB64 };
 
-    private async Task<Guid> SeedUserAsync(string playId)
-    {
-        var result = await PostSceneAsync(playId, "SingleUserScene", new SingleUserScene.Request
-        {
-            Email = $"user-{Guid.NewGuid():N}@example.com",
-            Password = "asdfasdfasdf",
-            EmailVerified = true
-        });
-
-        return result.GetProperty("userId").GetGuid();
-    }
+    private async Task<Guid> SeedUserAsync(string playId) => (await _client.SeedUserAsync(playId)).UserId;
 
     private async Task<(Guid OrganizationId, string OrganizationKeyB64)> SeedClientOrganizationAsync(
         string playId,
