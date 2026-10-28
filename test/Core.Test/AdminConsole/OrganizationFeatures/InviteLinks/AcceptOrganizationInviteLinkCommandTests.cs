@@ -38,8 +38,12 @@ public class AcceptOrganizationInviteLinkCommandTests
         // Arrange
         SetupHappyPath(organization, inviteLink, user, sutProvider);
         sutProvider.GetDependency<IInviteLinkRules>()
-            .ValidateEligibility(default, default, default, default!)
-            .ReturnsForAnyArgs(new EmailDomainNotAllowed(organization.Name));
+            .ValidateEligibility(
+                inviteLink,
+                Guid.Parse(inviteLink.Code),
+                organization,
+                user)
+            .Returns(new EmailDomainNotAllowed(organization.Name));
 
         var request = new AcceptOrganizationInviteLinkRequest
         {

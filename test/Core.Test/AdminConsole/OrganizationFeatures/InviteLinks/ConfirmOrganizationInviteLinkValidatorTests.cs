@@ -39,8 +39,12 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     {
         // Arrange
         sutProvider.GetDependency<IInviteLinkRules>()
-            .ValidateEligibility(default, default, default, default!)
-            .ReturnsForAnyArgs(new InviteLinkNotFound());
+            .ValidateEligibility(
+                null,
+                request.Code,
+                null,
+                request.User)
+            .Returns(new InviteLinkNotFound());
 
         // Act
         var result = await sutProvider.Sut.ValidateAsync(request);
@@ -59,8 +63,12 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
         sutProvider.GetDependency<IInviteLinkRules>()
-            .ValidateEligibility(default, default, default, default!)
-            .ReturnsForAnyArgs(new InviteLinkNotAvailable());
+            .ValidateEligibility(
+                inviteLink,
+                Guid.Parse(inviteLink.Code),
+                organization,
+                user)
+            .Returns(new InviteLinkNotAvailable());
 
         var request = new ConfirmOrganizationInviteLinkValidationRequest
         {
@@ -119,8 +127,12 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         // Arrange
         SetupHappyPath(organization, inviteLink, user, sutProvider);
         sutProvider.GetDependency<IInviteLinkRules>()
-            .ValidateEligibility(default, default, default, default!)
-            .ReturnsForAnyArgs(new EmailNotVerified());
+            .ValidateEligibility(
+                inviteLink,
+                Guid.Parse(inviteLink.Code),
+                organization,
+                user)
+            .Returns(new EmailNotVerified());
 
         var request = new ConfirmOrganizationInviteLinkValidationRequest
         {
@@ -154,8 +166,12 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
         sutProvider.GetDependency<IInviteLinkRules>()
-            .ValidateEligibility(default, default, default, default!)
-            .ReturnsForAnyArgs(new EmailDomainNotAllowed(organization.Name));
+            .ValidateEligibility(
+                inviteLink,
+                Guid.Parse(inviteLink.Code),
+                organization,
+                user)
+            .Returns(new EmailDomainNotAllowed(organization.Name));
 
         var request = new ConfirmOrganizationInviteLinkValidationRequest
         {

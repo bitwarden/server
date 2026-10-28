@@ -44,8 +44,12 @@ public class GetOrganizationInviteValidatorTests
         existingOrganizationUser.Status = OrganizationUserStatusType.Revoked;
         var request = BuildRequest(organization, inviteLink, user, existingOrganizationUser);
         sutProvider.GetDependency<IInviteLinkRules>()
-            .ValidateEligibility(default, default, default, default!)
-            .ReturnsForAnyArgs(new EmailDomainNotAllowed(organization.Name));
+            .ValidateEligibility(
+                inviteLink,
+                request.Code,
+                organization,
+                user)
+            .Returns(new EmailDomainNotAllowed(organization.Name));
 
         // Act
         var result = sutProvider.Sut.Validate(request);
