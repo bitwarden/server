@@ -1,14 +1,17 @@
 ﻿using System.Text.Json;
 using AutoFixture;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
+using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Test.Billing.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Core.Test.Billing.Services;
@@ -131,5 +134,23 @@ public class LicensingServiceTests
                 Directory.Delete(UserLicenseDirectory.Value, true);
             }
         }
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateOrganizationsAsync_NoLicenseFile_DisablesOrganizationAndUpdatesCache(Organization organization)
+    {
+        // Arrange
+        var sutProvider = GetSutProvider();
+        organization.Enabled = true;
+        sutProvider.GetDependency<IOrganizationRepository>().GetManyByEnabledAsync().Returns([organization]);
+
+        // Act
+        await sutProvider.Sut.ValidateOrganizationsAsync();
+
+        // Assert
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1)
+            .ReplaceAsync(Arg.Is<Organization>(o => o.Id == organization.Id && !o.Enabled));
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>().Received(1)
+            .UpsertOrganizationAbilityAsync(Arg.Is<Organization>(o => o.Id == organization.Id && !o.Enabled));
     }
 }

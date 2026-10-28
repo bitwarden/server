@@ -5,7 +5,7 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Queries;
 using Bit.Core.Entities;
-using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using Stripe;
@@ -22,8 +22,8 @@ public interface IRestartSubscriptionCommand
 
 public class RestartSubscriptionCommand(
     ILogger<RestartSubscriptionCommand> logger,
-    IOrganizationRepository organizationRepository,
     IGetOrganizationRestartQuery getOrganizationRestartQuery,
+    IOrganizationService organizationService,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService) : BaseBillingCommand<RestartSubscriptionCommand>(logger), IRestartSubscriptionCommand
 {
@@ -104,6 +104,6 @@ public class RestartSubscriptionCommand(
         organization.ExpirationDate = subscription.GetCurrentPeriodEnd();
         organization.RevisionDate = DateTime.UtcNow;
 
-        await organizationRepository.ReplaceAsync(organization);
+        await organizationService.ReplaceAndUpdateCacheAsync(organization);
     }
 }
