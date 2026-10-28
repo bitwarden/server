@@ -34,7 +34,7 @@ public class AcceptInviteLinkMembershipValidator(
     {
         var organization = request.Organization;
 
-        var membershipStatusError = InviteLinkEligibilityValidationService.ValidateAcceptMembershipStatus(organization, request.ExistingMembership);
+        var membershipStatusError = InviteLinkRules.ValidateAcceptMembershipStatus(organization, request.ExistingMembership);
         if (membershipStatusError is not null)
         {
             return Invalid(request, membershipStatusError);

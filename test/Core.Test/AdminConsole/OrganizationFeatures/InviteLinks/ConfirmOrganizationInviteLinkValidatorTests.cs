@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
-using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
@@ -37,11 +36,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         ConfirmOrganizationInviteLinkValidationRequest request,
         SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
     {
-        // Arrange
-        sutProvider.GetDependency<IInviteLinkEligibilityValidationService>()
-            .ValidateEligibility(default, default, default, default!)
-            .ReturnsForAnyArgs(new InviteLinkNotFound());
-
         // Act
         var result = await sutProvider.Sut.ValidateAsync(request);
 
@@ -57,10 +51,18 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         User user,
         SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
     {
-        SetupHappyPath(organization, inviteLink, user, sutProvider);
-        sutProvider.GetDependency<IInviteLinkEligibilityValidationService>()
-            .ValidateEligibility(default, default, default, default!)
-            .ReturnsForAnyArgs(new InviteLinkNotAvailable());
+        organization.Enabled = true;
+        organization.UseInviteLinks = false;
+        inviteLink.OrganizationId = organization.Id;
+        inviteLink.Code = Guid.NewGuid().ToString();
+
+        sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
+            .GetByOrganizationIdAsync(organization.Id)
+            .Returns(inviteLink);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
 
         var request = new ConfirmOrganizationInviteLinkValidationRequest
         {
@@ -118,9 +120,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     {
         // Arrange
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        sutProvider.GetDependency<IInviteLinkEligibilityValidationService>()
-            .ValidateEligibility(default, default, default, default!)
-            .ReturnsForAnyArgs(new EmailNotVerified());
+        user.EmailVerified = false;
 
         var request = new ConfirmOrganizationInviteLinkValidationRequest
         {
@@ -153,9 +153,8 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        sutProvider.GetDependency<IInviteLinkEligibilityValidationService>()
-            .ValidateEligibility(default, default, default, default!)
-            .ReturnsForAnyArgs(new EmailDomainNotAllowed(organization.Name));
+        inviteLink.AllowedDomains = "[\"allowed.example.com\"]";
+        user.Email = "user@notallowed.example.com";
 
         var request = new ConfirmOrganizationInviteLinkValidationRequest
         {

@@ -1,11 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
-using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.InviteLinks;
@@ -43,9 +41,7 @@ public class GetOrganizationInviteValidatorTests
         // Revoked would also fail the membership status check, so this proves eligibility is checked first.
         existingOrganizationUser.Status = OrganizationUserStatusType.Revoked;
         var request = BuildRequest(organization, inviteLink, user, existingOrganizationUser);
-        sutProvider.GetDependency<IInviteLinkEligibilityValidationService>()
-            .ValidateEligibility(default, default, default, default!)
-            .ReturnsForAnyArgs(new EmailDomainNotAllowed(organization.Name));
+        inviteLink.AllowedDomains = "[\"allowed.com\"]";
 
         // Act
         var result = sutProvider.Sut.Validate(request);

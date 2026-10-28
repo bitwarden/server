@@ -3,31 +3,46 @@ using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Settings;
-using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.InviteLinks;
 
-[SutProviderCustomize]
-public class InviteLinkEligibilityValidationServiceTests
+public class InviteLinkRulesTests
 {
     [Theory, BitAutoData]
-    public void ValidateEligibility_WithLinkNotFound_ReturnsInviteLinkNotFound(
-        SutProvider<InviteLinkEligibilityValidationService> sutProvider,
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user)
+    public void ValidateEligibility_WhenAllChecksPass_ReturnsNull(
+        Organization organization, OrganizationInviteLink inviteLink, User user)
     {
         // Arrange
         var code = SetupEligible(organization, inviteLink, user);
 
         // Act
-        var error = sutProvider.Sut.ValidateEligibility(
+        var error = InviteLinkRules.ValidateEligibility(
+            inviteLink,
+            code,
+            organization,
+            user,
+            new GlobalSettings());
+
+        // Assert
+        Assert.Null(error);
+    }
+
+    [Theory, BitAutoData]
+    public void ValidateEligibility_WithLinkNotFound_ReturnsInviteLinkNotFound(
+        Organization organization, OrganizationInviteLink inviteLink, User user)
+    {
+        // Arrange
+        var code = SetupEligible(organization, inviteLink, user);
+
+        // Act
+        var error = InviteLinkRules.ValidateEligibility(
             null,
             code,
             organization,
-            user);
+            user,
+            new GlobalSettings());
 
         // Assert
         Assert.IsType<InviteLinkNotFound>(error);
@@ -35,20 +50,18 @@ public class InviteLinkEligibilityValidationServiceTests
 
     [Theory, BitAutoData]
     public void ValidateEligibility_WithCodeMismatch_ReturnsInviteLinkNotFound(
-        SutProvider<InviteLinkEligibilityValidationService> sutProvider,
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user)
+        Organization organization, OrganizationInviteLink inviteLink, User user)
     {
         // Arrange
         SetupEligible(organization, inviteLink, user);
 
         // Act
-        var error = sutProvider.Sut.ValidateEligibility(
+        var error = InviteLinkRules.ValidateEligibility(
             inviteLink,
             Guid.NewGuid(),
             organization,
-            user);
+            user,
+            new GlobalSettings());
 
         // Assert
         Assert.IsType<InviteLinkNotFound>(error);
@@ -56,20 +69,18 @@ public class InviteLinkEligibilityValidationServiceTests
 
     [Theory, BitAutoData]
     public void ValidateEligibility_WithOrganizationNotFound_ReturnsInviteLinkNotFound(
-        SutProvider<InviteLinkEligibilityValidationService> sutProvider,
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user)
+        Organization organization, OrganizationInviteLink inviteLink, User user)
     {
         // Arrange
         var code = SetupEligible(organization, inviteLink, user);
 
         // Act
-        var error = sutProvider.Sut.ValidateEligibility(
+        var error = InviteLinkRules.ValidateEligibility(
             inviteLink,
             code,
             null,
-            user);
+            user,
+            new GlobalSettings());
 
         // Assert
         Assert.IsType<InviteLinkNotFound>(error);
@@ -77,21 +88,19 @@ public class InviteLinkEligibilityValidationServiceTests
 
     [Theory, BitAutoData]
     public void ValidateEligibility_WithOrganizationDisabled_ReturnsInviteLinkNotFound(
-        SutProvider<InviteLinkEligibilityValidationService> sutProvider,
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user)
+        Organization organization, OrganizationInviteLink inviteLink, User user)
     {
         // Arrange
         var code = SetupEligible(organization, inviteLink, user);
         organization.Enabled = false;
 
         // Act
-        var error = sutProvider.Sut.ValidateEligibility(
+        var error = InviteLinkRules.ValidateEligibility(
             inviteLink,
             code,
             organization,
-            user);
+            user,
+            new GlobalSettings());
 
         // Assert
         Assert.IsType<InviteLinkNotFound>(error);
@@ -99,21 +108,19 @@ public class InviteLinkEligibilityValidationServiceTests
 
     [Theory, BitAutoData]
     public void ValidateEligibility_WithOrganizationNotUsingInviteLinks_ReturnsInviteLinkNotAvailable(
-        SutProvider<InviteLinkEligibilityValidationService> sutProvider,
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user)
+        Organization organization, OrganizationInviteLink inviteLink, User user)
     {
         // Arrange
         var code = SetupEligible(organization, inviteLink, user);
         organization.UseInviteLinks = false;
 
         // Act
-        var error = sutProvider.Sut.ValidateEligibility(
+        var error = InviteLinkRules.ValidateEligibility(
             inviteLink,
             code,
             organization,
-            user);
+            user,
+            new GlobalSettings());
 
         // Assert
         Assert.IsType<InviteLinkNotAvailable>(error);
@@ -121,45 +128,19 @@ public class InviteLinkEligibilityValidationServiceTests
 
     [Theory, BitAutoData]
     public void ValidateEligibility_WithDisallowedDomain_ReturnsEmailDomainNotAllowed(
-        SutProvider<InviteLinkEligibilityValidationService> sutProvider,
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user)
+        Organization organization, OrganizationInviteLink inviteLink, User user)
     {
         // Arrange
         var code = SetupEligible(organization, inviteLink, user);
         inviteLink.AllowedDomains = "[\"allowed.com\"]";
 
         // Act
-        var error = sutProvider.Sut.ValidateEligibility(
+        var error = InviteLinkRules.ValidateEligibility(
             inviteLink,
             code,
             organization,
-            user);
-
-        // Assert
-        Assert.IsType<EmailDomainNotAllowed>(error);
-    }
-
-    // Auth's invite link email verification flow (PM-42435) relies on the domain being checked first.
-    [Theory, BitAutoData]
-    public void ValidateEligibility_WithUnverifiedEmailAndDisallowedDomain_ReturnsEmailDomainNotAllowedFirst(
-        SutProvider<InviteLinkEligibilityValidationService> sutProvider,
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user)
-    {
-        // Arrange
-        var code = SetupEligible(organization, inviteLink, user);
-        inviteLink.AllowedDomains = "[\"allowed.com\"]";
-        user.EmailVerified = false;
-
-        // Act
-        var error = sutProvider.Sut.ValidateEligibility(
-            inviteLink,
-            code,
-            organization,
-            user);
+            user,
+            new GlobalSettings());
 
         // Assert
         Assert.IsType<EmailDomainNotAllowed>(error);
@@ -173,22 +154,25 @@ public class InviteLinkEligibilityValidationServiceTests
     public void ValidateEligibility_WithVerifiedEmail_ReturnsNull(
         bool selfHosted,
         bool enableOpenInviteLinkEmailVerification,
-        SutProvider<InviteLinkEligibilityValidationService> sutProvider,
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user)
     {
         // Arrange
         var code = SetupEligible(organization, inviteLink, user);
-        sutProvider.GetDependency<IGlobalSettings>().SelfHosted = selfHosted;
-        sutProvider.GetDependency<IGlobalSettings>().EnableOpenInviteLinkEmailVerification = enableOpenInviteLinkEmailVerification;
+        var globalSettings = new GlobalSettings
+        {
+            SelfHosted = selfHosted,
+            EnableOpenInviteLinkEmailVerification = enableOpenInviteLinkEmailVerification
+        };
 
         // Act
-        var error = sutProvider.Sut.ValidateEligibility(
+        var error = InviteLinkRules.ValidateEligibility(
             inviteLink,
             code,
             organization,
-            user);
+            user,
+            globalSettings);
 
         // Assert
         Assert.Null(error);
@@ -202,7 +186,6 @@ public class InviteLinkEligibilityValidationServiceTests
     public void ValidateEligibility_WithUnverifiedEmailAndVerificationRequired_ReturnsEmailNotVerified(
         bool selfHosted,
         bool enableOpenInviteLinkEmailVerification,
-        SutProvider<InviteLinkEligibilityValidationService> sutProvider,
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user)
@@ -210,15 +193,19 @@ public class InviteLinkEligibilityValidationServiceTests
         // Arrange
         var code = SetupEligible(organization, inviteLink, user);
         user.EmailVerified = false;
-        sutProvider.GetDependency<IGlobalSettings>().SelfHosted = selfHosted;
-        sutProvider.GetDependency<IGlobalSettings>().EnableOpenInviteLinkEmailVerification = enableOpenInviteLinkEmailVerification;
+        var globalSettings = new GlobalSettings
+        {
+            SelfHosted = selfHosted,
+            EnableOpenInviteLinkEmailVerification = enableOpenInviteLinkEmailVerification
+        };
 
         // Act
-        var error = sutProvider.Sut.ValidateEligibility(
+        var error = InviteLinkRules.ValidateEligibility(
             inviteLink,
             code,
             organization,
-            user);
+            user,
+            globalSettings);
 
         // Assert
         Assert.IsType<EmailNotVerified>(error);
@@ -226,7 +213,6 @@ public class InviteLinkEligibilityValidationServiceTests
 
     [Theory, BitAutoData]
     public void ValidateEligibility_WithUnverifiedEmailSelfHostedAndSettingDisabled_ReturnsNull(
-        SutProvider<InviteLinkEligibilityValidationService> sutProvider,
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user)
@@ -234,25 +220,51 @@ public class InviteLinkEligibilityValidationServiceTests
         // Arrange
         var code = SetupEligible(organization, inviteLink, user);
         user.EmailVerified = false;
-        sutProvider.GetDependency<IGlobalSettings>().SelfHosted = true;
-        sutProvider.GetDependency<IGlobalSettings>().EnableOpenInviteLinkEmailVerification = false;
+        var globalSettings = new GlobalSettings
+        {
+            SelfHosted = true,
+            EnableOpenInviteLinkEmailVerification = false
+        };
 
         // Act
-        var error = sutProvider.Sut.ValidateEligibility(
+        var error = InviteLinkRules.ValidateEligibility(
             inviteLink,
             code,
             organization,
-            user);
+            user,
+            globalSettings);
 
         // Assert
         Assert.Null(error);
+    }
+
+    // Auth's invite link email verification flow (PM-42435) relies on the domain being checked first.
+    [Theory, BitAutoData]
+    public void ValidateEligibility_WithUnverifiedEmailAndDisallowedDomain_ReturnsEmailDomainNotAllowedFirst(
+        Organization organization, OrganizationInviteLink inviteLink, User user)
+    {
+        // Arrange
+        var code = SetupEligible(organization, inviteLink, user);
+        inviteLink.AllowedDomains = "[\"allowed.com\"]";
+        user.EmailVerified = false;
+
+        // Act
+        var error = InviteLinkRules.ValidateEligibility(
+            inviteLink,
+            code,
+            organization,
+            user,
+            new GlobalSettings());
+
+        // Assert
+        Assert.IsType<EmailDomainNotAllowed>(error);
     }
 
     [Theory, BitAutoData]
     public void ValidateAcceptMembershipStatus_WithNoMembership_ReturnsNull(Organization organization)
     {
         // Act
-        var error = InviteLinkEligibilityValidationService.ValidateAcceptMembershipStatus(organization, null);
+        var error = InviteLinkRules.ValidateAcceptMembershipStatus(organization, null);
 
         // Assert
         Assert.Null(error);
@@ -266,7 +278,7 @@ public class InviteLinkEligibilityValidationServiceTests
         existingOrganizationUser.Status = OrganizationUserStatusType.Revoked;
 
         // Act
-        var error = InviteLinkEligibilityValidationService.ValidateAcceptMembershipStatus(organization, existingOrganizationUser);
+        var error = InviteLinkRules.ValidateAcceptMembershipStatus(organization, existingOrganizationUser);
 
         // Assert
         Assert.IsType<OrganizationAccessRevoked>(error);
@@ -282,7 +294,7 @@ public class InviteLinkEligibilityValidationServiceTests
         existingOrganizationUser.Status = status;
 
         // Act
-        var error = InviteLinkEligibilityValidationService.ValidateAcceptMembershipStatus(organization, existingOrganizationUser);
+        var error = InviteLinkRules.ValidateAcceptMembershipStatus(organization, existingOrganizationUser);
 
         // Assert
         Assert.IsType<AlreadyOrganizationMember>(error);
@@ -296,7 +308,7 @@ public class InviteLinkEligibilityValidationServiceTests
         existingOrganizationUser.Status = OrganizationUserStatusType.Invited;
 
         // Act
-        var error = InviteLinkEligibilityValidationService.ValidateAcceptMembershipStatus(organization, existingOrganizationUser);
+        var error = InviteLinkRules.ValidateAcceptMembershipStatus(organization, existingOrganizationUser);
 
         // Assert
         Assert.Null(error);
@@ -306,7 +318,7 @@ public class InviteLinkEligibilityValidationServiceTests
     public void ValidateConfirmMembershipStatus_WithNoMembership_ReturnsNull(Organization organization)
     {
         // Act
-        var error = InviteLinkEligibilityValidationService.ValidateConfirmMembershipStatus(organization, null);
+        var error = InviteLinkRules.ValidateConfirmMembershipStatus(organization, null);
 
         // Assert
         Assert.Null(error);
@@ -320,7 +332,7 @@ public class InviteLinkEligibilityValidationServiceTests
         existingOrganizationUser.RevocationReason = RevocationReason.Manual;
 
         // Act
-        var error = InviteLinkEligibilityValidationService.ValidateConfirmMembershipStatus(organization, existingOrganizationUser);
+        var error = InviteLinkRules.ValidateConfirmMembershipStatus(organization, existingOrganizationUser);
 
         // Assert
         Assert.IsType<OrganizationAccessRevoked>(error);
@@ -335,7 +347,7 @@ public class InviteLinkEligibilityValidationServiceTests
         existingOrganizationUser.RevocationReason = null;
 
         // Act
-        var error = InviteLinkEligibilityValidationService.ValidateConfirmMembershipStatus(organization, existingOrganizationUser);
+        var error = InviteLinkRules.ValidateConfirmMembershipStatus(organization, existingOrganizationUser);
 
         // Assert
         Assert.IsType<AlreadyOrganizationMember>(error);
@@ -351,7 +363,7 @@ public class InviteLinkEligibilityValidationServiceTests
         existingOrganizationUser.RevocationReason = null;
 
         // Act
-        var error = InviteLinkEligibilityValidationService.ValidateConfirmMembershipStatus(organization, existingOrganizationUser);
+        var error = InviteLinkRules.ValidateConfirmMembershipStatus(organization, existingOrganizationUser);
 
         // Assert
         Assert.Null(error);

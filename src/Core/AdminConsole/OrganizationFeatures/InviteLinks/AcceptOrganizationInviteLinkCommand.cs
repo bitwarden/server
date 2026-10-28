@@ -16,6 +16,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
@@ -34,7 +35,7 @@ public class AcceptOrganizationInviteLinkCommand(
     IPolicyQuery policyQuery,
     ILogger<AcceptOrganizationInviteLinkCommand> logger,
     IEventService eventService,
-    IInviteLinkEligibilityValidationService inviteLinkEligibilityValidationService)
+    IGlobalSettings globalSettings)
     : IAcceptOrganizationInviteLinkCommand
 {
     public async Task<CommandResult<OrganizationUser>> AcceptAsync(AcceptOrganizationInviteLinkRequest request)
@@ -46,17 +47,18 @@ public class AcceptOrganizationInviteLinkCommand(
             ? null
             : await organizationRepository.GetByIdAsync(link.OrganizationId);
 
-        var eligibilityError = inviteLinkEligibilityValidationService.ValidateEligibility(
+        var eligibilityError = InviteLinkRules.ValidateEligibility(
             link,
             request.Code,
             existingOrganization,
-            user);
+            user,
+            globalSettings);
         if (eligibilityError is not null)
         {
             return eligibilityError;
         }
 
-        // The eligibility check guarantees the organization exists.
+        // ValidateEligibility guarantees the organization exists.
         var organization = existingOrganization!;
 
         var existingOrganizationUser = await ResolveExistingOrganizationUserAsync(organization, user);

@@ -15,6 +15,7 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using PasswordManagerValidation = Bit.Core.AdminConsole.Utilities.Validation;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
@@ -36,7 +37,7 @@ public class ConfirmOrganizationInviteLinkValidator(
     IPricingClient pricingClient,
     IPolicyRequirementQuery policyRequirementQuery,
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-    IInviteLinkEligibilityValidationService inviteLinkEligibilityValidationService)
+    IGlobalSettings globalSettings)
     : IConfirmOrganizationInviteLinkValidator
 {
     public async Task<CommandResult<ConfirmOrganizationInviteLinkValidationResult>> ValidateAsync(
@@ -49,17 +50,18 @@ public class ConfirmOrganizationInviteLinkValidator(
             ? null
             : await organizationRepository.GetByIdAsync(existingLink.OrganizationId);
 
-        var eligibilityError = inviteLinkEligibilityValidationService.ValidateEligibility(
+        var eligibilityError = InviteLinkRules.ValidateEligibility(
             existingLink,
             request.Code,
             existingOrganization,
-            user);
+            user,
+            globalSettings);
         if (eligibilityError is not null)
         {
             return ToConfirmValidationError(eligibilityError);
         }
 
-        // The eligibility check guarantees the invite link and organization exist.
+        // ValidateEligibility guarantees the invite link and organization exist.
         var link = existingLink!;
         var organization = existingOrganization!;
 
@@ -76,7 +78,7 @@ public class ConfirmOrganizationInviteLinkValidator(
 
         var existingOrganizationUser = await ResolveExistingOrganizationUserAsync(organization, user);
 
-        var membershipStatusError = InviteLinkEligibilityValidationService.ValidateConfirmMembershipStatus(organization, existingOrganizationUser);
+        var membershipStatusError = InviteLinkRules.ValidateConfirmMembershipStatus(organization, existingOrganizationUser);
         if (membershipStatusError is not null)
         {
             return ToConfirmValidationError(membershipStatusError);
@@ -130,8 +132,8 @@ public class ConfirmOrganizationInviteLinkValidator(
     }
 
     /// <summary>
-    /// Translates a shared invite link error into its link-confirm validation-problem variant so the endpoint always
-    /// returns the RFC 7807 shape. <see cref="InviteLinkNotFound"/> is returned unchanged.
+    /// Translates an <see cref="InviteLinkRules"/> error into its link-confirm validation-problem variant so the
+    /// endpoint always returns the RFC 7807 shape. <see cref="InviteLinkNotFound"/> is returned unchanged.
     /// </summary>
     /// <exception cref="UnreachableException">
     /// The error has no mapping. A new rule error must be mapped here rather than silently falling back to a plain 400.
