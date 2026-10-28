@@ -547,7 +547,9 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(User(), request));
 
-        Assert.True(exception.ModelState!.ContainsKey("Purchase.PrivilegedControls"));
+        Assert.Equal(
+            "Privileged Controls is only available on the Enterprise plan.",
+            ErrorFor(exception, "Purchase.PrivilegedControls"));
         await AssertNoIoAsync();
     }
 
