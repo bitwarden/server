@@ -37,8 +37,7 @@ public class GetOrganizationInviteValidator(IInviteLinkEligibilityValidationServ
     /// The existing membership must allow the step the link leads to: confirming, or accepting.
     /// </summary>
     /// <remarks>
-    /// Must run after <see cref="IInviteLinkEligibilityValidationService.ValidateEligibility"/>, which guarantees the
-    /// invite link and organization exist.
+    /// Must run after the eligibility check, which guarantees the invite link and organization exist.
     /// </remarks>
     private static Error? ValidateMembershipStatus(OrganizationInviteLinkValidationRequest request) =>
         request.ExistingInviteLink!.SupportsConfirmation

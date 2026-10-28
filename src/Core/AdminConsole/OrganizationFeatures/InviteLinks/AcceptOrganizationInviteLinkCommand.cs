@@ -56,7 +56,7 @@ public class AcceptOrganizationInviteLinkCommand(
             return eligibilityError;
         }
 
-        // ValidateEligibility guarantees the organization exists.
+        // The eligibility check guarantees the organization exists.
         var organization = existingOrganization!;
 
         var existingOrganizationUser = await ResolveExistingOrganizationUserAsync(organization, user);

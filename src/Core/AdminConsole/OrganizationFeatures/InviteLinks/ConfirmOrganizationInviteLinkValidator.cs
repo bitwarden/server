@@ -59,7 +59,7 @@ public class ConfirmOrganizationInviteLinkValidator(
             return ToConfirmValidationError(eligibilityError);
         }
 
-        // ValidateEligibility guarantees the invite link and organization exist.
+        // The eligibility check guarantees the invite link and organization exist.
         var link = existingLink!;
         var organization = existingOrganization!;
 
@@ -130,8 +130,8 @@ public class ConfirmOrganizationInviteLinkValidator(
     }
 
     /// <summary>
-    /// Translates an <see cref="InviteLinkEligibilityValidationService"/> error into its link-confirm validation-problem variant so the
-    /// endpoint always returns the RFC 7807 shape. <see cref="InviteLinkNotFound"/> is returned unchanged.
+    /// Translates a shared invite link error into its link-confirm validation-problem variant so the endpoint always
+    /// returns the RFC 7807 shape. <see cref="InviteLinkNotFound"/> is returned unchanged.
     /// </summary>
     /// <exception cref="UnreachableException">
     /// The error has no mapping. A new rule error must be mapped here rather than silently falling back to a plain 400.
