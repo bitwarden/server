@@ -3117,17 +3117,15 @@ public class CipherServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task MoveManyAsync_GatedCipher_ThrowsAndDoesNotMove(
-        SutProvider<CipherService> sutProvider, Guid movingUserId, Guid destinationFolderId, List<Guid> cipherIds)
+    public async Task MoveManyAsync_MovesWithoutTheLeaseGate(
+        SutProvider<CipherService> sutProvider, Guid movingUserId, List<Guid> cipherIds)
     {
-        // Re-filing is a mutation of the caller's view of the credential, so it is gated too.
-        RefusesBulkMutation(sutProvider);
+        // Folders are per user and leave Data unchanged, so a move needs no lease.
+        await sutProvider.Sut.MoveManyAsync(cipherIds, null, movingUserId);
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.MoveManyAsync(cipherIds, destinationFolderId, movingUserId));
-
-        await sutProvider.GetDependency<ICipherRepository>()
-            .DidNotReceiveWithAnyArgs().MoveAsync(default!, default, default);
+        await sutProvider.GetDependency<ICipherRepository>().Received(1).MoveAsync(cipherIds, null, movingUserId);
+        await sutProvider.GetDependency<ICipherLeaseGate>()
+            .DidNotReceiveWithAnyArgs().EnsureCanMutateManyAsync(default, default!);
     }
 
     [Theory, BitAutoData]
