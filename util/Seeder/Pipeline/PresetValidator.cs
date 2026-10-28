@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.Billing.Enums;
+using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Factories;
 
 namespace Bit.Seeder.Pipeline;
@@ -123,6 +124,144 @@ internal static class PresetValidator
             throw new InvalidOperationException(
                 $"Preset '{presetName}' uses 'accessShape', which replaces {string.Join(", ", ignored)}. " +
                 "Remove them, or set the equivalent under 'accessShape'.");
+        }
+
+        ValidateAccessShapeTopLevelBlocks(preset, shape, presetName);
+        ValidateAccessShapeValues(shape, presetName);
+        ValidateTotalAssignments(preset, shape, presetName);
+    }
+
+    /// <summary>
+    /// Shaped groups run only with a top-level <c>groups</c> block, and shaped collections and grants only with a
+    /// top-level <c>collections</c> block. Shape settings without their block would be silently ignored.
+    /// </summary>
+    private static void ValidateAccessShapeTopLevelBlocks(Models.SeedPreset preset, Models.SeedPresetAccessShape shape, string presetName)
+    {
+        if (preset.Collections is null)
+        {
+            var ignored = new List<string>();
+            if (shape.Collections is not null)
+            {
+                ignored.Add("'accessShape.collections'");
+            }
+            if (shape.GroupGrants is not null)
+            {
+                ignored.Add("'accessShape.groupGrants'");
+            }
+            if (shape.DirectGrants is not null)
+            {
+                ignored.Add("'accessShape.directGrants'");
+            }
+            if (shape.InactiveAccessRate > 0)
+            {
+                ignored.Add("'accessShape.inactiveAccessRate'");
+            }
+
+            if (ignored.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Preset '{presetName}' has {string.Join(", ", ignored)} but no 'collections', so no shaped " +
+                    "collections are created and they would be ignored. Add 'collections.count', or remove them.");
+            }
+        }
+
+        if (preset.Groups is null)
+        {
+            var ignored = new List<string>();
+            if (shape.Groups is not null)
+            {
+                ignored.Add("'accessShape.groups'");
+            }
+            if (shape.GroupGrants is not null)
+            {
+                ignored.Add("'accessShape.groupGrants'");
+            }
+
+            if (ignored.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Preset '{presetName}' has {string.Join(", ", ignored)} but no 'groups', so no groups are " +
+                    "created. Add 'groups.count', or remove them.");
+            }
+        }
+
+        if (preset.Collections is not null && preset.Ciphers is not { Fixture: null, Count: > 0 })
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' has 'accessShape' with 'collections' but no generated ciphers, so the shaped " +
+                "collections would stay empty. Set 'ciphers.count' above 0, without 'ciphers.fixture'.");
+        }
+    }
+
+    /// <summary>
+    /// Values the schema limits but deserialization accepts: an empty histogram, a locality outside 0–1 and a wide
+    /// group member cap that no group can meet.
+    /// </summary>
+    private static void ValidateAccessShapeValues(Models.SeedPresetAccessShape shape, string presetName)
+    {
+        var emptySizes = new List<string>();
+        if (shape.Collections?.Sizes is { Count: 0 })
+        {
+            emptySizes.Add("'accessShape.collections.sizes'");
+        }
+        if (shape.Groups?.Sizes is { Count: 0 })
+        {
+            emptySizes.Add("'accessShape.groups.sizes'");
+        }
+
+        if (emptySizes.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' has an empty {string.Join(" and ", emptySizes)}. " +
+                "Give each at least one bucket, or remove it.");
+        }
+
+        if (shape.Departments?.Locality is < 0 or > 1)
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' has 'accessShape.departments.locality' {shape.Departments.Locality}; " +
+                "it must be between 0 and 1.");
+        }
+
+        if (shape.GroupGrants?.WideGroups?.MaxMembers is < 1)
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' has 'accessShape.groupGrants.wideGroups.maxMembers' " +
+                $"{shape.GroupGrants.WideGroups.MaxMembers}; it must be at least 1.");
+        }
+    }
+
+    /// <summary>
+    /// <c>totalAssignments</c> must cover the hot collections, and the non-orphan ciphers must be able to fill it.
+    /// The orphan count uses the same formula as <c>GenerateCiphersStep</c>.
+    /// </summary>
+    private static void ValidateTotalAssignments(Models.SeedPreset preset, Models.SeedPresetAccessShape shape, string presetName)
+    {
+        if (shape.Collections?.TotalAssignments is not { } totalAssignments)
+        {
+            return;
+        }
+
+        var hotItems = (shape.GroupGrants?.HotCollections ?? []).Sum();
+        if (totalAssignments < hotItems)
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' has 'accessShape.collections.totalAssignments' {totalAssignments}, below the " +
+                $"{hotItems} items in 'accessShape.groupGrants.hotCollections'. Raise it to at least {hotItems}.");
+        }
+
+        // ValidateAccessShapeTopLevelBlocks has already required generated ciphers
+        var cipherCount = preset.Ciphers!.Count;
+        var assigned = cipherCount - (int)(cipherCount * (preset.Density?.CipherAssignment?.OrphanRate ?? 0));
+        var maxPerCipher = shape.Collections.MaxCollectionsPerCipher ?? 1;
+        var capacity = (long)assigned * maxPerCipher;
+        if (capacity < totalAssignments * (1 - ShapeTargets.Tolerance))
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' has 'accessShape.collections.totalAssignments' {totalAssignments}, but " +
+                $"{assigned} non-orphan ciphers with 'maxCollectionsPerCipher' {maxPerCipher} fill at most {capacity}. " +
+                "Raise 'accessShape.collections.maxCollectionsPerCipher' (default 1) or 'ciphers.count', " +
+                "lower 'density.cipherAssignment.orphanRate', or lower 'totalAssignments'.");
         }
     }
 

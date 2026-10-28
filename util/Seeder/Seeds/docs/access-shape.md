@@ -22,7 +22,10 @@ The reference presets also set `users.statusMix`, `users.adminCount`, `policies`
 The access-shape draws and the default-collection draws all derive from `accessShape.seed`, so a preset reproduces its
 shape. `PresetValidator` rejects density settings that `accessShape` would ignore, so a preset uses one model at a time.
 It also rejects `roster` with `collections`, because the roster's collections would take the first collection slots.
-The shaped loops fail the run if they fall more than 1% short of a target.
+It rejects shape blocks whose top-level `groups`, `collections` or generated `ciphers` are missing, empty `sizes`, a
+`totalAssignments` below the hot collections or above what the non-orphan ciphers can fill, and a `locality` or
+`wideGroups.maxMembers` outside the schema range. The shaped loops fail the run if they fall more than 1% short of a
+target, hot group sizes included, or if hot-pair, everyone and wide-group grants alone exceed `groupGrants.total`.
 
 ## Knobs, and what each one moves
 
@@ -55,9 +58,13 @@ Sizes use histograms: `[{ "min", "max", "weight" }]`. Bucket counts are exact, a
   report rows. `ungroupedBoost` multiplies the weight of members in no group except the everyone group, so direct
   access goes mostly to members outside team groups.
 - **`inactiveAccessRate`.** The share of invited, accepted and revoked members who copy a random confirmed member's
-  group memberships (except the everyone group) and direct grants. Real orgs leave revoked members in their groups, and
-  Access Intelligence maps them, so this moves member-item pairs but not sync. It runs on its own random stream, so it
-  doesn't change the confirmed members' shape.
+  group memberships (except the everyone group) and direct grants. A pick whose confirmed member has no group or direct
+  grant copies nothing, so the share with access is about `inactiveAccessRate` × the share of confirmed members with
+  access. Real orgs leave revoked members in their groups, and Access Intelligence maps them, so this moves member-item
+  pairs but not sync. It runs on its own random stream, so it doesn't change the confirmed members' shape.
+- **`cipherAssignment.orphanRate`.** The share of generated ciphers left out of every collection. Every other cipher
+  needs a slot, so `ciphers.count` minus the orphans can't exceed `totalAssignments`. Without `orphanRate`, a preset
+  with more ciphers than `totalAssignments` fails in `GenerateCiphersStep`.
 - **`defaultCollections.deletedRate` with `cipherAssignment.deletedRate` / `maxDeletedCiphers`.** Where the trash sits.
   In a migrated org most trashed items are in default collections. Trash in default collections comes on top of the
   active items, while pool trash takes slots in shared collections, so lowering pool trash raises active shared rows

@@ -12,6 +12,7 @@ public class PresetValidatorTests
     private const string _ssoEnterprise = "features.sso-enterprise";
     private const string _sterlingCooper = "scale.md-balanced-sterling-cooper";
     private const string _defaultCollectionsEnterprise = "features.default-collections-enterprise";
+    private const string _smCyberdyne = "scale.sm-migrated-cyberdyne";
 
     private readonly SeedReader _reader = new();
 
@@ -264,6 +265,153 @@ public class PresetValidatorTests
         });
 
         PresetValidator.Validate(preset, _sterlingCooper);
+    }
+
+    [Theory]
+    [InlineData("accessShape.collections")]
+    [InlineData("accessShape.groupGrants")]
+    [InlineData("accessShape.directGrants")]
+    [InlineData("accessShape.inactiveAccessRate")]
+    public void AccessShape_CollectionSettingWithoutCollections_Throws(string setting)
+    {
+        var preset = ReadPreset(_smCyberdyne);
+        var shape = preset.AccessShape!;
+        var onlySetting = setting switch
+        {
+            "accessShape.collections" => new SeedPresetAccessShape { Collections = shape.Collections },
+            "accessShape.groupGrants" => new SeedPresetAccessShape { GroupGrants = shape.GroupGrants },
+            "accessShape.directGrants" => new SeedPresetAccessShape { DirectGrants = shape.DirectGrants },
+            "accessShape.inactiveAccessRate" => new SeedPresetAccessShape { InactiveAccessRate = shape.InactiveAccessRate },
+            _ => throw new ArgumentOutOfRangeException(nameof(setting), setting, null),
+        };
+        preset = preset with { Collections = null, AccessShape = onlySetting with { Groups = shape.Groups } };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _smCyberdyne));
+
+        Assert.Contains($"has '{setting}' but no 'collections'", ex.Message);
+    }
+
+    [Fact]
+    public void AccessShape_GroupsOnlyWithoutCollections_Passes()
+    {
+        var preset = ReadPreset(_smCyberdyne);
+        preset = preset with
+        {
+            Collections = null,
+            AccessShape = new SeedPresetAccessShape
+            {
+                Groups = preset.AccessShape!.Groups,
+                Departments = preset.AccessShape.Departments,
+            },
+        };
+
+        PresetValidator.Validate(preset, _smCyberdyne);
+    }
+
+    [Theory]
+    [InlineData("accessShape.groups")]
+    [InlineData("accessShape.groupGrants")]
+    public void AccessShape_GroupSettingWithoutGroups_Throws(string setting)
+    {
+        var preset = ReadPreset(_smCyberdyne);
+        var shape = setting == "accessShape.groups"
+            ? preset.AccessShape! with { GroupGrants = null }
+            : preset.AccessShape! with { Groups = null };
+        preset = preset with { Groups = null, AccessShape = shape };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _smCyberdyne));
+
+        Assert.Contains($"has '{setting}' but no 'groups'", ex.Message);
+        Assert.Contains("'groups.count'", ex.Message);
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData(null, 0)]
+    [InlineData("enterprise-basic", 6090)]
+    public void AccessShape_CollectionsWithoutGeneratedCiphers_Throws(string? fixture, int? count)
+    {
+        var preset = ReadPreset(_smCyberdyne);
+        preset = preset with { Ciphers = count is null ? null : new SeedPresetCiphers { Fixture = fixture, Count = count.Value } };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _smCyberdyne));
+
+        Assert.Contains("has 'accessShape' with 'collections' but no generated ciphers", ex.Message);
+        Assert.Contains("'ciphers.count'", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("accessShape.collections.sizes")]
+    [InlineData("accessShape.groups.sizes")]
+    public void AccessShape_EmptySizes_Throws(string setting)
+    {
+        var preset = ReadPreset(_smCyberdyne);
+        var shape = preset.AccessShape!;
+        preset = preset with
+        {
+            AccessShape = setting == "accessShape.collections.sizes"
+                ? shape with { Collections = shape.Collections! with { Sizes = [] } }
+                : shape with { Groups = shape.Groups! with { Sizes = [] } },
+        };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _smCyberdyne));
+
+        Assert.Contains($"has an empty '{setting}'", ex.Message);
+    }
+
+    [Fact]
+    public void AccessShape_TotalAssignmentsAboveCipherCapacity_Throws()
+    {
+        var preset = ReadPreset(_smCyberdyne);
+        var shape = preset.AccessShape!;
+        preset = preset with { AccessShape = shape with { Collections = shape.Collections! with { MaxCollectionsPerCipher = null } } };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _smCyberdyne));
+
+        // 6,090 ciphers minus (int)(6,090 × 0.28) = 1,705 orphans leaves 4,385, one collection each
+        Assert.Contains(
+            "'accessShape.collections.totalAssignments' 5240, but 4385 non-orphan ciphers with 'maxCollectionsPerCipher' 1 fill at most 4385",
+            ex.Message);
+    }
+
+    [Fact]
+    public void AccessShape_TotalAssignmentsBelowHotCollections_Throws()
+    {
+        var preset = ReadPreset(_smCyberdyne);
+        var shape = preset.AccessShape!;
+        preset = preset with { AccessShape = shape with { Collections = shape.Collections! with { TotalAssignments = 100 } } };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _smCyberdyne));
+
+        Assert.Contains("'accessShape.collections.totalAssignments' 100, below the 359 items in 'accessShape.groupGrants.hotCollections'", ex.Message);
+    }
+
+    [Theory]
+    [InlineData(-0.1)]
+    [InlineData(1.5)]
+    public void AccessShape_LocalityOutsideRange_Throws(double locality)
+    {
+        var preset = ReadPreset(_smCyberdyne);
+        var shape = preset.AccessShape!;
+        preset = preset with { AccessShape = shape with { Departments = shape.Departments! with { Locality = locality } } };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _smCyberdyne));
+
+        Assert.Contains("'accessShape.departments.locality'", ex.Message);
+        Assert.Contains("it must be between 0 and 1", ex.Message);
+    }
+
+    [Fact]
+    public void AccessShape_WideGroupMaxMembersBelowOne_Throws()
+    {
+        var preset = ReadPreset(_smCyberdyne);
+        var shape = preset.AccessShape!;
+        var grants = shape.GroupGrants!;
+        preset = preset with { AccessShape = shape with { GroupGrants = grants with { WideGroups = grants.WideGroups! with { MaxMembers = 0 } } } };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _smCyberdyne));
+
+        Assert.Contains("'accessShape.groupGrants.wideGroups.maxMembers' 0; it must be at least 1", ex.Message);
     }
 
     private SeedPreset ShapedPreset(SeedPresetDensity density) =>

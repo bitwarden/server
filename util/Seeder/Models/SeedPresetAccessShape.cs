@@ -23,6 +23,7 @@ internal record SeedPresetAccessShape
 
     /// <summary>
     /// Collection grants to groups: hot pairs, the everyone group, wide groups and weighted random grants.
+    /// Unset means no group grants and no hot collections.
     /// </summary>
     public SeedPresetShapeGroupGrants? GroupGrants { get; init; }
 
@@ -39,6 +40,8 @@ internal record SeedPresetAccessShape
     /// <summary>
     /// Fraction of invited, accepted and revoked members who copy a random confirmed member's group
     /// memberships (except the everyone group) and direct grants. Real orgs leave revoked members in their groups.
+    /// A pick whose confirmed member has no group or direct grant copies nothing, so the share with access is about
+    /// this rate × the share of confirmed members with access.
     /// </summary>
     public double? InactiveAccessRate { get; init; }
 }
@@ -96,7 +99,7 @@ internal record SeedPresetShapeGroups
     public double? NestedGroupRate { get; init; }
 
     /// <summary>
-    /// Member-count histogram for the remaining groups.
+    /// Member-count histogram for the remaining groups. Unset leaves the regular groups empty.
     /// </summary>
     public List<SeedPresetSizeBucket>? Sizes { get; init; }
 

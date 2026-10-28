@@ -143,6 +143,7 @@ internal sealed class CreateShapedGroupsStep(int count, SeedPresetAccessShape ac
                 // Overlapping hot groups share a department; independent ones get their own
                 var department = seedMembers is { Count: > 0 } || h == 0 ? hotDepartment : _random.Next(_departmentCount);
                 var hot = AddGroup($"Hot Group {h + 1}", sizes[h], DepartmentWeights(department), department, seedMembers);
+                ShapeTargets.EnsureReached($"members in Hot Group {h + 1}", hot.Members.Count, sizes[h]);
                 hotMembers.Add(hot.Members);
                 _registry.HotGroupIds.Add(hot.Id);
             }

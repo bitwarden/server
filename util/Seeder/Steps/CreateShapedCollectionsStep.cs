@@ -294,6 +294,14 @@ internal sealed class CreateShapedCollectionsStep(
         /// </summary>
         internal void GrantRandomly(SeedPresetShapeGroupGrants grantShape)
         {
+            // Which groups qualify as wide is only known here, so the validator can't check this
+            if (_groupGrants.Count > grantShape.Total)
+            {
+                throw new InvalidOperationException(
+                    $"Access shape made {_groupGrants.Count:N0} hot-pair, everyone-group and wide-group grants, more than " +
+                    $"groupGrants.total ({grantShape.Total:N0}). Raise groupGrants.total or reduce those grants.");
+            }
+
             var candidates = RandomGrantCandidates(grantShape.GrantedGroupRate ?? 1.0);
             var target = grantShape.Total ?? _groupGrants.Count;
             if (candidates.Length > 0)

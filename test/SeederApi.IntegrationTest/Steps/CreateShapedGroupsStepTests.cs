@@ -68,7 +68,7 @@ public class CreateShapedGroupsStepTests
         Run(context, 13, new SeedPresetShapeGroups
         {
             EveryoneGroupRate = 1.0,
-            HotGroupSizes = [40, 30],
+            HotGroupSizes = [40, 10],
             Sizes = [new SeedPresetSizeBucket { Min = 20, Max = 20, Weight = 1 }],
             MaxGroupsPerUser = 2,
         });
@@ -163,6 +163,16 @@ public class CreateShapedGroupsStepTests
         var ex = Assert.Throws<InvalidOperationException>(() => Run(context, 2, groups));
 
         Assert.Contains("groups.count (2) is smaller than the everyone group plus 2 hot groups", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_HotGroupLargerThanMembers_Throws()
+    {
+        var context = ContextWithMembers(50);
+
+        var ex = Assert.Throws<InvalidOperationException>(() => Run(context, 1, new SeedPresetShapeGroups { HotGroupSizes = [60] }));
+
+        Assert.Contains("50 members in Hot Group 1 but the preset asks for 60", ex.Message);
     }
 
     [Fact]

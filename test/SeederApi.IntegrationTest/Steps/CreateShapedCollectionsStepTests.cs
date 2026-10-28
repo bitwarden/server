@@ -543,6 +543,26 @@ public class CreateShapedCollectionsStepTests
     }
 
     [Fact]
+    public void Execute_PinnedGrantsAboveGroupGrantTotal_Throws()
+    {
+        var shape = new SeedPresetAccessShape
+        {
+            Groups = new SeedPresetShapeGroups { HotGroupSizes = [10] },
+            GroupGrants = new SeedPresetShapeGroupGrants
+            {
+                Total = 2,
+                HotCollections = [5, 5, 5],
+                HotPairs = [new SeedPresetShapeHotPair { Group = 0, Collections = [0, 1, 2] }],
+            },
+        };
+        var context = ContextWithGroups(50, 1, shape);
+
+        var ex = Assert.Throws<InvalidOperationException>(() => Run(context, 10, shape));
+
+        Assert.Contains("made 3 hot-pair, everyone-group and wide-group grants, more than groupGrants.total (2)", ex.Message);
+    }
+
+    [Fact]
     public void Execute_SameSeed_GivesIdenticalOutput()
     {
         var members = NewIds(200);
