@@ -1083,7 +1083,7 @@ public class UserService : UserManager<User>, IUserService
         await _userRepository.ReplaceAsync(user);
     }
 
-    // TODO: PM-<placeholder-typed-secret> - Take the secret's type from the request and check only that type.
+    // TODO: PM-45962 - Take the secret's type from the request and check only that type.
     // The request models already carry separate master password hash and OTP fields. Checking one string as
     // both lets a wrong master password hash count as a wrong OTP.
     public async Task<bool> VerifySecretAsync(User user, string secret)

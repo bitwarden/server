@@ -22,7 +22,7 @@ public interface IUserVerificationOtpStore
     /// </returns>
     Task<IssueOtpResult> IssueAsync(User user);
 
-    // TODO: PM-<placeholder-otp-limit> - Move the step-up user verification callers to
+    // TODO: PM-45963 - Move the step-up user verification callers to
     // ValidateAndConsumeWithFailureLimitAsync, then delete this member and its implementation.
     /// <summary>
     /// Validates an OTP. A valid OTP is consumed and cannot be redeemed again. Wrong OTPs are not counted.
