@@ -34,6 +34,8 @@ dotnet run -- organization -n CustomOrg -d custom.example -u 10 -c 100 -g 3 --pa
 
 Additional flags include `--region`, `--kdf-iterations`, and `--plan-type`. Run `dotnet run -- organization --help` for the full list.
 
+`--region` only changes generated vault items, so it needs `-c`. It sets the name locale for login usernames, the card brands, and identity names, titles, addresses, country code and SSN format. It does not change the item mix or which companies logins use. The default is `Global`.
+
 Add `--stripe-billing` for an org whose subscription pages actually work — see [Stripe billing](#stripe-billing) below.
 
 ### `individual` - Seed an Individual User
@@ -96,6 +98,8 @@ For the full preset catalog, see [presets.md](../Seeder/Seeds/docs/presets.md).
 Without it, **Billing → Subscription** hangs on a seeded org — nothing real to test seat auto-scaling or upgrades against. By default a seeded organization has no billing at all: its gateway columns stay NULL and the seeder makes **zero** Stripe calls. Pass `--stripe-billing` (on `organization` or `preset`) to create a real customer and subscription in Stripe's test environment, so seat auto-scaling, subscription management, and upgrade flows behave the way they do on a manually created org.
 
 A seeded premium user is the same story: `Premium = 1` and an expiry date, but no Stripe subscription for the premium billing pages to read or change. Pass `--stripe-billing` on `individual --subscription premium` to give the user a real customer and an active premium subscription.
+
+Premium features still work without it, because they read `User.Premium`. Only **Settings → Subscription** differs: the web vault picks that page by asking for a subscription, so this user sees the Go Premium page.
 
 | Flag               | Applies to                                     | Effect                                                                                                                                                                                        |
 | ------------------ | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

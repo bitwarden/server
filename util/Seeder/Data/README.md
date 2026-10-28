@@ -7,9 +7,8 @@ Structured data generation for realistic vault seeding. Designed for extensibili
 Foundation layer for all cipher generation—data and patterns that future cipher types build upon.
 
 - **Enums are the API.** Configure via `CompanyType`, `PasswordStrength`, etc. Everything else is internal.
-- **Composable by region.** Arrays aggregate with `[.. UsNames, .. EuropeanNames]`. New region = new array + one line change.
+- **Region sets locale and formats.** `GeographicRegion` sets the name locale for login usernames, the card brands, and identity names, titles, addresses, country code and SSN format. It does not filter companies: logins always draw from `Companies.All`.
 - **Deterministic.** Seeded randomness means same org ID → same test data → reproducible debugging.
-- **Filterable.** `Companies.Filter(type, region, category)` for targeted data selection.
 
 ## Generators
 

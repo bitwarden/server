@@ -1499,6 +1499,9 @@
           "xunit": "[2.6.6, )"
         }
       },
+      "currentuser": {
+        "type": "Project"
+      },
       "data": {
         "type": "Project"
       },
@@ -1514,7 +1517,8 @@
       "organizationauthorization": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.10.1, )"
+          "Core": "[2026.10.1, )",
+          "CurrentUser": "[0.0.1, )"
         }
       },
       "push.infrastructure": {

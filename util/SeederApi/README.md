@@ -121,6 +121,10 @@ curl -X POST http://localhost:5000/seed \
   user's existing value unchanged.
 - `kdfIterations`: PBKDF2 iteration count, from 5,000 to 2,000,000. Defaults to 5,000 for fast seeding; use 600,000
   for production-realistic logins.
+- `enrollInEmail2Fa` — when true, enrolls the user in email two-factor authentication, delivered to the (mangled)
+  account email. The response includes `twoFactorRecoveryCode` so the recovery login flow can be tested.
+- `corruptPrivateKey` — when true, stores an undecryptable private key. The web Data Recovery tool only flags it
+  when the user also has at least one personal cipher (seed one with `UserLoginCipherScene`).
 
 Enum fields (`gateway`) must be sent as their **numeric value**. In the example below, `gateway: 0` is `Stripe`.
 

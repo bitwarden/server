@@ -113,8 +113,8 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
     }
 
     /// <summary>
-    /// Posts 10 RSA 1.5 requests for the same organization at the same time. It proves that
-    /// the host sends one email.
+    /// Posts 10 RSA 1.5 requests for the same organization at the same time, each with its own
+    /// HttpContext. It proves that the host sends one email.
     /// </summary>
     [Fact]
     public async Task CouldHandleAsync_ConcurrentRsa15Requests_SendOneEmail()
@@ -122,14 +122,15 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
         // Arrange
         using var arrangement = await ArrangeAsync(
             Saml2AcsPostHarness.BuildEncryptedAssertion(Rsa15), configure: b => b.WithMockedMailer());
-        var (samlOptions, organizationId, context, factory) = arrangement;
+        var (samlOptions, organizationId, _, factory) = arrangement;
         await SeedOrganizationUserAsync(
             factory, organizationId, OrganizationUserType.Owner, OrganizationUserStatusType.Confirmed, NewEmail("owner"));
         var probe = new MailProbe(arrangement.Mailer);
+        var contexts = Enumerable.Range(0, 10).Select(_ => arrangement.CreateContext()).ToList();
 
         // Act
-        await Task.WhenAll(Enumerable.Range(0, 10)
-            .Select(_ => Task.Run(() => samlOptions.CouldHandleAsync(organizationId.ToString(), context))));
+        await Task.WhenAll(contexts
+            .Select(c => Task.Run(() => samlOptions.CouldHandleAsync(organizationId.ToString(), c))));
         await probe.Sent;
         await Task.Delay(_negativeWait);
 
@@ -412,19 +413,26 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
         var samlOptions = Assert.IsType<Saml2Options>(dynamicScheme.Options);
 
         var responseXml = Saml2AcsPostHarness.BuildResponseXml(assertionElement, issuer);
-        var context = new DefaultHttpContext
+        HttpContext CreateContext()
         {
-            RequestServices = testData.Factory.Services.CreateScope().ServiceProvider,
-        };
-        context.Request.Path = SsoConfigurationData.BuildSaml2AcsUrl(null, organizationId.ToString());
-        context.Request.Method = HttpMethods.Post;
-        context.Request.ContentType = "application/x-www-form-urlencoded";
-        context.Request.Form = new FormCollection(new Dictionary<string, StringValues>
-        {
-            ["SAMLResponse"] = Convert.ToBase64String(Encoding.UTF8.GetBytes(responseXml)),
-        });
+            var context = new DefaultHttpContext
+            {
+                RequestServices = testData.Factory.Services.CreateScope().ServiceProvider,
+            };
+            context.Request.Path = SsoConfigurationData.BuildSaml2AcsUrl(null, organizationId.ToString());
+            context.Request.Method = HttpMethods.Post;
+            context.Request.ContentType = "application/x-www-form-urlencoded";
+            context.Request.Form = new FormCollection(new Dictionary<string, StringValues>
+            {
+                ["SAMLResponse"] = Convert.ToBase64String(Encoding.UTF8.GetBytes(responseXml)),
+            });
+            return context;
+        }
 
-        return new Arrangement(samlOptions, organizationId, context, testData.Factory);
+        return new Arrangement(samlOptions, organizationId, CreateContext(), testData.Factory)
+        {
+            CreateContext = CreateContext,
+        };
     }
 
     private static async Task<Guid> SeedOrganizationAsync(SsoApplicationFactory factory)
@@ -478,6 +486,8 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
     private sealed record Arrangement(
         Saml2Options SamlOptions, Guid OrganizationId, HttpContext Context, SsoApplicationFactory Factory) : IDisposable
     {
+        public required Func<HttpContext> CreateContext { get; init; }
+
         public IMailer Mailer => Factory.Services.GetRequiredService<IMailer>();
 
         public void Dispose() => Factory.Dispose();
