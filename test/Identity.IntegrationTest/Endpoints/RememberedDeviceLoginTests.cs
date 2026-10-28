@@ -232,8 +232,10 @@ public class RememberedDeviceLoginTests
         user.TwoFactorRecoveryCode = recoveryCode;
         await userRepository.ReplaceAsync(user);
 
+        var emailCode = await EmailLoginCodeAsync(
+            factory, _testEmail, IdentityApplicationFactory.DefaultDeviceIdentifier);
         var (_, rememberToken) = await factory.TokensFromPasswordWithTwoFactorAsync(
-            _testEmail, _testPassword, twoFactorProviderType: _emailProvider, twoFactorToken: _emailToken);
+            _testEmail, _testPassword, twoFactorProviderType: _emailProvider, twoFactorToken: emailCode);
         Assert.False(string.IsNullOrEmpty(rememberToken));
 
         // Tear down two-factor with the recovery code. The provider is sent as its numeric value because
