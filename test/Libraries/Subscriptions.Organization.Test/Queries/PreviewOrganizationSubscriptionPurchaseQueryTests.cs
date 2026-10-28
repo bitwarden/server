@@ -30,9 +30,6 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
     private readonly IInvoicePreviewService _invoicePreviewService = Substitute.For<IInvoicePreviewService>();
     private readonly PreviewOrganizationSubscriptionPurchaseQuery _sut;
 
-    private const int PamDefaultSeatMinimum = 10;
-    private const int PamPromotionalSeatMinimum = 5;
-
     public PreviewOrganizationSubscriptionPurchaseQueryTests()
     {
         _sut = new PreviewOrganizationSubscriptionPurchaseQuery(
@@ -48,12 +45,7 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
     }
 
     private static Bit.Core.Models.StaticStore.Plan.PrivilegedControlsPlanFeatures PrivilegedControls(string seatPlanId) =>
-        new()
-        {
-            StripeSeatPlanId = seatPlanId,
-            DefaultSeatMinimum = PamDefaultSeatMinimum,
-            PromotionalSeatMinimums = [PamPromotionalSeatMinimum]
-        };
+        new() { StripeSeatPlanId = seatPlanId };
 
     [Fact]
     public async Task Run_WhenPurchaseIsMissing_ThrowsBadRequest()
@@ -456,63 +448,63 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
     }
 
     [Fact]
-    public async Task Run_ForEnterpriseWithPrivilegedControlsAndNoRequestedMinimum_AddsTheDefaultMinimumSeatLine()
+    public async Task Run_ForEnterpriseWithPrivilegedControls_AddsTheRequestedSeatLine()
     {
         ArrangePreview();
 
-        await _sut.Run(User(), Request(Purchase(ProductTierType.Enterprise) with
+        await _sut.Run(User(), Request(Purchase(ProductTierType.Enterprise, passwordManager: new PasswordManagerSelections(10, 0, false)) with
         {
-            PrivilegedControls = new PrivilegedControlsSelections(null)
+            PrivilegedControls = new PrivilegedControlsSelections(6)
         }));
 
         Assert.Single(CapturedOptions().SubscriptionDetails.Items,
-            item => item.Price == "pam-seat-annually" && item.Quantity == PamDefaultSeatMinimum);
+            item => item.Price == "pam-seat-annually" && item.Quantity == 6);
     }
 
     [Fact]
-    public async Task Run_WithAnApprovedPromotionalMinimum_AddsThatSeatCount()
+    public async Task Run_WithPrivilegedControlsSeatsEqualToPasswordManagerSeats_AddsTheSeatLine()
     {
         ArrangePreview();
 
-        await _sut.Run(User(), Request(Purchase(ProductTierType.Enterprise) with
+        await _sut.Run(User(), Request(Purchase(ProductTierType.Enterprise, passwordManager: new PasswordManagerSelections(10, 0, false)) with
         {
-            PrivilegedControls = new PrivilegedControlsSelections(PamPromotionalSeatMinimum)
+            PrivilegedControls = new PrivilegedControlsSelections(10)
         }));
 
         Assert.Single(CapturedOptions().SubscriptionDetails.Items,
-            item => item.Price == "pam-seat-annually" && item.Quantity == PamPromotionalSeatMinimum);
+            item => item.Price == "pam-seat-annually" && item.Quantity == 10);
     }
 
     [Fact]
-    public async Task Run_WithAnUnapprovedPromotionalMinimum_FallsBackToTheDefault()
+    public async Task Run_WithMorePrivilegedControlsSeatsThanPasswordManagerSeats_ThrowsBadRequest()
     {
-        ArrangePreview();
-
-        await _sut.Run(User(), Request(Purchase(ProductTierType.Enterprise) with
+        var request = Request(Purchase(ProductTierType.Enterprise, passwordManager: new PasswordManagerSelections(10, 0, false)) with
         {
-            PrivilegedControls = new PrivilegedControlsSelections(PamPromotionalSeatMinimum - 1)
-        }));
+            PrivilegedControls = new PrivilegedControlsSelections(11)
+        });
 
-        Assert.Single(CapturedOptions().SubscriptionDetails.Items,
-            item => item.Price == "pam-seat-annually" && item.Quantity == PamDefaultSeatMinimum);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(User(), request));
+
+        Assert.Equal(
+            "You cannot have more Privileged Controls seats than Password Manager seats.",
+            ErrorFor(exception, "Purchase.PrivilegedControls.Seats"));
+        await AssertNoIoAsync();
     }
 
-    [Fact]
-    public async Task Run_WhenThePlanHasNoPromotionalMinimumList_FallsBackToTheDefault()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(100001)]
+    public async Task Run_WithPrivilegedControlsSeatsOutOfRange_ThrowsBadRequest(int seats)
     {
-        _pricingClient.GetPlan(PlanType.EnterpriseAnnually).Returns(TestPlan.SeatBased("enterprise-seat-annually", "storage-gb-annually", "sm-enterprise-seat-annually", "sm-enterprise-sa-annually", PrivilegedControls("pam-seat-annually") with
+        var request = Request(Purchase(ProductTierType.Enterprise, passwordManager: new PasswordManagerSelections(100000, 0, false)) with
         {
-            PromotionalSeatMinimums = null!
-        }));
-        ArrangePreview();
+            PrivilegedControls = new PrivilegedControlsSelections(seats)
+        });
 
-        await _sut.Run(User(), Request(Purchase(ProductTierType.Enterprise) with
-        {
-            PrivilegedControls = new PrivilegedControlsSelections(PamPromotionalSeatMinimum)
-        }));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(User(), request));
 
-        Assert.Single(CapturedOptions().SubscriptionDetails.Items,
-            item => item.Price == "pam-seat-annually" && item.Quantity == PamDefaultSeatMinimum);
+        Assert.True(exception.ModelState!.ContainsKey("Purchase.PrivilegedControls.Seats"));
+        await AssertNoIoAsync();
     }
 
     [Fact]
@@ -523,7 +515,7 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
 
         await _sut.Run(User(), Request(Purchase(ProductTierType.Enterprise) with
         {
-            PrivilegedControls = new PrivilegedControlsSelections(null)
+            PrivilegedControls = new PrivilegedControlsSelections(1)
         }));
 
         Assert.DoesNotContain(CapturedOptions().SubscriptionDetails.Items, item => item.Price == "pam-seat-annually");
@@ -536,7 +528,7 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
 
         var request = Request(Purchase(ProductTierType.Enterprise) with
         {
-            PrivilegedControls = new PrivilegedControlsSelections(null)
+            PrivilegedControls = new PrivilegedControlsSelections(1)
         });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(User(), request));
@@ -551,7 +543,7 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
     [InlineData(ProductTierType.Families)]
     public async Task Run_WithPrivilegedControlsOnANonEnterpriseTier_ThrowsBadRequest(ProductTierType tier)
     {
-        var request = Request(Purchase(tier) with { PrivilegedControls = new PrivilegedControlsSelections(null) });
+        var request = Request(Purchase(tier) with { PrivilegedControls = new PrivilegedControlsSelections(1) });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(User(), request));
 
@@ -565,7 +557,7 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
         var request = Request(Purchase(ProductTierType.Enterprise) with
         {
             SecretsManager = new SecretsManagerSelections(4, 0, true),
-            PrivilegedControls = new PrivilegedControlsSelections(null)
+            PrivilegedControls = new PrivilegedControlsSelections(1)
         });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(User(), request));

@@ -127,10 +127,10 @@ discount tier, and otherwise they are dropped silently.
 
 Privileged Controls is Enterprise-only and gated by `pm-39883-pam-billing-support`. With the flag
 off the `PrivilegedControls` selection is ignored entirely — no line and no error. With it on, the
-query rejects Privileged Controls on a non-Enterprise tier or alongside a standalone Secrets Manager
-trial with a 400 keyed to `Purchase.PrivilegedControls`, and otherwise bills the resolved seat
-minimum at the Privileged Controls seat price — the requested minimum when it's on the plan's
-approved promotional list, otherwise the plan default — matching what subscription creation bills.
+query rejects Privileged Controls on a non-Enterprise tier, alongside a standalone Secrets Manager
+trial, with seats outside 1–100,000, or with more seats than Password Manager — each a 400 keyed to
+`Purchase.PrivilegedControls` — and otherwise bills the requested seats at the Privileged Controls
+seat price, matching what subscription creation bills.
 
 The Stripe tax ID type is derived with `ITaxService`. If it can't be derived, the query falls back
 to the client's code and logs a warning naming only the country and that code, never the tax ID

@@ -217,7 +217,7 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
             }
         }
 
-        if (purchase.PrivilegedControls is not null)
+        if (purchase.PrivilegedControls is { } privilegedControls)
         {
             if (tier != ProductTierType.Enterprise)
             {
@@ -231,6 +231,20 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
                 throw new BadRequestException(
                     $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.PrivilegedControls)}",
                     "Privileged Controls cannot be combined with a Secrets Manager trial.");
+            }
+
+            if (privilegedControls.Seats is < 1 or > 100000)
+            {
+                throw new BadRequestException(
+                    $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.PrivilegedControls)}.{nameof(PrivilegedControlsSelections.Seats)}",
+                    "Privileged Controls seats must be between 1 and 100,000.");
+            }
+
+            if (privilegedControls.Seats > passwordManager.Seats)
+            {
+                throw new BadRequestException(
+                    $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.PrivilegedControls)}.{nameof(PrivilegedControlsSelections.Seats)}",
+                    "You cannot have more Privileged Controls seats than Password Manager seats.");
             }
         }
 
@@ -392,18 +406,12 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
             items.Add(new InvoiceSubscriptionDetailsItemOptions
             {
                 Price = plan.PrivilegedControls.StripeSeatPlanId,
-                Quantity = ResolvePrivilegedControlsSeatMinimum(plan, privilegedControls)
+                Quantity = privilegedControls.Seats
             });
         }
 
         return items;
     }
-
-    private static int ResolvePrivilegedControlsSeatMinimum(OrganizationPlan plan, PrivilegedControlsSelections privilegedControls) =>
-        privilegedControls.RequestedSeatMinimum is { } minimum &&
-        plan.PrivilegedControls.PromotionalSeatMinimums?.Contains(minimum) == true
-            ? minimum
-            : plan.PrivilegedControls.DefaultSeatMinimum;
 
     // All-or-nothing: an ineligible coupon drops every coupon rather than failing the preview.
     private async Task<List<InvoiceDiscountOptions>?> ResolveEligibleFamiliesDiscountsAsync(UserEntity user, string[]? coupons)
