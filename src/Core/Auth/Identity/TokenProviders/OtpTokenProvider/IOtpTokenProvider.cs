@@ -1,6 +1,6 @@
 ﻿namespace Bit.Core.Auth.Identity.TokenProviders;
 
-// TODO: PM-<placeholder-otp-token-key> - Replace the tokenProviderName, purpose, and uniqueIdentifier parameters
+// TODO: PM-45961 - Replace the tokenProviderName, purpose, and uniqueIdentifier parameters
 // with one key type. The three always travel together to build the cache key, and adjacent string parameters
 // can be swapped without a compile error.
 /// <summary>
