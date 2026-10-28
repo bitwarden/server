@@ -6,6 +6,7 @@ using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Licenses.Models;
 using Bit.Core.Billing.Licenses.Services;
@@ -38,6 +39,7 @@ public class LicensingService : ILicensingService
     private readonly IGlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
     private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IMailService _mailService;
     private readonly ILogger<LicensingService> _logger;
     private readonly ILicenseClaimsFactory<Organization> _organizationLicenseClaimsFactory;
@@ -55,7 +57,8 @@ public class LicensingService : ILicensingService
         IGlobalSettings globalSettings,
         ILicenseClaimsFactory<Organization> organizationLicenseClaimsFactory,
         ILicenseClaimsFactory<User> userLicenseClaimsFactory,
-        IPushNotificationService pushNotificationService)
+        IPushNotificationService pushNotificationService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService)
     {
         _userRepository = userRepository;
         _organizationRepository = organizationRepository;
@@ -65,6 +68,7 @@ public class LicensingService : ILicensingService
         _organizationLicenseClaimsFactory = organizationLicenseClaimsFactory;
         _userLicenseClaimsFactory = userLicenseClaimsFactory;
         _pushNotificationService = pushNotificationService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
 
 
         // Load license creation cert
@@ -198,6 +202,7 @@ public class LicensingService : ILicensingService
         org.ExpirationDate = license?.Expires ?? DateTime.UtcNow;
         org.RevisionDate = DateTime.UtcNow;
         await _organizationRepository.ReplaceAsync(org);
+        await _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(org);
 
         await _mailService.SendLicenseExpiredAsync(new List<string> { org.BillingEmail }, org.DisplayName());
     }
