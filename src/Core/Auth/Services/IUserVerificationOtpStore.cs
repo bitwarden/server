@@ -25,15 +25,15 @@ public interface IUserVerificationOtpStore
     // TODO: PM-45963 - Move the step-up user verification callers to
     // ValidateAndConsumeWithFailureLimitAsync, then delete this member and its implementation.
     /// <summary>
-    /// Validates an OTP. A valid OTP is consumed and cannot be redeemed again. Wrong OTPs are not counted.
+    /// Validates an OTP. A valid OTP is consumed and cannot be redeemed again. Failed attempts are not counted.
     /// </summary>
     /// <param name="user">The user attempting verification</param>
     /// <param name="otp">The OTP to validate; an empty or missing OTP is treated as incorrect</param>
     Task<bool> ValidateAndConsumeAsync(User user, string? otp);
 
     /// <summary>
-    /// Validates an OTP. A valid OTP is consumed and cannot be redeemed again. Wrong OTPs are counted, and the
-    /// pending OTP is removed when the count reaches the limit. The user must then be issued a new OTP.
+    /// Validates an OTP. A valid OTP is consumed and cannot be redeemed again. Failed attempts are counted, and
+    /// the pending OTP is removed when the count reaches the limit. The user must then be issued a new OTP.
     /// </summary>
     /// <param name="user">The user attempting verification</param>
     /// <param name="otp">The OTP to validate; an empty or missing OTP is treated as incorrect</param>

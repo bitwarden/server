@@ -19,7 +19,7 @@ public interface IUserVerificationOtpCommand
 
     /// <summary>
     /// Validates an OTP sent by <see cref="SendOtpAsync"/>. A valid OTP is consumed and marks the user's email
-    /// as verified. Wrong OTPs are counted, and the pending OTP is removed when the count reaches the limit.
+    /// as verified. Failed attempts are counted, and the pending OTP is removed when the count reaches the limit.
     /// </summary>
     /// <param name="user">The authenticated user submitting the OTP.</param>
     /// <param name="otp">The OTP the user entered.</param>

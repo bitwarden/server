@@ -171,7 +171,7 @@ public class OtpTokenProvider<TOptions>(
         public DateTimeOffset? ExpiresAt { get; set; }
 
         /// <summary>
-        /// Wrong tokens counted by <see cref="ValidateTokenWithFailureLimitAsync"/>.
+        /// Failed attempts counted by <see cref="ValidateTokenWithFailureLimitAsync"/>.
         /// </summary>
         public int FailedAttempts { get; set; }
     }

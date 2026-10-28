@@ -29,7 +29,7 @@ public interface IOtpTokenProvider<TOptions>
     /// </summary>
     /// <remarks>
     /// Prefer <see cref="ValidateTokenWithFailureLimitAsync"/> for new callers. It validates the same way and also
-    /// limits wrong tokens.
+    /// limits failed attempts.
     /// </remarks>
     /// <param name="token">string value matched against the unique identifier in the cache if found</param>
     /// <param name="tokenProviderName">Name of the token provider, used to distinguish different token providers that may inject this class</param>
@@ -43,13 +43,13 @@ public interface IOtpTokenProvider<TOptions>
     Task<bool> ValidateTokenAsync(string token, string tokenProviderName, string purpose, string uniqueIdentifier, string? boundValue = null);
 
     /// <summary>
-    /// Validates the provided token like <see cref="ValidateTokenAsync"/>, and also counts wrong tokens against
+    /// Validates the provided token like <see cref="ValidateTokenAsync"/>, and also counts failed attempts against
     /// the stored token. When the count reaches <paramref name="maxFailedAttempts"/>, the stored token is removed
     /// and no token validates until a new one is generated. Generating a new token resets the count. Counting
     /// does not extend the token's lifetime.
     /// </summary>
     /// <remarks>
-    /// The count is read and written back in separate cache operations, so wrong tokens validated in parallel can
+    /// The count is read and written back in separate cache operations, so failed attempts made in parallel can
     /// read the same count. Each round of parallel validations still adds at least one to the count.
     /// Only calls to this method count. Calls to <see cref="ValidateTokenAsync"/> for the same token do not.
     /// </remarks>
@@ -57,9 +57,9 @@ public interface IOtpTokenProvider<TOptions>
     /// <param name="tokenProviderName">Name of the token provider, used to distinguish different token providers that may inject this class</param>
     /// <param name="purpose">Purpose of the OTP token, used to distinguish different types of tokens.</param>
     /// <param name="uniqueIdentifier">Unique identifier to distinguish one request from another</param>
-    /// <param name="maxFailedAttempts">Number of wrong tokens after which the stored token is removed. Must be positive.</param>
+    /// <param name="maxFailedAttempts">Number of failed attempts after which the stored token is removed. Must be positive.</param>
     /// <param name="boundValue">
-    /// Value the token must have been bound to at generation time. A mismatch counts as a wrong token.
+    /// Value the token must have been bound to at generation time. A mismatch counts as a failed attempt.
     /// </param>
     /// <returns>true if the token matches what is fetched from the cache, false if not.</returns>
     Task<bool> ValidateTokenWithFailureLimitAsync(string token, string tokenProviderName, string purpose, string uniqueIdentifier, int maxFailedAttempts, string? boundValue = null);

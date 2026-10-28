@@ -66,7 +66,7 @@ bool isValid = await otpProvider.ValidateTokenAsync("123456", "EmailToken", "ema
 // Note: Valid tokens are automatically removed from cache
 ```
 
-Prefer `ValidateTokenWithFailureLimitAsync` for new callers. It validates the same way and also limits wrong guesses (see [Limiting Wrong Guesses](#limiting-wrong-guesses)).
+Prefer `ValidateTokenWithFailureLimitAsync` for new callers. It validates the same way and also limits failed attempts (see [Limiting Failed Attempts](#limiting-failed-attempts)).
 
 ### Binding a Token to Other Request Context
 
@@ -78,16 +78,16 @@ string token = await otpProvider.GenerateTokenAsync("NewDeviceVerification", "Ne
 bool isValid = await otpProvider.ValidateTokenAsync(token, "NewDeviceVerification", "NewDeviceVerificationCode", uniqueIdentifier, deviceIdentifier);
 ```
 
-### Limiting Wrong Guesses
+### Limiting Failed Attempts
 
 ```csharp
-// Remove the token after 5 wrong guesses; the user must then be issued a new token
+// Remove the token after 5 failed attempts; the user must then be issued a new token
 bool isValid = await otpProvider.ValidateTokenWithFailureLimitAsync(token, "UserVerification", "EmailOtp", uniqueIdentifier, 5, boundValue);
 ```
 
-`ValidateTokenWithFailureLimitAsync` validates like `ValidateTokenAsync`, and also counts wrong guesses in the cache entry. A bound value mismatch counts as a wrong guess. When the count reaches `maxFailedAttempts`, the entry is removed. Generating a new token resets the count. Rewriting the entry after a wrong guess keeps the expiry set at generation, so wrong guesses do not extend a token's lifetime.
+`ValidateTokenWithFailureLimitAsync` validates like `ValidateTokenAsync`, and also counts failed attempts in the cache entry. A bound value mismatch counts as a failed attempt. When the count reaches `maxFailedAttempts`, the entry is removed. Generating a new token resets the count. Rewriting the entry after a failed attempt keeps the expiry set at generation, so failed attempts do not extend a token's lifetime.
 
-Only calls to `ValidateTokenWithFailureLimitAsync` count. Calls to `ValidateTokenAsync` for the same token do not. The count is read and written back in separate cache operations, so wrong guesses validated in parallel can read the same count.
+Only calls to `ValidateTokenWithFailureLimitAsync` count. Calls to `ValidateTokenAsync` for the same token do not. The count is read and written back in separate cache operations, so failed attempts made in parallel can read the same count.
 
 ### Custom Configurations
 
@@ -178,7 +178,7 @@ These are passed into the OTP Token Provider which creates a cache record:
 
 ### Storage
 
-- Each cache entry is a JSON envelope containing the token, its optional bound value, its expiry, and its wrong-guess count, not the bare token
+- Each cache entry is a JSON envelope containing the token, its optional bound value, its expiry, and its failed-attempt count, not the bare token
 - Tokens are stored in distributed cache. The cache depends on the specific deployment, for cloud it is CosmosDb.
 - Automatic expiration prevents indefinite token validity
 - One-time use prevents replay attacks
@@ -187,7 +187,7 @@ These are passed into the OTP Token Provider which creates a cache record:
 
 - Exact string matching for the token, plus an exact match on the bound value supplied at generation, if any
 - Automatic removal after successful validation
-- Optional removal after a caller-set number of wrong guesses (`ValidateTokenWithFailureLimitAsync`)
+- Optional removal after a caller-set number of failed attempts (`ValidateTokenWithFailureLimitAsync`)
 - Returns `false` for expired or non-existent tokens
 
 ## Dependency Injection

@@ -1085,7 +1085,7 @@ public class UserService : UserManager<User>, IUserService
 
     // TODO: PM-45962 - Take the secret's type from the request and check only that type.
     // The request models already carry separate master password hash and OTP fields. Checking one string as
-    // both lets a wrong master password hash count as a wrong OTP.
+    // both lets a wrong master password hash count as a failed OTP attempt.
     public async Task<bool> VerifySecretAsync(User user, string secret)
     {
         if (user.HasMasterPassword())

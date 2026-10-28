@@ -28,7 +28,7 @@ public class AccountsControllerOtpTests : IClassFixture<ApiApplicationFactory>, 
     private readonly IMailService _mailService;
 
     private const string OwnerMasterPasswordHash = "master_password_hash";
-    private const int WrongGuessLimit = 5;
+    private const int FailedAttemptLimit = 5;
     private const int OtpRequestLimit = 5;
 
     private string _ownerEmail = null!;
@@ -335,11 +335,11 @@ public class AccountsControllerOtpTests : IClassFixture<ApiApplicationFactory>, 
     }
 
     [Fact]
-    public async Task PostVerifyOtp_OneFewerWrongGuessesThanLimit_ValidOtpOk()
+    public async Task PostVerifyOtp_OneFewerFailedAttemptsThanLimit_ValidOtpOk()
     {
         await _loginHelper.LoginAsync(_ownerEmail);
         var otp = await RequestOtpAndCaptureAsync();
-        for (var i = 0; i < WrongGuessLimit - 1; i++)
+        for (var i = 0; i < FailedAttemptLimit - 1; i++)
         {
             await AssertInvalidTokenAsync(await PostVerifyOtpAsync(WrongOtpFor(otp)));
         }
@@ -350,11 +350,11 @@ public class AccountsControllerOtpTests : IClassFixture<ApiApplicationFactory>, 
     }
 
     [Fact]
-    public async Task PostVerifyOtp_WrongGuessLimitReached_ValidOtpRejected()
+    public async Task PostVerifyOtp_FailedAttemptLimitReached_ValidOtpRejected()
     {
         await _loginHelper.LoginAsync(_ownerEmail);
         var otp = await RequestOtpAndCaptureAsync();
-        for (var i = 0; i < WrongGuessLimit; i++)
+        for (var i = 0; i < FailedAttemptLimit; i++)
         {
             await AssertInvalidTokenAsync(await PostVerifyOtpAsync(WrongOtpFor(otp)));
         }
@@ -365,11 +365,11 @@ public class AccountsControllerOtpTests : IClassFixture<ApiApplicationFactory>, 
     }
 
     [Fact]
-    public async Task PostVerifyOtp_WrongGuessLimitReached_NewOtpOk()
+    public async Task PostVerifyOtp_FailedAttemptLimitReached_NewOtpOk()
     {
         await _loginHelper.LoginAsync(_ownerEmail);
         var firstOtp = await RequestOtpAndCaptureAsync();
-        for (var i = 0; i < WrongGuessLimit; i++)
+        for (var i = 0; i < FailedAttemptLimit; i++)
         {
             await AssertInvalidTokenAsync(await PostVerifyOtpAsync(WrongOtpFor(firstOtp)));
         }

@@ -45,7 +45,7 @@ public class OtpTokenProviderFailureLimitTests
     }
 
     [Fact]
-    public async Task ValidateTokenWithFailureLimitAsync_OneFewerWrongTokensThanLimit_ValidTokenStillValidates()
+    public async Task ValidateTokenWithFailureLimitAsync_OneFewerFailedAttemptsThanLimit_ValidTokenStillValidates()
     {
         var token = await GenerateAsync();
         for (var i = 0; i < MaxFailedAttempts - 1; i++)
@@ -86,7 +86,7 @@ public class OtpTokenProviderFailureLimitTests
     }
 
     [Fact]
-    public async Task GenerateTokenAsync_AfterWrongTokens_ResetsFailureCount()
+    public async Task GenerateTokenAsync_AfterFailedAttempts_ResetsFailedAttemptCount()
     {
         var firstToken = await GenerateAsync();
         for (var i = 0; i < MaxFailedAttempts - 1; i++)
@@ -126,8 +126,8 @@ public class OtpTokenProviderFailureLimitTests
     }
 
     /// <summary>
-    /// A wrong token rewrites the entry to store the new count. The rewrite keeps the expiry set at generation,
-    /// so wrong tokens never extend the token's lifetime.
+    /// A failed attempt rewrites the entry to store the new count. The rewrite keeps the expiry set at generation,
+    /// so failed attempts never extend the token's lifetime.
     /// </summary>
     [Fact]
     public async Task ValidateTokenWithFailureLimitAsync_WrongToken_KeepsOriginalExpiry()
@@ -213,10 +213,10 @@ public class OtpTokenProviderFailureLimitTests
 
     /// <summary>
     /// Callers of <see cref="OtpTokenProvider{TOptions}.ValidateTokenAsync"/> keep unlimited guesses, and their
-    /// wrong tokens do not count toward the limit of a failure-limited caller of the same token.
+    /// failed attempts do not count toward the limit of a failure-limited caller of the same token.
     /// </summary>
     [Fact]
-    public async Task ValidateTokenAsync_WrongTokens_DoNotCountTowardFailureLimit()
+    public async Task ValidateTokenAsync_FailedAttempts_DoNotCountTowardFailureLimit()
     {
         var token = await GenerateAsync();
         for (var i = 0; i < MaxFailedAttempts * 2; i++)
