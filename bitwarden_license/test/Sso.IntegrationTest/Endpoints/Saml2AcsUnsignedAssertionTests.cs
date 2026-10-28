@@ -20,9 +20,10 @@ namespace Bit.Sso.IntegrationTest.Endpoints;
 /// Posts an unsigned SAML response to the assertion consumer service (ACS) URL through the whole
 /// request pipeline. The organization does not require signed assertions, so
 /// <c>CouldHandleAsync</c> returns true. The Sustainsys.Saml2 handler must then reject the response
-/// because the response has no signature. The identity provider allows unsolicited responses, so the
-/// handler reaches the signature validation. The test host returns an unhandled exception as a
-/// problem details body, and the tests read the exception type, message, and stack from that body.
+/// because the response has no signature. Unless a test states otherwise, the identity provider allows
+/// unsolicited responses, so the handler reaches the signature validation. The test host returns an
+/// unhandled exception as a problem details body, and the tests read the exception type, message,
+/// and stack from that body.
 /// </summary>
 public class Saml2AcsUnsignedAssertionTests
 {
@@ -41,6 +42,28 @@ public class Saml2AcsUnsignedAssertionTests
         using var arrangement = await Saml2AcsPostHarness.ArrangeAsync(
             BuildAssertion(), rsa15DeprecationFlag: true, allowUnsolicitedResponse: true);
         var responseXml = Saml2AcsPostHarness.BuildResponseXml(BuildAssertion(), includeSuccessStatus: true);
+
+        // Act
+        using var response = await Saml2AcsPostHarness.PostAcsAsync(
+            arrangement.Client, arrangement.OrganizationId, responseXml, includeSchemeQuery: true);
+
+        // Assert
+        await AssertSignatureValidationFailureAsync(response);
+    }
+
+    /// <summary>
+    /// The identity provider does not allow unsolicited responses. The unsolicited-response check
+    /// tests only that the <c>InResponseTo</c> attribute exists, so a fake value passes that check.
+    /// The Sustainsys.Saml2 signature validation then rejects the unsigned response.
+    /// </summary>
+    [Fact]
+    public async Task AcsPost_UnsignedPlaintextAssertionWithFakeInResponseToAndUnsolicitedNotAllowed_FailsSignatureValidation()
+    {
+        // Arrange
+        using var arrangement = await Saml2AcsPostHarness.ArrangeAsync(
+            BuildAssertion(), rsa15DeprecationFlag: true);
+        var responseXml = Saml2AcsPostHarness.BuildResponseXml(
+            BuildAssertion(), includeSuccessStatus: true, inResponseTo: "_fake-request-id");
 
         // Act
         using var response = await Saml2AcsPostHarness.PostAcsAsync(

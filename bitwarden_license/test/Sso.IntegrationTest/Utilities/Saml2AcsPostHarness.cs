@@ -92,11 +92,14 @@ public static class Saml2AcsPostHarness
     }
 
     public static string BuildResponseXml(
-        string assertionElement, string issuer = IdpEntityId, bool includeSuccessStatus = false) =>
+        string assertionElement, string issuer = IdpEntityId, bool includeSuccessStatus = false,
+        string? inResponseTo = null) =>
         "<samlp:Response xmlns:samlp=\"urn:oasis:names:tc:SAML:2.0:protocol\" " +
         "xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\" " +
         "xmlns:xenc=\"http://www.w3.org/2001/04/xmlenc#\" " +
-        "ID=\"_response\" Version=\"2.0\" IssueInstant=\"2026-01-01T00:00:00Z\">" +
+        "ID=\"_response\" Version=\"2.0\" IssueInstant=\"2026-01-01T00:00:00Z\"" +
+        (inResponseTo == null ? string.Empty : $" InResponseTo=\"{inResponseTo}\"") +
+        ">" +
         $"<saml:Issuer>{issuer}</saml:Issuer>" +
         (includeSuccessStatus
             ? "<samlp:Status><samlp:StatusCode Value=\"urn:oasis:names:tc:SAML:2.0:status:Success\" /></samlp:Status>"
