@@ -12,6 +12,8 @@ namespace Bit.Core.Pam.Services;
 /// </summary>
 /// <remarks>
 /// Members resolve leasing from their own collections; administrators resolve it from the organization's.
+/// The "/admin" decisions need no lease from an Owner or Admin when the organization lets admins access all
+/// collection items.
 /// </remarks>
 public interface ICipherLeaseGate
 {
@@ -111,17 +113,31 @@ public interface ICipherLeaseGate
         IEnumerable<Cipher> ciphers);
 
     /// <summary>
+    /// Per-cipher write via an "/admin" endpoint: the <see cref="AuthorizeAdminReadAsync"/> decision, throwing
+    /// <see cref="NotFoundException"/> where that returns <c>null</c>.
+    /// </summary>
+    Task<FullCipherAccess> EnsureCanMutateAsAdminAsync(Guid userId, Cipher cipher);
+
+    /// <summary>
+    /// Bulk counterpart of <see cref="EnsureCanMutateAsAdminAsync"/>; refuses the batch if any cipher is gated
+    /// with no valid lease.
+    /// </summary>
+    Task<FullCipherAccess> EnsureCanMutateManyAsAdminAsync(
+        Guid userId,
+        Guid organizationId,
+        IEnumerable<Cipher> ciphers);
+
+    /// <summary>
     /// Mints the witness for the cipher an access connector reads to rotate its credential. The caller must have
     /// verified the executing attempt's capability for this cipher; that capability, not a lease, is the authorization.
     /// </summary>
     FullCipherAccess AuthorizeAccessConnectorRotationRead(Cipher cipher);
 
     /// <summary>
-    /// Mints an unrestricted witness for whole-vault organization export — the only context in which
-    /// leasing is waived, and so the only sanctioned way to obtain full data without a decision. A
-    /// whole-vault exporter already holds an organization-wide read grant scoped to export, and a
-    /// partially stripped export is not a usable backup. The caller establishes that the requester may
-    /// export the whole vault; this only mints.
+    /// Mints an unrestricted witness for whole-vault organization export — the only sanctioned way to
+    /// obtain full data without a decision. A whole-vault exporter already holds an organization-wide
+    /// read grant scoped to export, and a partially stripped export is not a usable backup. The caller
+    /// establishes that the requester may export the whole vault; this only mints.
     /// </summary>
     FullCipherAccess UnrestrictedForWholeVaultExport();
 }
