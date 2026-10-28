@@ -35,7 +35,8 @@ public class ConfirmOrganizationInviteLinkValidator(
     IProviderUserRepository providerUserRepository,
     IPricingClient pricingClient,
     IPolicyRequirementQuery policyRequirementQuery,
-    ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
+    ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+    IInviteLinkEligibilityValidationService inviteLinkEligibilityValidationService)
     : IConfirmOrganizationInviteLinkValidator
 {
     public async Task<CommandResult<ConfirmOrganizationInviteLinkValidationResult>> ValidateAsync(
@@ -48,7 +49,11 @@ public class ConfirmOrganizationInviteLinkValidator(
             ? null
             : await organizationRepository.GetByIdAsync(existingLink.OrganizationId);
 
-        var eligibilityError = InviteLinkRules.ValidateEligibility(existingLink, request.Code, existingOrganization, user);
+        var eligibilityError = inviteLinkEligibilityValidationService.ValidateEligibility(
+            existingLink,
+            request.Code,
+            existingOrganization,
+            user);
         if (eligibilityError is not null)
         {
             return ToConfirmValidationError(eligibilityError);
@@ -71,7 +76,7 @@ public class ConfirmOrganizationInviteLinkValidator(
 
         var existingOrganizationUser = await ResolveExistingOrganizationUserAsync(organization, user);
 
-        var membershipStatusError = InviteLinkRules.ValidateConfirmMembershipStatus(organization, existingOrganizationUser);
+        var membershipStatusError = InviteLinkEligibilityValidationService.ValidateConfirmMembershipStatus(organization, existingOrganizationUser);
         if (membershipStatusError is not null)
         {
             return ToConfirmValidationError(membershipStatusError);
@@ -125,7 +130,7 @@ public class ConfirmOrganizationInviteLinkValidator(
     }
 
     /// <summary>
-    /// Translates an <see cref="InviteLinkRules"/> error into its link-confirm validation-problem variant so the
+    /// Translates an <see cref="InviteLinkEligibilityValidationService"/> error into its link-confirm validation-problem variant so the
     /// endpoint always returns the RFC 7807 shape. <see cref="InviteLinkNotFound"/> is returned unchanged.
     /// </summary>
     /// <exception cref="UnreachableException">

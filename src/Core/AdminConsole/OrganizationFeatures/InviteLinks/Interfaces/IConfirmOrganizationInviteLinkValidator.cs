@@ -10,10 +10,10 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 /// <remarks>
 /// The following are validated:
 /// <list type="bullet">
-///     <item><see cref="InviteLinkRules.ValidateEligibility"/>.</item>
+///     <item><see cref="IInviteLinkEligibilityValidationService.ValidateEligibility"/>.</item>
 ///     <item>The link supports confirmation.</item>
 ///     <item>The user is not a provider user.</item>
-///     <item><see cref="InviteLinkRules.ValidateConfirmMembershipStatus"/>.</item>
+///     <item><see cref="InviteLinkEligibilityValidationService.ValidateConfirmMembershipStatus"/>.</item>
 ///     <item>The organization has an available seat for a new or Staged member.</item>
 ///     <item>The Require Two-Factor Authentication and Single Organization policies.</item>
 /// </list>

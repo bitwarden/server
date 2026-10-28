@@ -1,25 +1,30 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.InviteLinks;
 
+[SutProviderCustomize]
 public class GetOrganizationInviteValidatorTests
 {
-    private readonly GetOrganizationInviteValidator _sut = new();
-
     [Theory, BitAutoData]
     public void Validate_WhenAllChecksPass_ReturnsValidRequest(
-        Organization organization, OrganizationInviteLink inviteLink, User user)
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        SutProvider<GetOrganizationInviteValidator> sutProvider)
     {
         // Arrange
         var request = BuildRequest(organization, inviteLink, user, existingOrganizationUser: null);
 
         // Act
-        var result = _sut.Validate(request);
+        var result = sutProvider.Sut.Validate(request);
 
         // Assert
         Assert.True(result.IsValid);
@@ -28,16 +33,22 @@ public class GetOrganizationInviteValidatorTests
 
     [Theory, BitAutoData]
     public void Validate_WhenEligibilityFails_ReturnsEligibilityError(
-        Organization organization, OrganizationInviteLink inviteLink, User user, OrganizationUser existingOrganizationUser)
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser existingOrganizationUser,
+        SutProvider<GetOrganizationInviteValidator> sutProvider)
     {
         // Arrange
         // Revoked would also fail the membership status check, so this proves eligibility is checked first.
         existingOrganizationUser.Status = OrganizationUserStatusType.Revoked;
         var request = BuildRequest(organization, inviteLink, user, existingOrganizationUser);
-        inviteLink.AllowedDomains = "[\"allowed.com\"]";
+        sutProvider.GetDependency<IInviteLinkEligibilityValidationService>()
+            .ValidateEligibility(default, default, default, default!)
+            .ReturnsForAnyArgs(new EmailDomainNotAllowed(organization.Name));
 
         // Act
-        var result = _sut.Validate(request);
+        var result = sutProvider.Sut.Validate(request);
 
         // Assert
         Assert.True(result.IsError);
@@ -46,7 +57,11 @@ public class GetOrganizationInviteValidatorTests
 
     [Theory, BitAutoData]
     public void Validate_WithAcceptLinkAndAcceptedMembership_ReturnsAlreadyOrganizationMember(
-        Organization organization, OrganizationInviteLink inviteLink, User user, OrganizationUser existingOrganizationUser)
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser existingOrganizationUser,
+        SutProvider<GetOrganizationInviteValidator> sutProvider)
     {
         // Arrange
         existingOrganizationUser.Status = OrganizationUserStatusType.Accepted;
@@ -54,7 +69,7 @@ public class GetOrganizationInviteValidatorTests
         var request = BuildRequest(organization, inviteLink, user, existingOrganizationUser);
 
         // Act
-        var result = _sut.Validate(request);
+        var result = sutProvider.Sut.Validate(request);
 
         // Assert
         Assert.True(result.IsError);
@@ -64,7 +79,11 @@ public class GetOrganizationInviteValidatorTests
     // Confirm promotes an Accepted membership, so the same membership that blocks an accept link is allowed here.
     [Theory, BitAutoData]
     public void Validate_WithConfirmationLinkAndAcceptedMembership_ReturnsValidRequest(
-        Organization organization, OrganizationInviteLink inviteLink, User user, OrganizationUser existingOrganizationUser)
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser existingOrganizationUser,
+        SutProvider<GetOrganizationInviteValidator> sutProvider)
     {
         // Arrange
         existingOrganizationUser.Status = OrganizationUserStatusType.Accepted;
@@ -73,7 +92,7 @@ public class GetOrganizationInviteValidatorTests
         inviteLink.SupportsConfirmation = true;
 
         // Act
-        var result = _sut.Validate(request);
+        var result = sutProvider.Sut.Validate(request);
 
         // Assert
         Assert.True(result.IsValid);
@@ -81,7 +100,11 @@ public class GetOrganizationInviteValidatorTests
 
     [Theory, BitAutoData]
     public void Validate_WithConfirmationLinkAndRevokedMembership_ReturnsOrganizationAccessRevoked(
-        Organization organization, OrganizationInviteLink inviteLink, User user, OrganizationUser existingOrganizationUser)
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser existingOrganizationUser,
+        SutProvider<GetOrganizationInviteValidator> sutProvider)
     {
         // Arrange
         existingOrganizationUser.RevocationReason = RevocationReason.Manual;
@@ -89,7 +112,7 @@ public class GetOrganizationInviteValidatorTests
         inviteLink.SupportsConfirmation = true;
 
         // Act
-        var result = _sut.Validate(request);
+        var result = sutProvider.Sut.Validate(request);
 
         // Assert
         Assert.True(result.IsError);

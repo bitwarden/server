@@ -6,7 +6,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 /// Validates that a user is eligible to accept an organization invite link.
 /// </summary>
 /// <remarks>
-/// Checks <see cref="InviteLinkRules.ValidateAcceptMembershipStatus"/>, the free organization admin limit, and the
+/// Checks <see cref="InviteLinkEligibilityValidationService.ValidateAcceptMembershipStatus"/>, the free organization admin limit, and the
 /// account-recovery key requirement, and enforces the Automatic User
 /// Confirmation, Single Organization, and Two-Factor Authentication policies. A single path handles every
 /// accept case (brand-new member, Staged provisioning, or existing email invitation): the target org's
