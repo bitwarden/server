@@ -36,7 +36,7 @@ public record OrganizationSubscriptionCreation
 
     public record PrivilegedControlsPurchase
     {
-        public int? RequestedSeatMinimum { get; init; }
+        public required int Seats { get; init; }
     }
 
     public record TrialSetup

@@ -883,6 +883,18 @@ public class OrganizationsController : Controller
             return "Privileged Access Management max autoscale seats can't be lower than seats";
         }
 
+        if (organization.PamSeats > organization.Seats)
+        {
+            return "You cannot have more Privileged Controls seats than Password Manager seats. " +
+                   $"This organization has {organization.PamSeats} Privileged Controls seats and {organization.Seats} Password Manager seats.";
+        }
+
+        if (!BillingExtensions.PrivilegedControlsAutoscaleLimitFits(organization.MaxAutoscalePamSeats, organization.MaxAutoscaleSeats))
+        {
+            return "You cannot set a Privileged Controls autoscale limit higher than the Password Manager autoscale limit. " +
+                   $"This organization has a Privileged Controls limit of {organization.MaxAutoscalePamSeats} and a Password Manager limit of {organization.MaxAutoscaleSeats}.";
+        }
+
         return null;
     }
 
