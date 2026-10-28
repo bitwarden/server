@@ -9,6 +9,7 @@ using Bit.Core.Dirt.Repositories;
 using Bit.Core.Dirt.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Settings;
+using Bit.Core.Tokens;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,6 +22,7 @@ public class SlackIntegrationController(
     IOrganizationIntegrationRepository integrationRepository,
     ISlackService slackService,
     IGlobalSettings globalSettings,
+    IDataProtectorTokenFactory<IntegrationOAuthStateTokenable> stateFactory,
     TimeProvider timeProvider) : Controller
 {
     [HttpGet("{organizationId:guid}/integrations/slack/redirect")]
@@ -57,10 +59,10 @@ public class SlackIntegrationController(
 
         } // An Initiated slack integration exits, re-use it and kick off a new OAuth flow
 
-        var state = IntegrationOAuthState.FromIntegration(integration, timeProvider);
+        var state = stateFactory.Protect(new IntegrationOAuthStateTokenable(integration, timeProvider));
         var redirectUrl = slackService.GetRedirectUrl(
             callbackUrl: callbackUrl,
-            state: state.ToString()
+            state: state
         );
 
         if (string.IsNullOrEmpty(redirectUrl))
@@ -78,21 +80,18 @@ public class SlackIntegrationController(
         [FromQuery] string? state,
         [FromQuery] string? error)
     {
-        var oAuthState = state is null ? null : IntegrationOAuthState.FromString(state: state, timeProvider: timeProvider);
-        if (oAuthState is null)
+        // The state is protected server-side, so a valid one could only have come from RedirectAsync
+        if (string.IsNullOrEmpty(state) ||
+            !stateFactory.TryUnprotect(state, out var oAuthState) ||
+            !oAuthState.Valid ||
+            oAuthState.Type != IntegrationType.Slack)
         {
             throw new NotFoundException();
         }
 
-        // Fetch existing Initiated record
+        // Fetch existing Initiated record. Only redirect to the web vault once the state matches it.
         var integration = await integrationRepository.GetByIdAsync(oAuthState.IntegrationId);
-        if (integration is null || integration.Type != IntegrationType.Slack)
-        {
-            throw new NotFoundException();
-        }
-
-        // Verify Organization matches hash. Only redirect to the web vault once the organization is trusted.
-        if (!oAuthState.ValidateOrg(integration.OrganizationId))
+        if (integration is null || !oAuthState.IsValidFor(integration))
         {
             throw new NotFoundException();
         }
