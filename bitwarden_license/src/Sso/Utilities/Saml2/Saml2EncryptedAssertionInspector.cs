@@ -10,6 +10,7 @@ namespace Bit.Sso.Utilities.Saml2;
 public static class Saml2EncryptedAssertionInspector
 {
     private const string _xencNamespace = "http://www.w3.org/2001/04/xmlenc#";
+    private const string _dsigNamespace = "http://www.w3.org/2000/09/xmldsig#";
 
     public const string KeyTransportAlgorithmNotAcceptedMessage =
         "SAML encrypted assertion key transport algorithm is not accepted.";
@@ -50,6 +51,8 @@ public static class Saml2EncryptedAssertionInspector
     /// <remarks>
     /// This method never decrypts an assertion, and it must run before any decryption.
     /// Only OAEP key transport is accepted.
+    /// A ds:RetrievalMethod must name an xenc:EncryptedKey in the same encrypted assertion.
+    /// Thus, every key that decryption can use is a key that this method checks.
     /// This method does not catch exceptions, so an envelope it cannot read fails closed.
     /// The exception message is constant. It never includes a value from the envelope.
     /// </remarks>
@@ -68,8 +71,62 @@ public static class Saml2EncryptedAssertionInspector
             {
                 throw new Exception(KeyTransportAlgorithmNotAcceptedMessage);
             }
+
+            EnsureRetrievalMethodsNameEncryptedKeys(encryptedAssertion);
         }
     }
+
+    private static void EnsureRetrievalMethodsNameEncryptedKeys(XmlElement encryptedAssertion)
+    {
+        var retrievalMethods = encryptedAssertion
+            .GetElementsByTagName("RetrievalMethod", _dsigNamespace)
+            .OfType<XmlElement>()
+            .ToArray();
+        if (retrievalMethods.Length == 0)
+        {
+            return;
+        }
+
+        var elements = encryptedAssertion.GetElementsByTagName("*").OfType<XmlElement>()
+            .Prepend(encryptedAssertion)
+            .ToArray();
+
+        foreach (var retrievalMethod in retrievalMethods)
+        {
+            var id = ReadLocalReferenceId(retrievalMethod.GetAttribute("URI"));
+            var targets = id == null
+                ? []
+                : elements.Where(e => HasId(e, id)).ToArray();
+            if (targets.Length == 0 || targets.Any(e => !IsEncryptedKey(e)))
+            {
+                throw new Exception(KeyTransportAlgorithmNotAcceptedMessage);
+            }
+        }
+    }
+
+    private static string? ReadLocalReferenceId(string uri)
+    {
+        if (uri.Length < 2 || uri[0] != '#')
+        {
+            return null;
+        }
+
+        var id = uri.Substring(1);
+        try
+        {
+            return XmlConvert.VerifyNCName(id);
+        }
+        catch (XmlException)
+        {
+            return null;
+        }
+    }
+
+    private static bool HasId(XmlElement element, string id) =>
+        element.GetAttribute("Id") == id || element.GetAttribute("id") == id || element.GetAttribute("ID") == id;
+
+    private static bool IsEncryptedKey(XmlElement element) =>
+        element.LocalName == "EncryptedKey" && element.NamespaceURI == _xencNamespace;
 
     private static IEnumerable<string?> ReadEnvelopeKeyEncryptionAlgorithms(XmlElement envelope)
     {

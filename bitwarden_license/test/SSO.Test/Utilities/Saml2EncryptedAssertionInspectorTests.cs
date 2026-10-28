@@ -346,6 +346,79 @@ public class Saml2EncryptedAssertionInspectorTests
         Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope);
     }
 
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_PeerKeyReferencedByRetrievalMethod_DoesNotThrow()
+    {
+        var envelope = BuildEnvelope(BuildRetrievalMethodAssertion("#_key", "<xenc:EncryptedData Id=\"_data\" />"));
+
+        Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope);
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_RetrievalMethodNamesNonKeyElement_Throws()
+    {
+        var envelope = BuildEnvelope(BuildRetrievalMethodAssertion("#_other", "<xenc:EncryptedData Id=\"_other\" />"));
+
+        Assert.Throws<Exception>(
+            () => Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope));
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_RetrievalMethodNamesKeyAndNonKeyElement_Throws()
+    {
+        var envelope = BuildEnvelope(BuildRetrievalMethodAssertion("#_key", "<xenc:EncryptedData Id=\"_key\" />"));
+
+        Assert.Throws<Exception>(
+            () => Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope));
+    }
+
+    [Theory]
+    [InlineData("id")]
+    [InlineData("ID")]
+    public void EnsureAcceptedKeyTransportAlgorithms_RetrievalMethodNamesNonKeyElementWithIdVariant_Throws(
+        string idAttribute)
+    {
+        var envelope = BuildEnvelope(
+            BuildRetrievalMethodAssertion("#_other", $"<xenc:EncryptedData {idAttribute}=\"_other\" />"));
+
+        Assert.Throws<Exception>(
+            () => Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope));
+    }
+
+    [Theory]
+    [InlineData("https://example.com/key")]
+    [InlineData("#xpointer(id('_key'))")]
+    [InlineData("#")]
+    [InlineData("")]
+    [InlineData(null)]
+    [InlineData("#1invalid")]
+    [InlineData("#_missing")]
+    public void EnsureAcceptedKeyTransportAlgorithms_RetrievalMethodWithUnacceptedUri_Throws(string? uri)
+    {
+        var envelope = BuildEnvelope(BuildRetrievalMethodAssertion(uri, "<xenc:EncryptedData Id=\"_data\" />"));
+
+        Assert.Throws<Exception>(
+            () => Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope));
+    }
+
+    private static string BuildRetrievalMethodAssertion(string? uri, string otherElement)
+    {
+        var uriAttribute = uri == null ? string.Empty : $" URI=\"{EscapeAttributeValue(uri)}\"";
+        return "<saml:EncryptedAssertion>" +
+            "<xenc:EncryptedKey Id=\"_key\">" +
+            $"<xenc:EncryptionMethod Algorithm=\"{RsaOaepMgf1P}\" />" +
+            "<xenc:CipherData><xenc:CipherValue>a2V5</xenc:CipherValue></xenc:CipherData>" +
+            "</xenc:EncryptedKey>" +
+            "<xenc:EncryptedData>" +
+            "<ds:KeyInfo>" +
+            $"<ds:RetrievalMethod{uriAttribute} Type=\"http://www.w3.org/2001/04/xmlenc#EncryptedKey\" />" +
+            "</ds:KeyInfo>" +
+            "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
+            "</xenc:EncryptedData>" +
+            otherElement +
+            "</saml:EncryptedAssertion>";
+    }
+
     private static string BuildNestedEncryptedAssertion(string algorithm) =>
         "<saml:EncryptedAssertion>" +
         "<xenc:EncryptedData>" +

@@ -22,6 +22,7 @@ using EncryptedXml = System.Security.Cryptography.Xml.EncryptedXml;
 using EncryptionMethod = System.Security.Cryptography.Xml.EncryptionMethod;
 using KeyInfo = System.Security.Cryptography.Xml.KeyInfo;
 using KeyInfoEncryptedKey = System.Security.Cryptography.Xml.KeyInfoEncryptedKey;
+using KeyInfoRetrievalMethod = System.Security.Cryptography.Xml.KeyInfoRetrievalMethod;
 
 namespace Bit.Sso.IntegrationTest.Endpoints;
 
@@ -83,6 +84,22 @@ public class Saml2WantAssertionsSignedTests
 
         var arrangement = await ArrangeAsync(
             encryptedAssertionXml, idpCertificate, spCertificate, wantAssertionsSigned: true);
+
+        Assert.True(await arrangement.SamlOptions.CouldHandleAsync(arrangement.Scheme, arrangement.Context));
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_SignedOaepEncryptedAssertionWithPeerKeyAndRetrievalMethodAndRsa15DeprecationFlagOn_ReturnsTrue()
+    {
+        // Some identity providers place xenc:EncryptedKey beside xenc:EncryptedData and link the two
+        // with a ds:RetrievalMethod. Sustainsys.Saml2 must decrypt this layout.
+        var (idpCertificate, spCertificate) = BuildCertificates();
+        var signedAssertion = BuildSignedAssertion(idpCertificate);
+        var encryptedAssertionXml = EncryptAssertionWithPeerKey(signedAssertion.OuterXml, spCertificate);
+
+        var arrangement = await ArrangeAsync(
+            encryptedAssertionXml, idpCertificate, spCertificate, wantAssertionsSigned: true,
+            rsa15DeprecationFlag: true);
 
         Assert.True(await arrangement.SamlOptions.CouldHandleAsync(arrangement.Scheme, arrangement.Context));
     }
@@ -803,6 +820,39 @@ public class Saml2WantAssertionsSignedTests
         encryptedData.KeyInfo.AddClause(new KeyInfoEncryptedKey(encryptedKey));
 
         document.DocumentElement!.AppendChild(document.ImportNode(encryptedData.GetXml(), deep: true));
+
+        return document.DocumentElement!.OuterXml;
+    }
+
+    // Encrypts XML like EncryptAssertion, but places the xenc:EncryptedKey beside the xenc:EncryptedData.
+    // A ds:RetrievalMethod in the ds:KeyInfo of the xenc:EncryptedData names the key.
+    private static string EncryptAssertionWithPeerKey(string payloadXml, X509Certificate2 encryptionCertificate)
+    {
+        var document = XmlHelpers.XmlDocumentFromString(
+            "<saml:EncryptedAssertion xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\" />");
+
+        using var contentKey = Aes.Create();
+        contentKey.KeySize = 256;
+        var cipherValue = new EncryptedXml().EncryptData(Encoding.UTF8.GetBytes(payloadXml), contentKey);
+
+        var encryptedData = new EncryptedData
+        {
+            Type = EncryptedXml.XmlEncElementUrl,
+            EncryptionMethod = new EncryptionMethod(EncryptedXml.XmlEncAES256Url),
+        };
+        encryptedData.CipherData.CipherValue = cipherValue;
+        encryptedData.KeyInfo = new KeyInfo();
+        encryptedData.KeyInfo.AddClause(new KeyInfoRetrievalMethod("#_key", EncryptedXml.XmlEncEncryptedKeyUrl));
+        var encryptedKey = new EncryptedKey
+        {
+            Id = "_key",
+            EncryptionMethod = new EncryptionMethod(EncryptedXml.XmlEncRSAOAEPUrl),
+            CipherData = new CipherData(
+                EncryptedXml.EncryptKey(contentKey.Key, encryptionCertificate.GetRSAPublicKey()!, useOAEP: true)),
+        };
+
+        document.DocumentElement!.AppendChild(document.ImportNode(encryptedData.GetXml(), deep: true));
+        document.DocumentElement!.AppendChild(document.ImportNode(encryptedKey.GetXml(), deep: true));
 
         return document.DocumentElement!.OuterXml;
     }
