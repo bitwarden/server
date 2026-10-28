@@ -37,7 +37,7 @@ public class UserEmailTokenCodeQuery(
     // Keep this in sync with TwoFactorEmailService, which owns this key for the email two-factor login code.
     // Restated rather than referenced, so that reading a code for a test never widens the production API of the
     // code that issues it.
-    private const string EmailTwoFactorCacheKeyFormat = "TwoFactorEmail_LoginCode_{0}_{1}";
+    private const string EmailTwoFactorLoginCacheKeyFormat = "TwoFactorEmail_LoginCode_{0}_{1}";
 
     // Keep this in sync with TwoFactorEmailService, which issues the setup code (POST /two-factor/send-email)
     // under the same provider name as the login code but a different purpose.
@@ -95,7 +95,7 @@ public class UserEmailTokenCodeQuery(
         var cacheKey = request.CodeType switch
         {
             CodeType.EmailTwoFactorLogin => string.Format(
-                CultureInfo.InvariantCulture, EmailTwoFactorCacheKeyFormat, user.Id, user.SecurityStamp),
+                CultureInfo.InvariantCulture, EmailTwoFactorLoginCacheKeyFormat, user.Id, user.SecurityStamp),
             CodeType.EmailTwoFactorSetup => string.Format(
                 CultureInfo.InvariantCulture, EmailTwoFactorSetupCacheKeyFormat, user.Id, user.SecurityStamp),
             CodeType.UserVerification => EmailTokenCacheKey(
