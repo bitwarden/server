@@ -230,10 +230,10 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
             {
                 throw new BadRequestException(
                     $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.PrivilegedControls)}",
-                    "Privileged Controls cannot be combined with a Secrets Manager trial.");
+                    "Privileged Controls cannot be combined with a standalone Secrets Manager purchase.");
             }
 
-            if (privilegedControls.Seats is < 1 or > 100000)
+            if (privilegedControls.Seats is < 1 or > PlanConstants.MaxPurchasableQuantity)
             {
                 throw new BadRequestException(
                     $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.PrivilegedControls)}.{nameof(PrivilegedControlsSelections.Seats)}",
