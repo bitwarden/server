@@ -1437,6 +1437,171 @@ public class OrganizationServiceTests
             .Run(default, default);
     }
 
+    [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually), BitAutoData]
+    public async Task AdjustSeatsAsync_DecreaseBelowPamSeats_Throws(
+        Organization organization, SutProvider<OrganizationService> sutProvider)
+    {
+        SetUpPrivilegedControlsOrganization(organization, sutProvider);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AdjustSeatsAsync(organization.Id, -11));
+
+        Assert.Equal("You cannot have more Privileged Controls seats than Password Manager seats.", exception.Message);
+        await sutProvider.GetDependency<IStripePaymentService>().DidNotReceiveWithAnyArgs()
+            .AdjustSeatsAsync(default, default, default);
+        await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().DidNotReceiveWithAnyArgs()
+            .Run(default, default);
+    }
+
+    [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually), BitAutoData]
+    public async Task AdjustSeatsAsync_Decrease_ToExactlyPamSeats_Succeeds(
+        Organization organization, SutProvider<OrganizationService> sutProvider)
+    {
+        SetUpPrivilegedControlsOrganization(organization, sutProvider);
+
+        await sutProvider.Sut.AdjustSeatsAsync(organization.Id, -10);
+
+        Assert.Equal((short)20, organization.Seats);
+    }
+
+    [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually), BitAutoData]
+    public async Task AdjustSeatsAsync_Increase_PamSeatsAbovePmSeats_Succeeds(
+        Organization organization, SutProvider<OrganizationService> sutProvider)
+    {
+        SetUpPrivilegedControlsOrganization(organization, sutProvider);
+        organization.Seats = 10;
+
+        await sutProvider.Sut.AdjustSeatsAsync(organization.Id, 5);
+
+        Assert.Equal((short)15, organization.Seats);
+    }
+
+    [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually), BitAutoData]
+    public async Task AdjustSeatsAsync_UsePamOff_DecreaseBelowPamSeats_Succeeds(
+        Organization organization, SutProvider<OrganizationService> sutProvider)
+    {
+        SetUpPrivilegedControlsOrganization(organization, sutProvider);
+        organization.UsePam = false;
+
+        await sutProvider.Sut.AdjustSeatsAsync(organization.Id, -11);
+
+        Assert.Equal((short)19, organization.Seats);
+    }
+
+    [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually), BitAutoData]
+    public async Task AdjustSeatsAsync_FlagOff_DecreaseBelowPamSeats_Succeeds(
+        Organization organization, SutProvider<OrganizationService> sutProvider)
+    {
+        SetUpPrivilegedControlsOrganization(organization, sutProvider, pamBillingSupport: false);
+
+        await sutProvider.Sut.AdjustSeatsAsync(organization.Id, -11);
+
+        Assert.Equal((short)19, organization.Seats);
+    }
+
+    [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually), BitAutoData]
+    public async Task UpdateSubscription_PmLimitBelowPamLimit_Throws(
+        Organization organization, SutProvider<OrganizationService> sutProvider)
+    {
+        SetUpPrivilegedControlsOrganization(organization, sutProvider);
+        organization.MaxAutoscalePamSeats = 40;
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateSubscription(organization.Id, 0, 35));
+
+        Assert.Equal(
+            "You cannot set a Password Manager autoscale limit lower than the Privileged Controls autoscale limit.",
+            exception.Message);
+        Assert.Null(organization.MaxAutoscaleSeats);
+    }
+
+    [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually), BitAutoData]
+    public async Task UpdateSubscription_SeatIncreaseWithPmLimitBelowPamLimit_ThrowsBeforeStripe(
+        Organization organization, SutProvider<OrganizationService> sutProvider)
+    {
+        SetUpPrivilegedControlsOrganization(organization, sutProvider);
+        organization.MaxAutoscalePamSeats = 40;
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscription(organization.Id, 2, 35));
+
+        await sutProvider.GetDependency<IStripePaymentService>().DidNotReceiveWithAnyArgs()
+            .AdjustSeatsAsync(default, default, default);
+        await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().DidNotReceiveWithAnyArgs()
+            .Run(default, default);
+    }
+
+    [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually), BitAutoData]
+    public async Task UpdateSubscription_PmLimitSetWithNoPamLimit_Succeeds(
+        Organization organization, SutProvider<OrganizationService> sutProvider)
+    {
+        SetUpPrivilegedControlsOrganization(organization, sutProvider);
+
+        await sutProvider.Sut.UpdateSubscription(organization.Id, 0, 35);
+
+        Assert.Equal(35, organization.MaxAutoscaleSeats);
+    }
+
+    [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually), BitAutoData]
+    public async Task UpdateSubscription_PmLimitEqualsPamLimit_Succeeds(
+        Organization organization, SutProvider<OrganizationService> sutProvider)
+    {
+        SetUpPrivilegedControlsOrganization(organization, sutProvider);
+        organization.MaxAutoscalePamSeats = 40;
+
+        await sutProvider.Sut.UpdateSubscription(organization.Id, 0, 40);
+
+        Assert.Equal(40, organization.MaxAutoscaleSeats);
+    }
+
+    [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually), BitAutoData]
+    public async Task UpdateSubscription_UsePamOff_PmLimitBelowPamLimit_Succeeds(
+        Organization organization, SutProvider<OrganizationService> sutProvider)
+    {
+        SetUpPrivilegedControlsOrganization(organization, sutProvider);
+        organization.UsePam = false;
+        organization.MaxAutoscalePamSeats = 40;
+
+        await sutProvider.Sut.UpdateSubscription(organization.Id, 0, 35);
+
+        Assert.Equal(35, organization.MaxAutoscaleSeats);
+    }
+
+    [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually), BitAutoData]
+    public async Task UpdateSubscription_FlagOff_PmLimitBelowPamLimit_Succeeds(
+        Organization organization, SutProvider<OrganizationService> sutProvider)
+    {
+        SetUpPrivilegedControlsOrganization(organization, sutProvider, pamBillingSupport: false);
+        organization.MaxAutoscalePamSeats = 40;
+
+        await sutProvider.Sut.UpdateSubscription(organization.Id, 0, 35);
+
+        Assert.Equal(35, organization.MaxAutoscaleSeats);
+    }
+
+    private static void SetUpPrivilegedControlsOrganization(
+        Organization organization,
+        SutProvider<OrganizationService> sutProvider,
+        bool pamBillingSupport = true)
+    {
+        organization.Seats = 30;
+        organization.MaxAutoscaleSeats = null;
+        organization.UsePam = true;
+        organization.PamSeats = 20;
+        organization.MaxAutoscalePamSeats = null;
+        organization.UseSecretsManager = false;
+        organization.GatewayCustomerId = "cus_123";
+        organization.GatewaySubscriptionId = "sub_123";
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationRepository>().GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Users = 1, Sponsored = 0 });
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
+            .Returns(MockPlans.Get(organization.PlanType));
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support)
+            .Returns(pamBillingSupport);
+    }
+
     [Theory, BitAutoData]
     public async Task AdjustStorageAsync_OrganizationNotFound_ThrowsNotFoundException(
         Guid organizationId, SutProvider<OrganizationService> sutProvider)

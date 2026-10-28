@@ -2350,6 +2350,7 @@ public class ProviderBillingServiceTests
     {
         organization.PlanType = planType;
         organization.Seats = 10;
+        organization.UsePam = false;
 
         sutProvider.GetDependency<IStripeAdapter>()
             .CancelSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionCancelOptions>())
@@ -2572,6 +2573,7 @@ public class ProviderBillingServiceTests
         provider.Type = ProviderType.Msp;
         organization.GatewayCustomerId = "cus_release_fails";
         organization.GatewaySubscriptionId = "sub_release_fails";
+        organization.UsePam = false;
 
         var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
@@ -2641,6 +2643,39 @@ public class ProviderBillingServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task AddExistingOrganization_OrganizationUsesPam_ThrowsBeforeAnyStripeOperation(
+        Provider provider,
+        Organization organization,
+        string key,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        provider.Type = ProviderType.Msp;
+        organization.UsePam = true;
+
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        providerOrganizationRepository
+            .GetByOrganizationId(organization.Id)
+            .Returns((ProviderOrganization)null);
+
+        var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.AddExistingOrganization(provider, organization, key));
+
+        Assert.Equal(
+            "Organizations managed by a provider can't use Privileged Controls. Please contact Customer Support.",
+            exception.Message);
+        await priceIncreaseScheduler.DidNotReceiveWithAnyArgs()
+            .Release(default, default, default);
+        await stripeAdapter.DidNotReceiveWithAnyArgs()
+            .CancelSubscriptionAsync(default, default);
+        await organizationRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(default);
+        await providerOrganizationRepository.DidNotReceiveWithAnyArgs().CreateAsync(default);
+    }
+
+    [Theory, BitAutoData]
     public async Task AddExistingOrganization_StripeCancelSucceeds_OnlyWhenReleasePrecedesIt(
         Provider provider,
         Organization organization,
@@ -2659,6 +2694,7 @@ public class ProviderBillingServiceTests
         organization.GatewaySubscriptionId = "sub_stripe_contract";
         organization.PlanType = PlanType.EnterpriseAnnually2020;
         organization.Seats = 10;
+        organization.UsePam = false;
 
         var releaseHasRun = false;
         var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();

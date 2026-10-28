@@ -17,7 +17,6 @@ namespace Bit.Subscriptions.Organization.Test.Commands;
 
 public class RemovePrivilegedControlsCommandTests
 {
-    private const int _seatMinimum = 10;
     private const string _seatPriceId = "privileged-controls-enterprise-seat-annually";
 
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
@@ -119,16 +118,6 @@ public class RemovePrivilegedControlsCommandTests
     }
 
     [Fact]
-    public async Task Run_LeavesTheSeatMinimumAlone()
-    {
-        var organization = CreateOrganization();
-
-        await _sut.Run(organization);
-
-        Assert.Equal(_seatMinimum, organization.PamSeatMinimum);
-    }
-
-    [Fact]
     public async Task Run_SavesTheOrganization()
     {
         var organization = CreateOrganization();
@@ -186,7 +175,6 @@ public class RemovePrivilegedControlsCommandTests
             PlanType = PlanType.EnterpriseAnnually,
             UsePam = usePam,
             PamSeats = pamSeats,
-            PamSeatMinimum = _seatMinimum,
             MaxAutoscalePamSeats = maxAutoscalePamSeats,
             GatewayCustomerId = "cus_123",
             GatewaySubscriptionId = gatewaySubscriptionId
@@ -198,7 +186,6 @@ public class RemovePrivilegedControlsCommandTests
             PrivilegedControls = new PrivilegedControlsPlanFeatures
             {
                 StripeSeatPlanId = _seatPriceId,
-                DefaultSeatMinimum = _seatMinimum
             };
     }
 }

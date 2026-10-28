@@ -151,6 +151,7 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
                     UserId = ownerId,
                     Key = ownerKey,
                     AccessSecretsManager = organization.UseSecretsManager,
+                    AccessPam = organization.UsePam,
                     Type = OrganizationUserType.Owner,
                     Status = OrganizationUserStatusType.Confirmed,
                     CreationDate = organization.CreationDate,

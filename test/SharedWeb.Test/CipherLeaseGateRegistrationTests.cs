@@ -84,6 +84,18 @@ public class CipherLeaseGateRegistrationTests
             IEnumerable<Cipher> ciphers) =>
             throw new NotSupportedException();
 
+        public Task<FullCipherAccess> EnsureCanMutateAsAdminAsync(Guid userId, Cipher cipher) =>
+            throw new NotSupportedException();
+
+        public Task<FullCipherAccess> EnsureCanMutateManyAsAdminAsync(
+            Guid userId,
+            Guid organizationId,
+            IEnumerable<Cipher> ciphers) =>
+            throw new NotSupportedException();
+
+        public FullCipherAccess AuthorizeAccessConnectorRotationRead(Cipher cipher) =>
+            throw new NotSupportedException();
+
         public FullCipherAccess UnrestrictedForWholeVaultExport() => throw new NotSupportedException();
     }
 }
