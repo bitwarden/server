@@ -13,9 +13,15 @@ public class UserVerificationOtpStore(
 {
     private const string TokenProviderName = "UserVerification";
     private const string Purpose = "EmailOtp";
+
+    // These limits allow at most 100 failed attempts per user per hour: 2 windows per hour x 10 OTPs per window
+    // x 5 failed attempts per OTP.
+    // Every user verification action shares one OTP, and each verification prompt requests a new OTP, so the
+    // request limit allows several prompts in a row. If each action gets its own OTP, the request limit can be
+    // tightened.
     private const int MaxFailedAttempts = 5;
-    private const int MaxRequestsPerWindow = 5;
-    private static readonly TimeSpan _requestWindow = TimeSpan.FromMinutes(15);
+    private const int MaxRequestsPerWindow = 10;
+    private static readonly TimeSpan _requestWindow = TimeSpan.FromMinutes(30);
 
     private readonly IOtpTokenProvider<DefaultOtpTokenProviderOptions> _otpTokenProvider = otpTokenProvider;
     private readonly IDistributedCache _distributedCache = distributedCache;

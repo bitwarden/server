@@ -17,8 +17,8 @@ public class UserVerificationOtpStoreTests
 {
     private const string TokenProviderName = "UserVerification";
     private const string Purpose = "EmailOtp";
-    private const int MaxRequestsPerWindow = 5;
-    private static readonly TimeSpan _requestWindow = TimeSpan.FromMinutes(15);
+    private const int MaxRequestsPerWindow = 10;
+    private static readonly TimeSpan _requestWindow = TimeSpan.FromMinutes(30);
 
     private readonly IOtpTokenProvider<DefaultOtpTokenProviderOptions> _otpTokenProvider =
         Substitute.For<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>();

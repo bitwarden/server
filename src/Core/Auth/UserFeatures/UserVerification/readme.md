@@ -80,9 +80,10 @@ OTP, so the rules live here once and the callers cannot drift apart.
    pending OTP.
 3. **Email binding:** the OTP is bound to `User.Email`. It proves control of the address it was sent to, so it
    must not validate after the address changes, even when the security stamp does not change.
-4. **Limits:** 5 failed attempts for each OTP through `ValidateAndConsumeWithFailureLimitAsync`, and 5 issued
-   OTPs for each user in a fixed 15-minute window. Together, they allow at most 100 failed attempts per user per
-   hour through that method. The request counter is a separate cache entry that `IUserVerificationOtpStore`
+4. **Limits:** 5 failed attempts for each OTP through `ValidateAndConsumeWithFailureLimitAsync`, and 10 issued
+   OTPs for each user in a fixed 30-minute window. Together, they allow at most 100 failed attempts per user per
+   hour through that method. The request limit allows several verification prompts in a row,
+   because every action shares one OTP. The request counter is a separate cache entry that `IUserVerificationOtpStore`
    writes directly, because `IOtpTokenProvider<TOptions>` manages codes, not counters.
 5. **Options:** `IUserVerificationOtpStore` uses `DefaultOtpTokenProviderOptions`, which other OTP flows share.
    To change the code length, character set, or expiry of this OTP only, give it its own `TOptions` class.

@@ -29,7 +29,7 @@ public class AccountsControllerOtpTests : IClassFixture<ApiApplicationFactory>, 
 
     private const string OwnerMasterPasswordHash = "master_password_hash";
     private const int FailedAttemptLimit = 5;
-    private const int OtpRequestLimit = 5;
+    private const int OtpRequestLimit = 10;
 
     private string _ownerEmail = null!;
 
