@@ -222,8 +222,14 @@ public class Startup
         // Add current context
         app.UseMiddleware<CurrentContextMiddleware>();
 
+        // Tag IdentityServer protocol requests with http.route for traces and metrics
+        app.UseMiddleware<IdentityServerRouteDiagnosticsMiddleware>();
+
         // Add IdentityServer to the request pipeline.
         app.UseIdentityServer();
+
+        // Requests IdentityServer passes on (e.g. disabled endpoints) are not tagged with its routes
+        app.Use(IdentityServerRouteDiagnosticsMiddleware.MarkUnhandled);
 
         // Gates endpoints carrying IFeatureMetadata; required in any app that
         // routes requests through endpoints tagged with [RequireFeature].
