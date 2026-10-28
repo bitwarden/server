@@ -1,6 +1,4 @@
 ﻿using Bit.Core.Entities;
-using Bit.Core.Enums;
-using Bit.Core.KeyManagement.Kdf;
 
 namespace Bit.Admin.Models;
 
@@ -22,15 +20,9 @@ public class UserCryptoViewModel
         {
             UserKeyId = user.UserKeyId,
             UsesV2Keys = user.HasV2Encryption(),
-            // Heuristic: the upgrade token only exists after a V1 -> V2 rotation and is cleared by any later rotation.
-            LastRotationFromV1 = user.V2UpgradeToken != null,
-            KeyRotatedWithPasswordChange = RotatedWithPasswordChange(user),
+            LastRotationFromV1 = user.LastRotationFromV1(),
+            KeyRotatedWithPasswordChange = user.KeyRotatedWithPassword(),
             NeedsRecoveryKeyV2Update = needsRecoveryKeyV2Update,
-            NeedsKdfUpdate = user.Kdf == KdfType.PBKDF2_SHA256 &&
-                user.KdfIterations < KdfConstants.PBKDF2_ITERATIONS.Min,
+            NeedsKdfUpdate = user.NeedsKdfUpdate(),
         };
-
-    // A rotation done together with a password change is stamped with the same timestamp.
-    private static bool RotatedWithPasswordChange(User user) =>
-        user.LastKeyRotationDate != null && user.LastKeyRotationDate == user.LastPasswordChangeDate;
 }
