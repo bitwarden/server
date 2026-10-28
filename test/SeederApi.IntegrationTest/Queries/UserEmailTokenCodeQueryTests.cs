@@ -141,8 +141,8 @@ public class UserEmailTokenCodeQueryTests
     }
 
     /// <summary>
-    /// The user verification OTP is bound to the user's email, which is not a device, so the response carries
-    /// no device identifier.
+    /// The user verification OTP is bound to the user's email. No device identifier is used, and none should be
+    /// returned.
     /// </summary>
     [Fact]
     public async Task Execute_UserVerification_ReturnsCodeWithoutDevice()
