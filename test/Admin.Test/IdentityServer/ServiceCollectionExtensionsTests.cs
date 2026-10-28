@@ -3,6 +3,7 @@ using System.Text.Json;
 using Bit.Admin;
 using Bit.Admin.Auth.IdentityServer;
 using Bit.Admin.IdentityServer;
+using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Http;
@@ -17,23 +18,83 @@ public class ServiceCollectionExtensionsTests
     [Fact]
     public void AddAdminUpstreamOidc_ThrowsWhenEmailClaimTypeIsNull()
     {
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            new ServiceCollection().AddAdminUpstreamOidc(
+                BuildAdminSettings(emailClaimType: null),
+                BuildGlobalSettings(selfHosted: false)));
+
+        Assert.Contains("EmailClaimType", ex.Message);
+    }
+
+    [Fact]
+    public void AddAdminUpstreamOidc_SelfHosted_ThrowsWhenAdminsEmpty()
+    {
+        // Self-hosted uses AdminSettings:Admins as the sign-in tenancy gate. Without it every
+        // SSO sign-in would be rejected at the gate.
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            new ServiceCollection().AddAdminUpstreamOidc(
+                BuildAdminSettings(admins: null, groupPrefix: "us-prd-adminportal-"),
+                BuildGlobalSettings(selfHosted: true)));
+
+        Assert.Contains("Admins", ex.Message);
+        Assert.Contains("self-hosted", ex.Message);
+    }
+
+    [Fact]
+    public void AddAdminUpstreamOidc_Cloud_ThrowsWhenGroupPrefixEmpty()
+    {
+        // Cloud uses "has at least one mapped role" as the sign-in tenancy gate, which requires
+        // AdminSettings:Oidc:GroupPrefix. Without it every SSO sign-in would be rejected.
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            new ServiceCollection().AddAdminUpstreamOidc(
+                BuildAdminSettings(admins: "admin@example.com", groupPrefix: null),
+                BuildGlobalSettings(selfHosted: false)));
+
+        Assert.Contains("GroupPrefix", ex.Message);
+        Assert.Contains("cloud", ex.Message);
+    }
+
+    [Fact]
+    public void AddAdminUpstreamOidc_SelfHosted_Succeeds_WhenAdminsConfigured()
+    {
         var services = new ServiceCollection();
-        var adminSettings = new AdminSettings
+        services.AddLogging();
+
+        services.AddAdminUpstreamOidc(
+            BuildAdminSettings(admins: "admin@example.com", groupPrefix: null),
+            BuildGlobalSettings(selfHosted: true));
+    }
+
+    [Fact]
+    public void AddAdminUpstreamOidc_Cloud_Succeeds_WhenGroupPrefixConfigured()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+
+        services.AddAdminUpstreamOidc(
+            BuildAdminSettings(admins: null, groupPrefix: "us-prd-adminportal-"),
+            BuildGlobalSettings(selfHosted: false));
+    }
+
+    private static AdminSettings BuildAdminSettings(
+        string admins = "admin@example.com",
+        string groupPrefix = "us-prd-adminportal-",
+        string emailClaimType = "email") =>
+        new()
         {
+            Admins = admins,
             Oidc = new AdminSettings.OidcSettings
             {
                 Authority = "https://idp.example.com",
                 ClientId = "id",
                 ClientSecret = "secret",
-                EmailClaimType = null,
-            }
+                GroupPrefix = groupPrefix,
+                EmailClaimType = emailClaimType,
+            },
         };
 
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            services.AddAdminUpstreamOidc(adminSettings));
-
-        Assert.Contains("EmailClaimType", ex.Message);
-    }
+    private static GlobalSettings BuildGlobalSettings(bool selfHosted) =>
+        new() { SelfHosted = selfHosted };
 
     [Fact]
     public async Task AddAdminUpstreamOidc_OnTokenValidated_FailsWhenAuthTimeMissingAsync()
@@ -168,15 +229,7 @@ public class ServiceCollectionExtensionsTests
     {
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddAdminUpstreamOidc(new AdminSettings
-        {
-            Oidc = new AdminSettings.OidcSettings
-            {
-                Authority = "https://idp.example.com",
-                ClientId = "id",
-                ClientSecret = "secret",
-            }
-        });
+        services.AddAdminUpstreamOidc(BuildAdminSettings(), BuildGlobalSettings(selfHosted: false));
 
         var sp = services.BuildServiceProvider();
         return sp.GetRequiredService<IOptionsMonitor<OpenIdConnectOptions>>()

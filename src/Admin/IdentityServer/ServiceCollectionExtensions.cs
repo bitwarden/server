@@ -64,7 +64,9 @@ public static class ServiceCollectionExtensions
     }
 
     public static IServiceCollection AddAdminUpstreamOidc(
-        this IServiceCollection services, AdminSettings adminSettings)
+        this IServiceCollection services,
+        AdminSettings adminSettings,
+        GlobalSettings globalSettings)
     {
         // Fail-closed: if the operator hasn't supplied Authority/ClientId/ClientSecret, we don't
         // register the handler at all. The SSO controller actions then return NotFound on any hit.
@@ -83,6 +85,21 @@ public static class ServiceCollectionExtensions
         {
             throw new InvalidOperationException(
                 "AdminSettings:Oidc:EmailClaimType must not be null or empty when SSO is enabled.");
+        }
+
+        // Fail-loud when the tenancy signal required by the deployment type is missing.
+        // Self-hosted uses AdminSettings:Admins as the sign-in gate; cloud uses the
+        // "has at least one mapped role" gate, which requires AdminSettings:Oidc:GroupPrefix.
+        // See src/Admin/Auth/README.md.
+        if (globalSettings.SelfHosted && string.IsNullOrWhiteSpace(adminSettings.Admins))
+        {
+            throw new InvalidOperationException(
+                "AdminSettings:Admins must be set when SSO is enabled on a self-hosted deployment.");
+        }
+        if (!globalSettings.SelfHosted && string.IsNullOrWhiteSpace(oidc.GroupPrefix))
+        {
+            throw new InvalidOperationException(
+                "AdminSettings:Oidc:GroupPrefix must be set when SSO is enabled on a cloud deployment.");
         }
 
         services.AddAuthentication()

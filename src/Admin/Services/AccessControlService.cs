@@ -31,13 +31,19 @@ public class AccessControlService : IAccessControlService
             return true;
         }
 
-        var userRole = GetUserRoleFromClaim();
-        if (string.IsNullOrEmpty(userRole) || !RolePermissionMapping.RolePermissions.TryGetValue(userRole, out var rolePermissions))
+        // A principal may hold multiple role claims when the IdP groups-to-roles mapper stamps
+        // more than one role on an SSO sign-in. Treat permissions as the union across every
+        // role the user holds: if any role grants the permission, the user has it.
+        foreach (var role in GetUserRolesFromClaims())
         {
-            return false;
+            if (RolePermissionMapping.RolePermissions.TryGetValue(role, out var rolePermissions) &&
+                rolePermissions.Contains(permission))
+            {
+                return true;
+            }
         }
 
-        return rolePermissions.Contains(permission);
+        return false;
     }
 
     public string GetUserRole(string userEmail)
@@ -61,9 +67,16 @@ public class AccessControlService : IAccessControlService
         return userRole.Key.ToLowerInvariant();
     }
 
-    private string GetUserRoleFromClaim()
+    private IEnumerable<string> GetUserRolesFromClaims()
     {
-        return _httpContextAccessor.HttpContext?.User?.Claims?
-                 .FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
+        var claims = _httpContextAccessor.HttpContext?.User?.Claims;
+        if (claims == null)
+        {
+            return [];
+        }
+
+        return claims
+            .Where(c => c.Type == ClaimTypes.Role && !string.IsNullOrEmpty(c.Value))
+            .Select(c => c.Value.ToLowerInvariant());
     }
 }

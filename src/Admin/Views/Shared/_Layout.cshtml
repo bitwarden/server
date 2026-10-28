@@ -1,12 +1,15 @@
 @using Bit.Admin.Enums;
 @using Bit.Core;
 
-@inject SignInManager<IdentityUser> SignInManager
 @inject Bit.Core.Settings.GlobalSettings GlobalSettings
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
 @inject Bit.Core.Services.IFeatureService FeatureService
 
 @{
+    // Scheme-agnostic: a passwordless session on Identity's application cookie and an SSO
+    // session on AdminAuthenticationSchemes.SsoCookie both satisfy IsAuthenticated once the
+    // authorization DefaultPolicy's PolicyEvaluator has populated HttpContext.User.
+    var isSignedIn = User.Identity?.IsAuthenticated == true;
     var canViewUsers = AccessControlService.UserHasPermission(Permission.User_List_View);
     var canViewOrgs = AccessControlService.UserHasPermission(Permission.Org_List_View);
     var canViewProviders = AccessControlService.UserHasPermission(Permission.Provider_List_View);
@@ -48,7 +51,7 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarCollapse">
                 <ul class="navbar-nav me-auto mb-2 mb-md-0">
-                    @if (SignInManager.IsSignedIn(User))
+                    @if (isSignedIn)
                     {
                         @if (canViewUsers)
                         {
@@ -147,7 +150,7 @@
                         </li>
                     }
                 </ul>
-                @if (SignInManager.IsSignedIn(User))
+                @if (isSignedIn)
                 {
                     <form asp-controller="Login" asp-action="Logout" method="post">
                         <button type="submit" class="btn btn-sm btn-secondary">Log Out</button>

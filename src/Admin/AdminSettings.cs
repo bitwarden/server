@@ -6,8 +6,15 @@ namespace Bit.Admin;
 public class AdminSettings
 {
     // Comma-separated allowlist of email addresses permitted to sign in to the Admin Portal.
-    // Authorization gate for both passwordless and SSO paths - authentication proves identity,
-    // this list decides who's an admin.
+    // Entries are "email" or "email:stamp" (the optional stamp populates IdentityUser
+    // .SecurityStamp for the passwordless user store).
+    //
+    // Used by:
+    //   - Passwordless sign-in (both deployments) - tenancy gate.
+    //   - SSO sign-in on self-hosted - tenancy gate.
+    //
+    // Not consulted on cloud SSO, where tenancy comes from AdminSettings:Oidc:GroupPrefix
+    // mapped role claims. See src/Admin/Auth/README.md.
     public virtual string Admins { get; set; }
 
     // Retention window for soft-deleted items before the background cleanup job hard-deletes them.
@@ -74,5 +81,14 @@ public class AdminSettings
         // against IdPs that permit self-registration with unverified email addresses. Set to
         // false only for IdPs that don't emit the claim and are operator-controlled.
         public bool RequireEmailVerifiedClaim { get; set; } = true;
+
+        // Prefix the IdP uses on Admin Portal group names (e.g. `us-prd-cloud-adminportal-`).
+        // The suffix after the prefix is matched case-insensitively against the known role names
+        // in RolePermissionMapping (owner, admin, billing, cs, sales). A group that does not
+        // start with this prefix, or whose suffix is not a known role, is ignored.
+        //
+        // Required at boot when SSO is enabled on cloud, where "has at least one mapped role"
+        // is the tenancy gate. Not required on self-hosted. See src/Admin/Auth/README.md.
+        public string GroupPrefix { get; set; }
     }
 }
