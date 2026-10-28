@@ -12,7 +12,7 @@ Each verb has one meaning across the layers:
 | Term           | Meaning                                                                                                 |
 | -------------- | ------------------------------------------------------------------------------------------------------- |
 | Generate       | `IOtpTokenProvider<TOptions>` creates a random code and stores it.                                      |
-| Issue          | `IUserVerificationOtpStore` generates a code under this OTP's rules: it counts the request and refuses at the request limit. |
+| Issue          | `IUserVerificationOtpStore` checks the request limit, then has `IOtpTokenProvider<TOptions>` create a code for the user. The new code replaces any pending one. |
 | Send           | `IUserVerificationOtpCommand` issues a code and emails it.                                              |
 | Validate       | `IOtpTokenProvider<TOptions>` and `IUserVerificationOtpStore` check a code, and remove it after a correct one. |
 | Verify         | `IUserVerificationOtpCommand` validates a code and marks the user's email as verified.                  |
