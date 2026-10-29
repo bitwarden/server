@@ -78,10 +78,13 @@ public class OrganizationInviteLinkEndpointsTests
         await _createCommand.DidNotReceiveWithAnyArgs().CreateAsync(default!);
     }
 
-    [Fact]
-    public async Task Create_WithMalformedBody_ReturnsBadRequestWithoutCallingCommand()
+    [Theory]
+    [InlineData("""{"invite":5}""")]
+    [InlineData("null")]
+    [InlineData("")]
+    public async Task Create_WithMalformedOrMissingBody_ReturnsBadRequestWithoutCallingCommand(string json)
     {
-        var context = await InvokeAsync("OrganizationInviteLinks_Create", HttpMethods.Post, """{"invite":5}""");
+        var context = await InvokeAsync("OrganizationInviteLinks_Create", HttpMethods.Post, json);
 
         Assert.Equal((int)HttpStatusCode.BadRequest, context.Response.StatusCode);
         await _createCommand.DidNotReceiveWithAnyArgs().CreateAsync(default!);

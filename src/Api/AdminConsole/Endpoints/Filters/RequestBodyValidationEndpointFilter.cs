@@ -24,12 +24,17 @@ public static class RequestBodyValidationEndpointFilter
             var model = invocationContext.Arguments[bodyIndex];
             var results = new List<ValidationResult>();
 
-            if (model is null || Validator.TryValidateObject(model, new ValidationContext(model), results, validateAllProperties: true))
+            if (model is not null && Validator.TryValidateObject(model, new ValidationContext(model), results, validateAllProperties: true))
             {
                 return next(invocationContext);
             }
 
             var modelState = new ModelStateDictionary();
+            if (model is null)
+            {
+                modelState.AddModelError(string.Empty, "Body is empty.");
+            }
+
             foreach (var result in results)
             {
                 modelState.AddModelError(result.MemberNames.FirstOrDefault() ?? string.Empty, result.ErrorMessage ?? string.Empty);
