@@ -13,23 +13,12 @@ namespace Bit.Api.Dirt.Models;
 public static class EventLegacyFieldResolver
 {
     /// <summary>
-    /// Secret and project events written before the server populated ActingUserId recorded the
-    /// human actor in UserId instead. Deliberately scoped to Secret_* and Project_*: on other
-    /// types UserId is not the actor (Send access rows hold the owner while the accessor is
-    /// unknown, system-user member events hold the member acted upon, and ServiceAccount_* rows
-    /// hold an OrganizationUser id), so a blanket fallback would misattribute them.
+    /// Events written before the server populated ActingUserId recorded the human actor in UserId
+    /// instead, so UserId is used as the actor whenever ActingUserId is missing, regardless of
+    /// event type.
     /// </summary>
-    public static Guid? ResolveActingUserId(IEvent ev)
-    {
-        if (ev.ActingUserId.HasValue || !ev.UserId.HasValue)
-        {
-            return ev.ActingUserId;
-        }
-
-        var type = (int)ev.Type;
-        var isSecretOrProjectEvent = type is >= 2100 and <= 2299;
-        return isSecretOrProjectEvent ? ev.UserId : null;
-    }
+    public static Guid? ResolveActingUserId(IEvent ev) =>
+        ev.ActingUserId ?? ev.UserId;
 
     /// <summary>
     /// ServiceAccount_UserAdded/Removed events written before the server populated

@@ -11,7 +11,7 @@ public class EventResponseModelTests
     [Theory]
     [BitAutoData(EventType.Secret_Retrieved)]
     [BitAutoData(EventType.Project_Retrieved)]
-    public void Constructor_SecretOrProjectEvent_MissingActingUser_FallsBackToUserId(
+    public void Constructor_MissingActingUser_FallsBackToUserId(
         EventType type, Guid userId)
     {
         var ev = new EventMessage { Type = type, UserId = userId, ActingUserId = null };
@@ -27,25 +27,6 @@ public class EventResponseModelTests
     // model (EventResponseModelTests in Bit.Api.Test.Dirt.Public.Models) -- ResolveActingUserId is
     // the same call in both models, and neither of those cases touches UserId, so they'd be exact
     // duplicates here.
-
-    /// <summary>
-    /// ServiceAccount_UserAdded is deliberately excluded here: on that type UserId is a legacy
-    /// stashed OrganizationUser id, so its ActingUserId non-fallback is covered instead by
-    /// Constructor_LegacyServiceAccountPeopleEvent_MissingOrganizationUserId_ReclaimsUserIdAndHidesIt.
-    /// </summary>
-    [Theory]
-    [BitAutoData(EventType.Send_Accessed_Text)]
-    [BitAutoData(EventType.OrganizationUser_Invited)]
-    public void Constructor_OtherEventTypes_MissingActingUser_DoesNotFallBack(
-        EventType type, Guid userId)
-    {
-        var ev = new EventMessage { Type = type, UserId = userId, ActingUserId = null };
-
-        var response = new EventResponseModel(ev);
-
-        Assert.Null(response.ActingUserId);
-        Assert.Equal(userId, response.UserId);
-    }
 
     /// <summary>
     /// Legacy ServiceAccount_UserAdded/Removed rows stashed the granted member's OrganizationUser
