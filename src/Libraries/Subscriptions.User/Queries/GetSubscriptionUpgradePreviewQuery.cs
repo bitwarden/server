@@ -110,7 +110,7 @@ internal sealed class GetSubscriptionUpgradePreviewQuery(
         try
         {
             return await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId,
-                new SubscriptionGetOptions { Expand = ["test_clock"] });
+                new SubscriptionGetOptions { Expand = [StripeConstants.SubscriptionExpandablePropertyNames.TestClock] });
         }
         catch (StripeException stripeException)
             when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.ResourceMissing)

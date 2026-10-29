@@ -109,7 +109,7 @@ public class UpgradePremiumToOrganizationCommand(
         // Fetch the current Premium subscription from Stripe
         var currentSubscription = await stripeAdapter.GetSubscriptionAsync(
             user.GatewaySubscriptionId,
-            new SubscriptionGetOptions { Expand = ["test_clock"] });
+            new SubscriptionGetOptions { Expand = [SubscriptionExpandablePropertyNames.TestClock] });
 
         if (prorationDate.HasValue)
         {

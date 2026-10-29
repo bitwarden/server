@@ -303,7 +303,7 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
         try
         {
             return await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
-                new SubscriptionGetOptions { Expand = ["items.data.price", "customer.tax_ids", "test_clock"] });
+                new SubscriptionGetOptions { Expand = ["items.data.price", "customer.tax_ids", SubscriptionExpandablePropertyNames.TestClock] });
         }
         catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
         {

@@ -122,7 +122,7 @@ public class UpgradeOrganizationPlanVNextCommand(
         if (prorationDate.HasValue)
         {
             var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
-                stripeAdapter, _logger, organization, ["test_clock"]);
+                stripeAdapter, _logger, organization, [SubscriptionExpandablePropertyNames.TestClock]);
 
             if (subscription is null)
             {
