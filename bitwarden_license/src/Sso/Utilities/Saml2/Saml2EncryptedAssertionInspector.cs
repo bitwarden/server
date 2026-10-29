@@ -46,12 +46,16 @@ public static class Saml2EncryptedAssertionInspector
     /// <summary>
     /// Throws when a top-level encrypted assertion has no xenc:EncryptedKey, or has any key whose
     /// key transport algorithm is not in <see cref="Saml2KeyTransportEncryptionAlgorithms.Accepted"/>.
+    /// Also throws when a top-level encrypted assertion does not hold exactly one xenc:EncryptedData.
     /// </summary>
     /// <param name="envelope">The root element of a SAML response or request.</param>
     /// <remarks>
     /// This method never decrypts an assertion, and it must run before any decryption.
     /// Only OAEP key transport is accepted.
     /// A ds:RetrievalMethod must name an xenc:EncryptedKey in the same encrypted assertion.
+    /// An encrypted assertion must hold exactly one xenc:EncryptedData.
+    /// The SAML 2.0 assertion schema declares this in saml:EncryptedElementType.
+    /// Decryption then resolves one key, before any decrypted content enters the document.
     /// Thus, every key that decryption can use is a key that this method checks.
     /// This method does not catch exceptions, so an envelope it cannot read fails closed.
     /// The exception message is constant. It never includes a value from the envelope.
@@ -65,6 +69,8 @@ public static class Saml2EncryptedAssertionInspector
 
         foreach (var encryptedAssertion in encryptedAssertions)
         {
+            EnsureSingleEncryptedData(encryptedAssertion);
+
             var algorithms = ReadKeyEncryptionAlgorithms(encryptedAssertion).ToArray();
             if (algorithms.Length == 0 || algorithms.Any(a =>
                     !Saml2KeyTransportEncryptionAlgorithms.Accepted.Contains(a, StringComparer.Ordinal)))
@@ -73,6 +79,17 @@ public static class Saml2EncryptedAssertionInspector
             }
 
             EnsureRetrievalMethodsNameEncryptedKeys(encryptedAssertion);
+        }
+    }
+
+    private static void EnsureSingleEncryptedData(XmlElement encryptedAssertion)
+    {
+        var encryptedDataCount = encryptedAssertion
+            .GetElementsByTagName("EncryptedData", _xencNamespace)
+            .Count;
+        if (encryptedDataCount != 1)
+        {
+            throw new Exception(KeyTransportAlgorithmNotAcceptedMessage);
         }
     }
 
