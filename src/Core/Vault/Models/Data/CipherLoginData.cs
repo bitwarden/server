@@ -22,6 +22,7 @@ public class CipherLoginData : CipherData
     public DateTime? PasswordRevisionDate { get; set; }
     public string Totp { get; set; }
     public bool? AutofillOnPageLoad { get; set; }
+    public bool? HttpAuthenticationEnabled { get; set; }
     public CipherLoginFido2CredentialData[] Fido2Credentials { get; set; }
 
     public class CipherLoginUriData
