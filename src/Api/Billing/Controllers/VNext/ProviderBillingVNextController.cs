@@ -7,12 +7,14 @@ using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Providers.Queries;
 using Bit.Core.Utilities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 // ReSharper disable RouteTemplates.MethodMissingRouteParameters
 
 namespace Bit.Api.Billing.Controllers.VNext;
 
+[Authorize("Application")]
 [Route("providers/{providerId:guid}/billing/vnext")]
 [SelfHosted(NotSelfHostedOnly = true)]
 public class ProviderBillingVNextController(
