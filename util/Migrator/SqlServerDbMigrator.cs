@@ -15,10 +15,10 @@ public class SqlServerDbMigrator : IDbMigrator
             executionTimeoutSeconds: globalSettings.SqlServer.MigrationExecutionTimeoutSeconds);
     }
 
-    public bool MigrateDatabase(bool enableLogging = true,
+    public bool MigrateDatabase(bool enableLogging = true, Func<string, bool>? onDataMigration = null,
         CancellationToken cancellationToken = default)
     {
-        return _migrator.MigrateMsSqlDatabaseWithRetries(enableLogging,
+        return _migrator.MigrateMsSqlDatabaseWithRetries(enableLogging, onDataMigration: onDataMigration,
             cancellationToken: cancellationToken);
     }
 }
