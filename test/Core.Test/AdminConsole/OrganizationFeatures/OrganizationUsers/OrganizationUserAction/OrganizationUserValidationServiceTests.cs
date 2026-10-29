@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Models.Data;
+﻿using Bit.Core.AdminConsole.Context;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
@@ -15,11 +16,12 @@ public class OrganizationUserValidationServiceTests
     private static readonly Guid _organizationId = Guid.NewGuid();
 
     private readonly IOrganizationUserRepository _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
+    private readonly IScopedOrganizationApiKeyContext _scopedOrganizationApiKeyContext = Substitute.For<IScopedOrganizationApiKeyContext>();
     private readonly OrganizationUserValidationService _sut;
 
     public OrganizationUserValidationServiceTests()
     {
-        _sut = new OrganizationUserValidationService(_organizationUserRepository);
+        _sut = new OrganizationUserValidationService(_organizationUserRepository, _scopedOrganizationApiKeyContext);
     }
 
     // NOTE: A null `performedBy` represents a non-member. Custom users are granted the ManageUsers permission by
@@ -222,6 +224,58 @@ public class OrganizationUserValidationServiceTests
             NewRole(OrganizationUserType.User));
 
         Assert.Null(result);
+    }
+
+    [Fact]
+    public void CanManageRoleChange_ByActingUser_WhenLegacyPublicApiPromotesToOwner_ReturnsNull()
+    {
+        var performedBy = new SystemUser(EventSystemUser.PublicApi);
+
+        var result = _sut.CanManageRoleChange(performedBy, TargetUser(OrganizationUserType.User),
+            NewRole(OrganizationUserType.Owner));
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void CanManageRoleChange_ByActingUser_WhenScopedApiKeyKeepsUserAsUser_ReturnsNull()
+    {
+        _scopedOrganizationApiKeyContext.IsScopedOrganizationApiKey.Returns(true);
+
+        var result = _sut.CanManageRoleChange(new SystemUser(EventSystemUser.PublicApi),
+            TargetUser(OrganizationUserType.User), NewRole(OrganizationUserType.User));
+
+        Assert.Null(result);
+    }
+
+    [Theory]
+    [InlineData(OrganizationUserType.Owner)]
+    [InlineData(OrganizationUserType.Admin)]
+    [InlineData(OrganizationUserType.Custom)]
+    public void CanManageRoleChange_ByActingUser_WhenScopedApiKeyTargetsElevatedMember_ReturnsScopedApiKeyCanOnlyManageUsers(
+        OrganizationUserType targetRole)
+    {
+        _scopedOrganizationApiKeyContext.IsScopedOrganizationApiKey.Returns(true);
+
+        var result = _sut.CanManageRoleChange(new SystemUser(EventSystemUser.PublicApi),
+            TargetUser(targetRole), NewRole(OrganizationUserType.User));
+
+        Assert.IsType<ScopedApiKeyCanOnlyManageUsers>(result);
+    }
+
+    [Theory]
+    [InlineData(OrganizationUserType.Owner)]
+    [InlineData(OrganizationUserType.Admin)]
+    [InlineData(OrganizationUserType.Custom)]
+    public void CanManageRoleChange_ByActingUser_WhenScopedApiKeyGrantsElevatedRole_ReturnsScopedApiKeyCanOnlyManageUsers(
+        OrganizationUserType newRole)
+    {
+        _scopedOrganizationApiKeyContext.IsScopedOrganizationApiKey.Returns(true);
+
+        var result = _sut.CanManageRoleChange(new SystemUser(EventSystemUser.PublicApi),
+            TargetUser(OrganizationUserType.User), NewRole(newRole, new Permissions { ManageUsers = true }));
+
+        Assert.IsType<ScopedApiKeyCanOnlyManageUsers>(result);
     }
 
     [Fact]

@@ -41,7 +41,7 @@ public interface IOrganizationUserValidationService
     /// <summary>
     /// Checks whether the acting user can change the target member's role without escalating privileges. The acting
     /// user must be able to manage both the target's current and requested role, and a Custom user may only grant
-    /// custom permissions they hold themselves.
+    /// custom permissions they hold themselves. A scoped organization API key may only manage Users and keep them Users.
     /// </summary>
     /// <param name="performedBy">The caller acting on the member.</param>
     /// <param name="targetUser">The member being managed, with their current role.</param>

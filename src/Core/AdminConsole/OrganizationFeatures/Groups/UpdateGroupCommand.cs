@@ -17,6 +17,7 @@ public class UpdateGroupCommand : IUpdateGroupCommand
     private readonly IGroupRepository _groupRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IGroupCollectionAccessValidator _groupCollectionAccessValidator;
+    private readonly IScopedApiKeyGroupMemberValidator _scopedApiKeyGroupMemberValidator;
     private readonly TimeProvider _timeProvider;
 
     public UpdateGroupCommand(
@@ -24,12 +25,14 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         IGroupRepository groupRepository,
         IOrganizationUserRepository organizationUserRepository,
         IGroupCollectionAccessValidator groupCollectionAccessValidator,
+        IScopedApiKeyGroupMemberValidator scopedApiKeyGroupMemberValidator,
         TimeProvider timeProvider)
     {
         _eventService = eventService;
         _groupRepository = groupRepository;
         _organizationUserRepository = organizationUserRepository;
         _groupCollectionAccessValidator = groupCollectionAccessValidator;
+        _scopedApiKeyGroupMemberValidator = scopedApiKeyGroupMemberValidator;
         _timeProvider = timeProvider;
     }
 
@@ -142,6 +145,16 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         if (memberAccess?.Any() == true)
         {
             await ValidateMemberAccessAsync(originalGroup, memberAccess.ToList());
+        }
+
+        if (memberAccess != null)
+        {
+            var memberError = await _scopedApiKeyGroupMemberValidator.ValidateAsync(
+                originalGroup.OrganizationId, originalGroup.Id, memberAccess);
+            if (memberError is not null)
+            {
+                throw memberError.ToException();
+            }
         }
 
         var invalidAssociations = collectionAccess?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));

@@ -2,6 +2,7 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Context;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Interfaces;
@@ -39,7 +40,8 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     IPricingClient pricingClient,
     IGlobalSettings globalSettings,
     ICollectionRepository collectionRepository,
-    IGroupRepository groupRepository
+    IGroupRepository groupRepository,
+    IScopedOrganizationApiKeyContext scopedOrganizationApiKeyContext
     ) : IInviteOrganizationUsersCommand
 {
 
@@ -116,6 +118,12 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     private async Task<CommandResult<InviteOrganizationUsersResponse>> InviteOrganizationUsersAsync(InviteOrganizationUsersRequest request)
     {
+        if (scopedOrganizationApiKeyContext.IsScopedOrganizationApiKey && request.Invites.Any(i => i.Type != OrganizationUserType.User))
+        {
+            return new Failure<InviteOrganizationUsersResponse>(new ScopedApiKeyCanOnlyInviteUsersError(
+                new InviteOrganizationUsersResponse(request.Organization.Id)));
+        }
+
         var plan = await pricingClient.GetPlan(request.Organization.PlanType);
         if (plan is null && !globalSettings.SelfHosted)
         {
