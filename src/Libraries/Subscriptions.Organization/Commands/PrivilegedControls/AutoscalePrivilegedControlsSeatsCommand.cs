@@ -27,14 +27,14 @@ internal sealed class AutoscalePrivilegedControlsSeatsCommand(
     IBitwardenEnvironment environment,
     ILogger<AutoscalePrivilegedControlsSeatsCommand> logger) : IAutoscalePrivilegedControlsSeatsCommand
 {
-    public async Task<AutoscalePrivilegedControlsSeatsResult> Run(OrganizationEntity organization, int seatsToAdd)
+    public async Task<AutoscalePrivilegedControlsSeatsResult> RunAsync(OrganizationEntity organization, int seatsRequested)
     {
         if (environment.SelfHosted)
         {
             throw new BadRequestException("Cannot update subscription on a self-hosted instance.");
         }
 
-        if (seatsToAdd < 1)
+        if (seatsRequested < 1)
         {
             throw new BadRequestException("At least one Privileged Controls seat must be added.");
         }
@@ -45,18 +45,18 @@ internal sealed class AutoscalePrivilegedControlsSeatsCommand(
         }
 
         var seatsNeeded =
-            await organizationUserRepository.GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id) + seatsToAdd;
+            await organizationUserRepository.GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id) + seatsRequested;
 
         if (seatsNeeded > organization.PamSeats)
         {
-            if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
-            {
-                throw new BadRequestException("No subscription found.");
-            }
-
             if (organization.MaxAutoscalePamSeats < seatsNeeded)
             {
                 return new AutoscalePrivilegedControlsSeatsResult(false, organization.MaxAutoscalePamSeats);
+            }
+
+            if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
+            {
+                throw new BadRequestException("No subscription found.");
             }
 
             if (!await isOnTrialQuery.Run(organization))

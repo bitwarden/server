@@ -30,8 +30,9 @@ public class BulkEnablePamCommand(
             return new PamNotEnabled();
         }
 
-        var membersTakingSeats = organizationUsers.Count(u => PrivilegedControlsSeatOccupancy.OccupiesSeat(u.Status));
-        var reservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, membersTakingSeats);
+        var privilegedControlsSeatsRequested =
+            organizationUsers.Count(u => PrivilegedControlsSeatOccupancy.OccupiesSeat(u.Status));
+        var reservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, privilegedControlsSeatsRequested);
         if (!reservation.Success)
         {
             return reservation.Error!;

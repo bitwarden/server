@@ -15,7 +15,7 @@ internal sealed class RevertPrivilegedControlsSeatsCommand(
     IIsOnPrivilegedControlsSalesInitiatedTrialQuery isOnTrialQuery,
     IBitwardenEnvironment environment) : IRevertPrivilegedControlsSeatsCommand
 {
-    public async Task Run(OrganizationEntity organization, int seats)
+    public async Task RunAsync(OrganizationEntity organization, int seats)
     {
         if (environment.SelfHosted)
         {

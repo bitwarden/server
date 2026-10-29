@@ -916,7 +916,7 @@ public class InviteStagedOrganizationUsersCommandTests
 
         await sutProvider.GetDependency<IRevertPrivilegedControlsSeatsCommand>()
             .Received(1)
-            .Run(organization, 5);
+            .RunAsync(organization, 5);
     }
 
     [Theory, BitAutoData]
@@ -990,7 +990,7 @@ public class InviteStagedOrganizationUsersCommandTests
 
         await sutProvider.GetDependency<IRevertPrivilegedControlsSeatsCommand>()
             .Received(1)
-            .Run(organization, 5);
+            .RunAsync(organization, 5);
     }
 
     [Theory, BitAutoData]
@@ -1003,7 +1003,7 @@ public class InviteStagedOrganizationUsersCommandTests
         AutoscalePamSeatsTo(sutProvider, organization, 7);
         FailInviteSend(sutProvider);
         sutProvider.GetDependency<IRevertPrivilegedControlsSeatsCommand>()
-            .Run(organization, 5)
+            .RunAsync(organization, 5)
             .ThrowsAsync(new GatewayException("Stripe is unreachable."));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.RunAsync(request));
@@ -1022,7 +1022,7 @@ public class InviteStagedOrganizationUsersCommandTests
 
         await sutProvider.GetDependency<IRevertPrivilegedControlsSeatsCommand>()
             .DidNotReceiveWithAnyArgs()
-            .Run(default!, default);
+            .RunAsync(default!, default);
     }
 
     /// <summary>Asserts the request succeeded overall but reported <typeparamref name="TError"/> for one member.</summary>

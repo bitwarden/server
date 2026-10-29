@@ -9,13 +9,17 @@ namespace Bit.Core.Billing.Organizations.Commands;
 public interface IReservePrivilegedControlsSeatsCommand
 {
     /// <summary>
-    /// Reserves seats for <paramref name="membersTakingSeats"/> members who are about to be granted Privileged
-    /// Controls access and do not already occupy a seat. On cloud, seats are autoscaled up to the organization's limit.
-    /// The caller grants the access.
+    /// Reserves Privileged Controls seats for members who are about to be granted access. On cloud, seats are
+    /// autoscaled up to the organization's limit. The caller grants the access.
     /// </summary>
+    /// <param name="organization">The organization the members belong to.</param>
+    /// <param name="seatsRequested">
+    /// The number of members about to start using a Privileged Controls seat. Not the new total and not the
+    /// shortfall: the command buys only what free seats don't cover.
+    /// </param>
     /// <remarks>
-    /// Succeeds without checking seats when no members are taking seats, the organization doesn't use Privileged
+    /// Succeeds without checking seats when no seats are requested, the organization doesn't use Privileged
     /// Controls, or it has no Privileged Controls seat count. Never throws: every failure is returned as an error.
     /// </remarks>
-    Task<PrivilegedControlsSeatReservationResult> RunAsync(Organization organization, int membersTakingSeats);
+    Task<PrivilegedControlsSeatReservationResult> RunAsync(Organization organization, int seatsRequested);
 }

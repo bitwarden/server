@@ -34,11 +34,11 @@ public class RevertPrivilegedControlsSeatsCommandTests
             _environment);
 
     [Fact]
-    public async Task Run_SeatsUnchanged_DoesNothing()
+    public async Task RunAsync_SeatsUnchanged_DoesNothing()
     {
         var organization = CreateOrganization(pamSeats: 5);
 
-        await _sut.Run(organization, 5);
+        await _sut.RunAsync(organization, 5);
 
         await _seatChangeSetFactory.DidNotReceive().CreateAsync(Arg.Any<OrganizationEntity>(), Arg.Any<int>());
         await _updateOrganizationSubscriptionCommand.DidNotReceive()
@@ -47,12 +47,12 @@ public class RevertPrivilegedControlsSeatsCommandTests
     }
 
     [Fact]
-    public async Task Run_OnTrial_ResetsSeatsOnOrganizationOnly()
+    public async Task RunAsync_OnTrial_ResetsSeatsOnOrganizationOnly()
     {
         var organization = CreateOrganization(pamSeats: 7);
         _isOnTrialQuery.Result = true;
 
-        await _sut.Run(organization, 5);
+        await _sut.RunAsync(organization, 5);
 
         Assert.Equal(5, organization.PamSeats);
         await _replaceOrganizationAndUpdateCacheCommand.Received(1).RunAsync(organization);
@@ -62,7 +62,7 @@ public class RevertPrivilegedControlsSeatsCommandTests
     }
 
     [Fact]
-    public async Task Run_Paid_UpdatesSubscriptionThenSaves()
+    public async Task RunAsync_Paid_UpdatesSubscriptionThenSaves()
     {
         var organization = CreateOrganization(pamSeats: 7);
         _isOnTrialQuery.Result = false;
@@ -75,7 +75,7 @@ public class RevertPrivilegedControlsSeatsCommandTests
             .Run(organization, changeSet, Arg.Any<Subscription?>())
             .Returns(new Subscription());
 
-        await _sut.Run(organization, 5);
+        await _sut.RunAsync(organization, 5);
 
         await _seatChangeSetFactory.Received(1).CreateAsync(organization, 5);
         await _updateOrganizationSubscriptionCommand.Received(1).Run(organization, changeSet);
@@ -84,12 +84,12 @@ public class RevertPrivilegedControlsSeatsCommandTests
     }
 
     [Fact]
-    public async Task Run_SelfHosted_ThrowsBadRequest()
+    public async Task RunAsync_SelfHosted_ThrowsBadRequest()
     {
         var organization = CreateOrganization(pamSeats: 7);
         _environment.SelfHosted.Returns(true);
 
-        await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, 5));
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.RunAsync(organization, 5));
     }
 
     private static OrganizationEntity CreateOrganization(int pamSeats) => new()

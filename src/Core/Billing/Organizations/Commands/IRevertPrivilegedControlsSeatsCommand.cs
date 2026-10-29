@@ -19,5 +19,5 @@ public interface IRevertPrivilegedControlsSeatsCommand
     /// Thrown on a self-hosted instance, or when the seat change or subscription update is rejected.
     /// </exception>
     /// <exception cref="ConflictException">Thrown when the organization's subscription is in a state that prevents the change.</exception>
-    Task Run(OrganizationEntity organization, int seats);
+    Task RunAsync(OrganizationEntity organization, int seats);
 }

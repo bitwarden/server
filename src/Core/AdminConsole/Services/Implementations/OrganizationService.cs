@@ -852,9 +852,9 @@ public class OrganizationService : IOrganizationService
         await _organizationUserRepository.ReplaceManyAsync(promotedStagedUsers);
     }
 
-    private async Task ReservePrivilegedControlsSeatsAsync(Organization organization, int membersTakingSeats)
+    private async Task ReservePrivilegedControlsSeatsAsync(Organization organization, int seatsRequested)
     {
-        var reservation = await _reservePrivilegedControlsSeatsCommand.RunAsync(organization, membersTakingSeats);
+        var reservation = await _reservePrivilegedControlsSeatsCommand.RunAsync(organization, seatsRequested);
         if (reservation.Success)
         {
             return;
@@ -877,7 +877,7 @@ public class OrganizationService : IOrganizationService
 
         try
         {
-            await _revertPrivilegedControlsSeatsCommand.Run(organization, initialPamSeats.Value);
+            await _revertPrivilegedControlsSeatsCommand.RunAsync(organization, initialPamSeats.Value);
         }
         catch (Exception ex)
         {

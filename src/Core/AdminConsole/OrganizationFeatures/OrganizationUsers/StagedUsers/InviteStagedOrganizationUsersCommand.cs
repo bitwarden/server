@@ -420,7 +420,7 @@ public class InviteStagedOrganizationUsersCommand(
 
         try
         {
-            await revertPrivilegedControlsSeatsCommand.Run(organization, initialPamSeats.Value);
+            await revertPrivilegedControlsSeatsCommand.RunAsync(organization, initialPamSeats.Value);
         }
         catch (Exception ex)
         {

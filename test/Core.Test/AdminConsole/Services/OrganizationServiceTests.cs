@@ -2228,7 +2228,7 @@ public class OrganizationServiceTests
 
         await sutProvider.GetDependency<IRevertPrivilegedControlsSeatsCommand>()
             .Received(1)
-            .Run(organization, 5);
+            .RunAsync(organization, 5);
     }
 
     [Theory]
@@ -2248,7 +2248,7 @@ public class OrganizationServiceTests
             .SendInvitesAsync(Arg.Any<SendInvitesRequest>())
             .ThrowsAsync(new InvalidOperationException("SMTP is down."));
         sutProvider.GetDependency<IRevertPrivilegedControlsSeatsCommand>()
-            .Run(organization, 5)
+            .RunAsync(organization, 5)
             .ThrowsAsync(new GatewayException("Stripe is unavailable."));
 
         var exception = await Assert.ThrowsAsync<AggregateException>(() => sutProvider.Sut

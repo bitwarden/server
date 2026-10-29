@@ -15,40 +15,40 @@ internal sealed class ReservePrivilegedControlsSeatsCommand(
     IBitwardenEnvironment environment,
     ILogger<ReservePrivilegedControlsSeatsCommand> logger) : IReservePrivilegedControlsSeatsCommand
 {
-    public async Task<PrivilegedControlsSeatReservationResult> RunAsync(OrganizationEntity organization, int membersTakingSeats)
+    public async Task<PrivilegedControlsSeatReservationResult> RunAsync(OrganizationEntity organization, int seatsRequested)
     {
         // A null seat count means no seat count applies to the organization yet.
-        if (membersTakingSeats < 1 || !organization.UsePam || organization.PamSeats is null)
+        if (seatsRequested < 1 || !organization.UsePam || organization.PamSeats is null)
         {
             return new PrivilegedControlsSeatReservationResult();
         }
 
         try
         {
-            return await ReserveAsync(organization, membersTakingSeats);
+            return await ReserveAsync(organization, seatsRequested);
         }
         catch (BadRequestException e)
         {
             logger.LogWarning(e,
                 "Could not reserve {SeatsToReserve} Privileged Controls seat(s) for organization {OrganizationId}",
-                membersTakingSeats, organization.Id);
+                seatsRequested, organization.Id);
             return new PrivilegedControlsSeatReservationResult(new PrivilegedControlsSeatExpansionFailedError(e.Message), e);
         }
         catch (Exception e)
         {
             logger.LogError(e,
                 "Unexpected error reserving {SeatsToReserve} Privileged Controls seat(s) for organization {OrganizationId}",
-                membersTakingSeats, organization.Id);
+                seatsRequested, organization.Id);
             return new PrivilegedControlsSeatReservationResult(new PrivilegedControlsSeatReservationUnexpectedError(), e);
         }
     }
 
-    private async Task<PrivilegedControlsSeatReservationResult> ReserveAsync(OrganizationEntity organization, int membersTakingSeats)
+    private async Task<PrivilegedControlsSeatReservationResult> ReserveAsync(OrganizationEntity organization, int seatsRequested)
     {
         if (environment.SelfHosted)
         {
             var seatsRequired = await countNewPamSeatsRequiredQuery
-                .CountNewPamSeatsRequiredAsync(organization, membersTakingSeats);
+                .CountNewPamSeatsRequiredAsync(organization, seatsRequested);
 
             return seatsRequired > 0
                 ? new PrivilegedControlsSeatReservationResult(new CannotAutoscalePrivilegedControlsSeatsOnSelfHostError())
@@ -61,7 +61,7 @@ internal sealed class ReservePrivilegedControlsSeatsCommand(
             return new PrivilegedControlsSeatReservationResult(new PrivilegedControlsSeatLimitReachedError());
         }
 
-        var result = await autoscalePrivilegedControlsSeatsCommand.Run(organization, membersTakingSeats);
+        var result = await autoscalePrivilegedControlsSeatsCommand.RunAsync(organization, seatsRequested);
 
         return result.Success
             ? new PrivilegedControlsSeatReservationResult()

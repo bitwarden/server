@@ -32,14 +32,14 @@ public class ReservePrivilegedControlsSeatsCommandTests
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public async Task RunAsync_NoMembers_SucceedsWithoutCallingAutoscale(int membersTakingSeats)
+    public async Task RunAsync_NoSeatsRequested_SucceedsWithoutCallingAutoscale(int seatsRequested)
     {
         var organization = CreateOrganization();
 
-        var result = await _sut.RunAsync(organization, membersTakingSeats);
+        var result = await _sut.RunAsync(organization, seatsRequested);
 
         Assert.True(result.Success);
-        await _autoscalePrivilegedControlsSeatsCommand.DidNotReceiveWithAnyArgs().Run(default!, default);
+        await _autoscalePrivilegedControlsSeatsCommand.DidNotReceiveWithAnyArgs().RunAsync(default!, default);
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public class ReservePrivilegedControlsSeatsCommandTests
         var result = await _sut.RunAsync(organization, 2);
 
         Assert.True(result.Success);
-        await _autoscalePrivilegedControlsSeatsCommand.DidNotReceiveWithAnyArgs().Run(default!, default);
+        await _autoscalePrivilegedControlsSeatsCommand.DidNotReceiveWithAnyArgs().RunAsync(default!, default);
     }
 
     [Theory]
@@ -64,7 +64,7 @@ public class ReservePrivilegedControlsSeatsCommandTests
         var result = await _sut.RunAsync(organization, 2);
 
         Assert.True(result.Success);
-        await _autoscalePrivilegedControlsSeatsCommand.DidNotReceiveWithAnyArgs().Run(default!, default);
+        await _autoscalePrivilegedControlsSeatsCommand.DidNotReceiveWithAnyArgs().RunAsync(default!, default);
         await _countNewPamSeatsRequiredQuery.DidNotReceiveWithAnyArgs().CountNewPamSeatsRequiredAsync(default!, default);
     }
 
@@ -76,7 +76,7 @@ public class ReservePrivilegedControlsSeatsCommandTests
         var result = await _sut.RunAsync(organization, 2);
 
         Assert.IsType<PrivilegedControlsSeatLimitReachedError>(result.Error);
-        await _autoscalePrivilegedControlsSeatsCommand.DidNotReceiveWithAnyArgs().Run(default!, default);
+        await _autoscalePrivilegedControlsSeatsCommand.DidNotReceiveWithAnyArgs().RunAsync(default!, default);
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public class ReservePrivilegedControlsSeatsCommandTests
         var result = await _sut.RunAsync(organization, 2);
 
         Assert.IsType<CannotAutoscalePrivilegedControlsSeatsOnSelfHostError>(result.Error);
-        await _autoscalePrivilegedControlsSeatsCommand.DidNotReceiveWithAnyArgs().Run(default!, default);
+        await _autoscalePrivilegedControlsSeatsCommand.DidNotReceiveWithAnyArgs().RunAsync(default!, default);
     }
 
     [Fact]
@@ -120,20 +120,20 @@ public class ReservePrivilegedControlsSeatsCommandTests
     public async Task RunAsync_Cloud_AutoscaleSucceeds_Succeeds()
     {
         var organization = CreateOrganization();
-        _autoscalePrivilegedControlsSeatsCommand.Run(organization, 3)
+        _autoscalePrivilegedControlsSeatsCommand.RunAsync(organization, 3)
             .Returns(new AutoscalePrivilegedControlsSeatsResult(true, null));
 
         var result = await _sut.RunAsync(organization, 3);
 
         Assert.True(result.Success);
-        await _autoscalePrivilegedControlsSeatsCommand.Received(1).Run(organization, 3);
+        await _autoscalePrivilegedControlsSeatsCommand.Received(1).RunAsync(organization, 3);
     }
 
     [Fact]
     public async Task RunAsync_Cloud_AutoscaleAtLimit_ReturnsLimitReached()
     {
         var organization = CreateOrganization();
-        _autoscalePrivilegedControlsSeatsCommand.Run(organization, 3)
+        _autoscalePrivilegedControlsSeatsCommand.RunAsync(organization, 3)
             .Returns(new AutoscalePrivilegedControlsSeatsResult(false, 6));
 
         var result = await _sut.RunAsync(organization, 3);
@@ -146,7 +146,7 @@ public class ReservePrivilegedControlsSeatsCommandTests
     {
         var organization = CreateOrganization();
         var exception = new BadRequestException("No subscription found.");
-        _autoscalePrivilegedControlsSeatsCommand.Run(organization, 3).ThrowsAsync(exception);
+        _autoscalePrivilegedControlsSeatsCommand.RunAsync(organization, 3).ThrowsAsync(exception);
 
         var result = await _sut.RunAsync(organization, 3);
 
@@ -162,7 +162,7 @@ public class ReservePrivilegedControlsSeatsCommandTests
     {
         var organization = CreateOrganization();
         var exception = new ConflictException("The subscription is invalid.");
-        _autoscalePrivilegedControlsSeatsCommand.Run(organization, 3).ThrowsAsync(exception);
+        _autoscalePrivilegedControlsSeatsCommand.RunAsync(organization, 3).ThrowsAsync(exception);
 
         var result = await _sut.RunAsync(organization, 3);
 
