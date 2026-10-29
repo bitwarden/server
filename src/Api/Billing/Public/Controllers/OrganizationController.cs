@@ -4,6 +4,7 @@
 using System.Net;
 using Bit.Api.Billing.Public.Models;
 using Bit.Api.Models.Public.Response;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
@@ -17,7 +18,6 @@ using OrganizationSubscriptionUpdateRequestModel = Bit.Api.Billing.Public.Models
 namespace Bit.Api.Billing.Public.Controllers;
 
 [Route("public/organization")]
-[Authorize("Organization")]
 public class OrganizationController : Controller
 {
     private readonly IOrganizationService _organizationService;
@@ -50,6 +50,7 @@ public class OrganizationController : Controller
     /// Returns an object containing the subscription details if successful.
     /// </returns>
     [HttpGet("subscription")]
+    [Authorize(Policies.OrganizationSubscriptionRead)]
     [SelfHosted(NotSelfHostedOnly = true)]
     [ProducesResponseType(typeof(OrganizationSubscriptionDetailsResponseModel), (int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.NotFound)]
@@ -91,6 +92,7 @@ public class OrganizationController : Controller
     /// </summary>
     /// <param name="model">The request model containing the updated subscription information.</param>
     [HttpPut("subscription")]
+    [Authorize(Policies.OrganizationSubscriptionWrite)]
     [SelfHosted(NotSelfHostedOnly = true)]
     [ProducesResponseType((int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
