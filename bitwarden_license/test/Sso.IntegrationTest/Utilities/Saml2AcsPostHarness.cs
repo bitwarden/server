@@ -7,7 +7,15 @@ using Bit.Core.Utilities;
 using Bit.Sso.Utilities;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Sustainsys.Saml2;
 using Xunit;
+using CipherData = System.Security.Cryptography.Xml.CipherData;
+using EncryptedData = System.Security.Cryptography.Xml.EncryptedData;
+using EncryptedKey = System.Security.Cryptography.Xml.EncryptedKey;
+using EncryptedXml = System.Security.Cryptography.Xml.EncryptedXml;
+using EncryptionMethod = System.Security.Cryptography.Xml.EncryptionMethod;
+using KeyInfo = System.Security.Cryptography.Xml.KeyInfo;
+using KeyInfoEncryptedKey = System.Security.Cryptography.Xml.KeyInfoEncryptedKey;
 
 namespace Bit.Sso.IntegrationTest.Utilities;
 
@@ -114,6 +122,45 @@ public static class Saml2AcsPostHarness
         return new CertificateRequest(
                 "CN=Test IdP signing certificate", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1)
             .CreateSelfSigned(now, now.AddDays(365));
+    }
+
+    /// <summary>
+    /// Encrypts XML into an <c>EncryptedAssertion</c> with the same method as a real identity provider.
+    /// An AES content key encrypts the payload, and the service provider certificate encrypts that key.
+    /// This is real XML encryption, not a fixed fixture. It tests the decryption path that
+    /// Sustainsys.Saml2 uses in production. The payload does not have to be one assertion.
+    /// Decryption moves every top-level node of the payload into the <c>EncryptedAssertion</c>.
+    /// A payload with more than one node, or with a nested assertion, tests those shapes.
+    /// </summary>
+    public static string EncryptAssertion(string payloadXml, X509Certificate2 encryptionCertificate,
+        string keyTransportAlgorithm = EncryptedXml.XmlEncRSAOAEPUrl)
+    {
+        var document = XmlHelpers.XmlDocumentFromString(
+            "<saml:EncryptedAssertion xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\" />");
+
+        using var contentKey = Aes.Create();
+        contentKey.KeySize = 256;
+        var cipherValue = new EncryptedXml().EncryptData(Encoding.UTF8.GetBytes(payloadXml), contentKey);
+
+        var encryptedData = new EncryptedData
+        {
+            Type = EncryptedXml.XmlEncElementUrl,
+            EncryptionMethod = new EncryptionMethod(EncryptedXml.XmlEncAES256Url),
+        };
+        encryptedData.CipherData.CipherValue = cipherValue;
+        encryptedData.KeyInfo = new KeyInfo();
+        var encryptedKey = new EncryptedKey
+        {
+            EncryptionMethod = new EncryptionMethod(keyTransportAlgorithm),
+            CipherData = new CipherData(
+                EncryptedXml.EncryptKey(contentKey.Key, encryptionCertificate.GetRSAPublicKey()!,
+                    useOAEP: keyTransportAlgorithm != EncryptedXml.XmlEncRSA15Url)),
+        };
+        encryptedData.KeyInfo.AddClause(new KeyInfoEncryptedKey(encryptedKey));
+
+        document.DocumentElement!.AppendChild(document.ImportNode(encryptedData.GetXml(), deep: true));
+
+        return document.DocumentElement!.OuterXml;
     }
 
     public static string BuildEncryptedAssertion(string algorithm) =>

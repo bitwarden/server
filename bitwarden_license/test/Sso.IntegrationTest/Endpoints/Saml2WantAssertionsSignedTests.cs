@@ -21,7 +21,6 @@ using EncryptedKey = System.Security.Cryptography.Xml.EncryptedKey;
 using EncryptedXml = System.Security.Cryptography.Xml.EncryptedXml;
 using EncryptionMethod = System.Security.Cryptography.Xml.EncryptionMethod;
 using KeyInfo = System.Security.Cryptography.Xml.KeyInfo;
-using KeyInfoEncryptedKey = System.Security.Cryptography.Xml.KeyInfoEncryptedKey;
 using KeyInfoRetrievalMethod = System.Security.Cryptography.Xml.KeyInfoRetrievalMethod;
 
 namespace Bit.Sso.IntegrationTest.Endpoints;
@@ -80,7 +79,7 @@ public class Saml2WantAssertionsSignedTests
         // Ensures that WantAssertionsSigned operates correctly on an EncryptedAssertion.
         var (idpCertificate, spCertificate) = BuildCertificates();
         var signedAssertion = BuildSignedAssertion(idpCertificate);
-        var encryptedAssertionXml = EncryptAssertion(signedAssertion.OuterXml, spCertificate);
+        var encryptedAssertionXml = Saml2AcsPostHarness.EncryptAssertion(signedAssertion.OuterXml, spCertificate);
 
         var arrangement = await ArrangeAsync(
             encryptedAssertionXml, idpCertificate, spCertificate, wantAssertionsSigned: true);
@@ -109,7 +108,7 @@ public class Saml2WantAssertionsSignedTests
     {
         var (idpCertificate, spCertificate) = BuildCertificates();
         var unsignedAssertion = BuildAssertionDocument().DocumentElement!.OuterXml;
-        var encryptedAssertionXml = EncryptAssertion(unsignedAssertion, spCertificate);
+        var encryptedAssertionXml = Saml2AcsPostHarness.EncryptAssertion(unsignedAssertion, spCertificate);
 
         var arrangement = await ArrangeAsync(
             encryptedAssertionXml, idpCertificate, spCertificate, wantAssertionsSigned: true);
@@ -126,7 +125,7 @@ public class Saml2WantAssertionsSignedTests
         var (idpCertificate, spCertificate) = BuildCertificates();
         var signedPlaintextAssertion = BuildSignedAssertion(idpCertificate);
         var unsignedEncryptedAssertionXml =
-            EncryptAssertion(BuildAssertionDocument().DocumentElement!.OuterXml, spCertificate);
+            Saml2AcsPostHarness.EncryptAssertion(BuildAssertionDocument().DocumentElement!.OuterXml, spCertificate);
 
         var arrangement = await ArrangeAsync(
             signedPlaintextAssertion.OuterXml + unsignedEncryptedAssertionXml,
@@ -153,7 +152,7 @@ public class Saml2WantAssertionsSignedTests
             BuildSignedAssertion(idpCertificate, "_signed").OuterXml;
 
         var arrangement = await ArrangeAsync(
-            EncryptAssertion(payload, spCertificate), idpCertificate, spCertificate,
+            Saml2AcsPostHarness.EncryptAssertion(payload, spCertificate), idpCertificate, spCertificate,
             wantAssertionsSigned: true);
 
         var exception = await Assert.ThrowsAsync<Exception>(
@@ -326,7 +325,7 @@ public class Saml2WantAssertionsSignedTests
         var foreignCertificate = CreateSelfSignedCertificate("CN=Other SP");
 
         var arrangement = await ArrangeAsync(
-            EncryptAssertion(BuildSignedAssertion(idpCertificate).OuterXml, foreignCertificate),
+            Saml2AcsPostHarness.EncryptAssertion(BuildSignedAssertion(idpCertificate).OuterXml, foreignCertificate),
             idpCertificate, spCertificate, wantAssertionsSigned: true);
 
         var exception = await Assert.ThrowsAsync<Exception>(
@@ -448,7 +447,7 @@ public class Saml2WantAssertionsSignedTests
         // CouldHandleAsync decrypted the rsa-1_5 key transport. With the flag on, the gate throws before
         // the signature check decrypts anything.
         var (idpCertificate, spCertificate) = BuildCertificates();
-        var encryptedAssertionXml = EncryptAssertion(
+        var encryptedAssertionXml = Saml2AcsPostHarness.EncryptAssertion(
             BuildSignedAssertion(idpCertificate).OuterXml, spCertificate, EncryptedXml.XmlEncRSA15Url);
 
         var (testData, samlOptions, organizationId) = await BuildSchemeAsync(
@@ -468,7 +467,7 @@ public class Saml2WantAssertionsSignedTests
         bool rsa15DeprecationFlag)
     {
         var (idpCertificate, spCertificate) = BuildCertificates();
-        var encryptedAssertionXml = EncryptAssertion(
+        var encryptedAssertionXml = Saml2AcsPostHarness.EncryptAssertion(
             BuildAssertionDocument().DocumentElement!.OuterXml, spCertificate, EncryptedXml.XmlEncRSA15Url);
 
         var (testData, samlOptions, organizationId) = await BuildSchemeAsync(
@@ -485,7 +484,7 @@ public class Saml2WantAssertionsSignedTests
     public async Task CouldHandleAsync_SignedEncryptedAssertionWithOaepKeyTransportAndWantAssertionsSignedAndRsa15DeprecationFlagOn_ReturnsTrue()
     {
         var (idpCertificate, spCertificate) = BuildCertificates();
-        var encryptedAssertionXml = EncryptAssertion(
+        var encryptedAssertionXml = Saml2AcsPostHarness.EncryptAssertion(
             BuildSignedAssertion(idpCertificate).OuterXml, spCertificate, EncryptedXml.XmlEncRSAOAEPUrl);
 
         var arrangement = await ArrangeAsync(
@@ -501,7 +500,7 @@ public class Saml2WantAssertionsSignedTests
         // The gate must precede the signature check. A check that decrypted first would throw
         // "Cannot verify SAML assertion signature." for this unsigned assertion.
         var (idpCertificate, spCertificate) = BuildCertificates();
-        var encryptedAssertionXml = EncryptAssertion(
+        var encryptedAssertionXml = Saml2AcsPostHarness.EncryptAssertion(
             BuildAssertionDocument().DocumentElement!.OuterXml, spCertificate, EncryptedXml.XmlEncRSA15Url);
 
         var arrangement = await ArrangeAsync(
@@ -785,43 +784,6 @@ public class Saml2WantAssertionsSignedTests
         var document = BuildAssertionDocument(assertionId);
         document.DocumentElement!.Sign(signingCertificate, includeKeyInfo: false);
         return document.DocumentElement!;
-    }
-
-    // Encrypts XML into an <EncryptedAssertion> with the same method as a real identity provider.
-    // An AES content key encrypts the payload, and the service provider certificate encrypts that key.
-    // This is real XML encryption, not a fixed fixture. It tests the decryption path that
-    // Sustainsys.Saml2 uses in production. The payload does not have to be one assertion.
-    // Decryption moves every top-level node of the payload into the <EncryptedAssertion>.
-    // A payload with more than one node, or with a nested assertion, tests those shapes.
-    private static string EncryptAssertion(string payloadXml, X509Certificate2 encryptionCertificate,
-        string keyTransportAlgorithm = EncryptedXml.XmlEncRSAOAEPUrl)
-    {
-        var document = XmlHelpers.XmlDocumentFromString(
-            "<saml:EncryptedAssertion xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\" />");
-
-        using var contentKey = Aes.Create();
-        contentKey.KeySize = 256;
-        var cipherValue = new EncryptedXml().EncryptData(Encoding.UTF8.GetBytes(payloadXml), contentKey);
-
-        var encryptedData = new EncryptedData
-        {
-            Type = EncryptedXml.XmlEncElementUrl,
-            EncryptionMethod = new EncryptionMethod(EncryptedXml.XmlEncAES256Url),
-        };
-        encryptedData.CipherData.CipherValue = cipherValue;
-        encryptedData.KeyInfo = new KeyInfo();
-        var encryptedKey = new EncryptedKey
-        {
-            EncryptionMethod = new EncryptionMethod(keyTransportAlgorithm),
-            CipherData = new CipherData(
-                EncryptedXml.EncryptKey(contentKey.Key, encryptionCertificate.GetRSAPublicKey()!,
-                    useOAEP: keyTransportAlgorithm != EncryptedXml.XmlEncRSA15Url)),
-        };
-        encryptedData.KeyInfo.AddClause(new KeyInfoEncryptedKey(encryptedKey));
-
-        document.DocumentElement!.AppendChild(document.ImportNode(encryptedData.GetXml(), deep: true));
-
-        return document.DocumentElement!.OuterXml;
     }
 
     // Encrypts XML like EncryptAssertion, but places the xenc:EncryptedKey beside the xenc:EncryptedData.
