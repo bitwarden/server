@@ -62,8 +62,9 @@ internal sealed class PreviewOrganizationRestartCommand(
         };
         var cadence = restart.Plan.IsAnnual ? PlanCadenceType.Annually : PlanCadenceType.Monthly;
 
-        // Only the request's tax ID is sent. Restart replaces the customer's tax IDs with the request's, so
-        // the ones on file must not leak into the preview.
+        // Families restarts keep the tax IDs on file, so the preview uses them and ignores the request's.
+        var effectiveTaxId = tier == PlanTierType.Families ? null : requestTaxId;
+
         var options = new InvoiceCreatePreviewOptions
         {
             Customer = canceledSubscription.CustomerId,
@@ -79,7 +80,7 @@ internal sealed class PreviewOrganizationRestartCommand(
             {
                 Address = address,
                 TaxIds = BillingAddressResolver.ResolveTaxIds(
-                    taxService, logger, request.BillingAddress.Country!, requestTaxId)
+                    taxService, logger, request.BillingAddress.Country!, effectiveTaxId)
             }
         };
 

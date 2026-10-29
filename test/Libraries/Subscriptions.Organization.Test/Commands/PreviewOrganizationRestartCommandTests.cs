@@ -105,6 +105,24 @@ public class PreviewOrganizationRestartCommandTests
         Assert.Equal("DE123", taxId.Value);
     }
 
+    [Fact]
+    public async Task Run_FamiliesWithTaxIdInRequest_IgnoresTaxId()
+    {
+        var organization = new OrganizationEntity { Id = Guid.NewGuid() };
+        var subscription = new Subscription { Status = StripeConstants.SubscriptionStatus.Canceled, CustomerId = "cus_1" };
+        _subscriberService.GetSubscription(organization).Returns(subscription);
+        _getOrganizationRestartQuery.Run(organization, subscription).Returns(
+            Restart(PlanType.FamiliesAnnually, ProductTierType.Families, true, ("price_seat", 1)));
+        _taxService.GetStripeTaxCode("DE", "DE123").Returns("eu_vat");
+        var options = CaptureOptions();
+
+        await _sut.Run(organization, Request(country: "DE", postalCode: "10115", taxId: new TaxIdSelection("eu_vat", "DE123")));
+
+        Assert.NotNull(options.Value);
+        Assert.Equal("cus_1", options.Value!.Customer);
+        Assert.Null(options.Value.CustomerDetails.TaxIds);
+    }
+
     [Theory]
     [InlineData(StripeConstants.SubscriptionStatus.Active)]
     [InlineData(StripeConstants.SubscriptionStatus.PastDue)]
