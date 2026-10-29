@@ -17,6 +17,7 @@ using Bit.Core.Auth.Entities;
 using Bit.SharedWeb.Health;
 using Microsoft.OpenApi;
 using Bit.SharedWeb.Utilities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Core.Auth.UserFeatures;
@@ -97,6 +98,9 @@ public class Startup
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
         services.TryAddScoped<PartnershipRequestContext>();
         services.TryAddScoped<IPartnershipRequestContext>(sp => sp.GetRequiredService<PartnershipRequestContext>());
+        // Replace, not TryAdd: AddAuthorization registers the default handler.
+        services.Replace(ServiceDescriptor
+            .Singleton<IAuthorizationMiddlewareResultHandler, PartnershipAuthorizationResultHandler>());
 
         // Caching
         services.AddMemoryCache();

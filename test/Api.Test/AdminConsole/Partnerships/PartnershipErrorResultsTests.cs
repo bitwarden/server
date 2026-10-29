@@ -90,6 +90,24 @@ public class PartnershipErrorResultsTests
     }
 
     [Fact]
+    public void Unauthorized_Returns401WithUnauthorizedCode()
+    {
+        var result = PartnershipErrorResults.Unauthorized(CreateHttpContext());
+
+        Assert.Equal(StatusCodes.Status401Unauthorized, result.StatusCode);
+        Assert.Equal("unauthorized", Assert.IsType<PartnershipErrorResponseModel>(result.Value).Code);
+    }
+
+    [Fact]
+    public void Forbidden_Returns403WithForbiddenCode()
+    {
+        var result = PartnershipErrorResults.Forbidden(CreateHttpContext());
+
+        Assert.Equal(StatusCodes.Status403Forbidden, result.StatusCode);
+        Assert.Equal("forbidden", Assert.IsType<PartnershipErrorResponseModel>(result.Value).Code);
+    }
+
+    [Fact]
     public void FromError_Envelope_HasErrorObjectAndRequestId()
     {
         ObjectResult result = PartnershipErrorResults.FromError(new PartnershipNotFound(), CreateHttpContext());

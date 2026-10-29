@@ -25,17 +25,28 @@ public class PartnershipAuthenticationTests : IClassFixture<ApiApplicationFactor
     }
 
     [Fact]
-    public async Task NoToken_Returns401()
+    public async Task NoToken_Returns401Envelope()
     {
         using var client = _factory.CreateClient();
 
         var response = await client.GetAsync(Path);
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        await AssertEnvelopeAsync(response, "unauthorized");
     }
 
     [Fact]
-    public async Task UserToken_IsRejected()
+    public async Task NoToken_KeepsBearerChallenge()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.GetAsync(Path);
+
+        Assert.Contains(response.Headers.WwwAuthenticate, h => h.Scheme == "Bearer");
+    }
+
+    [Fact]
+    public async Task UserToken_Returns403Envelope()
     {
         var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
         var (token, _) = await _factory.LoginWithNewAccount(email);
@@ -45,7 +56,18 @@ public class PartnershipAuthenticationTests : IClassFixture<ApiApplicationFactor
         var response = await client.GetAsync(Path);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-        Assert.DoesNotContain("partnership_not_active", await response.Content.ReadAsStringAsync());
+        await AssertEnvelopeAsync(response, "forbidden");
+    }
+
+    [Fact]
+    public async Task NoToken_OutsidePartnershipPath_KeepsEmptyBody()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/accounts/profile");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Empty(await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
