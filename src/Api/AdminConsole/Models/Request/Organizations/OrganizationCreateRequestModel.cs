@@ -76,6 +76,11 @@ public class OrganizationCreateRequestModel : IValidatableObject
     [Required]
     public bool UseSecretsManager { get; set; }
 
+    public bool UsePrivilegedControls { get; set; }
+
+    [Range(1, int.MaxValue)]
+    public int? PamSeats { get; set; }
+
     public bool IsFromSecretsManagerTrial { get; set; }
 
     public string InitiationPath { get; set; }
@@ -107,6 +112,8 @@ public class OrganizationCreateRequestModel : IValidatableObject
             AdditionalSmSeats = AdditionalSmSeats.GetValueOrDefault(),
             AdditionalServiceAccounts = AdditionalServiceAccounts.GetValueOrDefault(),
             UseSecretsManager = UseSecretsManager,
+            UsePrivilegedControls = UsePrivilegedControls,
+            PamSeats = PamSeats,
             IsFromSecretsManagerTrial = IsFromSecretsManagerTrial,
             TaxInfo = new TaxInfo
             {

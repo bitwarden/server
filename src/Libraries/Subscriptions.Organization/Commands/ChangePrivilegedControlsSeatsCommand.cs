@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Organizations.Commands;
+﻿using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
@@ -12,7 +13,7 @@ internal interface IChangePrivilegedControlsSeatsCommand
     /// <summary>
     /// Sets an organization's Privileged Controls seat count and autoscale limit. The subscription is only
     /// updated, and prorated, when the seat count changes; a call that changes only the limit saves it without
-    /// touching Stripe. The seat minimum is never changed.
+    /// touching Stripe.
     /// </summary>
     /// <param name="organization">The organization that already has Privileged Controls.</param>
     /// <param name="seats">The total number of Privileged Controls seats being requested.</param>
@@ -42,11 +43,6 @@ internal sealed class ChangePrivilegedControlsSeatsCommand(
             throw new BadRequestException("Your organization doesn't have Privileged Controls.");
         }
 
-        if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
-        {
-            throw new BadRequestException("No payment method found.");
-        }
-
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
             throw new BadRequestException("No subscription found.");
@@ -57,10 +53,16 @@ internal sealed class ChangePrivilegedControlsSeatsCommand(
             throw new BadRequestException("Cannot set max seat autoscaling below the Privileged Controls seat count.");
         }
 
+        if (!BillingExtensions.PrivilegedControlsAutoscaleLimitFits(maxAutoscaleSeats, organization.MaxAutoscaleSeats))
+        {
+            throw new BadRequestException(
+                "You cannot set a Privileged Controls autoscale limit higher than the Password Manager autoscale limit.");
+        }
+
         if (seats != organization.PamSeats)
         {
-            var seatChange = await seatChangeSetFactory.CreateAsync(organization, seats);
-            (await updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet)).GetValueOrThrowHttpException();
+            var changeSet = await seatChangeSetFactory.CreateAsync(organization, seats);
+            (await updateOrganizationSubscriptionCommand.Run(organization, changeSet)).GetValueOrThrowHttpException();
         }
 
         organization.PamSeats = seats;

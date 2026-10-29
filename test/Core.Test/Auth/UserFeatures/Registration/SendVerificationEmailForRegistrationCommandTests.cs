@@ -67,6 +67,9 @@ public class SendVerificationEmailForRegistrationCommandTests
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
             .SendRegistrationVerificationEmailAsync(email, mockedToken, null, null);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .Received(1)
+            .Protect(Arg.Is<RegistrationEmailVerificationTokenable>(t => t.EmailSent == true));
         Assert.Null(result);
     }
 
@@ -178,6 +181,9 @@ public class SendVerificationEmailForRegistrationCommandTests
 
         // Assert
         Assert.Equal(mockedToken, result);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .Received(1)
+            .Protect(Arg.Is<RegistrationEmailVerificationTokenable>(t => t.EmailSent == false));
     }
 
     [Theory]

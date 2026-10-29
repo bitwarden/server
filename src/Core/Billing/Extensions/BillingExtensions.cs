@@ -6,6 +6,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Stripe;
+using Plan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Core.Billing.Extensions;
 
@@ -87,4 +88,17 @@ public static class BillingExtensions
 
     public static bool SupportsConsolidatedBilling(this PlanType planType)
         => planType is PlanType.TeamsMonthly or PlanType.EnterpriseMonthly or PlanType.EnterpriseAnnually;
+
+    public static bool IsOnPrivilegedControlsSalesInitiatedTrial(
+        this Organization organization,
+        Plan plan,
+        bool subscriptionHasPrivilegedControlsSeats)
+        => plan.SupportsPrivilegedControls && organization.UsePam && !subscriptionHasPrivilegedControlsSeats;
+
+    /// <summary>
+    /// Whether a Privileged Controls autoscale limit is allowed next to a Password Manager autoscale limit.
+    /// A missing limit means no limit, so the rule only applies when both are set.
+    /// </summary>
+    public static bool PrivilegedControlsAutoscaleLimitFits(int? privilegedControlsLimit, int? passwordManagerLimit)
+        => privilegedControlsLimit is null || passwordManagerLimit is null || privilegedControlsLimit <= passwordManagerLimit;
 }

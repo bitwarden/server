@@ -24,7 +24,8 @@ public class OrganizationResponseModel : ResponseModel
     public OrganizationResponseModel(
         Organization organization,
         Plan plan,
-        string obj = "organization") : base(obj)
+        string obj = "organization",
+        bool includePrivilegedControlsPlanFeatures = false) : base(obj)
     {
         if (organization == null)
         {
@@ -41,7 +42,9 @@ public class OrganizationResponseModel : ResponseModel
         BusinessTaxNumber = organization.BusinessTaxNumber;
         BillingEmail = organization.BillingEmail;
         // Self-Host instances only require plan information that can be derived from the Organization record.
-        Plan = plan != null ? new PlanResponseModel(plan) : new PlanResponseModel(organization);
+        Plan = plan != null
+            ? new PlanResponseModel(plan, includePrivilegedControls: includePrivilegedControlsPlanFeatures)
+            : new PlanResponseModel(organization);
         PlanType = organization.PlanType;
         Seats = organization.Seats;
         MaxAutoscaleSeats = organization.MaxAutoscaleSeats;
@@ -147,7 +150,9 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
         Organization organization,
         Plan plan,
         int? occupiedPamSeats = null,
-        bool? isOnPamSalesInitiatedTrial = null) : base(organization, plan, "organizationSubscription")
+        bool? isOnPamSalesInitiatedTrial = null,
+        bool includePrivilegedControlsPlanFeatures = false)
+        : base(organization, plan, "organizationSubscription", includePrivilegedControlsPlanFeatures)
     {
         Expiration = organization.ExpirationDate;
         StorageName = organization.Storage.HasValue ?
@@ -166,7 +171,9 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
         bool hideSensitiveData,
         PendingAnnualUpgrade pendingAnnualUpgrade = null,
         int? occupiedPamSeats = null,
-        bool? isOnPamSalesInitiatedTrial = null) : this(organization, plan, occupiedPamSeats, isOnPamSalesInitiatedTrial)
+        bool? isOnPamSalesInitiatedTrial = null,
+        bool includePrivilegedControlsPlanFeatures = false)
+        : this(organization, plan, occupiedPamSeats, isOnPamSalesInitiatedTrial, includePrivilegedControlsPlanFeatures)
     {
         Subscription = subscription.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
         PendingAnnualUpgrade = pendingAnnualUpgrade != null

@@ -44,22 +44,6 @@ public class PlanAdapterTests
     }
 
     [Fact]
-    public void Constructor_WithPrivilegedControls_MapsDefaultSeatMinimum()
-    {
-        var plan = new PlanAdapter(CreateEnterprisePlan(_privilegedControlsJson));
-
-        Assert.Equal(10, plan.PrivilegedControls.DefaultSeatMinimum);
-    }
-
-    [Fact]
-    public void Constructor_WithPrivilegedControls_MapsPromotionalSeatMinimums()
-    {
-        var plan = new PlanAdapter(CreateEnterprisePlan(_privilegedControlsJson));
-
-        Assert.Equal(new[] { 4, 6, 8 }, plan.PrivilegedControls.PromotionalSeatMinimums);
-    }
-
-    [Fact]
     public void Constructor_WithPrivilegedControls_SupportsPrivilegedControls()
     {
         var plan = new PlanAdapter(CreateEnterprisePlan(_privilegedControlsJson));

@@ -68,6 +68,16 @@ public class OrganizationsControllerTests
         }
     }
 
+    private sealed record EnterprisePlanStub : Bit.Core.Models.StaticStore.Plan
+    {
+        public EnterprisePlanStub(bool supportsPrivilegedControls = true)
+        {
+            Type = PlanType.EnterpriseAnnually;
+            PasswordManager = new PasswordManagerPlanFeatures();
+            PrivilegedControls = supportsPrivilegedControls ? new PrivilegedControlsPlanFeatures() : null;
+        }
+    }
+
     #region Edit (POST)
 
     [BitAutoData]
@@ -1610,6 +1620,430 @@ public class OrganizationsControllerTests
         await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
     }
 
+    private static void StubPrivilegedControlsEdit(
+        SutProvider<OrganizationsController> sutProvider,
+        Organization organization,
+        bool supportsPrivilegedControls = true,
+        bool canEditPlan = true,
+        bool flagEnabled = true,
+        Provider provider = null)
+    {
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.EnterpriseAnnually)
+            .Returns(new EnterprisePlanStub(supportsPrivilegedControls));
+        sutProvider.GetDependency<IAccessControlService>().UserHasPermission(Permission.Org_Plan_Edit)
+            .Returns(canEditPlan);
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(Bit.Core.FeatureFlagKeys.PM39883_Pam_Billing_Support)
+            .Returns(flagEnabled);
+        sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).Returns(provider);
+        sutProvider.Sut.TempData = new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+    }
+
+    private static async Task AssertPrivilegedControlsRejectedAsync(
+        IActionResult result,
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal("Edit", redirect.ActionName);
+        Assert.Equal(organization.Id, redirect.RouteValues!["id"]);
+        await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_PrivilegedControls_TurnedOn_SavesSeatsAndLimit(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsEdit(sutProvider, organization);
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            UsePam = true,
+            PamSeats = 25,
+            MaxAutoscalePamSeats = 40
+        };
+
+        await sutProvider.Sut.Edit(organization.Id, update);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(
+            Arg.Is<Organization>(o => o.UsePam && o.PamSeats == 25 && o.MaxAutoscalePamSeats == 40));
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_PrivilegedControls_TurnedOff_ClearsSeatsAndLimit(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsEdit(sutProvider, organization);
+        organization.UsePam = true;
+        organization.PamSeats = 25;
+        organization.MaxAutoscalePamSeats = 40;
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            UsePam = false,
+            PamSeats = 25,
+            MaxAutoscalePamSeats = 40
+        };
+
+        await sutProvider.Sut.Edit(organization.Id, update);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(
+            Arg.Is<Organization>(o => !o.UsePam && o.PamSeats == null && o.MaxAutoscalePamSeats == null));
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_PrivilegedControls_PlanDoesNotSupport_Rejects(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsEdit(sutProvider, organization, supportsPrivilegedControls: false);
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            UsePam = true,
+            PamSeats = 25
+        };
+
+        var result = await sutProvider.Sut.Edit(organization.Id, update);
+
+        await AssertPrivilegedControlsRejectedAsync(result, organization, sutProvider);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_PrivilegedControls_SeatsMissing_Rejects(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsEdit(sutProvider, organization);
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            UsePam = true,
+            PamSeats = null
+        };
+
+        var result = await sutProvider.Sut.Edit(organization.Id, update);
+
+        await AssertPrivilegedControlsRejectedAsync(result, organization, sutProvider);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_PrivilegedControls_SeatsBelowOne_Rejects(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsEdit(sutProvider, organization);
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            UsePam = true,
+            PamSeats = 0
+        };
+
+        var result = await sutProvider.Sut.Edit(organization.Id, update);
+
+        await AssertPrivilegedControlsRejectedAsync(result, organization, sutProvider);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_PrivilegedControls_AutoscaleBelowSeats_Rejects(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsEdit(sutProvider, organization);
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            UsePam = true,
+            PamSeats = 25,
+            MaxAutoscalePamSeats = 24
+        };
+
+        var result = await sutProvider.Sut.Edit(organization.Id, update);
+
+        await AssertPrivilegedControlsRejectedAsync(result, organization, sutProvider);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_PrivilegedControls_AutoscaleEqualsSeats_Saves(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsEdit(sutProvider, organization);
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            UsePam = true,
+            PamSeats = 25,
+            MaxAutoscalePamSeats = 25
+        };
+
+        await sutProvider.Sut.Edit(organization.Id, update);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(
+            Arg.Is<Organization>(o => o.MaxAutoscalePamSeats == 25));
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_PrivilegedControls_PamSeatsAbovePmSeats_Rejects(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsEdit(sutProvider, organization);
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            Seats = 10,
+            UsePam = true,
+            PamSeats = 11
+        };
+
+        var result = await sutProvider.Sut.Edit(organization.Id, update);
+
+        await AssertPrivilegedControlsRejectedAsync(result, organization, sutProvider);
+        Assert.Equal(
+            "You cannot have more Privileged Controls seats than Password Manager seats. " +
+            "This organization has 11 Privileged Controls seats and 10 Password Manager seats.",
+            sutProvider.Sut.TempData["Error"]);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_PrivilegedControls_OverCapUnrelatedChange_Rejects(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        organization.Seats = 10;
+        organization.PamSeats = 12;
+        StubPrivilegedControlsEdit(sutProvider, organization);
+        var update = new OrganizationEditModel
+        {
+            Name = "Renamed",
+            PlanType = PlanType.EnterpriseAnnually,
+            Seats = 10,
+            UsePam = true,
+            PamSeats = 12
+        };
+
+        var result = await sutProvider.Sut.Edit(organization.Id, update);
+
+        await AssertPrivilegedControlsRejectedAsync(result, organization, sutProvider);
+        Assert.Equal(
+            "You cannot have more Privileged Controls seats than Password Manager seats. " +
+            "This organization has 12 Privileged Controls seats and 10 Password Manager seats.",
+            sutProvider.Sut.TempData["Error"]);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_PrivilegedControls_PamSeatsEqualPmSeats_Saves(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsEdit(sutProvider, organization);
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            Seats = 10,
+            UsePam = true,
+            PamSeats = 10
+        };
+
+        await sutProvider.Sut.Edit(organization.Id, update);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(
+            Arg.Is<Organization>(o => o.PamSeats == 10));
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_PrivilegedControls_PmAndPamSeatsRaisedTogether_Saves(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        organization.Seats = 10;
+        organization.PamSeats = 5;
+        StubPrivilegedControlsEdit(sutProvider, organization);
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            Seats = 30,
+            UsePam = true,
+            PamSeats = 25
+        };
+
+        await sutProvider.Sut.Edit(organization.Id, update);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(
+            Arg.Is<Organization>(o => o.Seats == 30 && o.PamSeats == 25));
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_PrivilegedControls_PamLimitAbovePmLimit_Rejects(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsEdit(sutProvider, organization);
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            Seats = 10,
+            MaxAutoscaleSeats = 20,
+            UsePam = true,
+            PamSeats = 10,
+            MaxAutoscalePamSeats = 21
+        };
+
+        var result = await sutProvider.Sut.Edit(organization.Id, update);
+
+        await AssertPrivilegedControlsRejectedAsync(result, organization, sutProvider);
+        Assert.Equal(
+            "You cannot set a Privileged Controls autoscale limit higher than the Password Manager autoscale limit. " +
+            "This organization has a Privileged Controls limit of 21 and a Password Manager limit of 20.",
+            sutProvider.Sut.TempData["Error"]);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_PrivilegedControls_PamLimitWithNoPmLimit_Saves(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsEdit(sutProvider, organization);
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            Seats = 10,
+            MaxAutoscaleSeats = null,
+            UsePam = true,
+            PamSeats = 10,
+            MaxAutoscalePamSeats = 21
+        };
+
+        await sutProvider.Sut.Edit(organization.Id, update);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(
+            Arg.Is<Organization>(o => o.MaxAutoscalePamSeats == 21));
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_PrivilegedControls_NoPamLimitWithPmLimit_Saves(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsEdit(sutProvider, organization);
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            Seats = 10,
+            MaxAutoscaleSeats = 20,
+            UsePam = true,
+            PamSeats = 10,
+            MaxAutoscalePamSeats = null
+        };
+
+        await sutProvider.Sut.Edit(organization.Id, update);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(
+            Arg.Is<Organization>(o => o.MaxAutoscaleSeats == 20 && o.MaxAutoscalePamSeats == null));
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_PrivilegedControls_ProviderManaged_Rejects(
+        Organization organization,
+        Provider provider,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsEdit(sutProvider, organization, provider: provider);
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            UsePam = true,
+            PamSeats = 25
+        };
+
+        var result = await sutProvider.Sut.Edit(organization.Id, update);
+
+        await AssertPrivilegedControlsRejectedAsync(result, organization, sutProvider);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_PrivilegedControls_FlagOff_LeavesSeatsUnchanged(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsEdit(sutProvider, organization, flagEnabled: false);
+        organization.PamSeats = 10;
+        organization.MaxAutoscalePamSeats = 20;
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            UsePam = true,
+            PamSeats = null,
+            MaxAutoscalePamSeats = null
+        };
+
+        await sutProvider.Sut.Edit(organization.Id, update);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(
+            Arg.Is<Organization>(o => o.PamSeats == 10 && o.MaxAutoscalePamSeats == 20));
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_PrivilegedControls_WithoutPlanEditPermission_SkipsValidation(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsEdit(sutProvider, organization, canEditPlan: false);
+        organization.UsePam = true;
+        organization.PamSeats = null;
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            UsePam = true,
+            PamSeats = null
+        };
+
+        await sutProvider.Sut.Edit(organization.Id, update);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(
+            Arg.Is<Organization>(o => o.PamSeats == null));
+    }
+
     #endregion
 
     #region Edit (GET)
@@ -2259,5 +2693,183 @@ public class OrganizationsControllerTests
         var model = await GetEditModelAsync(sutProvider, organization);
 
         Assert.Null(model.Trial);
+    }
+
+    private static Subscription PrivilegedControlsSubscription(bool includePrivilegedControlsLine = true)
+    {
+        var items = new List<SubscriptionItem>
+        {
+            new() { Quantity = 5, Price = new Price { Metadata = new Dictionary<string, string>() } }
+        };
+        if (includePrivilegedControlsLine)
+        {
+            items.Add(new SubscriptionItem
+            {
+                Quantity = 20,
+                Price = new Price
+                {
+                    Metadata = new Dictionary<string, string>
+                    {
+                        [StripeConstants.MetadataKeys.PurchasableReference] =
+                            StripeConstants.PurchasableReferences.PrivilegedControlsSeat
+                    }
+                }
+            });
+        }
+
+        return new Subscription { Items = new StripeList<SubscriptionItem> { Data = items } };
+    }
+
+    private static void StubPrivilegedControlsGet(
+        SutProvider<OrganizationsController> sutProvider,
+        Organization organization,
+        bool flagEnabled = true,
+        Provider provider = null)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(Bit.Core.FeatureFlagKeys.PM39883_Pam_Billing_Support)
+            .Returns(flagEnabled);
+        sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).Returns(provider);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_PrivilegedControls_StripeLine_SetsStripeSeats(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsGet(sutProvider, organization);
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(PrivilegedControlsSubscription());
+
+        var model = await GetEditModelAsync(sutProvider, organization);
+
+        Assert.Equal(20, model.PrivilegedControlsStripeSeats);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_PrivilegedControls_NoStripeLine_StripeSeatsNull(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsGet(sutProvider, organization);
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(PrivilegedControlsSubscription(includePrivilegedControlsLine: false));
+
+        var model = await GetEditModelAsync(sutProvider, organization);
+
+        Assert.Null(model.PrivilegedControlsStripeSeats);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_PrivilegedControls_NoSubscriptionId_DoesNotCallStripe(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        organization.GatewaySubscriptionId = null;
+        StubPrivilegedControlsGet(sutProvider, organization);
+
+        var model = await GetEditModelAsync(sutProvider, organization);
+
+        Assert.Null(model.PrivilegedControlsStripeSeats);
+        await sutProvider.GetDependency<IStripeAdapter>().DidNotReceiveWithAnyArgs()
+            .GetSubscriptionAsync(default, default);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_PrivilegedControls_SubscriptionMissing_StripeSeatsNull(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsGet(sutProvider, organization);
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .ThrowsAsync(new StripeException
+            {
+                StripeError = new StripeError { Code = StripeConstants.ErrorCodes.ResourceMissing }
+            });
+
+        var model = await GetEditModelAsync(sutProvider, organization);
+
+        Assert.Null(model.PrivilegedControlsStripeSeats);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_PrivilegedControls_StripeFails_StillLoads(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsGet(sutProvider, organization);
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .ThrowsAsync(new StripeException());
+
+        var model = await GetEditModelAsync(sutProvider, organization);
+
+        Assert.Null(model.PrivilegedControlsStripeSeats);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_PrivilegedControls_FlagOff_DoesNotCallStripe(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsGet(sutProvider, organization, flagEnabled: false);
+
+        var model = await GetEditModelAsync(sutProvider, organization);
+
+        Assert.Null(model.PrivilegedControlsStripeSeats);
+        await sutProvider.GetDependency<IStripeAdapter>().DidNotReceiveWithAnyArgs()
+            .GetSubscriptionAsync(default, default);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
+            .GetOccupiedPamSeatCountByOrganizationIdAsync(default);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_PrivilegedControls_ProviderManaged_DoesNotCallStripe(
+        Organization organization,
+        Provider provider,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsGet(sutProvider, organization, provider: provider);
+
+        var model = await GetEditModelAsync(sutProvider, organization);
+
+        Assert.Null(model.PrivilegedControlsStripeSeats);
+        await sutProvider.GetDependency<IStripeAdapter>().DidNotReceiveWithAnyArgs()
+            .GetSubscriptionAsync(default, default);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_PrivilegedControls_SetsOccupiedSeats(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsGet(sutProvider, organization);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(7);
+
+        var model = await GetEditModelAsync(sutProvider, organization);
+
+        Assert.Equal(7, model.OccupiedPamSeatsCount);
     }
 }

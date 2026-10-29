@@ -5,7 +5,7 @@ using Bit.Core.Platform.Push;
 namespace Bit.Notifications;
 
 /// <summary>
-/// A notification received from <see cref="AzureQueueHostedService"/> or <see cref="Controllers.SendController"/>.
+/// A notification received from <see cref="AzureQueueHostedService"/> or the self-hosted <c>POST /send</c> endpoint.
 /// </summary>
 /// <remarks>
 /// <para>This type is an envelope containing a serialized notification. <see cref="Type"/> identifies which notification

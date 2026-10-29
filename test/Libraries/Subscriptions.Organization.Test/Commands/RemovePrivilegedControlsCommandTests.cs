@@ -17,7 +17,6 @@ namespace Bit.Subscriptions.Organization.Test.Commands;
 
 public class RemovePrivilegedControlsCommandTests
 {
-    private const int _seatMinimum = 10;
     private const string _seatPriceId = "privileged-controls-enterprise-seat-annually";
 
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
@@ -72,20 +71,6 @@ public class RemovePrivilegedControlsCommandTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData(" ")]
-    public async Task Run_NoGatewayCustomer_ThrowsBadRequest(string? gatewayCustomerId)
-    {
-        var organization = CreateOrganization(gatewayCustomerId: gatewayCustomerId);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization));
-
-        Assert.Equal("No payment method found.", exception.Message);
-        await AssertNothingChangedOrSaved();
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData(" ")]
     public async Task Run_NoGatewaySubscription_ThrowsBadRequest(string? gatewaySubscriptionId)
     {
         var organization = CreateOrganization(gatewaySubscriptionId: gatewaySubscriptionId);
@@ -130,16 +115,6 @@ public class RemovePrivilegedControlsCommandTests
 
         Assert.Null(organization.PamSeats);
         Assert.Null(organization.MaxAutoscalePamSeats);
-    }
-
-    [Fact]
-    public async Task Run_LeavesTheSeatMinimumAlone()
-    {
-        var organization = CreateOrganization();
-
-        await _sut.Run(organization);
-
-        Assert.Equal(_seatMinimum, organization.PamSeatMinimum);
     }
 
     [Fact]
@@ -194,16 +169,14 @@ public class RemovePrivilegedControlsCommandTests
         bool usePam = true,
         int? pamSeats = 12,
         int? maxAutoscalePamSeats = null,
-        string? gatewayCustomerId = "cus_123",
         string? gatewaySubscriptionId = "sub_123") => new()
         {
             Id = Guid.NewGuid(),
             PlanType = PlanType.EnterpriseAnnually,
             UsePam = usePam,
             PamSeats = pamSeats,
-            PamSeatMinimum = _seatMinimum,
             MaxAutoscalePamSeats = maxAutoscalePamSeats,
-            GatewayCustomerId = gatewayCustomerId,
+            GatewayCustomerId = "cus_123",
             GatewaySubscriptionId = gatewaySubscriptionId
         };
 
@@ -213,7 +186,6 @@ public class RemovePrivilegedControlsCommandTests
             PrivilegedControls = new PrivilegedControlsPlanFeatures
             {
                 StripeSeatPlanId = _seatPriceId,
-                DefaultSeatMinimum = _seatMinimum
             };
     }
 }

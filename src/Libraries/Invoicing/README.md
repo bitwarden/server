@@ -16,6 +16,11 @@ service, builder, mappers, reference table, and Stripe client are internal.
 `IInvoicePreviewService.GetInvoicePreviewAsync(options, tier, cadence)` is the shared entry point:
 callers (this library's own queries, and feature libraries such as `Subscriptions.Organization`) build
 a Stripe `InvoiceCreatePreviewOptions` and hand it here to get back the projected `InvoicePreview`.
+Previews built from a billing address the customer typed (cart previews for purchases, upgrades, plan
+changes, and restarts) use `GetInvoicePreviewForBillingAddressAsync` instead: it throws a
+`BadRequestException` keyed `BillingAddress` when Stripe couldn't calculate tax, which is how Stripe
+reports an address it can't locate. Previews that use the address on file (the renewal preview) keep
+the non-validating `GetInvoicePreviewAsync`.
 
 `IGetSubscriptionPreviewQuery.Run(ISubscriber)` builds the `SubscriptionPreview` for a subscriber's
 upcoming renewal: the invoice preview wrapped in the subscription-level envelope (status, storage,
@@ -50,7 +55,8 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | From Core | Used for |
 | --- | --- |
 | `IStripeAdapter` | Fetching the preview invoice from Stripe |
-| `StripeConstants` | The `purchasable_reference` metadata key and reference values |
+| `StripeConstants` | The `purchasable_reference` metadata key and reference values, and the invoice automatic tax status |
+| `BillingErrorKeys` | The `BillingAddress` key on the error thrown when Stripe couldn't calculate tax |
 | `PlanCadenceType` | The billing cadence carried on the preview |
 | `ProductType` | Routing a reference to its product family |
 | `BitwardenDiscountType` | The type of a projected discount |

@@ -105,8 +105,7 @@ public class HandlebarsMailService : IMailService
         ProductTierType productTier,
         IEnumerable<ProductType> products,
         int trialLength,
-        bool paymentOptional = false,
-        int? pamSeatMinimum = null)
+        bool paymentOptional = false)
     {
         var message = CreateDefaultMessage("Verify your email", email);
         var model = new TrialInitiationVerifyEmail
@@ -119,8 +118,7 @@ public class HandlebarsMailService : IMailService
             ProductTier = productTier,
             Product = products,
             TrialLength = trialLength,
-            PaymentOptional = paymentOptional,
-            PamSeatMinimum = pamSeatMinimum
+            PaymentOptional = paymentOptional
         };
         await AddMessageContentAsync(message, "Billing.TrialInitiationVerifyEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
@@ -423,6 +421,45 @@ public class HandlebarsMailService : IMailService
                 ExpirationDate = expirationDate,
                 Url = url,
                 ButtonText = buttonText,
+                InviterEmail = orgInvitesInfo.InviterEmail,
+                CurrentYear = DateTime.UtcNow.Year.ToString()
+            });
+        });
+
+        await EnqueueMailAsync(messageModels);
+    }
+
+    public async Task SendOrganizationInviteReminderEmailsAsync(OrganizationInvitesInfo orgInvitesInfo, int reminderNumber)
+    {
+        var messageModels = orgInvitesInfo.OrgUserTokenPairs.Select(orgUserTokenPair =>
+        {
+            Debug.Assert(orgUserTokenPair.OrgUser.Email is not null);
+
+            var organizationName = CoreHelpers.PreventEmailAutoLinking(orgInvitesInfo.OrganizationName);
+
+            var (subject, templateName) = reminderNumber switch
+            {
+                1 => ($"Reminder: You're invited to join {orgInvitesInfo.OrganizationName} on Bitwarden",
+                    "AdminConsole.OrganizationInvite.OrganizationInviteReminder1View"),
+                2 => ($"Don't miss out: Your {orgInvitesInfo.OrganizationName} invite is still waiting",
+                    "AdminConsole.OrganizationInvite.OrganizationInviteReminder2View"),
+                3 => ($"Last chance: Your {orgInvitesInfo.OrganizationName} invite is about to expire",
+                    "AdminConsole.OrganizationInvite.OrganizationInviteReminder3View"),
+                _ => throw new ArgumentOutOfRangeException(nameof(reminderNumber), reminderNumber,
+                    "Reminder number must be 1, 2, or 3.")
+            };
+
+            var url = BuildInvitationUrl(orgInvitesInfo, orgUserTokenPair.OrgUser, orgUserTokenPair.Token);
+            var expirationDate = $"{orgUserTokenPair.Token.ExpirationDate.ToLongDateString()} {orgUserTokenPair.Token.ExpirationDate.ToShortTimeString()} UTC";
+
+            var message = CreateDefaultMessage(subject, orgUserTokenPair.OrgUser.Email);
+
+            return new MailQueueMessage(message, templateName, new
+            {
+                OrganizationName = organizationName,
+                Email = orgUserTokenPair.OrgUser.Email,
+                ExpirationDate = expirationDate,
+                Url = url,
                 InviterEmail = orgInvitesInfo.InviterEmail,
                 CurrentYear = DateTime.UtcNow.Year.ToString()
             });

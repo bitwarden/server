@@ -39,8 +39,7 @@ public class NoopMailService : IMailService
         ProductTierType productTier,
         IEnumerable<ProductType> products,
         int trailLength,
-        bool paymentOptional = false,
-        int? pamSeatMinimum = null)
+        bool paymentOptional = false)
     {
         return Task.FromResult(0);
     }
@@ -92,6 +91,11 @@ public class NoopMailService : IMailService
     }
 
     public Task SendUpdatedOrganizationInviteEmailsAsync(OrganizationInvitesInfo orgInvitesInfo)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task SendOrganizationInviteReminderEmailsAsync(OrganizationInvitesInfo orgInvitesInfo, int reminderNumber)
     {
         return Task.FromResult(0);
     }

@@ -96,8 +96,9 @@ set automatically in supported Bitwarden setups.
 
 ## Adding new notification targets
 
-[`NotificationTarget`](./NotificationTarget.cs) is an enum that defines the possible targets for a
-notification, `IPushEngine` implementations may or may not need to be aware and have special
+[`NotificationTarget`](../../../Libraries/Push.Infrastructure/NotificationTarget.cs) is an enum that
+defines the possible targets for a notification. It lives in the `Push.Infrastructure` library so the
+Notifications service can use it without referencing Core. `IPushEngine` implementations may or may not need to be aware and have special
 considerations for each notification target type. For that reason adding a new target is NOT as easy
 as adding a new enum member. The ANH implementation uses it to build its tag query. A new target
 also needs to be something that is targettable through the tag query. For example, say a team wants

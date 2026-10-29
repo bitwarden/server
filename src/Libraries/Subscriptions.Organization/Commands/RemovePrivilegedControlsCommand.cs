@@ -13,7 +13,7 @@ internal interface IRemovePrivilegedControlsCommand
     /// <summary>
     /// Removes Privileged Controls from an organization: turns the entitlement off for every user, removes the
     /// seat line item from the subscription with an immediate credit, and clears the seat count and autoscale
-    /// limit. The seat minimum and each user's individual access flag are left as they are.
+    /// limit. Each user's individual access flag is left as it is.
     /// </summary>
     /// <param name="organization">The organization that currently has Privileged Controls.</param>
     /// <exception cref="BadRequestException">Thrown when the removal is invalid or rejected.</exception>
@@ -37,11 +37,6 @@ internal sealed class RemovePrivilegedControlsCommand(
         if (!organization.UsePam || organization.PamSeats.GetValueOrDefault() < 1)
         {
             throw new BadRequestException("Your organization doesn't have Privileged Controls.");
-        }
-
-        if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
-        {
-            throw new BadRequestException("No payment method found.");
         }
 
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
