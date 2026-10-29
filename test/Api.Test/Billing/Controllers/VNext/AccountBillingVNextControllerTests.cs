@@ -8,10 +8,10 @@ using Bit.Core.Billing.Licenses.Queries;
 using Bit.Core.Billing.Models.Api.Response;
 using Bit.Core.Billing.Models.Api.Response.Premium;
 using Bit.Core.Billing.Models.Business;
-using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Portal.Commands;
 using Bit.Core.Billing.Premium.Commands;
+using Bit.Core.Billing.Premium.Models;
 using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Billing.Subscriptions.Queries;
 using Bit.Core.Context;
@@ -536,15 +536,13 @@ public class AccountBillingVNextControllerTests
             ProrationDate = prorationDate
         };
         _upgradePremiumToOrganizationCommand
-            .Run(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<string?>(), Arg.Any<PlanType>(), Arg.Any<BillingAddress>(), Arg.Any<DateTime?>())
+            .Run(Arg.Any<User>(), Arg.Any<PremiumToOrganizationUpgrade>())
             .Returns(new BillingCommandResult<Guid>(Guid.NewGuid()));
 
         await _sut.UpgradePremiumToOrganizationAsync(user, request);
 
         await _upgradePremiumToOrganizationCommand.Received(1).Run(
-            user, Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
-            Arg.Any<string?>(), Arg.Any<PlanType>(), Arg.Any<BillingAddress>(), prorationDate);
+            user, Arg.Is<PremiumToOrganizationUpgrade>(upgrade => upgrade.ProrationDate == prorationDate));
     }
 
     [Theory, BitAutoData]

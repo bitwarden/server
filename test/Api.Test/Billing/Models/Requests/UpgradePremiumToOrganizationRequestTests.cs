@@ -26,21 +26,23 @@ public class UpgradePremiumToOrganizationRequestTests
             {
                 Country = "US",
                 PostalCode = "12345"
-            }
+            },
+            ProrationDate = new DateTime(2026, 10, 27, 12, 0, 0, DateTimeKind.Utc)
         };
 
         // Act
-        var (organizationName, key, publicKey, encryptedPrivateKey, collectionName, planType, billingAddress) = sut.ToDomain();
+        var upgrade = sut.ToDomain();
 
         // Assert
-        Assert.Equal("Test Organization", organizationName);
-        Assert.Equal("encrypted-key", key);
-        Assert.Equal("public-key", publicKey);
-        Assert.Equal("encrypted-private-key", encryptedPrivateKey);
-        Assert.Equal("Default Collection", collectionName);
-        Assert.Equal(expectedPlanType, planType);
-        Assert.Equal("US", billingAddress.Country);
-        Assert.Equal("12345", billingAddress.PostalCode);
+        Assert.Equal("Test Organization", upgrade.OrganizationName);
+        Assert.Equal("encrypted-key", upgrade.Key);
+        Assert.Equal("public-key", upgrade.PublicKey);
+        Assert.Equal("encrypted-private-key", upgrade.EncryptedPrivateKey);
+        Assert.Equal("Default Collection", upgrade.CollectionName);
+        Assert.Equal(expectedPlanType, upgrade.TargetPlanType);
+        Assert.Equal("US", upgrade.BillingAddress.Country);
+        Assert.Equal("12345", upgrade.BillingAddress.PostalCode);
+        Assert.Equal(new DateTime(2026, 10, 27, 12, 0, 0, DateTimeKind.Utc), upgrade.ProrationDate);
     }
 
     [Theory]
@@ -101,19 +103,19 @@ public class UpgradePremiumToOrganizationRequestTests
         };
 
         // Act
-        var (organizationName, key, publicKey, encryptedPrivateKey, collectionName, planType, billingAddress) = sut.ToDomain();
+        var upgrade = sut.ToDomain();
 
         // Assert
-        Assert.Equal("International Business", organizationName);
-        Assert.Equal("encrypted-key", key);
-        Assert.Equal("public-key", publicKey);
-        Assert.Equal("encrypted-private-key", encryptedPrivateKey);
-        Assert.Equal("Default Collection", collectionName);
-        Assert.Equal(expectedPlanType, planType);
-        Assert.Equal(country, billingAddress.Country);
-        Assert.Equal(postalCode, billingAddress.PostalCode);
-        Assert.NotNull(billingAddress.TaxId);
-        Assert.Equal(taxIdCode, billingAddress.TaxId.Code);
-        Assert.Equal(taxIdValue, billingAddress.TaxId.Value);
+        Assert.Equal("International Business", upgrade.OrganizationName);
+        Assert.Equal("encrypted-key", upgrade.Key);
+        Assert.Equal("public-key", upgrade.PublicKey);
+        Assert.Equal("encrypted-private-key", upgrade.EncryptedPrivateKey);
+        Assert.Equal("Default Collection", upgrade.CollectionName);
+        Assert.Equal(expectedPlanType, upgrade.TargetPlanType);
+        Assert.Equal(country, upgrade.BillingAddress.Country);
+        Assert.Equal(postalCode, upgrade.BillingAddress.PostalCode);
+        Assert.NotNull(upgrade.BillingAddress.TaxId);
+        Assert.Equal(taxIdCode, upgrade.BillingAddress.TaxId.Code);
+        Assert.Equal(taxIdValue, upgrade.BillingAddress.TaxId.Value);
     }
 }
