@@ -13,7 +13,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 /// <list type="bullet">
 ///     <item><see cref="IInviteLinkValidationService.ValidateEligibility"/>.</item>
 ///     <item>The link supports confirmation.</item>
-///     <item><see cref="InviteLinkRules.ValidateConfirmMembershipStatus"/>.</item>
+///     <item><see cref="InviteLinkValidationService.ValidateConfirmMembershipStatus"/>.</item>
 ///     <item><see cref="IInviteLinkValidationService.ValidateJoinRequirementsAsync"/>.</item>
 ///     <item><see cref="IJoinOrganizationPolicyValidationService.ValidateAccountRecoveryPolicy"/>.</item>
 /// </list>

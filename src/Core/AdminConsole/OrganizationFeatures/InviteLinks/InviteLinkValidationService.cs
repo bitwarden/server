@@ -113,4 +113,35 @@ public class InviteLinkValidationService(
 
         return new JoinRequirementsValidationResult(twoFactorError, autoConfirmResult.AutoConfirmPolicyEnabled);
     }
+
+    /// <summary>
+    /// Checks that the user's existing membership allows accepting an invite link: it must not be revoked, and the
+    /// user must not already be an accepted or confirmed member.
+    /// </summary>
+    /// <param name="organization">The organization the user is joining.</param>
+    /// <param name="existingOrganizationUser">The user's existing membership, or <c>null</c> if they have none.</param>
+    /// <returns><c>null</c> when allowed, otherwise the error explaining why.</returns>
+    public static Error? ValidateAcceptMembershipStatus(Organization organization, OrganizationUser? existingOrganizationUser) =>
+        existingOrganizationUser?.Status switch
+        {
+            OrganizationUserStatusType.Revoked => new OrganizationAccessRevoked(organization.DisplayName()),
+            OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed =>
+                new AlreadyOrganizationMember(organization.DisplayName()),
+            _ => null
+        };
+
+    /// <summary>
+    /// Checks that the user's existing membership allows confirming through an invite link: it must not be revoked,
+    /// and the user must not already be confirmed. An accepted membership is allowed, so it can be confirmed.
+    /// </summary>
+    /// <param name="organization">The organization the user is joining.</param>
+    /// <param name="existingOrganizationUser">The user's existing membership, or <c>null</c> if they have none.</param>
+    /// <returns><c>null</c> when allowed, otherwise the error explaining why.</returns>
+    public static Error? ValidateConfirmMembershipStatus(Organization organization, OrganizationUser? existingOrganizationUser) =>
+        existingOrganizationUser switch
+        {
+            { RevocationReason: not null } => new OrganizationAccessRevoked(organization.DisplayName()),
+            { Status: OrganizationUserStatusType.Confirmed } => new AlreadyOrganizationMember(organization.DisplayName()),
+            _ => null
+        };
 }
