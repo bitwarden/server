@@ -41,6 +41,21 @@ public class OrganizationAccessRuleSceneTests : IClassFixture<InPlaySeederApiApp
         Assert.Equal(0, await CountRulesAsync(org.OrganizationId));
     }
 
+    [Fact]
+    public async Task SeedAsync_EmptyIpAllowlist_ReturnsBadRequestWithoutWrites()
+    {
+        var playId = Guid.NewGuid().ToString();
+        var org = await _client.SeedOrganizationAsync(playId);
+        var request = Rule(org.OrganizationId, "Office");
+        request.IpAllowlistCidrs = [];
+
+        var response = await _client.PostSceneRequestAsync(playId, nameof(OrganizationAccessRuleScene), request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("at least one CIDR", await response.Content.ReadAsStringAsync());
+        Assert.Equal(0, await CountRulesAsync(org.OrganizationId));
+    }
+
     private static OrganizationAccessRuleScene.Request Rule(Guid organizationId, string name) =>
         new() { OrganizationId = organizationId, Name = name };
 

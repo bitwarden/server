@@ -178,8 +178,8 @@ Rule request fields:
   rejects a duplicate.
 - `collectionIds`: collections the rule governs; each must belong to the organization and must not already be governed
   by another access rule (a collection belongs to at most one rule).
-- `ipAllowlistCidrs`: adds an `ip_allowlist` condition with these CIDRs. An invalid CIDR is rejected; omit the field
-  for no IP condition.
+- `ipAllowlistCidrs`: adds an `ip_allowlist` condition with these CIDRs. An invalid CIDR or an empty list is rejected;
+  omit the field for no IP condition.
 - `requireHumanApproval`: adds a `human_approval` condition. With neither condition, requests auto-approve.
 - `description`, `enabled` (default true), `singleActiveLease`, `defaultLeaseDurationSeconds`,
   `maxLeaseDurationSeconds`, `allowsExtensions`, `maxExtensionDurationSeconds` (required and positive when

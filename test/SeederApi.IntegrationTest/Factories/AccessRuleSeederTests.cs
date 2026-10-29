@@ -62,6 +62,13 @@ public class AccessRuleSeederTests
             AccessRuleSeeder.Create(Guid.NewGuid(), "Bad", ipAllowlistCidrs: ["not-a-cidr"]));
     }
 
+    [Fact]
+    public void Create_WithEmptyIpAllowlist_Throws()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            AccessRuleSeeder.Create(Guid.NewGuid(), "Empty", ipAllowlistCidrs: []));
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData(0)]

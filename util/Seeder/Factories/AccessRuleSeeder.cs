@@ -61,6 +61,13 @@ internal static class AccessRuleSeeder
 
         if (ipAllowlistCidrs is not null)
         {
+            if (ipAllowlistCidrs.Count == 0)
+            {
+                throw new ArgumentException(
+                    "ipAllowlistCidrs must contain at least one CIDR; omit it for no IP condition.",
+                    nameof(ipAllowlistCidrs));
+            }
+
             foreach (var cidr in ipAllowlistCidrs)
             {
                 if (string.IsNullOrWhiteSpace(cidr) || !IPNetwork.TryParse(cidr, out _))
