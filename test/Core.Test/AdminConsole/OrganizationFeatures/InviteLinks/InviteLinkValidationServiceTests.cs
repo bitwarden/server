@@ -11,6 +11,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -21,6 +22,263 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.InviteLinks;
 [SutProviderCustomize]
 public class InviteLinkValidationServiceTests
 {
+    [Theory, BitAutoData]
+    public void ValidateEligibility_WhenAllChecksPass_ReturnsNull(
+        SutProvider<InviteLinkValidationService> sutProvider,
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user)
+    {
+        // Arrange
+        var code = SetupEligible(organization, inviteLink, user);
+
+        // Act
+        var error = sutProvider.Sut.ValidateEligibility(
+            inviteLink,
+            code,
+            organization,
+            user);
+
+        // Assert
+        Assert.Null(error);
+    }
+
+    [Theory, BitAutoData]
+    public void ValidateEligibility_WithLinkNotFound_ReturnsInviteLinkNotFound(
+        SutProvider<InviteLinkValidationService> sutProvider,
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user)
+    {
+        // Arrange
+        var code = SetupEligible(organization, inviteLink, user);
+
+        // Act
+        var error = sutProvider.Sut.ValidateEligibility(
+            null,
+            code,
+            organization,
+            user);
+
+        // Assert
+        Assert.IsType<InviteLinkNotFound>(error);
+    }
+
+    [Theory, BitAutoData]
+    public void ValidateEligibility_WithCodeMismatch_ReturnsInviteLinkNotFound(
+        SutProvider<InviteLinkValidationService> sutProvider,
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user)
+    {
+        // Arrange
+        SetupEligible(organization, inviteLink, user);
+
+        // Act
+        var error = sutProvider.Sut.ValidateEligibility(
+            inviteLink,
+            Guid.NewGuid(),
+            organization,
+            user);
+
+        // Assert
+        Assert.IsType<InviteLinkNotFound>(error);
+    }
+
+    [Theory, BitAutoData]
+    public void ValidateEligibility_WithOrganizationNotFound_ReturnsInviteLinkNotFound(
+        SutProvider<InviteLinkValidationService> sutProvider,
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user)
+    {
+        // Arrange
+        var code = SetupEligible(organization, inviteLink, user);
+
+        // Act
+        var error = sutProvider.Sut.ValidateEligibility(
+            inviteLink,
+            code,
+            null,
+            user);
+
+        // Assert
+        Assert.IsType<InviteLinkNotFound>(error);
+    }
+
+    [Theory, BitAutoData]
+    public void ValidateEligibility_WithOrganizationDisabled_ReturnsInviteLinkNotFound(
+        SutProvider<InviteLinkValidationService> sutProvider,
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user)
+    {
+        // Arrange
+        var code = SetupEligible(organization, inviteLink, user);
+        organization.Enabled = false;
+
+        // Act
+        var error = sutProvider.Sut.ValidateEligibility(
+            inviteLink,
+            code,
+            organization,
+            user);
+
+        // Assert
+        Assert.IsType<InviteLinkNotFound>(error);
+    }
+
+    [Theory, BitAutoData]
+    public void ValidateEligibility_WithOrganizationNotUsingInviteLinks_ReturnsInviteLinkNotAvailable(
+        SutProvider<InviteLinkValidationService> sutProvider,
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user)
+    {
+        // Arrange
+        var code = SetupEligible(organization, inviteLink, user);
+        organization.UseInviteLinks = false;
+
+        // Act
+        var error = sutProvider.Sut.ValidateEligibility(
+            inviteLink,
+            code,
+            organization,
+            user);
+
+        // Assert
+        Assert.IsType<InviteLinkNotAvailable>(error);
+    }
+
+    [Theory, BitAutoData]
+    public void ValidateEligibility_WithDisallowedDomain_ReturnsEmailDomainNotAllowed(
+        SutProvider<InviteLinkValidationService> sutProvider,
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user)
+    {
+        // Arrange
+        var code = SetupEligible(organization, inviteLink, user);
+        inviteLink.AllowedDomains = "[\"allowed.com\"]";
+
+        // Act
+        var error = sutProvider.Sut.ValidateEligibility(
+            inviteLink,
+            code,
+            organization,
+            user);
+
+        // Assert
+        Assert.IsType<EmailDomainNotAllowed>(error);
+    }
+
+    [Theory]
+    [BitAutoData(false, true)]
+    [BitAutoData(false, false)]
+    [BitAutoData(true, true)]
+    [BitAutoData(true, false)]
+    public void ValidateEligibility_WithVerifiedEmail_ReturnsNull(
+        bool selfHosted,
+        bool enableOpenInviteLinkEmailVerification,
+        SutProvider<InviteLinkValidationService> sutProvider,
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user)
+    {
+        // Arrange
+        var code = SetupEligible(organization, inviteLink, user);
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted = selfHosted;
+        sutProvider.GetDependency<IGlobalSettings>().EnableOpenInviteLinkEmailVerification = enableOpenInviteLinkEmailVerification;
+
+        // Act
+        var error = sutProvider.Sut.ValidateEligibility(
+            inviteLink,
+            code,
+            organization,
+            user);
+
+        // Assert
+        Assert.Null(error);
+    }
+
+    // Cloud always requires email verification, even if the setting is disabled.
+    [Theory]
+    [BitAutoData(false, true)]
+    [BitAutoData(false, false)]
+    [BitAutoData(true, true)]
+    public void ValidateEligibility_WithUnverifiedEmailAndVerificationRequired_ReturnsEmailNotVerified(
+        bool selfHosted,
+        bool enableOpenInviteLinkEmailVerification,
+        SutProvider<InviteLinkValidationService> sutProvider,
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user)
+    {
+        // Arrange
+        var code = SetupEligible(organization, inviteLink, user);
+        user.EmailVerified = false;
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted = selfHosted;
+        sutProvider.GetDependency<IGlobalSettings>().EnableOpenInviteLinkEmailVerification = enableOpenInviteLinkEmailVerification;
+
+        // Act
+        var error = sutProvider.Sut.ValidateEligibility(
+            inviteLink,
+            code,
+            organization,
+            user);
+
+        // Assert
+        Assert.IsType<EmailNotVerified>(error);
+    }
+
+    [Theory, BitAutoData]
+    public void ValidateEligibility_WithUnverifiedEmailSelfHostedAndSettingDisabled_ReturnsNull(
+        SutProvider<InviteLinkValidationService> sutProvider,
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user)
+    {
+        // Arrange
+        var code = SetupEligible(organization, inviteLink, user);
+        user.EmailVerified = false;
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted = true;
+        sutProvider.GetDependency<IGlobalSettings>().EnableOpenInviteLinkEmailVerification = false;
+
+        // Act
+        var error = sutProvider.Sut.ValidateEligibility(
+            inviteLink,
+            code,
+            organization,
+            user);
+
+        // Assert
+        Assert.Null(error);
+    }
+
+    // Auth's invite link email verification flow (PM-42435) relies on the domain being checked first.
+    [Theory, BitAutoData]
+    public void ValidateEligibility_WithUnverifiedEmailAndDisallowedDomain_ReturnsEmailDomainNotAllowedFirst(
+        SutProvider<InviteLinkValidationService> sutProvider,
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user)
+    {
+        // Arrange
+        var code = SetupEligible(organization, inviteLink, user);
+        inviteLink.AllowedDomains = "[\"allowed.com\"]";
+        user.EmailVerified = false;
+
+        // Act
+        var error = sutProvider.Sut.ValidateEligibility(
+            inviteLink,
+            code,
+            organization,
+            user);
+
+        // Assert
+        Assert.IsType<EmailDomainNotAllowed>(error);
+    }
+
     [Theory, BitAutoData]
     public async Task ValidateJoinRequirementsAsync_WhenAllChecksPass_ReturnsNoError(
         Organization organization,
@@ -223,6 +481,20 @@ public class InviteLinkValidationServiceTests
         // Assert
         Assert.Null(result.Error);
         Assert.True(result.AutoConfirmPolicyEnabled);
+    }
+
+    // Makes the link, organization, and user pass every eligibility check and returns the link's code.
+    private static Guid SetupEligible(Organization organization, OrganizationInviteLink inviteLink, User user)
+    {
+        organization.Enabled = true;
+        organization.UseInviteLinks = true;
+        inviteLink.OrganizationId = organization.Id;
+        inviteLink.Code = Guid.NewGuid().ToString();
+        inviteLink.AllowedDomains = "[\"example.com\"]";
+        user.Email = "user@example.com";
+        user.EmailVerified = true;
+
+        return Guid.Parse(inviteLink.Code);
     }
 
     private static void SetupAllChecksPass(

@@ -34,7 +34,7 @@ public class AcceptOrganizationInviteLinkCommand(
     IPolicyQuery policyQuery,
     ILogger<AcceptOrganizationInviteLinkCommand> logger,
     IEventService eventService,
-    IInviteLinkRules inviteLinkRules)
+    IInviteLinkValidationService inviteLinkValidationService)
     : IAcceptOrganizationInviteLinkCommand
 {
     public async Task<CommandResult<OrganizationUser>> AcceptAsync(AcceptOrganizationInviteLinkRequest request)
@@ -46,7 +46,7 @@ public class AcceptOrganizationInviteLinkCommand(
             ? null
             : await organizationRepository.GetByIdAsync(link.OrganizationId);
 
-        var eligibilityError = inviteLinkRules.ValidateEligibility(
+        var eligibilityError = inviteLinkValidationService.ValidateEligibility(
             link,
             request.Code,
             existingOrganization,

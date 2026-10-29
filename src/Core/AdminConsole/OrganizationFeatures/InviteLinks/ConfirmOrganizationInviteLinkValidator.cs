@@ -31,8 +31,7 @@ public class ConfirmOrganizationInviteLinkValidator(
     IOrganizationUserRepository organizationUserRepository,
     IInviteLinkValidationService inviteLinkValidationService,
     IPreAccessEnforcerQuery preAccessEnforcerQuery,
-    IJoinOrganizationPolicyValidationService joinOrganizationPolicyValidationService,
-    IInviteLinkRules inviteLinkRules)
+    IJoinOrganizationPolicyValidationService joinOrganizationPolicyValidationService)
     : IConfirmOrganizationInviteLinkValidator
 {
     public async Task<CommandResult<ConfirmOrganizationInviteLinkValidationResult>> ValidateAsync(
@@ -45,7 +44,7 @@ public class ConfirmOrganizationInviteLinkValidator(
             ? null
             : await organizationRepository.GetByIdAsync(existingLink.OrganizationId);
 
-        var eligibilityError = inviteLinkRules.ValidateEligibility(
+        var eligibilityError = inviteLinkValidationService.ValidateEligibility(
             existingLink,
             request.Code,
             existingOrganization,

@@ -11,7 +11,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 /// <remarks>
 /// The following are validated:
 /// <list type="bullet">
-///     <item><see cref="InviteLinkRules.ValidateEligibility"/>.</item>
+///     <item><see cref="IInviteLinkValidationService.ValidateEligibility"/>.</item>
 ///     <item>The link supports confirmation.</item>
 ///     <item><see cref="InviteLinkRules.ValidateConfirmMembershipStatus"/>.</item>
 ///     <item><see cref="IInviteLinkValidationService.ValidateJoinRequirementsAsync"/>.</item>

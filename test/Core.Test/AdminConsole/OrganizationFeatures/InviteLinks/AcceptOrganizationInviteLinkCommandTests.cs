@@ -37,7 +37,7 @@ public class AcceptOrganizationInviteLinkCommandTests
     {
         // Arrange
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        sutProvider.GetDependency<IInviteLinkRules>()
+        sutProvider.GetDependency<IInviteLinkValidationService>()
             .ValidateEligibility(
                 inviteLink,
                 Guid.Parse(inviteLink.Code),

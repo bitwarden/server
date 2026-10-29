@@ -8,12 +8,12 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 /// <summary>
 /// See <see cref="IGetOrganizationInviteValidator"/>.
 /// </summary>
-public class GetOrganizationInviteValidator(IInviteLinkRules inviteLinkRules) : IGetOrganizationInviteValidator
+public class GetOrganizationInviteValidator(IInviteLinkValidationService inviteLinkValidationService) : IGetOrganizationInviteValidator
 {
     public ValidationResult<OrganizationInviteLinkValidationRequest> Validate(
         OrganizationInviteLinkValidationRequest request)
     {
-        var eligibilityError = inviteLinkRules.ValidateEligibility(
+        var eligibilityError = inviteLinkValidationService.ValidateEligibility(
             request.ExistingInviteLink,
             request.Code,
             request.Organization,
@@ -36,7 +36,7 @@ public class GetOrganizationInviteValidator(IInviteLinkRules inviteLinkRules) : 
     /// The existing membership must allow the step the link leads to: confirming, or accepting.
     /// </summary>
     /// <remarks>
-    /// Must run after <see cref="InviteLinkRules.ValidateEligibility"/>, which guarantees the invite link and
+    /// Must run after <see cref="IInviteLinkValidationService.ValidateEligibility"/>, which guarantees the invite link and
     /// organization exist.
     /// </remarks>
     private static Error? ValidateMembershipStatus(OrganizationInviteLinkValidationRequest request) =>

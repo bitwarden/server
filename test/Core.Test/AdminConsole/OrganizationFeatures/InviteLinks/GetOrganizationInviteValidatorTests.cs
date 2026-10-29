@@ -43,7 +43,7 @@ public class GetOrganizationInviteValidatorTests
         // Revoked would also fail the membership status check, so this proves eligibility is checked first.
         existingOrganizationUser.Status = OrganizationUserStatusType.Revoked;
         var request = BuildRequest(organization, inviteLink, user, existingOrganizationUser);
-        sutProvider.GetDependency<IInviteLinkRules>()
+        sutProvider.GetDependency<IInviteLinkValidationService>()
             .ValidateEligibility(
                 inviteLink,
                 request.Code,
