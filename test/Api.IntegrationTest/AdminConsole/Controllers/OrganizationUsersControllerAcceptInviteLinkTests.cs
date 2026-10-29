@@ -441,9 +441,9 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
     // Staged path: a staged member given Privileged Controls joins without it when the organization is at its
     // Privileged Controls seat limit.
     [Fact]
-    public async Task AcceptInviteLink_WithStagedMembershipWithPam_AtPamSeatLimit_JoinsWithoutPam()
+    public async Task AcceptInviteLink_WithStagedMembershipWithPrivilegedControls_AtPrivilegedControlsSeatLimit_JoinsWithoutPrivilegedControls()
     {
-        await FillPamSeatsAtLimitAsync();
+        await FillPrivilegedControlsSeatsAtLimitAsync();
         var created = await CreateInviteLinkAsync();
         var (joinerEmail, joinerClient) = await RegisterAndLoginJoinerAsync();
         await CreateStagedMembershipAsync(joinerEmail, accessPam: true);
@@ -658,7 +658,7 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
     }
 
     // Gives the organization one Privileged Controls seat, already taken, with no room to autoscale.
-    private async Task FillPamSeatsAtLimitAsync()
+    private async Task FillPrivilegedControlsSeatsAtLimitAsync()
     {
         _organization.UsePam = true;
         _organization.PamSeats = 1;

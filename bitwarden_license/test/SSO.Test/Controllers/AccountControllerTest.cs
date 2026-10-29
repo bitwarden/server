@@ -1067,14 +1067,14 @@ public class AccountControllerTest
     }
 
     [Theory, BitAutoData]
-    public async Task ExternalCallback_ExistingUserStagedWithPam_AtLimit_PromotesWithoutPam(
+    public async Task ExternalCallback_ExistingUserStagedWithPrivilegedControls_AtLimit_PromotesWithoutPrivilegedControls(
         SutProvider<AccountController> sutProvider)
     {
         var orgId = Guid.NewGuid();
         var email = "staged.user@example.com";
         var existingUser = new User { Id = Guid.NewGuid(), Email = email, UsesKeyConnector = false };
         var organization = new Organization { Id = orgId, Name = "Org", Seats = null };
-        var orgUser = BuildStagedOrgUserWithPam(orgId, email);
+        var orgUser = BuildStagedOrgUserWithPrivilegedControls(orgId, email);
         ArrangeStagedMember(sutProvider, organization, existingUser, orgUser, email);
         var sendSeatNeededEmailCommand = ArrangePrivilegedControlsSeatUnavailable(
             sutProvider, organization, new PrivilegedControlsSeatLimitReachedError());
@@ -1094,13 +1094,13 @@ public class AccountControllerTest
     }
 
     [Theory, BitAutoData]
-    public async Task ExternalCallback_NewUserStagedWithPam_AtLimit_ProvisionsWithoutPam(
+    public async Task ExternalCallback_NewUserStagedWithPrivilegedControls_AtLimit_ProvisionsWithoutPrivilegedControls(
         SutProvider<AccountController> sutProvider)
     {
         var orgId = Guid.NewGuid();
         var email = "staged.new.user@example.com";
         var organization = new Organization { Id = orgId, Name = "Org", Seats = null };
-        var orgUser = BuildStagedOrgUserWithPam(orgId, email);
+        var orgUser = BuildStagedOrgUserWithPrivilegedControls(orgId, email);
         ArrangeStagedMember(sutProvider, organization, null, orgUser, email);
         sutProvider.GetDependency<IPolicyQuery>()
             .RunAsync(orgId, PolicyType.TwoFactorAuthentication)
@@ -1122,14 +1122,14 @@ public class AccountControllerTest
     }
 
     [Theory, BitAutoData]
-    public async Task ExternalCallback_ExistingUserStagedWithPam_ReservationFailed_PromotesWithoutPamOrEmail(
+    public async Task ExternalCallback_ExistingUserStagedWithPrivilegedControls_ReservationFailed_PromotesWithoutPrivilegedControlsOrEmail(
         SutProvider<AccountController> sutProvider)
     {
         var orgId = Guid.NewGuid();
         var email = "staged.user@example.com";
         var existingUser = new User { Id = Guid.NewGuid(), Email = email, UsesKeyConnector = false };
         var organization = new Organization { Id = orgId, Name = "Org", Seats = null };
-        var orgUser = BuildStagedOrgUserWithPam(orgId, email);
+        var orgUser = BuildStagedOrgUserWithPrivilegedControls(orgId, email);
         ArrangeStagedMember(sutProvider, organization, existingUser, orgUser, email);
         var sendSeatNeededEmailCommand = ArrangePrivilegedControlsSeatUnavailable(
             sutProvider, organization, new PrivilegedControlsSeatReservationUnexpectedError());
@@ -1147,13 +1147,13 @@ public class AccountControllerTest
     }
 
     [Theory, BitAutoData]
-    public async Task ExternalCallback_NewUserStagedWithPam_ReservationFailed_ProvisionsWithoutPamOrEmail(
+    public async Task ExternalCallback_NewUserStagedWithPrivilegedControls_ReservationFailed_ProvisionsWithoutPrivilegedControlsOrEmail(
         SutProvider<AccountController> sutProvider)
     {
         var orgId = Guid.NewGuid();
         var email = "staged.new.user@example.com";
         var organization = new Organization { Id = orgId, Name = "Org", Seats = null };
-        var orgUser = BuildStagedOrgUserWithPam(orgId, email);
+        var orgUser = BuildStagedOrgUserWithPrivilegedControls(orgId, email);
         ArrangeStagedMember(sutProvider, organization, null, orgUser, email);
         sutProvider.GetDependency<IPolicyQuery>()
             .RunAsync(orgId, PolicyType.TwoFactorAuthentication)
@@ -1173,14 +1173,14 @@ public class AccountControllerTest
     }
 
     [Theory, BitAutoData]
-    public async Task ExternalCallback_ExistingUserStagedWithPam_InviteSendFails_RestoresPam(
+    public async Task ExternalCallback_ExistingUserStagedWithPrivilegedControls_InviteSendFails_RestoresPrivilegedControls(
         SutProvider<AccountController> sutProvider)
     {
         var orgId = Guid.NewGuid();
         var email = "staged.user@example.com";
         var existingUser = new User { Id = Guid.NewGuid(), Email = email, UsesKeyConnector = false };
         var organization = new Organization { Id = orgId, Name = "Org", Seats = null };
-        var orgUser = BuildStagedOrgUserWithPam(orgId, email);
+        var orgUser = BuildStagedOrgUserWithPrivilegedControls(orgId, email);
         ArrangeStagedMember(sutProvider, organization, existingUser, orgUser, email);
         var sendSeatNeededEmailCommand = ArrangePrivilegedControlsSeatUnavailable(
             sutProvider, organization, new PrivilegedControlsSeatLimitReachedError());
@@ -1212,7 +1212,7 @@ public class AccountControllerTest
         return sutProvider.GetDependency<ISendPrivilegedControlsSeatNeededEmailCommand>();
     }
 
-    private static OrganizationUser BuildStagedOrgUserWithPam(Guid orgId, string email) =>
+    private static OrganizationUser BuildStagedOrgUserWithPrivilegedControls(Guid orgId, string email) =>
         new()
         {
             Id = Guid.NewGuid(),

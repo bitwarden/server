@@ -174,7 +174,7 @@ public class UpdateOrganizationUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task UpdateUserAsync_EnablingPam_ConfirmedMember_ReservesOneSeat(
+    public async Task UpdateUserAsync_EnablingPrivilegedControls_ConfirmedMember_ReservesOneSeat(
         SutProvider<UpdateOrganizationUserCommand> sutProvider,
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
@@ -192,7 +192,7 @@ public class UpdateOrganizationUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task UpdateUserAsync_EnablingPam_AtLimit_ReturnsSeatLimitReachedAndDoesNotSave(
+    public async Task UpdateUserAsync_EnablingPrivilegedControls_AtLimit_ReturnsSeatLimitReachedAndDoesNotSave(
         SutProvider<UpdateOrganizationUserCommand> sutProvider,
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
@@ -214,7 +214,7 @@ public class UpdateOrganizationUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task UpdateUserAsync_EnablingPam_ReservationFails_ReturnsTheReservationErrorAndDoesNotSave(
+    public async Task UpdateUserAsync_EnablingPrivilegedControls_ReservationFails_ReturnsTheReservationErrorAndDoesNotSave(
         SutProvider<UpdateOrganizationUserCommand> sutProvider,
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
@@ -239,7 +239,7 @@ public class UpdateOrganizationUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task UpdateUserAsync_EnablingPam_RevokedMember_DoesNotReserve(
+    public async Task UpdateUserAsync_EnablingPrivilegedControls_RevokedMember_DoesNotReserve(
         SutProvider<UpdateOrganizationUserCommand> sutProvider,
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Revoked, OrganizationUserType.User)] OrganizationUser organizationUser)
@@ -257,7 +257,7 @@ public class UpdateOrganizationUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task UpdateUserAsync_EnablingPam_StagedMember_DoesNotReserve(
+    public async Task UpdateUserAsync_EnablingPrivilegedControls_StagedMember_DoesNotReserve(
         SutProvider<UpdateOrganizationUserCommand> sutProvider,
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Staged, OrganizationUserType.User)] OrganizationUser organizationUser)
@@ -275,7 +275,7 @@ public class UpdateOrganizationUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task UpdateUserAsync_AlreadyHasPam_DoesNotReserve(
+    public async Task UpdateUserAsync_AlreadyHasPrivilegedControls_DoesNotReserve(
         SutProvider<UpdateOrganizationUserCommand> sutProvider,
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)

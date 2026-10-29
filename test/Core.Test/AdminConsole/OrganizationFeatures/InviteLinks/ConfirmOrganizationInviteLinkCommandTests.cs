@@ -322,7 +322,7 @@ public class ConfirmOrganizationInviteLinkCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ConfirmAsync_StagedMemberWithPam_AtLimit_JoinsWithoutPam(
+    public async Task ConfirmAsync_StagedMemberWithPrivilegedControls_AtLimit_JoinsWithoutPrivilegedControls(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
@@ -353,7 +353,7 @@ public class ConfirmOrganizationInviteLinkCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ConfirmAsync_StagedMemberWithPam_ReservationFailed_JoinsWithoutPamOrEmail(
+    public async Task ConfirmAsync_StagedMemberWithPrivilegedControls_ReservationFailed_JoinsWithoutPrivilegedControlsOrEmail(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
@@ -380,7 +380,7 @@ public class ConfirmOrganizationInviteLinkCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ConfirmAsync_StagedMemberWithPam_SeatAvailable_JoinsWithPam(
+    public async Task ConfirmAsync_StagedMemberWithPrivilegedControls_SeatAvailable_JoinsWithPrivilegedControls(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
@@ -407,7 +407,7 @@ public class ConfirmOrganizationInviteLinkCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ConfirmAsync_NotStaged_DoesNotReservePamSeat(
+    public async Task ConfirmAsync_NotStaged_DoesNotReservePrivilegedControlsSeat(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,

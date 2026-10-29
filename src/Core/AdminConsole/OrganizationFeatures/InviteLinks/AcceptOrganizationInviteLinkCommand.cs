@@ -75,7 +75,7 @@ public class AcceptOrganizationInviteLinkCommand(
     {
         var organization = validationResult.Organization;
 
-        PrivilegedControlsSeatReservationResult? pamSeatReservation = null;
+        PrivilegedControlsSeatReservationResult? privilegedControlsSeatReservation = null;
         if (existingOrganizationUser.Status == OrganizationUserStatusType.Staged)
         {
             var seatReservationError = await ReserveSeatAsync(organization);
@@ -84,9 +84,9 @@ public class AcceptOrganizationInviteLinkCommand(
                 return seatReservationError;
             }
 
-            pamSeatReservation = await reservePrivilegedControlsSeatsCommand.RunAsync(
+            privilegedControlsSeatReservation = await reservePrivilegedControlsSeatsCommand.RunAsync(
                 organization, existingOrganizationUser.AccessPam ? 1 : 0);
-            if (!pamSeatReservation.Success)
+            if (!privilegedControlsSeatReservation.Success)
             {
                 existingOrganizationUser.AccessPam = false;
             }
@@ -105,7 +105,7 @@ public class AcceptOrganizationInviteLinkCommand(
 
         await organizationUserRepository.ReplaceAsync(existingOrganizationUser);
 
-        if (pamSeatReservation?.Error is PrivilegedControlsSeatLimitReachedError)
+        if (privilegedControlsSeatReservation?.Error is PrivilegedControlsSeatLimitReachedError)
         {
             await sendPrivilegedControlsSeatNeededEmailCommand.RunAsync(organization, memberEmail);
         }

@@ -419,7 +419,7 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
     }
 
     [Fact]
-    public async Task Put_GrantingPamAtSeatLimit_ReturnsBadRequestAndDoesNotGrant()
+    public async Task Put_GrantingPrivilegedControlsAtSeatLimit_ReturnsBadRequestAndDoesNotGrant()
     {
         await SetUsePamAsync(true);
         _organization.PamSeats = 1;

@@ -74,7 +74,7 @@ public class InviteStagedOrganizationUsersCommand(
 
         // Captured before the subscription grows, because a successful update writes the new total onto the entity.
         var initialSecretsManagerSeats = organization.SmSeats;
-        var initialPamSeats = organization.PamSeats;
+        var initialPrivilegedControlsSeats = organization.PamSeats;
 
         // Password Manager seats first: the subscription rejects more Secrets Manager seats than it has PM seats.
         var secretsManagerSeatReservationError = await AdjustSecretsManagerSeatsAsync(organization, secretsManagerSeatsToAdd, dryRun: false);
@@ -85,14 +85,14 @@ public class InviteStagedOrganizationUsersCommand(
         }
 
         var membersWithPrivilegedControls = eligible.Count(organizationUser => organizationUser.AccessPam);
-        var pamSeatReservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, membersWithPrivilegedControls);
-        if (!pamSeatReservation.Success)
+        var privilegedControlsSeatReservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, membersWithPrivilegedControls);
+        if (!privilegedControlsSeatReservation.Success)
         {
             // Privileged Controls seats go back first: Password Manager seats can't drop below them.
-            await ReleasePrivilegedControlsSeatsAsync(organization, initialPamSeats);
+            await ReleasePrivilegedControlsSeatsAsync(organization, initialPrivilegedControlsSeats);
             await ReleaseSecretsManagerSeatsAsync(organization, secretsManagerSeatsToAdd, initialSecretsManagerSeats);
             await ReleaseSeatsAsync(organization, seatsToAdd);
-            return pamSeatReservation.Error!;
+            return privilegedControlsSeatReservation.Error!;
         }
 
         try
@@ -101,7 +101,7 @@ public class InviteStagedOrganizationUsersCommand(
         }
         catch
         {
-            await ReleasePrivilegedControlsSeatsAsync(organization, initialPamSeats);
+            await ReleasePrivilegedControlsSeatsAsync(organization, initialPrivilegedControlsSeats);
             await ReleaseSecretsManagerSeatsAsync(organization, secretsManagerSeatsToAdd, initialSecretsManagerSeats);
             await ReleaseSeatsAsync(organization, seatsToAdd);
             throw;
@@ -412,16 +412,16 @@ public class InviteStagedOrganizationUsersCommand(
     /// Restores the Privileged Controls seat count captured before the reservation when a later step means
     /// nobody will be invited.
     /// </summary>
-    private async Task ReleasePrivilegedControlsSeatsAsync(Organization organization, int? initialPamSeats)
+    private async Task ReleasePrivilegedControlsSeatsAsync(Organization organization, int? initialPrivilegedControlsSeats)
     {
-        if (initialPamSeats is null || initialPamSeats == organization.PamSeats)
+        if (initialPrivilegedControlsSeats is null || initialPrivilegedControlsSeats == organization.PamSeats)
         {
             return;
         }
 
         try
         {
-            await revertPrivilegedControlsSeatsCommand.RunAsync(organization, initialPamSeats.Value);
+            await revertPrivilegedControlsSeatsCommand.RunAsync(organization, initialPrivilegedControlsSeats.Value);
         }
         catch (Exception ex)
         {

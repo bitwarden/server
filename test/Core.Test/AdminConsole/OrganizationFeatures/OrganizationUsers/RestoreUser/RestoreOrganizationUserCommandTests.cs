@@ -1237,7 +1237,7 @@ public class RestoreOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RestoreUser_Admin_MemberWithPam_ReservesOneSeat(
+    public async Task RestoreUser_Admin_MemberWithPrivilegedControls_ReservesOneSeat(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
@@ -1259,7 +1259,7 @@ public class RestoreOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RestoreUser_Admin_MemberWithPam_AtLimit_ThrowsSeatLimitMessage(
+    public async Task RestoreUser_Admin_MemberWithPrivilegedControls_AtLimit_ThrowsSeatLimitMessage(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
@@ -1283,7 +1283,7 @@ public class RestoreOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RestoreUser_Admin_MemberWithPam_SelfHostedShortfall_ThrowsSelfHostMessage(
+    public async Task RestoreUser_Admin_MemberWithPrivilegedControls_SelfHostedShortfall_ThrowsSelfHostMessage(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
@@ -1307,7 +1307,7 @@ public class RestoreOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RestoreUser_Admin_MemberWithPam_AtLimit_GivesBackThePasswordManagerSeatItBought(
+    public async Task RestoreUser_Admin_MemberWithPrivilegedControls_AtLimit_GivesBackThePasswordManagerSeatItBought(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
@@ -1335,7 +1335,7 @@ public class RestoreOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RestoreUser_Admin_MemberWithPam_ReservationFails_GivesBackThePasswordManagerSeatAndThrowsBadRequest(
+    public async Task RestoreUser_Admin_MemberWithPrivilegedControls_ReservationFails_GivesBackThePasswordManagerSeatAndThrowsBadRequest(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
@@ -1361,7 +1361,7 @@ public class RestoreOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RestoreUser_Admin_MemberWithPam_ReservationFailsUnexpectedly_GivesBackThePasswordManagerSeatAndThrowsWithTheOriginalFailure(
+    public async Task RestoreUser_Admin_MemberWithPrivilegedControls_ReservationFailsUnexpectedly_GivesBackThePasswordManagerSeatAndThrowsWithTheOriginalFailure(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
@@ -1386,7 +1386,7 @@ public class RestoreOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RestoreUser_Admin_MemberWithPam_AtLimit_GivingBackTheSeatFails_StillThrowsSeatLimitMessage(
+    public async Task RestoreUser_Admin_MemberWithPrivilegedControls_AtLimit_GivingBackTheSeatFails_StillThrowsSeatLimitMessage(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
@@ -1412,7 +1412,7 @@ public class RestoreOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RestoreUser_Admin_MemberWithPam_AtLimitWithFreePasswordManagerSeat_GivesNothingBack(
+    public async Task RestoreUser_Admin_MemberWithPrivilegedControls_AtLimitWithFreePasswordManagerSeat_GivesNothingBack(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
@@ -1455,7 +1455,7 @@ public class RestoreOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RestoreUser_Scim_AtLimit_RestoresWithoutPamAndSaves(
+    public async Task RestoreUser_Scim_AtLimit_RestoresWithoutPrivilegedControlsAndSaves(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
         SutProvider<RestoreOrganizationUserCommand> sutProvider)
@@ -1482,7 +1482,7 @@ public class RestoreOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RestoreUser_Scim_SelfHostedShortfall_RestoresWithoutPamOrEmail(
+    public async Task RestoreUser_Scim_SelfHostedShortfall_RestoresWithoutPrivilegedControlsOrEmail(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
         SutProvider<RestoreOrganizationUserCommand> sutProvider)
@@ -1531,7 +1531,7 @@ public class RestoreOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RestoreUser_Scim_ReservationFailed_RestoresWithoutPamOrEmail(
+    public async Task RestoreUser_Scim_ReservationFailed_RestoresWithoutPrivilegedControlsOrEmail(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
         SutProvider<RestoreOrganizationUserCommand> sutProvider)
@@ -1557,7 +1557,7 @@ public class RestoreOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RestoreUser_Scim_SeatAvailable_RestoresWithPam(
+    public async Task RestoreUser_Scim_SeatAvailable_RestoresWithPrivilegedControls(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
         SutProvider<RestoreOrganizationUserCommand> sutProvider)
@@ -1580,7 +1580,7 @@ public class RestoreOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RestoreUser_PublicApi_MemberWithPam_DoesNotTouchSeats(
+    public async Task RestoreUser_PublicApi_MemberWithPrivilegedControls_DoesNotTouchSeats(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
         SutProvider<RestoreOrganizationUserCommand> sutProvider)
@@ -1599,31 +1599,31 @@ public class RestoreOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RestoreUsers_Bulk_CountsOnlyRevokedMembersWithPamReturningToSeatUsingStatus(
+    public async Task RestoreUsers_Bulk_CountsOnlyRevokedMembersWithPrivilegedControlsReturningToSeatUsingStatus(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
-        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser confirmedWithPam,
-        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser acceptedWithPam,
-        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser invitedWithPam,
-        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser stagedWithPam,
-        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser confirmedWithoutPam,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser confirmedWithPrivilegedControls,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser acceptedWithPrivilegedControls,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser invitedWithPrivilegedControls,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser stagedWithPrivilegedControls,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser confirmedWithoutPrivilegedControls,
         SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
         organization.UsePam = true;
         var userService = Substitute.For<IUserService>();
-        RestoreUser_Setup(organization, owner, confirmedWithPam, sutProvider);
-        confirmedWithPam.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
-        acceptedWithPam.StatusNew = OrganizationUserStatusTypeNew.Accepted;
-        invitedWithPam.StatusNew = OrganizationUserStatusTypeNew.Invited;
-        stagedWithPam.StatusNew = OrganizationUserStatusTypeNew.Staged;
-        confirmedWithoutPam.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
-        OrganizationUser[] orgUsers = [confirmedWithPam, acceptedWithPam, invitedWithPam, stagedWithPam, confirmedWithoutPam];
+        RestoreUser_Setup(organization, owner, confirmedWithPrivilegedControls, sutProvider);
+        confirmedWithPrivilegedControls.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        acceptedWithPrivilegedControls.StatusNew = OrganizationUserStatusTypeNew.Accepted;
+        invitedWithPrivilegedControls.StatusNew = OrganizationUserStatusTypeNew.Invited;
+        stagedWithPrivilegedControls.StatusNew = OrganizationUserStatusTypeNew.Staged;
+        confirmedWithoutPrivilegedControls.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        OrganizationUser[] orgUsers = [confirmedWithPrivilegedControls, acceptedWithPrivilegedControls, invitedWithPrivilegedControls, stagedWithPrivilegedControls, confirmedWithoutPrivilegedControls];
         foreach (var orgUser in orgUsers)
         {
             orgUser.OrganizationId = organization.Id;
             orgUser.AccessPam = true;
         }
-        confirmedWithoutPam.AccessPam = false;
+        confirmedWithoutPrivilegedControls.AccessPam = false;
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(orgUsers);

@@ -702,7 +702,7 @@ public class AccountController : Controller
         // won't complete. Staged rows aren't seat-counted; a Staged→Invited promotion
         // consumes a seat and must gate here alongside the fresh-JIT case.
         var willPromoteStagedOrgUser = possibleOrgUser?.Status == OrganizationUserStatusType.Staged;
-        PrivilegedControlsSeatReservationResult? pamSeatReservation = null;
+        PrivilegedControlsSeatReservationResult? privilegedControlsSeatReservation = null;
 
         if (possibleOrgUser == null || willPromoteStagedOrgUser)
         {
@@ -710,9 +710,9 @@ public class AccountController : Controller
 
             if (willPromoteStagedOrgUser)
             {
-                pamSeatReservation = await _reservePrivilegedControlsSeatsCommand.RunAsync(
+                privilegedControlsSeatReservation = await _reservePrivilegedControlsSeatsCommand.RunAsync(
                     organization, possibleOrgUser!.AccessPam ? 1 : 0);
-                if (!pamSeatReservation.Success)
+                if (!privilegedControlsSeatReservation.Success)
                 {
                     possibleOrgUser.AccessPam = false;
                 }
@@ -802,7 +802,7 @@ public class AccountController : Controller
             possibleOrgUser.RevisionDate = DateTime.UtcNow;
             await _organizationUserRepository.ReplaceAsync(possibleOrgUser);
 
-            if (pamSeatReservation?.Error is PrivilegedControlsSeatLimitReachedError)
+            if (privilegedControlsSeatReservation?.Error is PrivilegedControlsSeatLimitReachedError)
             {
                 await _sendPrivilegedControlsSeatNeededEmailCommand.RunAsync(
                     organization, possibleOrgUser.Email ?? newUser.Email);
@@ -881,9 +881,9 @@ public class AccountController : Controller
         var previousRevisionDate = orgUser.RevisionDate;
         var previousAccessPam = orgUser.AccessPam;
 
-        var pamSeatReservation =
+        var privilegedControlsSeatReservation =
             await _reservePrivilegedControlsSeatsCommand.RunAsync(organization, orgUser.AccessPam ? 1 : 0);
-        if (!pamSeatReservation.Success)
+        if (!privilegedControlsSeatReservation.Success)
         {
             orgUser.AccessPam = false;
         }
@@ -915,7 +915,7 @@ public class AccountController : Controller
             throw;
         }
 
-        if (pamSeatReservation.Error is PrivilegedControlsSeatLimitReachedError)
+        if (privilegedControlsSeatReservation.Error is PrivilegedControlsSeatLimitReachedError)
         {
             await _sendPrivilegedControlsSeatNeededEmailCommand.RunAsync(organization, orgUser.Email!);
         }

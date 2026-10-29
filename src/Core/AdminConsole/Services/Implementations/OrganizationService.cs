@@ -710,7 +710,7 @@ public class OrganizationService : IOrganizationService
         var privilegedControlsSeatsToReserve = organization.UsePam
             ? stagedInvitations.Values.Count(s => s.OrgUser.AccessPam)
             : 0;
-        var initialPamSeats = organization.PamSeats;
+        var initialPrivilegedControlsSeats = organization.PamSeats;
 
         // Staged rows whose promotion has actually committed, and so must be put back if the batch fails.
         var promotedStagedUsers = new List<OrganizationUser>();
@@ -776,7 +776,7 @@ public class OrganizationService : IOrganizationService
             // Demote any staged rows that were promoted before the failure.
             await RestorePromotedStagedUsersAsync(promotedStagedUsers, stagedSnapshots);
 
-            await ReleasePrivilegedControlsSeatsAsync(organization, initialPamSeats);
+            await ReleasePrivilegedControlsSeatsAsync(organization, initialPrivilegedControlsSeats);
 
             var currentOrganization = await _organizationRepository.GetByIdAsync(organization.Id);
 
@@ -868,16 +868,16 @@ public class OrganizationService : IOrganizationService
     /// <summary>
     /// Restores the Privileged Controls seat count captured before the reservation when the invite fails.
     /// </summary>
-    private async Task ReleasePrivilegedControlsSeatsAsync(Organization organization, int? initialPamSeats)
+    private async Task ReleasePrivilegedControlsSeatsAsync(Organization organization, int? initialPrivilegedControlsSeats)
     {
-        if (initialPamSeats is null || initialPamSeats == organization.PamSeats)
+        if (initialPrivilegedControlsSeats is null || initialPrivilegedControlsSeats == organization.PamSeats)
         {
             return;
         }
 
         try
         {
-            await _revertPrivilegedControlsSeatsCommand.RunAsync(organization, initialPamSeats.Value);
+            await _revertPrivilegedControlsSeatsCommand.RunAsync(organization, initialPrivilegedControlsSeats.Value);
         }
         catch (Exception ex)
         {

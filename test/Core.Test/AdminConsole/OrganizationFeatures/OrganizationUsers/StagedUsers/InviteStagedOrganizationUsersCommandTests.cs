@@ -741,18 +741,18 @@ public class InviteStagedOrganizationUsersCommandTests
     /// <summary>
     /// Makes the reservation behave like a successful autoscale, which writes the grown total onto the entity.
     /// </summary>
-    private static void AutoscalePamSeatsTo(
-        SutProvider<InviteStagedOrganizationUsersCommand> sutProvider, Organization organization, int newPamSeats) =>
+    private static void AutoscalePrivilegedControlsSeatsTo(
+        SutProvider<InviteStagedOrganizationUsersCommand> sutProvider, Organization organization, int newPrivilegedControlsSeats) =>
         sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
             .RunAsync(organization, Arg.Any<int>())
             .Returns(callInfo =>
             {
-                organization.PamSeats = newPamSeats;
+                organization.PamSeats = newPrivilegedControlsSeats;
                 return new PrivilegedControlsSeatReservationResult();
             });
 
     [Theory, BitAutoData]
-    public async Task RunAsync_StagedMembersWithPam_ReservesTheirCount(
+    public async Task RunAsync_StagedMembersWithPrivilegedControls_ReservesTheirCount(
         Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
     {
         var sutProvider = GetSutProvider();
@@ -767,7 +767,7 @@ public class InviteStagedOrganizationUsersCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RunAsync_ReservesPasswordManagerSeatsBeforePamSeats(
+    public async Task RunAsync_ReservesPasswordManagerSeatsBeforePrivilegedControlsSeats(
         Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
     {
         var sutProvider = GetSutProvider();
@@ -787,7 +787,7 @@ public class InviteStagedOrganizationUsersCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RunAsync_PamAtLimit_ReturnsSeatLimitReachedAndReleasesPasswordManagerSeats(
+    public async Task RunAsync_PrivilegedControlsAtLimit_ReturnsSeatLimitReachedAndReleasesPasswordManagerSeats(
         Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
     {
         var sutProvider = GetSutProvider();
@@ -809,7 +809,7 @@ public class InviteStagedOrganizationUsersCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RunAsync_PamAtLimit_ReleasesSecretsManagerSeats(
+    public async Task RunAsync_PrivilegedControlsAtLimit_ReleasesSecretsManagerSeats(
         Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
     {
         var sutProvider = GetSutProvider();
@@ -828,7 +828,7 @@ public class InviteStagedOrganizationUsersCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RunAsync_PamReservationFails_ReturnsSeatExpansionFailedAndReleasesPasswordManagerSeats(
+    public async Task RunAsync_PrivilegedControlsReservationFails_ReturnsSeatExpansionFailedAndReleasesPasswordManagerSeats(
         Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
     {
         var sutProvider = GetSutProvider();
@@ -851,7 +851,7 @@ public class InviteStagedOrganizationUsersCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RunAsync_PamReservationFailsUnexpectedly_ReturnsInternalErrorAndReleasesPasswordManagerSeats(
+    public async Task RunAsync_PrivilegedControlsReservationFailsUnexpectedly_ReturnsInternalErrorAndReleasesPasswordManagerSeats(
         Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
     {
         var sutProvider = GetSutProvider();
@@ -875,7 +875,7 @@ public class InviteStagedOrganizationUsersCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RunAsync_PamReservationFailsUnexpectedly_ReleasesSecretsManagerSeats(
+    public async Task RunAsync_PrivilegedControlsReservationFailsUnexpectedly_ReleasesSecretsManagerSeats(
         Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
     {
         var sutProvider = GetSutProvider();
@@ -896,7 +896,7 @@ public class InviteStagedOrganizationUsersCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RunAsync_PamReservationFailsAfterSeatsChanged_RevertsPamSeats(
+    public async Task RunAsync_PrivilegedControlsReservationFailsAfterSeatsChanged_RevertsPrivilegedControlsSeats(
         Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
     {
         var sutProvider = GetSutProvider();
@@ -920,7 +920,7 @@ public class InviteStagedOrganizationUsersCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RunAsync_PamSelfHostedShortfall_ReturnsCannotAutoscaleOnSelfHost(
+    public async Task RunAsync_PrivilegedControlsSelfHostedShortfall_ReturnsCannotAutoscaleOnSelfHost(
         Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
     {
         var sutProvider = GetSutProvider();
@@ -937,7 +937,7 @@ public class InviteStagedOrganizationUsersCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RunAsync_PasswordManagerReservationFails_DoesNotReservePamSeats(
+    public async Task RunAsync_PasswordManagerReservationFails_DoesNotReservePrivilegedControlsSeats(
         Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
     {
         var sutProvider = GetSutProvider();
@@ -957,7 +957,7 @@ public class InviteStagedOrganizationUsersCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RunAsync_SecretsManagerAdjustFails_DoesNotReservePamSeats(
+    public async Task RunAsync_SecretsManagerAdjustFails_DoesNotReservePrivilegedControlsSeats(
         Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
     {
         var sutProvider = GetSutProvider();
@@ -977,13 +977,13 @@ public class InviteStagedOrganizationUsersCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RunAsync_InviteSendFails_RevertsPamSeatsAndRethrows(
+    public async Task RunAsync_InviteSendFails_RevertsPrivilegedControlsSeatsAndRethrows(
         Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
     {
         var sutProvider = GetSutProvider();
         var request = Arrange(sutProvider, organization, organizationUsers, performedBy);
         ArrangePrivilegedControls(organization, organizationUsers, membersWithAccess: 2, pamSeats: 5);
-        AutoscalePamSeatsTo(sutProvider, organization, 7);
+        AutoscalePrivilegedControlsSeatsTo(sutProvider, organization, 7);
         FailInviteSend(sutProvider);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.RunAsync(request));
@@ -994,13 +994,13 @@ public class InviteStagedOrganizationUsersCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RunAsync_InviteSendFails_RevertsPamSeatsBeforePasswordManagerSeats(
+    public async Task RunAsync_InviteSendFails_RevertsPrivilegedControlsSeatsBeforePasswordManagerSeats(
         Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
     {
         var sutProvider = GetSutProvider();
         var request = Arrange(sutProvider, organization, organizationUsers, performedBy, seats: 10, occupiedSeats: 10);
         ArrangePrivilegedControls(organization, organizationUsers, membersWithAccess: 2, pamSeats: 5);
-        AutoscalePamSeatsTo(sutProvider, organization, 7);
+        AutoscalePrivilegedControlsSeatsTo(sutProvider, organization, 7);
         FailInviteSend(sutProvider);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.RunAsync(request));
@@ -1016,13 +1016,13 @@ public class InviteStagedOrganizationUsersCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RunAsync_PamRevertFails_StillRethrowsTheSendFailure(
+    public async Task RunAsync_PrivilegedControlsRevertFails_StillRethrowsTheSendFailure(
         Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
     {
         var sutProvider = GetSutProvider();
         var request = Arrange(sutProvider, organization, organizationUsers, performedBy);
         ArrangePrivilegedControls(organization, organizationUsers, membersWithAccess: 2, pamSeats: 5);
-        AutoscalePamSeatsTo(sutProvider, organization, 7);
+        AutoscalePrivilegedControlsSeatsTo(sutProvider, organization, 7);
         FailInviteSend(sutProvider);
         sutProvider.GetDependency<IRevertPrivilegedControlsSeatsCommand>()
             .RunAsync(organization, 5)
@@ -1032,7 +1032,7 @@ public class InviteStagedOrganizationUsersCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RunAsync_NoPamSeatsAdded_DoesNotRevert(
+    public async Task RunAsync_NoPrivilegedControlsSeatsAdded_DoesNotRevert(
         Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
     {
         var sutProvider = GetSutProvider();

@@ -120,7 +120,7 @@ public class RestoreOrganizationUserCommand(
         await CheckPoliciesBeforeRestoreAsync(organizationUser, userTwoFactorIsEnabled);
 
         var status = organizationUser.GetPriorActiveOrganizationUserStatusType();
-        PrivilegedControlsSeatReservationResult scimPamSeatReservation = null;
+        PrivilegedControlsSeatReservationResult scimPrivilegedControlsSeatReservation = null;
 
         if (organization.UsePam && organizationUser.AccessPam && PrivilegedControlsSeatOccupancy.OccupiesSeat(status))
         {
@@ -133,8 +133,8 @@ public class RestoreOrganizationUserCommand(
             // without access and the Owners are emailed. Public API restores don't check seats.
             else if (systemUser == EventSystemUser.SCIM)
             {
-                scimPamSeatReservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, 1);
-                if (!scimPamSeatReservation.Success)
+                scimPrivilegedControlsSeatReservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, 1);
+                if (!scimPrivilegedControlsSeatReservation.Success)
                 {
                     organizationUser.AccessPam = false;
                     // RestoreAsync only writes the status, so the removed access has to be saved separately.
@@ -151,7 +151,7 @@ public class RestoreOrganizationUserCommand(
                 [organizationUser.Id], timeProvider.GetUtcNow().UtcDateTime);
         }
 
-        if (scimPamSeatReservation?.Error is PrivilegedControlsSeatLimitReachedError)
+        if (scimPrivilegedControlsSeatReservation?.Error is PrivilegedControlsSeatLimitReachedError)
         {
             var memberEmail = organizationUser.Email
                               ?? (await userRepository.GetByIdAsync(organizationUser.UserId!.Value)).Email;

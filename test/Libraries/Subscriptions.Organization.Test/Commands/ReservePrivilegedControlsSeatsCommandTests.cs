@@ -43,7 +43,7 @@ public class ReservePrivilegedControlsSeatsCommandTests
     }
 
     [Fact]
-    public async Task RunAsync_PamOff_SucceedsWithoutCallingAutoscale()
+    public async Task RunAsync_PrivilegedControlsOff_SucceedsWithoutCallingAutoscale()
     {
         var organization = CreateOrganization(usePam: false);
 
@@ -56,7 +56,7 @@ public class ReservePrivilegedControlsSeatsCommandTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task RunAsync_NullPamSeats_SucceedsWithoutCheckingSeats(bool selfHosted)
+    public async Task RunAsync_NullPrivilegedControlsSeats_SucceedsWithoutCheckingSeats(bool selfHosted)
     {
         var organization = CreateOrganization(pamSeats: null);
         _environment.SelfHosted.Returns(selfHosted);
@@ -69,7 +69,7 @@ public class ReservePrivilegedControlsSeatsCommandTests
     }
 
     [Fact]
-    public async Task RunAsync_Cloud_ZeroPamSeats_ReturnsLimitReachedWithoutCallingAutoscale()
+    public async Task RunAsync_Cloud_ZeroPrivilegedControlsSeats_ReturnsLimitReachedWithoutCallingAutoscale()
     {
         var organization = CreateOrganization(pamSeats: 0);
 
@@ -80,7 +80,7 @@ public class ReservePrivilegedControlsSeatsCommandTests
     }
 
     [Fact]
-    public async Task RunAsync_SelfHosted_ZeroPamSeats_ReturnsSelfHostedShortfall()
+    public async Task RunAsync_SelfHosted_ZeroPrivilegedControlsSeats_ReturnsSelfHostedShortfall()
     {
         var organization = CreateOrganization(pamSeats: 0);
         _environment.SelfHosted.Returns(true);
