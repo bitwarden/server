@@ -127,7 +127,7 @@ public class UpgradeOrganizationPlanVNextCommand(
 
             if (subscription is null)
             {
-                return new BadRequest("We couldn't find your subscription.");
+                return new Conflict("We couldn't find your subscription.");
             }
 
             prorationDate = InvoicePreviewQuote.EnsureValid(prorationDate.Value, subscription, timeProvider);

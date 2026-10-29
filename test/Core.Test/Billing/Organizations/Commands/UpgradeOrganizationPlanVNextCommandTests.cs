@@ -668,7 +668,7 @@ public class UpgradeOrganizationPlanVNextCommandTests
     }
 
     [Fact]
-    public async Task Run_PaidUpgrade_WithProrationDate_SubscriptionNotFound_ReturnsBadRequestBeforeAnyWrite()
+    public async Task Run_PaidUpgrade_WithProrationDate_SubscriptionNotFound_ReturnsConflictBeforeAnyWrite()
     {
         var (organization, targetPlan) = SetupPaidUpgrade();
         _stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId!, Arg.Any<SubscriptionGetOptions>())
@@ -676,8 +676,8 @@ public class UpgradeOrganizationPlanVNextCommandTests
 
         var result = await _command.Run(organization, targetPlan, null, _frozen.AddMinutes(-10));
 
-        Assert.True(result.IsT1);
-        Assert.Equal("We couldn't find your subscription.", result.AsT1.Response);
+        Assert.True(result.IsT2);
+        Assert.Equal("We couldn't find your subscription.", result.AsT2.Response);
         await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs()
             .Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
     }
