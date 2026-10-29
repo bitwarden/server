@@ -1,10 +1,14 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
+using Bit.Seeder.Extensions;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Services;
@@ -25,6 +29,7 @@ public struct SingleUserSceneResult
     public string ApiKey { get; init; }
     public bool PremiumLicenseWritten { get; init; }
     public string? PremiumLicenseWarning { get; init; }
+    public string? TwoFactorRecoveryCode { get; init; }
 }
 
 /// <summary>
@@ -55,6 +60,14 @@ public class SingleUserScene(
         /// PBKDF2 iteration count. Null uses <see cref="UserSeed.DefaultKdfIterations"/>.
         /// </summary>
         public int? KdfIterations { get; set; }
+        /// <summary>
+        /// Enrolls the user in email two-factor authentication, delivered to the (mangled) account email.
+        /// </summary>
+        public bool EnrollInEmail2Fa { get; set; } = false;
+        /// <summary>
+        /// Stores an undecryptable private key, the state the web Data Recovery tool detects and replaces.
+        /// </summary>
+        public bool CorruptPrivateKey { get; set; } = false;
     }
 
     private const int MinKdfIterations = 5_000;
@@ -68,13 +81,12 @@ public class SingleUserScene(
                 $"KdfIterations must be between {MinKdfIterations:N0} and {KdfConstants.PBKDF2_ITERATIONS.Max:N0}.");
         }
 
-        if (request.SelfHosted && request.Premium && !globalSettings.SelfHosted)
+        if (request.SelfHosted && request.Premium)
         {
-            throw new InvalidOperationException(
-                "SelfHosted premium was requested, but this Seeder API is running in cloud mode " +
-                "('globalSettings:selfHosted' is false), so no self-hosted license can be written. " +
-                "Target a self-hosted Seeder API or set SelfHosted=false.");
+            globalSettings.ThrowIfNotSelfHosted("A SelfHosted premium user");
         }
+
+        globalSettings.ThrowIfSelfHostedWithGatewayIds(request.GatewayCustomerId, request.GatewaySubscriptionId);
 
         var (user, keys) = UserSeeder.Create(
             new UserSeed
@@ -92,6 +104,27 @@ public class SingleUserScene(
             passwordHasher,
             manglerService);
 
+        if (request.EnrollInEmail2Fa)
+        {
+            user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+            {
+                [TwoFactorProviderType.Email] = new TwoFactorProvider
+                {
+                    MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
+                    Enabled = true
+                }
+            });
+            // UserService.SetTwoFactorProvider generates a recovery code on enrollment; mirror it.
+            user.TwoFactorRecoveryCode = CoreHelpers.SecureRandomString(32, upper: false, special: false);
+        }
+
+        if (request.CorruptPrivateKey)
+        {
+            // Corrupt the first IV char so the MAC check fails (mirrors QA's manual DB script).
+            var privateKey = user.PrivateKey!;
+            user.PrivateKey = privateKey[..2] + (privateKey[2] == 'X' ? 'Y' : 'X') + privateKey[3..];
+        }
+
         await userRepository.CreateAsync(user);
 
         var licenseOutcome = default(LicenseWriteOutcome);
@@ -106,6 +139,7 @@ public class SingleUserScene(
                 PremiumLicenseWritten = licenseOutcome.Written,
                 PremiumLicenseWarning = licenseOutcome.Warning,
                 UserId = user.Id,
+                TwoFactorRecoveryCode = user.TwoFactorRecoveryCode,
                 Kdf = user.Kdf.ToString(),
                 KdfIterations = user.KdfIterations,
                 Key = user.Key!,

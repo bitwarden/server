@@ -1,4 +1,6 @@
-﻿using Bit.Core.Billing.Enums;
+﻿using Bit.Core;
+using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Services;
@@ -7,6 +9,7 @@ using Bit.Invoicing.InvoicePreviews;
 using Bit.Invoicing.InvoicePreviews.Models;
 using Bit.Subscriptions.Organization.Models.Requests;
 using Bit.Subscriptions.Organization.Queries;
+using Bitwarden.Server.Sdk.Features;
 using NSubstitute;
 using Stripe;
 using Xunit;
@@ -23,20 +26,26 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly ISubscriptionDiscountService _subscriptionDiscountService = Substitute.For<ISubscriptionDiscountService>();
     private readonly ITaxService _taxService = Substitute.For<ITaxService>();
+    private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly IInvoicePreviewService _invoicePreviewService = Substitute.For<IInvoicePreviewService>();
     private readonly PreviewOrganizationSubscriptionPurchaseQuery _sut;
 
     public PreviewOrganizationSubscriptionPurchaseQueryTests()
     {
         _sut = new PreviewOrganizationSubscriptionPurchaseQuery(
-            _logger, _pricingClient, _subscriptionDiscountService, _taxService, _invoicePreviewService);
+            _logger, _pricingClient, _subscriptionDiscountService, _taxService, _featureService, _invoicePreviewService);
+
+        _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(true);
 
         _pricingClient.GetPlan(PlanType.FamiliesAnnually).Returns(TestPlan.Packaged("2020-families-org-annually", "personal-storage-gb-annually"));
         _pricingClient.GetPlan(PlanType.TeamsAnnually).Returns(TestPlan.SeatBased("teams-seat-annually", "storage-gb-annually", "sm-teams-seat-annually", "sm-teams-sa-annually"));
         _pricingClient.GetPlan(PlanType.TeamsMonthly).Returns(TestPlan.SeatBased("teams-seat-monthly", "storage-gb-monthly", "sm-teams-seat-monthly", "sm-teams-sa-monthly"));
-        _pricingClient.GetPlan(PlanType.EnterpriseAnnually).Returns(TestPlan.SeatBased("enterprise-seat-annually", "storage-gb-annually", "sm-enterprise-seat-annually", "sm-enterprise-sa-annually"));
-        _pricingClient.GetPlan(PlanType.EnterpriseMonthly).Returns(TestPlan.SeatBased("enterprise-seat-monthly", "storage-gb-monthly", "sm-enterprise-seat-monthly", "sm-enterprise-sa-monthly"));
+        _pricingClient.GetPlan(PlanType.EnterpriseAnnually).Returns(TestPlan.SeatBased("enterprise-seat-annually", "storage-gb-annually", "sm-enterprise-seat-annually", "sm-enterprise-sa-annually", PrivilegedControls("pam-seat-annually")));
+        _pricingClient.GetPlan(PlanType.EnterpriseMonthly).Returns(TestPlan.SeatBased("enterprise-seat-monthly", "storage-gb-monthly", "sm-enterprise-seat-monthly", "sm-enterprise-sa-monthly", PrivilegedControls("pam-seat-monthly")));
     }
+
+    private static Bit.Core.Models.StaticStore.Plan.PrivilegedControlsPlanFeatures PrivilegedControls(string seatPlanId) =>
+        new() { StripeSeatPlanId = seatPlanId };
 
     [Fact]
     public async Task Run_WhenPurchaseIsMissing_ThrowsBadRequest()
@@ -260,7 +269,7 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
 
         Assert.Same(preview, result);
         await _pricingClient.Received(1).GetPlan(expectedPlanType);
-        await _invoicePreviewService.Received(1).GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), expectedTier, cadence);
+        await _invoicePreviewService.Received(1).GetInvoicePreviewForBillingAddressAsync(Arg.Any<InvoiceCreatePreviewOptions>(), expectedTier, cadence);
     }
 
     [Fact]
@@ -274,7 +283,7 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
         var error = Assert.Single(_logger.Errors);
         Assert.Contains("TeamsAnnually", error);
         await _invoicePreviewService.DidNotReceiveWithAnyArgs()
-            .GetInvoicePreviewAsync(default(InvoiceCreatePreviewOptions)!, default, default);
+            .GetInvoicePreviewForBillingAddressAsync(default(InvoiceCreatePreviewOptions)!, default, default);
     }
 
     [Fact]
@@ -421,6 +430,7 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
             PlanCadenceType.Annually,
             new PasswordManagerSelections(4, 2, false),
             new SecretsManagerSelections(4, 20, true),
+            null,
             ["USER-COUPON"])));
 
         var options = CapturedOptions();
@@ -438,11 +448,132 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
     }
 
     [Fact]
+    public async Task Run_ForEnterpriseWithPrivilegedControls_AddsTheRequestedSeatLine()
+    {
+        ArrangePreview();
+
+        await _sut.Run(User(), Request(Purchase(ProductTierType.Enterprise, passwordManager: new PasswordManagerSelections(10, 0, false)) with
+        {
+            PrivilegedControls = new PrivilegedControlsSelections(6)
+        }));
+
+        Assert.Single(CapturedOptions().SubscriptionDetails.Items,
+            item => item.Price == "pam-seat-annually" && item.Quantity == 6);
+    }
+
+    [Fact]
+    public async Task Run_WithPrivilegedControlsSeatsEqualToPasswordManagerSeats_AddsTheSeatLine()
+    {
+        ArrangePreview();
+
+        await _sut.Run(User(), Request(Purchase(ProductTierType.Enterprise, passwordManager: new PasswordManagerSelections(10, 0, false)) with
+        {
+            PrivilegedControls = new PrivilegedControlsSelections(10)
+        }));
+
+        Assert.Single(CapturedOptions().SubscriptionDetails.Items,
+            item => item.Price == "pam-seat-annually" && item.Quantity == 10);
+    }
+
+    [Fact]
+    public async Task Run_WithMorePrivilegedControlsSeatsThanPasswordManagerSeats_ThrowsBadRequest()
+    {
+        var request = Request(Purchase(ProductTierType.Enterprise, passwordManager: new PasswordManagerSelections(10, 0, false)) with
+        {
+            PrivilegedControls = new PrivilegedControlsSelections(11)
+        });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(User(), request));
+
+        Assert.Equal(
+            "You cannot have more Privileged Controls seats than Password Manager seats.",
+            ErrorFor(exception, "Purchase.PrivilegedControls.Seats"));
+        await AssertNoIoAsync();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(100001)]
+    public async Task Run_WithPrivilegedControlsSeatsOutOfRange_ThrowsBadRequest(int seats)
+    {
+        var request = Request(Purchase(ProductTierType.Enterprise, passwordManager: new PasswordManagerSelections(100000, 0, false)) with
+        {
+            PrivilegedControls = new PrivilegedControlsSelections(seats)
+        });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(User(), request));
+
+        Assert.True(exception.ModelState!.ContainsKey("Purchase.PrivilegedControls.Seats"));
+        await AssertNoIoAsync();
+    }
+
+    [Fact]
+    public async Task Run_WhenPrivilegedControlsBillingIsDisabled_IgnoresTheSelection()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(false);
+        ArrangePreview();
+
+        await _sut.Run(User(), Request(Purchase(ProductTierType.Enterprise) with
+        {
+            PrivilegedControls = new PrivilegedControlsSelections(1)
+        }));
+
+        Assert.DoesNotContain(CapturedOptions().SubscriptionDetails.Items, item => item.Price == "pam-seat-annually");
+    }
+
+    [Fact]
+    public async Task Run_WithPrivilegedControlsOnAPlanWithoutSupport_ThrowsBadRequest()
+    {
+        _pricingClient.GetPlan(PlanType.EnterpriseAnnually).Returns(TestPlan.SeatBased("enterprise-seat-annually", "storage-gb-annually", "sm-enterprise-seat-annually", "sm-enterprise-sa-annually"));
+
+        var request = Request(Purchase(ProductTierType.Enterprise) with
+        {
+            PrivilegedControls = new PrivilegedControlsSelections(1)
+        });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(User(), request));
+
+        Assert.Equal("Invalid Privileged Controls plan selected.", ErrorFor(exception, "Purchase.PrivilegedControls"));
+        await _invoicePreviewService.DidNotReceiveWithAnyArgs()
+            .GetInvoicePreviewForBillingAddressAsync(default(InvoiceCreatePreviewOptions)!, default, default);
+    }
+
+    [Theory]
+    [InlineData(ProductTierType.Teams)]
+    [InlineData(ProductTierType.Families)]
+    public async Task Run_WithPrivilegedControlsOnANonEnterpriseTier_ThrowsBadRequest(ProductTierType tier)
+    {
+        var request = Request(Purchase(tier) with { PrivilegedControls = new PrivilegedControlsSelections(1) });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(User(), request));
+
+        Assert.Equal(
+            "Privileged Controls is only available on the Enterprise plan.",
+            ErrorFor(exception, "Purchase.PrivilegedControls"));
+        await AssertNoIoAsync();
+    }
+
+    [Fact]
+    public async Task Run_WithPrivilegedControlsAndStandaloneSecretsManager_ThrowsBadRequest()
+    {
+        var request = Request(Purchase(ProductTierType.Enterprise) with
+        {
+            SecretsManager = new SecretsManagerSelections(4, 0, true),
+            PrivilegedControls = new PrivilegedControlsSelections(1)
+        });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(User(), request));
+
+        Assert.True(exception.ModelState!.ContainsKey("Purchase.PrivilegedControls"));
+        await AssertNoIoAsync();
+    }
+
+    [Fact]
     public async Task Run_ForSponsoredFamilies_SendsOnlyTheSponsoredPriceAndReturnsTheServiceResultUnchanged()
     {
         var sponsoredPreview = SponsoredPreview();
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), PlanTierType.Families, PlanCadenceType.Annually)
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Any<InvoiceCreatePreviewOptions>(), PlanTierType.Families, PlanCadenceType.Annually)
             .Returns(sponsoredPreview);
 
         var result = await _sut.Run(User(), Request(Purchase(ProductTierType.Families) with
@@ -466,7 +597,7 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
     public async Task Run_ForSponsoredFamiliesWithStorage_AddsTheFamiliesStorageItem()
     {
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), PlanTierType.Families, PlanCadenceType.Annually)
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Any<InvoiceCreatePreviewOptions>(), PlanTierType.Families, PlanCadenceType.Annually)
             .Returns(SponsoredPreview());
 
         await _sut.Run(User(), Request(Purchase(ProductTierType.Families) with
@@ -560,7 +691,9 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(User(), Request(Purchase(ProductTierType.Teams))));
 
-        Assert.Contains("Your location wasn't recognized", exception.Message);
+        Assert.Equal(
+            "Your location wasn't recognized. Please ensure your country and postal code are valid and try again.",
+            ErrorFor(exception, BillingErrorKeys.BillingAddress));
     }
 
     [Fact]
@@ -570,7 +703,9 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(User(), Request(Purchase(ProductTierType.Teams))));
 
-        Assert.Equal("The tax ID number you provided was invalid. Please try again or contact support for assistance.", exception.Message);
+        Assert.Equal(
+            "The tax ID number you provided was invalid. Please try again or contact support for assistance.",
+            ErrorFor(exception, BillingErrorKeys.BillingAddress));
     }
 
     [Fact]
@@ -613,7 +748,7 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
 
     private void ArrangePreviewWithoutSeats(PlanTierType planTier) =>
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), planTier, Arg.Any<PlanCadenceType>())
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Any<InvoiceCreatePreviewOptions>(), planTier, Arg.Any<PlanCadenceType>())
             .Returns(new InvoicePreview
             {
                 PlanTier = planTier,
@@ -632,7 +767,7 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
         ProductTierType tier,
         PlanCadenceType cadence = PlanCadenceType.Annually,
         PasswordManagerSelections? passwordManager = null) =>
-        new(tier, cadence, passwordManager ?? new PasswordManagerSelections(1, 0, false), null, null);
+        new(tier, cadence, passwordManager ?? new PasswordManagerSelections(1, 0, false), null, null, null);
 
     private static PreviewOrganizationSubscriptionPurchaseRequest Request(PurchaseSelections purchase, BillingAddressSelections? billingAddress = null) =>
         new(purchase, billingAddress ?? Address());
@@ -644,7 +779,7 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
     {
         await _pricingClient.DidNotReceiveWithAnyArgs().GetPlan(default);
         await _invoicePreviewService.DidNotReceiveWithAnyArgs()
-            .GetInvoicePreviewAsync(default(InvoiceCreatePreviewOptions)!, default, default);
+            .GetInvoicePreviewForBillingAddressAsync(default(InvoiceCreatePreviewOptions)!, default, default);
         await _subscriptionDiscountService.DidNotReceiveWithAnyArgs()
             .ValidateDiscountEligibilityForUserAsync(default!, default!, default);
     }
@@ -664,14 +799,14 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
             AmountDue = 518.4m
         };
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns(preview);
         return preview;
     }
 
     private void ArrangePreviewFailure(string code) =>
         _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
             .Returns<InvoicePreview>(_ => throw new StripeException { StripeError = new StripeError { Code = code } });
 
     private InvoiceCreatePreviewOptions CapturedOptions() =>
@@ -679,18 +814,28 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
 
     private sealed record TestPlan : Bit.Core.Models.StaticStore.Plan
     {
-        private TestPlan(PasswordManagerPlanFeatures passwordManager, SecretsManagerPlanFeatures? secretsManager)
+        private TestPlan(
+            PasswordManagerPlanFeatures passwordManager,
+            SecretsManagerPlanFeatures? secretsManager,
+            PrivilegedControlsPlanFeatures? privilegedControls = null)
         {
             PasswordManager = passwordManager;
             SecretsManager = secretsManager!;
+            PrivilegedControls = privilegedControls!;
         }
 
         public static TestPlan Packaged(string planId, string storagePlanId) =>
             new(new PasswordManagerPlanFeatures { StripePlanId = planId, StripeStoragePlanId = storagePlanId }, null);
 
-        public static TestPlan SeatBased(string seatPlanId, string storagePlanId, string secretsManagerSeatPlanId, string serviceAccountPlanId) =>
+        public static TestPlan SeatBased(
+            string seatPlanId,
+            string storagePlanId,
+            string secretsManagerSeatPlanId,
+            string serviceAccountPlanId,
+            PrivilegedControlsPlanFeatures? privilegedControls = null) =>
             new(
                 new PasswordManagerPlanFeatures { StripeSeatPlanId = seatPlanId, StripeStoragePlanId = storagePlanId },
-                new SecretsManagerPlanFeatures { StripeSeatPlanId = secretsManagerSeatPlanId, StripeServiceAccountPlanId = serviceAccountPlanId });
+                new SecretsManagerPlanFeatures { StripeSeatPlanId = secretsManagerSeatPlanId, StripeServiceAccountPlanId = serviceAccountPlanId },
+                privilegedControls);
     }
 }

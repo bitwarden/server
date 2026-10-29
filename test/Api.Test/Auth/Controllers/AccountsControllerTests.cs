@@ -1042,6 +1042,56 @@ public class AccountsControllerTests : IDisposable
             .SendNewDeviceVerificationEmailAsync(user, _deviceIdentifier);
     }
 
+    [Theory, BitAutoData]
+    public async Task VerifyOTP_ValidOtp_EmailNotVerified_VerifiesEmail(User user, VerifyOTPRequestModel model)
+    {
+        // Arrange
+        user.EmailVerified = false;
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        _userService.VerifyOTPAsync(user, model.OTP).Returns(Task.FromResult(true));
+
+        // Act
+        await _sut.VerifyOTP(model);
+
+        // Assert
+        Assert.True(user.EmailVerified);
+        await _userService.Received(1).SaveUserAsync(user);
+    }
+
+    [Theory, BitAutoData]
+    public async Task VerifyOTP_ValidOtp_EmailAlreadyVerified_DoesNotSaveUser(User user, VerifyOTPRequestModel model)
+    {
+        // Arrange
+        user.EmailVerified = true;
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        _userService.VerifyOTPAsync(user, model.OTP).Returns(Task.FromResult(true));
+
+        // Act
+        await _sut.VerifyOTP(model);
+
+        // Assert
+        Assert.True(user.EmailVerified);
+        await _userService.DidNotReceiveWithAnyArgs().SaveUserAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task VerifyOTP_InvalidOtp_ThrowsAndDoesNotVerifyEmail(User user, VerifyOTPRequestModel model)
+    {
+        // Arrange
+        user.EmailVerified = false;
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        _userService.VerifyOTPAsync(user, model.OTP).Returns(Task.FromResult(false));
+
+        // Act
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.VerifyOTP(model));
+
+        // Assert
+        Assert.Contains("Invalid token",
+            exception.ModelState!.Values.SelectMany(x => x.Errors).Select(x => x.ErrorMessage));
+        Assert.False(user.EmailVerified);
+        await _userService.DidNotReceiveWithAnyArgs().SaveUserAsync(default!);
+    }
+
     [Theory]
     [BitAutoData]
     public async Task PostKdf_UserNotFound_ShouldFail(ChangeKdfRequestModel model)

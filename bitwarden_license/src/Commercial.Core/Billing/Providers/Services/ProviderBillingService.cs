@@ -42,6 +42,7 @@ public class ProviderBillingService(
     IGlobalSettings globalSettings,
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
+    IOrganizationService organizationService,
     IPriceIncreaseScheduler priceIncreaseScheduler,
     IPricingClient pricingClient,
     IProviderInvoiceItemRepository providerInvoiceItemRepository,
@@ -64,6 +65,12 @@ public class ProviderBillingService(
         if (existingProviderOrganization != null)
         {
             throw new ConflictException("Organization already belongs to a provider.");
+        }
+
+        if (organization.UsePam)
+        {
+            throw new BadRequestException(
+                "Organizations managed by a provider can't use Privileged Controls. Please contact Customer Support.");
         }
 
         await priceIncreaseScheduler.Release(
@@ -142,7 +149,7 @@ public class ProviderBillingService(
         await ScaleSeats(provider, organization.PlanType, organization.Seats!.Value);
 
         await Task.WhenAll(
-            organizationRepository.ReplaceAsync(organization),
+            organizationService.ReplaceAndUpdateCacheAsync(organization),
             providerOrganizationRepository.CreateAsync(providerOrganization)
         );
 

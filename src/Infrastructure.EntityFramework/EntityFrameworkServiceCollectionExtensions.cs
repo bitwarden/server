@@ -22,6 +22,7 @@ using Bit.Infrastructure.EntityFramework.Dirt.Repositories;
 using Bit.Infrastructure.EntityFramework.KeyManagement.Repositories;
 using Bit.Infrastructure.EntityFramework.NotificationCenter.Repositories;
 using Bit.Infrastructure.EntityFramework.Platform;
+using Bit.Infrastructure.EntityFramework.Providers.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Repositories;
 using Bit.Infrastructure.EntityFramework.Tools.Repositories;

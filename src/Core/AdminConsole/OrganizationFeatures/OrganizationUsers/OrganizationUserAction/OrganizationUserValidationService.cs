@@ -3,7 +3,6 @@ using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
@@ -80,13 +79,10 @@ public class OrganizationUserValidationService(
             return null;
         }
 
-        var actorClaims = (actingUser.GetPermissions() ?? new Permissions())
-            .ClaimsMap.ToDictionary(c => c.ClaimName, c => c.Permission);
-
         // The acting user must also hold every granted permission.
-        return newTargetPermissions.ClaimsMap.Any(granted => granted.Permission && !actorClaims[granted.ClaimName])
-            ? new CustomUsersCanOnlyGrantOwnPermissions()
-            : null;
+        return actingUser.GetPermissions()?.Includes(newTargetPermissions) is true
+            ? null
+            : new CustomUsersCanOnlyGrantOwnPermissions();
     }
 
     private static BadRequestError CannotManageError(params OrganizationUserType[] targetTypes) =>

@@ -73,7 +73,7 @@ public class AccessAuditEventResponseModel : ResponseModel
     /// <summary>Whether a failed attempt left the target system's password changed; set on failure events.</summary>
     public PamRotationSyncState? SyncState { get; }
 
-    /// <summary>An approver comment or a revoke reason.</summary>
+    /// <summary>The reason, comment or message recorded with the event.</summary>
     public string? Detail { get; }
 
     public DateTime? LeaseNotBefore { get; }

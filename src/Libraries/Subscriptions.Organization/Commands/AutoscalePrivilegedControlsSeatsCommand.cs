@@ -57,8 +57,8 @@ internal sealed class AutoscalePrivilegedControlsSeatsCommand(
                 return new AutoscalePrivilegedControlsSeatsResult(false, organization.MaxAutoscalePamSeats);
             }
 
-            var seatChange = await seatChangeSetFactory.CreateAsync(organization, seatsNeeded);
-            (await updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet)).GetValueOrThrowHttpException();
+            var changeSet = await seatChangeSetFactory.CreateAsync(organization, seatsNeeded);
+            (await updateOrganizationSubscriptionCommand.Run(organization, changeSet)).GetValueOrThrowHttpException();
 
             organization.PamSeats = seatsNeeded;
             await organizationService.ReplaceAndUpdateCacheAsync(organization);

@@ -121,6 +121,10 @@ curl -X POST http://localhost:5000/seed \
   user's existing value unchanged.
 - `kdfIterations`: PBKDF2 iteration count, from 5,000 to 2,000,000. Defaults to 5,000 for fast seeding; use 600,000
   for production-realistic logins.
+- `enrollInEmail2Fa` — when true, enrolls the user in email two-factor authentication, delivered to the (mangled)
+  account email. The response includes `twoFactorRecoveryCode` so the recovery login flow can be tested.
+- `corruptPrivateKey` — when true, stores an undecryptable private key. The web Data Recovery tool only flags it
+  when the user also has at least one personal cipher (seed one with `UserLoginCipherScene`).
 
 Enum fields (`gateway`) must be sent as their **numeric value**. In the example below, `gateway: 0` is `Stripe`.
 
@@ -224,6 +228,21 @@ When Stripe fails part-way, the error's `details` names any customer already cre
 can then be billed again. An organization keeps that customer ID, so the scene refuses it; seed a fresh organization
 instead. An organization whose first charge failed (`card: "fails-on-charge"` with `skipTrial`) shows a blank
 billing page unless the `pm-36631-preview-driven-cart` flag is on.
+
+### Cloud-only and Self-hosted-only Scenes
+
+Scenes refuse to seed data that cannot exist on the instance type the Seeder API runs as
+(`globalSettings:selfHosted`). A refused request returns HTTP 400 and writes nothing.
+
+| Scene | Rejected on a self-hosted Seeder API |
+| --- | --- |
+| `SingleProviderScene`, `ProviderUserScene` | Always: providers are cloud-only |
+| `MigrationCohortExportScene` | Always: plan migration cohorts are cloud-only |
+| `SingleOrganizationScene`, `SingleUserScene` | When `gatewayCustomerId` or `gatewaySubscriptionId` is set |
+| `OrganizationStripeBillingScene`, `UserStripeBillingScene` | Always: Stripe billing requires cloud mode |
+
+In the other direction, `SingleUserScene` with `selfHosted: true` and `premium: true` is rejected on a cloud Seeder
+API, because a self-hosted premium license can only be written on a self-hosted instance.
 
 ### Querying Data
 

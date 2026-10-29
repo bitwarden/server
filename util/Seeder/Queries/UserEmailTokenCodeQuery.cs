@@ -11,13 +11,13 @@ namespace Bit.Seeder.Queries;
 
 /// <summary>
 /// Looks up a login or verification code that was generated for the user with the given email. Supports the
-/// email two-factor login code, the user-verification OTP (the code generated during UserVerification for
+/// email two-factor login code, the email two-factor setup code (send-email), the user-verification OTP (the code generated during UserVerification for
 /// users without a master password, e.g. request-otp), and the new device verification code. Which code is
 /// returned is selected by <see cref="Request.CodeType"/>.
 /// </summary>
 /// <remarks>
 /// This is a read-only query: it reads the code the login/verification flow already wrote to the persistent
-/// distributed cache (see <c>EmailTokenProvider</c>/<c>EmailTwoFactorTokenProvider</c> in
+/// distributed cache (see <c>TwoFactorEmailService</c>, <c>EmailTokenProvider</c> in
 /// <c>Bit.Core.Auth.Identity.TokenProviders</c>, <c>UserService.SendOTPAsync</c>, and
 /// <c>NewDeviceVerificationOtpStore</c>) and never removes it, so the real flow can still consume the code.
 /// It only succeeds when SeederApi shares the same cache backend as the server that generated the code (Redis
@@ -28,15 +28,20 @@ public class UserEmailTokenCodeQuery(
     [FromKeyedServices("persistent")] IDistributedCache distributedCache)
     : IQuery<UserEmailTokenCodeQuery.Request, UserEmailTokenCodeQuery.Response>
 {
-    // Keep this in sync with EmailTokenProvider: both email-token code kinds use the same cache key format,
-    // and both store the code as a bare UTF-8 string.
+    // Keep this in sync with EmailTokenProvider, which stores the user-verification OTP as a bare UTF-8 string.
     private const string EmailTokenCacheKeyFormat = "EmailToken_{0}_{1}_{2}";
 
-    // Keep these purposes in sync with the providers that generate the codes:
-    // - "TwoFactor" is the literal purpose UserManager.GenerateTwoFactorTokenAsync uses (EmailTwoFactorTokenProvider).
-    // - The user-verification OTP purpose is "otp:" + user.Email (UserService.SendOTPAsync).
-    private const string EmailTwoFactorPurpose = "TwoFactor";
+    // Keep this purpose in sync with UserService.SendOTPAsync, which uses "otp:" + user.Email.
     private const string UserVerificationPurposePrefix = "otp:";
+
+    // Keep this in sync with TwoFactorEmailService, which owns this key for the email two-factor login code.
+    // Restated rather than referenced, so that reading a code for a test never widens the production API of the
+    // code that issues it.
+    private const string EmailTwoFactorLoginCacheKeyFormat = "TwoFactorEmail_LoginCode_{0}_{1}";
+
+    // Keep this in sync with TwoFactorEmailService, which issues the setup code (POST /two-factor/send-email)
+    // under the same provider name as the login code but a different purpose.
+    private const string EmailTwoFactorSetupCacheKeyFormat = "TwoFactorEmail_SetupCode_{0}_{1}";
 
     // Keep this in sync with NewDeviceVerificationOtpStore, which owns this key. Restated here rather than
     // referenced, so that reading a code for a test never widens the production API of the code that issues
@@ -45,12 +50,13 @@ public class UserEmailTokenCodeQuery(
     private const string NewDeviceVerificationCacheKeyFormat = "NewDeviceVerification_NewDeviceVerificationCode_{0}_{1}";
 
     /// <summary>
-    /// The kind of code to retrieve. The serialized value is the member name (e.g. "EmailTwoFactor").
+    /// The kind of code to retrieve. The serialized value is the member name.
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum CodeType
     {
         EmailTwoFactor,
+        EmailTwoFactorSetup,
         UserVerification,
         NewDeviceVerification,
     }
@@ -88,7 +94,10 @@ public class UserEmailTokenCodeQuery(
 
         var cacheKey = request.CodeType switch
         {
-            CodeType.EmailTwoFactor => EmailTokenCacheKey(user.Id, user.SecurityStamp, EmailTwoFactorPurpose),
+            CodeType.EmailTwoFactor => string.Format(
+                CultureInfo.InvariantCulture, EmailTwoFactorLoginCacheKeyFormat, user.Id, user.SecurityStamp),
+            CodeType.EmailTwoFactorSetup => string.Format(
+                CultureInfo.InvariantCulture, EmailTwoFactorSetupCacheKeyFormat, user.Id, user.SecurityStamp),
             CodeType.UserVerification => EmailTokenCacheKey(
                 user.Id, user.SecurityStamp, UserVerificationPurposePrefix + user.Email),
             CodeType.NewDeviceVerification => string.Format(
@@ -102,9 +111,9 @@ public class UserEmailTokenCodeQuery(
             return NotFound();
         }
 
-        return request.CodeType == CodeType.NewDeviceVerification
-            ? ReadEnvelope(cachedValue)
-            : new Response { Code = Encoding.UTF8.GetString(cachedValue), Found = true };
+        return request.CodeType == CodeType.UserVerification
+            ? new Response { Code = Encoding.UTF8.GetString(cachedValue), Found = true }
+            : ReadEnvelope(cachedValue);
     }
 
     private static string EmailTokenCacheKey(Guid userId, string securityStamp, string purpose)
@@ -142,8 +151,8 @@ public class UserEmailTokenCodeQuery(
     }
 
     /// <summary>
-    /// Mirrors the envelope the token provider writes: unlike the two email-token kinds, a new device
-    /// verification entry holds the code alongside the device it is bound to. The provider keeps its own
+    /// Mirrors the envelope the token provider writes: unlike the user-verification OTP, an email two-factor or new
+    /// device verification entry holds the code alongside the device it is bound to. The provider keeps its own
     /// envelope type private, so this restates the shape — and the property names must match the serialized
     /// form exactly, since deserialization is case-sensitive.
     /// </summary>

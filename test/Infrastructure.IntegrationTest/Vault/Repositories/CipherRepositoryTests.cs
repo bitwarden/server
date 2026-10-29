@@ -628,6 +628,96 @@ public class CipherRepositoryTests
         Assert.True(deletableCipher.Manage);
     }
 
+    [Theory, DatabaseData]
+    public async Task GetManyByUserIdAsync_WhenUserReachesCiphersThroughSeveralGroups_ReturnsEachCipherOnceWithMostPrivilegedAccess(
+        ICipherRepository cipherRepository,
+        IUserRepository userRepository,
+        ICollectionCipherRepository collectionCipherRepository,
+        ICollectionRepository collectionRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository)
+    {
+        // Arrange
+        var (user, organization, orgUser) = await CreateTestUserAndOrganization(userRepository, organizationRepository, organizationUserRepository);
+
+        var allGroupsCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "All Groups",
+            OrganizationId = organization.Id
+        });
+        var readOnlyGroupsCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Read-Only Groups",
+            OrganizationId = organization.Id
+        });
+
+        var allGroupsCiphers = new List<Cipher>();
+        for (var i = 0; i < 2; i++)
+        {
+            var cipher = await cipherRepository.CreateAsync(new Cipher
+            {
+                Type = CipherType.Login,
+                OrganizationId = organization.Id,
+                Data = ""
+            });
+            await collectionCipherRepository.UpdateCollectionsForAdminAsync(cipher.Id, organization.Id,
+                [allGroupsCollection.Id]);
+            allGroupsCiphers.Add(cipher);
+        }
+
+        var readOnlyGroupsCipher = await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = organization.Id,
+            Data = ""
+        });
+        await collectionCipherRepository.UpdateCollectionsForAdminAsync(readOnlyGroupsCipher.Id, organization.Id,
+            [readOnlyGroupsCollection.Id]);
+
+        var groupAccess = new (bool ReadOnly, bool HidePasswords, bool Manage, bool GrantsReadOnlyGroupsCollection)[]
+        {
+            (ReadOnly: true, HidePasswords: true, Manage: false, GrantsReadOnlyGroupsCollection: true),
+            (ReadOnly: true, HidePasswords: false, Manage: false, GrantsReadOnlyGroupsCollection: true),
+            (ReadOnly: false, HidePasswords: false, Manage: false, GrantsReadOnlyGroupsCollection: false),
+            (ReadOnly: false, HidePasswords: false, Manage: true, GrantsReadOnlyGroupsCollection: false),
+        };
+        foreach (var access in groupAccess)
+        {
+            var collections = new List<CollectionAccessSelection>
+            {
+                new() { Id = allGroupsCollection.Id, ReadOnly = access.ReadOnly, HidePasswords = access.HidePasswords, Manage = access.Manage }
+            };
+            if (access.GrantsReadOnlyGroupsCollection)
+            {
+                collections.Add(new() { Id = readOnlyGroupsCollection.Id, ReadOnly = access.ReadOnly, HidePasswords = access.HidePasswords, Manage = access.Manage });
+            }
+
+            var group = new Group { OrganizationId = organization.Id, Name = "Test Group" };
+            await groupRepository.CreateAsync(group, collections);
+            await groupRepository.UpdateUsersAsync(group.Id, [orgUser.Id], DateTime.UtcNow);
+        }
+
+        // Act
+        var ciphers = await cipherRepository.GetManyByUserIdAsync(user.Id);
+
+        // Assert
+        Assert.Equal(3, ciphers.Count);
+        Assert.Equal(3, ciphers.Select(c => c.Id).Distinct().Count());
+
+        foreach (var cipher in allGroupsCiphers.Select(expected => Assert.Single(ciphers, c => c.Id == expected.Id)))
+        {
+            Assert.True(cipher.Manage);
+            Assert.True(cipher.Edit);
+            Assert.True(cipher.ViewPassword);
+        }
+
+        var readOnlyCipher = Assert.Single(ciphers, c => c.Id == readOnlyGroupsCipher.Id);
+        Assert.False(readOnlyCipher.Manage);
+        Assert.False(readOnlyCipher.Edit);
+        Assert.True(readOnlyCipher.ViewPassword);
+    }
+
     private async Task<(User user, Organization org, OrganizationUser orgUser)> CreateTestUserAndOrganization(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,

@@ -12,6 +12,7 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Platform.Push.Internal;
 using Bit.Core.Settings;
 using Bit.Notifications;
+using Bitwarden.Server.Sdk.Environment.Setup;
 using MessagePack;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -305,10 +306,8 @@ public sealed class PushNotificationWireFormatTests
         _factory = factory;
 
         // The queue consumer cannot run inside the factory's app: it bails out when SelfHosted is
-        // true, which is exactly when SendController is enabled. So the queue ingress gets its own
+        // true, which is exactly when the /send endpoint is mapped. So the queue ingress gets its own
         // host running the real hosted service, while the endpoint ingress uses the real app.
-        var globalSettings = new GlobalSettings();
-        globalSettings.Notifications.ConnectionString = "fake-connection-string";
 
         var (notificationsHubContext, _) = _queueRecorder.CreateHubContext<NotificationsHub>();
         var (anonymousHubContext, _) = _queueRecorder.CreateHubContext<AnonymousNotificationsHub>();
@@ -317,7 +316,10 @@ public sealed class PushNotificationWireFormatTests
             .ConfigureServices(services =>
             {
                 services.AddKeyedSingleton<QueueClient>("notifications", _queue);
-                services.AddSingleton(globalSettings);
+                services.AddBitwardenEnvironment();
+                services.Configure<SelfHostDetails>(details => details.MakeCloud());
+                services.Configure<NotificationsSettings>(settings =>
+                    settings.ConnectionString = "fake-connection-string");
                 services.AddSingleton<TimeProvider>(new FakeTimeProvider());
                 services.AddSingleton(notificationsHubContext);
                 services.AddSingleton(anonymousHubContext);

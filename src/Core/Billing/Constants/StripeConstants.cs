@@ -80,10 +80,21 @@ public static class StripeConstants
         ];
     }
 
+    /// <summary>The values of a Stripe error's <c>type</c> field, as opposed to its <c>code</c> (<see cref="ErrorCodes"/>).</summary>
+    public static class ErrorTypes
+    {
+        public const string CardError = "card_error";
+    }
+
     public static class Intervals
     {
         public const string Month = "month";
         public const string Year = "year";
+    }
+
+    public static class InvoiceAutomaticTaxStatus
+    {
+        public const string Complete = "complete";
     }
 
     public static class InvoiceStatus
