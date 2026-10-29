@@ -57,6 +57,21 @@ public class PamAccessConnectorClientProviderTests
     }
 
     [Fact]
+    public async Task GetAsync_ApiKeyWithoutEncryptedPayload_ReturnsNull()
+    {
+        var apiKeyId = Guid.NewGuid();
+        var apiKey = CreateApiKey(apiKeyId);
+        apiKey.EncryptedPayload = null;
+        _apiKeyRepository.GetByIdAsync(apiKeyId).Returns(apiKey);
+        _pamAccessConnectorRepository.GetDetailsByApiKeyIdAsync(apiKeyId)
+            .Returns(CreateAccessConnectorDetails(apiKeyId));
+
+        var client = await _sut.GetAsync(apiKeyId.ToString());
+
+        Assert.Null(client);
+    }
+
+    [Fact]
     public async Task GetAsync_NoAccessConnectorForApiKey_ReturnsNull()
     {
         var apiKeyId = Guid.NewGuid();
