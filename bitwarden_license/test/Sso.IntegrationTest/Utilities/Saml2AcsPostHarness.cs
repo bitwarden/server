@@ -16,6 +16,7 @@ using EncryptedXml = System.Security.Cryptography.Xml.EncryptedXml;
 using EncryptionMethod = System.Security.Cryptography.Xml.EncryptionMethod;
 using KeyInfo = System.Security.Cryptography.Xml.KeyInfo;
 using KeyInfoEncryptedKey = System.Security.Cryptography.Xml.KeyInfoEncryptedKey;
+using KeyInfoRetrievalMethod = System.Security.Cryptography.Xml.KeyInfoRetrievalMethod;
 
 namespace Bit.Sso.IntegrationTest.Utilities;
 
@@ -131,9 +132,11 @@ public static class Saml2AcsPostHarness
     /// Sustainsys.Saml2 uses in production. The payload does not have to be one assertion.
     /// Decryption moves every top-level node of the payload into the <c>EncryptedAssertion</c>.
     /// A payload with more than one node, or with a nested assertion, tests those shapes.
+    /// When <paramref name="keyBesideData"/> is true, the key is a sibling after the <c>EncryptedData</c>,
+    /// and a <c>RetrievalMethod</c> in the <c>EncryptedData</c> names the key.
     /// </summary>
     public static string EncryptAssertion(string payloadXml, X509Certificate2 encryptionCertificate,
-        string keyTransportAlgorithm = EncryptedXml.XmlEncRSAOAEPUrl)
+        string keyTransportAlgorithm = EncryptedXml.XmlEncRSAOAEPUrl, bool keyBesideData = false)
     {
         var document = XmlHelpers.XmlDocumentFromString(
             "<saml:EncryptedAssertion xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\" />");
@@ -156,9 +159,22 @@ public static class Saml2AcsPostHarness
                 EncryptedXml.EncryptKey(contentKey.Key, encryptionCertificate.GetRSAPublicKey()!,
                     useOAEP: keyTransportAlgorithm != EncryptedXml.XmlEncRSA15Url)),
         };
-        encryptedData.KeyInfo.AddClause(new KeyInfoEncryptedKey(encryptedKey));
+        if (keyBesideData)
+        {
+            encryptedKey.Id = "_key";
+            encryptedData.KeyInfo.AddClause(
+                new KeyInfoRetrievalMethod("#_key", EncryptedXml.XmlEncEncryptedKeyUrl));
+        }
+        else
+        {
+            encryptedData.KeyInfo.AddClause(new KeyInfoEncryptedKey(encryptedKey));
+        }
 
         document.DocumentElement!.AppendChild(document.ImportNode(encryptedData.GetXml(), deep: true));
+        if (keyBesideData)
+        {
+            document.DocumentElement!.AppendChild(document.ImportNode(encryptedKey.GetXml(), deep: true));
+        }
 
         return document.DocumentElement!.OuterXml;
     }

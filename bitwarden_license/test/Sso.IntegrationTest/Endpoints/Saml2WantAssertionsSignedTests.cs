@@ -15,13 +15,7 @@ using Sustainsys.Saml2;
 using Sustainsys.Saml2.AspNetCore2;
 using Sustainsys.Saml2.Exceptions;
 using Xunit;
-using CipherData = System.Security.Cryptography.Xml.CipherData;
-using EncryptedData = System.Security.Cryptography.Xml.EncryptedData;
-using EncryptedKey = System.Security.Cryptography.Xml.EncryptedKey;
 using EncryptedXml = System.Security.Cryptography.Xml.EncryptedXml;
-using EncryptionMethod = System.Security.Cryptography.Xml.EncryptionMethod;
-using KeyInfo = System.Security.Cryptography.Xml.KeyInfo;
-using KeyInfoRetrievalMethod = System.Security.Cryptography.Xml.KeyInfoRetrievalMethod;
 
 namespace Bit.Sso.IntegrationTest.Endpoints;
 
@@ -94,7 +88,8 @@ public class Saml2WantAssertionsSignedTests
         // with a ds:RetrievalMethod. Sustainsys.Saml2 must decrypt this layout.
         var (idpCertificate, spCertificate) = BuildCertificates();
         var signedAssertion = BuildSignedAssertion(idpCertificate);
-        var encryptedAssertionXml = EncryptAssertionWithPeerKey(signedAssertion.OuterXml, spCertificate);
+        var encryptedAssertionXml = Saml2AcsPostHarness.EncryptAssertion(
+            signedAssertion.OuterXml, spCertificate, keyBesideData: true);
 
         var arrangement = await ArrangeAsync(
             encryptedAssertionXml, idpCertificate, spCertificate, wantAssertionsSigned: true,
@@ -784,39 +779,6 @@ public class Saml2WantAssertionsSignedTests
         var document = BuildAssertionDocument(assertionId);
         document.DocumentElement!.Sign(signingCertificate, includeKeyInfo: false);
         return document.DocumentElement!;
-    }
-
-    // Encrypts XML like EncryptAssertion, but places the xenc:EncryptedKey beside the xenc:EncryptedData.
-    // A ds:RetrievalMethod in the ds:KeyInfo of the xenc:EncryptedData names the key.
-    private static string EncryptAssertionWithPeerKey(string payloadXml, X509Certificate2 encryptionCertificate)
-    {
-        var document = XmlHelpers.XmlDocumentFromString(
-            "<saml:EncryptedAssertion xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\" />");
-
-        using var contentKey = Aes.Create();
-        contentKey.KeySize = 256;
-        var cipherValue = new EncryptedXml().EncryptData(Encoding.UTF8.GetBytes(payloadXml), contentKey);
-
-        var encryptedData = new EncryptedData
-        {
-            Type = EncryptedXml.XmlEncElementUrl,
-            EncryptionMethod = new EncryptionMethod(EncryptedXml.XmlEncAES256Url),
-        };
-        encryptedData.CipherData.CipherValue = cipherValue;
-        encryptedData.KeyInfo = new KeyInfo();
-        encryptedData.KeyInfo.AddClause(new KeyInfoRetrievalMethod("#_key", EncryptedXml.XmlEncEncryptedKeyUrl));
-        var encryptedKey = new EncryptedKey
-        {
-            Id = "_key",
-            EncryptionMethod = new EncryptionMethod(EncryptedXml.XmlEncRSAOAEPUrl),
-            CipherData = new CipherData(
-                EncryptedXml.EncryptKey(contentKey.Key, encryptionCertificate.GetRSAPublicKey()!, useOAEP: true)),
-        };
-
-        document.DocumentElement!.AppendChild(document.ImportNode(encryptedData.GetXml(), deep: true));
-        document.DocumentElement!.AppendChild(document.ImportNode(encryptedKey.GetXml(), deep: true));
-
-        return document.DocumentElement!.OuterXml;
     }
 
     // SAML Core 3.2.2.2 nests the second-level status code inside the top-level one, so this
