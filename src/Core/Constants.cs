@@ -140,6 +140,7 @@ public static partial class FeatureFlagKeys
     public const string PM35153CollectionSdkDecryption = "pm-35153-collection-sdk-decryption";
     public const string PM43375CollectionsDecryptListFailures = "pm-43375-collections-decrypt-list-failures";
     public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
+    public const string MembersTableV2 = "pm-37463-members-table-v2";
     public const string GroupsTableV2 = "pm-43419-groups-table-v2";
 
     /* Architecture */

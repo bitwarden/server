@@ -220,6 +220,7 @@ public static class OrganizationServiceCollectionExtensions
         services.TryAddScoped<IAcceptInviteLinkMembershipValidator, AcceptInviteLinkMembershipValidator>();
         services.TryAddScoped<IAcceptOrganizationInviteLinkCommand, AcceptOrganizationInviteLinkCommand>();
         services.TryAddScoped<IInviteLinkRules, InviteLinkRules>();
+        services.TryAddScoped<IInviteLinkValidationService, InviteLinkValidationService>();
         services.TryAddScoped<IConfirmOrganizationInviteLinkValidator, ConfirmOrganizationInviteLinkValidator>();
         services.TryAddScoped<IConfirmOrganizationInviteLinkCommand, ConfirmOrganizationInviteLinkCommand>();
         services.TryAddScoped<IGetOrganizationInviteValidator, GetOrganizationInviteValidator>();

@@ -8,4 +8,5 @@ internal record PurchaseSelections(
     [property: JsonConverter(typeof(JsonStringEnumConverter))] PlanCadenceType? Cadence,
     PasswordManagerSelections? PasswordManager,
     SecretsManagerSelections? SecretsManager,
+    PrivilegedControlsSelections? PrivilegedControls,
     string[]? Coupons);

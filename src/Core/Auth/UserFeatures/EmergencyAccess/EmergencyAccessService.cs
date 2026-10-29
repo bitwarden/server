@@ -517,7 +517,7 @@ public class EmergencyAccessService : IEmergencyAccessService
 
     private async Task SendInviteAsync(Entities.EmergencyAccess emergencyAccess, string invitingUsersName)
     {
-        var token = _dataProtectorTokenizer.Protect(new EmergencyAccessInviteTokenable(emergencyAccess, _globalSettings.OrganizationInviteExpirationHours));
+        var token = _dataProtectorTokenizer.Protect(new EmergencyAccessInviteTokenable(emergencyAccess, _globalSettings.EmergencyAccessInviteExpirationHours));
         await _mailService.SendEmergencyAccessInviteEmailAsync(emergencyAccess, invitingUsersName, token);
     }
 
