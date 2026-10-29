@@ -13,6 +13,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bitwarden.Server.Sdk.Environment;
 using NSubstitute;
 using Stripe;
 using Xunit;
@@ -39,6 +40,10 @@ public class OrganizationUsersControllerBulkEnablePamTests
     {
         _factory = apiFactory;
         _factory.SubstituteService<IStripeAdapter>(_ => { });
+        // Billing reads self-hosted from the environment, which is fixed at startup, so it follows the settings flag
+        // the tests flip instead.
+        _factory.SubstituteService<IBitwardenEnvironment>(environment =>
+            environment.SelfHosted.Returns(_ => _factory.GetService<GlobalSettings>().SelfHosted));
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }

@@ -7,7 +7,10 @@ using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -15,6 +18,7 @@ using Bit.Core.Settings;
 using NSubstitute;
 using NSubstitute.ClearExtensions;
 using NSubstitute.ExceptionExtensions;
+using Stripe;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
@@ -35,6 +39,9 @@ public class OrganizationUsersControllerSendInviteToStagedUsersTests
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IStripeAdapter _stripeAdapter;
+
+    private const string _subscriptionId = "sub_integration_test";
 
     private Organization _organization = null!;
     private string _ownerEmail = null!;
@@ -43,12 +50,14 @@ public class OrganizationUsersControllerSendInviteToStagedUsersTests
     {
         _factory = factory;
         _factory.SubstituteService<ISendOrganizationInvitesCommand>(_ => { });
+        _factory.SubstituteService<IStripeAdapter>(_ => { });
 
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
         _sendOrganizationInvitesCommand = _factory.GetService<ISendOrganizationInvitesCommand>();
         _organizationRepository = _factory.GetService<IOrganizationRepository>();
         _organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        _stripeAdapter = _factory.GetService<IStripeAdapter>();
     }
 
     public async Task InitializeAsync()
@@ -56,6 +65,12 @@ public class OrganizationUsersControllerSendInviteToStagedUsersTests
         // The substitutes live on the shared class fixture, so a throw configured by one test would
         // otherwise apply to whichever test runs next.
         _sendOrganizationInvitesCommand.ClearSubstitute();
+        _stripeAdapter.ClearSubstitute();
+
+        var plan = await _factory.GetService<IPricingClient>().GetPlanOrThrow(PlanType.EnterpriseAnnually);
+        var subscription = BuildSubscriptionWithPasswordManagerSeats(plan.PasswordManager.StripeSeatPlanId);
+        _stripeAdapter.GetSubscriptionAsync(_subscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        _stripeAdapter.UpdateSubscriptionAsync(_subscriptionId, Arg.Any<SubscriptionUpdateOptions>()).Returns(subscription);
 
         _factory.GetService<GlobalSettings>().SelfHosted = false;
 
@@ -243,8 +258,33 @@ public class OrganizationUsersControllerSendInviteToStagedUsersTests
 
     /// <summary>
     /// Fixes the organization's seat headroom. Gateway ids are stood in because AutoAddSeats refuses to
-    /// adjust a subscription it cannot identify, and the test host's payment service is a no-op substitute.
+    /// adjust a subscription it cannot identify, and the substituted Stripe adapter answers for that subscription.
     /// </summary>
     private Task SetSeatsAsync(int seats, int? maxAutoscaleSeats) =>
         OrganizationTestHelpers.SetSeatsAsync(_factory, _organization, seats, maxAutoscaleSeats);
+
+    private static Subscription BuildSubscriptionWithPasswordManagerSeats(string passwordManagerSeatPriceId) =>
+        new()
+        {
+            Id = _subscriptionId,
+            Status = StripeConstants.SubscriptionStatus.Active,
+            CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
+            Customer = new Customer { Id = "cus_integration_test" },
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Id = "si_password_manager_seats",
+                        Quantity = 1,
+                        Price = new Price
+                        {
+                            Id = passwordManagerSeatPriceId,
+                            Recurring = new PriceRecurring { Interval = StripeConstants.Intervals.Year }
+                        }
+                    }
+                ]
+            }
+        };
 }
