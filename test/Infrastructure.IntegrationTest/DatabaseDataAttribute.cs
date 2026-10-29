@@ -1,10 +1,8 @@
 ﻿using System.Reflection;
 using Bit.Core.Enums;
 using Bit.Core.Settings;
-using Bit.DataMigrations;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
-using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -74,7 +72,7 @@ public class DatabaseDataAttribute : DataAttribute
                 AddEfServices(services, database);
             }
 
-            services.AddDataMigrations<DatabaseContext>();
+            services.AddDataMigrations();
 
             var serviceProvider = services.BuildServiceProvider();
             disposalTracker.Add(serviceProvider);
