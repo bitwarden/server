@@ -8,14 +8,10 @@ namespace Bit.Api.Test.Dirt.Public.Models;
 
 public class EventResponseModelTests
 {
-    /// <summary>
-    /// The fallback is not limited to any event type: any legacy row with UserId but no
-    /// ActingUserId is attributed to UserId.
-    /// </summary>
     [Theory]
     [BitAutoData(EventType.Secret_Retrieved)]
     [BitAutoData(EventType.Project_Deleted)]
-    public void Constructor_MissingActingUser_FallsBackToUserId(
+    public void Constructor_SecretOrProjectEvent_MissingActingUser_FallsBackToUserId(
         EventType type, Guid userId)
     {
         var ev = new EventMessage { Type = type, UserId = userId, ActingUserId = null };
@@ -28,7 +24,7 @@ public class EventResponseModelTests
     [Theory]
     [BitAutoData(EventType.Secret_Created)]
     [BitAutoData(EventType.Project_Edited)]
-    public void Constructor_ActingUserPresent_DoesNotOverwriteIt(
+    public void Constructor_SecretOrProjectEvent_ActingUserPresent_DoesNotOverwriteIt(
         EventType type, Guid userId, Guid actingUserId)
     {
         var ev = new EventMessage { Type = type, UserId = userId, ActingUserId = actingUserId };
@@ -41,7 +37,7 @@ public class EventResponseModelTests
     [Theory]
     [BitAutoData(EventType.Secret_Retrieved)]
     [BitAutoData(EventType.Project_Retrieved)]
-    public void Constructor_MachineAccountEvent_StaysUnattributed(
+    public void Constructor_MachineAccountSecretOrProjectEvent_StaysUnattributed(
         EventType type, Guid serviceAccountId)
     {
         var ev = new EventMessage
@@ -56,6 +52,25 @@ public class EventResponseModelTests
 
         Assert.Null(response.ActingUserId);
         Assert.Equal(serviceAccountId, response.ServiceAccountId);
+    }
+
+    /// <summary>
+    /// On these types UserId is not the actor: the Send owner did not access their own Send, a
+    /// SCIM-invited member did not invite themselves, and ServiceAccount_* rows store an
+    /// OrganizationUser id in UserId. The fallback must not reach them.
+    /// </summary>
+    [Theory]
+    [BitAutoData(EventType.Send_Accessed_Text)]
+    [BitAutoData(EventType.OrganizationUser_Invited)]
+    [BitAutoData(EventType.ServiceAccount_UserAdded)]
+    public void Constructor_OtherEventTypes_MissingActingUser_DoesNotFallBack(
+        EventType type, Guid userId)
+    {
+        var ev = new EventMessage { Type = type, UserId = userId, ActingUserId = null };
+
+        var response = new EventResponseModel(ev);
+
+        Assert.Null(response.ActingUserId);
     }
 
     [Theory]
