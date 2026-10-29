@@ -98,7 +98,21 @@ internal sealed class PreviewOrganizationRestartCommand(
 
         try
         {
-            return await invoicePreviewService.GetInvoicePreviewForBillingAddressAsync(options, tier, cadence);
+            var preview = await invoicePreviewService.GetInvoicePreviewForBillingAddressAsync(options, tier, cadence);
+
+            if (!previewWithoutCustomer)
+            {
+                return preview;
+            }
+
+            // Stripe applies no customer balance to a preview sent without the customer, so apply it here with
+            // Stripe's rule: a credit (negative balance) reduces the amount due to a floor of zero, a debt adds to it.
+            var balance = customer!.Balance / 100m;
+            return preview with
+            {
+                StartingBalance = balance < 0 ? balance : null,
+                AmountDue = Math.Max(0, preview.Total + balance)
+            };
         }
         catch (StripeException stripeException)
             when (stripeException.StripeError?.Code == ErrorCodes.CustomerTaxLocationInvalid)

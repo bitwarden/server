@@ -149,6 +149,41 @@ public class PreviewOrganizationRestartCommandTests
         Assert.Null(options.Value.CustomerDetails.TaxIds);
     }
 
+    [Theory]
+    [InlineData(-400, -4d, 6d)]
+    [InlineData(-2500, -25d, 0d)]
+    [InlineData(300, null, 13d)]
+    [InlineData(0, null, 10d)]
+    public async Task Run_BusinessClearedTaxIdOnFile_AppliesCustomerBalance(
+        long balance, double? expectedStartingBalance, double expectedAmountDue)
+    {
+        var organization = ArrangeCanceledOrganization();
+        ArrangeCustomer(organization, taxIdCount: 1, balance: balance);
+        CaptureOptions();
+
+        var preview = await _sut.Run(organization, Request());
+
+        Assert.Equal(10m, preview.Total);
+        Assert.Equal((decimal?)expectedStartingBalance, preview.StartingBalance);
+        Assert.Equal((decimal)expectedAmountDue, preview.AmountDue);
+    }
+
+    [Fact]
+    public async Task Run_BusinessNoTaxIdAnywhere_ReturnsStripePreviewUnchanged()
+    {
+        var organization = ArrangeCanceledOrganization();
+        ArrangeCustomer(organization, taxIdCount: 0, balance: -400);
+        var stripePreview = SampleInvoicePreview();
+        _invoicePreviewService
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Any<InvoiceCreatePreviewOptions>(),
+                Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .Returns(stripePreview);
+
+        var preview = await _sut.Run(organization, Request());
+
+        Assert.Same(stripePreview, preview);
+    }
+
     [Fact]
     public async Task Run_BusinessCustomerTaxIdsNull_KeepsCustomer()
     {
