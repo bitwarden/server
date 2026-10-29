@@ -8,7 +8,7 @@ using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Bit.Subscriptions.Organization.Commands;
+using Bit.Subscriptions.Organization.Commands.PrivilegedControls;
 using Bitwarden.Server.Sdk.Environment;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;

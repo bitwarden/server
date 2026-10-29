@@ -3,7 +3,9 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedCon
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Invoicing;
-using Bit.Subscriptions.Organization.Commands;
+using Bit.Subscriptions.Organization.Commands.InvoicePreviews;
+using Bit.Subscriptions.Organization.Commands.PrivilegedControls;
+using Bit.Subscriptions.Organization.Commands.Purchase;
 using Bit.Subscriptions.Organization.Handlers;
 using Bit.Subscriptions.Organization.Helpers;
 using Bit.Subscriptions.Organization.Queries;

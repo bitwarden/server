@@ -6,7 +6,7 @@ using Bit.Subscriptions.Organization.Queries;
 using Bitwarden.Server.Sdk.Environment;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
 
-namespace Bit.Subscriptions.Organization.Commands;
+namespace Bit.Subscriptions.Organization.Commands.PrivilegedControls;
 
 internal sealed class RevertPrivilegedControlsSeatsCommand(
     IPrivilegedControlsSeatChangeSetFactory seatChangeSetFactory,

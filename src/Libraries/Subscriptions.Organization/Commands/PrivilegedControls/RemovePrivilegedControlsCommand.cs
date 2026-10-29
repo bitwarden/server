@@ -7,7 +7,7 @@ using Bitwarden.Server.Sdk.Environment;
 using Microsoft.Extensions.Logging;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
 
-namespace Bit.Subscriptions.Organization.Commands;
+namespace Bit.Subscriptions.Organization.Commands.PrivilegedControls;
 
 internal interface IRemovePrivilegedControlsCommand
 {

@@ -4,7 +4,7 @@ using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Exceptions;
-using Bit.Subscriptions.Organization.Commands;
+using Bit.Subscriptions.Organization.Commands.PrivilegedControls;
 using Bitwarden.Server.Sdk.Environment;
 using NSubstitute;
 using Stripe;

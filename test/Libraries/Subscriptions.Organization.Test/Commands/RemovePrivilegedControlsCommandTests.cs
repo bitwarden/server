@@ -5,7 +5,7 @@ using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
-using Bit.Subscriptions.Organization.Commands;
+using Bit.Subscriptions.Organization.Commands.PrivilegedControls;
 using Bitwarden.Server.Sdk.Environment;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
