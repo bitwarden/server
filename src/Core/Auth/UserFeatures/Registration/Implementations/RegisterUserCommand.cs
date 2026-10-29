@@ -446,7 +446,7 @@ public class RegisterUserCommand : IRegisterUserCommand
     private void ValidateProviderInviteToken(string providerInviteToken, Guid providerUserId, string userEmail)
     {
         if (!CoreHelpers.TokenIsValid("ProviderUserInvite", _providerServiceDataProtector, providerInviteToken, userEmail, providerUserId,
-                _globalSettings.OrganizationInviteExpirationHours))
+                _globalSettings.ProviderInviteExpirationHours))
         {
             throw new BadRequestException("Invalid provider invite token.");
         }
