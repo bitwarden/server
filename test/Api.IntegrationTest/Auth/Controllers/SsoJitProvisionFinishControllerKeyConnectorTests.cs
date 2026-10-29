@@ -8,8 +8,10 @@ using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Enums;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Api.Request;
+using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Xunit;
@@ -31,6 +33,7 @@ public class SsoJitProvisionFinishControllerKeyConnectorTests : IClassFixture<Ap
     private readonly IUserRepository _userRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IUserSignatureKeyPairRepository _userSignatureKeyPairRepository;
     private string _ownerEmail = null!;
 
     public SsoJitProvisionFinishControllerKeyConnectorTests(ApiApplicationFactory factory)
@@ -42,6 +45,7 @@ public class SsoJitProvisionFinishControllerKeyConnectorTests : IClassFixture<Ap
         _userRepository = _factory.GetService<IUserRepository>();
         _organizationRepository = _factory.GetService<IOrganizationRepository>();
         _organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        _userSignatureKeyPairRepository = _factory.GetService<IUserSignatureKeyPairRepository>();
     }
 
     public async Task InitializeAsync()
@@ -90,12 +94,23 @@ public class SsoJitProvisionFinishControllerKeyConnectorTests : IClassFixture<Ap
 
         var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
         Assert.NotNull(user);
-        Assert.Equal(_mockEncryptedString, user.Key);
         Assert.True(user.UsesKeyConnector);
+        Assert.Null(user.MasterPassword);
+        Assert.Equal(_mockEncryptedString, user.Key);
         Assert.Equal(_mockKeyId, user.UserKeyId);
+        Assert.Equal("publicKey", user.PublicKey);
+        Assert.Equal(_mockEncryptedType7String, user.PrivateKey);
         Assert.Equal("signedPublicKey", user.SignedPublicKey);
         Assert.Equal("v2", user.SecurityState);
         Assert.Equal(2, user.SecurityVersion);
+        Assert.Equal(DateTime.UtcNow, user.RevisionDate, TimeSpan.FromMinutes(1));
+        Assert.Equal(DateTime.UtcNow, user.AccountRevisionDate, TimeSpan.FromMinutes(1));
+
+        var signatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(user.Id);
+        Assert.NotNull(signatureKeyPair);
+        Assert.Equal(SignatureAlgorithm.Ed25519, signatureKeyPair.SignatureAlgorithm);
+        Assert.Equal(_mockEncryptedType7WrappedSigningKey, signatureKeyPair.WrappedSigningKey);
+        Assert.Equal("verifyingKey", signatureKeyPair.VerifyingKey);
 
         await AssertOrganizationUserStatusAsync(organization, user, expectedStatus);
     }
@@ -108,15 +123,13 @@ public class SsoJitProvisionFinishControllerKeyConnectorTests : IClassFixture<Ap
     {
         var orgSsoIdentifier = $"sso-{Guid.NewGuid()}";
         var (ssoUserEmail, organization) = await SetupKeyConnectorUserAsync(orgSsoIdentifier);
-        var ssoUser = await _userRepository.GetByEmailAsync(ssoUserEmail);
-        Assert.NotNull(ssoUser);
 
         var request = new SsoJitProvisionFinishSetKeyConnectorKeyRequestModel
         {
             KeyConnectorKeys = new SetKeyConnectorKeyRequestModel
             {
                 Key = _mockEncryptedString,
-                Keys = new KeysRequestModel { PublicKey = ssoUser.PublicKey, EncryptedPrivateKey = ssoUser.PrivateKey },
+                Keys = new KeysRequestModel { PublicKey = "publicKey", EncryptedPrivateKey = _mockEncryptedString },
                 Kdf = KdfType.PBKDF2_SHA256,
                 KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
                 OrgIdentifier = orgSsoIdentifier
@@ -129,8 +142,16 @@ public class SsoJitProvisionFinishControllerKeyConnectorTests : IClassFixture<Ap
 
         var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
         Assert.NotNull(user);
-        Assert.Equal(_mockEncryptedString, user.Key);
         Assert.True(user.UsesKeyConnector);
+        Assert.Null(user.MasterPassword);
+        Assert.Equal(_mockEncryptedString, user.Key);
+        Assert.Equal("publicKey", user.PublicKey);
+        Assert.Equal(_mockEncryptedString, user.PrivateKey);
+        Assert.Equal(KdfType.PBKDF2_SHA256, user.Kdf);
+        Assert.Equal(KdfConstants.PBKDF2_ITERATIONS.Default, user.KdfIterations);
+        Assert.Null(user.SignedPublicKey);
+        Assert.Null(user.SecurityState);
+        Assert.Null(await _userSignatureKeyPairRepository.GetByUserIdAsync(user.Id));
         Assert.Equal(DateTime.UtcNow, user.RevisionDate, TimeSpan.FromMinutes(1));
         Assert.Equal(DateTime.UtcNow, user.AccountRevisionDate, TimeSpan.FromMinutes(1));
 
@@ -185,6 +206,7 @@ public class SsoJitProvisionFinishControllerKeyConnectorTests : IClassFixture<Ap
         var nonMemberEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(nonMemberEmail);
         await _loginHelper.LoginAsync(nonMemberEmail);
+        await SimulateJitProvisionedUserAsync(nonMemberEmail);
 
         var request = new SsoJitProvisionFinishSetKeyConnectorKeyRequestModel
         {
@@ -195,9 +217,7 @@ public class SsoJitProvisionFinishControllerKeyConnectorTests : IClassFixture<Ap
         var response = await _client.PostAsJsonAsync(_endpoint, request);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        var user = await _userRepository.GetByEmailAsync(nonMemberEmail);
-        Assert.NotNull(user);
-        Assert.False(user.UsesKeyConnector);
+        await AssertJitProvisionedStateAsync(nonMemberEmail);
     }
 
     private async Task<Organization> SetupKeyConnectorOrganizationAsync(string orgSsoIdentifier)
@@ -223,7 +243,42 @@ public class SsoJitProvisionFinishControllerKeyConnectorTests : IClassFixture<Ap
         await OrganizationTestHelpers.CreateUserAsync(_factory, organization.Id, ssoUserEmail,
             OrganizationUserType.User, userStatusType: OrganizationUserStatusType.Invited);
 
+        await SimulateJitProvisionedUserAsync(ssoUserEmail);
+
         return (ssoUserEmail, organization);
+    }
+
+    /// <summary>
+    /// LoginWithNewAccount registers a full account. A JIT provisioned SSO user has no master password,
+    /// user key, or account keys yet, so clear them to match that state.
+    /// </summary>
+    private async Task SimulateJitProvisionedUserAsync(string email)
+    {
+        var user = await _userRepository.GetByEmailAsync(email);
+        Assert.NotNull(user);
+        user.MasterPassword = null;
+        user.Key = null;
+        user.PrivateKey = null;
+        user.PublicKey = null;
+        user.SignedPublicKey = null;
+        await _userRepository.ReplaceAsync(user);
+
+        await AssertJitProvisionedStateAsync(email);
+    }
+
+    private async Task AssertJitProvisionedStateAsync(string email)
+    {
+        var user = await _userRepository.GetByEmailAsync(email);
+        Assert.NotNull(user);
+        Assert.False(user.UsesKeyConnector);
+        Assert.Null(user.MasterPassword);
+        Assert.Null(user.Key);
+        Assert.Null(user.UserKeyId);
+        Assert.Null(user.PublicKey);
+        Assert.Null(user.PrivateKey);
+        Assert.Null(user.SignedPublicKey);
+        Assert.Null(user.SecurityState);
+        Assert.Null(await _userSignatureKeyPairRepository.GetByUserIdAsync(user.Id));
     }
 
     private async Task AssertOrganizationUserStatusAsync(Organization organization, User user,
@@ -237,9 +292,9 @@ public class SsoJitProvisionFinishControllerKeyConnectorTests : IClassFixture<Ap
 
     private async Task AssertNotProvisionedAsync(string ssoUserEmail, Organization organization)
     {
+        await AssertJitProvisionedStateAsync(ssoUserEmail);
         var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
         Assert.NotNull(user);
-        Assert.False(user.UsesKeyConnector);
         await AssertOrganizationUserStatusAsync(organization, user, OrganizationUserStatusType.Invited);
     }
 

@@ -130,7 +130,7 @@ public class SsoJitProvisionFinishController(
     /// Accepts the same V2 and V1 key shapes as <c>accounts/set-key-connector-key</c>.
     /// </remarks>
     [HttpPost("key-connector")]
-    public async Task FinishKeyConnectorAsync([FromBody] SsoJitProvisionFinishSetKeyConnectorKeyRequestModel model)
+    public async Task FinishJitProvisionForKeyConnectorAsync([FromBody] SsoJitProvisionFinishSetKeyConnectorKeyRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
 
