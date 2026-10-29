@@ -85,7 +85,19 @@ public class InviteStagedOrganizationUsersCommand(
             return secretsManagerSeatReservationError;
         }
 
-        var pamSeatReservationError = await ReservePrivilegedControlsSeatsAsync(organization, eligible);
+        Error? pamSeatReservationError;
+        try
+        {
+            pamSeatReservationError = await ReservePrivilegedControlsSeatsAsync(organization, eligible);
+        }
+        catch
+        {
+            await ReleaseSecretsManagerSeatsAsync(organization, secretsManagerSeatsToAdd, initialSecretsManagerSeats);
+            await ReleaseSeatsAsync(organization, seatsToAdd);
+            await ReleasePrivilegedControlsSeatsAsync(organization, initialPamSeats);
+            throw;
+        }
+
         if (pamSeatReservationError is not null)
         {
             await ReleaseSecretsManagerSeatsAsync(organization, secretsManagerSeatsToAdd, initialSecretsManagerSeats);

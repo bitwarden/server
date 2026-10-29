@@ -850,6 +850,45 @@ public class InviteStagedOrganizationUsersCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task RunAsync_PamReservationThrowsConflict_ReleasesPasswordManagerSeatsAndRethrows(
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        organization.MaxAutoscaleSeats = 100;
+        var request = Arrange(sutProvider, organization, organizationUsers, performedBy, seats: 10, occupiedSeats: 9);
+        ArrangePrivilegedControls(organization, organizationUsers, membersWithAccess: 2);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, Arg.Any<int>())
+            .ThrowsAsync(new ConflictException("The subscription is unpaid."));
+
+        await Assert.ThrowsAsync<ConflictException>(() => sutProvider.Sut.RunAsync(request));
+
+        await sutProvider.GetDependency<IOrganizationService>()
+            .Received(1)
+            .AdjustSeatsAsync(organization.Id, -(organizationUsers.Count - 1));
+        Assert.All(organizationUsers, organizationUser =>
+            Assert.Equal(OrganizationUserStatusType.Staged, organizationUser.Status));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RunAsync_PamReservationThrowsConflict_ReleasesSecretsManagerSeatsAndRethrows(
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        var request = ArrangeWithSecretsManager(sutProvider, organization, organizationUsers, performedBy);
+        ArrangePrivilegedControls(organization, organizationUsers, membersWithAccess: 2);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, Arg.Any<int>())
+            .ThrowsAsync(new ConflictException("The subscription is unpaid."));
+
+        await Assert.ThrowsAsync<ConflictException>(() => sutProvider.Sut.RunAsync(request));
+
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+            .Received(1)
+            .UpdateSubscriptionAsync(Arg.Is<SecretsManagerSubscriptionUpdate>(update => update.SmSeats == 5));
+    }
+
+    [Theory, BitAutoData]
     public async Task RunAsync_PamSelfHostedShortfall_ReturnsCannotAutoscaleOnSelfHost(
         Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
     {
