@@ -7,15 +7,10 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 /// <summary>
 /// The validated context produced by <see cref="IConfirmOrganizationInviteLinkValidator"/> when a user
 /// is eligible to be confirmed via an invite link. The confirmation endpoints reuse this so they do not
-/// have to re-resolve the link, organization, or existing membership after validation succeeds.
+/// have to re-resolve the organization or existing membership after validation succeeds.
 /// </summary>
 public record ConfirmOrganizationInviteLinkValidationResult
 {
-    /// <summary>
-    /// The invite link resolved from the request code.
-    /// </summary>
-    public required OrganizationInviteLink InviteLink { get; init; }
-
     /// <summary>
     /// The organization the invite link belongs to.
     /// </summary>
@@ -26,4 +21,9 @@ public record ConfirmOrganizationInviteLinkValidationResult
     /// not yet a member and a new membership will be created during confirmation.
     /// </summary>
     public OrganizationUser? ExistingOrganizationUser { get; init; }
+
+    /// <summary>
+    /// If true, the caller must enroll the user in account recovery once they join.
+    /// </summary>
+    public bool AccountRecoveryAutoEnrollEnabled { get; init; }
 }
