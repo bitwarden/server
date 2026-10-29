@@ -32,6 +32,7 @@ public class TeamsIntegrationControllerTests
 {
     private const string _teamsToken = "test-token";
     private const string _validTeamsCode = "A_test_code";
+    private const string _nonce = "test-nonce";
 
     [Theory, BitAutoData]
     public async Task CreateAsync_AllParamsProvided_Succeeds(
@@ -63,6 +64,8 @@ public class TeamsIntegrationControllerTests
         await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1)
             .UpsertAsync(Arg.Any<OrganizationIntegration>());
         AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.Success);
+        await sutProvider.GetDependency<IIntegrationOAuthNonceStore>().Received(1)
+            .TryConsumeAsync(integration.Id, _nonce);
     }
 
     [Theory, BitAutoData]
@@ -183,6 +186,8 @@ public class TeamsIntegrationControllerTests
         var requestAction = await sutProvider.Sut.CreateAsync(null, state, "access_denied");
 
         AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.Canceled);
+        await sutProvider.GetDependency<IIntegrationOAuthNonceStore>().Received(1)
+            .TryConsumeAsync(integration.Id, _nonce);
         await sutProvider.GetDependency<ITeamsService>().DidNotReceiveWithAnyArgs()
             .ObtainTokenViaOAuth(default!, default!);
     }
@@ -232,7 +237,7 @@ public class TeamsIntegrationControllerTests
         sutProvider.GetDependency<IOrganizationIntegrationRepository>()
             .GetByIdAsync(integration.Id)
             .Returns(integration);
-        var state = SetupState(sutProvider, new IntegrationOAuthStateTokenable(integration, TimeProvider.System)
+        var state = SetupState(sutProvider, new IntegrationOAuthStateTokenable(integration, _nonce, TimeProvider.System)
         {
             ExpirationDate = DateTime.UtcNow.AddMinutes(-1)
         });
@@ -314,6 +319,32 @@ public class TeamsIntegrationControllerTests
         var requestAction = await sutProvider.Sut.CreateAsync(_validTeamsCode, state, null);
 
         AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.AlreadyConnected);
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceiveWithAnyArgs()
+            .UpsertAsync(default!);
+        await sutProvider.GetDependency<IIntegrationOAuthNonceStore>().DidNotReceiveWithAnyArgs()
+            .TryConsumeAsync(default, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_NonceAlreadyConsumedOrReplaced_ThrowsNotFound(
+        SutProvider<TeamsIntegrationController> sutProvider,
+        OrganizationIntegration integration)
+    {
+        integration.Type = IntegrationType.Teams;
+        integration.Configuration = null;
+        SetBaseServiceUriApi(sutProvider);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(integration.Id)
+            .Returns(integration);
+        var state = SetupState(sutProvider, integration);
+        sutProvider.GetDependency<IIntegrationOAuthNonceStore>()
+            .TryConsumeAsync(integration.Id, _nonce)
+            .Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validTeamsCode, state, null));
+
+        await sutProvider.GetDependency<ITeamsService>().DidNotReceiveWithAnyArgs()
+            .ObtainTokenViaOAuth(default!, default!);
         await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceiveWithAnyArgs()
             .UpsertAsync(default!);
     }
@@ -773,7 +804,7 @@ public class TeamsIntegrationControllerTests
     }
 
     private static string SetupState(SutProvider<TeamsIntegrationController> sutProvider, OrganizationIntegration integration) =>
-        SetupState(sutProvider, new IntegrationOAuthStateTokenable(integration, TimeProvider.System));
+        SetupState(sutProvider, new IntegrationOAuthStateTokenable(integration, _nonce, TimeProvider.System));
 
     private static string SetupState(
         SutProvider<TeamsIntegrationController> sutProvider,
@@ -787,6 +818,9 @@ public class TeamsIntegrationControllerTests
                 call[1] = tokenable;
                 return true;
             });
+        sutProvider.GetDependency<IIntegrationOAuthNonceStore>()
+            .TryConsumeAsync(tokenable.IntegrationId, tokenable.Nonce)
+            .Returns(true);
         return state;
     }
 
@@ -797,11 +831,15 @@ public class TeamsIntegrationControllerTests
     {
         const string state = "protected-oauth-state";
         var expectedExpiration = timeProvider.GetUtcNow().UtcDateTime.Add(IntegrationOAuthStateTokenable.Lifetime);
+        sutProvider.GetDependency<IIntegrationOAuthNonceStore>()
+            .IssueAsync(integration.Id)
+            .Returns(_nonce);
         sutProvider.GetDependency<IDataProtectorTokenFactory<IntegrationOAuthStateTokenable>>()
             .Protect(Arg.Is<IntegrationOAuthStateTokenable>(t =>
                 t.IntegrationId == integration.Id &&
                 t.OrganizationId == integration.OrganizationId &&
                 t.Type == integration.Type &&
+                t.Nonce == _nonce &&
                 t.ExpirationDate == expectedExpiration))
             .Returns(state);
         return state;

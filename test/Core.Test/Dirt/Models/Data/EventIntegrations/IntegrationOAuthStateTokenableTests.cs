@@ -15,6 +15,7 @@ namespace Bit.Core.Test.Dirt.Models.Data.EventIntegrations;
 
 public class IntegrationOAuthStateTokenableTests
 {
+    private const string _nonce = "test-nonce";
     private readonly IDataProtectorTokenFactory<IntegrationOAuthStateTokenable> _tokenFactory = CreateTokenFactory();
 
     [Theory, BitAutoData]
@@ -22,11 +23,12 @@ public class IntegrationOAuthStateTokenableTests
     {
         var timeProvider = new FakeTimeProvider(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
 
-        var token = new IntegrationOAuthStateTokenable(integration, timeProvider);
+        var token = new IntegrationOAuthStateTokenable(integration, _nonce, timeProvider);
 
         Assert.Equal(integration.Id, token.IntegrationId);
         Assert.Equal(integration.OrganizationId, token.OrganizationId);
         Assert.Equal(integration.Type, token.Type);
+        Assert.Equal(_nonce, token.Nonce);
         Assert.Equal(new DateTime(2025, 1, 1, 0, 20, 0, DateTimeKind.Utc), token.ExpirationDate);
     }
 
@@ -34,7 +36,7 @@ public class IntegrationOAuthStateTokenableTests
     public void ProtectUnprotect_RoundTripsCorrectly(OrganizationIntegration integration)
     {
         integration.Type = IntegrationType.Slack;
-        var token = new IntegrationOAuthStateTokenable(integration, TimeProvider.System);
+        var token = new IntegrationOAuthStateTokenable(integration, _nonce, TimeProvider.System);
 
         var state = _tokenFactory.Protect(token);
 
@@ -45,12 +47,13 @@ public class IntegrationOAuthStateTokenableTests
         Assert.Equal(integration.Id, parsed.IntegrationId);
         Assert.Equal(integration.OrganizationId, parsed.OrganizationId);
         Assert.Equal(IntegrationType.Slack, parsed.Type);
+        Assert.Equal(_nonce, parsed.Nonce);
     }
 
     [Theory, BitAutoData]
     public void ProtectedState_DoesNotExposeIdentifiers(OrganizationIntegration integration)
     {
-        var state = _tokenFactory.Protect(new IntegrationOAuthStateTokenable(integration, TimeProvider.System));
+        var state = _tokenFactory.Protect(new IntegrationOAuthStateTokenable(integration, _nonce, TimeProvider.System));
 
         Assert.DoesNotContain(integration.Id.ToString(), state, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(integration.OrganizationId.ToString(), state, StringComparison.OrdinalIgnoreCase);
@@ -71,7 +74,7 @@ public class IntegrationOAuthStateTokenableTests
     [Theory, BitAutoData]
     public void Unprotect_TamperedState_Fails(OrganizationIntegration integration)
     {
-        var state = _tokenFactory.Protect(new IntegrationOAuthStateTokenable(integration, TimeProvider.System));
+        var state = _tokenFactory.Protect(new IntegrationOAuthStateTokenable(integration, _nonce, TimeProvider.System));
 
         // Flip a character in the protected payload, after the clear text prefix
         var index = state.Length - 10;
@@ -83,7 +86,7 @@ public class IntegrationOAuthStateTokenableTests
     [Theory, BitAutoData]
     public void Unprotect_StateFromDifferentKey_Fails(OrganizationIntegration integration)
     {
-        var state = CreateTokenFactory().Protect(new IntegrationOAuthStateTokenable(integration, TimeProvider.System));
+        var state = CreateTokenFactory().Protect(new IntegrationOAuthStateTokenable(integration, _nonce, TimeProvider.System));
 
         Assert.False(_tokenFactory.TryUnprotect(state, out _));
     }
@@ -91,7 +94,7 @@ public class IntegrationOAuthStateTokenableTests
     [Theory, BitAutoData]
     public void Valid_Expired_ReturnsFalse(OrganizationIntegration integration)
     {
-        var token = new IntegrationOAuthStateTokenable(integration, TimeProvider.System)
+        var token = new IntegrationOAuthStateTokenable(integration, _nonce, TimeProvider.System)
         {
             ExpirationDate = DateTime.UtcNow.AddMinutes(-1)
         };
@@ -105,7 +108,7 @@ public class IntegrationOAuthStateTokenableTests
     [Theory, BitAutoData]
     public void Valid_WrongIdentifier_ReturnsFalse(OrganizationIntegration integration)
     {
-        var token = new IntegrationOAuthStateTokenable(integration, TimeProvider.System)
+        var token = new IntegrationOAuthStateTokenable(integration, _nonce, TimeProvider.System)
         {
             Identifier = "not-the-right-identifier"
         };
@@ -113,10 +116,20 @@ public class IntegrationOAuthStateTokenableTests
         Assert.False(token.Valid);
     }
 
+    [Theory]
+    [BitAutoData("")]
+    [BitAutoData((string)null)]
+    public void Valid_MissingNonce_ReturnsFalse(string nonce, OrganizationIntegration integration)
+    {
+        var token = new IntegrationOAuthStateTokenable(integration, nonce, TimeProvider.System);
+
+        Assert.False(token.Valid);
+    }
+
     [Fact]
     public void Valid_DefaultIds_ReturnsFalse()
     {
-        var token = new IntegrationOAuthStateTokenable { ExpirationDate = DateTime.UtcNow.AddMinutes(5) };
+        var token = new IntegrationOAuthStateTokenable { Nonce = _nonce, ExpirationDate = DateTime.UtcNow.AddMinutes(5) };
 
         Assert.False(token.Valid);
     }
@@ -126,7 +139,7 @@ public class IntegrationOAuthStateTokenableTests
         OrganizationIntegration integration,
         Guid otherIntegrationId)
     {
-        var token = new IntegrationOAuthStateTokenable(integration, TimeProvider.System);
+        var token = new IntegrationOAuthStateTokenable(integration, _nonce, TimeProvider.System);
         integration.Id = otherIntegrationId;
 
         Assert.False(token.IsValidFor(integration));
@@ -137,7 +150,7 @@ public class IntegrationOAuthStateTokenableTests
         OrganizationIntegration integration,
         Guid otherOrganizationId)
     {
-        var token = new IntegrationOAuthStateTokenable(integration, TimeProvider.System);
+        var token = new IntegrationOAuthStateTokenable(integration, _nonce, TimeProvider.System);
         integration.OrganizationId = otherOrganizationId;
 
         Assert.False(token.IsValidFor(integration));
@@ -147,7 +160,7 @@ public class IntegrationOAuthStateTokenableTests
     public void IsValidFor_DifferentType_ReturnsFalse(OrganizationIntegration integration)
     {
         integration.Type = IntegrationType.Slack;
-        var token = new IntegrationOAuthStateTokenable(integration, TimeProvider.System);
+        var token = new IntegrationOAuthStateTokenable(integration, _nonce, TimeProvider.System);
         integration.Type = IntegrationType.Teams;
 
         Assert.False(token.IsValidFor(integration));

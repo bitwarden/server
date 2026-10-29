@@ -27,6 +27,7 @@ public class SlackIntegrationControllerTests
 {
     private const string _slackToken = "xoxb-test-token";
     private const string _validSlackCode = "A_test_code";
+    private const string _nonce = "test-nonce";
 
     [Theory, BitAutoData]
     public async Task CreateAsync_AllParamsProvided_Succeeds(
@@ -53,6 +54,8 @@ public class SlackIntegrationControllerTests
         await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1)
             .UpsertAsync(Arg.Any<OrganizationIntegration>());
         AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.Success);
+        await sutProvider.GetDependency<IIntegrationOAuthNonceStore>().Received(1)
+            .TryConsumeAsync(integration.Id, _nonce);
     }
 
     [Theory, BitAutoData]
@@ -142,6 +145,8 @@ public class SlackIntegrationControllerTests
         var requestAction = await sutProvider.Sut.CreateAsync(null, state, "access_denied");
 
         AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.Canceled);
+        await sutProvider.GetDependency<IIntegrationOAuthNonceStore>().Received(1)
+            .TryConsumeAsync(integration.Id, _nonce);
         await sutProvider.GetDependency<ISlackService>().DidNotReceiveWithAnyArgs()
             .ObtainTokenViaOAuth(default!, default!);
     }
@@ -191,7 +196,7 @@ public class SlackIntegrationControllerTests
         sutProvider.GetDependency<IOrganizationIntegrationRepository>()
             .GetByIdAsync(integration.Id)
             .Returns(integration);
-        var state = SetupState(sutProvider, new IntegrationOAuthStateTokenable(integration, TimeProvider.System)
+        var state = SetupState(sutProvider, new IntegrationOAuthStateTokenable(integration, _nonce, TimeProvider.System)
         {
             ExpirationDate = DateTime.UtcNow.AddMinutes(-1)
         });
@@ -275,6 +280,32 @@ public class SlackIntegrationControllerTests
         var requestAction = await sutProvider.Sut.CreateAsync(_validSlackCode, state, null);
 
         AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.AlreadyConnected);
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceiveWithAnyArgs()
+            .UpsertAsync(default!);
+        await sutProvider.GetDependency<IIntegrationOAuthNonceStore>().DidNotReceiveWithAnyArgs()
+            .TryConsumeAsync(default, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_NonceAlreadyConsumedOrReplaced_ThrowsNotFound(
+        SutProvider<SlackIntegrationController> sutProvider,
+        OrganizationIntegration integration)
+    {
+        integration.Type = IntegrationType.Slack;
+        integration.Configuration = null;
+        SetBaseServiceUriApi(sutProvider);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(integration.Id)
+            .Returns(integration);
+        var state = SetupState(sutProvider, integration);
+        sutProvider.GetDependency<IIntegrationOAuthNonceStore>()
+            .TryConsumeAsync(integration.Id, _nonce)
+            .Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validSlackCode, state, null));
+
+        await sutProvider.GetDependency<ISlackService>().DidNotReceiveWithAnyArgs()
+            .ObtainTokenViaOAuth(default!, default!);
         await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceiveWithAnyArgs()
             .UpsertAsync(default!);
     }
@@ -543,7 +574,7 @@ public class SlackIntegrationControllerTests
     }
 
     private static string SetupState(SutProvider<SlackIntegrationController> sutProvider, OrganizationIntegration integration) =>
-        SetupState(sutProvider, new IntegrationOAuthStateTokenable(integration, TimeProvider.System));
+        SetupState(sutProvider, new IntegrationOAuthStateTokenable(integration, _nonce, TimeProvider.System));
 
     private static string SetupState(
         SutProvider<SlackIntegrationController> sutProvider,
@@ -557,6 +588,9 @@ public class SlackIntegrationControllerTests
                 call[1] = tokenable;
                 return true;
             });
+        sutProvider.GetDependency<IIntegrationOAuthNonceStore>()
+            .TryConsumeAsync(tokenable.IntegrationId, tokenable.Nonce)
+            .Returns(true);
         return state;
     }
 
@@ -567,11 +601,15 @@ public class SlackIntegrationControllerTests
     {
         const string state = "protected-oauth-state";
         var expectedExpiration = timeProvider.GetUtcNow().UtcDateTime.Add(IntegrationOAuthStateTokenable.Lifetime);
+        sutProvider.GetDependency<IIntegrationOAuthNonceStore>()
+            .IssueAsync(integration.Id)
+            .Returns(_nonce);
         sutProvider.GetDependency<IDataProtectorTokenFactory<IntegrationOAuthStateTokenable>>()
             .Protect(Arg.Is<IntegrationOAuthStateTokenable>(t =>
                 t.IntegrationId == integration.Id &&
                 t.OrganizationId == integration.OrganizationId &&
                 t.Type == integration.Type &&
+                t.Nonce == _nonce &&
                 t.ExpirationDate == expectedExpiration))
             .Returns(state);
         return state;

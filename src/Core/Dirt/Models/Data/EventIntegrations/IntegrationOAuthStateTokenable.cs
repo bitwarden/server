@@ -20,13 +20,19 @@ public class IntegrationOAuthStateTokenable : ExpiringTokenable
     public Guid OrganizationId { get; set; }
     public IntegrationType Type { get; set; }
 
+    /// <summary>
+    /// Single-use value that must match the integration's active nonce in <c>IIntegrationOAuthNonceStore</c>.
+    /// </summary>
+    public string Nonce { get; set; } = string.Empty;
+
     public IntegrationOAuthStateTokenable() { }
 
-    public IntegrationOAuthStateTokenable(OrganizationIntegration integration, TimeProvider timeProvider)
+    public IntegrationOAuthStateTokenable(OrganizationIntegration integration, string nonce, TimeProvider timeProvider)
     {
         IntegrationId = integration.Id;
         OrganizationId = integration.OrganizationId;
         Type = integration.Type;
+        Nonce = nonce;
         ExpirationDate = timeProvider.GetUtcNow().UtcDateTime.Add(Lifetime);
     }
 
@@ -42,5 +48,6 @@ public class IntegrationOAuthStateTokenable : ExpiringTokenable
     protected override bool TokenIsValid() =>
         Identifier == TokenIdentifier &&
         IntegrationId != default &&
-        OrganizationId != default;
+        OrganizationId != default &&
+        !string.IsNullOrEmpty(Nonce);
 }

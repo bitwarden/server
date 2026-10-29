@@ -23,6 +23,7 @@ public class SlackIntegrationController(
     ISlackService slackService,
     IGlobalSettings globalSettings,
     IDataProtectorTokenFactory<IntegrationOAuthStateTokenable> stateFactory,
+    IIntegrationOAuthNonceStore nonceStore,
     TimeProvider timeProvider) : Controller
 {
     [HttpGet("{organizationId:guid}/integrations/slack/redirect")]
@@ -59,7 +60,9 @@ public class SlackIntegrationController(
 
         } // An Initiated slack integration exits, re-use it and kick off a new OAuth flow
 
-        var state = stateFactory.Protect(new IntegrationOAuthStateTokenable(integration, timeProvider));
+        // Issuing a new nonce invalidates any state handed out by an earlier redirect
+        var nonce = await nonceStore.IssueAsync(integration.Id);
+        var state = stateFactory.Protect(new IntegrationOAuthStateTokenable(integration, nonce, timeProvider));
         var redirectUrl = slackService.GetRedirectUrl(
             callbackUrl: callbackUrl,
             state: state
@@ -99,6 +102,12 @@ public class SlackIntegrationController(
         if (integration.Configuration is not null)
         {
             return RedirectToVault(integration, IntegrationOAuthCallbackRedirect.AlreadyConnected);
+        }
+
+        // Each state can be redeemed once, whatever the outcome, so a leaked state cannot be replayed
+        if (!await nonceStore.TryConsumeAsync(integration.Id, oAuthState.Nonce))
+        {
+            throw new NotFoundException();
         }
 
         // Slack returns "error" instead of "code" when the user declines consent

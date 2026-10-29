@@ -155,6 +155,17 @@ public class EventIntegrationServiceCollectionExtensionsTests
     }
 
     [Fact]
+    public void AddEventIntegrationsCommandsQueries_RegistersOAuthNonceStoreAsSingleton()
+    {
+        _services.AddEventIntegrationsCommandsQueries(_globalSettings);
+        _services.AddEventIntegrationsCommandsQueries(_globalSettings);
+
+        var descriptor = Assert.Single(_services, s => s.ServiceType == typeof(IIntegrationOAuthNonceStore));
+        Assert.Equal(typeof(IntegrationOAuthNonceStore), descriptor.ImplementationType);
+        Assert.Equal(ServiceLifetime.Singleton, descriptor.Lifetime);
+    }
+
+    [Fact]
     public void AddOrganizationIntegrationCommandsQueries_RegistersAllIntegrationServices()
     {
         _services.AddOrganizationIntegrationCommandsQueries();
