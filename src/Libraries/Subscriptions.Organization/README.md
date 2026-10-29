@@ -170,13 +170,20 @@ Core's `IGetOrganizationRestartQuery`, the same query `RestartSubscriptionComman
 preview can't diverge from what restart creates: the organization's plan (or the enabled plan for the same
 tier and cadence when it's disabled), with quantities copied from the canceled subscription.
 
-It previews a new subscription against the canceled subscription's customer, with no `Subscription` (so
-nothing prorates), no explicit currency (Stripe uses the customer's), and `classic` billing mode, matching
-restart's create options. The customer's balance carries through to the cart. Only the request's tax id is
-sent, never the customer's on-file tax id. Before restarting, the restart endpoint replaces the customer's
-tax ids with the request's, deleting them when the request has none. Stripe falls back to the on-file tax
-ids when `customer_details.tax_ids` is omitted and rejects an empty list, so the client prefills the tax id
-to keep the two in step.
+It previews a new subscription with no `Subscription` (so nothing prorates), no explicit currency (Stripe
+uses the customer's), and `classic` billing mode, matching restart's create options. Which tax ids the
+preview uses has to match what restart leaves on the customer. Stripe falls back to the customer's on-file
+tax ids when `customer_details.tax_ids` is omitted and rejects an empty list, so there are three cases:
+
+- **Families:** restart keeps the customer's tax ids, so the preview ignores the request's tax id and runs
+  against the canceled subscription's customer, using the ones on file.
+- **Business with no tax id in the request, and tax ids on file:** restart deletes the customer's tax ids,
+  so the preview leaves `customer` off and copies what Stripe would have read from it: `tax_exempt` and the
+  customer's coupon (as `discounts`). Stripe applies no balance to a preview without a customer, so the
+  command applies it with Stripe's rule: `StartingBalance` carries a credit and
+  `AmountDue = max(0, Total + balance)`.
+- **Every other business request:** the preview runs against the customer and sends the request's tax id
+  when there is one, which overrides the ones on file. The customer's balance carries through to the cart.
 
 A missing subscription, or one in any status other than `canceled` or `incomplete_expired`, is a **400** with restart's own message
 ("Cannot restart a subscription that has not ended."), as are an invalid billing address and a tax
@@ -271,7 +278,7 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | `IProviderOrganizationRepository` (`Bit.Core.AdminConsole.Repositories`) | The provider-managed-organization check behind `StandaloneOrganizationOwnerRequirement` |
 | `IUserService`, `User` (`Bit.Core.Services`, `Bit.Core.Entities`) | Resolving the purchase preview's caller |
 | `IStripeAdapter` (`Bit.Core.Billing.Services`) | Reading the organization's subscription (and its customer's tax ids) for the plan-change preview, and its subscription for the Privileged Controls trial query |
-| `ISubscriberService` (`Bit.Core.Billing.Services`) | Reading the organization's canceled subscription for the restart preview |
+| `ISubscriberService` (`Bit.Core.Billing.Services`) | Reading the organization's canceled subscription for the restart preview, and its customer (with tax ids, `tax_exempt`, discount, and balance) for a business restart with no tax id in the request |
 | `IGetOrganizationRestartQuery`, `OrganizationRestart` (`Bit.Core.Billing.Subscriptions.Queries`, `Bit.Core.Billing.Subscriptions.Models`) | Resolving the restart preview's plan and line items with the same query restart uses |
 | `PlanConstants` (`Bit.Core.Billing.Constants`) | The most of any one purchasable item that can be bought at once, for the purchase preview's checks and the Privileged Controls purchase request's ranges |
 | `IPricingClient` (`Bit.Core.Billing.Pricing`), `Plan` (`Bit.Core.Models.StaticStore`) | Resolving the current and target plans' Stripe price ids and seat/flat shape; reading a plan's Privileged Controls support |
