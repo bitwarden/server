@@ -4,7 +4,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Invoicing.InvoicePreviews.Models;
 
-/// <summary>A structured projection of a Stripe invoice. Every monetary value originates from the invoice, not from local subscription or form state.</summary>
+/// <summary>A structured projection of a Stripe invoice. Monetary values originate from the invoice, not from local subscription or form state, except a customer balance that a caller previewing without the customer applies itself.</summary>
 public record InvoicePreview
 {
     public required PasswordManagerInvoiceItems PasswordManager { get; init; }

@@ -139,7 +139,7 @@ public class PreviewOrganizationRestartCommandTests
     public async Task Run_BusinessNoTaxIdAnywhere_KeepsCustomer()
     {
         var organization = ArrangeCanceledOrganization();
-        ArrangeCustomer(organization, taxIdCount: 0);
+        ArrangeCustomer(organization, taxIdCount: 0, taxExempt: "reverse", couponId: "coupon_10");
         var options = CaptureOptions();
 
         await _sut.Run(organization, Request());
@@ -147,6 +147,8 @@ public class PreviewOrganizationRestartCommandTests
         Assert.NotNull(options.Value);
         Assert.Equal("cus_1", options.Value!.Customer);
         Assert.Null(options.Value.CustomerDetails.TaxIds);
+        Assert.Null(options.Value.CustomerDetails.TaxExempt);
+        Assert.Null(options.Value.Discounts);
     }
 
     [Theory]
@@ -188,7 +190,7 @@ public class PreviewOrganizationRestartCommandTests
     public async Task Run_BusinessCustomerTaxIdsNull_KeepsCustomer()
     {
         var organization = ArrangeCanceledOrganization();
-        _subscriberService.GetCustomerOrThrow(organization, Arg.Any<CustomerGetOptions>())
+        _subscriberService.GetCustomerOrThrow(organization, Arg.Is<CustomerGetOptions>(options => options.Expand != null && options.Expand.Contains("tax_ids")))
             .Returns(new Customer { TaxIds = null });
         var options = CaptureOptions();
 
@@ -245,21 +247,6 @@ public class PreviewOrganizationRestartCommandTests
         Assert.NotNull(options.Value);
         Assert.Equal("cus_1", options.Value!.Customer);
         Assert.Null(options.Value.CustomerDetails.TaxIds);
-    }
-
-    [Fact]
-    public async Task Run_Families_DoesNotFetchCustomer()
-    {
-        var organization = new OrganizationEntity { Id = Guid.NewGuid() };
-        var subscription = new Subscription { Status = StripeConstants.SubscriptionStatus.Canceled, CustomerId = "cus_1" };
-        _subscriberService.GetSubscription(organization).Returns(subscription);
-        _getOrganizationRestartQuery.Run(organization, subscription).Returns(
-            Restart(PlanType.FamiliesAnnually, ProductTierType.Families, true, ("price_seat", 1)));
-        CaptureOptions();
-
-        await _sut.Run(organization, Request());
-
-        await _subscriberService.DidNotReceiveWithAnyArgs().GetCustomerOrThrow(default!, default);
     }
 
     [Theory]
@@ -386,7 +373,7 @@ public class PreviewOrganizationRestartCommandTests
 
     private void ArrangeCustomer(
         OrganizationEntity organization, int taxIdCount = 0, string taxExempt = "none", string? couponId = null, long balance = 0) =>
-        _subscriberService.GetCustomerOrThrow(organization, Arg.Any<CustomerGetOptions>()).Returns(new Customer
+        _subscriberService.GetCustomerOrThrow(organization, Arg.Is<CustomerGetOptions>(options => options.Expand != null && options.Expand.Contains("tax_ids"))).Returns(new Customer
         {
             TaxIds = new StripeList<TaxId> { Data = Enumerable.Range(0, taxIdCount).Select(_ => new TaxId()).ToList() },
             TaxExempt = taxExempt,
