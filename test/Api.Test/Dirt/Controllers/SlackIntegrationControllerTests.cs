@@ -78,6 +78,8 @@ public class SlackIntegrationControllerTests
         var requestAction = await sutProvider.Sut.CreateAsync(string.Empty, state, null);
 
         AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.Canceled);
+        await sutProvider.GetDependency<IIntegrationOAuthNonceStore>().Received(1)
+            .TryConsumeAsync(integration.Id, _nonce);
         await sutProvider.GetDependency<ISlackService>().DidNotReceiveWithAnyArgs()
             .ObtainTokenViaOAuth(default!, default!);
     }
@@ -102,6 +104,8 @@ public class SlackIntegrationControllerTests
         var requestAction = await sutProvider.Sut.CreateAsync(_validSlackCode, state, null);
 
         AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.Failed);
+        await sutProvider.GetDependency<IIntegrationOAuthNonceStore>().Received(1)
+            .TryConsumeAsync(integration.Id, _nonce);
     }
 
     [Theory, BitAutoData]
@@ -127,6 +131,8 @@ public class SlackIntegrationControllerTests
         var requestAction = await sutProvider.Sut.CreateAsync(_validSlackCode, state, null);
 
         AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.Failed);
+        await sutProvider.GetDependency<IIntegrationOAuthNonceStore>().Received(1)
+            .TryConsumeAsync(integration.Id, _nonce);
     }
 
     [Theory, BitAutoData]

@@ -88,6 +88,8 @@ public class TeamsIntegrationControllerTests
         var requestAction = await sutProvider.Sut.CreateAsync(_validTeamsCode, state, null);
 
         AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.Failed);
+        await sutProvider.GetDependency<IIntegrationOAuthNonceStore>().Received(1)
+            .TryConsumeAsync(integration.Id, _nonce);
     }
 
     [Theory, BitAutoData]
@@ -110,6 +112,8 @@ public class TeamsIntegrationControllerTests
         var requestAction = await sutProvider.Sut.CreateAsync(string.Empty, state, null);
 
         AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.Canceled);
+        await sutProvider.GetDependency<IIntegrationOAuthNonceStore>().Received(1)
+            .TryConsumeAsync(integration.Id, _nonce);
         await sutProvider.GetDependency<ITeamsService>().DidNotReceiveWithAnyArgs()
             .ObtainTokenViaOAuth(default!, default!);
     }
@@ -141,6 +145,8 @@ public class TeamsIntegrationControllerTests
         var requestAction = await sutProvider.Sut.CreateAsync(_validTeamsCode, state, null);
 
         AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.NoTeams);
+        await sutProvider.GetDependency<IIntegrationOAuthNonceStore>().Received(1)
+            .TryConsumeAsync(integration.Id, _nonce);
         await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceiveWithAnyArgs()
             .UpsertAsync(default!);
     }
@@ -168,6 +174,8 @@ public class TeamsIntegrationControllerTests
         var requestAction = await sutProvider.Sut.CreateAsync(_validTeamsCode, state, null);
 
         AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.Failed);
+        await sutProvider.GetDependency<IIntegrationOAuthNonceStore>().Received(1)
+            .TryConsumeAsync(integration.Id, _nonce);
     }
 
     [Theory, BitAutoData]
