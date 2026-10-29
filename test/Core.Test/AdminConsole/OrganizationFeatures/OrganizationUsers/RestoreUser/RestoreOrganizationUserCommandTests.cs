@@ -1318,6 +1318,7 @@ public class RestoreOrganizationUserCommandTests
         organizationUser.AccessPam = true;
         organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
         RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+        SetupAutoAddSeatsRaisesSeatCount(organization, sutProvider);
         sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
             .RunAsync(organization, 1)
             .Returns(new PrivilegedControlsSeatReservationResult(new PrivilegedControlsSeatLimitReachedError()));
@@ -1345,6 +1346,7 @@ public class RestoreOrganizationUserCommandTests
         organizationUser.AccessPam = true;
         organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
         RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+        SetupAutoAddSeatsRaisesSeatCount(organization, sutProvider);
         sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
             .RunAsync(organization, 1)
             .Returns(new PrivilegedControlsSeatReservationResult(
@@ -1370,6 +1372,7 @@ public class RestoreOrganizationUserCommandTests
         organizationUser.AccessPam = true;
         organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
         RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+        SetupAutoAddSeatsRaisesSeatCount(organization, sutProvider);
         var failure = new TimeoutException("Stripe is unreachable.");
         sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
             .RunAsync(organization, 1)
@@ -1394,6 +1397,7 @@ public class RestoreOrganizationUserCommandTests
         organizationUser.AccessPam = true;
         organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
         RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+        SetupAutoAddSeatsRaisesSeatCount(organization, sutProvider);
         sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
             .RunAsync(organization, 1)
             .Returns(new PrivilegedControlsSeatReservationResult(new PrivilegedControlsSeatLimitReachedError()));
@@ -1671,6 +1675,7 @@ public class RestoreOrganizationUserCommandTests
         organization.Seats = 1;
         var userService = Substitute.For<IUserService>();
         RestoreUser_Setup(organization, owner, orgUser1, sutProvider);
+        SetupAutoAddSeatsRaisesSeatCount(organization, sutProvider);
         OrganizationUser[] orgUsers = [orgUser1, orgUser2];
         foreach (var orgUser in orgUsers)
         {
@@ -1707,6 +1712,7 @@ public class RestoreOrganizationUserCommandTests
         organization.Seats = 1;
         var userService = Substitute.For<IUserService>();
         RestoreUser_Setup(organization, owner, orgUser1, sutProvider);
+        SetupAutoAddSeatsRaisesSeatCount(organization, sutProvider);
         orgUser1.AccessPam = true;
         orgUser1.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -1749,6 +1755,18 @@ public class RestoreOrganizationUserCommandTests
         await sutProvider.GetDependency<IOrganizationService>()
             .DidNotReceiveWithAnyArgs()
             .AdjustSeatsAsync(default, default);
+    }
+
+    /// <summary>
+    /// Raises the organization's seat count when seats are auto-added, as the real <see cref="IOrganizationService"/> does.
+    /// </summary>
+    private static void SetupAutoAddSeatsRaisesSeatCount(
+        Organization organization,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationService>()
+            .When(service => service.AutoAddSeatsAsync(organization, Arg.Is<int>(seats => seats > 0)))
+            .Do(callInfo => organization.Seats += callInfo.ArgAt<int>(1));
     }
 
     private static void RestoreUser_Setup(

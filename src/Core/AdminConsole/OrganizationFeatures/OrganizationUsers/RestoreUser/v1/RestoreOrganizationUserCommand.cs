@@ -95,12 +95,11 @@ public class RestoreOrganizationUserCommand(
         var organization = await organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
         var seatCounts = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
         var availableSeats = organization.Seats.GetValueOrDefault(0) - seatCounts.Total;
-        var passwordManagerSeatsAdded = 0;
+        var initialPasswordManagerSeats = organization.Seats;
 
         if (availableSeats < 1)
         {
             await organizationService.AutoAddSeatsAsync(organization, 1); // Hooray
-            passwordManagerSeatsAdded = organization.Seats.HasValue ? 1 : 0;
         }
 
         var userTwoFactorIsEnabled = false;
@@ -125,10 +124,13 @@ public class RestoreOrganizationUserCommand(
 
         if (organization.UsePam && organizationUser.AccessPam && PrivilegedControlsSeatOccupancy.OccupiesSeat(status))
         {
+            // No system user means an admin is restoring this one member, so one seat is reserved.
             if (systemUser is null)
             {
-                await ReservePrivilegedControlsSeatsAsync(organization, 1, passwordManagerSeatsAdded);
+                await ReservePrivilegedControlsSeatsOrThrowAsync(organization, 1, initialPasswordManagerSeats);
             }
+            // A SCIM restore with no free Privileged Controls seat must still go through: the member is restored
+            // without access and the Owners are emailed. Public API restores don't check seats.
             else if (systemUser == EventSystemUser.SCIM)
             {
                 scimPamSeatReservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, 1);
@@ -169,30 +171,37 @@ public class RestoreOrganizationUserCommand(
     }
 
     /// <summary>
-    /// Reserves Privileged Controls seats for members being restored with access. When the seats cannot be
-    /// reserved, the Password Manager seats bought for the same restore are handed back before the error is raised.
+    /// Reserves Privileged Controls seats for members an admin is restoring with access, through single or bulk
+    /// restore. When the seats cannot be reserved, the Password Manager seats bought for the same restore are handed
+    /// back and the restore fails.
     /// </summary>
-    private async Task ReservePrivilegedControlsSeatsAsync(Organization organization, int membersTakingSeats,
-        int passwordManagerSeatsAdded)
+    /// <param name="initialPasswordManagerSeats">The Password Manager seat count captured before the restore bought seats.</param>
+    private async Task ReservePrivilegedControlsSeatsOrThrowAsync(Organization organization, int seatsRequested,
+        int? initialPasswordManagerSeats)
     {
-        var reservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, membersTakingSeats);
+        var reservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, seatsRequested);
         if (reservation.Success)
         {
             return;
         }
 
-        await ReleasePasswordManagerSeatsAsync(organization, passwordManagerSeatsAdded);
+        await ReleasePasswordManagerSeatsAsync(organization, initialPasswordManagerSeats);
         throw reservation.Error is InternalError
             ? new InvalidOperationException(reservation.Error.Message, reservation.Exception)
             : new BadRequestException(reservation.Error!.Message);
     }
 
-    private async Task ReleasePasswordManagerSeatsAsync(Organization organization, int seatsToRelease)
+    /// <summary>
+    /// Restores the Password Manager seat count captured before the restore bought seats.
+    /// </summary>
+    private async Task ReleasePasswordManagerSeatsAsync(Organization organization, int? initialPasswordManagerSeats)
     {
-        if (seatsToRelease <= 0)
+        if (initialPasswordManagerSeats is null || initialPasswordManagerSeats == organization.Seats)
         {
             return;
         }
+
+        var seatsToRelease = organization.Seats.GetValueOrDefault() - initialPasswordManagerSeats.Value;
 
         try
         {
@@ -271,16 +280,20 @@ public class RestoreOrganizationUserCommand(
         var seatCounts = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
         var availableSeats = organization.Seats.GetValueOrDefault(0) - seatCounts.Total;
         var newSeatsRequired = organizationUserIds.Count() - availableSeats;
+        var initialPasswordManagerSeats = organization.Seats;
         await organizationService.AutoAddSeatsAsync(organization, newSeatsRequired);
-        var passwordManagerSeatsAdded = organization.Seats.HasValue ? Math.Max(newSeatsRequired, 0) : 0;
 
         if (organization.UsePam)
         {
-            var membersTakingPamSeats = filteredUsers.Count(u =>
+            // Only revoked members are restored, and only those returning to a seat-using status with Privileged
+            // Controls access need a seat. Seats are reserved once for the whole selection before the per-member
+            // checks, the same way Password Manager seats are.
+            var privilegedControlsSeatsRequested = filteredUsers.Count(u =>
                 u.Status == OrganizationUserStatusType.Revoked
                 && u.AccessPam
                 && PrivilegedControlsSeatOccupancy.OccupiesSeat(u.GetPriorActiveOrganizationUserStatusType()));
-            await ReservePrivilegedControlsSeatsAsync(organization, membersTakingPamSeats, passwordManagerSeatsAdded);
+            await ReservePrivilegedControlsSeatsOrThrowAsync(organization, privilegedControlsSeatsRequested,
+                initialPasswordManagerSeats);
         }
 
         var restoringUserIsOwner = false;
