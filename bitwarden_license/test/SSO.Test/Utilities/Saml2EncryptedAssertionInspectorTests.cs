@@ -453,6 +453,63 @@ public class Saml2EncryptedAssertionInspectorTests
         Assert.Equal(Saml2EncryptedAssertionInspector.KeyTransportAlgorithmNotAcceptedMessage, exception.Message);
     }
 
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_ManyRetrievalMethodsNameOneKey_CompletesWithinTimeLimit()
+    {
+        var envelope = BuildEnvelope(BuildManyRetrievalMethodsAssertion(30_000, 1, string.Empty));
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope);
+        stopwatch.Stop();
+
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(5), $"Elapsed: {stopwatch.ElapsedMilliseconds} ms");
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_ManyRetrievalMethodsNameManyKeysWithOneId_CompletesWithinTimeLimit()
+    {
+        var envelope = BuildEnvelope(BuildManyRetrievalMethodsAssertion(30_000, 30_000, string.Empty));
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope);
+        stopwatch.Stop();
+
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(5), $"Elapsed: {stopwatch.ElapsedMilliseconds} ms");
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_ManyRetrievalMethodsNameKeysAndOneNonKeyElement_Throws()
+    {
+        var envelope = BuildEnvelope(
+            BuildManyRetrievalMethodsAssertion(1_000, 1_000, "<ds:Object Id=\"_key\" />"));
+
+        var exception = Assert.Throws<Exception>(
+            () => Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope));
+
+        Assert.Equal(Saml2EncryptedAssertionInspector.KeyTransportAlgorithmNotAcceptedMessage, exception.Message);
+    }
+
+    private static string BuildManyRetrievalMethodsAssertion(int retrievalMethodCount, int keyCount, string otherElement)
+    {
+        var encryptedKey =
+            "<xenc:EncryptedKey Id=\"_key\">" +
+            $"<xenc:EncryptionMethod Algorithm=\"{RsaOaepMgf1P}\" />" +
+            "<xenc:CipherData><xenc:CipherValue>a2V5</xenc:CipherValue></xenc:CipherData>" +
+            "</xenc:EncryptedKey>";
+        var retrievalMethod =
+            "<ds:RetrievalMethod URI=\"#_key\" Type=\"http://www.w3.org/2001/04/xmlenc#EncryptedKey\" />";
+        return "<saml:EncryptedAssertion>" +
+            string.Concat(Enumerable.Repeat(encryptedKey, keyCount)) +
+            "<xenc:EncryptedData>" +
+            "<ds:KeyInfo>" +
+            string.Concat(Enumerable.Repeat(retrievalMethod, retrievalMethodCount)) +
+            "</ds:KeyInfo>" +
+            "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
+            "</xenc:EncryptedData>" +
+            otherElement +
+            "</saml:EncryptedAssertion>";
+    }
+
     private static string BuildRetrievalMethodAssertion(string? uri, string otherElement)
     {
         var uriAttribute = uri == null ? string.Empty : $" URI=\"{EscapeAttributeValue(uri)}\"";

@@ -104,21 +104,47 @@ public static class Saml2EncryptedAssertionInspector
             return;
         }
 
-        var elements = encryptedAssertion.GetElementsByTagName("*").OfType<XmlElement>()
-            .Prepend(encryptedAssertion)
-            .ToArray();
+        var idTargetsAreEncryptedKeys = ReadIdTargetsAreEncryptedKeys(encryptedAssertion);
 
         foreach (var retrievalMethod in retrievalMethods)
         {
             var id = ReadLocalReferenceId(retrievalMethod.GetAttribute("URI"));
-            var targets = id == null
-                ? []
-                : elements.Where(e => HasId(e, id)).ToArray();
-            if (targets.Length == 0 || targets.Any(e => !IsEncryptedKey(e)))
+            if (id == null
+                || !idTargetsAreEncryptedKeys.TryGetValue(id, out var allTargetsAreEncryptedKeys)
+                || !allTargetsAreEncryptedKeys)
             {
                 throw new Exception(KeyTransportAlgorithmNotAcceptedMessage);
             }
         }
+    }
+
+    /// <summary>
+    /// Maps each Id value in one encrypted assertion to <see langword="true"/> when every element with that Id
+    /// is an xenc:EncryptedKey. Reads the Id, id, and ID attributes of the assertion and of each descendant.
+    /// </summary>
+    private static Dictionary<string, bool> ReadIdTargetsAreEncryptedKeys(XmlElement encryptedAssertion)
+    {
+        var idTargetsAreEncryptedKeys = new Dictionary<string, bool>(StringComparer.Ordinal);
+        var elements = encryptedAssertion.GetElementsByTagName("*").OfType<XmlElement>()
+            .Prepend(encryptedAssertion);
+
+        foreach (var element in elements)
+        {
+            var isEncryptedKey = IsEncryptedKey(element);
+            var ids = new[] { element.GetAttribute("Id"), element.GetAttribute("id"), element.GetAttribute("ID") }
+                .Where(id => id.Length > 0)
+                .Distinct(StringComparer.Ordinal);
+
+            foreach (var id in ids)
+            {
+                idTargetsAreEncryptedKeys[id] =
+                    (!idTargetsAreEncryptedKeys.TryGetValue(id, out var allTargetsAreEncryptedKeys)
+                        || allTargetsAreEncryptedKeys)
+                    && isEncryptedKey;
+            }
+        }
+
+        return idTargetsAreEncryptedKeys;
     }
 
     private static string? ReadLocalReferenceId(string uri)
@@ -138,9 +164,6 @@ public static class Saml2EncryptedAssertionInspector
             return null;
         }
     }
-
-    private static bool HasId(XmlElement element, string id) =>
-        element.GetAttribute("Id") == id || element.GetAttribute("id") == id || element.GetAttribute("ID") == id;
 
     private static bool IsEncryptedKey(XmlElement element) =>
         element.LocalName == "EncryptedKey" && element.NamespaceURI == _xencNamespace;
