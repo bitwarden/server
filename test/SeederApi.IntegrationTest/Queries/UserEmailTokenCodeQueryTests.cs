@@ -111,7 +111,7 @@ public class UserEmailTokenCodeQueryTests
         var response = await query.Execute(new UserEmailTokenCodeQuery.Request
         {
             Email = user.Email,
-            CodeType = UserEmailTokenCodeQuery.CodeType.EmailTwoFactorLogin,
+            CodeType = UserEmailTokenCodeQuery.CodeType.EmailTwoFactor,
         });
 
         Assert.True(response.Found);
@@ -134,7 +134,7 @@ public class UserEmailTokenCodeQueryTests
         var response = await query.Execute(new UserEmailTokenCodeQuery.Request
         {
             Email = user.Email,
-            CodeType = UserEmailTokenCodeQuery.CodeType.EmailTwoFactorLogin,
+            CodeType = UserEmailTokenCodeQuery.CodeType.EmailTwoFactor,
         });
 
         Assert.True(await twoFactorEmailService.VerifyTwoFactorLoginTokenAsync(user, DeviceIdentifier, response.Code));
@@ -191,7 +191,7 @@ public class UserEmailTokenCodeQueryTests
         var response = await query.Execute(new UserEmailTokenCodeQuery.Request
         {
             Email = user.Email,
-            CodeType = UserEmailTokenCodeQuery.CodeType.EmailTwoFactorLogin,
+            CodeType = UserEmailTokenCodeQuery.CodeType.EmailTwoFactor,
         });
 
         Assert.False(response.Found);

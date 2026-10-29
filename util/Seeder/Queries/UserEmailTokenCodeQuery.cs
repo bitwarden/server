@@ -50,12 +50,12 @@ public class UserEmailTokenCodeQuery(
     private const string NewDeviceVerificationCacheKeyFormat = "NewDeviceVerification_NewDeviceVerificationCode_{0}_{1}";
 
     /// <summary>
-    /// The kind of code to retrieve. The serialized value is the member name (e.g. "EmailTwoFactor").
+    /// The kind of code to retrieve. The serialized value is the member name.
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum CodeType
     {
-        EmailTwoFactorLogin,
+        EmailTwoFactor,
         EmailTwoFactorSetup,
         UserVerification,
         NewDeviceVerification,
@@ -94,7 +94,7 @@ public class UserEmailTokenCodeQuery(
 
         var cacheKey = request.CodeType switch
         {
-            CodeType.EmailTwoFactorLogin => string.Format(
+            CodeType.EmailTwoFactor => string.Format(
                 CultureInfo.InvariantCulture, EmailTwoFactorLoginCacheKeyFormat, user.Id, user.SecurityStamp),
             CodeType.EmailTwoFactorSetup => string.Format(
                 CultureInfo.InvariantCulture, EmailTwoFactorSetupCacheKeyFormat, user.Id, user.SecurityStamp),
