@@ -13,6 +13,7 @@ namespace Bit.Api.AdminConsole.Partnerships.Controllers;
 /// applies <see cref="PartnershipErrorFilter"/> so every error uses the partnership envelope.
 /// </summary>
 [Authorize(Policies.Organization)]
+[ProducesResponseType(typeof(PartnershipErrorResponseModel), StatusCodes.Status401Unauthorized)]
 [ProducesResponseType(typeof(PartnershipErrorResponseModel), StatusCodes.Status403Forbidden)]
 [ProducesResponseType(typeof(PartnershipErrorResponseModel), StatusCodes.Status404NotFound)]
 [ProducesResponseType(typeof(PartnershipErrorResponseModel), StatusCodes.Status429TooManyRequests)]
