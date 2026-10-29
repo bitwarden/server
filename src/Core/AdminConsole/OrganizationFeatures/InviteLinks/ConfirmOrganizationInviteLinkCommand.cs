@@ -1,12 +1,14 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
+using Bit.Core.Billing.Organizations;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -38,7 +40,8 @@ public class ConfirmOrganizationInviteLinkCommand(
     IStripePaymentService stripePaymentService,
     IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand,
     IPushNotificationService pushNotificationService,
-    IReservePrivilegedControlsSeatForJoiningMemberCommand reservePrivilegedControlsSeatForJoiningMemberCommand,
+    IReservePrivilegedControlsSeatsCommand reservePrivilegedControlsSeatsCommand,
+    ISendPrivilegedControlsSeatNeededEmailCommand sendPrivilegedControlsSeatNeededEmailCommand,
     IEventService eventService,
     ILogger<ConfirmOrganizationInviteLinkCommand> logger)
     : IConfirmOrganizationInviteLinkCommand
@@ -117,7 +120,7 @@ public class ConfirmOrganizationInviteLinkCommand(
     private async Task<CommandResult<OrganizationUser>> ConfirmExistingMembershipAsync(
         Organization organization, OrganizationUser existingOrganizationUser, User user, string orgUserKey)
     {
-        var privilegedControlsAccess = JoiningMemberPrivilegedControlsAccess.Kept;
+        var pamSeatReservation = new PrivilegedControlsSeatReservationResult();
         if (existingOrganizationUser.Status == OrganizationUserStatusType.Staged)
         {
             var seatReservationError = await ReserveSeatAsync(organization);
@@ -126,8 +129,12 @@ public class ConfirmOrganizationInviteLinkCommand(
                 return seatReservationError;
             }
 
-            privilegedControlsAccess = await reservePrivilegedControlsSeatForJoiningMemberCommand.RunAsync(
-                organization, existingOrganizationUser);
+            pamSeatReservation = await reservePrivilegedControlsSeatsCommand.RunAsync(
+                organization, existingOrganizationUser.AccessPam ? 1 : 0);
+            if (!pamSeatReservation.Success)
+            {
+                existingOrganizationUser.AccessPam = false;
+            }
         }
 
         var memberEmail = existingOrganizationUser.Email ?? user.Email;
@@ -139,9 +146,9 @@ public class ConfirmOrganizationInviteLinkCommand(
 
         await organizationUserRepository.ReplaceAsync(existingOrganizationUser);
 
-        if (privilegedControlsAccess == JoiningMemberPrivilegedControlsAccess.RemovedAtSeatLimit)
+        if (pamSeatReservation.Error is PrivilegedControlsSeatLimitReachedError)
         {
-            await reservePrivilegedControlsSeatForJoiningMemberCommand.NotifyOwnersAsync(organization, memberEmail);
+            await sendPrivilegedControlsSeatNeededEmailCommand.RunAsync(organization, memberEmail);
         }
 
         return existingOrganizationUser;

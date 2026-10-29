@@ -2,7 +2,6 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Billing.Organizations.Commands;
@@ -85,24 +84,14 @@ public class InviteStagedOrganizationUsersCommand(
             return secretsManagerSeatReservationError;
         }
 
-        Error? pamSeatReservationError;
-        try
-        {
-            pamSeatReservationError = await ReservePrivilegedControlsSeatsAsync(organization, eligible);
-        }
-        catch
+        var membersWithPrivilegedControls = eligible.Count(organizationUser => organizationUser.AccessPam);
+        var pamSeatReservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, membersWithPrivilegedControls);
+        if (!pamSeatReservation.Success)
         {
             await ReleaseSecretsManagerSeatsAsync(organization, secretsManagerSeatsToAdd, initialSecretsManagerSeats);
             await ReleaseSeatsAsync(organization, seatsToAdd);
             await ReleasePrivilegedControlsSeatsAsync(organization, initialPamSeats);
-            throw;
-        }
-
-        if (pamSeatReservationError is not null)
-        {
-            await ReleaseSecretsManagerSeatsAsync(organization, secretsManagerSeatsToAdd, initialSecretsManagerSeats);
-            await ReleaseSeatsAsync(organization, seatsToAdd);
-            return pamSeatReservationError;
+            return pamSeatReservation.Error!;
         }
 
         try
@@ -415,36 +404,6 @@ public class InviteStagedOrganizationUsersCommand(
             logger.LogError(ex,
                 "Failed to release {SeatsToRelease} auto-added seat(s) for organization {OrganizationId}",
                 seatsToRelease, organization.Id);
-        }
-    }
-
-    /// <summary>
-    /// Reserves a Privileged Controls seat for each eligible member who already has access to it.
-    /// </summary>
-    private async Task<Error?> ReservePrivilegedControlsSeatsAsync(
-        Organization organization,
-        List<OrganizationUser> organizationUsers)
-    {
-        var membersWithPrivilegedControls = organization.UsePam
-            ? organizationUsers.Count(organizationUser => organizationUser.AccessPam)
-            : 0;
-
-        try
-        {
-            var reservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, membersWithPrivilegedControls);
-            return reservation switch
-            {
-                PrivilegedControlsSeatReservation.LimitReached => new PrivilegedControlsSeatLimitReached(),
-                PrivilegedControlsSeatReservation.SelfHostedShortfall => new CannotAutoscalePamSeatsOnSelfHost(),
-                _ => null
-            };
-        }
-        catch (Exception ex) when (ex is BadRequestException or GatewayException)
-        {
-            logger.LogWarning(ex,
-                "Could not add {SeatsToAdd} Privileged Controls seat(s) while inviting staged members for organization {OrganizationId}",
-                membersWithPrivilegedControls, organization.Id);
-            return new PrivilegedControlsSeatExpansionFailed(ex.Message);
         }
     }
 

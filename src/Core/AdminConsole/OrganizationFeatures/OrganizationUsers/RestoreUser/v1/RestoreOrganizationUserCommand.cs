@@ -3,14 +3,18 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Helpers;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -37,7 +41,7 @@ public class RestoreOrganizationUserCommand(
     IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand,
     TimeProvider timeProvider,
     IReservePrivilegedControlsSeatsCommand reservePrivilegedControlsSeatsCommand,
-    IReservePrivilegedControlsSeatForJoiningMemberCommand reservePrivilegedControlsSeatForJoiningMemberCommand,
+    ISendPrivilegedControlsSeatNeededEmailCommand sendPrivilegedControlsSeatNeededEmailCommand,
     ILogger<RestoreOrganizationUserCommand> logger) : IRestoreOrganizationUserCommand
 {
     public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, string defaultCollectionName)
@@ -117,7 +121,7 @@ public class RestoreOrganizationUserCommand(
         await CheckPoliciesBeforeRestoreAsync(organizationUser, userTwoFactorIsEnabled);
 
         var status = organizationUser.GetPriorActiveOrganizationUserStatusType();
-        var privilegedControlsAccess = JoiningMemberPrivilegedControlsAccess.Kept;
+        var scimPamSeatReservation = new PrivilegedControlsSeatReservationResult();
 
         if (organization.UsePam && organizationUser.AccessPam && PrivilegedControlsSeatOccupancy.OccupiesSeat(status))
         {
@@ -127,10 +131,10 @@ public class RestoreOrganizationUserCommand(
             }
             else if (systemUser == EventSystemUser.SCIM)
             {
-                privilegedControlsAccess = await reservePrivilegedControlsSeatForJoiningMemberCommand.RunAsync(
-                    organization, organizationUser);
-                if (privilegedControlsAccess != JoiningMemberPrivilegedControlsAccess.Kept)
+                scimPamSeatReservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, 1);
+                if (!scimPamSeatReservation.Success)
                 {
+                    organizationUser.AccessPam = false;
                     // RestoreAsync only writes the status, so the removed access has to be saved separately.
                     await organizationUserRepository.ReplaceAsync(organizationUser);
                 }
@@ -145,11 +149,11 @@ public class RestoreOrganizationUserCommand(
                 [organizationUser.Id], timeProvider.GetUtcNow().UtcDateTime);
         }
 
-        if (privilegedControlsAccess == JoiningMemberPrivilegedControlsAccess.RemovedAtSeatLimit)
+        if (scimPamSeatReservation.Error is PrivilegedControlsSeatLimitReachedError)
         {
             var memberEmail = organizationUser.Email
                               ?? (await userRepository.GetByIdAsync(organizationUser.UserId!.Value)).Email;
-            await reservePrivilegedControlsSeatForJoiningMemberCommand.NotifyOwnersAsync(organization, memberEmail);
+            await sendPrivilegedControlsSeatNeededEmailCommand.RunAsync(organization, memberEmail);
         }
 
         if (organizationUser.UserId.HasValue
@@ -171,29 +175,16 @@ public class RestoreOrganizationUserCommand(
     private async Task ReservePrivilegedControlsSeatsAsync(Organization organization, int membersTakingSeats,
         int passwordManagerSeatsAdded)
     {
-        PrivilegedControlsSeatReservation reservation;
-        try
+        var reservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, membersTakingSeats);
+        if (reservation.Success)
         {
-            reservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, membersTakingSeats);
-        }
-        catch
-        {
-            await ReleasePasswordManagerSeatsAsync(organization, passwordManagerSeatsAdded);
-            throw;
+            return;
         }
 
-        var errorMessage = reservation switch
-        {
-            PrivilegedControlsSeatReservation.LimitReached => new PrivilegedControlsSeatLimitReached().Message,
-            PrivilegedControlsSeatReservation.SelfHostedShortfall => new CannotAutoscalePamSeatsOnSelfHost().Message,
-            _ => null
-        };
-
-        if (errorMessage is not null)
-        {
-            await ReleasePasswordManagerSeatsAsync(organization, passwordManagerSeatsAdded);
-            throw new BadRequestException(errorMessage);
-        }
+        await ReleasePasswordManagerSeatsAsync(organization, passwordManagerSeatsAdded);
+        throw reservation.Error is InternalError
+            ? new InvalidOperationException(reservation.Error.Message, reservation.Exception)
+            : new BadRequestException(reservation.Error!.Message);
     }
 
     private async Task ReleasePasswordManagerSeatsAsync(Organization organization, int seatsToRelease)

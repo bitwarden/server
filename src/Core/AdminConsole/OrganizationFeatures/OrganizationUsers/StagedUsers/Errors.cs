@@ -16,6 +16,3 @@ public record SeatExpansionFailed(string Reason)
 
 public record SecretsManagerSeatExpansionFailed(string Reason)
     : BadRequestError(Reason);
-
-public record PrivilegedControlsSeatExpansionFailed(string Reason)
-    : BadRequestError(Reason);

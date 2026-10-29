@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Pricing;
@@ -118,12 +117,12 @@ public class SubscriptionsOrganizationServiceCollectionExtensionsTests
     }
 
     [Fact]
-    public void AddPrivilegedControlsSeatAutoscaling_ResolvesReserveAutoscaleAndRevertCommands()
+    public void AddPrivilegedControlsSeatAutoscaling_ResolvesReserveAutoscaleRevertAndSeatNeededEmailCommands()
     {
         var services = new ServiceCollection();
         services.AddSingleton(Substitute.For<IStripeAdapter>());
         services.AddSingleton(Substitute.For<IPricingClient>());
-        services.AddSingleton(Substitute.For<IOrganizationReplaceCommand>());
+        services.AddSingleton(Substitute.For<IReplaceOrganizationAndUpdateCacheCommand>());
         services.AddSingleton(Substitute.For<ICountNewPamSeatsRequiredQuery>());
         services.AddSingleton(Substitute.For<IOrganizationUserRepository>());
         services.AddSingleton(Substitute.For<IUpdateOrganizationSubscriptionCommand>());
@@ -141,7 +140,7 @@ public class SubscriptionsOrganizationServiceCollectionExtensionsTests
             scope.ServiceProvider.GetService<IRevertPrivilegedControlsSeatsCommand>());
         Assert.IsType<ReservePrivilegedControlsSeatsCommand>(
             scope.ServiceProvider.GetService<IReservePrivilegedControlsSeatsCommand>());
-        Assert.IsType<ReservePrivilegedControlsSeatForJoiningMemberCommand>(
-            scope.ServiceProvider.GetService<IReservePrivilegedControlsSeatForJoiningMemberCommand>());
+        Assert.IsType<SendPrivilegedControlsSeatNeededEmailCommand>(
+            scope.ServiceProvider.GetService<ISendPrivilegedControlsSeatNeededEmailCommand>());
     }
 }

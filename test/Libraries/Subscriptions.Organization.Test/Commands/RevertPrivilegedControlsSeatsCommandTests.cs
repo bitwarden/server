@@ -19,7 +19,8 @@ public class RevertPrivilegedControlsSeatsCommandTests
         Substitute.For<IPrivilegedControlsSeatChangeSetFactory>();
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand =
         Substitute.For<IUpdateOrganizationSubscriptionCommand>();
-    private readonly IOrganizationReplaceCommand _organizationReplaceCommand = Substitute.For<IOrganizationReplaceCommand>();
+    private readonly IReplaceOrganizationAndUpdateCacheCommand _replaceOrganizationAndUpdateCacheCommand =
+        Substitute.For<IReplaceOrganizationAndUpdateCacheCommand>();
     private readonly FakeIsOnPrivilegedControlsSalesInitiatedTrialQuery _isOnTrialQuery = new();
     private readonly IBitwardenEnvironment _environment = Substitute.For<IBitwardenEnvironment>();
     private readonly RevertPrivilegedControlsSeatsCommand _sut;
@@ -28,7 +29,7 @@ public class RevertPrivilegedControlsSeatsCommandTests
         _sut = new RevertPrivilegedControlsSeatsCommand(
             _seatChangeSetFactory,
             _updateOrganizationSubscriptionCommand,
-            _organizationReplaceCommand,
+            _replaceOrganizationAndUpdateCacheCommand,
             _isOnTrialQuery,
             _environment);
 
@@ -42,7 +43,7 @@ public class RevertPrivilegedControlsSeatsCommandTests
         await _seatChangeSetFactory.DidNotReceive().CreateAsync(Arg.Any<OrganizationEntity>(), Arg.Any<int>());
         await _updateOrganizationSubscriptionCommand.DidNotReceive()
             .Run(Arg.Any<OrganizationEntity>(), Arg.Any<OrganizationSubscriptionChangeSet>(), Arg.Any<Subscription?>());
-        await _organizationReplaceCommand.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<OrganizationEntity>());
+        await _replaceOrganizationAndUpdateCacheCommand.DidNotReceive().RunAsync(Arg.Any<OrganizationEntity>());
     }
 
     [Fact]
@@ -54,7 +55,7 @@ public class RevertPrivilegedControlsSeatsCommandTests
         await _sut.Run(organization, 5);
 
         Assert.Equal(5, organization.PamSeats);
-        await _organizationReplaceCommand.Received(1).ReplaceAndUpdateCacheAsync(organization);
+        await _replaceOrganizationAndUpdateCacheCommand.Received(1).RunAsync(organization);
         await _seatChangeSetFactory.DidNotReceive().CreateAsync(Arg.Any<OrganizationEntity>(), Arg.Any<int>());
         await _updateOrganizationSubscriptionCommand.DidNotReceive()
             .Run(Arg.Any<OrganizationEntity>(), Arg.Any<OrganizationSubscriptionChangeSet>(), Arg.Any<Subscription?>());
@@ -79,7 +80,7 @@ public class RevertPrivilegedControlsSeatsCommandTests
         await _seatChangeSetFactory.Received(1).CreateAsync(organization, 5);
         await _updateOrganizationSubscriptionCommand.Received(1).Run(organization, changeSet);
         Assert.Equal(5, organization.PamSeats);
-        await _organizationReplaceCommand.Received(1).ReplaceAndUpdateCacheAsync(organization);
+        await _replaceOrganizationAndUpdateCacheCommand.Received(1).RunAsync(organization);
     }
 
     [Fact]

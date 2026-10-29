@@ -1,11 +1,12 @@
 ﻿using Bit.Core.AdminConsole.Models.Mail.Mailer.MemberEmailChanged;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.UserFeatures.UserEmail;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -204,19 +205,13 @@ public class UpdateOrganizationUserCommand(
 
     private async Task<CommandError?> TryEnablingPamAsync(UpdateOrganizationUserRequest request)
     {
-        // Only members who occupy a seat need one reserved. Revoked and staged members are given access without one.
         if (!PrivilegedControlsSeatOccupancy.OccupiesSeat(request.OrganizationUserToUpdate.Status))
         {
             return null;
         }
 
         var reservation = await reservePrivilegedControlsSeatsCommand.RunAsync(request.Organization, 1);
-        return reservation switch
-        {
-            PrivilegedControlsSeatReservation.LimitReached => new PrivilegedControlsSeatLimitReached(),
-            PrivilegedControlsSeatReservation.SelfHostedShortfall => new CannotAutoscalePamSeatsOnSelfHost(),
-            _ => null
-        };
+        return reservation.Error;
     }
 
     private async Task<UpdateOrganizationUserRequest> LoadUserToUpdateAsync(UpdateOrganizationUserRequest request)

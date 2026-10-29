@@ -13,14 +13,14 @@ using Xunit;
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Organizations;
 
 [SutProviderCustomize]
-public class OrganizationReplaceCommandTests
+public class ReplaceOrganizationAndUpdateCacheCommandTests
 {
     [Theory, BitAutoData]
-    public async Task ReplaceAndUpdateCacheAsync_SavesThenRefreshesTheCache(
+    public async Task RunAsync_SavesThenRefreshesTheCache(
         Organization organization,
-        SutProvider<OrganizationReplaceCommand> sutProvider)
+        SutProvider<ReplaceOrganizationAndUpdateCacheCommand> sutProvider)
     {
-        await sutProvider.Sut.ReplaceAndUpdateCacheAsync(organization);
+        await sutProvider.Sut.RunAsync(organization);
 
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
@@ -32,11 +32,11 @@ public class OrganizationReplaceCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ReplaceAndUpdateCacheAsync_NoEvent_LogsNothing(
+    public async Task RunAsync_NoEvent_LogsNothing(
         Organization organization,
-        SutProvider<OrganizationReplaceCommand> sutProvider)
+        SutProvider<ReplaceOrganizationAndUpdateCacheCommand> sutProvider)
     {
-        await sutProvider.Sut.ReplaceAndUpdateCacheAsync(organization);
+        await sutProvider.Sut.RunAsync(organization);
 
         await sutProvider.GetDependency<IEventService>()
             .DidNotReceiveWithAnyArgs()
@@ -44,11 +44,11 @@ public class OrganizationReplaceCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ReplaceAndUpdateCacheAsync_WithEvent_LogsTheEvent(
+    public async Task RunAsync_WithEvent_LogsTheEvent(
         Organization organization,
-        SutProvider<OrganizationReplaceCommand> sutProvider)
+        SutProvider<ReplaceOrganizationAndUpdateCacheCommand> sutProvider)
     {
-        await sutProvider.Sut.ReplaceAndUpdateCacheAsync(organization, EventType.Organization_Updated);
+        await sutProvider.Sut.RunAsync(organization, EventType.Organization_Updated);
 
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
@@ -56,9 +56,9 @@ public class OrganizationReplaceCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ReplaceAndUpdateCacheAsync_SaveFails_RethrowsWithoutRefreshingTheCache(
+    public async Task RunAsync_SaveFails_RethrowsWithoutRefreshingTheCache(
         Organization organization,
-        SutProvider<OrganizationReplaceCommand> sutProvider)
+        SutProvider<ReplaceOrganizationAndUpdateCacheCommand> sutProvider)
     {
         var saveFailure = new InvalidOperationException("The save failed.");
         sutProvider.GetDependency<IOrganizationRepository>()
@@ -66,7 +66,7 @@ public class OrganizationReplaceCommandTests
             .ThrowsAsync(saveFailure);
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => sutProvider.Sut.ReplaceAndUpdateCacheAsync(organization));
+            () => sutProvider.Sut.RunAsync(organization));
 
         Assert.Same(saveFailure, exception);
         await sutProvider.GetDependency<IOrganizationAbilityCacheService>()

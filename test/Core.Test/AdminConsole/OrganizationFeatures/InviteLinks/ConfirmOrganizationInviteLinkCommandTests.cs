@@ -3,10 +3,12 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.Billing.Organizations;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -331,15 +333,11 @@ public class ConfirmOrganizationInviteLinkCommandTests
         SetupStagedMembership(user, stagedOrganizationUser);
         stagedOrganizationUser.AccessPam = true;
         var memberEmail = stagedOrganizationUser.Email!;
-        var joiningMemberCommand = sutProvider.GetDependency<IReservePrivilegedControlsSeatForJoiningMemberCommand>();
-        joiningMemberCommand
-            .RunAsync(organization, stagedOrganizationUser)
-            .Returns(callInfo =>
-            {
-                callInfo.Arg<OrganizationUser>().AccessPam = false;
-                return Task.FromResult(JoiningMemberPrivilegedControlsAccess.RemovedAtSeatLimit);
-            });
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(new PrivilegedControlsSeatReservationResult(new PrivilegedControlsSeatLimitReachedError()));
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var sendSeatNeededEmailCommand = sutProvider.GetDependency<ISendPrivilegedControlsSeatNeededEmailCommand>();
 
         var result = await sutProvider.Sut.ConfirmAsync(BuildRequest(inviteLink, user));
 
@@ -350,7 +348,7 @@ public class ConfirmOrganizationInviteLinkCommandTests
                 ou.Id == stagedOrganizationUser.Id &&
                 ou.Status == OrganizationUserStatusType.Confirmed &&
                 !ou.AccessPam));
-            joiningMemberCommand.NotifyOwnersAsync(organization, memberEmail);
+            sendSeatNeededEmailCommand.RunAsync(organization, memberEmail);
         });
     }
 
@@ -365,14 +363,10 @@ public class ConfirmOrganizationInviteLinkCommandTests
         SetupHappyPath(organization, inviteLink, user, stagedOrganizationUser, sutProvider);
         SetupStagedMembership(user, stagedOrganizationUser);
         stagedOrganizationUser.AccessPam = true;
-        var joiningMemberCommand = sutProvider.GetDependency<IReservePrivilegedControlsSeatForJoiningMemberCommand>();
-        joiningMemberCommand
-            .RunAsync(organization, stagedOrganizationUser)
-            .Returns(callInfo =>
-            {
-                callInfo.Arg<OrganizationUser>().AccessPam = false;
-                return Task.FromResult(JoiningMemberPrivilegedControlsAccess.RemovedAfterError);
-            });
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(new PrivilegedControlsSeatReservationResult(
+                new PrivilegedControlsSeatReservationUnexpectedError(), new TimeoutException("Stripe is unreachable.")));
 
         var result = await sutProvider.Sut.ConfirmAsync(BuildRequest(inviteLink, user));
 
@@ -380,7 +374,9 @@ public class ConfirmOrganizationInviteLinkCommandTests
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .ReplaceAsync(Arg.Is<OrganizationUser>(ou => ou.Id == stagedOrganizationUser.Id && !ou.AccessPam));
-        await joiningMemberCommand.DidNotReceiveWithAnyArgs().NotifyOwnersAsync(default!, default!);
+        await sutProvider.GetDependency<ISendPrivilegedControlsSeatNeededEmailCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default!, default!);
     }
 
     [Theory, BitAutoData]
@@ -394,25 +390,24 @@ public class ConfirmOrganizationInviteLinkCommandTests
         SetupHappyPath(organization, inviteLink, user, stagedOrganizationUser, sutProvider);
         SetupStagedMembership(user, stagedOrganizationUser);
         stagedOrganizationUser.AccessPam = true;
-        var joiningMemberCommand = sutProvider.GetDependency<IReservePrivilegedControlsSeatForJoiningMemberCommand>();
-        joiningMemberCommand
-            .RunAsync(organization, stagedOrganizationUser)
-            .Returns(JoiningMemberPrivilegedControlsAccess.Kept);
 
         var result = await sutProvider.Sut.ConfirmAsync(BuildRequest(inviteLink, user));
 
         Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>().Received(1).RunAsync(organization, 1);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .ReplaceAsync(Arg.Is<OrganizationUser>(ou =>
                 ou.Id == stagedOrganizationUser.Id &&
                 ou.Status == OrganizationUserStatusType.Confirmed &&
                 ou.AccessPam));
-        await joiningMemberCommand.DidNotReceiveWithAnyArgs().NotifyOwnersAsync(default!, default!);
+        await sutProvider.GetDependency<ISendPrivilegedControlsSeatNeededEmailCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default!, default!);
     }
 
     [Theory, BitAutoData]
-    public async Task ConfirmAsync_NotStaged_DoesNotCallJoiningCommand(
+    public async Task ConfirmAsync_NotStaged_DoesNotReservePamSeat(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
@@ -424,9 +419,9 @@ public class ConfirmOrganizationInviteLinkCommandTests
         var result = await sutProvider.Sut.ConfirmAsync(BuildRequest(inviteLink, user));
 
         Assert.True(result.IsSuccess);
-        await sutProvider.GetDependency<IReservePrivilegedControlsSeatForJoiningMemberCommand>()
+        await sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
             .DidNotReceiveWithAnyArgs()
-            .RunAsync(Arg.Any<Organization>(), Arg.Any<OrganizationUser>());
+            .RunAsync(default!, default);
     }
 
     [Theory, BitAutoData]
@@ -597,6 +592,10 @@ public class ConfirmOrganizationInviteLinkCommandTests
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
             .Returns(new OrganizationSeatCounts { Users = 0, Sponsored = 0 });
+
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, Arg.Any<int>())
+            .Returns(new PrivilegedControlsSeatReservationResult());
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(user.Id)

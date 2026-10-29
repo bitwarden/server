@@ -1,8 +1,8 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
+﻿using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Enums;
 using Xunit;
 
-namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
+namespace Bit.Core.Test.Billing.Organizations.Helpers;
 
 public class PrivilegedControlsSeatOccupancyTests
 {

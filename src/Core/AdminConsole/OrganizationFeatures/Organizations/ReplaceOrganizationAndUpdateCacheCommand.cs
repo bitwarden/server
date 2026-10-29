@@ -8,13 +8,13 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 
-public class OrganizationReplaceCommand(
+public class ReplaceOrganizationAndUpdateCacheCommand(
     IOrganizationRepository organizationRepository,
     IOrganizationAbilityCacheService organizationAbilityCacheService,
     IEventService eventService,
-    ILogger<OrganizationReplaceCommand> logger) : IOrganizationReplaceCommand
+    ILogger<ReplaceOrganizationAndUpdateCacheCommand> logger) : IReplaceOrganizationAndUpdateCacheCommand
 {
-    public async Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null)
+    public async Task RunAsync(Organization org, EventType? orgEvent = null)
     {
         try
         {
@@ -28,7 +28,7 @@ public class OrganizationReplaceCommand(
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "An error occurred while calling {Method} for Organization ({OrganizationID})", nameof(ReplaceAndUpdateCacheAsync), org.Id);
+            logger.LogError(exception, "An error occurred while replacing Organization ({OrganizationID}) and updating its cache", org.Id);
             throw;
         }
     }

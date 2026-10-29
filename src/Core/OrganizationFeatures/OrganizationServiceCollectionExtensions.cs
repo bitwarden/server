@@ -112,7 +112,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IOrganizationUpdateKeysCommand, OrganizationUpdateKeysCommand>();
         services.AddScoped<IOrganizationUpdateCommand, OrganizationUpdateCommand>();
         services.AddScoped<IOrganizationUpdateCollectionManagementCommand, OrganizationUpdateCollectionManagementCommand>();
-        services.AddScoped<IOrganizationReplaceCommand, OrganizationReplaceCommand>();
+        services.AddScoped<IReplaceOrganizationAndUpdateCacheCommand, ReplaceOrganizationAndUpdateCacheCommand>();
     }
 
     private static void AddOrganizationEnableCommands(this IServiceCollection services) =>

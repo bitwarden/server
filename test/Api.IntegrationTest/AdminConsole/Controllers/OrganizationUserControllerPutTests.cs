@@ -6,11 +6,11 @@ using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Request;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -438,7 +438,7 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
             UpdateRequest(accessPam: true));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Contains(new PrivilegedControlsSeatLimitReached().Message, await response.Content.ReadAsStringAsync());
+        Assert.Contains(new PrivilegedControlsSeatLimitReachedError().Message, await response.Content.ReadAsStringAsync());
         await AssertAccessPamAsync(member, false);
         var reloadedOrganization = await _factory.GetService<IOrganizationRepository>().GetByIdAsync(_organization.Id);
         Assert.Equal(1, reloadedOrganization!.PamSeats);

@@ -1,8 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Repositories;
 using OneOf.Types;
 
@@ -29,15 +30,11 @@ public class BulkEnablePamCommand(
             return new PamNotEnabled();
         }
 
-        // Revoked and staged members are given access without occupying a seat.
         var membersTakingSeats = organizationUsers.Count(u => PrivilegedControlsSeatOccupancy.OccupiesSeat(u.Status));
         var reservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, membersTakingSeats);
-        switch (reservation)
+        if (!reservation.Success)
         {
-            case PrivilegedControlsSeatReservation.LimitReached:
-                return new PrivilegedControlsSeatLimitReached();
-            case PrivilegedControlsSeatReservation.SelfHostedShortfall:
-                return new CannotAutoscalePamSeatsOnSelfHost();
+            return reservation.Error!;
         }
 
         foreach (var organizationUser in organizationUsers)

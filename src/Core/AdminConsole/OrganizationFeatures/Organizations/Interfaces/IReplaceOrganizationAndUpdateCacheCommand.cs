@@ -3,12 +3,12 @@ using Bit.Core.Enums;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 
-public interface IOrganizationReplaceCommand
+public interface IReplaceOrganizationAndUpdateCacheCommand
 {
     /// <summary>
     /// Saves the organization and refreshes its cached abilities.
     /// </summary>
     /// <param name="org">The organization to save.</param>
     /// <param name="orgEvent">When provided, an organization event of this type is logged after the save.</param>
-    Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null);
+    Task RunAsync(Organization org, EventType? orgEvent = null);
 }

@@ -19,7 +19,7 @@ namespace Bit.Subscriptions.Organization.Commands.PrivilegedControls;
 internal sealed class AutoscalePrivilegedControlsSeatsCommand(
     IPrivilegedControlsSeatChangeSetFactory seatChangeSetFactory,
     IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
-    IOrganizationReplaceCommand organizationReplaceCommand,
+    IReplaceOrganizationAndUpdateCacheCommand replaceOrganizationAndUpdateCacheCommand,
     IOrganizationUserRepository organizationUserRepository,
     IIsOnPrivilegedControlsSalesInitiatedTrialQuery isOnTrialQuery,
     IMailer mailer,
@@ -66,7 +66,7 @@ internal sealed class AutoscalePrivilegedControlsSeatsCommand(
             }
 
             organization.PamSeats = seatsNeeded;
-            await organizationReplaceCommand.ReplaceAndUpdateCacheAsync(organization);
+            await replaceOrganizationAndUpdateCacheCommand.RunAsync(organization);
         }
 
         if (organization.MaxAutoscalePamSeats == seatsNeeded)

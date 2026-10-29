@@ -1,8 +1,10 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.BulkEnablePam;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
+using Bit.Core.Billing.Organizations;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -31,6 +33,9 @@ public class BulkEnablePamCommandTests
 
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(organizationUserIds)
             .Returns(organizationUsers);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, Arg.Any<int>())
+            .Returns(new PrivilegedControlsSeatReservationResult());
 
         var result = await sutProvider.Sut.BulkEnablePamAsync(organization, organizationUserIds);
 
@@ -55,6 +60,9 @@ public class BulkEnablePamCommandTests
 
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(organizationUserIds)
             .Returns([targetUser, alreadyEnabledUser, otherOrgUser]);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, Arg.Any<int>())
+            .Returns(new PrivilegedControlsSeatReservationResult());
 
         var result = await sutProvider.Sut.BulkEnablePamAsync(organization, organizationUserIds);
 
@@ -133,12 +141,12 @@ public class BulkEnablePamCommandTests
             .Returns(organizationUsers);
         sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
             .RunAsync(organization, Arg.Any<int>())
-            .Returns(PrivilegedControlsSeatReservation.SelfHostedShortfall);
+            .Returns(new PrivilegedControlsSeatReservationResult(new CannotAutoscalePrivilegedControlsSeatsOnSelfHostError()));
 
         var result = await sutProvider.Sut.BulkEnablePamAsync(organization, organizationUserIds);
 
         Assert.True(result.IsError);
-        Assert.IsType<CannotAutoscalePamSeatsOnSelfHost>(result.AsError);
+        Assert.IsType<CannotAutoscalePrivilegedControlsSeatsOnSelfHostError>(result.AsError);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .ReplaceManyAsync(default!);
@@ -161,7 +169,7 @@ public class BulkEnablePamCommandTests
             .Returns(organizationUsers);
         sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
             .RunAsync(organization, Arg.Any<int>())
-            .Returns(PrivilegedControlsSeatReservation.Reserved);
+            .Returns(new PrivilegedControlsSeatReservationResult());
 
         var result = await sutProvider.Sut.BulkEnablePamAsync(organization, organizationUserIds);
 
@@ -188,7 +196,7 @@ public class BulkEnablePamCommandTests
             .Returns(organizationUsers);
         sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
             .RunAsync(organization, Arg.Any<int>())
-            .Returns(PrivilegedControlsSeatReservation.Reserved);
+            .Returns(new PrivilegedControlsSeatReservationResult());
 
         var result = await sutProvider.Sut.BulkEnablePamAsync(organization, organizationUserIds);
 
@@ -220,7 +228,7 @@ public class BulkEnablePamCommandTests
             .Returns(organizationUsers);
         sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
             .RunAsync(organization, 3)
-            .Returns(PrivilegedControlsSeatReservation.Reserved);
+            .Returns(new PrivilegedControlsSeatReservationResult());
 
         var result = await sutProvider.Sut.BulkEnablePamAsync(organization, organizationUserIds);
 
@@ -252,12 +260,42 @@ public class BulkEnablePamCommandTests
             .Returns(organizationUsers);
         sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
             .RunAsync(organization, organizationUsers.Count)
-            .Returns(PrivilegedControlsSeatReservation.LimitReached);
+            .Returns(new PrivilegedControlsSeatReservationResult(new PrivilegedControlsSeatLimitReachedError()));
 
         var result = await sutProvider.Sut.BulkEnablePamAsync(organization, organizationUserIds);
 
         Assert.True(result.IsError);
-        Assert.IsType<PrivilegedControlsSeatLimitReached>(result.AsError);
+        Assert.IsType<PrivilegedControlsSeatLimitReachedError>(result.AsError);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceManyAsync(default!);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task BulkEnablePamAsync_ReservationFailsUnexpectedly_ReturnsTheReservationErrorAndSavesNothing(
+        Organization organization, List<Guid> organizationUserIds, List<OrganizationUser> organizationUsers,
+        SutProvider<BulkEnablePamCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        foreach (var organizationUser in organizationUsers)
+        {
+            organizationUser.OrganizationId = organization.Id;
+            organizationUser.AccessPam = false;
+            organizationUser.Status = OrganizationUserStatusType.Confirmed;
+        }
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(organizationUserIds)
+            .Returns(organizationUsers);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, organizationUsers.Count)
+            .Returns(new PrivilegedControlsSeatReservationResult(
+                new PrivilegedControlsSeatReservationUnexpectedError(), new InvalidOperationException("Database down.")));
+
+        var result = await sutProvider.Sut.BulkEnablePamAsync(organization, organizationUserIds);
+
+        Assert.True(result.IsError);
+        Assert.IsType<PrivilegedControlsSeatReservationUnexpectedError>(result.AsError);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .ReplaceManyAsync(default!);
@@ -281,7 +319,7 @@ public class BulkEnablePamCommandTests
             .Returns(organizationUsers);
         sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
             .RunAsync(organization, 0)
-            .Returns(PrivilegedControlsSeatReservation.Reserved);
+            .Returns(new PrivilegedControlsSeatReservationResult());
 
         var result = await sutProvider.Sut.BulkEnablePamAsync(organization, organizationUserIds);
 

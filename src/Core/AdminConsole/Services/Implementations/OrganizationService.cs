@@ -10,8 +10,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Constants;
@@ -61,7 +61,7 @@ public class OrganizationService : IOrganizationService
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand;
     private readonly TimeProvider _timeProvider;
-    private readonly IOrganizationReplaceCommand _organizationReplaceCommand;
+    private readonly IReplaceOrganizationAndUpdateCacheCommand _replaceOrganizationAndUpdateCacheCommand;
     private readonly IReservePrivilegedControlsSeatsCommand _reservePrivilegedControlsSeatsCommand;
     private readonly IRevertPrivilegedControlsSeatsCommand _revertPrivilegedControlsSeatsCommand;
 
@@ -88,7 +88,7 @@ public class OrganizationService : IOrganizationService
         IStripeAdapter stripeAdapter,
         IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
         TimeProvider timeProvider,
-        IOrganizationReplaceCommand organizationReplaceCommand,
+        IReplaceOrganizationAndUpdateCacheCommand replaceOrganizationAndUpdateCacheCommand,
         IReservePrivilegedControlsSeatsCommand reservePrivilegedControlsSeatsCommand,
         IRevertPrivilegedControlsSeatsCommand revertPrivilegedControlsSeatsCommand)
     {
@@ -114,7 +114,7 @@ public class OrganizationService : IOrganizationService
         _stripeAdapter = stripeAdapter;
         _updateOrganizationSubscriptionCommand = updateOrganizationSubscriptionCommand;
         _timeProvider = timeProvider;
-        _organizationReplaceCommand = organizationReplaceCommand;
+        _replaceOrganizationAndUpdateCacheCommand = replaceOrganizationAndUpdateCacheCommand;
         _reservePrivilegedControlsSeatsCommand = reservePrivilegedControlsSeatsCommand;
         _revertPrivilegedControlsSeatsCommand = revertPrivilegedControlsSeatsCommand;
     }
@@ -855,13 +855,14 @@ public class OrganizationService : IOrganizationService
     private async Task ReservePrivilegedControlsSeatsAsync(Organization organization, int membersTakingSeats)
     {
         var reservation = await _reservePrivilegedControlsSeatsCommand.RunAsync(organization, membersTakingSeats);
-        switch (reservation)
+        if (reservation.Success)
         {
-            case PrivilegedControlsSeatReservation.LimitReached:
-                throw new BadRequestException(new PrivilegedControlsSeatLimitReached().Message);
-            case PrivilegedControlsSeatReservation.SelfHostedShortfall:
-                throw new BadRequestException(new CannotAutoscalePamSeatsOnSelfHost().Message);
+            return;
         }
+
+        throw reservation.Error is InternalError
+            ? new InvalidOperationException(reservation.Error.Message, reservation.Exception)
+            : new BadRequestException(reservation.Error.Message);
     }
 
     /// <summary>
@@ -1036,7 +1037,7 @@ public class OrganizationService : IOrganizationService
 
 
     public Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null) =>
-        _organizationReplaceCommand.ReplaceAndUpdateCacheAsync(org, orgEvent);
+        _replaceOrganizationAndUpdateCacheCommand.RunAsync(org, orgEvent);
 
     private async Task<Organization> GetOrgById(Guid id)
     {

@@ -4,7 +4,6 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeats;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -13,6 +12,9 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.Registration;
+using Bit.Core.Billing.Organizations;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
@@ -60,7 +62,8 @@ public class AccountController : Controller
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly IRegisterUserCommand _registerUserCommand;
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
-    private readonly IReservePrivilegedControlsSeatForJoiningMemberCommand _reservePrivilegedControlsSeatForJoiningMemberCommand;
+    private readonly IReservePrivilegedControlsSeatsCommand _reservePrivilegedControlsSeatsCommand;
+    private readonly ISendPrivilegedControlsSeatNeededEmailCommand _sendPrivilegedControlsSeatNeededEmailCommand;
 
     public AccountController(
         IAuthenticationSchemeProvider schemeProvider,
@@ -83,7 +86,8 @@ public class AccountController : Controller
         IOrganizationDomainRepository organizationDomainRepository,
         IRegisterUserCommand registerUserCommand,
         ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
-        IReservePrivilegedControlsSeatForJoiningMemberCommand reservePrivilegedControlsSeatForJoiningMemberCommand)
+        IReservePrivilegedControlsSeatsCommand reservePrivilegedControlsSeatsCommand,
+        ISendPrivilegedControlsSeatNeededEmailCommand sendPrivilegedControlsSeatNeededEmailCommand)
     {
         _schemeProvider = schemeProvider;
         _clientStore = clientStore;
@@ -105,7 +109,8 @@ public class AccountController : Controller
         _organizationDomainRepository = organizationDomainRepository;
         _registerUserCommand = registerUserCommand;
         _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
-        _reservePrivilegedControlsSeatForJoiningMemberCommand = reservePrivilegedControlsSeatForJoiningMemberCommand;
+        _reservePrivilegedControlsSeatsCommand = reservePrivilegedControlsSeatsCommand;
+        _sendPrivilegedControlsSeatNeededEmailCommand = sendPrivilegedControlsSeatNeededEmailCommand;
     }
 
     [HttpGet]
@@ -697,7 +702,7 @@ public class AccountController : Controller
         // won't complete. Staged rows aren't seat-counted; a Staged→Invited promotion
         // consumes a seat and must gate here alongside the fresh-JIT case.
         var willPromoteStagedOrgUser = possibleOrgUser?.Status == OrganizationUserStatusType.Staged;
-        var privilegedControlsAccess = JoiningMemberPrivilegedControlsAccess.Kept;
+        var pamSeatReservation = new PrivilegedControlsSeatReservationResult();
 
         if (possibleOrgUser == null || willPromoteStagedOrgUser)
         {
@@ -705,8 +710,12 @@ public class AccountController : Controller
 
             if (willPromoteStagedOrgUser)
             {
-                privilegedControlsAccess =
-                    await _reservePrivilegedControlsSeatForJoiningMemberCommand.RunAsync(organization, possibleOrgUser!);
+                pamSeatReservation = await _reservePrivilegedControlsSeatsCommand.RunAsync(
+                    organization, possibleOrgUser!.AccessPam ? 1 : 0);
+                if (!pamSeatReservation.Success)
+                {
+                    possibleOrgUser.AccessPam = false;
+                }
             }
         }
 
@@ -784,8 +793,8 @@ public class AccountController : Controller
             if (possibleOrgUser.Status == OrganizationUserStatusType.Staged)
             {
                 // The member seat and the Privileged Controls seat were both reserved up-front before user
-                // creation, so it is safe to consume them here. The Privileged Controls step may have cleared
-                // AccessPam on this instance, which the ReplaceAsync below saves.
+                // creation, so it is safe to consume them here. AccessPam may have been cleared on this instance
+                // when no Privileged Controls seat was available, which the ReplaceAsync below saves.
                 possibleOrgUser.Status = OrganizationUserStatusType.Invited;
             }
 
@@ -793,9 +802,9 @@ public class AccountController : Controller
             possibleOrgUser.RevisionDate = DateTime.UtcNow;
             await _organizationUserRepository.ReplaceAsync(possibleOrgUser);
 
-            if (privilegedControlsAccess == JoiningMemberPrivilegedControlsAccess.RemovedAtSeatLimit)
+            if (pamSeatReservation.Error is PrivilegedControlsSeatLimitReachedError)
             {
-                await _reservePrivilegedControlsSeatForJoiningMemberCommand.NotifyOwnersAsync(
+                await _sendPrivilegedControlsSeatNeededEmailCommand.RunAsync(
                     organization, possibleOrgUser.Email ?? newUser.Email);
             }
         }
@@ -872,8 +881,12 @@ public class AccountController : Controller
         var previousRevisionDate = orgUser.RevisionDate;
         var previousAccessPam = orgUser.AccessPam;
 
-        var privilegedControlsAccess =
-            await _reservePrivilegedControlsSeatForJoiningMemberCommand.RunAsync(organization, orgUser);
+        var pamSeatReservation =
+            await _reservePrivilegedControlsSeatsCommand.RunAsync(organization, orgUser.AccessPam ? 1 : 0);
+        if (!pamSeatReservation.Success)
+        {
+            orgUser.AccessPam = false;
+        }
 
         orgUser.Status = OrganizationUserStatusType.Invited;
         orgUser.RevisionDate = DateTime.UtcNow;
@@ -902,9 +915,9 @@ public class AccountController : Controller
             throw;
         }
 
-        if (privilegedControlsAccess == JoiningMemberPrivilegedControlsAccess.RemovedAtSeatLimit)
+        if (pamSeatReservation.Error is PrivilegedControlsSeatLimitReachedError)
         {
-            await _reservePrivilegedControlsSeatForJoiningMemberCommand.NotifyOwnersAsync(organization, orgUser.Email!);
+            await _sendPrivilegedControlsSeatNeededEmailCommand.RunAsync(organization, orgUser.Email!);
         }
     }
 

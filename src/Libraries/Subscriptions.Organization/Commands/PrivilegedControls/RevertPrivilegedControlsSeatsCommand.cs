@@ -11,7 +11,7 @@ namespace Bit.Subscriptions.Organization.Commands.PrivilegedControls;
 internal sealed class RevertPrivilegedControlsSeatsCommand(
     IPrivilegedControlsSeatChangeSetFactory seatChangeSetFactory,
     IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
-    IOrganizationReplaceCommand organizationReplaceCommand,
+    IReplaceOrganizationAndUpdateCacheCommand replaceOrganizationAndUpdateCacheCommand,
     IIsOnPrivilegedControlsSalesInitiatedTrialQuery isOnTrialQuery,
     IBitwardenEnvironment environment) : IRevertPrivilegedControlsSeatsCommand
 {
@@ -34,6 +34,6 @@ internal sealed class RevertPrivilegedControlsSeatsCommand(
         }
 
         organization.PamSeats = seats;
-        await organizationReplaceCommand.ReplaceAndUpdateCacheAsync(organization);
+        await replaceOrganizationAndUpdateCacheCommand.RunAsync(organization);
     }
 }
