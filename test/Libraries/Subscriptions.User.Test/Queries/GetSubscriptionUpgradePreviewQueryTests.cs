@@ -31,7 +31,7 @@ public class GetSubscriptionUpgradePreviewQueryTests
     private readonly GetSubscriptionUpgradePreviewQuery _sut;
 
     public GetSubscriptionUpgradePreviewQueryTests() =>
-        _sut = new GetSubscriptionUpgradePreviewQuery(_logger, _pricingClient, _stripeAdapter, _invoicePreviewService);
+        _sut = new GetSubscriptionUpgradePreviewQuery(_logger, _pricingClient, _stripeAdapter, _invoicePreviewService, TimeProvider.System);
 
     [Theory]
     [InlineData(ProductTierType.Free)]

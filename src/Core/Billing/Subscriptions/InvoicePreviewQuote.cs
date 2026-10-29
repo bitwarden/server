@@ -14,8 +14,8 @@ public static class InvoicePreviewQuote
     /// The current time (the test clock's frozen time when present), in UTC, truncated to whole seconds.
     /// Stripe stores proration dates as unix seconds, so the value returned to the client must match what Stripe used exactly.
     /// </summary>
-    public static DateTime GetProrationDate(Subscription subscription) =>
-        Truncate(GetNow(subscription));
+    public static DateTime GetProrationDate(Subscription subscription, TimeProvider timeProvider) =>
+        Truncate(GetNow(subscription, timeProvider));
 
     /// <summary>
     /// Throws <see cref="InvoicePreviewExpiredException"/> if <paramref name="prorationDate"/> is in the future,
@@ -23,7 +23,7 @@ public static class InvoicePreviewQuote
     /// Returns the date normalized to UTC; pass that value (not the input) to Stripe so the instant that was
     /// checked is the instant that is sent.
     /// </summary>
-    public static DateTime EnsureValid(DateTime prorationDate, Subscription subscription)
+    public static DateTime EnsureValid(DateTime prorationDate, Subscription subscription, TimeProvider timeProvider)
     {
         var time = prorationDate.Kind switch
         {
@@ -32,7 +32,7 @@ public static class InvoicePreviewQuote
             _ => prorationDate
         };
 
-        var now = GetNow(subscription);
+        var now = GetNow(subscription, timeProvider);
 
         if (time > now || now - time > ValidFor)
         {
@@ -49,8 +49,8 @@ public static class InvoicePreviewQuote
         return time;
     }
 
-    private static DateTime GetNow(Subscription subscription) =>
-        subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+    private static DateTime GetNow(Subscription subscription, TimeProvider timeProvider) =>
+        subscription.TestClock?.FrozenTime ?? timeProvider.GetUtcNow().UtcDateTime;
 
     private static DateTime Truncate(DateTime value) =>
         new(value.Ticks - value.Ticks % TimeSpan.TicksPerSecond, DateTimeKind.Utc);

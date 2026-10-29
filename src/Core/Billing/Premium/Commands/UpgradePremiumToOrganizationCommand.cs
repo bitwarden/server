@@ -54,7 +54,8 @@ public class UpgradePremiumToOrganizationCommand(
     IGetPaymentMethodQuery getPaymentMethodQuery,
     IOrganizationAbilityCacheService organizationAbilityCacheService,
     IPushNotificationService pushNotificationService,
-    ITaxService taxService)
+    ITaxService taxService,
+    TimeProvider timeProvider)
     : BaseBillingCommand<UpgradePremiumToOrganizationCommand>(logger), IUpgradePremiumToOrganizationCommand
 {
     private readonly ILogger<UpgradePremiumToOrganizationCommand> _logger = logger;
@@ -86,7 +87,7 @@ public class UpgradePremiumToOrganizationCommand(
         var prorationDate = upgrade.ProrationDate;
         if (prorationDate.HasValue)
         {
-            prorationDate = InvoicePreviewQuote.EnsureValid(prorationDate.Value, currentSubscription);
+            prorationDate = InvoicePreviewQuote.EnsureValid(prorationDate.Value, currentSubscription, timeProvider);
         }
 
         // Fetch all premium plans to find which specific plan the user is on

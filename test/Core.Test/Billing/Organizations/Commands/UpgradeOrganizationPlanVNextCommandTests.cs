@@ -12,6 +12,7 @@ using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Stripe;
@@ -41,7 +42,8 @@ public class UpgradeOrganizationPlanVNextCommandTests
             _pricingClient,
             _priceIncreaseScheduler,
             _stripeAdapter,
-            _updateOrganizationSubscriptionCommand);
+            _updateOrganizationSubscriptionCommand,
+            new FakeTimeProvider());
     }
 
     [Fact]

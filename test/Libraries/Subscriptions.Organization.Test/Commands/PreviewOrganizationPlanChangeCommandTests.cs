@@ -9,6 +9,7 @@ using Bit.Invoicing.InvoicePreviews.Models;
 using Bit.Subscriptions.Organization.Commands;
 using Bit.Subscriptions.Organization.Models.Requests;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Stripe;
 using Xunit;
@@ -28,7 +29,7 @@ public class PreviewOrganizationPlanChangeCommandTests
     public PreviewOrganizationPlanChangeCommandTests() =>
         _sut = new PreviewOrganizationPlanChangeCommand(
             NullLogger<PreviewOrganizationPlanChangeCommand>.Instance,
-            _pricingClient, _stripeAdapter, _taxService, _invoicePreviewService);
+            _pricingClient, _stripeAdapter, _taxService, _invoicePreviewService, new FakeTimeProvider());
 
     [Fact]
     public async Task Run_PaidOrganization_SwapsEveryLineByIdProratesAndTaxesFromAddress()

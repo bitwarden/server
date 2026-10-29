@@ -41,7 +41,8 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter,
     ITaxService taxService,
-    IInvoicePreviewService invoicePreviewService) : IPreviewOrganizationPlanChangeCommand
+    IInvoicePreviewService invoicePreviewService,
+    TimeProvider timeProvider) : IPreviewOrganizationPlanChangeCommand
 {
     private const string InvalidSubscriptionMessage =
         "Your organization's subscription is in an invalid state. Please contact support for assistance.";
@@ -160,7 +161,7 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
             .Select(change => ToPreviewItem(change, itemsByPriceId, organization))
             .ToList();
 
-        var prorationDate = InvoicePreviewQuote.GetProrationDate(subscription);
+        var prorationDate = InvoicePreviewQuote.GetProrationDate(subscription, timeProvider);
 
         var subscriptionDetails = new InvoiceSubscriptionDetailsOptions
         {

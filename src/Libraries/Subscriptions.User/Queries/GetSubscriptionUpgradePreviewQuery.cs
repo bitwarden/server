@@ -22,7 +22,8 @@ internal sealed class GetSubscriptionUpgradePreviewQuery(
     ILogger<GetSubscriptionUpgradePreviewQuery> logger,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter,
-    IInvoicePreviewService invoicePreviewService) : IGetSubscriptionUpgradePreviewQuery
+    IInvoicePreviewService invoicePreviewService,
+    TimeProvider timeProvider) : IGetSubscriptionUpgradePreviewQuery
 {
     private const string InvalidSubscriptionMessage =
         "Subscription is in an invalid state. Please contact support for assistance.";
@@ -75,7 +76,7 @@ internal sealed class GetSubscriptionUpgradePreviewQuery(
             Quantity = 1
         });
 
-        var prorationDate = InvoicePreviewQuote.GetProrationDate(subscription);
+        var prorationDate = InvoicePreviewQuote.GetProrationDate(subscription, timeProvider);
 
         var options = new InvoiceCreatePreviewOptions
         {

@@ -56,7 +56,8 @@ public class UpgradeOrganizationPlanVNextCommand(
     IPricingClient pricingClient,
     IPriceIncreaseScheduler priceIncreaseScheduler,
     IStripeAdapter stripeAdapter,
-    IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand) : BaseBillingCommand<UpgradeOrganizationPlanVNextCommand>(logger), IUpgradeOrganizationPlanVNextCommand
+    IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
+    TimeProvider timeProvider) : BaseBillingCommand<UpgradeOrganizationPlanVNextCommand>(logger), IUpgradeOrganizationPlanVNextCommand
 {
     private readonly ILogger<UpgradeOrganizationPlanVNextCommand> _logger = logger;
 
@@ -129,7 +130,7 @@ public class UpgradeOrganizationPlanVNextCommand(
                 return new BadRequest("We couldn't find your subscription.");
             }
 
-            prorationDate = InvoicePreviewQuote.EnsureValid(prorationDate.Value, subscription);
+            prorationDate = InvoicePreviewQuote.EnsureValid(prorationDate.Value, subscription, timeProvider);
         }
 
         await priceIncreaseScheduler.Release(organization.GatewayCustomerId, organization.GatewaySubscriptionId!, organization.Id);

@@ -20,6 +20,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Stripe;
 using Stripe.TestHelpers;
@@ -186,7 +187,8 @@ public class UpgradePremiumToOrganizationCommandTests
             _getPaymentMethodQuery,
             _organizationAbilityCacheService,
             _pushNotificationService,
-            _taxService);
+            _taxService,
+            new FakeTimeProvider());
     }
 
     private static Core.Billing.Payment.Models.BillingAddress CreateTestBillingAddress() =>
