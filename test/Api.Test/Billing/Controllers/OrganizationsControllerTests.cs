@@ -798,79 +798,17 @@ public class OrganizationsControllerTests : IDisposable
     }
 
     [Theory, AutoData]
-    public async Task GetSubscription_PamOnWithOrganizationMinimum_ReturnsOrganizationMinimum(
+    public async Task GetSubscription_SelfHosted_PamOn_DoesNotReadPlan(
         Guid organizationId,
         Organization organization)
     {
         organization.UsePam = true;
-        organization.PamSeatMinimum = 4;
-        var plan = new EnterprisePlan(isAnnual: true);
-        ArrangeCloudSubscription(organizationId, organization, plan, PurchasableReferences.PrivilegedControlsSeat);
-
-        var response = await _sut.GetSubscription(organizationId);
-
-        Assert.Equal(4, response.PamSeatMinimum);
-    }
-
-    [Theory, AutoData]
-    public async Task GetSubscription_PamOnWithoutOrganizationMinimum_ReturnsPlanDefaultMinimum(
-        Guid organizationId,
-        Organization organization)
-    {
-        organization.UsePam = true;
-        organization.PamSeatMinimum = null;
-        var plan = new EnterprisePlan(isAnnual: true);
-        ArrangeCloudSubscription(organizationId, organization, plan, PurchasableReferences.PrivilegedControlsSeat);
-
-        var response = await _sut.GetSubscription(organizationId);
-
-        Assert.Equal(10, response.PamSeatMinimum);
-    }
-
-    [Theory, AutoData]
-    public async Task GetSubscription_PamOff_PamSeatMinimumIsNull(
-        Guid organizationId,
-        Organization organization)
-    {
-        organization.UsePam = false;
-        organization.PamSeatMinimum = 4;
-        var plan = new EnterprisePlan(isAnnual: true);
-        ArrangeCloudSubscription(organizationId, organization, plan, PurchasableReferences.PrivilegedControlsSeat);
-
-        var response = await _sut.GetSubscription(organizationId);
-
-        Assert.Null(response.PamSeatMinimum);
-    }
-
-    [Theory, AutoData]
-    public async Task GetSubscription_PamOnPlanWithoutPrivilegedControls_PamSeatMinimumIsNull(
-        Guid organizationId,
-        Organization organization)
-    {
-        organization.UsePam = true;
-        organization.PamSeatMinimum = 4;
-        var plan = new TeamsPlan(true);
-        ArrangeCloudSubscription(organizationId, organization, plan, PurchasableReferences.PasswordManagerSeat);
-
-        var response = await _sut.GetSubscription(organizationId);
-
-        Assert.Null(response.PamSeatMinimum);
-    }
-
-    [Theory, AutoData]
-    public async Task GetSubscription_SelfHosted_PamSeatMinimumIsNull(
-        Guid organizationId,
-        Organization organization)
-    {
-        organization.UsePam = true;
-        organization.PamSeatMinimum = 4;
         _globalSettings.SelfHosted = true;
         _currentContext.ViewSubscription(organizationId).Returns(true);
         _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
 
         var response = await _sut.GetSubscription(organizationId);
 
-        Assert.Null(response.PamSeatMinimum);
         await _pricingClient.DidNotReceiveWithAnyArgs().GetPlanOrThrow(default);
     }
 
@@ -891,12 +829,11 @@ public class OrganizationsControllerTests : IDisposable
     }
 
     [Theory, AutoData]
-    public async Task GetSubscription_PamBillingFlagOff_PlanHidesPrivilegedControlsPricingButSeatMinimumStays(
+    public async Task GetSubscription_PamBillingFlagOff_PlanHidesPrivilegedControlsPricing(
         Guid organizationId,
         Organization organization)
     {
         organization.UsePam = true;
-        organization.PamSeatMinimum = 4;
         var plan = new EnterprisePlan(isAnnual: true);
         ArrangeCloudSubscription(organizationId, organization, plan, PurchasableReferences.PrivilegedControlsSeat);
         _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(false);
@@ -904,33 +841,14 @@ public class OrganizationsControllerTests : IDisposable
         var response = await _sut.GetSubscription(organizationId);
 
         Assert.Null(response.Plan.PrivilegedControls);
-        Assert.Equal(4, response.PamSeatMinimum);
     }
 
     [Theory, AutoData]
-    public async Task GetSubscription_HideSensitiveData_PamSeatMinimumStillPopulated(
+    public async Task GetSubscription_NoGatewaySubscription_PamOn_DoesNotFetchSubscription(
         Guid organizationId,
         Organization organization)
     {
         organization.UsePam = true;
-        organization.PamSeatMinimum = 4;
-        var plan = new EnterprisePlan(isAnnual: true);
-        ArrangeCloudSubscription(organizationId, organization, plan, PurchasableReferences.PrivilegedControlsSeat);
-        _currentContext.EditSubscription(organizationId).Returns(false);
-
-        var response = await _sut.GetSubscription(organizationId);
-
-        Assert.Null(response.BillingEmail);
-        Assert.Equal(4, response.PamSeatMinimum);
-    }
-
-    [Theory, AutoData]
-    public async Task GetSubscription_NoGatewaySubscription_PamOn_ReturnsPamSeatMinimum(
-        Guid organizationId,
-        Organization organization)
-    {
-        organization.UsePam = true;
-        organization.PamSeatMinimum = null;
         organization.GatewaySubscriptionId = null;
         var plan = new EnterprisePlan(isAnnual: true);
 
@@ -940,7 +858,7 @@ public class OrganizationsControllerTests : IDisposable
 
         var response = await _sut.GetSubscription(organizationId);
 
-        Assert.Equal(10, response.PamSeatMinimum);
+        Assert.NotNull(response);
         await _paymentService.DidNotReceiveWithAnyArgs().GetSubscriptionAsync(default);
     }
 

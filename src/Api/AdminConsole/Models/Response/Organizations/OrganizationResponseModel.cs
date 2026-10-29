@@ -151,7 +151,6 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
         Plan plan,
         int? occupiedPamSeats = null,
         bool? isOnPamSalesInitiatedTrial = null,
-        int? pamSeatMinimum = null,
         bool includePrivilegedControlsPlanFeatures = false)
         : base(organization, plan, "organizationSubscription", includePrivilegedControlsPlanFeatures)
     {
@@ -163,7 +162,6 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
         ExemptFromBillingAutomation = organization.ExemptFromBillingAutomation;
         OccupiedPamSeats = occupiedPamSeats;
         IsOnPamSalesInitiatedTrial = isOnPamSalesInitiatedTrial;
-        PamSeatMinimum = pamSeatMinimum;
     }
 
     public OrganizationSubscriptionResponseModel(
@@ -174,9 +172,8 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
         PendingAnnualUpgrade pendingAnnualUpgrade = null,
         int? occupiedPamSeats = null,
         bool? isOnPamSalesInitiatedTrial = null,
-        int? pamSeatMinimum = null,
         bool includePrivilegedControlsPlanFeatures = false)
-        : this(organization, plan, occupiedPamSeats, isOnPamSalesInitiatedTrial, pamSeatMinimum, includePrivilegedControlsPlanFeatures)
+        : this(organization, plan, occupiedPamSeats, isOnPamSalesInitiatedTrial, includePrivilegedControlsPlanFeatures)
     {
         Subscription = subscription.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
         PendingAnnualUpgrade = pendingAnnualUpgrade != null
@@ -269,12 +266,6 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
     /// Privileged Controls line. Null on self-hosted.
     /// </summary>
     public bool? IsOnPamSalesInitiatedTrial { get; set; }
-
-    /// <summary>
-    /// The organization's Privileged Controls seat minimum, or the plan default. Null on self-hosted, when
-    /// Privileged Controls is off, and when the plan has no Privileged Controls.
-    /// </summary>
-    public int? PamSeatMinimum { get; set; }
 
     /// <summary>
     /// Date when a self-hosted organization's subscription expires, without any grace period.

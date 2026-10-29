@@ -140,6 +140,7 @@ public static partial class FeatureFlagKeys
     public const string PM35153CollectionSdkDecryption = "pm-35153-collection-sdk-decryption";
     public const string PM43375CollectionsDecryptListFailures = "pm-43375-collections-decrypt-list-failures";
     public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
+    public const string MembersTableV2 = "pm-37463-members-table-v2";
     public const string GroupsTableV2 = "pm-43419-groups-table-v2";
 
     /* Architecture */
@@ -307,6 +308,11 @@ public static partial class FeatureFlagKeys
     /// Kill switch for the PAM SQL audit trail. Turning it on stops the writes and withdraws the read endpoint.
     /// </summary>
     public const string PamDisableSqlAuditLogging = "pm-42480-disable-pam-sql-audit-logging";
+
+    /// <summary>
+    /// Kill switch for the partial-cipher write guard. Turning it on lets partial-shaped cipher writes through again.
+    /// </summary>
+    public const string PamDisablePartialCipherWriteGuard = "pam-317-disable-partial-cipher-write-guard";
 
     /* VFO */
     public const string VFO1Foundation = "vfo1-foundation";
