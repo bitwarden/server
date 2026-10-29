@@ -41,6 +41,7 @@ public class PreviewOrganizationRestartCommandTests
         _subscriberService.GetSubscription(organization).Returns(subscription);
         _getOrganizationRestartQuery.Run(organization, subscription).Returns(
             Restart(PlanType.TeamsAnnually, ProductTierType.Teams, true, ("price_seat", 5), ("price_storage", 2)));
+        ArrangeCustomer(organization);
         var options = CaptureOptions();
 
         await _sut.Run(organization, Request());
@@ -67,6 +68,7 @@ public class PreviewOrganizationRestartCommandTests
         _subscriberService.GetSubscription(organization).Returns(subscription);
         _getOrganizationRestartQuery.Run(organization, subscription).Returns(
             Restart(PlanType.TeamsAnnually, ProductTierType.Teams, true, ("price_seat", 5), ("price_storage", 2)));
+        ArrangeCustomer(organization);
         var options = CaptureOptions();
 
         await _sut.Run(organization, Request());
@@ -79,15 +81,102 @@ public class PreviewOrganizationRestartCommandTests
     }
 
     [Fact]
-    public async Task Run_NoTaxIdInRequest_LeavesTaxIdsNull()
+    public async Task Run_BusinessClearedTaxIdOnFile_PreviewsWithoutCustomer()
     {
         var organization = ArrangeCanceledOrganization();
+        ArrangeCustomer(organization, taxIdCount: 1);
+        var options = CaptureOptions();
+
+        await _sut.Run(organization, Request(country: "DE", postalCode: "10115"));
+
+        Assert.NotNull(options.Value);
+        Assert.Null(options.Value!.Customer);
+        Assert.Null(options.Value.CustomerDetails.TaxIds);
+        Assert.Equal("DE", options.Value.CustomerDetails.Address.Country);
+        Assert.Equal("10115", options.Value.CustomerDetails.Address.PostalCode);
+    }
+
+    [Fact]
+    public async Task Run_BusinessClearedTaxIdOnFile_CopiesTaxExempt()
+    {
+        var organization = ArrangeCanceledOrganization();
+        ArrangeCustomer(organization, taxIdCount: 1, taxExempt: "reverse");
         var options = CaptureOptions();
 
         await _sut.Run(organization, Request());
 
         Assert.NotNull(options.Value);
-        Assert.Null(options.Value!.CustomerDetails.TaxIds);
+        Assert.Equal("reverse", options.Value!.CustomerDetails.TaxExempt);
+    }
+
+    [Fact]
+    public async Task Run_BusinessClearedTaxIdOnFile_CopiesCustomerDiscount()
+    {
+        var organization = ArrangeCanceledOrganization();
+        ArrangeCustomer(organization, taxIdCount: 1, couponId: "coupon_10");
+        var options = CaptureOptions();
+
+        await _sut.Run(organization, Request());
+
+        Assert.NotNull(options.Value);
+        Assert.Equal("coupon_10", Assert.Single(options.Value!.Discounts).Coupon);
+    }
+
+    [Fact]
+    public async Task Run_BusinessClearedTaxIdOnFile_NoCustomerDiscount_SendsNoDiscounts()
+    {
+        var organization = ArrangeCanceledOrganization();
+        ArrangeCustomer(organization, taxIdCount: 1);
+        var options = CaptureOptions();
+
+        await _sut.Run(organization, Request());
+
+        Assert.NotNull(options.Value);
+        Assert.Null(options.Value!.Discounts);
+    }
+
+    [Fact]
+    public async Task Run_BusinessNoTaxIdAnywhere_KeepsCustomer()
+    {
+        var organization = ArrangeCanceledOrganization();
+        ArrangeCustomer(organization, taxIdCount: 0);
+        var options = CaptureOptions();
+
+        await _sut.Run(organization, Request());
+
+        Assert.NotNull(options.Value);
+        Assert.Equal("cus_1", options.Value!.Customer);
+        Assert.Null(options.Value.CustomerDetails.TaxIds);
+    }
+
+    [Fact]
+    public async Task Run_BusinessCustomerTaxIdsNull_KeepsCustomer()
+    {
+        var organization = ArrangeCanceledOrganization();
+        _subscriberService.GetCustomerOrThrow(organization, Arg.Any<CustomerGetOptions>())
+            .Returns(new Customer { TaxIds = null });
+        var options = CaptureOptions();
+
+        await _sut.Run(organization, Request());
+
+        Assert.NotNull(options.Value);
+        Assert.Equal("cus_1", options.Value!.Customer);
+    }
+
+    [Fact]
+    public async Task Run_BusinessTaxIdInRequestWithOneOnFile_KeepsCustomerAndSendsRequestTaxId()
+    {
+        var organization = ArrangeCanceledOrganization();
+        ArrangeCustomer(organization, taxIdCount: 1);
+        _taxService.GetStripeTaxCode("DE", "DE123").Returns("eu_vat");
+        var options = CaptureOptions();
+
+        await _sut.Run(organization, Request(country: "DE", postalCode: "10115", taxId: new TaxIdSelection("eu_vat", "DE123")));
+
+        Assert.NotNull(options.Value);
+        Assert.Equal("cus_1", options.Value!.Customer);
+        var taxId = Assert.Single(options.Value.CustomerDetails.TaxIds);
+        Assert.Equal("DE123", taxId.Value);
     }
 
     [Fact]
@@ -121,6 +210,21 @@ public class PreviewOrganizationRestartCommandTests
         Assert.NotNull(options.Value);
         Assert.Equal("cus_1", options.Value!.Customer);
         Assert.Null(options.Value.CustomerDetails.TaxIds);
+    }
+
+    [Fact]
+    public async Task Run_Families_DoesNotFetchCustomer()
+    {
+        var organization = new OrganizationEntity { Id = Guid.NewGuid() };
+        var subscription = new Subscription { Status = StripeConstants.SubscriptionStatus.Canceled, CustomerId = "cus_1" };
+        _subscriberService.GetSubscription(organization).Returns(subscription);
+        _getOrganizationRestartQuery.Run(organization, subscription).Returns(
+            Restart(PlanType.FamiliesAnnually, ProductTierType.Families, true, ("price_seat", 1)));
+        CaptureOptions();
+
+        await _sut.Run(organization, Request());
+
+        await _subscriberService.DidNotReceiveWithAnyArgs().GetCustomerOrThrow(default!, default);
     }
 
     [Theory]
@@ -167,6 +271,7 @@ public class PreviewOrganizationRestartCommandTests
         _subscriberService.GetSubscription(organization).Returns(subscription);
         _getOrganizationRestartQuery.Run(organization, subscription)
             .Returns(Restart(planType, productTier, isAnnual, ("price_seat", 1)));
+        ArrangeCustomer(organization);
         CaptureOptions();
 
         await _sut.Run(organization, Request());
@@ -240,8 +345,19 @@ public class PreviewOrganizationRestartCommandTests
         _subscriberService.GetSubscription(organization).Returns(subscription);
         _getOrganizationRestartQuery.Run(organization, subscription).Returns(
             Restart(PlanType.TeamsAnnually, ProductTierType.Teams, true, ("price_seat", 5)));
+        ArrangeCustomer(organization);
         return organization;
     }
+
+    private void ArrangeCustomer(
+        OrganizationEntity organization, int taxIdCount = 0, string taxExempt = "none", string? couponId = null, long balance = 0) =>
+        _subscriberService.GetCustomerOrThrow(organization, Arg.Any<CustomerGetOptions>()).Returns(new Customer
+        {
+            TaxIds = new StripeList<TaxId> { Data = Enumerable.Range(0, taxIdCount).Select(_ => new TaxId()).ToList() },
+            TaxExempt = taxExempt,
+            Balance = balance,
+            Discount = couponId is null ? null : new Discount { Source = new DiscountSource { CouponId = couponId } }
+        });
 
     private Captured<InvoiceCreatePreviewOptions> CaptureOptions()
     {

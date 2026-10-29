@@ -65,9 +65,17 @@ internal sealed class PreviewOrganizationRestartCommand(
         // Families restarts keep the tax IDs on file, so the preview uses them and ignores the request's.
         var effectiveTaxId = tier == PlanTierType.Families ? null : requestTaxId;
 
+        // Restarting a business plan replaces the customer's tax IDs with the request's. Stripe falls back to the
+        // customer's on-file tax IDs when none are sent and won't clear them, so to preview without them we leave the
+        // customer off and copy what Stripe would have read from it.
+        var customer = tier != PlanTierType.Families && effectiveTaxId is null
+            ? await subscriberService.GetCustomerOrThrow(organization, new CustomerGetOptions { Expand = ["tax_ids"] })
+            : null;
+        var previewWithoutCustomer = customer?.TaxIds?.Data is { Count: > 0 };
+
         var options = new InvoiceCreatePreviewOptions
         {
-            Customer = canceledSubscription.CustomerId,
+            Customer = previewWithoutCustomer ? null : canceledSubscription.CustomerId,
             SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
             {
                 Items = restart.Items
@@ -80,8 +88,12 @@ internal sealed class PreviewOrganizationRestartCommand(
             {
                 Address = address,
                 TaxIds = BillingAddressResolver.ResolveTaxIds(
-                    taxService, logger, request.BillingAddress.Country!, effectiveTaxId)
-            }
+                    taxService, logger, request.BillingAddress.Country!, effectiveTaxId),
+                TaxExempt = previewWithoutCustomer ? customer!.TaxExempt : null
+            },
+            Discounts = previewWithoutCustomer && customer!.Discount?.Source?.CouponId is { } couponId
+                ? [new InvoiceDiscountOptions { Coupon = couponId }]
+                : null
         };
 
         try
