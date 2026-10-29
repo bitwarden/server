@@ -28,7 +28,7 @@ the services wait for the database and secrets setup to finish before launching.
 | Resource            | Type                      | Purpose                                                                   |
 |---------------------|---------------------------|---------------------------------------------------------------------------|
 | `setup-secrets`     | Executable                | Runs `dev/setup_secrets.ps1` — applies `dev/secrets.json` to all projects |
-| `mssql`             | SQL Server 2022 container | Persistent data volume, port 1433                                         |
+| `mssql`             | SQL Server 2025 container | Persistent data volume, port 1433                                         |
 | `run-db-migrations` | Executable                | Runs `dev/migrate.ps1` against `vault_dev` (or `self_host_dev`)           |
 | `azurite`           | Azure Storage emulator    | Blob :10000 · Queue :10001 · Table :10002 · persistent data volume        |
 | `azurite-setup`     | Executable                | Runs `dev/setup_azurite.ps1` after Azurite is ready                       |
@@ -74,7 +74,7 @@ dotnet user-secrets set "Database:Password" "<your-sa-password>"
 | `ClientsPath`               | `../../clients/apps`               | Path to the `clients` repo's `apps/` directory (see [Git Worktrees](#git-worktrees)) |
 | `WorkingDirectory`          | `../dev`                           | Directory where dev scripts are resolved                                             |
 | `Services:<name>:BasePort`  | see `appsettings.Development.json` | HTTP port for each service; pre-filled to match each service's `launchSettings.json` |
-| `Database:Image`            | `mssql/server:2022-latest`         | Docker image for SQL Server                                                          |
+| `Database:Image`            | `mssql/server:2025-latest`         | Docker image for SQL Server                                                          |
 | `Database:Port`             | `1433`                             | Host port mapped to the SQL Server container                                         |
 | `Database:Password`         | _(empty)_                          | SA password for the SQL Server container                                             |
 | `Database:SelfHostPassword` | _(empty)_                          | SA password used in self-hosted mode                                                 |
