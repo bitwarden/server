@@ -1,4 +1,5 @@
-﻿using Bit.Core.Models.Api;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
+using Bit.Core.Models.Api;
 
 namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
@@ -35,4 +36,17 @@ public class OrganizationInviteLinkSsoResponseModel : ResponseModel
         OrgSsoId = orgSsoId;
         Required = required;
     }
+}
+
+public static class OrganizationInviteLinkStatusExtensions
+{
+    public static OrganizationInviteLinkStatusResponseModel ToResponseModel(this OrganizationInviteLinkStatus status) =>
+        new(
+            status.OrganizationName,
+            status.LinksEnabled,
+            status.SeatsAvailable,
+            status.SupportsConfirmation,
+            status.Sso is null
+                ? null
+                : new OrganizationInviteLinkSsoResponseModel(status.Sso.OrgSsoId, status.Sso.Required));
 }
