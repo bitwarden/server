@@ -10,7 +10,7 @@ namespace Bit.Seeder.Queries;
 
 /// <summary>
 /// Looks up a login or verification code that was generated for the user with the given email. Supports the
-/// email two-factor login code, the user-verification OTP (the code generated during UserVerification for
+/// email two-factor login code, the email two-factor setup code (send-email), the user-verification OTP (the code generated during UserVerification for
 /// users without a master password, e.g. request-otp), and the new device verification code. Which code is
 /// returned is selected by <see cref="Request.CodeType"/>.
 /// </summary>
@@ -34,7 +34,11 @@ public class UserEmailTokenCodeQuery(
     // Keep this in sync with TwoFactorEmailService, which owns this key for the email two-factor login code.
     // Restated rather than referenced, so that reading a code for a test never widens the production API of the
     // code that issues it.
-    private const string EmailTwoFactorCacheKeyFormat = "TwoFactorEmail_LoginCode_{0}_{1}";
+    private const string EmailTwoFactorLoginCacheKeyFormat = "TwoFactorEmail_LoginCode_{0}_{1}";
+
+    // Keep this in sync with TwoFactorEmailService, which issues the setup code (POST /two-factor/send-email)
+    // under the same provider name as the login code but a different purpose.
+    private const string EmailTwoFactorSetupCacheKeyFormat = "TwoFactorEmail_SetupCode_{0}_{1}";
 
     // Keep this in sync with NewDeviceVerificationOtpStore, which owns this key. Restated here rather than
     // referenced, so that reading a code for a test never widens the production API of the code that issues
@@ -43,12 +47,13 @@ public class UserEmailTokenCodeQuery(
     private const string NewDeviceVerificationCacheKeyFormat = "NewDeviceVerification_NewDeviceVerificationCode_{0}_{1}";
 
     /// <summary>
-    /// The kind of code to retrieve. The serialized value is the member name (e.g. "EmailTwoFactor").
+    /// The kind of code to retrieve. The serialized value is the member name.
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum CodeType
     {
         EmailTwoFactor,
+        EmailTwoFactorSetup,
         UserVerification,
         NewDeviceVerification,
     }
@@ -87,7 +92,9 @@ public class UserEmailTokenCodeQuery(
         var cacheKey = request.CodeType switch
         {
             CodeType.EmailTwoFactor => string.Format(
-                CultureInfo.InvariantCulture, EmailTwoFactorCacheKeyFormat, user.Id, user.SecurityStamp),
+                CultureInfo.InvariantCulture, EmailTwoFactorLoginCacheKeyFormat, user.Id, user.SecurityStamp),
+            CodeType.EmailTwoFactorSetup => string.Format(
+                CultureInfo.InvariantCulture, EmailTwoFactorSetupCacheKeyFormat, user.Id, user.SecurityStamp),
             CodeType.UserVerification => string.Format(
                 CultureInfo.InvariantCulture, UserVerificationCacheKeyFormat, user.Id, user.SecurityStamp),
             CodeType.NewDeviceVerification => string.Format(
