@@ -88,9 +88,10 @@ public class InviteStagedOrganizationUsersCommand(
         var pamSeatReservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, membersWithPrivilegedControls);
         if (!pamSeatReservation.Success)
         {
+            // Privileged Controls seats go back first: Password Manager seats can't drop below them.
+            await ReleasePrivilegedControlsSeatsAsync(organization, initialPamSeats);
             await ReleaseSecretsManagerSeatsAsync(organization, secretsManagerSeatsToAdd, initialSecretsManagerSeats);
             await ReleaseSeatsAsync(organization, seatsToAdd);
-            await ReleasePrivilegedControlsSeatsAsync(organization, initialPamSeats);
             return pamSeatReservation.Error!;
         }
 
@@ -100,9 +101,9 @@ public class InviteStagedOrganizationUsersCommand(
         }
         catch
         {
+            await ReleasePrivilegedControlsSeatsAsync(organization, initialPamSeats);
             await ReleaseSecretsManagerSeatsAsync(organization, secretsManagerSeatsToAdd, initialSecretsManagerSeats);
             await ReleaseSeatsAsync(organization, seatsToAdd);
-            await ReleasePrivilegedControlsSeatsAsync(organization, initialPamSeats);
             throw;
         }
 

@@ -994,6 +994,28 @@ public class InviteStagedOrganizationUsersCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task RunAsync_InviteSendFails_RevertsPamSeatsBeforePasswordManagerSeats(
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        var request = Arrange(sutProvider, organization, organizationUsers, performedBy, seats: 10, occupiedSeats: 10);
+        ArrangePrivilegedControls(organization, organizationUsers, membersWithAccess: 2, pamSeats: 5);
+        AutoscalePamSeatsTo(sutProvider, organization, 7);
+        FailInviteSend(sutProvider);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.RunAsync(request));
+
+        // Password Manager seats can't drop below Privileged Controls seats, so those go back first.
+        Received.InOrder(() =>
+        {
+            sutProvider.GetDependency<IRevertPrivilegedControlsSeatsCommand>()
+                .RunAsync(organization, 5);
+            sutProvider.GetDependency<IOrganizationService>()
+                .AdjustSeatsAsync(organization.Id, -organizationUsers.Count);
+        });
+    }
+
+    [Theory, BitAutoData]
     public async Task RunAsync_PamRevertFails_StillRethrowsTheSendFailure(
         Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
     {
