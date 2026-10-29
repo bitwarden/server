@@ -120,7 +120,7 @@ public class ConfirmOrganizationInviteLinkCommand(
     private async Task<CommandResult<OrganizationUser>> ConfirmExistingMembershipAsync(
         Organization organization, OrganizationUser existingOrganizationUser, User user, string orgUserKey)
     {
-        var pamSeatReservation = new PrivilegedControlsSeatReservationResult();
+        PrivilegedControlsSeatReservationResult? pamSeatReservation = null;
         if (existingOrganizationUser.Status == OrganizationUserStatusType.Staged)
         {
             var seatReservationError = await ReserveSeatAsync(organization);
@@ -146,7 +146,7 @@ public class ConfirmOrganizationInviteLinkCommand(
 
         await organizationUserRepository.ReplaceAsync(existingOrganizationUser);
 
-        if (pamSeatReservation.Error is PrivilegedControlsSeatLimitReachedError)
+        if (pamSeatReservation?.Error is PrivilegedControlsSeatLimitReachedError)
         {
             await sendPrivilegedControlsSeatNeededEmailCommand.RunAsync(organization, memberEmail);
         }

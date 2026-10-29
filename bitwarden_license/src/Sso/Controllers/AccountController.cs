@@ -702,7 +702,7 @@ public class AccountController : Controller
         // won't complete. Staged rows aren't seat-counted; a Staged→Invited promotion
         // consumes a seat and must gate here alongside the fresh-JIT case.
         var willPromoteStagedOrgUser = possibleOrgUser?.Status == OrganizationUserStatusType.Staged;
-        var pamSeatReservation = new PrivilegedControlsSeatReservationResult();
+        PrivilegedControlsSeatReservationResult? pamSeatReservation = null;
 
         if (possibleOrgUser == null || willPromoteStagedOrgUser)
         {
@@ -802,7 +802,7 @@ public class AccountController : Controller
             possibleOrgUser.RevisionDate = DateTime.UtcNow;
             await _organizationUserRepository.ReplaceAsync(possibleOrgUser);
 
-            if (pamSeatReservation.Error is PrivilegedControlsSeatLimitReachedError)
+            if (pamSeatReservation?.Error is PrivilegedControlsSeatLimitReachedError)
             {
                 await _sendPrivilegedControlsSeatNeededEmailCommand.RunAsync(
                     organization, possibleOrgUser.Email ?? newUser.Email);

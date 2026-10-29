@@ -121,7 +121,7 @@ public class RestoreOrganizationUserCommand(
         await CheckPoliciesBeforeRestoreAsync(organizationUser, userTwoFactorIsEnabled);
 
         var status = organizationUser.GetPriorActiveOrganizationUserStatusType();
-        var scimPamSeatReservation = new PrivilegedControlsSeatReservationResult();
+        PrivilegedControlsSeatReservationResult scimPamSeatReservation = null;
 
         if (organization.UsePam && organizationUser.AccessPam && PrivilegedControlsSeatOccupancy.OccupiesSeat(status))
         {
@@ -149,7 +149,7 @@ public class RestoreOrganizationUserCommand(
                 [organizationUser.Id], timeProvider.GetUtcNow().UtcDateTime);
         }
 
-        if (scimPamSeatReservation.Error is PrivilegedControlsSeatLimitReachedError)
+        if (scimPamSeatReservation?.Error is PrivilegedControlsSeatLimitReachedError)
         {
             var memberEmail = organizationUser.Email
                               ?? (await userRepository.GetByIdAsync(organizationUser.UserId!.Value)).Email;
