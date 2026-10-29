@@ -15,6 +15,12 @@ internal sealed class RemovePrivilegedControlsHandler(
         var organization = await organizationRepository.GetByIdAsync(organizationId)
             ?? throw new NotFoundException();
 
+        // A repeated DELETE after a successful removal is a no-op, not an error.
+        if (!organization.UsePam)
+        {
+            return;
+        }
+
         // The command doesn't detect sales-initiated trials.
         if (await isOnPrivilegedControlsSalesInitiatedTrialQuery.Run(organization))
         {

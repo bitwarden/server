@@ -75,7 +75,7 @@ internal sealed class RemovePrivilegedControlsCommand(
         catch (Exception exception)
         {
             logger.LogError(exception,
-                "Privileged Controls seat line was removed from subscription ({SubscriptionId}) but organization ({OrganizationId}) could not be saved; the organization still shows Privileged Controls on with no seat line, manual reconciliation required",
+                "Privileged Controls seat line was removed from subscription ({SubscriptionId}) but organization ({OrganizationId}) could not be saved or its cache could not be refreshed; check whether the organization still has Privileged Controls on before reconciling",
                 organization.GatewaySubscriptionId, organization.Id);
             throw;
         }

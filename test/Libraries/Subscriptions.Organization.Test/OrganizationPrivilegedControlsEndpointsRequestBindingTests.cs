@@ -35,7 +35,7 @@ public class OrganizationPrivilegedControlsEndpointsRequestBindingTests
     private readonly Guid _organizationId = Guid.NewGuid();
 
     public OrganizationPrivilegedControlsEndpointsRequestBindingTests() =>
-        _organizationRepository.GetByIdAsync(_organizationId).Returns(new OrganizationEntity { Id = _organizationId });
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(new OrganizationEntity { Id = _organizationId, UsePam = true });
 
     [Fact]
     public async Task ChangeSeats_SeatsAndLimit_BindsAndReturnsNoContent()
@@ -125,6 +125,18 @@ public class OrganizationPrivilegedControlsEndpointsRequestBindingTests
         Assert.Equal("no-store", context.Response.Headers.CacheControl.ToString());
         Assert.True(_removeCommand.Called);
         Assert.Equal(_organizationId, _removeCommand.ReceivedOrganization?.Id);
+    }
+
+    [Fact]
+    public async Task Remove_PrivilegedControlsAlreadyOff_ReturnsNoContentWithoutCheckingTrialOrCallingCommand()
+    {
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(new OrganizationEntity { Id = _organizationId, UsePam = false });
+
+        var context = await InvokeRemoveAsync();
+
+        Assert.Equal((int)HttpStatusCode.NoContent, context.Response.StatusCode);
+        Assert.Null(_trialQuery.ReceivedOrganization);
+        Assert.False(_removeCommand.Called);
     }
 
     [Fact]

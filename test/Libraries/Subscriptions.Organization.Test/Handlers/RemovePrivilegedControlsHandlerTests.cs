@@ -34,6 +34,17 @@ public class RemovePrivilegedControlsHandlerTests
     }
 
     [Fact]
+    public async Task HandleAsync_PrivilegedControlsAlreadyOff_ReturnsWithoutCheckingTrialOrCallingCommand()
+    {
+        var organization = ArrangeOrganization(usePam: false);
+
+        await _sut.HandleAsync(organization.Id);
+
+        Assert.Null(_trialQuery.ReceivedOrganization);
+        Assert.False(_command.Called);
+    }
+
+    [Fact]
     public async Task HandleAsync_SalesInitiatedTrial_ThrowsBadRequestWithRepresentativeMessageWithoutCallingCommand()
     {
         var organization = ArrangeOrganization();
@@ -58,9 +69,9 @@ public class RemovePrivilegedControlsHandlerTests
         Assert.Same(organization, _command.ReceivedOrganization);
     }
 
-    private OrganizationEntity ArrangeOrganization()
+    private OrganizationEntity ArrangeOrganization(bool usePam = true)
     {
-        var organization = new OrganizationEntity { Id = Guid.NewGuid() };
+        var organization = new OrganizationEntity { Id = Guid.NewGuid(), UsePam = usePam };
         _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
         return organization;
     }

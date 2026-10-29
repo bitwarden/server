@@ -244,7 +244,8 @@ Stripe prorates the change when it is committed. Success returns 204 and the cli
 ### Privileged Controls removal
 
 `DELETE .../privileged-controls` removes Privileged Controls from the organization's subscription. It takes no body.
-The handler runs in the same order as the seat change: it resolves the organization (404), runs
+The handler resolves the organization (404) and returns 204 without doing anything when Privileged Controls is already
+off, so a repeated call after a successful removal is a no-op rather than an error. Otherwise it runs in the same order as the seat change: it runs
 `IIsOnPrivilegedControlsSalesInitiatedTrialQuery`, and rejects a sales-initiated trial with a 400 ("Work with your
 customer service representative to remove Privileged Controls.") before calling `IRemovePrivilegedControlsCommand`.
 **The removal command does not detect sales-initiated trials either**, so any new caller must run the trial query first.
@@ -261,7 +262,8 @@ trial check costs one extra Stripe read per call, the same as the seat change.
 | Sales-initiated trial, including no subscription id | 400, trial message above |
 | Subscription id no longer in Stripe | 409, logged with the organization and subscription ids |
 | Plan not in the pricing service | 404 (pricing client), the same as the subscription response |
-| Privileged Controls off, or on with no seats and a seat line in Stripe | 400 (command) |
+| Privileged Controls already off | 204, nothing changes |
+| Privileged Controls on with no seats and a seat line in Stripe | 400 (command) |
 | Privileged Controls on for a plan that doesn't support it | 409 (command), logged with the organization id and plan type |
 | Subscription not `trialing`, `active`, or `past_due`, or a Stripe input error | 400 (subscription update) |
 | Subscription schedule with no updatable phase, or another conflict inside the update | 409 (subscription update) |
