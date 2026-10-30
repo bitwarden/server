@@ -42,8 +42,42 @@ public class SsoJitProvisionFinishControllerKeyConnectorTests
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsNull();
 
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.FinishKeyConnectorAsync(model));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.FinishJitProvisionForKeyConnectorAsync(model));
 
+        await sutProvider.GetDependency<ISetKeyConnectorKeyCommand>().DidNotReceiveWithAnyArgs()
+            .SetKeyConnectorKeyForUserAsync(default!, default!, default);
+        await sutProvider.GetDependency<IUserService>().DidNotReceiveWithAnyArgs()
+            .SetKeyConnectorKeyAsync(default!, default!, default!, default);
+    }
+
+    [Theory]
+    [BitAutoData(true, true, false)]
+    [BitAutoData(true, false, true)]
+    [BitAutoData(true, true, true)]
+    [BitAutoData(false, true, false)]
+    [BitAutoData(false, false, true)]
+    [BitAutoData(false, true, true)]
+    public async Task FinishJitProvisionForKeyConnectorAsync_AccountKeysAlreadyInitialized_ThrowsBadRequestException(
+        bool isV2Request, bool hasPublicKey, bool hasPrivateKey,
+        SutProvider<SsoJitProvisionFinishController> sutProvider,
+        User user)
+    {
+        // Arrange
+        user.PublicKey = hasPublicKey ? "existingPublicKey" : null;
+        user.PrivateKey = hasPrivateKey ? "existingPrivateKey" : null;
+        var model = new SsoJitProvisionFinishSetKeyConnectorKeyRequestModel
+        {
+            KeyConnectorKeys = isV2Request ? CreateV2Keys() : CreateV1Keys(),
+            AcceptOrganizationInvite = true
+        };
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+
+        // Act
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.FinishJitProvisionForKeyConnectorAsync(model));
+
+        // Assert
+        Assert.Equal("User account keys are already initialized.", exception.Message);
         await sutProvider.GetDependency<ISetKeyConnectorKeyCommand>().DidNotReceiveWithAnyArgs()
             .SetKeyConnectorKeyForUserAsync(default!, default!, default);
         await sutProvider.GetDependency<IUserService>().DidNotReceiveWithAnyArgs()
@@ -59,6 +93,8 @@ public class SsoJitProvisionFinishControllerKeyConnectorTests
         User user)
     {
         // Arrange
+        user.PublicKey = null;
+        user.PrivateKey = null;
         var keys = CreateV2Keys();
         var model = new SsoJitProvisionFinishSetKeyConnectorKeyRequestModel
         {
@@ -68,7 +104,7 @@ public class SsoJitProvisionFinishControllerKeyConnectorTests
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
 
         // Act
-        await sutProvider.Sut.FinishKeyConnectorAsync(model);
+        await sutProvider.Sut.FinishJitProvisionForKeyConnectorAsync(model);
 
         // Assert
         await sutProvider.GetDependency<ISetKeyConnectorKeyCommand>().Received(1).SetKeyConnectorKeyForUserAsync(
@@ -107,7 +143,7 @@ public class SsoJitProvisionFinishControllerKeyConnectorTests
             .Returns(IdentityResult.Success);
 
         // Act
-        await sutProvider.Sut.FinishKeyConnectorAsync(model);
+        await sutProvider.Sut.FinishJitProvisionForKeyConnectorAsync(model);
 
         // Assert
         await userService.Received(1).SetKeyConnectorKeyAsync(
@@ -148,7 +184,7 @@ public class SsoJitProvisionFinishControllerKeyConnectorTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.FinishKeyConnectorAsync(model));
+            () => sutProvider.Sut.FinishJitProvisionForKeyConnectorAsync(model));
 
         Assert.Equal(1, exception.ModelState!.ErrorCount);
         Assert.Equal("set key connector key failed", exception.ModelState.Root.Errors[0].ErrorMessage);

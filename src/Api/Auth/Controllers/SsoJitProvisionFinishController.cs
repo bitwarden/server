@@ -46,10 +46,7 @@ public class SsoJitProvisionFinishController(
         var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
 
         // TODO: eventually move this into the FinishSsoJitProvisionMasterPasswordCommand
-        if (user.PublicKey != null || user.PrivateKey != null)
-        {
-            throw new BadRequestException("User account keys are already initialized.");
-        }
+        ThrowIfAccountKeysInitialized(user);
 
         // Require AccountKeys so V1 requests (legacy Keys) still route to V1 when the flag is on.
         if (model.AccountKeys != null &&
@@ -134,6 +131,11 @@ public class SsoJitProvisionFinishController(
     {
         var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
 
+        // TODO: move this into SetKeyConnectorKeyCommand once the V1 path is removed with
+        // https://bitwarden.atlassian.net/browse/PM-27328. Until then, the controller is the one place that
+        // covers both V1 and V2.
+        ThrowIfAccountKeysInitialized(user);
+
         var keys = model.KeyConnectorKeys;
         if (keys.IsV2Request())
         {
@@ -156,5 +158,16 @@ public class SsoJitProvisionFinishController(
         }
 
         throw new BadRequestException(ModelState);
+    }
+
+    /// <summary>
+    /// SSO JIT provisioned users have no account keys. Rejects users whose account keys are already set.
+    /// </summary>
+    private static void ThrowIfAccountKeysInitialized(User user)
+    {
+        if (user.PublicKey != null || user.PrivateKey != null)
+        {
+            throw new BadRequestException("User account keys are already initialized.");
+        }
     }
 }
