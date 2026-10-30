@@ -87,7 +87,7 @@ bool isValid = await otpProvider.ValidateTokenWithFailureLimitAsync(token, "User
 
 `ValidateTokenWithFailureLimitAsync` validates like `ValidateTokenAsync`, and also counts failed attempts in the cache entry. A bound value mismatch counts as a failed attempt. When the count reaches `maxFailedAttempts`, the entry is removed. Generating a new token resets the count. Rewriting the entry after a failed attempt keeps the expiry set at generation, so failed attempts do not extend a token's lifetime.
 
-Only calls to `ValidateTokenWithFailureLimitAsync` count. Calls to `ValidateTokenAsync` for the same token do not. The count is read and written back in separate cache operations, so failed attempts made in parallel can read the same count.
+Only calls to `ValidateTokenWithFailureLimitAsync` count. Calls to `ValidateTokenAsync` for the same token do not. The count is read and written back in separate cache operations, so parallel failed attempts can read the same count and get extra guesses. Burst rate limiting on the calling endpoint caps parallel requests, so this race adds very few guesses.
 
 ### Custom Configurations
 
