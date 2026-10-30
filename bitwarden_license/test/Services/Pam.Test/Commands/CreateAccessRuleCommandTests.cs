@@ -17,8 +17,8 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Commands;
 
 /// <summary>
-/// The validation these commands share lives in <see cref="AccessRuleWriteValidator"/> and is covered by
-/// AccessRuleWriteValidatorTests; these tests cover persistence, timestamps, and collection association wiring.
+/// Validation lives in <see cref="AccessRuleWriteValidator"/> and its tests; these cover persistence, timestamps and
+/// collection links.
 /// </summary>
 [SutProviderCustomize]
 public class CreateAccessRuleCommandTests
@@ -133,7 +133,6 @@ public class CreateAccessRuleCommandTests
             && e.AccessRuleId == rule.Id && e.RuleName == "Production database"));
     }
 
-    // A failure writing collection links leaves the attempt without an outcome.
     [Theory, BitAutoData]
     public async Task CreateAsync_CollectionLinkWriteFails_EmitsAttemptButNoOutcome(AccessRule rule)
     {

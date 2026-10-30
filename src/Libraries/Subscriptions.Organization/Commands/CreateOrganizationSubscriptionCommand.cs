@@ -53,7 +53,12 @@ internal sealed class CreateOrganizationSubscriptionCommand(
                 "Privileged Controls cannot be combined with a Secrets Manager standalone trial.");
         }
 
-        var privilegedControlsSeatsMinimum = ResolvePrivilegedControlSeatsMinimum(plan, purchase);
+        if (purchase.PrivilegedControls is not null && !plan.SupportsPrivilegedControls)
+        {
+            throw new BadRequestException("Invalid Privileged Controls plan selected.");
+        }
+
+        var privilegedControlsSeats = purchase.PrivilegedControls?.Seats;
 
         var coupons = await ResolveCouponsAsync(customerSetup, purchase.Owner, purchase.PlanType);
 
@@ -63,7 +68,7 @@ internal sealed class CreateOrganizationSubscriptionCommand(
         try
         {
             subscription = await CreateSubscriptionAsync(organization, customer, purchase, plan, coupons,
-                privilegedControlsSeatsMinimum);
+                privilegedControlsSeats);
         }
         catch (Exception exception)
         {
@@ -75,7 +80,7 @@ internal sealed class CreateOrganizationSubscriptionCommand(
             throw;
         }
 
-        ApplyResultsToOrganization(organization, customer, subscription, privilegedControlsSeatsMinimum);
+        ApplyResultsToOrganization(organization, customer, subscription, privilegedControlsSeats);
 
         return subscription;
     }
@@ -111,24 +116,6 @@ internal sealed class CreateOrganizationSubscriptionCommand(
         }
 
         return discountCoupons;
-    }
-
-    private static int? ResolvePrivilegedControlSeatsMinimum(Plan plan, OrganizationSubscriptionCreation purchase)
-    {
-        if (purchase.PrivilegedControls is null)
-        {
-            return null;
-        }
-
-        if (!plan.SupportsPrivilegedControls)
-        {
-            throw new BadRequestException("Invalid Privileged Controls plan selected.");
-        }
-
-        return purchase.PrivilegedControls.RequestedSeatMinimum is { } minimum &&
-               plan.PrivilegedControls.PromotionalSeatMinimums.Contains(minimum)
-            ? minimum
-            : plan.PrivilegedControls.DefaultSeatMinimum;
     }
 
     private async Task<Customer> CreateCustomerAsync(OrganizationEntity organization, CustomerSetup customerSetup,
@@ -315,10 +302,10 @@ internal sealed class CreateOrganizationSubscriptionCommand(
         OrganizationSubscriptionCreation purchase,
         Plan plan,
         IReadOnlyList<string> coupons,
-        int? privilegedControlsSeatsMinimum)
+        int? privilegedControlsSeats)
     {
         var subscriptionCreateOptions = BuildSubscriptionCreateOptions(organization, customer, purchase, plan,
-            coupons, privilegedControlsSeatsMinimum);
+            coupons, privilegedControlsSeats);
 
         return await stripeAdapter.CreateSubscriptionAsync(subscriptionCreateOptions);
     }
@@ -329,7 +316,7 @@ internal sealed class CreateOrganizationSubscriptionCommand(
         OrganizationSubscriptionCreation purchase,
         Plan plan,
         IReadOnlyList<string> coupons,
-        int? privilegedControlsSeatsMinimum)
+        int? privilegedControlsSeats)
     {
         var passwordManager = purchase.PasswordManager;
 
@@ -379,7 +366,7 @@ internal sealed class CreateOrganizationSubscriptionCommand(
             }
         }
 
-        if (privilegedControlsSeatsMinimum is { } pamSeats)
+        if (privilegedControlsSeats is { } pamSeats)
         {
             subscriptionItemOptionsList.Add(new SubscriptionItemOptions
             {
@@ -443,7 +430,7 @@ internal sealed class CreateOrganizationSubscriptionCommand(
         OrganizationEntity organization,
         Customer customer,
         Subscription subscription,
-        int? privilegedControlsSeatsMinimum)
+        int? privilegedControlsSeats)
     {
         organization.Gateway = GatewayType.Stripe;
         organization.GatewayCustomerId = customer.Id;
@@ -456,12 +443,11 @@ internal sealed class CreateOrganizationSubscriptionCommand(
             organization.ExpirationDate = subscription.GetCurrentPeriodEnd();
         }
 
-        if (privilegedControlsSeatsMinimum is { } pamSeats)
+        if (privilegedControlsSeats is { } pamSeats)
         {
             organization.PamSeats = pamSeats;
             organization.MaxAutoscalePamSeats = null;
             organization.UsePam = true;
-            organization.PamSeatMinimum = pamSeats;
         }
     }
 

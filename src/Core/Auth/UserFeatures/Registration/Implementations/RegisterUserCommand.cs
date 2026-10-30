@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Enums;
@@ -446,7 +447,7 @@ public class RegisterUserCommand : IRegisterUserCommand
     private void ValidateProviderInviteToken(string providerInviteToken, Guid providerUserId, string userEmail)
     {
         if (!CoreHelpers.TokenIsValid("ProviderUserInvite", _providerServiceDataProtector, providerInviteToken, userEmail, providerUserId,
-                _globalSettings.OrganizationInviteExpirationHours))
+                _globalSettings.ProviderInviteExpirationHours))
         {
             throw new BadRequestException("Invalid provider invite token.");
         }

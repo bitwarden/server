@@ -36,8 +36,7 @@ public class GetAccessRequestDetailsQueryTests
         var result = await sutProvider.Sut.GetDetailsAsync(userId, details.Id, _now);
 
         Assert.Same(details, result);
-        // The requester always sees their own request — no collection-manage check, and (unlike decide) no
-        // self-approval block.
+        // The requester always sees their own request; unlike decide, there is no self-approval block.
         await sutProvider.GetDependency<IApproverCollectionAccessQuery>().DidNotReceiveWithAnyArgs()
             .CanManageCollectionAsync(default, default);
     }
@@ -61,15 +60,13 @@ public class GetAccessRequestDetailsQueryTests
     {
         var sutProvider = Setup();
         sutProvider.GetDependency<IAccessRequestRepository>().GetDetailsByIdAsync(details.Id, _now).Returns(details);
-        // userId is neither the requester nor a manager.
 
         // A request the caller can't see is indistinguishable from a missing one, so ids can't be probed.
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetDetailsAsync(userId, details.Id, _now));
     }
 
     /// <summary>
-    /// The read is handed the current time so the produced lease's status can be projected against it, since
-    /// nothing writes AccessLeaseStatus.Expired.
+    /// The produced lease's status is projected against this clock, since nothing writes AccessLeaseStatus.Expired.
     /// </summary>
     [Theory, BitAutoData]
     public async Task GetDetailsAsync_PassesCurrentTimeAsTheProjectionClock(AccessRequestDetails details)

@@ -1,9 +1,8 @@
 ﻿namespace Bit.Services.Pam.Models;
 
 /// <summary>
-/// A request to extend an active lease. Extensions are always auto-approved, subject to the governing rule's
-/// <c>AllowsExtensions</c> / <c>MaxExtensionDurationSeconds</c> settings: the lease's end is pushed out by
-/// <see cref="DurationSeconds"/> in place (no new lease is minted), and a justifying <see cref="Reason"/> is required.
+/// A request to extend an active lease in place by <see cref="DurationSeconds"/>. Extensions are approved
+/// automatically, once per lease, when the governing rule allows them; <see cref="Reason"/> is required.
 /// </summary>
 public sealed class AccessLeaseExtensionSubmission
 {
