@@ -858,6 +858,45 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
         AssertTwoFactorRejected(result);
     }
 
+    [Fact]
+    public async Task DeleteEmail_RemovesLastProvider_RevokesRememberedDevices()
+    {
+        await EnrollUserInEmail();
+        var user = (await _userRepository.GetByEmailAsync(_userEmail))!;
+
+        var deviceRepository = _factory.GetService<IDeviceRepository>();
+        var rememberTokenRepository = _factory.GetService<ITwoFactorRememberTokenRepository>();
+
+        var device = await deviceRepository.CreateAsync(new Device
+        {
+            UserId = user.Id,
+            Name = "chrome-test",
+            Type = DeviceType.ChromeBrowser,
+            Identifier = Guid.NewGuid().ToString(),
+            Active = true,
+            LastActivityDate = DateTime.UtcNow,
+        });
+        await rememberTokenRepository.UpsertAsync(new TwoFactorRememberToken
+        {
+            UserId = user.Id,
+            DeviceId = device.Id,
+            Stamp = "stamp-before-teardown",
+            ExpirationDate = DateTime.UtcNow.AddDays(30),
+        });
+
+        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-email",
+            new { MasterPasswordHash = MasterPasswordHash });
+        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "email");
+
+        var disableResponse = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/email",
+            new TwoFactorEmailDeleteRequestModel { UserVerificationToken = uvToken });
+        Assert.Equal(HttpStatusCode.NoContent, disableResponse.StatusCode);
+
+        var row = await rememberTokenRepository.GetByUserIdDeviceIdAsync(user.Id, device.Id);
+        Assert.NotNull(row);
+        Assert.NotEqual("stamp-before-teardown", row.Stamp);
+    }
+
     // ---------------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------------

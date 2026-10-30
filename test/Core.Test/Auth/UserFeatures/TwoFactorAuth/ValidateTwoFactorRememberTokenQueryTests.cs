@@ -100,7 +100,9 @@ public class ValidateTwoFactorRememberTokenQueryTests
         Assert.False(await sutProvider.Sut.ValidateAsync(user, _deviceIdentifier, _token));
     }
 
-    /// <summary>The account-wide check inherited from the previous design.</summary>
+    /// <summary>
+    /// The account-wide check: rotating the user's security stamp invalidates every remember token they hold.
+    /// </summary>
     [Theory, BitAutoData]
     public async Task ValidateAsync_UserSecurityStampRotated_ReturnsFalse(
         User user, Guid deviceId)
