@@ -86,14 +86,14 @@ public class AccessStatusDerivationTests
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void ComputeLeaseStatus_Revoked_EndedEarlyEndedEarly(bool windowOpen) =>
+    public void ComputeLeaseStatus_Revoked_RecordedFactBeatsTheClock(bool windowOpen) =>
         Assert.Equal(AccessLeaseStatus.Revoked,
             AccessStatusDerivation.ComputeLeaseStatus(AccessLeaseAction.Revoked, windowOpen ? _open : _lapsed, _now));
 
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void ComputeLeaseStatus_Cancelled_EndedEarlyEndedEarly(bool windowOpen) =>
+    public void ComputeLeaseStatus_Cancelled_RecordedFactBeatsTheClock(bool windowOpen) =>
         Assert.Equal(AccessLeaseStatus.Cancelled,
             AccessStatusDerivation.ComputeLeaseStatus(AccessLeaseAction.Cancelled, windowOpen ? _open : _lapsed, _now));
 
