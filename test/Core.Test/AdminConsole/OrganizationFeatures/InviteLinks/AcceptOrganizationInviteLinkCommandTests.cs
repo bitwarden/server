@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
@@ -36,7 +37,13 @@ public class AcceptOrganizationInviteLinkCommandTests
     {
         // Arrange
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        inviteLink.AllowedDomains = "[\"allowed.com\"]";
+        sutProvider.GetDependency<IInviteLinkValidationService>()
+            .ValidateEligibility(
+                inviteLink,
+                Guid.Parse(inviteLink.Code),
+                organization,
+                user)
+            .Returns(new EmailDomainNotAllowed(organization.Name));
 
         var request = new AcceptOrganizationInviteLinkRequest
         {

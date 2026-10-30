@@ -44,7 +44,11 @@ public class ConfirmOrganizationInviteLinkValidator(
             ? null
             : await organizationRepository.GetByIdAsync(existingLink.OrganizationId);
 
-        var eligibilityError = InviteLinkRules.ValidateEligibility(existingLink, request.Code, existingOrganization, user);
+        var eligibilityError = inviteLinkValidationService.ValidateEligibility(
+            existingLink,
+            request.Code,
+            existingOrganization,
+            user);
         if (eligibilityError is not null)
         {
             return ToConfirmValidationError(eligibilityError);
@@ -61,7 +65,7 @@ public class ConfirmOrganizationInviteLinkValidator(
 
         var existingOrganizationUser = await ResolveExistingOrganizationUserAsync(organization, user);
 
-        var membershipStatusError = InviteLinkRules.ValidateConfirmMembershipStatus(organization, existingOrganizationUser);
+        var membershipStatusError = InviteLinkValidationService.ValidateConfirmMembershipStatus(organization, existingOrganizationUser);
         if (membershipStatusError is not null)
         {
             return ToConfirmValidationError(membershipStatusError);

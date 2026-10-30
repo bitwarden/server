@@ -72,7 +72,13 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     {
         // Arrange
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        organization.UseInviteLinks = false;
+        sutProvider.GetDependency<IInviteLinkValidationService>()
+            .ValidateEligibility(
+                inviteLink,
+                Guid.Parse(inviteLink.Code),
+                organization,
+                user)
+            .Returns(new InviteLinkNotAvailable());
 
         // Act
         var result = await sutProvider.Sut.ValidateAsync(BuildRequest(inviteLink, user));

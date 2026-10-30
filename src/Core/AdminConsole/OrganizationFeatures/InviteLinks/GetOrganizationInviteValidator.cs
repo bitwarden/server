@@ -8,13 +8,16 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 /// <summary>
 /// See <see cref="IGetOrganizationInviteValidator"/>.
 /// </summary>
-public class GetOrganizationInviteValidator : IGetOrganizationInviteValidator
+public class GetOrganizationInviteValidator(IInviteLinkValidationService inviteLinkValidationService) : IGetOrganizationInviteValidator
 {
     public ValidationResult<OrganizationInviteLinkValidationRequest> Validate(
         OrganizationInviteLinkValidationRequest request)
     {
-        var eligibilityError = InviteLinkRules.ValidateEligibility(
-            request.ExistingInviteLink, request.Code, request.Organization, request.User);
+        var eligibilityError = inviteLinkValidationService.ValidateEligibility(
+            request.ExistingInviteLink,
+            request.Code,
+            request.Organization,
+            request.User);
         if (eligibilityError is not null)
         {
             return Invalid(request, eligibilityError);
@@ -33,11 +36,11 @@ public class GetOrganizationInviteValidator : IGetOrganizationInviteValidator
     /// The existing membership must allow the step the link leads to: confirming, or accepting.
     /// </summary>
     /// <remarks>
-    /// Must run after <see cref="InviteLinkRules.ValidateEligibility"/>, which guarantees the invite link and
+    /// Must run after <see cref="IInviteLinkValidationService.ValidateEligibility"/>, which guarantees the invite link and
     /// organization exist.
     /// </remarks>
     private static Error? ValidateMembershipStatus(OrganizationInviteLinkValidationRequest request) =>
         request.ExistingInviteLink!.SupportsConfirmation
-            ? InviteLinkRules.ValidateConfirmMembershipStatus(request.Organization!, request.ExistingOrganizationUser)
-            : InviteLinkRules.ValidateAcceptMembershipStatus(request.Organization!, request.ExistingOrganizationUser);
+            ? InviteLinkValidationService.ValidateConfirmMembershipStatus(request.Organization!, request.ExistingOrganizationUser)
+            : InviteLinkValidationService.ValidateAcceptMembershipStatus(request.Organization!, request.ExistingOrganizationUser);
 }
