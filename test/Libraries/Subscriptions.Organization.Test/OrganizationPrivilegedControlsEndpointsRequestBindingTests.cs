@@ -28,12 +28,12 @@ public class OrganizationPrivilegedControlsEndpointsRequestBindingTests
     private readonly Guid _organizationId = Guid.NewGuid();
 
     public OrganizationPrivilegedControlsEndpointsRequestBindingTests() =>
-        _organizationRepository.GetByIdAsync(_organizationId).Returns(new OrganizationEntity { Id = _organizationId });
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(new OrganizationEntity { Id = _organizationId, PamSeats = 10 });
 
     [Fact]
-    public async Task ChangeSeats_SeatsAndLimit_BindsAndReturnsNoContent()
+    public async Task ChangeSeats_AdjustmentAndLimit_BindsAddsToCurrentSeatsAndReturnsNoContent()
     {
-        var context = await InvokeAsync("""{"seats":15,"maxAutoscaleSeats":20}""");
+        var context = await InvokeAsync("""{"seatAdjustment":5,"maxAutoscaleSeats":20}""");
 
         Assert.Equal((int)HttpStatusCode.NoContent, context.Response.StatusCode);
         Assert.Equal("no-store", context.Response.Headers.CacheControl.ToString());
@@ -43,9 +43,9 @@ public class OrganizationPrivilegedControlsEndpointsRequestBindingTests
     }
 
     [Fact]
-    public async Task ChangeSeats_SeatsOnly_BindsNullLimitAndReturnsNoContent()
+    public async Task ChangeSeats_AdjustmentOnly_BindsNullLimitAndReturnsNoContent()
     {
-        var context = await InvokeAsync("""{"seats":15}""");
+        var context = await InvokeAsync("""{"seatAdjustment":5}""");
 
         Assert.Equal((int)HttpStatusCode.NoContent, context.Response.StatusCode);
         Assert.True(_command.Called);
@@ -54,19 +54,19 @@ public class OrganizationPrivilegedControlsEndpointsRequestBindingTests
     }
 
     [Fact]
-    public async Task ChangeSeats_MissingSeats_ForwardsZeroSoTheFactoryMessageReachesTheClient()
+    public async Task ChangeSeats_MissingAdjustment_KeepsCurrentSeats()
     {
         var context = await InvokeAsync("{}");
 
         Assert.Equal((int)HttpStatusCode.NoContent, context.Response.StatusCode);
         Assert.True(_command.Called);
-        Assert.Equal(0, _command.ReceivedSeats);
+        Assert.Equal(10, _command.ReceivedSeats);
     }
 
     [Fact]
-    public async Task ChangeSeats_NonIntegerSeats_ReturnsBadRequestWithoutCallingCommand()
+    public async Task ChangeSeats_NonIntegerAdjustment_ReturnsBadRequestWithoutCallingCommand()
     {
-        var context = await InvokeAsync("""{"seats":"ten"}""");
+        var context = await InvokeAsync("""{"seatAdjustment":"ten"}""");
 
         Assert.Equal((int)HttpStatusCode.BadRequest, context.Response.StatusCode);
         Assert.Null(_trialQuery.ReceivedOrganization);
@@ -78,7 +78,7 @@ public class OrganizationPrivilegedControlsEndpointsRequestBindingTests
     {
         _command.Exception = new BadRequestException("Privileged Controls requires at least 10 seats.");
 
-        var context = await InvokeAsync("""{"seats":5}""");
+        var context = await InvokeAsync("""{"seatAdjustment":-5}""");
 
         Assert.Equal((int)HttpStatusCode.BadRequest, context.Response.StatusCode);
         Assert.Equal("Privileged Controls requires at least 10 seats.", await ReadErrorMessageAsync(context));
@@ -91,7 +91,7 @@ public class OrganizationPrivilegedControlsEndpointsRequestBindingTests
         _trialQuery.Exception = new ConflictException(
             "Your organization's subscription is in an invalid state. Please contact support for assistance.");
 
-        var context = await InvokeAsync("""{"seats":15}""");
+        var context = await InvokeAsync("""{"seatAdjustment":5}""");
 
         Assert.Equal((int)HttpStatusCode.Conflict, context.Response.StatusCode);
         Assert.Equal(
@@ -105,7 +105,7 @@ public class OrganizationPrivilegedControlsEndpointsRequestBindingTests
     {
         _trialQuery.Result = true;
 
-        var context = await InvokeAsync("""{"seats":15}""");
+        var context = await InvokeAsync("""{"seatAdjustment":5}""");
 
         Assert.Equal((int)HttpStatusCode.BadRequest, context.Response.StatusCode);
         Assert.Equal(TrialMessage, await ReadErrorMessageAsync(context));
