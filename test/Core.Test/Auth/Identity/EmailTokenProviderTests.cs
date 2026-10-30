@@ -1,7 +1,6 @@
 ﻿using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Entities;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -23,35 +22,17 @@ public class EmailTokenProviderTests
 
     [Theory]
     [BitAutoData]
-    public async Task GenerateAsync_GeneratesSixDigitToken_WhenFeatureFlagIsEnabled(User user)
+    public async Task GenerateAsync_GeneratesSixDigitToken(User user)
     {
         // Arrange
         var purpose = "test-purpose";
-        var featureService = Substitute.For<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.Otp6Digits).Returns(true);
-        var tokenProvider = new EmailTokenProvider(_cache, featureService);
+        var tokenProvider = new EmailTokenProvider(_cache);
 
         // Act
         var code = await tokenProvider.GenerateAsync(purpose, SubstituteUserManager(), user);
 
         // Assert
         Assert.Equal(6, code.Length);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task GenerateAsync_GeneratesEightDigitToken_WhenFeatureFlagIsDisabled(User user)
-    {
-        // Arrange
-        var purpose = "test-purpose";
-        var featureService = Substitute.For<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.Otp6Digits).Returns(false);
-        var tokenProvider = new EmailTokenProvider(_cache, featureService);
-        // Act
-        var code = await tokenProvider.GenerateAsync(purpose, SubstituteUserManager(), user);
-
-        // Assert
-        Assert.Equal(8, code.Length);
     }
 
     protected static UserManager<User> SubstituteUserManager()
