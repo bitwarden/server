@@ -89,8 +89,8 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
                 || (e.OccurredDate == beforeOccurredDate && e.Id.CompareTo(beforeId) < 0));
         }
 
-        // Collapses each action's pair to its further-along half, as NOT EXISTS because a GroupBy does not translate
-        // on all three providers.
+        // Collapses each action's pair to its further-along half. It uses NOT EXISTS, since a GroupBy does not
+        // translate on all three providers.
         query = query.Where(e => !dbContext.AccessAuditEvents.Any(p =>
             p.CorrelationId == e.CorrelationId
             && p.OrganizationId == organizationId
