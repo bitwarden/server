@@ -1,7 +1,9 @@
 ﻿using Bit.Api.Auth.Models.Request.SsoJitProvisionFinish;
 using Bit.Core;
 using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.UserFeatures.DeviceTrust;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Commands.Interfaces;
@@ -22,7 +24,9 @@ public class SsoJitProvisionFinishController(
     Bitwarden.Server.Sdk.Features.IFeatureService featureService,
     IFinishSsoJitProvisionMasterPasswordCommand finishSsoJitProvisionMasterPasswordCommand,
     ISetInitialMasterPasswordCommandV1 setInitialMasterPasswordCommandV1,
-    ISetKeyConnectorKeyCommand setKeyConnectorKeyCommand) : Controller
+    ISetKeyConnectorKeyCommand setKeyConnectorKeyCommand,
+    IFinishSsoJitProvisionTrustedDeviceCommand finishSsoJitProvisionTrustedDeviceCommand,
+    ICurrentContext currentContext) : Controller
 {
     private readonly IUserService _userService = userService;
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService = featureService;
@@ -30,6 +34,9 @@ public class SsoJitProvisionFinishController(
         finishSsoJitProvisionMasterPasswordCommand;
     private readonly ISetInitialMasterPasswordCommandV1 _setInitialMasterPasswordCommandV1 = setInitialMasterPasswordCommandV1;
     private readonly ISetKeyConnectorKeyCommand _setKeyConnectorKeyCommand = setKeyConnectorKeyCommand;
+    private readonly IFinishSsoJitProvisionTrustedDeviceCommand _finishSsoJitProvisionTrustedDeviceCommand =
+        finishSsoJitProvisionTrustedDeviceCommand;
+    private readonly ICurrentContext _currentContext = currentContext;
 
     /// <summary>
     /// Sets the initial master password and account keys for an SSO JIT provisioned user in an organization
@@ -169,5 +176,23 @@ public class SsoJitProvisionFinishController(
         {
             throw new BadRequestException("User account keys are already initialized.");
         }
+    }
+
+    /// <summary>
+    /// Stores the account keys of an SSO JIT provisioned user in an organization that uses trusted device
+    /// encryption, and trusts the device in the access token when device keys are sent. Enrolls in admin account recovery
+    /// and accepts the organization invite only when <c>AcceptOrganizationInvite</c> is true.
+    /// </summary>
+    /// <remarks>
+    /// Replaces the <c>accounts/keys</c>, <c>reset-password-enrollment</c> and <c>devices/{identifier}/keys</c>
+    /// calls of the trusted device encryption JIT flow.
+    /// </remarks>
+    [HttpPost("trusted-device")]
+    public async Task FinishTrustedDeviceAsync([FromBody] SsoJitProvisionFinishTrustedDeviceRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
+
+        await _finishSsoJitProvisionTrustedDeviceCommand.FinishProvisionAsync(
+            user, model.ToData(_currentContext.DeviceIdentifier), model.AcceptOrganizationInvite);
     }
 }
