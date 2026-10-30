@@ -1,6 +1,5 @@
 ﻿using Bit.Core;
 using Bit.Core.Auth.Identity;
-using Bit.Invoicing;
 using Bit.OrganizationAuthorization;
 using Bit.Subscriptions.Organization.Requirements;
 using Bitwarden.Server.Sdk.Features;
@@ -141,29 +140,7 @@ public class OrganizationSubscriptionEndpointsTests
         Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<OrganizationBillingRequirement>);
         Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>);
 
-        // Gated by the Privileged Controls flag alone, not by the preview flag the preview endpoints carry.
         var feature = Assert.Single(purchase.Metadata.GetOrderedMetadata<IFeatureMetadata>());
         Assert.Contains(FeatureFlagKeys.PM39883_Pam_Billing_Support, feature.ToString());
-        Assert.DoesNotContain(InvoicingFeatureFlags.PM36631_PreviewDrivenCart, feature.ToString());
-    }
-
-    [Theory]
-    [InlineData("preview")]
-    [InlineData("plan-change/preview")]
-    [InlineData("restart/preview")]
-    public void MapOrganizationSubscriptionEndpoints_PreviewEndpointsAreGatedByThePreviewFlagAlone(string route)
-    {
-        var app = WebApplication.CreateBuilder().Build();
-
-        var group = app.MapGroup("/{organizationId:guid}")
-            .MapOrganizationSubscriptionEndpoints();
-
-        var preview = ((IEndpointRouteBuilder)app).DataSources
-            .SelectMany(dataSource => dataSource.Endpoints)
-            .OfType<RouteEndpoint>()
-            .Single(e => e.RoutePattern.RawText!.EndsWith("}/" + route));
-
-        var feature = Assert.Single(preview.Metadata.GetOrderedMetadata<IFeatureMetadata>());
-        Assert.Contains(InvoicingFeatureFlags.PM36631_PreviewDrivenCart, feature.ToString());
     }
 }

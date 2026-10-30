@@ -37,14 +37,12 @@ card into a 400 carrying Stripe's message; it sits inside the basic exception ha
 handle Stripe errors and would answer a declined card with a 500, so every charging endpoint added to
 the group gets the mapping), and a `Cache-Control: no-store` filter (the responses are per-organization
 billing data, never cached). The group carries no feature gate, so a flag for one kind of endpoint never
-gates another: each endpoint declares its own. The preview endpoints require
-`PM36631_PreviewDrivenCart`, and the Privileged Controls purchase endpoint requires
-`PM39883_Pam_Billing_Support` alone.
+gates another: each endpoint declares its own. The Privileged Controls purchase endpoint requires
+`PM39883_Pam_Billing_Support`.
 
 `MapOrganizationSubscriptionPurchaseEndpoints()` attaches a second group, which the host mounts at
 `/organizations/billing/subscription`. Its chain applies the `OrganizationSubscriptions` tag, the
-`internal` group name, the `Application` policy, basic exception handling, the
-`PM36631_PreviewDrivenCart` feature gate, and an endpoint filter that sends `Cache-Control: no-store`.
+`internal` group name, the `Application` policy, basic exception handling, and an endpoint filter that sends `Cache-Control: no-store`.
 It has no `OrganizationBillingRequirement` and no organization id in its route, because the caller
 is buying an organization and doesn't have one yet. It lives here rather than in
 `Subscriptions.User` because libraries group endpoints by what they operate on, not by who calls

@@ -10,6 +10,4 @@ namespace Bit.Invoicing;
 [FlagKeyCollection]
 public static partial class InvoicingFeatureFlags
 {
-    /// <summary>Gates the preview-driven cart surface (the subscription preview endpoints).</summary>
-    public const string PM36631_PreviewDrivenCart = "pm-36631-preview-driven-cart";
 }
