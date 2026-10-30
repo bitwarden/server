@@ -41,7 +41,7 @@ public interface IAccessRequestRepository
 
     /// <summary>
     /// The approver inbox's actionable rows: no action recorded and the window still open. A lapsed row is derived
-    /// Expired and belongs to the history read.
+    /// Expired and belongs to the history read. An empty <paramref name="collectionIds"/> yields an empty result.
     /// </summary>
     Task<ICollection<AccessRequestDetails>> GetManyInboxPendingByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime now);
 
