@@ -1,6 +1,5 @@
-﻿using Bit.Core.AdminConsole.Utilities.v2;
+﻿using Bit.Api.AdminConsole.Endpoints;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
-using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Models.Api;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -62,27 +61,7 @@ public abstract class BaseAdminConsoleController : Controller
                 statusCode: StatusCodes.Status500InternalServerError);
     }
 
-    private static IResult MapError(CommandError error) =>
-        error switch
-        {
-            IValidationError validationError => TypedResults.BitwardenValidationProblem(validationError),
-            _ => MapErrorPublic(error),
-        };
+    private static IResult MapError(CommandError error) => CommandErrorResults.ToResult(error);
 
-    private static IResult MapErrorPublic(CommandError error) =>
-        error switch
-        {
-            BadRequestError badRequest => TypedResults.BadRequest(new ErrorResponseModel(badRequest.Message)),
-            NotFoundError notFound => TypedResults.NotFound(new ErrorResponseModel(notFound.Message)),
-            ConflictError conflict => TypedResults.Json(
-                new ErrorResponseModel(conflict.Message),
-                statusCode: StatusCodes.Status409Conflict),
-            InternalError internalError => TypedResults.Json(
-                new ErrorResponseModel(internalError.Message),
-                statusCode: StatusCodes.Status500InternalServerError),
-            _ => TypedResults.Json(
-                new ErrorResponseModel(error.Message),
-                statusCode: StatusCodes.Status500InternalServerError
-            )
-        };
+    private static IResult MapErrorPublic(CommandError error) => CommandErrorResults.ToPublicResult(error);
 }
