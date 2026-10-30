@@ -1,5 +1,4 @@
-﻿using Bit.Core.Context;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Queries.AccessPolicies.Interfaces;
@@ -15,16 +14,16 @@ public class
         ProjectPeopleAccessPolicies>
 {
     private readonly IAccessClientQuery _accessClientQuery;
-    private readonly ICurrentContext _currentContext;
+    private readonly ISecretsManagerAccessQuery _secretsManagerAccessQuery;
     private readonly IProjectRepository _projectRepository;
     private readonly ISameOrganizationQuery _sameOrganizationQuery;
 
-    public ProjectPeopleAccessPoliciesAuthorizationHandler(ICurrentContext currentContext,
+    public ProjectPeopleAccessPoliciesAuthorizationHandler(ISecretsManagerAccessQuery secretsManagerAccessQuery,
         IAccessClientQuery accessClientQuery,
         ISameOrganizationQuery sameOrganizationQuery,
         IProjectRepository projectRepository)
     {
-        _currentContext = currentContext;
+        _secretsManagerAccessQuery = secretsManagerAccessQuery;
         _accessClientQuery = accessClientQuery;
         _sameOrganizationQuery = sameOrganizationQuery;
         _projectRepository = projectRepository;
@@ -34,7 +33,7 @@ public class
         ProjectPeopleAccessPoliciesOperationRequirement requirement,
         ProjectPeopleAccessPolicies resource)
     {
-        if (!_currentContext.AccessSecretsManager(resource.OrganizationId))
+        if (!await _secretsManagerAccessQuery.HasAccessAsync(resource.OrganizationId))
         {
             return;
         }

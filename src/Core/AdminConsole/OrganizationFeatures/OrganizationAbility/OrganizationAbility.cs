@@ -34,6 +34,7 @@ public class OrganizationAbility
         UseMyItems = organization.UseMyItems;
         UseInviteLinks = organization.UseInviteLinks;
         UsePam = organization.UsePam;
+        UseSecretsManager = organization.UseSecretsManager;
     }
 
     public Guid Id { get; set; }
@@ -61,4 +62,5 @@ public class OrganizationAbility
     public bool UseMyItems { get; set; }
     public bool UseInviteLinks { get; set; }
     public bool UsePam { get; set; }
+    public bool UseSecretsManager { get; set; }
 }

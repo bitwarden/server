@@ -1,7 +1,6 @@
 ﻿using System.Reflection;
 using System.Security.Claims;
 using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.AccessPolicies;
-using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Entities;
@@ -40,7 +39,7 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         ClaimsPrincipal claimsPrincipal)
     {
         var requirement = SecretAccessPoliciesOperations.Updates;
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(resource.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(resource.OrganizationId)
             .Returns(false);
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, resource);
@@ -552,7 +551,7 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SecretAccessPoliciesUpdates resource,
         Guid userId = new())
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(resource.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(resource.OrganizationId)
             .Returns(true);
         sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, resource.OrganizationId)
             .ReturnsForAnyArgs((accessClientType, userId));
