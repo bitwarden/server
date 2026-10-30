@@ -665,12 +665,17 @@ public class OrganizationService : IOrganizationService
 
         // Promote the staged rows set aside above. They keep their Id and ExternalId because SCIM and
         // Directory Connector key off both, and only the fields the invite specifies are overwritten.
+        // The reminder fields match what sending the invites stores, because the promotion is saved after the send.
+        var inviteReminderDueDate = _timeProvider.GetUtcNow().UtcDateTime
+            .AddDays(InviteReminderConstants.ReminderIntervalDays);
         foreach (var (orgUser, invite) in stagedInvitations.Values)
         {
             orgUser.Type = invite.Type.Value;
             orgUser.Status = OrganizationUserStatusType.Invited;
             orgUser.AccessSecretsManager = invite.AccessSecretsManager;
             orgUser.RevisionDate = DateTime.UtcNow;
+            orgUser.InviteReminderDueDate = inviteReminderDueDate;
+            orgUser.InviteRemindersSentCount = 0;
             // Custom permissions only apply to the Custom role, and a staged row may already carry some.
             orgUser.Permissions = null;
 
@@ -817,6 +822,7 @@ public class OrganizationService : IOrganizationService
             orgUser.Permissions = snapshot.Permissions;
             orgUser.AccessSecretsManager = snapshot.AccessSecretsManager;
             orgUser.RevisionDate = snapshot.RevisionDate;
+            orgUser.ClearInviteReminders();
         }
 
         await _organizationUserRepository.ReplaceManyAsync(promotedStagedUsers);

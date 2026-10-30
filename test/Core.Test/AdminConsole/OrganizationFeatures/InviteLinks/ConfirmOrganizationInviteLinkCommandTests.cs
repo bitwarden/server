@@ -115,6 +115,40 @@ public class ConfirmOrganizationInviteLinkCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task ConfirmAsync_WithExistingMembership_ClearsInviteReminders(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser existingOrganizationUser,
+        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
+    {
+        // Arrange
+        SetupHappyPath(organization, inviteLink, user, existingOrganizationUser, sutProvider);
+        existingOrganizationUser.Status = OrganizationUserStatusType.Invited;
+        existingOrganizationUser.InviteReminderDueDate = DateTime.UtcNow;
+        existingOrganizationUser.InviteRemindersSentCount = 2;
+        organization.Seats = 2;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Users = 2, Sponsored = 0 });
+
+        var request = BuildRequest(inviteLink, user);
+
+        // Act
+        var result = await sutProvider.Sut.ConfirmAsync(request);
+
+        // Assert - the saved row has no reminder schedule
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou =>
+                ou.Id == existingOrganizationUser.Id &&
+                ou.InviteReminderDueDate == null &&
+                ou.InviteRemindersSentCount == null));
+    }
+
+    [Theory, BitAutoData]
     public async Task ConfirmAsync_WithNewUser_CreatesMembershipDirectlyInConfirmedStatus(
         Organization organization,
         OrganizationInviteLink inviteLink,

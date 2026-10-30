@@ -151,7 +151,6 @@ public static partial class FeatureFlagKeys
     public const string DesktopMigrationSettings = "desktop-ui-settings-dialog";
 
     /* Auth Team */
-    public const string Otp6Digits = "pm-18612-otp-6-digits";
     public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
     public const string SafariAccountSwitching = "pm-5594-safari-account-switching";
     public const string PM27086_UpdateAuthenticationApisForInputPassword = "pm-27086-update-authentication-apis-for-input-password";
