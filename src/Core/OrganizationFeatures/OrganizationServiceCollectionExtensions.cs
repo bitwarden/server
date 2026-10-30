@@ -21,8 +21,10 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.BulkEnablePam;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteReminders;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.GlobalSettings;
@@ -92,7 +94,8 @@ public static class OrganizationServiceCollectionExtensions
 
     private static void AddOrganizationSignUpCommands(this IServiceCollection services)
     {
-        services.AddScoped<ICloudOrganizationSignUpCommand, CloudOrganizationSignUpCommand>();
+        // ICloudOrganizationSignUpCommand is registered in Api.Startup instead: it depends on
+        // ICreateOrganizationSubscriptionCommand from the Api-only Subscriptions.Organization library.
         services.AddScoped<IProviderClientOrganizationSignUpCommand, ProviderClientOrganizationSignUpCommand>();
         services.AddScoped<IResellerClientOrganizationSignUpCommand, ResellerClientOrganizationSignUpCommand>();
         services.AddScoped<ISelfHostedOrganizationSignUpCommand, SelfHostedOrganizationSignUpCommand>();
@@ -164,6 +167,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IAdminRecoverAccountValidator, AdminRecoverAccountValidator>();
         services.AddScoped<IBulkAutomaticallyConfirmOrganizationUsersValidator, BulkAutomaticallyConfirmOrganizationUsersValidator>();
         services.AddScoped<IBulkAutomaticallyConfirmOrganizationUsersCommand, BulkAutomaticallyConfirmOrganizationUsersCommand>();
+        services.TryAddScoped<IBulkEnablePamCommand, BulkEnablePamCommand>();
 
         services.AddScoped<IDeleteClaimedOrganizationUserAccountCommand, DeleteClaimedOrganizationUserAccountCommand>();
         services.AddScoped<IDeleteClaimedOrganizationUserAccountValidator, DeleteClaimedOrganizationUserAccountValidator>();
@@ -215,9 +219,11 @@ public static class OrganizationServiceCollectionExtensions
         services.TryAddScoped<IRefreshOrganizationInviteLinkCommand, RefreshOrganizationInviteLinkCommand>();
         services.TryAddScoped<IAcceptInviteLinkMembershipValidator, AcceptInviteLinkMembershipValidator>();
         services.TryAddScoped<IAcceptOrganizationInviteLinkCommand, AcceptOrganizationInviteLinkCommand>();
+        services.TryAddScoped<IInviteLinkValidationService, InviteLinkValidationService>();
         services.TryAddScoped<IConfirmOrganizationInviteLinkValidator, ConfirmOrganizationInviteLinkValidator>();
         services.TryAddScoped<IConfirmOrganizationInviteLinkCommand, ConfirmOrganizationInviteLinkCommand>();
-        services.TryAddScoped<IGetOrganizationInviteCommand, GetOrganizationInviteCommand>();
+        services.TryAddScoped<IGetOrganizationInviteValidator, GetOrganizationInviteValidator>();
+        services.TryAddScoped<IGetOrganizationInviteQuery, GetOrganizationInviteQuery>();
     }
 
     private static void AddOrganizationDomainCommandsQueries(this IServiceCollection services)
@@ -255,6 +261,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<ISendOrganizationInvitesCommand, SendOrganizationInvitesCommand>();
         services.AddScoped<IResendOrganizationInviteCommand, ResendOrganizationInviteCommand>();
         services.AddScoped<IBulkResendOrganizationInvitesCommand, BulkResendOrganizationInvitesCommand>();
+        services.TryAddScoped<ISendInviteRemindersCommand, SendInviteRemindersCommand>();
 
         services.AddScoped<IInviteUsersValidator, InviteOrganizationUsersValidator>();
         services.AddScoped<IInviteUsersOrganizationValidator, InviteUsersOrganizationValidator>();

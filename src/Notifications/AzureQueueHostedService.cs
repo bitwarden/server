@@ -1,6 +1,6 @@
 ﻿using Azure.Storage.Queues;
-using Bit.Core.Settings;
-using Bit.Core.Utilities;
+using Bitwarden.Server.Sdk.Environment;
+using Microsoft.Extensions.Options;
 
 namespace Bit.Notifications;
 
@@ -8,7 +8,8 @@ public class AzureQueueHostedService : IHostedService, IDisposable
 {
     private readonly ILogger _logger;
     private readonly HubHelpers _hubHelpers;
-    private readonly GlobalSettings _globalSettings;
+    private readonly IBitwardenEnvironment _environment;
+    private readonly IOptions<NotificationsSettings> _settings;
     private readonly IServiceProvider _serviceProvider;
     private readonly TimeProvider _timeProvider;
 
@@ -18,21 +19,23 @@ public class AzureQueueHostedService : IHostedService, IDisposable
     public AzureQueueHostedService(
         ILogger<AzureQueueHostedService> logger,
         HubHelpers hubHelpers,
-        GlobalSettings globalSettings,
+        IBitwardenEnvironment environment,
+        IOptions<NotificationsSettings> settings,
         IServiceProvider serviceProvider,
         TimeProvider timeProvider)
     {
         _logger = logger;
         _hubHelpers = hubHelpers;
-        _globalSettings = globalSettings;
+        _environment = environment;
+        _settings = settings;
         _serviceProvider = serviceProvider;
         _timeProvider = timeProvider;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        if (_globalSettings.SelfHosted ||
-            !CoreHelpers.SettingHasValue(_globalSettings.Notifications?.ConnectionString))
+        if (_environment.SelfHosted ||
+            string.IsNullOrWhiteSpace(_settings.Value.ConnectionString))
         {
             return Task.CompletedTask;
         }
@@ -74,34 +77,19 @@ public class AzureQueueHostedService : IHostedService, IDisposable
                     {
                         try
                         {
-                            // CoreHelpers.DecodeMessageText inlined, so that a successful decode can
-                            // be reported: nothing writes base64 to this queue any more, and the
-                            // decode exists only to tolerate a sender that predates that. The warning
-                            // is how we find out whether any still does, so the tolerance can be
-                            // dropped on evidence rather than on the assumption that it is unused.
-                            var decodedMessage = message.MessageText;
-                            if (!string.IsNullOrWhiteSpace(decodedMessage))
+                            // The default options are case-sensitive, which matches the PascalCase
+                            // the push engines write.
+                            var notification = message.Body.ToObjectFromJson<InboundNotification>();
+                            if (notification is null)
                             {
-                                try
-                                {
-                                    decodedMessage = CoreHelpers.Base64DecodeString(decodedMessage);
-                                    _logger.LogWarning(
-                                        "Dequeued a base64-encoded message: {MessageId}. Decoding it is legacy tolerance, not something a current sender needs.",
-                                        message.MessageId);
-                                }
-                                catch
-                                {
-                                    // Not base64, so it is the plain text a current sender writes.
-                                    // Catching everything is what CoreHelpers.DecodeMessageText does,
-                                    // and this is only meant to inline it, not to change it.
-                                }
+                                // A JSON null will never become a notification, so retrying it is pointless.
+                                _logger.LogError("Dequeued message {MessageId} was null and will be deleted.",
+                                    message.MessageId);
                             }
-
-                            if (!string.IsNullOrWhiteSpace(decodedMessage))
+                            else
                             {
-                                await _hubHelpers.SendNotificationToHubAsync(decodedMessage, cancellationToken);
+                                await _hubHelpers.SendNotificationToHubAsync(notification, cancellationToken);
                             }
-
                             await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt,
                                 cancellationToken);
                         }

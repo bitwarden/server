@@ -3,6 +3,7 @@ using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Options;
 using Bit.Seeder.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Seeder.Pipeline;
@@ -65,7 +66,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         }
         if (stripeBilling is not null)
         {
-            services.AddSingleton(deps.BillingInitializer!());
+            services.AddSingleton(deps.OrganizationStripeBillingService!());
         }
 
         PresetLoader.RegisterRecipe(presetName, reader, services, stripeBilling);
@@ -105,9 +106,22 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         }
         if (options.StripeBilling is not null)
         {
-            services.AddSingleton(deps.BillingInitializer!());
+            services.AddSingleton(deps.OrganizationStripeBillingService!());
         }
 
+        var recipeName = RegisterRecipe(options, services);
+
+        return await BuildAndExecuteAsync(recipeName, services);
+    }
+
+    /// <summary>
+    /// Registers the steps for an organization built from CLI options as a recipe.
+    /// </summary>
+    /// <param name="options">The CLI options describing the organization to seed</param>
+    /// <param name="services">The service collection to register steps in</param>
+    /// <returns>The recipe name the steps are keyed under</returns>
+    internal static string RegisterRecipe(OrganizationVaultOptions options, IServiceCollection services)
+    {
         var recipeName = "from-options";
         var builder = services.AddRecipe(recipeName);
 
@@ -120,7 +134,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         }
 
         builder.AddOwner();
-        builder.WithGenerator(options.Domain);
+        builder.WithGenerator(options.Domain, region: options.Region);
         builder.AddUsers(options.Users, options.RealisticStatusMix);
 
         if (options.Groups > 0)
@@ -149,12 +163,12 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
 
         if (options.StripeBilling is not null)
         {
-            builder.WithStripeBilling(options.StripeBilling);
+            builder.WithStripeOrganizationBilling(options.StripeBilling);
         }
 
         builder.Validate();
 
-        return await BuildAndExecuteAsync(recipeName, services);
+        return recipeName;
     }
 
     /// <summary>
@@ -169,6 +183,21 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         var premium = options.Premium;
         var maxStorageGb = premium ? (short)1 : (short)0;
 
+        if (options.StripeBilling is not null)
+        {
+            options.StripeBilling.ValidateForPersonalAccount();
+
+            RequireBillingService(deps.UserStripeBillingService).ValidateConfiguration();
+
+            if (!deps.ManglerService.IsEnabled && deps.Db.Users.Any(u => u.Email == email))
+            {
+                throw new InvalidOperationException(
+                    $"A User with email '{email}' already exists in the database. Stripe billing runs before the " +
+                    "commit, so the duplicate would only fail the commit after Stripe had already billed a new " +
+                    "customer. Choose a different --email or add --mangle for test isolation.");
+            }
+        }
+
         var services = new ServiceCollection();
         services.AddSingleton(deps.LoggerFactory);
         services.AddLogging();
@@ -181,6 +210,10 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         if (deps.Progress is not null)
         {
             services.AddSingleton(deps.Progress);
+        }
+        if (options.StripeBilling is not null)
+        {
+            services.AddSingleton(deps.UserStripeBillingService!());
         }
 
         var recipeName = "individual-from-options";
@@ -199,6 +232,11 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
             builder.AddPersonalCiphers(75);
         }
 
+        if (options.StripeBilling is not null)
+        {
+            builder.WithStripeUserBilling(options.StripeBilling);
+        }
+
         builder.Validate();
 
         return await BuildAndExecuteAsync(recipeName, services);
@@ -206,8 +244,13 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
 
     private async Task<PipelineExecutionResult> BuildAndExecuteAsync(string recipeName, ServiceCollection services)
     {
+        if (deps.DisableDataProtection && !deps.Db.Database.IsSqlServer())
+        {
+            throw new InvalidOperationException("Disabling data protection (--no-data-protection) is only supported on SQL Server.");
+        }
+
         await using var serviceProvider = services.BuildServiceProvider();
-        var committer = new BulkCommitter(deps.Db, deps.Mapper);
+        var committer = new BulkCommitter(deps.Db, deps.Mapper, deps.DisableDataProtection);
         var executor = new RecipeExecutor(recipeName, serviceProvider, committer);
         return await executor.ExecuteAsync();
     }
@@ -219,16 +262,19 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
     /// Billing runs in a post-commit step, so without this gate an unusable Stripe configuration would only
     /// surface after the organization and its users were already written to the database.
     /// </remarks>
-    private void ValidateBillingOptIn(PlanType planType)
+    private void ValidateBillingOptIn(PlanType planType) =>
+        RequireBillingService(deps.OrganizationStripeBillingService).ValidateConfiguration(planType);
+
+    private static T RequireBillingService<T>(Func<T>? factory)
     {
-        if (deps.BillingInitializer is null)
+        if (factory is null)
         {
             throw new InvalidOperationException(
-                "Stripe billing was requested but no IStripeBillingInitializer was supplied on " +
+                $"Stripe billing was requested but no {typeof(T).Name} was supplied on " +
                 "SeederDependencies. The host has to register the billing services before opting in.");
         }
 
-        deps.BillingInitializer().ValidateConfiguration(planType);
+        return factory();
     }
 
     /// <summary>

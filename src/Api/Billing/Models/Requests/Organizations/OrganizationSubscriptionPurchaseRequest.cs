@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Models;
 
@@ -62,7 +63,7 @@ public record OrganizationSubscriptionPurchaseRequest : IValidatableObject
     public record PasswordManagerPurchaseSelections
     {
         [Required]
-        [Range(1, 100000, ErrorMessage = "Password Manager seats must be between 1 and 100,000")]
+        [Range(1, PlanConstants.MaxPurchasableQuantity, ErrorMessage = "Password Manager seats must be between 1 and 100,000")]
         public int Seats { get; set; }
 
         [Required]
@@ -75,11 +76,11 @@ public record OrganizationSubscriptionPurchaseRequest : IValidatableObject
     public record SecretsManagerPurchaseSelections
     {
         [Required]
-        [Range(1, 100000, ErrorMessage = "Secrets Manager seats must be between 1 and 100,000")]
+        [Range(1, PlanConstants.MaxPurchasableQuantity, ErrorMessage = "Secrets Manager seats must be between 1 and 100,000")]
         public int Seats { get; set; }
 
         [Required]
-        [Range(0, 100000, ErrorMessage = "Additional service accounts must be between 0 and 100,000")]
+        [Range(0, PlanConstants.MaxPurchasableQuantity, ErrorMessage = "Additional service accounts must be between 0 and 100,000")]
         public int AdditionalServiceAccounts { get; set; }
 
         public bool Standalone { get; set; } = false;

@@ -4,6 +4,7 @@
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
@@ -51,7 +52,7 @@ public class OrganizationService : IOrganizationService
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IProviderRepository _providerRepository;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
     private readonly IPricingClient _pricingClient;
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
@@ -75,7 +76,7 @@ public class OrganizationService : IOrganizationService
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IProviderRepository providerRepository,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IPricingClient pricingClient,
         ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
@@ -147,6 +148,14 @@ public class OrganizationService : IOrganizationService
         if (maxAutoscaleSeats.HasValue && newSeatCount > maxAutoscaleSeats.Value)
         {
             throw new BadRequestException("Cannot set max seat autoscaling below seat count.");
+        }
+
+        if (organization.UsePam &&
+            _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support) &&
+            !BillingExtensions.PrivilegedControlsAutoscaleLimitFits(organization.MaxAutoscalePamSeats, maxAutoscaleSeats))
+        {
+            throw new BadRequestException(
+                "You cannot set a Password Manager autoscale limit lower than the Privileged Controls autoscale limit.");
         }
 
         if (seatAdjustment != 0)
@@ -272,6 +281,15 @@ public class OrganizationService : IOrganizationService
         if (organization.UseSecretsManager && organization.Seats + seatAdjustment < organization.SmSeats)
         {
             throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
+        }
+
+        // Only decreases are checked; adding seats is never blocked by this rule.
+        if (organization.UsePam &&
+            seatAdjustment < 0 &&
+            newSeatTotal < organization.PamSeats &&
+            _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support))
+        {
+            throw new BadRequestException(new PrivilegedControlsSeatsMustNotExceedPasswordManagerSeatsError().Message);
         }
 
         _logger.LogInformation("{Method}: Invoking _paymentService.AdjustSeatsAsync with {AdditionalSeats} additional seats for Organization ({OrganizationID})",
@@ -1210,6 +1228,11 @@ public class OrganizationService : IOrganizationService
         }
 
         if (permissions.ManageAccessRules && !org.Permissions.ManageAccessRules)
+        {
+            return false;
+        }
+
+        if (permissions.ManageRotation && !org.Permissions.ManageRotation)
         {
             return false;
         }

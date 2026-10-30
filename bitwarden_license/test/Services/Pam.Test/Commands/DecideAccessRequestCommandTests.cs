@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.Models;
 using Bit.Services.Pam.OrganizationFeatures.Commands;
@@ -39,6 +40,10 @@ public class DecideAccessRequestCommandTests
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.DecideAsync(userId, request.Id, Approve()));
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
     }
 
     [Theory, BitAutoData]
@@ -67,6 +72,10 @@ public class DecideAccessRequestCommandTests
 
         await Assert.ThrowsAsync<ConflictException>(
             () => sutProvider.Sut.DecideAsync(userId, request.Id, Approve()));
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
     }
 
     [Theory, BitAutoData]
@@ -83,6 +92,10 @@ public class DecideAccessRequestCommandTests
         Assert.Contains("your own request", ex.Message);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .ResolveWithDecisionAsync(default!, default!, default, default);
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
+        await sutProvider.GetDependency<IRequesterMailNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyDecisionAsync(default!, default);
     }
 
     [Theory, BitAutoData]
@@ -99,6 +112,10 @@ public class DecideAccessRequestCommandTests
         Assert.Contains("already ended", ex.Message);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .ResolveWithDecisionAsync(default!, default!, default, default);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
     }
 
     [Theory, BitAutoData]
@@ -135,7 +152,7 @@ public class DecideAccessRequestCommandTests
         Assert.Equal(AccessDecisionVerdict.Approve, decision.Verdict);
         Assert.Equal("looks good", decision.Comment);
         Assert.Equal(_now, decision.DecidedAt);
-        // Approval records the verdict only; no lease is minted until the requester activates the approved request.
+        // Approval records the verdict only; the requester's activation mints the lease.
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).ResolveWithDecisionAsync(
             request,
             Arg.Is<AccessDecision>(d =>
@@ -145,6 +162,12 @@ public class DecideAccessRequestCommandTests
                 d.Comment == "looks good"),
             AccessRequestAction.Approved,
             _now);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
+            .NotifyCollectionApproversAsync(request.CollectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(request.RequesterId);
+        await sutProvider.GetDependency<IRequesterMailNotifier>().Received(1)
+            .NotifyDecisionAsync(request, true);
     }
 
     [Theory]
@@ -162,9 +185,14 @@ public class DecideAccessRequestCommandTests
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.DecideAsync(userId, request.Id, Deny(comment)));
         Assert.Contains("reason is required", ex.Message);
-        // A denial without a reason must leave the request pending, not written or notified.
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .ResolveWithDecisionAsync(default!, default!, default, default);
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs()
+            .EmitAsync(default!);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
     }
 
     [Theory, BitAutoData]
@@ -175,7 +203,6 @@ public class DecideAccessRequestCommandTests
         SetOpenWindow(request);
         SetupManageableRequest(sutProvider, userId, request);
 
-        // The required-reason gate is the denial's alone; an approval still needs no explanation.
         var result = await sutProvider.Sut.DecideAsync(userId, request.Id, Approve());
 
         Assert.Equal(AccessRequestStatus.Approved, result.Status);
@@ -201,6 +228,10 @@ public class DecideAccessRequestCommandTests
                 d.Comment == "use the read replica instead"),
             AccessRequestAction.Denied,
             _now);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(request.RequesterId);
+        await sutProvider.GetDependency<IRequesterMailNotifier>().Received(1)
+            .NotifyDecisionAsync(request, false);
     }
 
     [Theory, BitAutoData]
@@ -217,6 +248,12 @@ public class DecideAccessRequestCommandTests
             () => sutProvider.Sut.DecideAsync(userId, request.Id, Deny("not needed")));
 
         Assert.Equal("This request has already been resolved.", exception.Message);
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceive()
+            .EmitAsync(Arg.Is<AccessAuditEventData>(e => e.Phase == AccessAuditEventPhase.Outcome));
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+        await sutProvider.GetDependency<IRequesterMailNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyDecisionAsync(default!, default);
     }
 
     private static AccessDecisionSubmission Approve(string? comment = null) =>

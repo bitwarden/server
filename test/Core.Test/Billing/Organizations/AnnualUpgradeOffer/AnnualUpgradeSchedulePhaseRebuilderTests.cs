@@ -104,6 +104,25 @@ public class AnnualUpgradeSchedulePhaseRebuilderTests
     }
 
     [Fact]
+    public void BuildUpdatedPhases_TrialingPhase_CarriesTrialEnd()
+    {
+        var phase = Phase(MonthlySeat, 5);
+        phase.TrialEnd = phase.EndDate;
+
+        var result = AnnualUpgradeSchedulePhaseRebuilder.BuildUpdatedPhases([phase], [], _source, _target);
+
+        Assert.Equal(phase.TrialEnd, (DateTime?)result[0].TrialEnd);
+    }
+
+    [Fact]
+    public void BuildUpdatedPhases_NoTrial_LeavesTrialEndNull()
+    {
+        var result = AnnualUpgradeSchedulePhaseRebuilder.BuildUpdatedPhases([Phase(MonthlySeat, 5)], [], _source, _target);
+
+        Assert.Null(result[0].TrialEnd);
+    }
+
+    [Fact]
     public void BuildUpdatedPhases_AppliesQuantityUpdateToTheMatchingItem()
     {
         var phases = new List<SubscriptionSchedulePhase>

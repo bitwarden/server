@@ -1206,6 +1206,56 @@ public class UpdateOrganizationSubscriptionCommandTests
     }
 
     [Fact]
+    public async Task Run_BusinessMigration_RemovePrivilegedControlsItem_RemovesItFromBothPhasesAndKeepsOtherItems()
+    {
+        const string privilegedControlsSeat = "privileged-controls-enterprise-seat-annually";
+
+        var organization = CreateOrganization();
+        var source = MockPlans.Get(PlanType.EnterpriseAnnually2020);
+        var target = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        SetupMigration(organization,
+            MigrationPathId.Enterprise2020AnnualToCurrent,
+            PlanType.EnterpriseAnnually2020, source,
+            PlanType.EnterpriseAnnually, target);
+
+        var sourceSeat = source.PasswordManager.StripeSeatPlanId;
+        var targetSeat = target.PasswordManager.StripeSeatPlanId;
+
+        var subscription = CreateSubscription(
+            items: [(sourceSeat, "si_1", 10), (privilegedControlsSeat, "si_2", 12)]);
+        SetupGetSubscription(organization, subscription);
+
+        var schedule = CreateMockSchedule(
+            subscription.Id,
+            [(sourceSeat, 10), (privilegedControlsSeat, 12)],
+            [(targetSeat, 10), (privilegedControlsSeat, 12)],
+            phaseMetadata: new Dictionary<string, string> { [MetadataKeys.MigrationCohortId] = "cohort-1" });
+        subscription.ScheduleId = schedule.Id;
+        subscription.Schedule = schedule;
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new RemoveItem(privilegedControlsSeat)],
+            ChargeImmediately = true
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.ProrationBehavior == ProrationBehavior.AlwaysInvoice &&
+                opts.Phases[0].Items.Count == 1 &&
+                opts.Phases[0].Items[0].Price == sourceSeat &&
+                opts.Phases[1].Items.Count == 1 &&
+                opts.Phases[1].Items[0].Price == targetSeat));
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
     public async Task Run_BusinessMigration_UpdateItemQuantity_Zero_TranslatesRemovalOnPhase2()
     {
         var organization = CreateOrganization();
@@ -1519,6 +1569,91 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         await _stripeAdapter.DidNotReceive().UpdateSubscriptionScheduleAsync(
             Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task Run_BusinessMigration_TrialingPhase1_CarriesTrialEndOnlyOnPhase1()
+    {
+        var organization = CreateOrganization();
+        var source = MockPlans.Get(PlanType.EnterpriseAnnually2020);
+        var target = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        SetupMigration(organization,
+            MigrationPathId.Enterprise2020AnnualToCurrent,
+            PlanType.EnterpriseAnnually2020, source,
+            PlanType.EnterpriseAnnually, target);
+
+        var sourceSeat = source.PasswordManager.StripeSeatPlanId;
+        var targetSeat = target.PasswordManager.StripeSeatPlanId;
+
+        var subscription = CreateSubscription(items: [(sourceSeat, "si_1", 5)]);
+        subscription.Status = SubscriptionStatus.Trialing;
+        SetupGetSubscription(organization, subscription);
+
+        var schedule = CreateMockSchedule(subscription.Id, [(sourceSeat, 5)], [(targetSeat, 5)],
+            scheduleMetadata: new Dictionary<string, string>
+            {
+                [MetadataKeys.ManagingSystem] = ManagingSystems.BusinessPriceIncrease
+            });
+        var trialEnd = schedule.Phases[0].EndDate;
+        schedule.Phases[0].TrialEnd = trialEnd;
+        subscription.ScheduleId = schedule.Id;
+        subscription.Schedule = schedule;
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity(sourceSeat, 10)]
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                (DateTime?)opts.Phases[0].TrialEnd == trialEnd &&
+                opts.Phases[1].TrialEnd == null));
+    }
+
+    [Fact]
+    public async Task Run_BusinessMigration_NoTrial_LeavesPhase1TrialEndNull()
+    {
+        var organization = CreateOrganization();
+        var source = MockPlans.Get(PlanType.EnterpriseAnnually2020);
+        var target = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        SetupMigration(organization,
+            MigrationPathId.Enterprise2020AnnualToCurrent,
+            PlanType.EnterpriseAnnually2020, source,
+            PlanType.EnterpriseAnnually, target);
+
+        var sourceSeat = source.PasswordManager.StripeSeatPlanId;
+        var targetSeat = target.PasswordManager.StripeSeatPlanId;
+
+        var subscription = CreateSubscription(items: [(sourceSeat, "si_1", 5)]);
+        SetupGetSubscription(organization, subscription);
+
+        var schedule = CreateMockSchedule(subscription.Id, [(sourceSeat, 5)], [(targetSeat, 5)],
+            scheduleMetadata: new Dictionary<string, string>
+            {
+                [MetadataKeys.ManagingSystem] = ManagingSystems.BusinessPriceIncrease
+            });
+        subscription.ScheduleId = schedule.Id;
+        subscription.Schedule = schedule;
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity(sourceSeat, 10)]
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts => opts.Phases[0].TrialEnd == null));
     }
 
     [Fact]

@@ -95,6 +95,11 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
+    public Task SendOrganizationInviteReminderEmailsAsync(OrganizationInvitesInfo orgInvitesInfo, int reminderNumber)
+    {
+        return Task.FromResult(0);
+    }
+
     public Task SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(string organizationName, string email) =>
         Task.CompletedTask;
 

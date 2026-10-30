@@ -11,8 +11,12 @@ Prefer these over hand-rolled joins — they encode member status, org enablemen
 | What ciphers can user X see                                    | `src/Sql/dbo/Vault/Functions/UserCipherDetails.sql`             |
 | Per-user cipher projection (computed per-user ArchivedDate)    | `src/Sql/dbo/Vault/Functions/CipherDetails.sql`                 |
 | What collections can user X access, with effective permissions | `src/Sql/dbo/AdminConsole/Functions/UserCollectionDetails.sql`  |
+| Per-Id permission merge over UserCipherDetails                 | `src/Sql/dbo/Vault/Stored Procedures/Cipher/CipherDetails_ReadByIdUserId.sql` |
+| Per-Id permission merge over UserCollectionDetails             | `src/Sql/dbo/AdminConsole/Stored Procedures/Collection_ReadByUserId.sql` |
 | How archive state is written (JSON_MODIFY on Archives)         | `src/Sql/dbo/Vault/Stored Procedures/Cipher/Cipher_Archive.sql` |
-| Org feature flags in one row                                   | `src/Sql/dbo/Views/OrganizationAbilityView.sql`                 |
+| Some org feature flags (no `UseGroups`, `UseApi`)              | `src/Sql/dbo/Views/OrganizationAbilityView.sql`                 |
+
+`OrganizationAbilityView` carries only a subset of the feature flags. The full set is the `Organization.Use*` columns.
 
 ## Tables (SSDT schema)
 
@@ -42,6 +46,6 @@ Anything not listed: browse `src/Sql/dbo/` (tables live under both `Tables/` and
 | AuthRequestType               | `AuthRequest.Type`                                               | `src/Core/Auth/Enums/AuthRequestType.cs`                    |
 | RevocationReason              | `OrganizationUser.RevocationReason`                              | `src/Core/AdminConsole/Enums/RevocationReason.cs`           |
 | PlanType                      | `Organization.PlanType`                                          | `src/Core/Billing/Enums/PlanType.cs`                        |
-| DeviceType                    | `Device.Type`, `AuthRequest.RequestDeviceType`                   | `src/Core/Enums/DeviceType.cs`                              |
+| DeviceType                    | `Device.Type`, `AuthRequest.RequestDeviceType`                   | `src/Libraries/Clients/DeviceType.cs`                       |
 | EventType                     | `Event.Type`                                                     | `src/Core/Dirt/Enums/EventType.cs`                          |
 | Custom permissions JSON shape | `OrganizationUser.Permissions` (only meaningful when `Type = 4`) | `src/Core/AdminConsole/Models/Data/Permissions.cs`          |

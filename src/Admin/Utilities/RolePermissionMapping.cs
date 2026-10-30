@@ -46,6 +46,7 @@ public static class RolePermissionMapping
                 Permission.Provider_List_View,
                 Permission.Provider_Create,
                 Permission.Provider_View,
+                Permission.Provider_Edit,
                 Permission.Provider_ResendEmailInvite,
                 Permission.Provider_CheckEnabledBox,
                 Permission.Tools_ChargeBrainTreeCustomer,
@@ -53,7 +54,8 @@ public static class RolePermissionMapping
                 Permission.Tools_PromoteProviderServiceUser,
                 Permission.Tools_GenerateLicenseFile,
                 Permission.Tools_ManageTaxRates,
-                Permission.Org_InitiateSalesAssistedTrial
+                Permission.Org_InitiateSalesAssistedTrial,
+                Permission.Org_ExtendTrial
             }
         },
         { "admin", new List<Permission>
@@ -107,7 +109,8 @@ public static class RolePermissionMapping
                 Permission.Tools_ManageTaxRates,
                 Permission.Tools_CreateEditTransaction,
                 Permission.Tools_ManagePlanMigrationCohorts,
-                Permission.Org_InitiateSalesAssistedTrial
+                Permission.Org_InitiateSalesAssistedTrial,
+                Permission.Org_ExtendTrial
             }
         },
         { "cs", new List<Permission>
@@ -181,7 +184,8 @@ public static class RolePermissionMapping
                 Permission.Tools_ChargeBrainTreeCustomer,
                 Permission.Tools_GenerateLicenseFile,
                 Permission.Tools_ManageTaxRates,
-                Permission.Tools_CreateEditTransaction
+                Permission.Tools_CreateEditTransaction,
+                Permission.Org_ExtendTrial
             }
         },
         { "sales", new List<Permission>
@@ -212,7 +216,8 @@ public static class RolePermissionMapping
                 Permission.Provider_Edit,
                 Permission.Provider_View,
                 Permission.Provider_ResendEmailInvite,
-                Permission.Org_InitiateSalesAssistedTrial
+                Permission.Org_InitiateSalesAssistedTrial,
+                Permission.Org_ExtendTrial
             }
         },
     };

@@ -26,6 +26,11 @@ internal sealed class EntityRegistry
     internal List<Guid> HardenedOrgUserIds { get; } = [];
 
     /// <summary>
+    /// Organization user IDs for invited, accepted and revoked generated members. The access-shape collection step can give some of them access.
+    /// </summary>
+    internal List<Guid> InactiveOrgUserIds { get; } = [];
+
+    /// <summary>
     /// Full user references including symmetric keys. Used for per-user encrypted content.
     /// </summary>
     /// <seealso cref="UserDigest"/>
@@ -73,11 +78,66 @@ internal sealed class EntityRegistry
     internal Dictionary<string, Guid> FixtureCollectionNameToId { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
+    /// Member count per group. Populated by the access-shape group step for grant weighting.
+    /// </summary>
+    internal Dictionary<Guid, int> GroupMemberCounts { get; } = [];
+
+    /// <summary>
+    /// The access-shape "everyone" group, if one was created.
+    /// </summary>
+    internal Guid? EveryoneGroupId { get; set; }
+
+    /// <summary>
+    /// Access-shape hot groups, in preset order. Paired with dedicated large collections.
+    /// </summary>
+    internal List<Guid> HotGroupIds { get; } = [];
+
+    /// <summary>
+    /// Target item count per collection, aligned with <see cref="CollectionIds"/>. When non-empty,
+    /// <see cref="Steps.GenerateCiphersStep"/> fills collections to these sizes instead of using density skew.
+    /// </summary>
+    internal List<int> CollectionTargetSizes { get; } = [];
+
+    /// <summary>
+    /// Access-shape department per collection, aligned with <see cref="CollectionIds"/>. Filled for every shaped
+    /// collection; all 0 when departments are off.
+    /// </summary>
+    internal List<int> CollectionDepartments { get; } = [];
+
+    /// <summary>
+    /// Access-shape department per member, aligned with <see cref="HardenedOrgUserIds"/>.
+    /// </summary>
+    internal List<int> MemberDepartments { get; } = [];
+
+    /// <summary>
+    /// Access-shape department per group; -1 for groups outside any department, such as the everyone group.
+    /// </summary>
+    internal Dictionary<Guid, int> GroupDepartments { get; } = [];
+
+    /// <summary>
+    /// Access-shape nested groups: parent group → child groups drawn from the parent's members. When the
+    /// per-member cap leaves too few of them, the child is topped up from the parent's department, so it is
+    /// not always a strict subset.
+    /// </summary>
+    internal Dictionary<Guid, List<Guid>> GroupChildren { get; } = [];
+
+    /// <summary>
+    /// Probability that a shaped pick stays inside the home department.
+    /// </summary>
+    internal double DepartmentLocality { get; set; }
+
+    /// <summary>
+    /// Cap on collections per cipher when filling <see cref="CollectionTargetSizes"/>.
+    /// </summary>
+    internal int MaxCollectionsPerCipher { get; set; } = 1;
+
+    /// <summary>
     /// Clears all registry lists. Called by <see cref="RecipeExecutor"/> before each pipeline run.
     /// </summary>
     internal void Clear()
     {
         HardenedOrgUserIds.Clear();
+        InactiveOrgUserIds.Clear();
         UserDigests.Clear();
         GroupIds.Clear();
         CollectionIds.Clear();
@@ -87,5 +147,15 @@ internal sealed class EntityRegistry
         UserEmailPrefixToUserId.Clear();
         FixtureCipherNameToId.Clear();
         FixtureCollectionNameToId.Clear();
+        GroupMemberCounts.Clear();
+        EveryoneGroupId = null;
+        HotGroupIds.Clear();
+        CollectionTargetSizes.Clear();
+        MaxCollectionsPerCipher = 1;
+        CollectionDepartments.Clear();
+        MemberDepartments.Clear();
+        GroupDepartments.Clear();
+        GroupChildren.Clear();
+        DepartmentLocality = 0;
     }
 }

@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Models.Mail;
 using Bit.Core.Platform.Mail.Delivery;
@@ -565,6 +566,104 @@ public class HandlebarsMailServiceTests
 
         // Assert
         Assert.StartsWith(expectedVaultBase, result);
+    }
+
+    [Theory]
+    [InlineData(1, "Reminder: You're invited to join Acme.Corp on Bitwarden", "OrganizationInviteReminder1View")]
+    [InlineData(2, "Don't miss out: Your Acme.Corp invite is still waiting", "OrganizationInviteReminder2View")]
+    [InlineData(3, "Last chance: Your Acme.Corp invite is about to expire", "OrganizationInviteReminder3View")]
+    public async Task SendOrganizationInviteReminderEmailsAsync_SendsCorrectSubjectAndTemplate(
+        int reminderNumber, string expectedSubject, string expectedTemplateName)
+    {
+        // Arrange
+        _mailEnqueuingService
+            .EnqueueManyAsync(Arg.Any<IEnumerable<IMailQueueMessage>>(), Arg.Any<Func<IMailQueueMessage, Task>>())
+            .Returns(callInfo => Task.WhenAll(
+                callInfo.Arg<IEnumerable<IMailQueueMessage>>().Select(callInfo.Arg<Func<IMailQueueMessage, Task>>())));
+
+        var organization = new Organization { Id = Guid.NewGuid(), Name = "Acme.Corp", PlanType = PlanType.Free };
+        var orgUser = new OrganizationUser
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organization.Id,
+            Email = "member@example.com"
+        };
+        var token = new ExpiringToken("test_token", DateTime.UtcNow.AddDays(5));
+
+        var orgInvitesInfo = new OrganizationInvitesInfo(
+            organization,
+            orgSsoEnabled: false,
+            orgSsoLoginRequiredPolicyEnabled: false,
+            orgUserTokenPairs: new[] { (orgUser, token) },
+            orgUserHasExistingUserDict: new Dictionary<Guid, bool> { { orgUser.Id, false } },
+            inviterEmail: "inviter@example.com");
+
+        // Act
+        await _sut.SendOrganizationInviteReminderEmailsAsync(orgInvitesInfo, reminderNumber);
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.ToEmails.Contains("member@example.com") &&
+            m.Subject == expectedSubject &&
+            m.HtmlContent.Contains("Acme.&#8204;Corp") &&
+            m.Category == $"AdminConsole.OrganizationInvite.{expectedTemplateName}"));
+    }
+
+    [Fact]
+    public async Task SendOrganizationInviteReminderEmailsAsync_MultipleMembers_SendsOneEmailPerMember()
+    {
+        // Arrange
+        _mailEnqueuingService
+            .EnqueueManyAsync(Arg.Any<IEnumerable<IMailQueueMessage>>(), Arg.Any<Func<IMailQueueMessage, Task>>())
+            .Returns(callInfo => Task.WhenAll(
+                callInfo.Arg<IEnumerable<IMailQueueMessage>>().Select(callInfo.Arg<Func<IMailQueueMessage, Task>>())));
+
+        var organization = new Organization { Id = Guid.NewGuid(), Name = "Acme Corp", PlanType = PlanType.Free };
+        var orgUser1 = new OrganizationUser { Id = Guid.NewGuid(), OrganizationId = organization.Id, Email = "one@example.com" };
+        var orgUser2 = new OrganizationUser { Id = Guid.NewGuid(), OrganizationId = organization.Id, Email = "two@example.com" };
+        var token = new ExpiringToken("test_token", DateTime.UtcNow.AddDays(5));
+
+        var orgInvitesInfo = new OrganizationInvitesInfo(
+            organization,
+            orgSsoEnabled: false,
+            orgSsoLoginRequiredPolicyEnabled: false,
+            orgUserTokenPairs: new[] { (orgUser1, token), (orgUser2, token) },
+            orgUserHasExistingUserDict: new Dictionary<Guid, bool> { { orgUser1.Id, false }, { orgUser2.Id, true } });
+
+        // Act
+        await _sut.SendOrganizationInviteReminderEmailsAsync(orgInvitesInfo, 1);
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m => m.ToEmails.Contains("one@example.com")));
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m => m.ToEmails.Contains("two@example.com")));
+    }
+
+    [Fact]
+    public async Task SendOrganizationInviteReminderEmailsAsync_RequireSsoOrganization_BuildsUrlWithSsoIdentifier()
+    {
+        // Arrange
+        _mailEnqueuingService
+            .EnqueueManyAsync(Arg.Any<IEnumerable<IMailQueueMessage>>(), Arg.Any<Func<IMailQueueMessage, Task>>())
+            .Returns(callInfo => Task.WhenAll(
+                callInfo.Arg<IEnumerable<IMailQueueMessage>>().Select(callInfo.Arg<Func<IMailQueueMessage, Task>>())));
+
+        var organization = new Organization { Id = Guid.NewGuid(), Name = "Acme Corp", PlanType = PlanType.Free, Identifier = "acme-sso" };
+        var orgUser = new OrganizationUser { Id = Guid.NewGuid(), OrganizationId = organization.Id, Email = "member@example.com" };
+        var token = new ExpiringToken("test_token", DateTime.UtcNow.AddDays(5));
+
+        var orgInvitesInfo = new OrganizationInvitesInfo(
+            organization,
+            orgSsoEnabled: true,
+            orgSsoLoginRequiredPolicyEnabled: true,
+            orgUserTokenPairs: new[] { (orgUser, token) },
+            orgUserHasExistingUserDict: new Dictionary<Guid, bool> { { orgUser.Id, false } });
+
+        // Act
+        await _sut.SendOrganizationInviteReminderEmailsAsync(orgInvitesInfo, 1);
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.HtmlContent.Contains("orgSsoIdentifier=acme-sso")));
     }
 
     [Theory]

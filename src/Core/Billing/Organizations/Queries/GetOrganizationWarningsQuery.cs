@@ -12,7 +12,7 @@ using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
-using Bit.Core.Services;
+using Bitwarden.Server.Sdk.Features;
 using Stripe;
 using Stripe.Tax;
 
@@ -123,7 +123,7 @@ public class GetOrganizationWarningsQuery(
         // If the organization is enabled or the subscription is active, don't return a warning.
         if (organization.Enabled || subscription is not
             {
-                Status: SubscriptionStatus.Unpaid or SubscriptionStatus.Canceled
+                Status: SubscriptionStatus.Unpaid or SubscriptionStatus.Canceled or SubscriptionStatus.IncompleteExpired
             })
         {
             return null;
@@ -147,7 +147,7 @@ public class GetOrganizationWarningsQuery(
                 {
                     Resolution = "add_payment_method"
                 },
-                SubscriptionStatus.Canceled => new InactiveSubscriptionWarning
+                SubscriptionStatus.Canceled or SubscriptionStatus.IncompleteExpired => new InactiveSubscriptionWarning
                 {
                     Resolution = "resubscribe"
                 },

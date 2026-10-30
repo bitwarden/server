@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Xunit;
@@ -61,6 +62,218 @@ public class OrganizationRepositoryTests
         Assert.NotNull(read);
         Assert.Equal(5, read.PamSeats);
         Assert.Equal(10, read.MaxAutoscalePamSeats);
+    }
+
+    [Theory, DatabaseData]
+    public async Task CreateAsync_WithoutPamSeatMinimum_PamSeatMinimumIsNull(
+        IOrganizationRepository organizationRepository)
+    {
+        var created = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org PAM Minimum Unset",
+            BillingEmail = "test@email.com",
+            Plan = "Test",
+            PrivateKey = "privatekey",
+        });
+
+        var read = await organizationRepository.GetByIdAsync(created.Id);
+
+        Assert.NotNull(read);
+        Assert.Null(read.PamSeatMinimum);
+    }
+
+    [Theory, DatabaseData]
+    public async Task CreateAsync_WithPamSeatMinimum_RoundTripsThroughReadPaths(
+        IOrganizationRepository organizationRepository)
+    {
+        var created = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org PAM Minimum",
+            BillingEmail = "test@email.com",
+            Plan = "Test",
+            PrivateKey = "privatekey",
+            PamSeatMinimum = 10,
+        });
+
+        var readById = await organizationRepository.GetByIdAsync(created.Id);
+        var readManyByIds = await organizationRepository.GetManyByIdsAsync([created.Id]);
+
+        Assert.NotNull(readById);
+        Assert.Equal(10, readById.PamSeatMinimum);
+        var readFromMany = Assert.Single(readManyByIds);
+        Assert.Equal(10, readFromMany.PamSeatMinimum);
+    }
+
+    [Theory, DatabaseData]
+    public async Task ReplaceAsync_WithPamSeatMinimum_PersistsValue(
+        IOrganizationRepository organizationRepository)
+    {
+        var created = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org PAM Minimum Replace",
+            BillingEmail = "test@email.com",
+            Plan = "Test",
+            PrivateKey = "privatekey",
+        });
+
+        created.PamSeatMinimum = 10;
+        await organizationRepository.ReplaceAsync(created);
+
+        var read = await organizationRepository.GetByIdAsync(created.Id);
+
+        Assert.NotNull(read);
+        Assert.Equal(10, read.PamSeatMinimum);
+    }
+
+    [Theory, DatabaseData]
+    public async Task CreateAsync_WithoutOrganizationKeyId_OrganizationKeyIdIsNull(
+        IOrganizationRepository organizationRepository)
+    {
+        var created = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org Key Id Unset",
+            BillingEmail = "test@email.com",
+            Plan = "Test",
+            PrivateKey = "privatekey",
+        });
+
+        var read = await organizationRepository.GetByIdAsync(created.Id);
+
+        Assert.NotNull(read);
+        Assert.Null(read.OrganizationKeyId);
+    }
+
+    [Theory, DatabaseData]
+    public async Task CreateAsync_WithOrganizationKeyId_RoundTripsThroughReadPaths(
+        IOrganizationRepository organizationRepository)
+    {
+        const string organizationKeyId = "0123456789abcdef0123456789abcdef";
+        var created = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org Key Id",
+            BillingEmail = "test@email.com",
+            Plan = "Test",
+            PrivateKey = "privatekey",
+            OrganizationKeyId = organizationKeyId,
+        });
+
+        var readById = await organizationRepository.GetByIdAsync(created.Id);
+        var readManyByIds = await organizationRepository.GetManyByIdsAsync([created.Id]);
+
+        Assert.NotNull(readById);
+        Assert.Equal(organizationKeyId, readById.OrganizationKeyId);
+        var readFromMany = Assert.Single(readManyByIds);
+        Assert.Equal(organizationKeyId, readFromMany.OrganizationKeyId);
+    }
+
+    [Theory, DatabaseData]
+    public async Task ReplaceAsync_WithOrganizationKeyId_DoesNotChangeOrganizationKeyId(
+        IOrganizationRepository organizationRepository)
+    {
+        const string organizationKeyId = "fedcba9876543210fedcba9876543210";
+        var created = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org Key Id Replace",
+            BillingEmail = "test@email.com",
+            Plan = "Test",
+            PrivateKey = "privatekey",
+            OrganizationKeyId = organizationKeyId,
+        });
+
+        // A replace from a stale read must not clear or change the key id.
+        created.OrganizationKeyId = null;
+        created.Name = "Test Org Key Id Replaced";
+        await organizationRepository.ReplaceAsync(created);
+
+        var read = await organizationRepository.GetByIdAsync(created.Id);
+
+        Assert.NotNull(read);
+        Assert.Equal("Test Org Key Id Replaced", read.Name);
+        Assert.Equal(organizationKeyId, read.OrganizationKeyId);
+    }
+
+    [Theory, DatabaseData]
+    public async Task SetOrganizationKeyIdAsync_WithoutOrganizationKeyId_SetsOrganizationKeyId(
+        IOrganizationRepository organizationRepository)
+    {
+        var organizationKeyId = KeyId.FromHexEncodedString("0123456789abcdef0123456789abcdef")!;
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+
+        var result = await organizationRepository.SetOrganizationKeyIdAsync(organization.Id, organizationKeyId);
+
+        Assert.True(result);
+        var read = await organizationRepository.GetByIdAsync(organization.Id);
+        Assert.NotNull(read);
+        Assert.Equal(organizationKeyId.ToString(), read.OrganizationKeyId);
+        Assert.Equal(DateTime.UtcNow, read.RevisionDate, TimeSpan.FromMinutes(1));
+    }
+
+    [Theory, DatabaseData]
+    public async Task SetOrganizationKeyIdAsync_WithOrganizationKeyId_DoesNotChangeOrganizationKeyId(
+        IOrganizationRepository organizationRepository)
+    {
+        var existingKeyId = KeyId.FromHexEncodedString("0123456789abcdef0123456789abcdef")!;
+        var newKeyId = KeyId.FromHexEncodedString("fedcba9876543210fedcba9876543210")!;
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        await organizationRepository.SetOrganizationKeyIdAsync(organization.Id, existingKeyId);
+
+        var result = await organizationRepository.SetOrganizationKeyIdAsync(organization.Id, newKeyId);
+
+        Assert.False(result);
+        var read = await organizationRepository.GetByIdAsync(organization.Id);
+        Assert.NotNull(read);
+        Assert.Equal(existingKeyId.ToString(), read.OrganizationKeyId);
+    }
+
+    [Theory, DatabaseData]
+    public async Task SetOrganizationKeyIdAsync_OrganizationDoesNotExist_ReturnsFalse(
+        IOrganizationRepository organizationRepository)
+    {
+        var organizationKeyId = KeyId.FromHexEncodedString("0123456789abcdef0123456789abcdef")!;
+
+        var result = await organizationRepository.SetOrganizationKeyIdAsync(Guid.NewGuid(), organizationKeyId);
+
+        Assert.False(result);
+    }
+
+    [Theory, DatabaseData]
+    public async Task BuildSetOrganizationKeyIdAction_WithoutOrganizationKeyId_SetsOrganizationKeyId(
+        IOrganizationRepository organizationRepository,
+        Database database,
+        IServiceProvider serviceProvider)
+    {
+        var organizationKeyId = KeyId.FromHexEncodedString("0123456789abcdef0123456789abcdef")!;
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+
+        await DatabaseTransactionActionTestHelper.ExecuteAsync(database,
+            organizationRepository.BuildSetOrganizationKeyIdAction(organization.Id, organizationKeyId),
+            serviceProvider);
+
+        var read = await organizationRepository.GetByIdAsync(organization.Id);
+        Assert.NotNull(read);
+        Assert.Equal(organizationKeyId.ToString(), read.OrganizationKeyId);
+        Assert.Equal(DateTime.UtcNow, read.RevisionDate, TimeSpan.FromMinutes(1));
+    }
+
+    [Theory, DatabaseData]
+    public async Task BuildSetOrganizationKeyIdAction_WithOrganizationKeyId_ThrowsAndDoesNotChangeOrganizationKeyId(
+        IOrganizationRepository organizationRepository,
+        Database database,
+        IServiceProvider serviceProvider)
+    {
+        var existingKeyId = KeyId.FromHexEncodedString("0123456789abcdef0123456789abcdef")!;
+        var newKeyId = KeyId.FromHexEncodedString("fedcba9876543210fedcba9876543210")!;
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        await organizationRepository.SetOrganizationKeyIdAsync(organization.Id, existingKeyId);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            DatabaseTransactionActionTestHelper.ExecuteAsync(database,
+                organizationRepository.BuildSetOrganizationKeyIdAction(organization.Id, newKeyId),
+                serviceProvider));
+
+        var read = await organizationRepository.GetByIdAsync(organization.Id);
+        Assert.NotNull(read);
+        Assert.Equal(existingKeyId.ToString(), read.OrganizationKeyId);
     }
 
     [Theory, DatabaseData]
@@ -387,6 +600,83 @@ public class OrganizationRepositoryTests
 
         await Assert.ThrowsAsync<Exception>(async () =>
             await organizationRepository.InitializeOrganizationAsync(organization, failingAction));
+
+        var orgAfter = await organizationRepository.GetByIdAsync(organization.Id);
+        Assert.NotNull(orgAfter);
+        Assert.False(orgAfter.Enabled);
+        Assert.Equal(OrganizationStatusType.Pending, orgAfter.Status);
+        Assert.Null(orgAfter.PublicKey);
+        Assert.Null(orgAfter.PrivateKey);
+
+        var orgUserAfter = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(orgUserAfter);
+        Assert.Equal(OrganizationUserStatusType.Invited, orgUserAfter.Status);
+        Assert.Null(orgUserAfter.UserId);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task InitializeOrganizationAsync_WithSetOrganizationKeyIdAction_SetsOrganizationKeyId(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        var (user, organization, organizationUser) = await CreatePendingOrganizationWithUserAsync(
+            userRepository, organizationRepository, organizationUserRepository);
+        var organizationKeyId = KeyId.FromHexEncodedString("0123456789abcdef0123456789abcdef")!;
+
+        organization.Enabled = true;
+        organization.Status = OrganizationStatusType.Created;
+        organization.PublicKey = "public-key";
+        organization.PrivateKey = "private-key";
+        organization.RevisionDate = DateTime.UtcNow;
+
+        organizationUser.Status = OrganizationUserStatusType.Confirmed;
+        organizationUser.UserId = user.Id;
+        organizationUser.Key = "user-key";
+        organizationUser.Email = null;
+
+        var confirmOwnerAction = organizationUserRepository.BuildConfirmOwnerAction(organizationUser);
+        await organizationRepository.InitializeOrganizationAsync(organization, confirmOwnerAction,
+            [organizationRepository.BuildSetOrganizationKeyIdAction(organization.Id, organizationKeyId)]);
+
+        var updatedOrg = await organizationRepository.GetByIdAsync(organization.Id);
+        Assert.NotNull(updatedOrg);
+        Assert.Equal(OrganizationStatusType.Created, updatedOrg.Status);
+        Assert.Equal("public-key", updatedOrg.PublicKey);
+        Assert.Equal(organizationKeyId.ToString(), updatedOrg.OrganizationKeyId);
+
+        var updatedOrgUser = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(updatedOrgUser);
+        Assert.Equal(OrganizationUserStatusType.Confirmed, updatedOrgUser.Status);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task InitializeOrganizationAsync_WhenAdditionalActionFails_RollsBackAllChanges(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        var (user, organization, organizationUser) = await CreatePendingOrganizationWithUserAsync(
+            userRepository, organizationRepository, organizationUserRepository);
+
+        organization.Enabled = true;
+        organization.Status = OrganizationStatusType.Created;
+        organization.PublicKey = "public-key";
+        organization.PrivateKey = "private-key";
+        organization.RevisionDate = DateTime.UtcNow;
+
+        organizationUser.Status = OrganizationUserStatusType.Confirmed;
+        organizationUser.UserId = user.Id;
+        organizationUser.Key = "user-key";
+        organizationUser.Email = null;
+
+        DatabaseTransactionAction failingAction = (_, _) =>
+            throw new Exception("Simulated failure to test rollback");
+
+        var confirmOwnerAction = organizationUserRepository.BuildConfirmOwnerAction(organizationUser);
+        await Assert.ThrowsAsync<Exception>(async () =>
+            await organizationRepository.InitializeOrganizationAsync(organization, confirmOwnerAction,
+                [failingAction]));
 
         var orgAfter = await organizationRepository.GetByIdAsync(organization.Id);
         Assert.NotNull(orgAfter);

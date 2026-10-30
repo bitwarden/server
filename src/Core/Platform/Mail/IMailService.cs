@@ -72,6 +72,12 @@ public interface IMailService
     /// <param name="orgInvitesInfo">The information required to send the organization invites.</param>
     Task SendOrganizationInviteEmailsAsync(OrganizationInvitesInfo orgInvitesInfo);
     Task SendUpdatedOrganizationInviteEmailsAsync(OrganizationInvitesInfo orgInvitesInfo);
+    /// <summary>
+    /// Sends a reminder email to the members of an organization who have not yet accepted their invite.
+    /// </summary>
+    /// <param name="orgInvitesInfo">The information required to send the organization invite reminders.</param>
+    /// <param name="reminderNumber">Which reminder is being sent: 1, 2, or 3.</param>
+    Task SendOrganizationInviteReminderEmailsAsync(OrganizationInvitesInfo orgInvitesInfo, int reminderNumber);
     Task SendOrganizationMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails);
     Task SendOrganizationAutoscaledEmailAsync(Organization organization, int initialSeatCount, IEnumerable<string> ownerEmails);
     Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier, IEnumerable<string> adminEmails, bool hasAccessSecretsManager = false);

@@ -137,7 +137,7 @@ public class GetPendingAnnualUpgradeQueryTests
     }
 
     [Fact]
-    public async Task Run_SubscriptionNotActive_ReturnsNull()
+    public async Task Run_SubscriptionPastDue_ReturnsNull()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
         // Otherwise-valid redeemed schedule, so Status is the only thing that can produce null.
@@ -149,6 +149,23 @@ public class GetPendingAnnualUpgradeQueryTests
         var result = await _query.Run(organization);
 
         Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task Run_TrialingSubscriptionWithAnnualUpgradeSchedule_ReturnsPendingUpgrade()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        var schedule = ScheduleWithUpcomingAnnualPhase(
+            metadata: new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = "TeamsMonthly" });
+        var subscription = AttachSchedule(organization, schedule);
+        subscription.Status = SubscriptionStatus.Trialing;
+        // Redeeming during a trial starts the annual phase at the trial end.
+        subscription.TrialEnd = schedule.Phases[^1].StartDate;
+
+        var result = await _query.Run(organization);
+
+        Assert.NotNull(result);
+        Assert.Equal(schedule.Phases[^1].StartDate, result.EffectiveDate);
     }
 
     [Fact]

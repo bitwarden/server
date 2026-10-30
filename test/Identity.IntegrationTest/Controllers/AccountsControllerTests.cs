@@ -1,8 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -13,6 +15,7 @@ using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bit.Identity.Models.Request.Accounts;
@@ -425,6 +428,21 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         return (organization, inviteLink);
     }
 
+    // TODO: PM-45479 - Delete this helper with the TokenWithoutEmailSent tests.
+    /// <summary>
+    /// Mints a registration token whose payload has no EmailSent field, the shape of tokens issued before
+    /// that property existed. Protected with the same purpose and prefix the real token factory uses.
+    /// </summary>
+    private static string ProtectRegistrationTokenWithoutEmailSent(IdentityApplicationFactory factory, string email, string name)
+    {
+        var payload = JsonNode.Parse(new RegistrationEmailVerificationTokenable(email, name).ToToken().ToString())!.AsObject();
+        payload.Remove(nameof(RegistrationEmailVerificationTokenable.EmailSent));
+
+        var protector = factory.GetService<IDataProtectionProvider>()
+            .CreateProtector(RegistrationEmailVerificationTokenable.DataProtectorPurpose);
+        return RegistrationEmailVerificationTokenable.ClearTextPrefix + protector.Protect(payload.ToJsonString());
+    }
+
 
     [Theory]
     [BitAutoData(true)]
@@ -528,8 +546,147 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         Assert.Equal(KdfConstants.PBKDF2_ITERATIONS.Default, user.KdfIterations);
         Assert.Equal(kdfMemory, user.KdfMemory);
         Assert.Equal(kdfParallelism, user.KdfParallelism);
+        Assert.True(user.EmailVerified);
     }
 
+    [Theory, BitAutoData]
+    public async Task RegistrationWithEmailVerification_WithEnableEmailVerificationFalse_DoesNotMarkEmailVerified(
+        [Required] string name, bool receiveMarketingEmails,
+        [StringLength(1000), Required] string masterPasswordHash, [StringLength(50)] string masterPasswordHint,
+        [Required] string userSymmetricKey, [Required] KeysRequestModel userAsymmetricKeys,
+        int kdfMemory, int kdfParallelism)
+    {
+        // With email verification disabled, the token comes back in the response body and no email
+        // is sent, so registering with it proves nothing about mailbox ownership.
+        userAsymmetricKeys.AccountKeys = null;
+        var localFactory = new IdentityApplicationFactory();
+        localFactory.UpdateConfiguration("globalSettings:enableEmailVerification", "false");
+
+        var email = $"test+register+noemail+{name}@email.com";
+        var sendReqModel = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails
+        };
+        var sendCtx = await localFactory.PostRegisterSendEmailVerificationAsync(sendReqModel);
+        Assert.Equal(StatusCodes.Status200OK, sendCtx.Response.StatusCode);
+        var emailVerificationToken = await sendCtx.ReadBodyAsStringAsync();
+        Assert.False(localFactory.RegistrationTokens.ContainsKey(email));
+
+        var registerFinishReqModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
+            MasterPasswordHint = masterPasswordHint,
+            EmailVerificationToken = emailVerificationToken,
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            UserSymmetricKey = userSymmetricKey,
+            UserAsymmetricKeys = userAsymmetricKeys,
+            KdfMemory = kdfMemory,
+            KdfParallelism = kdfParallelism
+        };
+        var finishCtx = await localFactory.PostRegisterFinishAsync(registerFinishReqModel);
+
+        Assert.Equal(StatusCodes.Status200OK, finishCtx.Response.StatusCode);
+
+        var database = localFactory.GetDatabaseContext();
+        var user = await database.Users.SingleAsync(u => u.Email == email);
+        Assert.Equal(name, user.Name);
+        Assert.False(user.EmailVerified);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RegistrationWithEmailVerification_TokenIssuedWithEnableEmailVerificationFalse_FinishedAfterSettingEnabled_DoesNotMarkEmailVerified(
+        [Required] string name, bool receiveMarketingEmails,
+        [StringLength(1000), Required] string masterPasswordHash, [StringLength(50)] string masterPasswordHint,
+        [Required] string userSymmetricKey, [Required] KeysRequestModel userAsymmetricKeys,
+        int kdfMemory, int kdfParallelism)
+    {
+        // Whether the email is verified depends on how the token was delivered, not on the
+        // setting's value when registration finishes.
+        userAsymmetricKeys.AccountKeys = null;
+        var localFactory = new IdentityApplicationFactory();
+        localFactory.UpdateConfiguration("globalSettings:enableEmailVerification", "false");
+
+        var email = $"test+register+settingflip+{name}@email.com";
+        var sendReqModel = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails
+        };
+        var sendCtx = await localFactory.PostRegisterSendEmailVerificationAsync(sendReqModel);
+        Assert.Equal(StatusCodes.Status200OK, sendCtx.Response.StatusCode);
+        var emailVerificationToken = await sendCtx.ReadBodyAsStringAsync();
+
+        // GlobalSettings is a singleton, so this changes the value every command reads from here on.
+        localFactory.GetService<GlobalSettings>().EnableEmailVerification = true;
+
+        var registerFinishReqModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
+            MasterPasswordHint = masterPasswordHint,
+            EmailVerificationToken = emailVerificationToken,
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            UserSymmetricKey = userSymmetricKey,
+            UserAsymmetricKeys = userAsymmetricKeys,
+            KdfMemory = kdfMemory,
+            KdfParallelism = kdfParallelism
+        };
+        var finishCtx = await localFactory.PostRegisterFinishAsync(registerFinishReqModel);
+
+        Assert.Equal(StatusCodes.Status200OK, finishCtx.Response.StatusCode);
+
+        var database = localFactory.GetDatabaseContext();
+        var user = await database.Users.SingleAsync(u => u.Email == email);
+        Assert.False(user.EmailVerified);
+    }
+
+    // TODO: PM-45479 - Delete this test.
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task RegistrationWithEmailVerification_TokenWithoutEmailSent_MarksEmailVerifiedPerEnableEmailVerification(
+        bool enableEmailVerification,
+        [Required] string name,
+        [StringLength(1000), Required] string masterPasswordHash, [StringLength(50)] string masterPasswordHint,
+        [Required] string userSymmetricKey, [Required] KeysRequestModel userAsymmetricKeys,
+        int kdfMemory, int kdfParallelism)
+    {
+        // A token issued before EmailSent existed was emailed only when email verification was enabled.
+        userAsymmetricKeys.AccountKeys = null;
+        var localFactory = new IdentityApplicationFactory();
+        localFactory.UpdateConfiguration("globalSettings:enableEmailVerification", enableEmailVerification.ToString());
+
+        var email = $"test+register+noemailsent+{name}@email.com";
+        var emailVerificationToken = ProtectRegistrationTokenWithoutEmailSent(localFactory, email, name);
+
+        var registerFinishReqModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
+            MasterPasswordHint = masterPasswordHint,
+            EmailVerificationToken = emailVerificationToken,
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            UserSymmetricKey = userSymmetricKey,
+            UserAsymmetricKeys = userAsymmetricKeys,
+            KdfMemory = kdfMemory,
+            KdfParallelism = kdfParallelism
+        };
+        var finishCtx = await localFactory.PostRegisterFinishAsync(registerFinishReqModel);
+
+        Assert.Equal(StatusCodes.Status200OK, finishCtx.Response.StatusCode);
+
+        var database = localFactory.GetDatabaseContext();
+        var user = await database.Users.SingleAsync(u => u.Email == email);
+        Assert.Equal(name, user.Name);
+        Assert.Equal(enableEmailVerification, user.EmailVerified);
+    }
 
     [Theory, BitAutoData]
     public async Task RegistrationWithEmailVerification_OpenRegistrationDisabled_ThrowsBadRequestException([Required] string name, string emailVerificationToken,
@@ -686,6 +843,233 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
 
         // Seeded org has no Require 2FA policy — user must not be initialized with 2FA providers.
         Assert.Null(user.GetTwoFactorProviders());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RegistrationWithEmailVerification_WithOpenOrgInviteAndEmailedToken_MarksEmailVerified(
+        [Required] string name, bool receiveMarketingEmails,
+        [StringLength(1000), Required] string masterPasswordHash, [StringLength(50)] string masterPasswordHint,
+        [Required] string userSymmetricKey, [Required] KeysRequestModel userAsymmetricKeys,
+        int kdfMemory, int kdfParallelism)
+    {
+        userAsymmetricKeys.AccountKeys = null;
+        var localFactory = new IdentityApplicationFactory();
+
+        var email = $"test+openinvite+emailed+{name}@email.com";
+        var (_, inviteLink) = await SeedOrgWithInviteLinkAsync(localFactory, allowedDomains: new[] { "email.com" });
+
+        var sendReqModel = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails,
+            OpenOrgInvite = new RegisterStartOpenOrgInviteRequestModel
+            {
+                OrganizationId = inviteLink.OrganizationId,
+                Code = Guid.Parse(inviteLink.Code),
+                SealedOpenOrgInviteData = "opaque-base64url-blob",
+            },
+        };
+        var sendCtx = await localFactory.PostRegisterSendEmailVerificationAsync(sendReqModel);
+        Assert.Equal(StatusCodes.Status204NoContent, sendCtx.Response.StatusCode);
+        Assert.NotNull(localFactory.RegistrationTokens[email]);
+
+        var registerFinishReqModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
+            MasterPasswordHint = masterPasswordHint,
+            EmailVerificationToken = localFactory.RegistrationTokens[email],
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            UserSymmetricKey = userSymmetricKey,
+            UserAsymmetricKeys = userAsymmetricKeys,
+            KdfMemory = kdfMemory,
+            KdfParallelism = kdfParallelism,
+            OpenOrgInvite = new OpenOrgInviteRequestModel
+            {
+                OrganizationId = inviteLink.OrganizationId,
+                Code = Guid.Parse(inviteLink.Code),
+            },
+        };
+        var finishCtx = await localFactory.PostRegisterFinishAsync(registerFinishReqModel);
+
+        Assert.Equal(StatusCodes.Status200OK, finishCtx.Response.StatusCode);
+
+        var database = localFactory.GetDatabaseContext();
+        var user = await database.Users.SingleAsync(u => u.Email == email);
+        Assert.True(user.EmailVerified);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RegistrationWithEmailVerification_WithOpenOrgInviteAndEnableEmailVerificationFalse_DoesNotMarkEmailVerified(
+        [Required] string name, bool receiveMarketingEmails,
+        [StringLength(1000), Required] string masterPasswordHash, [StringLength(50)] string masterPasswordHint,
+        [Required] string userSymmetricKey, [Required] KeysRequestModel userAsymmetricKeys,
+        int kdfMemory, int kdfParallelism)
+    {
+        // With email verification disabled, the token comes back in the response body and no email
+        // is sent, so registering with it proves nothing about mailbox ownership.
+        userAsymmetricKeys.AccountKeys = null;
+        var localFactory = new IdentityApplicationFactory();
+        localFactory.UpdateConfiguration("globalSettings:enableEmailVerification", "false");
+
+        var email = $"test+openinvite+noemail+{name}@email.com";
+        var (_, inviteLink) = await SeedOrgWithInviteLinkAsync(localFactory, allowedDomains: new[] { "email.com" });
+
+        var sendReqModel = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails,
+            OpenOrgInvite = new RegisterStartOpenOrgInviteRequestModel
+            {
+                OrganizationId = inviteLink.OrganizationId,
+                Code = Guid.Parse(inviteLink.Code),
+                SealedOpenOrgInviteData = "opaque-base64url-blob",
+            },
+        };
+        var sendCtx = await localFactory.PostRegisterSendEmailVerificationAsync(sendReqModel);
+        Assert.Equal(StatusCodes.Status200OK, sendCtx.Response.StatusCode);
+        var emailVerificationToken = await sendCtx.ReadBodyAsStringAsync();
+        Assert.False(localFactory.RegistrationTokens.ContainsKey(email));
+
+        var registerFinishReqModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
+            MasterPasswordHint = masterPasswordHint,
+            EmailVerificationToken = emailVerificationToken,
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            UserSymmetricKey = userSymmetricKey,
+            UserAsymmetricKeys = userAsymmetricKeys,
+            KdfMemory = kdfMemory,
+            KdfParallelism = kdfParallelism,
+            OpenOrgInvite = new OpenOrgInviteRequestModel
+            {
+                OrganizationId = inviteLink.OrganizationId,
+                Code = Guid.Parse(inviteLink.Code),
+            },
+        };
+        var finishCtx = await localFactory.PostRegisterFinishAsync(registerFinishReqModel);
+
+        Assert.Equal(StatusCodes.Status200OK, finishCtx.Response.StatusCode);
+
+        var database = localFactory.GetDatabaseContext();
+        var user = await database.Users.SingleAsync(u => u.Email == email);
+        Assert.Equal(name, user.Name);
+        Assert.False(user.EmailVerified);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RegistrationWithEmailVerification_WithOpenOrgInviteAndTokenIssuedWithEnableEmailVerificationFalse_FinishedAfterSettingEnabled_DoesNotMarkEmailVerified(
+        [Required] string name, bool receiveMarketingEmails,
+        [StringLength(1000), Required] string masterPasswordHash, [StringLength(50)] string masterPasswordHint,
+        [Required] string userSymmetricKey, [Required] KeysRequestModel userAsymmetricKeys,
+        int kdfMemory, int kdfParallelism)
+    {
+        // Whether the email is verified depends on how the token was delivered, not on the
+        // setting's value when registration finishes.
+        userAsymmetricKeys.AccountKeys = null;
+        var localFactory = new IdentityApplicationFactory();
+        localFactory.UpdateConfiguration("globalSettings:enableEmailVerification", "false");
+
+        var email = $"test+openinvite+settingflip+{name}@email.com";
+        var (_, inviteLink) = await SeedOrgWithInviteLinkAsync(localFactory, allowedDomains: new[] { "email.com" });
+
+        var sendReqModel = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails,
+            OpenOrgInvite = new RegisterStartOpenOrgInviteRequestModel
+            {
+                OrganizationId = inviteLink.OrganizationId,
+                Code = Guid.Parse(inviteLink.Code),
+                SealedOpenOrgInviteData = "opaque-base64url-blob",
+            },
+        };
+        var sendCtx = await localFactory.PostRegisterSendEmailVerificationAsync(sendReqModel);
+        Assert.Equal(StatusCodes.Status200OK, sendCtx.Response.StatusCode);
+        var emailVerificationToken = await sendCtx.ReadBodyAsStringAsync();
+
+        // GlobalSettings is a singleton, so this changes the value every command reads from here on.
+        localFactory.GetService<GlobalSettings>().EnableEmailVerification = true;
+
+        var registerFinishReqModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
+            MasterPasswordHint = masterPasswordHint,
+            EmailVerificationToken = emailVerificationToken,
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            UserSymmetricKey = userSymmetricKey,
+            UserAsymmetricKeys = userAsymmetricKeys,
+            KdfMemory = kdfMemory,
+            KdfParallelism = kdfParallelism,
+            OpenOrgInvite = new OpenOrgInviteRequestModel
+            {
+                OrganizationId = inviteLink.OrganizationId,
+                Code = Guid.Parse(inviteLink.Code),
+            },
+        };
+        var finishCtx = await localFactory.PostRegisterFinishAsync(registerFinishReqModel);
+
+        Assert.Equal(StatusCodes.Status200OK, finishCtx.Response.StatusCode);
+
+        var database = localFactory.GetDatabaseContext();
+        var user = await database.Users.SingleAsync(u => u.Email == email);
+        Assert.False(user.EmailVerified);
+    }
+
+    // TODO: PM-45479 - Delete this test.
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task RegistrationWithEmailVerification_WithOpenOrgInviteAndTokenWithoutEmailSent_MarksEmailVerifiedPerEnableEmailVerification(
+        bool enableEmailVerification,
+        [Required] string name,
+        [StringLength(1000), Required] string masterPasswordHash, [StringLength(50)] string masterPasswordHint,
+        [Required] string userSymmetricKey, [Required] KeysRequestModel userAsymmetricKeys,
+        int kdfMemory, int kdfParallelism)
+    {
+        // A token issued before EmailSent existed was emailed only when email verification was enabled.
+        userAsymmetricKeys.AccountKeys = null;
+        var localFactory = new IdentityApplicationFactory();
+        localFactory.UpdateConfiguration("globalSettings:enableEmailVerification", enableEmailVerification.ToString());
+
+        var email = $"test+openinvite+noemailsent+{name}@email.com";
+        var (_, inviteLink) = await SeedOrgWithInviteLinkAsync(localFactory, allowedDomains: new[] { "email.com" });
+        var emailVerificationToken = ProtectRegistrationTokenWithoutEmailSent(localFactory, email, name);
+
+        var registerFinishReqModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
+            MasterPasswordHint = masterPasswordHint,
+            EmailVerificationToken = emailVerificationToken,
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            UserSymmetricKey = userSymmetricKey,
+            UserAsymmetricKeys = userAsymmetricKeys,
+            KdfMemory = kdfMemory,
+            KdfParallelism = kdfParallelism,
+            OpenOrgInvite = new OpenOrgInviteRequestModel
+            {
+                OrganizationId = inviteLink.OrganizationId,
+                Code = Guid.Parse(inviteLink.Code),
+            },
+        };
+        var finishCtx = await localFactory.PostRegisterFinishAsync(registerFinishReqModel);
+
+        Assert.Equal(StatusCodes.Status200OK, finishCtx.Response.StatusCode);
+
+        var database = localFactory.GetDatabaseContext();
+        var user = await database.Users.SingleAsync(u => u.Email == email);
+        Assert.Equal(name, user.Name);
+        Assert.Equal(enableEmailVerification, user.EmailVerified);
     }
 
     [Theory, BitAutoData]
@@ -1256,7 +1640,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
 
         // As token contains now milliseconds for when it was created, create 1k year timespan for expiration
         // to ensure token is valid for a good long while.
-        localFactory.UpdateConfiguration("globalSettings:OrganizationInviteExpirationHours", "8760000");
+        localFactory.UpdateConfiguration("globalSettings:ProviderInviteExpirationHours", "8760000");
 
         var registerFinishReqModel = new RegisterFinishRequestModel
         {

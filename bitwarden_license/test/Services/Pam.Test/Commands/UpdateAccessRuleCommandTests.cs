@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Pam.Entities;
+using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.OrganizationFeatures.Commands;
@@ -15,8 +16,8 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Commands;
 
 /// <summary>
-/// The validation these commands share lives in <see cref="AccessRuleWriteValidator"/> and is covered by
-/// AccessRuleWriteValidatorTests; these tests cover persistence, timestamps, and collection association wiring.
+/// Validation lives in <see cref="AccessRuleWriteValidator"/> and its tests; these cover persistence, timestamps and
+/// collection links.
 /// </summary>
 [SutProviderCustomize]
 public class UpdateAccessRuleCommandTests
@@ -120,7 +121,6 @@ public class UpdateAccessRuleCommandTests
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.UpdateAsync(Guid.NewGuid(), Guid.NewGuid(), update, []));
-        // A rule the caller cannot see is a 404 before anything about the payload is judged.
         await sutProvider.GetDependency<IAccessRuleWriteValidator>().DidNotReceiveWithAnyArgs()
             .ValidateAsync(default, default!, default!, default);
     }
@@ -157,6 +157,44 @@ public class UpdateAccessRuleCommandTests
         await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs()
             .SetAccessRuleAssociationsAsync(default, default, default!, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_EmitsAttemptThenOutcome_WithTheNewNameAndEditorAsActor(
+        AccessRuleDetails existing, AccessRule update, Guid editorId)
+    {
+        var sutProvider = SetupSutProvider();
+        var orgId = existing.OrganizationId;
+        existing.CollectionIds = [];
+        existing.Name = "before";
+        update.Name = "after";
+        update.LastEditedBy = editorId;
+        sutProvider.GetDependency<IAccessRuleRepository>().GetDetailsByIdAsync(existing.Id).Returns(existing);
+        SetupValidator(sutProvider, orgId, existing.Id, []);
+
+        await sutProvider.Sut.UpdateAsync(orgId, existing.Id, update, []);
+
+        var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
+        await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
+            e.Kind == AccessAuditEventKind.RuleUpdated && e.Phase == AccessAuditEventPhase.Attempt
+            && e.OrganizationId == orgId && e.ActorId == editorId && e.AccessRuleId == existing.Id
+            && e.RuleName == "after" && e.OccurredDate == _now));
+        await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
+            e.Kind == AccessAuditEventKind.RuleUpdated && e.Phase == AccessAuditEventPhase.Outcome
+            && e.AccessRuleId == existing.Id && e.RuleName == "after"));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_WrongOrg_EmitsNothing(AccessRuleDetails existing, AccessRule update)
+    {
+        var sutProvider = SetupSutProvider();
+        sutProvider.GetDependency<IAccessRuleRepository>().GetDetailsByIdAsync(existing.Id).Returns(existing);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.UpdateAsync(Guid.NewGuid(), existing.Id, update, []));
+
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>()
+            .DidNotReceiveWithAnyArgs().EmitAsync(default!);
     }
 
     private static void SetupValidator(SutProvider<UpdateAccessRuleCommand> sutProvider, Guid organizationId,

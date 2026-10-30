@@ -5,7 +5,7 @@
 @using Bit.Core.Billing.Enums
 @using Bit.SharedWeb.Utilities
 @inject Bit.Admin.Services.IAccessControlService AccessControlService;
-@inject Bit.Core.Services.IFeatureService FeatureService
+@inject Bitwarden.Server.Sdk.Features.IFeatureService FeatureService
 
 @model OrganizationEditModel
 
@@ -23,6 +23,9 @@
     var canManagePlanMigrationCohorts = AccessControlService.UserHasPermission(Permission.Tools_ManagePlanMigrationCohorts);
     var businessPlanPriceMigrationEnabled = FeatureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration);
     var canViewMigrationCohortAssignment = businessPlanPriceMigrationEnabled && canManagePlanMigrationCohorts;
+    var pamBillingSupportEnabled = FeatureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support);
+    var showPamCheckbox = !pamBillingSupportEnabled || Model.Provider == null;
+    var showPamConfiguration = pamBillingSupportEnabled && Model.Provider == null;
 }
 
 <form method="post" id="edit-form" asp-route-providerId="@Model.Provider?.Id">
@@ -258,13 +261,20 @@
                             <label class="form-check-label" asp-for="UseRiskInsights"></label>
                         </div>
                     </div>
-                    <div class="col-6">
-                        <h3>Privileged Access Management</h3>
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" asp-for="UsePam" disabled='@(canEditPlan ? null : "disabled")'>
-                            <label class="form-check-label" asp-for="UsePam"></label>
+                    @if (showPamCheckbox)
+                    {
+                        <div class="col-6">
+                            <h3>Privileged Access Management</h3>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" asp-for="UsePam" disabled='@(canEditPlan ? null : "disabled")'>
+                                <label class="form-check-label" asp-for="UsePam"></label>
+                            </div>
+                            @if (showPamConfiguration && !Model.UsePam && Model.PrivilegedControlsStripeSeats.HasValue)
+                            {
+                                <div class="alert alert-warning mt-2"><strong>Privileged Access Management doesn't match Stripe.</strong> Privileged Access Management is off, but the Stripe subscription has a Privileged Access Management line for @Model.PrivilegedControlsStripeSeats seats.</div>
+                            }
                         </div>
-                    </div>
+                    }
                 </div>
             </div>
         </div>
@@ -332,6 +342,31 @@
                     <div class="mb-3">
                         <label class="form-label" asp-for="MaxAutoscaleSmServiceAccounts"></label>
                         <input type="number" class="form-control" asp-for="MaxAutoscaleSmServiceAccounts" min="1" readonly='@(!canEditPlan)'>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (canViewPlan && showPamConfiguration)
+    {
+        <div id="organization-pam-configuration" hidden="@(!Model.UsePam)">
+            <h2>Privileged Access Management Configuration</h2>
+            @if (Model.UsePam && Model.PrivilegedControlsStripeSeats.HasValue && Model.PrivilegedControlsStripeSeats != Model.PamSeats)
+            {
+                <div class="alert alert-warning"><strong>These seats don't match Stripe.</strong> Organization: @(Model.PamSeats?.ToString() ?? "none"). Stripe: @Model.PrivilegedControlsStripeSeats seats.</div>
+            }
+            <div class="row">
+                <div class="col-sm">
+                    <div class="mb-3">
+                        <label class="form-label" asp-for="PamSeats"></label>
+                        <input type="number" class="form-control" asp-for="PamSeats" min="1" readonly='@(!canEditPlan)'>
+                    </div>
+                </div>
+                <div class="col-sm">
+                    <div class="mb-3">
+                        <label class="form-label" asp-for="MaxAutoscalePamSeats"></label>
+                        <input type="number" class="form-control" asp-for="MaxAutoscalePamSeats" min="1" readonly='@(!canEditPlan)'>
                     </div>
                 </div>
             </div>

@@ -205,10 +205,8 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
     }
 
     /// <summary>
-    /// Reads a two-result-set access-request projection: result 1 is the raw request rows (stored facts only), result
-    /// 2 is every decision row (human or automatic) keyed by AccessRequestId (ordered oldest-first by the procedure).
-    /// Derives each row's statuses against <paramref name="now"/> and groups the decisions onto each request's
-    /// <see cref="AccessRequestDetails.Decisions"/>; a pending request keeps its empty list.
+    /// Reads the request rows, then the decision rows oldest first, deriving each request's statuses against
+    /// <paramref name="now"/>.
     /// </summary>
     private static async Task<List<AccessRequestDetails>> ReadDetailsWithDecisionsAsync(SqlMapper.GridReader reader, DateTime now)
     {
@@ -229,11 +227,8 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
     }
 
     /// <summary>
-    /// A raw request-projection row: the <see cref="AccessRequestDetails"/> it becomes, plus the stored
-    /// action and the produced lease's action the procedures additionally project.
-    /// Dapper maps inherited columns by name, so a new model column can't silently drop; <see cref="Derive"/> stamps
-    /// derived statuses via the shared <see cref="AccessRequestDetails.StampDerivedStatuses"/>. Derived statuses
-    /// never cross the wire from SQL.
+    /// Inherits the read model so Dapper maps every column by name, and adds the stored actions <see cref="Derive"/>
+    /// turns into statuses. Derived statuses never come from SQL.
     /// </summary>
     private sealed class DetailsRow : AccessRequestDetails
     {
@@ -251,7 +246,6 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
         }
     }
 
-    /// <summary>A decision row from the decision result set, carrying its AccessRequestId for grouping.</summary>
     private sealed class DecisionRow
     {
         public Guid AccessRequestId { get; set; }

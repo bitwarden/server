@@ -24,29 +24,32 @@ public class UsersController : Controller
 {
     private readonly IUserRepository _userRepository;
     private readonly ICipherRepository _cipherRepository;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IStripePaymentService _paymentService;
     private readonly GlobalSettings _globalSettings;
     private readonly IAccessControlService _accessControlService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IUserService _userService;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly ISubscriberService _subscriberService;
     private readonly ILogger<UsersController> _logger;
 
     public UsersController(
         IUserRepository userRepository,
         ICipherRepository cipherRepository,
+        IOrganizationUserRepository organizationUserRepository,
         IStripePaymentService paymentService,
         GlobalSettings globalSettings,
         IAccessControlService accessControlService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IUserService userService,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         ISubscriberService subscriberService,
         ILogger<UsersController> logger)
     {
         _userRepository = userRepository;
         _cipherRepository = cipherRepository;
+        _organizationUserRepository = organizationUserRepository;
         _paymentService = paymentService;
         _globalSettings = globalSettings;
         _accessControlService = accessControlService;
@@ -99,7 +102,8 @@ public class UsersController : Controller
 
         var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var verifiedDomain = await _userService.IsClaimedByAnyOrganizationAsync(user.Id);
-        return View(UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers, verifiedDomain));
+        var needsRecoveryKeyV2Update = await NeedsRecoveryKeyV2UpdateAsync(user.Id);
+        return View(UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers, verifiedDomain, needsRecoveryKeyV2Update));
     }
 
     [SelfHosted(NotSelfHostedOnly = true)]
@@ -144,8 +148,16 @@ public class UsersController : Controller
         var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var verifiedDomain = await _userService.IsClaimedByAnyOrganizationAsync(user.Id);
         var deviceVerificationRequired = await _userService.ActiveNewDeviceVerificationException(user.Id);
+        var needsRecoveryKeyV2Update = await NeedsRecoveryKeyV2UpdateAsync(user.Id);
 
-        return View(new UserEditModel(user, isTwoFactorEnabled, ciphers, billingInfo, billingHistoryInfo, _globalSettings, verifiedDomain, deviceVerificationRequired));
+        return View(new UserEditModel(user, isTwoFactorEnabled, ciphers, billingInfo, billingHistoryInfo, _globalSettings, verifiedDomain, deviceVerificationRequired, needsRecoveryKeyV2Update));
+    }
+
+    // Enrolled members whose recovery key still awaits an admin's V2 re-wrap, e.g. after a forced key rotation.
+    private async Task<bool> NeedsRecoveryKeyV2UpdateAsync(Guid userId)
+    {
+        var memberships = await _organizationUserRepository.GetManyByUserAsync(userId);
+        return memberships.Any(m => m.V2UpgradeToken != null && m.IsEnrolledInAccountRecovery());
     }
 
     [HttpPost]

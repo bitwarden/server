@@ -12,10 +12,10 @@ using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
-using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bitwarden.Server.Sdk.Features;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Stripe;
@@ -268,6 +268,34 @@ public class GetOrganizationWarningsQueryTests
             {
                 Customer = new Customer(),
                 Status = SubscriptionStatus.Canceled
+            });
+
+        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
+
+        var response = await sutProvider.Sut.Run(organization);
+
+        Assert.True(response is
+        {
+            InactiveSubscription.Resolution: "resubscribe"
+        });
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_Has_InactiveSubscriptionWarning_Resubscribe_IncompleteExpired(
+        Organization organization,
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
+    {
+        organization.Enabled = false;
+        organization.ExemptFromBillingAutomation = false;
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.SequenceEqual(_requiredExpansions)
+            ))
+            .Returns(new Subscription
+            {
+                Customer = new Customer(),
+                Status = SubscriptionStatus.IncompleteExpired
             });
 
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);

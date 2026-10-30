@@ -157,6 +157,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<ICipherService, CipherService>();
         services.TryAddScoped<ICipherSyncPushService, CipherSyncPushService>();
+        services.TryAddScoped<IPartialCipherWriteGuard, PartialCipherWriteGuard>();
         // PAM credential leasing is commercial; OSS builds never gate. The commercial Pam library
         // overrides this default by registering the real gate after AddBaseServices, where the last
         // registration wins — the shape AddOosServices uses for IProviderService. That override must
@@ -240,6 +241,12 @@ public static class ServiceCollectionExtensions
                 DuoUserStateTokenable.DataProtectorPurpose,
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<DuoUserStateTokenable>>>()));
+        services.AddSingleton<IDataProtectorTokenFactory<TwoFactorRememberTokenable>>(serviceProvider =>
+            new DataProtectorTokenFactory<TwoFactorRememberTokenable>(
+                TwoFactorRememberTokenable.ClearTextPrefix,
+                TwoFactorRememberTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<TwoFactorRememberTokenable>>>()));
 
         services.AddSingleton<IDataProtectorTokenFactory<ProviderDeleteTokenable>>(serviceProvider =>
             new DataProtectorTokenFactory<ProviderDeleteTokenable>(
@@ -261,6 +268,7 @@ public static class ServiceCollectionExtensions
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable>>>()));
         services.AddSingleton<ITwoFactorUserVerificationTokenableFactory, TwoFactorUserVerificationTokenableFactory>();
+        services.AddSingleton<ITwoFactorRememberTokenableFactory, TwoFactorRememberTokenableFactory>();
         services.AddSingleton<IDataProtectorTokenFactory<TwoFactorUserVerificationTokenable>>(
             serviceProvider => new DataProtectorTokenFactory<TwoFactorUserVerificationTokenable>(
                 TwoFactorUserVerificationTokenable.ClearTextPrefix,
@@ -450,8 +458,6 @@ public static class ServiceCollectionExtensions
             .AddTokenProvider<DataProtectorTokenProvider<User>>(TokenOptions.DefaultProvider)
             .AddTokenProvider<AuthenticatorTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Authenticator))
-            .AddTokenProvider<EmailTwoFactorTokenProvider>(
-                CoreHelpers.CustomProviderName(TwoFactorProviderType.Email))
             .AddTokenProvider<YubicoOtpTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.YubiKey))
             .AddTokenProvider<DuoUniversalTokenProvider>(

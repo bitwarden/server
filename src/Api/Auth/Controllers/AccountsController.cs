@@ -52,7 +52,7 @@ public class AccountsController : Controller
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly IReplaceAdminSetTemporaryPasswordCommand _replaceAdminSetTemporaryPasswordCommand;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
     private readonly ITwoFactorEmailService _twoFactorEmailService;
     private readonly IChangeKdfCommand _changeKdfCommand;
@@ -75,7 +75,7 @@ public class AccountsController : Controller
         ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
         IReplaceAdminSetTemporaryPasswordCommand replaceAdminSetTemporaryPasswordCommand,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         IUserAccountKeysQuery userAccountKeysQuery,
         ITwoFactorEmailService twoFactorEmailService,
         IChangeKdfCommand changeKdfCommand,
@@ -857,6 +857,8 @@ public class AccountsController : Controller
         throw new BadRequestException(ModelState);
     }
 
+    // TODO: PM-44310 - Move the OTP request and verify out of IUserService
+    // and this action into Auth commands.
     [HttpPost("request-otp")]
     public async Task PostRequestOTP()
     {
@@ -874,6 +876,13 @@ public class AccountsController : Controller
         {
             await Task.Delay(2000);
             throw new BadRequestException("Token", "Invalid token");
+        }
+
+        // A valid emailed OTP proves mailbox control.
+        if (!user.EmailVerified)
+        {
+            user.EmailVerified = true;
+            await _userService.SaveUserAsync(user);
         }
     }
 

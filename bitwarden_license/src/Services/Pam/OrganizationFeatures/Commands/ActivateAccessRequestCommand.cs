@@ -2,6 +2,7 @@
 using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
@@ -14,25 +15,34 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
 {
     private readonly IAccessRequestRepository _accessRequestRepository;
     private readonly IAccessLeaseRepository _accessLeaseRepository;
+    private readonly IApproverInboxNotifier _approverInboxNotifier;
+    private readonly IRequesterNotifier _requesterNotifier;
     private readonly ISingleActiveLeaseEvaluator _singleActiveLeaseEvaluator;
     private readonly IGoverningRuleResolver _resolver;
     private readonly IAccessRuleEngine _ruleEngine;
     private readonly ICurrentContext _currentContext;
+    private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
 
     public ActivateAccessRequestCommand(
         IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository,
+        IApproverInboxNotifier approverInboxNotifier,
+        IRequesterNotifier requesterNotifier,
         ISingleActiveLeaseEvaluator singleActiveLeaseEvaluator,
         IGoverningRuleResolver resolver,
         IAccessRuleEngine ruleEngine,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IAccessAuditEventEmitter accessAuditEventEmitter)
     {
         _accessRequestRepository = accessRequestRepository;
         _accessLeaseRepository = accessLeaseRepository;
+        _approverInboxNotifier = approverInboxNotifier;
+        _requesterNotifier = requesterNotifier;
         _singleActiveLeaseEvaluator = singleActiveLeaseEvaluator;
         _resolver = resolver;
         _ruleEngine = ruleEngine;
         _currentContext = currentContext;
+        _accessAuditEventEmitter = accessAuditEventEmitter;
     }
 
     public async Task<AccessLease> ActivateAsync(Guid userId, Guid requestId, DateTime now)
@@ -89,7 +99,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
             CollectionId = request.CollectionId,
             CipherId = request.CipherId,
             RequesterId = request.RequesterId,
-            // NotBefore is now, not backdated to the approved window's start; NotAfter stays the approved end.
+            // Starts now, not backdated to the approved window's start.
             NotBefore = now,
             NotAfter = request.NotAfter,
             CreationDate = now,
@@ -99,10 +109,36 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         // Binds only where every cipher path is singleton-governed; enforced under a range lock in the mint proc.
         var enforceSingleActiveLease = await _singleActiveLeaseEvaluator.AppliesAsync(userId, request.CipherId);
 
-        // Automated conditions (e.g. an IP allowlist) must still hold at activation, not just at submit.
+        // Attempt before the mint, outcome after. A race lost to another activation leaves the attempt without one.
+        var audit = new AccessAuditEventData
+        {
+            Kind = AccessAuditEventKind.LeaseActivated,
+            OccurredDate = now,
+            OrganizationId = request.OrganizationId,
+            ActorId = userId,
+            RequesterId = request.RequesterId,
+            CollectionId = request.CollectionId,
+            CipherId = request.CipherId,
+            AccessRequestId = request.Id,
+            AccessLeaseId = lease.Id,
+            LeaseNotBefore = lease.NotBefore,
+            LeaseNotAfter = lease.NotAfter,
+        };
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
+
+        // Automated conditions (e.g. an IP allowlist) must still hold at activation.
         var denial = await FindConditionDenialAsync(userId, request, now);
         if (denial is not null)
         {
+            await _accessAuditEventEmitter.EmitAsync(
+                audit with
+                {
+                    Kind = AccessAuditEventKind.LeaseActivationRejected,
+                    Phase = AccessAuditEventPhase.Outcome,
+                    AccessLeaseId = null,
+                    // The reason code, not the localized message.
+                    Detail = denial.Reason.ToString(),
+                });
             throw new BadRequestException(AccessDenialMessage.For(denial));
         }
 
@@ -110,6 +146,8 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
 
         if (outcome == AccessLeaseMintOutcome.SingleActiveLeaseConflict)
         {
+            await _accessAuditEventEmitter.EmitAsync(
+                audit with { Kind = AccessAuditEventKind.LeaseActivationRejected, Phase = AccessAuditEventPhase.Outcome, AccessLeaseId = null });
             throw new ConflictException("Another active lease exists for this item. Try again once it ends.");
         }
 
@@ -121,18 +159,23 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
             {
                 return winner;
             }
+            await _accessAuditEventEmitter.EmitAsync(
+                audit with { Kind = AccessAuditEventKind.LeaseActivationRejected, Phase = AccessAuditEventPhase.Outcome, AccessLeaseId = null });
             throw new ConflictException("This request can no longer be activated.");
         }
+
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
+
+        await _approverInboxNotifier.NotifyCollectionApproversAsync(request.CollectionId);
+        await _requesterNotifier.NotifyRequesterAsync(request.RequesterId);
 
         return lease;
     }
 
     /// <summary>
-    /// Re-evaluates the governing rule's automated conditions against the caller's signals at activation time.
+    /// Re-evaluates the automated conditions of the rule pinned on the request, falling back to the cipher's current
+    /// rule only when none is pinned.
     /// </summary>
-    /// <remarks>
-    /// Uses the rule pinned on the request, not whichever rule governs the cipher today; the approval gate is stripped.
-    /// </remarks>
     private async Task<AccessEvaluation?> FindConditionDenialAsync(Guid userId, AccessRequest request, DateTime now)
     {
         var signals = AccessSignals.From(_currentContext.IpAddress, new DateTimeOffset(now, TimeSpan.Zero));
@@ -141,7 +184,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
             ? await _resolver.ResolvePinnedAsync(ruleId, request.CollectionId)
             : await _resolver.ResolveAsync(userId, request.CipherId, signals);
 
-        // No rule left to enforce: the cipher is no longer gated, so the approved request activates unconditionally.
+        // No rule left to enforce, so the approved request activates unconditionally.
         if (governingRule is null)
         {
             return null;

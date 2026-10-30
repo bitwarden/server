@@ -15,7 +15,11 @@ public interface IGlobalSettings
     string LicenseCertificatePassword { get; set; }
     string LicenseCertificatePath { get; set; }
     int OrganizationInviteExpirationHours { get; set; }
+    int OrganizationInviteReminderBatchSize { get; set; }
+    int EmergencyAccessInviteExpirationHours { get; set; }
+    int ProviderInviteExpirationHours { get; set; }
     int TwoFactorUserVerificationTokenLifetimeInMinutes { get; set; }
+    int TwoFactorRememberTokenLifetimeInDays { get; set; }
     int DeviceLastActivityCacheTtlHours { get; set; }
     bool DisableUserRegistration { get; set; }
     bool SuppressOnboardingInterstitials { get; set; }

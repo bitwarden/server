@@ -1,7 +1,10 @@
 ﻿#nullable enable
 
+using System.Reflection;
 using System.Text.Json;
 using Bit.Api.Dirt.Controllers;
+using Bit.Api.Dirt.Utilities;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Enums;
@@ -13,6 +16,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
@@ -56,15 +60,15 @@ public class TeamsIntegrationControllerTests
             .Returns(integration);
 
         var state = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
-        var requestAction = await sutProvider.Sut.CreateAsync(_validTeamsCode, state.ToString());
+        var requestAction = await sutProvider.Sut.CreateAsync(_validTeamsCode, state.ToString(), null);
 
         await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1)
             .UpsertAsync(Arg.Any<OrganizationIntegration>());
-        Assert.IsType<CreatedResult>(requestAction);
+        AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.Success);
     }
 
     [Theory, BitAutoData]
-    public async Task CreateAsync_CallbackUrlIsEmpty_ThrowsBadRequest(
+    public async Task CreateAsync_CallbackUrlIsEmpty_RedirectsWithFailed(
         SutProvider<TeamsIntegrationController> sutProvider,
         OrganizationIntegration integration)
     {
@@ -80,12 +84,13 @@ public class TeamsIntegrationControllerTests
             .Returns(integration);
         var state = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
 
-        await Assert.ThrowsAsync<BadRequestException>(async () =>
-            await sutProvider.Sut.CreateAsync(_validTeamsCode, state.ToString()));
+        var requestAction = await sutProvider.Sut.CreateAsync(_validTeamsCode, state.ToString(), null);
+
+        AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.Failed);
     }
 
     [Theory, BitAutoData]
-    public async Task CreateAsync_CodeIsEmpty_ThrowsBadRequest(
+    public async Task CreateAsync_CodeIsEmpty_RedirectsWithCanceled(
         SutProvider<TeamsIntegrationController> sutProvider,
         OrganizationIntegration integration)
     {
@@ -101,12 +106,15 @@ public class TeamsIntegrationControllerTests
             .Returns(integration);
         var state = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
 
-        await Assert.ThrowsAsync<BadRequestException>(async () =>
-            await sutProvider.Sut.CreateAsync(string.Empty, state.ToString()));
+        var requestAction = await sutProvider.Sut.CreateAsync(string.Empty, state.ToString(), null);
+
+        AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.Canceled);
+        await sutProvider.GetDependency<ITeamsService>().DidNotReceiveWithAnyArgs()
+            .ObtainTokenViaOAuth(default!, default!);
     }
 
     [Theory, BitAutoData]
-    public async Task CreateAsync_NoTeamsFound_ThrowsBadRequest(
+    public async Task CreateAsync_NoTeamsFound_RedirectsWithNoTeams(
         SutProvider<TeamsIntegrationController> sutProvider,
         OrganizationIntegration integration)
     {
@@ -129,11 +137,15 @@ public class TeamsIntegrationControllerTests
 
         var state = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
 
-        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.CreateAsync(_validTeamsCode, state.ToString()));
+        var requestAction = await sutProvider.Sut.CreateAsync(_validTeamsCode, state.ToString(), null);
+
+        AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.NoTeams);
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceiveWithAnyArgs()
+            .UpsertAsync(default!);
     }
 
     [Theory, BitAutoData]
-    public async Task CreateAsync_TeamsServiceReturnsEmptyToken_ThrowsBadRequest(
+    public async Task CreateAsync_TeamsServiceReturnsEmptyToken_RedirectsWithFailed(
         SutProvider<TeamsIntegrationController> sutProvider,
         OrganizationIntegration integration)
     {
@@ -152,7 +164,29 @@ public class TeamsIntegrationControllerTests
             .Returns(string.Empty);
         var state = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
 
-        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.CreateAsync(_validTeamsCode, state.ToString()));
+        var requestAction = await sutProvider.Sut.CreateAsync(_validTeamsCode, state.ToString(), null);
+
+        AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.Failed);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_ProviderReturnsError_RedirectsWithCanceled(
+        SutProvider<TeamsIntegrationController> sutProvider,
+        OrganizationIntegration integration)
+    {
+        integration.Type = IntegrationType.Teams;
+        integration.Configuration = null;
+        SetBaseServiceUriApi(sutProvider);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(integration.Id)
+            .Returns(integration);
+        var state = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
+
+        var requestAction = await sutProvider.Sut.CreateAsync(null, state.ToString(), "access_denied");
+
+        AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.Canceled);
+        await sutProvider.GetDependency<ITeamsService>().DidNotReceiveWithAnyArgs()
+            .ObtainTokenViaOAuth(default!, default!);
     }
 
     [Theory, BitAutoData]
@@ -168,7 +202,7 @@ public class TeamsIntegrationControllerTests
             .ObtainTokenViaOAuth(_validTeamsCode, Arg.Any<string>())
             .Returns(_teamsToken);
 
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validTeamsCode, string.Empty));
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validTeamsCode, string.Empty, null));
     }
 
     [Theory, BitAutoData]
@@ -189,7 +223,7 @@ public class TeamsIntegrationControllerTests
         timeProvider.Advance(TimeSpan.FromMinutes(30));
 
         sutProvider.SetDependency<TimeProvider>(timeProvider);
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validTeamsCode, state.ToString()));
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validTeamsCode, state.ToString(), null));
     }
 
     [Theory, BitAutoData]
@@ -208,7 +242,7 @@ public class TeamsIntegrationControllerTests
 
         var state = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
 
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validTeamsCode, state.ToString()));
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validTeamsCode, state.ToString(), null));
     }
 
     [Theory, BitAutoData]
@@ -235,11 +269,11 @@ public class TeamsIntegrationControllerTests
 
         var state = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
 
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validTeamsCode, state.ToString()));
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validTeamsCode, state.ToString(), null));
     }
 
     [Theory, BitAutoData]
-    public async Task CreateAsync_StateHasNonEmptyIntegration_ThrowsNotFound(
+    public async Task CreateAsync_StateHasNonEmptyIntegration_RedirectsWithAlreadyConnected(
         SutProvider<TeamsIntegrationController> sutProvider,
         OrganizationIntegration integration)
     {
@@ -258,7 +292,11 @@ public class TeamsIntegrationControllerTests
             .Returns(integration);
 
         var state = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validTeamsCode, state.ToString()));
+        var requestAction = await sutProvider.Sut.CreateAsync(_validTeamsCode, state.ToString(), null);
+
+        AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.AlreadyConnected);
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceiveWithAnyArgs()
+            .UpsertAsync(default!);
     }
 
     [Theory, BitAutoData]
@@ -281,7 +319,7 @@ public class TeamsIntegrationControllerTests
             .Returns(integration);
 
         var state = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validTeamsCode, state.ToString()));
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validTeamsCode, state.ToString(), null));
     }
 
     [Theory, BitAutoData]
@@ -310,9 +348,9 @@ public class TeamsIntegrationControllerTests
 
         var expectedState = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
 
-        var requestAction = await sutProvider.Sut.RedirectAsync(integration.OrganizationId);
+        var response = await sutProvider.Sut.RedirectAsync(integration.OrganizationId);
 
-        Assert.IsType<RedirectResult>(requestAction);
+        Assert.Equal(expectedUrl, response.Url);
         await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1)
             .CreateAsync(Arg.Any<OrganizationIntegration>());
         sutProvider.GetDependency<ITeamsService>().Received(1).GetRedirectUrl(Arg.Any<string>(), expectedState.ToString());
@@ -342,11 +380,11 @@ public class TeamsIntegrationControllerTests
             .Returns([integration]);
         sutProvider.GetDependency<ITeamsService>().GetRedirectUrl(Arg.Any<string>(), Arg.Any<string>()).Returns(expectedUrl);
 
-        var requestAction = await sutProvider.Sut.RedirectAsync(organizationId);
+        var response = await sutProvider.Sut.RedirectAsync(organizationId);
 
         var expectedState = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
 
-        Assert.IsType<RedirectResult>(requestAction);
+        Assert.Equal(expectedUrl, response.Url);
         sutProvider.GetDependency<ITeamsService>().Received(1).GetRedirectUrl(Arg.Any<string>(), expectedState.ToString());
     }
 
@@ -453,6 +491,40 @@ public class TeamsIntegrationControllerTests
     }
 
     [Theory]
+    [InlineData(nameof(TeamsIntegrationController.RedirectAsync))]
+    [InlineData(nameof(TeamsIntegrationController.GetChannelsAsync))]
+    public void OwnerEndpoints_AreGatedOnEventManagementForTeams(string methodName)
+    {
+        // A failed RequireFeature check answers 404 before the action runs. Running the attribute's FeatureCheck
+        // with the flag on and off pins the key, so the endpoints can't drift onto another flag or lose the gate.
+        var method = typeof(TeamsIntegrationController).GetMethod(methodName);
+
+        Assert.NotNull(method);
+        var attribute = method.GetCustomAttributes<RequireFeatureAttribute>().SingleOrDefault();
+        Assert.NotNull(attribute);
+
+        var featureService = Substitute.For<IFeatureService>();
+        featureService.IsEnabled(FeatureFlagKeys.EventManagementForTeams, Arg.Any<bool>()).Returns(true);
+        Assert.True(attribute.FeatureCheck(featureService));
+
+        featureService.IsEnabled(FeatureFlagKeys.EventManagementForTeams, Arg.Any<bool>()).Returns(false);
+        Assert.False(attribute.FeatureCheck(featureService));
+    }
+
+    [Theory]
+    [InlineData(nameof(TeamsIntegrationController.CreateAsync))]
+    [InlineData(nameof(TeamsIntegrationController.IncomingPostAsync))]
+    public void AnonymousEndpoints_AreNotGated(string methodName)
+    {
+        // The OAuth callback and the bot endpoint are called by Microsoft without a user, so the flag would be
+        // evaluated for an anonymous context and organization targeting wouldn't match. RedirectAsync is the gate.
+        var method = typeof(TeamsIntegrationController).GetMethod(methodName);
+
+        Assert.NotNull(method);
+        Assert.Empty(method.GetCustomAttributes<RequireFeatureAttribute>());
+    }
+
+    [Theory]
     [BitAutoData("https://api.example.com", "https://api.example.com/organizations/integrations/teams/create")]
     [BitAutoData("https://bitwarden.example.com/api/", "https://bitwarden.example.com/api/organizations/integrations/teams/create")]
     public async Task RedirectAsync_CallbackUrlUsesConfiguredApiBaseUrl(
@@ -480,9 +552,9 @@ public class TeamsIntegrationControllerTests
             .GetRedirectUrl(expectedCallbackUrl, Arg.Any<string>())
             .Returns("https://teams.example.com/authorize");
 
-        var requestAction = await sutProvider.Sut.RedirectAsync(integration.OrganizationId);
+        var response = await sutProvider.Sut.RedirectAsync(integration.OrganizationId);
 
-        Assert.IsType<RedirectResult>(requestAction);
+        Assert.Equal("https://teams.example.com/authorize", response.Url);
         sutProvider.GetDependency<ITeamsService>().Received(1)
             .GetRedirectUrl(expectedCallbackUrl, Arg.Any<string>());
     }
@@ -679,5 +751,15 @@ public class TeamsIntegrationControllerTests
     private static void SetBaseServiceUriApi(SutProvider<TeamsIntegrationController> sutProvider)
     {
         sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri.Api.Returns("https://api.example.com");
+        sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri.VaultWithHash.Returns("https://vault.example.com/#");
+    }
+
+    private static void AssertRedirectsToVault(IActionResult actionResult, Guid organizationId, string expectedResult)
+    {
+        var redirect = Assert.IsType<RedirectResult>(actionResult);
+        Assert.Equal(
+            $"https://vault.example.com/#/organizations/{organizationId}/integrations/event-management" +
+            $"?integration=teams&result={expectedResult}",
+            redirect.Url);
     }
 }

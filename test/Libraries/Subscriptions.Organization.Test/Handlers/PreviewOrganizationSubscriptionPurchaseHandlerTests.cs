@@ -44,7 +44,7 @@ public class PreviewOrganizationSubscriptionPurchaseHandlerTests
     }
 
     private static PreviewOrganizationSubscriptionPurchaseRequest Request() => new(
-        new PurchaseSelections(ProductTierType.Families, PlanCadenceType.Annually, new PasswordManagerSelections(1, 0, false), null, null),
+        new PurchaseSelections(ProductTierType.Families, PlanCadenceType.Annually, new PasswordManagerSelections(1, 0, false), null, null, null),
         new BillingAddressSelections("US", "12345", null));
 
     private static InvoicePreview SamplePreview() => new()
