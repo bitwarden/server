@@ -5,8 +5,8 @@ namespace Bit.Services.Pam.Services;
 public interface IAccessRuleValidator
 {
     /// <summary>
-    /// Validates a raw JSON conditions document. A null or empty document is treated as "no conditions
-    /// configured" and considered valid; callers decide how to treat that semantically.
+    /// Validates a raw JSON conditions document. Null and an empty array both mean no conditions and are valid; a
+    /// blank string is not.
     /// </summary>
     AccessRuleValidationResult Validate(string? conditionsJson);
 }

@@ -3,8 +3,8 @@
 namespace Bit.Pam.Models;
 
 /// <summary>
-/// The write-side payload. Unlike the read model <see cref="AccessAuditEvent"/> it carries no actor or requester
-/// display names; those are resolved and snapshotted at write time.
+/// The write-side payload of an audit event. Actor and requester display names are resolved and snapshotted at write
+/// time, so it carries none.
 /// </summary>
 public record AccessAuditEventData
 {
@@ -12,9 +12,8 @@ public record AccessAuditEventData
     public AccessAuditEventPhase Phase { get; init; } = AccessAuditEventPhase.Outcome;
 
     /// <summary>
-    /// Correlates an action's Attempt/Outcome pair: both halves emitted from the same instance (via <c>with</c>)
-    /// share this id, so the trail read can collapse them. A separate event emitted alongside (the automatic
-    /// approval on an auto-approved submit, say) must be given its own id.
+    /// Shared by an action's Attempt and Outcome when both are emitted from one instance via <c>with</c>. A separate
+    /// event emitted alongside needs its own id.
     /// </summary>
     public Guid CorrelationId { get; init; } = Guid.NewGuid();
 
@@ -29,9 +28,8 @@ public record AccessAuditEventData
     public Guid? AccessRuleId { get; init; }
 
     /// <summary>
-    /// Supplied by the rule commands rather than resolved by a JOIN at write time: a rule can be hard-deleted in the
-    /// same action, after which a JOIN could no longer resolve it. The target system and access connector names below
-    /// follow the same pattern.
+    /// Supplied by the caller rather than joined at write time, since the same action can hard-delete the rule. The
+    /// target system and access connector names work the same way.
     /// </summary>
     public string? RuleName { get; init; }
 

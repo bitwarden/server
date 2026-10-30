@@ -4,11 +4,7 @@ using Bit.Services.Pam.Api.Models.Request;
 
 namespace Bit.Services.Pam.Api.Endpoints;
 
-/// <summary>
-/// The <c>leases/ciphers/{id}</c> resource: the per-cipher leasing entry points (pre-check, state, submit).
-/// <c>id</c> is bound from the group's route prefix. The deprecated <c>GET …/cipher</c> read-back is hosted by a
-/// small MVC controller in the Api project instead (it depends on the Api Vault response models).
-/// </summary>
+/// <summary>The <c>leases/ciphers/{id}</c> resource: the per-cipher leasing entry points.</summary>
 internal static class CipherLeaseEndpoints
 {
     public static RouteGroupBuilder MapCipherLeaseEndpoints(this RouteGroupBuilder group)
