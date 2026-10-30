@@ -269,6 +269,25 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     }
 
     /// <summary>
+    /// Whether the last key rotation upgraded the user from V1 to V2 encryption.
+    /// Heuristic: the upgrade token only exists after a V1 -> V2 rotation and is cleared by any later rotation.
+    /// </summary>
+    public bool LastRotationFromV1() => V2UpgradeToken != null;
+
+    /// <summary>
+    /// Whether the last key rotation happened together with a password change.
+    /// Such a rotation stamps both dates with the same timestamp.
+    /// </summary>
+    public bool KeyRotatedWithPassword() =>
+        LastKeyRotationDate != null && LastKeyRotationDate == LastPasswordChangeDate;
+
+    /// <summary>
+    /// Whether the KDF settings are below the current minimum (PBKDF2 under 600k iterations).
+    /// </summary>
+    public bool NeedsKdfUpdate() =>
+        Kdf == KdfType.PBKDF2_SHA256 && KdfIterations < KdfConstants.PBKDF2_ITERATIONS.Min;
+
+    /// <summary>
     /// This technically is correct but all versions after 1 are considered v2 encryption. Leaving for now with
     /// KM's blessing that when a new version comes along they will handle migration.
     /// </summary>

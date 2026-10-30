@@ -2,6 +2,7 @@
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Test.Common.Helpers;
 using Xunit;
@@ -189,5 +190,59 @@ public class UserTests
         var user = new User { UserKeyId = storedValue };
 
         Assert.Null(user.GetUserKeyId());
+    }
+
+    [Theory]
+    [InlineData("{}", true)]
+    [InlineData(null, false)]
+    public void LastRotationFromV1_TrueWhenUpgradeTokenPresent(string? token, bool expected)
+    {
+        var user = new User { V2UpgradeToken = token };
+
+        Assert.Equal(expected, user.LastRotationFromV1());
+    }
+
+    [Theory]
+    [InlineData(0, true)]
+    [InlineData(1, false)]
+    [InlineData(-1, false)]
+    public void KeyRotatedWithPassword_RequiresEqualTimestamps(int offsetSeconds, bool expected)
+    {
+        var rotation = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var user = new User
+        {
+            LastKeyRotationDate = rotation,
+            LastPasswordChangeDate = rotation.AddSeconds(offsetSeconds),
+        };
+
+        Assert.Equal(expected, user.KeyRotatedWithPassword());
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(false, false)]
+    public void KeyRotatedWithPassword_FalseWhenADateIsMissing(bool hasRotation, bool hasPasswordChange)
+    {
+        var now = DateTime.UtcNow;
+        var user = new User
+        {
+            LastKeyRotationDate = hasRotation ? now : null,
+            LastPasswordChangeDate = hasPasswordChange ? now : null,
+        };
+
+        Assert.False(user.KeyRotatedWithPassword());
+    }
+
+    [Theory]
+    [InlineData(KdfType.PBKDF2_SHA256, 599_999, true)]
+    [InlineData(KdfType.PBKDF2_SHA256, 600_000, false)]
+    [InlineData(KdfType.PBKDF2_SHA256, 1_000_000, false)]
+    [InlineData(KdfType.Argon2id, 1, false)]
+    public void NeedsKdfUpdate_OnlyLowPbkdf2(KdfType kdf, int iterations, bool expected)
+    {
+        var user = new User { Kdf = kdf, KdfIterations = iterations };
+
+        Assert.Equal(expected, user.NeedsKdfUpdate());
     }
 }
