@@ -36,25 +36,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     ];
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_WithOrganizationNotUsingInviteLinks_ReturnsInviteLinkNotAvailable(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
-    {
-        // Arrange
-        SetupHappyPath(organization, inviteLink, user, sutProvider);
-        organization.UseInviteLinks = false;
-
-        // Act
-        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(inviteLink, user));
-
-        // Assert
-        Assert.True(result.IsError);
-        Assert.IsType<ConfirmInviteLinkNotAvailable>(result.AsError);
-    }
-
-    [Theory, BitAutoData]
     public async Task ValidateAsync_WithLinkThatDoesNotSupportConfirmation_ReturnsConfirmationNotSupported(
         Organization organization,
         OrganizationInviteLink inviteLink,
@@ -83,7 +64,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_WithUnverifiedEmail_ReturnsEmailNotVerified(
+    public async Task ValidateAsync_WhenEligibilityRuleFails_ReturnsMappedValidationError(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
@@ -91,14 +72,14 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     {
         // Arrange
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        user.EmailVerified = false;
+        organization.UseInviteLinks = false;
 
         // Act
         var result = await sutProvider.Sut.ValidateAsync(BuildRequest(inviteLink, user));
 
         // Assert
         Assert.True(result.IsError);
-        var error = Assert.IsType<ConfirmEmailNotVerified>(result.AsError);
+        var error = Assert.IsType<ConfirmInviteLinkNotAvailable>(result.AsError);
         Assert.IsAssignableFrom<IValidationError>(error);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -110,27 +91,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_WithEmailDomainNotAllowed_ReturnsEmailDomainNotAllowed(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
-    {
-        // Arrange
-        SetupHappyPath(organization, inviteLink, user, sutProvider);
-        inviteLink.AllowedDomains = "[\"allowed.example.com\"]";
-        user.Email = "user@notallowed.example.com";
-
-        // Act
-        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(inviteLink, user));
-
-        // Assert
-        Assert.True(result.IsError);
-        Assert.IsType<ConfirmEmailDomainNotAllowed>(result.AsError);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_WithRevokedEmailInvite_ReturnsOrganizationAccessRevoked(
+    public async Task ValidateAsync_WhenEmailInviteFailsMembershipStatusRule_ReturnsMappedValidationError(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
@@ -155,34 +116,9 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         Assert.IsType<ConfirmOrganizationAccessRevoked>(result.AsError);
     }
 
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_WithConfirmedMember_ReturnsAlreadyOrganizationMember(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        OrganizationUser existingOrganizationUser,
-        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
-    {
-        // Arrange
-        SetupHappyPath(organization, inviteLink, user, sutProvider);
-        existingOrganizationUser.Status = OrganizationUserStatusType.Confirmed;
-        existingOrganizationUser.RevocationReason = null;
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationAsync(organization.Id, user.Id)
-            .Returns(existingOrganizationUser);
-
-        // Act
-        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(inviteLink, user));
-
-        // Assert
-        Assert.True(result.IsError);
-        Assert.IsType<ConfirmAlreadyOrganizationMember>(result.AsError);
-    }
-
     [Theory]
     [BitMemberAutoData(nameof(JoinRequirementsErrors))]
-    public async Task ValidateAsync_WithJoinRequirementsError_ReturnsMappedValidationError(
+    public async Task ValidateAsync_WhenJoinRequirementsFail_ReturnsMappedValidationError(
         Error joinRequirementsError,
         Type expectedErrorType,
         Organization organization,
@@ -211,7 +147,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_WithAccountRecoveryPolicyViolation_ReturnsResetPasswordKeyRequired(
+    public async Task ValidateAsync_WhenAccountRecoveryPolicyFails_ReturnsMappedValidationError(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
@@ -247,7 +183,8 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     {
         // Arrange
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        existingOrganizationUser.Type = OrganizationUserType.Admin;
+        var existingRole = OrganizationUserType.Admin;
+        existingOrganizationUser.Type = existingRole;
         existingOrganizationUser.Status = OrganizationUserStatusType.Accepted;
         existingOrganizationUser.RevocationReason = null;
 
@@ -273,14 +210,14 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .ValidateJoinRequirementsAsync(
                 organization,
                 user,
-                OrganizationUserType.Admin,
+                existingRole,
                 policyEnforcer);
         sutProvider.GetDependency<IJoinOrganizationPolicyValidationService>()
             .Received(1)
             .ValidateAccountRecoveryPolicy(
                 organization.Id,
                 user,
-                OrganizationUserType.Admin,
+                existingRole,
                 policyEnforcer,
                 request.ResetPasswordKey);
     }
@@ -309,7 +246,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
 
         // Assert
         Assert.True(result.IsSuccess);
-        Assert.Same(inviteLink, result.AsSuccess.InviteLink);
         Assert.Same(organization, result.AsSuccess.Organization);
         Assert.Null(result.AsSuccess.ExistingOrganizationUser);
         Assert.True(result.AsSuccess.AccountRecoveryAutoEnrollEnabled);

@@ -2350,6 +2350,7 @@ public class ProviderBillingServiceTests
     {
         organization.PlanType = planType;
         organization.Seats = 10;
+        organization.UsePam = false;
 
         sutProvider.GetDependency<IStripeAdapter>()
             .CancelSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionCancelOptions>())
@@ -2439,7 +2440,7 @@ public class ProviderBillingServiceTests
 
         var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationService = sutProvider.GetDependency<IOrganizationService>();
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
         var customerId = organization.GatewayCustomerId;
         var subscriptionId = organization.GatewaySubscriptionId;
@@ -2454,7 +2455,7 @@ public class ProviderBillingServiceTests
         {
             priceIncreaseScheduler.Release(customerId, subscriptionId, orgId);
             stripeAdapter.CancelSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
-            organizationRepository.ReplaceAsync(organization);
+            organizationService.ReplaceAndUpdateCacheAsync(organization);
             providerOrganizationRepository.CreateAsync(Arg.Any<ProviderOrganization>());
         });
         await priceIncreaseScheduler.Received(1).Release(customerId, subscriptionId, orgId);
@@ -2474,7 +2475,7 @@ public class ProviderBillingServiceTests
         ArrangeAddExistingOrganizationHappyPath(sutProvider, provider, organization);
 
         var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationService = sutProvider.GetDependency<IOrganizationService>();
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
         // Capture before Act — AddExistingOrganization clears GatewaySubscriptionId
@@ -2488,7 +2489,7 @@ public class ProviderBillingServiceTests
 
         // Assert
         await priceIncreaseScheduler.Received(1).Release(customerId, subscriptionId, orgId);
-        await organizationRepository.Received(1).ReplaceAsync(organization);
+        await organizationService.Received(1).ReplaceAndUpdateCacheAsync(organization);
         Assert.Equal(MockPlans.Get(PlanType.EnterpriseMonthly).HasRiskInsights, organization.UseRiskInsights);
         await providerOrganizationRepository.Received(1).CreateAsync(Arg.Is<ProviderOrganization>(po =>
             po.ProviderId == provider.Id && po.OrganizationId == organization.Id && po.Key == key));
@@ -2535,7 +2536,7 @@ public class ProviderBillingServiceTests
 
         var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationService = sutProvider.GetDependency<IOrganizationService>();
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
         var customerId = organization.GatewayCustomerId;
         var subscriptionId = organization.GatewaySubscriptionId;
@@ -2552,11 +2553,11 @@ public class ProviderBillingServiceTests
             priceIncreaseScheduler.Release(customerId, subscriptionId, orgId);
             stripeAdapter.UpdateSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionUpdateOptions>());
             stripeAdapter.CancelSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
-            organizationRepository.ReplaceAsync(organization);
+            organizationService.ReplaceAndUpdateCacheAsync(organization);
             providerOrganizationRepository.CreateAsync(Arg.Any<ProviderOrganization>());
         });
         await priceIncreaseScheduler.Received(1).Release(customerId, subscriptionId, orgId);
-        await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
+        await organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(o =>
             o.Id == organization.Id && o.PlanType == PlanType.TeamsMonthly));
     }
 
@@ -2572,10 +2573,11 @@ public class ProviderBillingServiceTests
         provider.Type = ProviderType.Msp;
         organization.GatewayCustomerId = "cus_release_fails";
         organization.GatewaySubscriptionId = "sub_release_fails";
+        organization.UsePam = false;
 
         var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationService = sutProvider.GetDependency<IOrganizationService>();
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
         var subscriptionId = organization.GatewaySubscriptionId;
@@ -2593,7 +2595,7 @@ public class ProviderBillingServiceTests
             .UpdateSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionUpdateOptions>());
         await stripeAdapter.Received(0)
             .CancelSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
-        await organizationRepository.Received(0).ReplaceAsync(Arg.Any<Organization>());
+        await organizationService.Received(0).ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
         await providerOrganizationRepository.Received(0).CreateAsync(Arg.Any<ProviderOrganization>());
         await eventService.Received(0).LogProviderOrganizationEventAsync(
             Arg.Any<ProviderOrganization>(), Arg.Any<EventType>());
@@ -2641,6 +2643,39 @@ public class ProviderBillingServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task AddExistingOrganization_OrganizationUsesPam_ThrowsBeforeAnyStripeOperation(
+        Provider provider,
+        Organization organization,
+        string key,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        provider.Type = ProviderType.Msp;
+        organization.UsePam = true;
+
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        providerOrganizationRepository
+            .GetByOrganizationId(organization.Id)
+            .Returns((ProviderOrganization)null);
+
+        var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.AddExistingOrganization(provider, organization, key));
+
+        Assert.Equal(
+            "Organizations managed by a provider can't use Privileged Controls. Please contact Customer Support.",
+            exception.Message);
+        await priceIncreaseScheduler.DidNotReceiveWithAnyArgs()
+            .Release(default, default, default);
+        await stripeAdapter.DidNotReceiveWithAnyArgs()
+            .CancelSubscriptionAsync(default, default);
+        await organizationRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(default);
+        await providerOrganizationRepository.DidNotReceiveWithAnyArgs().CreateAsync(default);
+    }
+
+    [Theory, BitAutoData]
     public async Task AddExistingOrganization_StripeCancelSucceeds_OnlyWhenReleasePrecedesIt(
         Provider provider,
         Organization organization,
@@ -2659,6 +2694,7 @@ public class ProviderBillingServiceTests
         organization.GatewaySubscriptionId = "sub_stripe_contract";
         organization.PlanType = PlanType.EnterpriseAnnually2020;
         organization.Seats = 10;
+        organization.UsePam = false;
 
         var releaseHasRun = false;
         var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();

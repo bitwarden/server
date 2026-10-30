@@ -16,6 +16,7 @@ When a grantee user _takes over_ a grantor user's account, the grantor user will
 
 A grantor user invites another user to be their emergency contact, the grantee. This will create a new `EmergencyAccess` entity in the database with the `EmergencyAccessStatusType` set to `Invited`.
 The `EmergencyAccess.KeyEncrypted` field is empty, and the `GranteeId` is `null` since the user being invited via email may not have an account yet.
+The invite link expires after `GlobalSettings.EmergencyAccessInviteExpirationHours` (default 5 days). Resending the invite sends a new link.
 
 ### code
 

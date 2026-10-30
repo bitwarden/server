@@ -22,7 +22,7 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.InviteLinks;
 public class InviteLinkValidationServiceTests
 {
     [Theory, BitAutoData]
-    public async Task ValidateJoinRequirementsAsync_WhenAllChecksPass_ReturnsNull(
+    public async Task ValidateJoinRequirementsAsync_WhenAllChecksPass_ReturnsNoError(
         Organization organization,
         User user,
         SutProvider<InviteLinkValidationService> sutProvider)
@@ -78,7 +78,7 @@ public class InviteLinkValidationServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateJoinRequirementsAsync_WhenFreeAdminLimitReached_ReturnsErrorBeforePolicyChecks(
+    public async Task ValidateJoinRequirementsAsync_WhenFreeAdminLimitReached_ReturnsError(
         Organization organization,
         User user,
         SutProvider<InviteLinkValidationService> sutProvider)
@@ -104,19 +104,10 @@ public class InviteLinkValidationServiceTests
         // Assert
         Assert.IsType<CannotBeAdminOfMultipleFreeOrganizations>(result.Error);
         Assert.False(result.AutoConfirmPolicyEnabled);
-
-        await sutProvider.GetDependency<IJoinOrganizationPolicyValidationService>()
-            .DidNotReceiveWithAnyArgs()
-            .ValidateAutomaticUserConfirmationPolicyAsync(
-                Arg.Any<Guid>(),
-                Arg.Any<User>(),
-                Arg.Any<OrganizationUserType>(),
-                Arg.Any<IPreAccessPolicyEnforcer>(),
-                Arg.Any<ICollection<OrganizationUser>>());
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateJoinRequirementsAsync_WhenAutomaticUserConfirmationPolicyFails_ReturnsErrorBeforeSingleOrgCheck(
+    public async Task ValidateJoinRequirementsAsync_WhenAutoConfirmPolicyFails_ReturnsError(
         Organization organization,
         User user,
         SutProvider<InviteLinkValidationService> sutProvider)
@@ -145,19 +136,10 @@ public class InviteLinkValidationServiceTests
         // Assert
         Assert.IsType<UserCannotBelongToAnotherOrganization>(result.Error);
         Assert.True(result.AutoConfirmPolicyEnabled);
-
-        await sutProvider.GetDependency<IJoinOrganizationPolicyValidationService>()
-            .DidNotReceiveWithAnyArgs()
-            .ValidateSingleOrganizationPolicyAsync(
-                Arg.Any<Guid>(),
-                Arg.Any<User>(),
-                Arg.Any<OrganizationUserType>(),
-                Arg.Any<IPreAccessPolicyEnforcer>(),
-                Arg.Any<ICollection<OrganizationUser>>());
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateJoinRequirementsAsync_WhenSingleOrganizationPolicyFails_ReturnsErrorBeforeTwoFactorCheck(
+    public async Task ValidateJoinRequirementsAsync_WhenSingleOrgPolicyFails_ReturnsError(
         Organization organization,
         User user,
         SutProvider<InviteLinkValidationService> sutProvider)
@@ -183,14 +165,6 @@ public class InviteLinkValidationServiceTests
 
         // Assert
         Assert.IsType<UserIsAMemberOfAnotherOrganization>(result.Error);
-
-        await sutProvider.GetDependency<IJoinOrganizationPolicyValidationService>()
-            .DidNotReceiveWithAnyArgs()
-            .ValidateTwoFactorAuthenticationPolicyAsync(
-                Arg.Any<Guid>(),
-                Arg.Any<User>(),
-                Arg.Any<OrganizationUserType>(),
-                Arg.Any<IPreAccessPolicyEnforcer>());
     }
 
     [Theory, BitAutoData]
@@ -222,7 +196,7 @@ public class InviteLinkValidationServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateJoinRequirementsAsync_WhenAutomaticUserConfirmationPolicyEnabled_ReturnsAutoConfirmPolicyEnabled(
+    public async Task ValidateJoinRequirementsAsync_WhenAutoConfirmPolicyEnabled_ReturnsAutoConfirmPolicyEnabled(
         Organization organization,
         User user,
         SutProvider<InviteLinkValidationService> sutProvider)

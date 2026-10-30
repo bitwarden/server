@@ -4,36 +4,39 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT 
-        CC.*
-    FROM
-        [dbo].[CollectionCipher] CC
-    INNER JOIN
-        [dbo].[Collection] S ON S.[Id] = CC.[CollectionId]
-    INNER JOIN
-        [dbo].[OrganizationUser] OU ON OU.[OrganizationId] = S.[OrganizationId] AND OU.[UserId] = @UserId
-    INNER JOIN
-        [dbo].[CollectionUser] CU ON CU.[CollectionId] = S.[Id] AND CU.[OrganizationUserId] = OU.[Id]
-    WHERE
-        OU.[Status] = 2
+    ;WITH [UserCollections] AS (
+        SELECT
+            CU.[CollectionId]
+        FROM
+            [dbo].[OrganizationUser] OU
+        INNER JOIN
+            [dbo].[CollectionUser] CU ON CU.[OrganizationUserId] = OU.[Id]
+        INNER JOIN
+            [dbo].[Collection] S ON S.[Id] = CU.[CollectionId] AND S.[OrganizationId] = OU.[OrganizationId]
+        WHERE
+            OU.[UserId] = @UserId
+            AND OU.[Status] = 2
 
-    UNION ALL
+        UNION
 
+        SELECT
+            CG.[CollectionId]
+        FROM
+            [dbo].[OrganizationUser] OU
+        INNER JOIN
+            [dbo].[GroupUser] GU ON GU.[OrganizationUserId] = OU.[Id]
+        INNER JOIN
+            [dbo].[CollectionGroup] CG ON CG.[GroupId] = GU.[GroupId]
+        INNER JOIN
+            [dbo].[Collection] S ON S.[Id] = CG.[CollectionId] AND S.[OrganizationId] = OU.[OrganizationId]
+        WHERE
+            OU.[UserId] = @UserId
+            AND OU.[Status] = 2
+    )
     SELECT
         CC.*
     FROM
         [dbo].[CollectionCipher] CC
     INNER JOIN
-        [dbo].[Collection] S ON S.[Id] = CC.[CollectionId]
-    INNER JOIN
-        [dbo].[OrganizationUser] OU ON OU.[OrganizationId] = S.[OrganizationId] AND OU.[UserId] = @UserId
-    INNER JOIN
-        [dbo].[GroupUser] GU ON GU.[OrganizationUserId] = OU.[Id]
-    INNER JOIN
-        [dbo].[CollectionGroup] CG ON CG.[CollectionId] = CC.[CollectionId] AND CG.[GroupId] = GU.[GroupId]
-    LEFT JOIN
-        [dbo].[CollectionUser] CU ON CU.[CollectionId] = S.[Id] AND CU.[OrganizationUserId] = OU.[Id]
-    WHERE
-        OU.[Status] = 2
-        AND CU.[CollectionId] IS NULL
+        [UserCollections] UC ON UC.[CollectionId] = CC.[CollectionId]
 END

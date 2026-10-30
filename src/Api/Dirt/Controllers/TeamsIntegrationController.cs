@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Bit.Api.Dirt.Models.Response;
 using Bit.Api.Dirt.Utilities;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Enums;
@@ -10,6 +11,7 @@ using Bit.Core.Dirt.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Settings;
 using Bit.HttpExtensions;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Bot.Builder;
@@ -28,6 +30,7 @@ public class TeamsIntegrationController(
     IGlobalSettings globalSettings,
     TimeProvider timeProvider) : Controller
 {
+    [RequireFeature(FeatureFlagKeys.EventManagementForTeams)]
     [HttpGet("{organizationId:guid}/integrations/teams/redirect")]
     public async Task<OrganizationIntegrationOAuthRedirectResponseModel> RedirectAsync(Guid organizationId)
     {
@@ -139,6 +142,7 @@ public class TeamsIntegrationController(
         return RedirectToVault(integration, IntegrationOAuthCallbackRedirect.Success);
     }
 
+    [RequireFeature(FeatureFlagKeys.EventManagementForTeams)]
     [HttpGet("{organizationId:guid}/integrations/{integrationId:guid}/teams/channels")]
     public async Task<ListResponseModel<TeamsChannelResponseModel>> GetChannelsAsync(
         Guid organizationId,

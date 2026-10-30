@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Net;
-using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.Tokens;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
