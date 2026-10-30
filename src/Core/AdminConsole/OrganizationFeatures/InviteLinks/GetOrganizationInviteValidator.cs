@@ -1,6 +1,8 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PreAccess;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
+using Bit.Core.Enums;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
@@ -8,9 +10,12 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 /// <summary>
 /// See <see cref="IGetOrganizationInviteValidator"/>.
 /// </summary>
-public class GetOrganizationInviteValidator : IGetOrganizationInviteValidator
+public class GetOrganizationInviteValidator(
+    IInviteLinkValidationService inviteLinkValidationService,
+    IPreAccessEnforcerQuery preAccessEnforcerQuery)
+    : IGetOrganizationInviteValidator
 {
-    public ValidationResult<OrganizationInviteLinkValidationRequest> Validate(
+    public async Task<ValidationResult<OrganizationInviteLinkValidationRequest>> ValidateAsync(
         OrganizationInviteLinkValidationRequest request)
     {
         var eligibilityError = InviteLinkRules.ValidateEligibility(
@@ -24,6 +29,28 @@ public class GetOrganizationInviteValidator : IGetOrganizationInviteValidator
         if (membershipStatusError is not null)
         {
             return Invalid(request, membershipStatusError);
+        }
+
+        // ValidateEligibility guarantees the organization exists.
+        var organization = request.Organization!;
+
+        var seatAvailabilityError = await inviteLinkValidationService.ValidateSeatAvailabilityAsync(
+            organization,
+            request.ExistingOrganizationUser);
+        if (seatAvailabilityError is not null)
+        {
+            return Invalid(request, seatAvailabilityError);
+        }
+
+        var joinRequirementsResult = await inviteLinkValidationService.ValidateJoinRequirementsAsync(
+            organization,
+            request.User,
+            request.ExistingOrganizationUser?.Type ?? OrganizationUserType.User,
+            await preAccessEnforcerQuery.RunAsync(organization.Id));
+
+        if (joinRequirementsResult.IsError)
+        {
+            return Invalid(request, joinRequirementsResult.Error!);
         }
 
         return Valid(request);
