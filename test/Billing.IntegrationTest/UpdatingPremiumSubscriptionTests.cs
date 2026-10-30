@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Json;
 using System.Text.Json.Nodes;
+using Bit.Core.Billing.Constants;
 using Bit.Test.Common.Helpers;
 
 namespace Bit.Billing.IntegrationTest;
@@ -58,10 +59,19 @@ public class UpdatingPremiumSubscriptionTests(StripeTestsFixture fixture) : ICla
         var preview = (await response.Content.ReadFromJsonAsync<JsonObject>())!;
         Assert.Equal("families", preview["planTier"]!.GetValue<string>());
         Assert.Equal("annually", preview["cadence"]!.GetValue<string>());
-        Assert.Equal(1, preview["passwordManager"]!["seats"]!["quantity"]!.GetValue<long>());
-        Assert.True(preview["total"]!.GetValue<decimal>() >= 0m);
-        Assert.True(preview["estimatedTax"]!.GetValue<decimal>() >= 0m);
-        Assert.NotNull(preview["amountDue"]);
+        // An upgrade mid-term is projected as a proration (credit for the unused Premium seat against
+        // the prorated Families charge), not as a full-price seats line.
+        var proration = Assert.Single(preview["passwordManager"]!["prorations"]!.AsArray());
+        Assert.Equal(StripeConstants.PurchasableReferences.PasswordManagerSeat, proration!["reference"]!.GetValue<string>());
+        var credit = proration["credit"]!.GetValue<decimal>();
+        var charge = proration["charge"]!.GetValue<decimal>();
+        Assert.True(credit > 0m);
+        Assert.True(charge > credit);
+        Assert.Equal(charge - credit, proration["total"]!.GetValue<decimal>());
+        var total = preview["total"]!.GetValue<decimal>();
+        var estimatedTax = preview["estimatedTax"]!.GetValue<decimal>();
+        Assert.Equal(charge - credit + estimatedTax, total);
+        Assert.Equal(total, preview["amountDue"]!.GetValue<decimal>());
     }
 
     [BillingFact]
