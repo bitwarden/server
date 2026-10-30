@@ -982,8 +982,8 @@ public class AccessRequestRepositoryTests
         ICollectionRepository collectionRepository,
         IAccessRequestRepository accessRequestRepository)
     {
-        // Unlike the caller-scoped "mine" read, the request page's read carries the requester identity and the full
-        // decision log.
+        // The request page's read carries the requester identity, which the caller-scoped "mine" read omits, and the
+        // full decision log.
         var requester = await userRepository.CreateTestUserAsync("requester");
         var approver = await userRepository.CreateTestUserAsync("approver");
         var organization = await organizationRepository.CreateTestOrganizationAsync();
