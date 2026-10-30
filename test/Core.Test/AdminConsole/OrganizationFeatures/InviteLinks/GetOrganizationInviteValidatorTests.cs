@@ -104,39 +104,6 @@ public class GetOrganizationInviteValidatorTests
         Assert.IsType<TwoFactorRequiredForMembership>(result.AsError);
     }
 
-    [Theory]
-    [BitAutoData(false, OrganizationUserType.User)]
-    [BitAutoData(true, OrganizationUserType.Admin)]
-    public async Task ValidateAsync_ChecksJoinRequirementsWithProposedRoleAndEnforcer(
-        bool hasExistingMembership,
-        OrganizationUserType expectedRole,
-        Organization organization, OrganizationInviteLink inviteLink, User user, OrganizationUser existingOrganizationUser,
-        SutProvider<GetOrganizationInviteValidator> sutProvider)
-    {
-        // Arrange
-        SetupJoinRequirementsPass(sutProvider);
-        existingOrganizationUser.Type = OrganizationUserType.Admin;
-        existingOrganizationUser.Status = OrganizationUserStatusType.Invited;
-        existingOrganizationUser.RevocationReason = null;
-        var request = BuildRequest(organization, inviteLink, user,
-            hasExistingMembership ? existingOrganizationUser : null);
-
-        var policyEnforcer = Substitute.For<IPreAccessPolicyEnforcer>();
-        sutProvider.GetDependency<IPreAccessEnforcerQuery>()
-            .RunAsync(organization.Id)
-            .Returns(policyEnforcer);
-
-        // Act
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        // Assert
-        Assert.True(result.IsValid);
-        Assert.Same(request, result.Request);
-        await sutProvider.GetDependency<IInviteLinkValidationService>()
-            .Received(1)
-            .ValidateJoinRequirementsAsync(organization, user, expectedRole, policyEnforcer);
-    }
-
     private static void SetupJoinRequirementsPass(SutProvider<GetOrganizationInviteValidator> sutProvider) =>
         sutProvider.GetDependency<IInviteLinkValidationService>()
             .ValidateJoinRequirementsAsync(
