@@ -12,7 +12,7 @@ Each verb has one meaning across the layers:
 | Term           | Meaning                                                                                                 |
 | -------------- | ------------------------------------------------------------------------------------------------------- |
 | Generate       | `IOtpTokenProvider<TOptions>` creates a random code and stores it.                                      |
-| Issue          | `IUserVerificationOtpStore` checks the request limit, then has `IOtpTokenProvider<TOptions>` create a code for the user. The new code replaces any pending one. |
+| Issue          | `IUserVerificationOtpStore` has `IOtpTokenProvider<TOptions>` create a code for the user. The new code replaces any pending one. |
 | Send           | `IUserVerificationOtpCommand` issues a code and emails it.                                              |
 | Validate       | `IOtpTokenProvider<TOptions>` and `IUserVerificationOtpStore` check a code, and remove it after a correct one. |
 | Verify         | `IUserVerificationOtpCommand` validates a code and marks the user's email as verified.                  |
@@ -31,9 +31,8 @@ flowchart TB
         Command --> UserRepository["IUserRepository"]
     end
 
-    subgraph Policy["User verification OTP: key, email binding, limits"]
-        direction LR
-        Store["IUserVerificationOtpStore"] --> Counter["Request counter<br/>(own cache entry)"]
+    subgraph Policy["User verification OTP: key, email binding, failed-attempt limit"]
+        Store["IUserVerificationOtpStore"]
     end
 
     subgraph Shared["Shared OTP generation and validation"]
@@ -61,11 +60,11 @@ messages, and setting `EmailVerified`. Other callers check the same OTP but must
 account. This is the only layer that sends mail or writes to the database.
 
 1. `SendOtpAsync` checks that the user has an email, issues an OTP through `IUserVerificationOtpStore`, and
-   emails it. It throws a `BadRequestException` when the user has no email or has reached the request limit.
+   emails it. It throws a `BadRequestException` when the user has no email.
 2. `VerifyOtpAsync` validates through `IUserVerificationOtpStore` with the failed-attempt limit. A valid OTP sets
    `User.EmailVerified` and saves the user.
 
-### `IUserVerificationOtpStore`: user verification OTP key, email binding, and limits
+### `IUserVerificationOtpStore`: user verification OTP key, email binding, and failed-attempt limit
 
 [`src/Core/Auth/Services/IUserVerificationOtpStore.cs`](../../Services/IUserVerificationOtpStore.cs)
 
@@ -80,11 +79,8 @@ OTP, so the rules live here once and the callers cannot drift apart.
    pending OTP.
 3. **Email binding:** the OTP is bound to `User.Email`. It proves control of the address it was sent to, so it
    must not validate after the address changes, even when the security stamp does not change.
-4. **Limits:** 5 failed attempts for each OTP through `ValidateAndConsumeWithFailureLimitAsync`, and 10 issued
-   OTPs for each user in a fixed 30-minute window. Together, they allow at most 100 failed attempts per user per
-   hour through that method. The request limit allows several verification prompts in a row,
-   because every action shares one OTP. The request counter is a separate cache entry that `IUserVerificationOtpStore`
-   writes directly, because `IOtpTokenProvider<TOptions>` manages codes, not counters.
+4. **Failed-attempt limit:** 5 failed attempts for each OTP through `ValidateAndConsumeWithFailureLimitAsync`.
+   The limit is on each OTP, not on the user, so it does not limit how many OTPs a user can request.
 5. **Options:** `IUserVerificationOtpStore` uses `DefaultOtpTokenProviderOptions`, which other OTP flows share.
    To change the code length, character set, or expiry of this OTP only, give it its own `TOptions` class.
 6. **Callers:** both callers check the same OTP, and each chooses a validate method:

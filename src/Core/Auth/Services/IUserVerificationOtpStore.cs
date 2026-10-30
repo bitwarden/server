@@ -12,15 +12,11 @@ namespace Bit.Core.Auth.Services;
 public interface IUserVerificationOtpStore
 {
     /// <summary>
-    /// Generates an OTP and replaces any OTP already pending for the user. Each user can be issued a limited
-    /// number of OTPs in a fixed time window.
+    /// Generates an OTP and replaces any OTP already pending for the user.
     /// </summary>
     /// <param name="user">The user the OTP is being issued for</param>
-    /// <returns>
-    /// <see cref="IssueOtpResult.Issued"/> with the generated OTP, or <see cref="IssueOtpResult.RequestLimitReached"/>
-    /// if the user has reached the request limit
-    /// </returns>
-    Task<IssueOtpResult> IssueAsync(User user);
+    /// <returns>The generated OTP</returns>
+    Task<string> IssueAsync(User user);
 
     // TODO: PM-45963 - Move the step-up user verification callers to
     // ValidateAndConsumeWithFailureLimitAsync, then delete this member and its implementation.

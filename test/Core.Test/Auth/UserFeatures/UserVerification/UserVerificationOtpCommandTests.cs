@@ -19,7 +19,7 @@ public class UserVerificationOtpCommandTests
     [Theory, BitAutoData]
     public async Task SendOtpAsync_IssuesAndEmailsOtp(SutProvider<UserVerificationOtpCommand> sutProvider, User user)
     {
-        sutProvider.GetDependency<IUserVerificationOtpStore>().IssueAsync(user).Returns(new IssueOtpResult.Issued("123456"));
+        sutProvider.GetDependency<IUserVerificationOtpStore>().IssueAsync(user).Returns("123456");
 
         await sutProvider.Sut.SendOtpAsync(user);
 
@@ -38,19 +38,6 @@ public class UserVerificationOtpCommandTests
 
         Assert.Equal("No user email.", exception.Message);
         await sutProvider.GetDependency<IUserVerificationOtpStore>().DidNotReceiveWithAnyArgs().IssueAsync(default!);
-        await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs()
-            .SendOTPEmailAsync(default!, default!);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SendOtpAsync_RequestLimitReached_ThrowsAndDoesNotEmail(
-        SutProvider<UserVerificationOtpCommand> sutProvider, User user)
-    {
-        sutProvider.GetDependency<IUserVerificationOtpStore>().IssueAsync(user).Returns(new IssueOtpResult.RequestLimitReached());
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SendOtpAsync(user));
-
-        Assert.Equal("Too many verification codes requested. Try again later.", exception.Message);
         await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs()
             .SendOTPEmailAsync(default!, default!);
     }

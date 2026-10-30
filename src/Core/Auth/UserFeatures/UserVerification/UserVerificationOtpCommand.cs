@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using Bit.Core.Auth.Services;
+﻿using Bit.Core.Auth.Services;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -24,14 +23,7 @@ public class UserVerificationOtpCommand(
             throw new BadRequestException("No user email.");
         }
 
-        var otp = await _userVerificationOtpStore.IssueAsync(user) switch
-        {
-            IssueOtpResult.Issued issued => issued.Otp,
-            IssueOtpResult.RequestLimitReached =>
-                throw new BadRequestException("Too many verification codes requested. Try again later."),
-            _ => throw new UnreachableException(),
-        };
-
+        var otp = await _userVerificationOtpStore.IssueAsync(user);
         await _mailService.SendOTPEmailAsync(user.Email, otp);
     }
 

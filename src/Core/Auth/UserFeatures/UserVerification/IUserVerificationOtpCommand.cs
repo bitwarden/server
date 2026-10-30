@@ -12,9 +12,7 @@ public interface IUserVerificationOtpCommand
     /// Emails the user a new OTP, replacing any OTP already pending.
     /// </summary>
     /// <param name="user">The authenticated user requesting the OTP.</param>
-    /// <exception cref="BadRequestException">
-    /// The user has no email, or the user has requested too many OTPs recently.
-    /// </exception>
+    /// <exception cref="BadRequestException">The user has no email.</exception>
     Task SendOtpAsync(User user);
 
     /// <summary>

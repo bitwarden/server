@@ -29,7 +29,6 @@ public class AccountsControllerOtpTests : IClassFixture<ApiApplicationFactory>, 
 
     private const string OwnerMasterPasswordHash = "master_password_hash";
     private const int FailedAttemptLimit = 5;
-    private const int OtpRequestLimit = 10;
 
     private string _ownerEmail = null!;
 
@@ -418,57 +417,6 @@ public class AccountsControllerOtpTests : IClassFixture<ApiApplicationFactory>, 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
-    [Fact]
-    public async Task PostRequestOtp_RequestLimitReached_BadRequestAndNoEmail()
-    {
-        await _loginHelper.LoginAsync(_ownerEmail);
-        for (var i = 0; i < OtpRequestLimit; i++)
-        {
-            Assert.Equal(HttpStatusCode.OK, (await PostRequestOtpAsync()).StatusCode);
-        }
-
-        var response = await PostRequestOtpAsync();
-
-        await AssertOtpRequestLimitReachedAsync(response);
-        await _mailService.Received(OtpRequestLimit).SendOTPEmailAsync(_ownerEmail, Arg.Any<string>());
-    }
-
-    [Fact]
-    public async Task PostRequestOtp_RequestLimitReached_LastIssuedOtpStillValid()
-    {
-        await _loginHelper.LoginAsync(_ownerEmail);
-        for (var i = 0; i < OtpRequestLimit - 1; i++)
-        {
-            Assert.Equal(HttpStatusCode.OK, (await PostRequestOtpAsync()).StatusCode);
-        }
-        var lastOtp = await RequestOtpAndCaptureAsync();
-        await AssertOtpRequestLimitReachedAsync(await PostRequestOtpAsync());
-
-        var response = await PostVerifyOtpAsync(lastOtp);
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
-
-    /// <summary>
-    /// The end of the request window is simulated by evicting the request counter's cache entry, because the
-    /// test host cannot advance the clock. A real timeout removes the same entry.
-    /// </summary>
-    [Fact]
-    public async Task PostRequestOtp_RequestWindowEnded_Ok()
-    {
-        await _loginHelper.LoginAsync(_ownerEmail);
-        for (var i = 0; i < OtpRequestLimit; i++)
-        {
-            Assert.Equal(HttpStatusCode.OK, (await PostRequestOtpAsync()).StatusCode);
-        }
-        await AssertOtpRequestLimitReachedAsync(await PostRequestOtpAsync());
-        await EndOtpRequestWindowAsync(_ownerEmail);
-
-        var response = await PostRequestOtpAsync();
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
-
     private async Task<HttpResponseMessage> PostRequestOtpAsync()
     {
         using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/request-otp");
@@ -536,21 +484,6 @@ public class AccountsControllerOtpTests : IClassFixture<ApiApplicationFactory>, 
         await cache.RemoveAsync(otpCacheKey);
     }
 
-    private async Task EndOtpRequestWindowAsync(string email)
-    {
-        var user = await _userRepository.GetByEmailAsync(email);
-        Assert.NotNull(user);
-
-        var cache = _factory.Services.GetRequiredKeyedService<IDistributedCache>("persistent");
-        var requestCounterCacheKey = OtpRequestCounterCacheKey(user);
-
-        Assert.NotNull(await cache.GetAsync(requestCounterCacheKey));
-        await cache.RemoveAsync(requestCounterCacheKey);
-    }
-
-    private static string OtpRequestCounterCacheKey(User user) =>
-        $"UserVerificationOtpRequests_{user.Id}";
-
     private static string OtpCacheKey(User user) =>
         $"UserVerification_EmailOtp_{user.Id}_{user.SecurityStamp}";
 
@@ -559,13 +492,6 @@ public class AccountsControllerOtpTests : IClassFixture<ApiApplicationFactory>, 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("Invalid token", content);
-    }
-
-    private static async Task AssertOtpRequestLimitReachedAsync(HttpResponseMessage response)
-    {
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Too many verification codes requested. Try again later.", content);
     }
 
     private static async Task AssertUserVerificationFailedAsync(HttpResponseMessage response)

@@ -205,8 +205,7 @@ public class UserEmailTokenCodeQueryTests
     public async Task Execute_UserVerification_ReturnsCodeWithoutDevice()
     {
         var (query, cache, user) = Arrange();
-        var issueResult = await BuildUserVerificationOtpStore(cache).IssueAsync(user);
-        var issuedCode = Assert.IsType<IssueOtpResult.Issued>(issueResult).Otp;
+        var issuedCode = await BuildUserVerificationOtpStore(cache).IssueAsync(user);
 
         var response = await query.Execute(new UserEmailTokenCodeQuery.Request
         {
@@ -314,6 +313,6 @@ public class UserEmailTokenCodeQueryTests
 
     private static UserVerificationOtpStore BuildUserVerificationOtpStore(IDistributedCache cache)
     {
-        return new UserVerificationOtpStore(BuildOtpTokenProvider(cache), cache, TimeProvider.System);
+        return new UserVerificationOtpStore(BuildOtpTokenProvider(cache));
     }
 }
