@@ -29,6 +29,7 @@ public interface IOtpTokenProvider<TOptions>
 {
     Task<string?> GenerateTokenAsync(string tokenProviderName, string purpose, string uniqueIdentifier, string? boundValue = null);
     Task<bool> ValidateTokenAsync(string token, string tokenProviderName, string purpose, string uniqueIdentifier, string? boundValue = null);
+    Task<bool> ValidateTokenWithFailureLimitAsync(string token, string tokenProviderName, string purpose, string uniqueIdentifier, int maxFailedAttempts, string? boundValue = null);
 }
 ```
 
@@ -40,6 +41,7 @@ The provider is initialized with:
 
 - **Distributed Cache**: Storage backend for tokens (using "persistent" keyed service)
 - **IOptions<TOptions>**: Configuration options for token generation and caching
+- **TimeProvider**: Clock used to record and check a token's expiry
 
 ## Usage
 
@@ -64,6 +66,8 @@ bool isValid = await otpProvider.ValidateTokenAsync("123456", "EmailToken", "ema
 // Note: Valid tokens are automatically removed from cache
 ```
 
+Prefer `ValidateTokenWithFailureLimitAsync` for new callers. It validates the same way and also limits failed attempts (see [Limiting Failed Attempts](#limiting-failed-attempts)).
+
 ### Binding a Token to Other Request Context
 
 ```csharp
@@ -73,6 +77,17 @@ string token = await otpProvider.GenerateTokenAsync("NewDeviceVerification", "Ne
 // Validation must supply the same bound value; a different or missing one fails even for a correct token
 bool isValid = await otpProvider.ValidateTokenAsync(token, "NewDeviceVerification", "NewDeviceVerificationCode", uniqueIdentifier, deviceIdentifier);
 ```
+
+### Limiting Failed Attempts
+
+```csharp
+// Remove the token after 5 failed attempts; the user must then be issued a new token
+bool isValid = await otpProvider.ValidateTokenWithFailureLimitAsync(token, "UserVerification", "EmailOtp", uniqueIdentifier, 5, boundValue);
+```
+
+`ValidateTokenWithFailureLimitAsync` validates like `ValidateTokenAsync`, and also counts failed attempts in the cache entry. A bound value mismatch counts as a failed attempt. When the count reaches `maxFailedAttempts`, the entry is removed. Generating a new token resets the count. Rewriting the entry after a failed attempt keeps the expiry set at generation, so failed attempts do not extend a token's lifetime.
+
+Only calls to `ValidateTokenWithFailureLimitAsync` count. Calls to `ValidateTokenAsync` for the same token do not. The count is read and written back in separate cache operations, so parallel failed attempts can read the same count and get extra guesses. Burst rate limiting on the calling endpoint caps parallel requests, so this race adds very few guesses.
 
 ### Custom Configurations
 
@@ -163,7 +178,7 @@ These are passed into the OTP Token Provider which creates a cache record:
 
 ### Storage
 
-- Each cache entry is a JSON envelope containing the token and its optional bound value, not the bare token
+- Each cache entry is a JSON envelope containing the token, its optional bound value, its expiry, and its failed-attempt count, not the bare token
 - Tokens are stored in distributed cache. The cache depends on the specific deployment, for cloud it is CosmosDb.
 - Automatic expiration prevents indefinite token validity
 - One-time use prevents replay attacks
@@ -172,6 +187,7 @@ These are passed into the OTP Token Provider which creates a cache record:
 
 - Exact string matching for the token, plus an exact match on the bound value supplied at generation, if any
 - Automatic removal after successful validation
+- Optional removal after a caller-set number of failed attempts (`ValidateTokenWithFailureLimitAsync`)
 - Returns `false` for expired or non-existent tokens
 
 ## Dependency Injection

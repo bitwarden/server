@@ -19,6 +19,7 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserApiKey.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserEmail;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
+using Bit.Core.Auth.UserFeatures.UserVerification;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -59,6 +60,7 @@ public class AccountsController : Controller
     private readonly IUserRepository _userRepository;
     private readonly IRotateUserApiKeyCommand _rotateUserApiKeyCommand;
     private readonly ISelfServiceChangeEmailCommand _selfServiceChangeEmailCommand;
+    private readonly IUserVerificationOtpCommand _userVerificationOtpCommand;
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<AccountsController> _logger;
 
@@ -82,6 +84,7 @@ public class AccountsController : Controller
         IUserRepository userRepository,
         IRotateUserApiKeyCommand rotateUserApiKeyCommand,
         ISelfServiceChangeEmailCommand selfServiceChangeEmailCommand,
+        IUserVerificationOtpCommand userVerificationOtpCommand,
         ICurrentContext currentContext,
         ILogger<AccountsController> logger
         )
@@ -105,6 +108,7 @@ public class AccountsController : Controller
         _userRepository = userRepository;
         _rotateUserApiKeyCommand = rotateUserApiKeyCommand;
         _selfServiceChangeEmailCommand = selfServiceChangeEmailCommand;
+        _userVerificationOtpCommand = userVerificationOtpCommand;
         _currentContext = currentContext;
         _logger = logger;
     }
@@ -857,14 +861,12 @@ public class AccountsController : Controller
         throw new BadRequestException(ModelState);
     }
 
-    // TODO: PM-44310 - Move the OTP request and verify out of IUserService
-    // and this action into Auth commands.
     [HttpPost("request-otp")]
     public async Task PostRequestOTP()
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
 
-        await _userService.SendOTPAsync(user);
+        await _userVerificationOtpCommand.SendOtpAsync(user);
     }
 
     [HttpPost("verify-otp")]
@@ -872,17 +874,9 @@ public class AccountsController : Controller
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
 
-        if (!await _userService.VerifyOTPAsync(user, model.OTP))
+        if (!await _userVerificationOtpCommand.VerifyOtpAsync(user, model.OTP))
         {
-            await Task.Delay(2000);
             throw new BadRequestException("Token", "Invalid token");
-        }
-
-        // A valid emailed OTP proves mailbox control.
-        if (!user.EmailVerified)
-        {
-            user.EmailVerified = true;
-            await _userService.SaveUserAsync(user);
         }
     }
 
