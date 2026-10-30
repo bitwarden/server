@@ -441,8 +441,48 @@ public class PreviewOrganizationPlanChangeCommandTests
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
         _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(FullSubscription());
 
-        await Assert.ThrowsAsync<BadRequestException>(() =>
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             _sut.Run(organization, Request(PlanTierType.Teams, PlanCadenceType.Annually)));
+        Assert.Equal("Your organization is already on this plan.", exception.Message);
+    }
+
+    [Fact]
+    public async Task Run_SameTierOnNonPreviewableSubscription_ThrowsConflict()
+    {
+        var organization = new OrganizationEntity
+        {
+            Id = Guid.NewGuid(),
+            GatewayCustomerId = "cus_1",
+            GatewaySubscriptionId = "sub_1",
+            PlanType = PlanType.TeamsAnnually,
+            Seats = 5
+        };
+
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(CanceledSubscription());
+
+        await Assert.ThrowsAsync<ConflictException>(() =>
+            _sut.Run(organization, Request(PlanTierType.Teams, PlanCadenceType.Annually)));
+    }
+
+    [Fact]
+    public async Task Run_SameTierOnPastDueSubscription_ThrowsBadRequest()
+    {
+        var organization = new OrganizationEntity
+        {
+            Id = Guid.NewGuid(),
+            GatewayCustomerId = "cus_1",
+            GatewaySubscriptionId = "sub_1",
+            PlanType = PlanType.TeamsAnnually,
+            Seats = 5
+        };
+
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(PastDueSubscription());
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _sut.Run(organization, Request(PlanTierType.Teams, PlanCadenceType.Annually)));
+        Assert.Equal("Your organization is already on this plan.", exception.Message);
     }
 
     [Fact]
@@ -492,10 +532,10 @@ public class PreviewOrganizationPlanChangeCommandTests
         var organization = TrialingTeamsAnnualOrganization();
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(FamiliesPlan());
-        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(TrialingTeamsSubscription());
 
         await Assert.ThrowsAsync<BadRequestException>(() =>
             _sut.Run(organization, Request(PlanTierType.Families, PlanCadenceType.Annually)));
+        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
     }
 
     [Fact]
@@ -846,6 +886,13 @@ public class PreviewOrganizationPlanChangeCommandTests
     private static Subscription PastDueSubscription() => Subscription.FromJson("""
         {
           "id": "sub_1", "status": "past_due",
+          "items": { "data": [ { "id": "si_pm", "quantity": 5, "price": { "id": "price_teams_seat" } } ] }
+        }
+        """);
+
+    private static Subscription CanceledSubscription() => Subscription.FromJson("""
+        {
+          "id": "sub_1", "status": "canceled",
           "items": { "data": [ { "id": "si_pm", "quantity": 5, "price": { "id": "price_teams_seat" } } ] }
         }
         """);
