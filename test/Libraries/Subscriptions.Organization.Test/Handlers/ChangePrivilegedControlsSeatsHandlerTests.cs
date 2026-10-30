@@ -3,7 +3,6 @@ using Bit.Core.Repositories;
 using Bit.Subscriptions.Organization.Commands;
 using Bit.Subscriptions.Organization.Handlers;
 using Bit.Subscriptions.Organization.Models.Requests;
-using Bit.Subscriptions.Organization.Queries;
 using NSubstitute;
 using Xunit;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
@@ -83,18 +82,6 @@ public class ChangePrivilegedControlsSeatsHandlerTests
         var organization = new OrganizationEntity { Id = Guid.NewGuid() };
         _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
         return organization;
-    }
-
-    private sealed class FakeIsOnPrivilegedControlsSalesInitiatedTrialQuery : IIsOnPrivilegedControlsSalesInitiatedTrialQuery
-    {
-        public bool Result { get; set; }
-        public OrganizationEntity? ReceivedOrganization { get; private set; }
-
-        public Task<bool> Run(OrganizationEntity organization)
-        {
-            ReceivedOrganization = organization;
-            return Task.FromResult(Result);
-        }
     }
 
     private sealed class FakeChangePrivilegedControlsSeatsCommand : IChangePrivilegedControlsSeatsCommand

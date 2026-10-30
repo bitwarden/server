@@ -33,6 +33,16 @@ public static class OrganizationPrivilegedControlsEndpointsExtensions
             .WithName("ChangePrivilegedControlsSeats")
             .WithDescription("Sets the organization's Privileged Controls seat total and autoscale limit.");
 
+        group.MapDelete("privileged-controls",
+                async ([FromRoute] Guid organizationId, [FromServices] RemovePrivilegedControlsHandler handler) =>
+                {
+                    await handler.HandleAsync(organizationId);
+                    return Results.NoContent();
+                })
+            .RequireAuthorization(new AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>())
+            .WithName("RemovePrivilegedControls")
+            .WithDescription("Removes Privileged Controls from the organization's subscription.");
+
         return group;
     }
 }
