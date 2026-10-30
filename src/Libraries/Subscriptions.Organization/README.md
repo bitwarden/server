@@ -217,11 +217,14 @@ through the handler unchanged. A Stripe card error from the charge is mapped by 
 
 ### Privileged Controls seat change
 
-`PUT .../privileged-controls` sets the organization's Privileged Controls seat total and autoscale limit. Its body,
-`PrivilegedControlsSeatsRequest` (`seats`, and `maxAutoscaleSeats` null for no limit), holds absolute totals, so
-repeating the request is idempotent. The handler adds
-no validation of its own: the command and `PrivilegedControlsSeatChangeSetFactory` own every seat rule, so an omitted
-`seats` is forwarded as 0 and rejected by the factory with its own message rather than by binding with none.
+`PUT .../privileged-controls` changes the organization's Privileged Controls seats by a number to add or remove, rather
+than a new total, and sets the autoscale limit. Its body, `PrivilegedControlsSeatsRequest`, carries `seatAdjustment`
+(seats to add, negative to remove; null or omitted leaves the count unchanged) and `maxAutoscaleSeats` (null for no
+limit). The handler adds the adjustment to the seats the organization holds when the request arrives, not the count the
+client last saw, so a client working from a stale count cannot undo a concurrent autoscale or another owner's change; a
+limit-only request sends an adjustment of 0 and never reaches Stripe. The handler adds no other validation of its own:
+the command and `PrivilegedControlsSeatChangeSetFactory` own every seat rule and reject the resulting total with their
+own messages.
 
 The handler resolves the organization (404), runs `IIsOnPrivilegedControlsSalesInitiatedTrialQuery`, and rejects a
 sales-initiated trial with a 400 ("Work with your customer service representative to change your Privileged Controls
@@ -237,15 +240,15 @@ and any new caller must run the trial query first. The cost is one extra Stripe 
 
 | Condition | Status |
 | --- | --- |
-| `seats` not an integer | 400 (binding) |
+| `seatAdjustment` not an integer | 400 (binding) |
 | Not an Owner of a standalone organization | 403 |
 | `PM39883_Pam_Billing_Support` off | 404 |
 | Organization not found (an unknown id normally fails authorization first, as 403) | 404 |
 | Sales-initiated trial, including no subscription id, or no seats saved with no seat line | 400, trial message above |
 | Subscription id no longer in Stripe | 409, logged with the organization and subscription ids |
 | Plan not in the pricing service | 404 (pricing client), the same as the subscription response |
-| Privileged Controls off, `maxAutoscaleSeats` below `seats`, or `maxAutoscaleSeats` above the Password Manager autoscale limit | 400 (command) |
-| Plan without Privileged Controls, fewer than one seat, more seats than Password Manager seats, or a decrease below occupied seats | 400 (factory) |
+| Privileged Controls off, `maxAutoscaleSeats` below the resulting seat total, or `maxAutoscaleSeats` above the Password Manager autoscale limit | 400 (command) |
+| Plan without Privileged Controls, fewer than one seat, a resulting total above the Password Manager seat count, or a decrease below occupied seats | 400 (factory) |
 | Subscription not `trialing`, `active`, or `past_due`, or a Stripe input error | 400 (subscription update) |
 | Subscription schedule with no updatable phase, or another conflict inside the update | 409 (subscription update) |
 | Unmapped Stripe or unexpected error | 500 |
