@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Queries.Interfaces;
@@ -67,7 +68,8 @@ IBaseRequestValidatorTestWrapper
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
         IClientVersionValidator clientVersionValidator,
-        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand) :
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand,
+        IIssueTwoFactorRememberTokenCommand issueTwoFactorRememberTokenCommand) :
          base(
             userManager,
             userService,
@@ -87,7 +89,8 @@ IBaseRequestValidatorTestWrapper
             mailService,
             userAccountKeysQuery,
             clientVersionValidator,
-            updateDeviceLastActivityCommand)
+            updateDeviceLastActivityCommand,
+            issueTwoFactorRememberTokenCommand)
     {
     }
 

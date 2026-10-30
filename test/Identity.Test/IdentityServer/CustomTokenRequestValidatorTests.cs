@@ -6,6 +6,7 @@ using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -77,7 +78,8 @@ public class CustomTokenRequestValidatorTests
             Substitute.For<IMailService>(),
             Substitute.For<IUserAccountKeysQuery>(),
             Substitute.For<IClientVersionValidator>(),
-            _updateDeviceLastActivityCommand);
+            _updateDeviceLastActivityCommand,
+            Substitute.For<IIssueTwoFactorRememberTokenCommand>());
     }
 
     private CustomTokenRequestValidationContext CreateRefreshTokenContext(ClaimsPrincipal subject)
@@ -261,6 +263,7 @@ public class CustomTokenRequestValidatorTests
             Substitute.For<ILogger<UserManager<User>>>());
 
         var updateCmd = Substitute.For<IUpdateDeviceLastActivityCommand>();
+        var issueRememberCmd = Substitute.For<IIssueTwoFactorRememberTokenCommand>();
 
         var sut = new CustomTokenRequestValidator(
             userManager,
@@ -282,7 +285,8 @@ public class CustomTokenRequestValidatorTests
             Substitute.For<IMailService>(),
             Substitute.For<IUserAccountKeysQuery>(),
             Substitute.For<IClientVersionValidator>(),
-            updateCmd);
+            updateCmd,
+            issueRememberCmd);
 
         var subject = new ClaimsPrincipal(new ClaimsIdentity(
         [
