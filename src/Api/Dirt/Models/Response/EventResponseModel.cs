@@ -15,17 +15,17 @@ public class EventResponseModel : ResponseModel
         }
 
         Type = ev.Type;
-        UserId = EventLegacyFieldResolver.ResolveUserId(ev);
+        UserId = ev.UserId;
         OrganizationId = ev.OrganizationId;
         ProviderId = ev.ProviderId;
         CipherId = ev.CipherId;
         CollectionId = ev.CollectionId;
         GroupId = ev.GroupId;
         PolicyId = ev.PolicyId;
-        OrganizationUserId = EventLegacyFieldResolver.ResolveOrganizationUserId(ev);
+        OrganizationUserId = ev.OrganizationUserId;
         ProviderUserId = ev.ProviderUserId;
         ProviderOrganizationId = ev.ProviderOrganizationId;
-        ActingUserId = EventLegacyFieldResolver.ResolveActingUserId(ev);
+        ActingUserId = ev.ActingUserId;
         Date = ev.Date;
         DeviceType = ev.DeviceType;
         IpAddress = ev.IpAddress;
