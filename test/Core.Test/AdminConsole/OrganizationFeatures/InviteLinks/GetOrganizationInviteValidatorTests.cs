@@ -88,12 +88,16 @@ public class GetOrganizationInviteValidatorTests
     {
         // Arrange
         var request = BuildRequest(organization, inviteLink, user, existingOrganizationUser: null);
+        var policyEnforcer = Substitute.For<IPreAccessPolicyEnforcer>();
+        sutProvider.GetDependency<IPreAccessEnforcerQuery>()
+            .RunAsync(organization.Id)
+            .Returns(policyEnforcer);
         sutProvider.GetDependency<IInviteLinkValidationService>()
             .ValidateJoinRequirementsAsync(
-                Arg.Any<Organization>(),
-                Arg.Any<User>(),
-                Arg.Any<OrganizationUserType>(),
-                Arg.Any<IPreAccessPolicyEnforcer>())
+                organization,
+                user,
+                OrganizationUserType.User,
+                policyEnforcer)
             .Returns(new JoinRequirementsValidationResult(new TwoFactorRequiredForMembership(), AutoConfirmPolicyEnabled: false));
 
         // Act
