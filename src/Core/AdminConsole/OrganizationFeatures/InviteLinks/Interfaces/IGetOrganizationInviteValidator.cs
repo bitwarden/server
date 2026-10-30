@@ -14,6 +14,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 ///     <item>The existing membership's status:
 ///     <see cref="InviteLinkRules.ValidateConfirmMembershipStatus"/> when the link supports confirmation,
 ///     otherwise <see cref="InviteLinkRules.ValidateAcceptMembershipStatus"/>.</item>
+///     <item><see cref="IInviteLinkValidationService.ValidateSeatAvailabilityAsync"/>.</item>
 ///     <item><see cref="IInviteLinkValidationService.ValidateJoinRequirementsAsync"/>.</item>
 /// </list>
 /// The caller supplies the invite link, organization, and existing membership. The reset password key is left to the

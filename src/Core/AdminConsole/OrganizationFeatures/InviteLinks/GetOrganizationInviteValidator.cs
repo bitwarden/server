@@ -34,6 +34,14 @@ public class GetOrganizationInviteValidator(
         // ValidateEligibility guarantees the organization exists.
         var organization = request.Organization!;
 
+        var seatAvailabilityError = await inviteLinkValidationService.ValidateSeatAvailabilityAsync(
+            organization,
+            request.ExistingOrganizationUser);
+        if (seatAvailabilityError is not null)
+        {
+            return Invalid(request, seatAvailabilityError);
+        }
+
         var joinRequirementsResult = await inviteLinkValidationService.ValidateJoinRequirementsAsync(
             organization,
             request.User,

@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PreAccess;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Test.Common.AutoFixture;
@@ -54,6 +55,9 @@ public class GetOrganizationInviteValidatorTests
         Assert.IsType<AlreadyOrganizationMember>(result.AsError);
         await sutProvider.GetDependency<IInviteLinkValidationService>()
             .DidNotReceiveWithAnyArgs()
+            .ValidateSeatAvailabilityAsync(Arg.Any<Organization>(), Arg.Any<OrganizationUser?>());
+        await sutProvider.GetDependency<IInviteLinkValidationService>()
+            .DidNotReceiveWithAnyArgs()
             .ValidateJoinRequirementsAsync(
                 Arg.Any<Organization>(),
                 Arg.Any<User>(),
@@ -68,6 +72,7 @@ public class GetOrganizationInviteValidatorTests
         SutProvider<GetOrganizationInviteValidator> sutProvider)
     {
         // Arrange
+        SetupSeatsAvailable(sutProvider);
         SetupJoinRequirementsPass(sutProvider);
         existingOrganizationUser.Status = OrganizationUserStatusType.Accepted;
         existingOrganizationUser.RevocationReason = null;
@@ -82,11 +87,39 @@ public class GetOrganizationInviteValidatorTests
     }
 
     [Theory, BitAutoData]
+    public async Task ValidateAsync_WhenNoSeatsAvailable_ReturnsNoAvailableSeats(
+        Organization organization, OrganizationInviteLink inviteLink, User user,
+        SutProvider<GetOrganizationInviteValidator> sutProvider)
+    {
+        // Arrange
+        SetupJoinRequirementsPass(sutProvider);
+        var request = BuildRequest(organization, inviteLink, user, existingOrganizationUser: null);
+        sutProvider.GetDependency<IInviteLinkValidationService>()
+            .ValidateSeatAvailabilityAsync(organization, null)
+            .Returns(new OrganizationHasNoAvailableSeats(organization.DisplayName()));
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<OrganizationHasNoAvailableSeats>(result.AsError);
+        await sutProvider.GetDependency<IInviteLinkValidationService>()
+            .DidNotReceiveWithAnyArgs()
+            .ValidateJoinRequirementsAsync(
+                Arg.Any<Organization>(),
+                Arg.Any<User>(),
+                Arg.Any<OrganizationUserType>(),
+                Arg.Any<IPreAccessPolicyEnforcer>());
+    }
+
+    [Theory, BitAutoData]
     public async Task ValidateAsync_WhenJoinRequirementsFail_ReturnsJoinRequirementsError(
         Organization organization, OrganizationInviteLink inviteLink, User user,
         SutProvider<GetOrganizationInviteValidator> sutProvider)
     {
         // Arrange
+        SetupSeatsAvailable(sutProvider);
         var request = BuildRequest(organization, inviteLink, user, existingOrganizationUser: null);
         var policyEnforcer = Substitute.For<IPreAccessPolicyEnforcer>();
         sutProvider.GetDependency<IPreAccessEnforcerQuery>()
@@ -107,6 +140,11 @@ public class GetOrganizationInviteValidatorTests
         Assert.True(result.IsError);
         Assert.IsType<TwoFactorRequiredForMembership>(result.AsError);
     }
+
+    private static void SetupSeatsAvailable(SutProvider<GetOrganizationInviteValidator> sutProvider) =>
+        sutProvider.GetDependency<IInviteLinkValidationService>()
+            .ValidateSeatAvailabilityAsync(Arg.Any<Organization>(), Arg.Any<OrganizationUser?>())
+            .Returns((Error?)null);
 
     private static void SetupJoinRequirementsPass(SutProvider<GetOrganizationInviteValidator> sutProvider) =>
         sutProvider.GetDependency<IInviteLinkValidationService>()
