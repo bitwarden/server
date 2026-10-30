@@ -41,7 +41,6 @@ public class GetCipherAccessStateQueryTests
     {
         var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
-        // No active lease, no pending request, and the resolver finds no governing rule.
         sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
             .Returns((GoverningRule?)null);
@@ -75,7 +74,6 @@ public class GetCipherAccessStateQueryTests
         sutProvider.GetDependency<IAccessLeaseRepository>()
             .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, _now)
             .Returns(activeLease);
-        // Access rule since removed; the held lease must still surface.
         sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
             .Returns((GoverningRule?)null);
@@ -107,7 +105,6 @@ public class GetCipherAccessStateQueryTests
         Assert.Equal(pending.Id, result.PendingRequest!.Id);
         Assert.Equal(pending.ExtensionOfLeaseId, result.PendingRequest.ExtensionOfLeaseId);
         Assert.Equal(AccessRequestStatus.Pending, result.PendingRequest.Status);
-        // Pending has produced no lease and has no resolver yet.
         Assert.Null(result.PendingRequest.ProducedLeaseId);
         Assert.Empty(result.PendingRequest.Decisions);
     }
@@ -136,8 +133,7 @@ public class GetCipherAccessStateQueryTests
         Assert.Equal(AccessRequestStatus.Approved, result.ApprovedRequest.Status);
         Assert.Equal(approved.NotBefore, result.ApprovedRequest.NotBefore);
         Assert.Equal(approved.NotAfter, result.ApprovedRequest.NotAfter);
-        // The approved read excludes activated rows, so no lease id; the caller-scoped snapshot carries no approver
-        // identity.
+        // The approved read excludes activated rows, and the caller's snapshot carries no approver identity.
         Assert.Null(result.ApprovedRequest.ProducedLeaseId);
         Assert.Empty(result.ApprovedRequest.Decisions);
     }
@@ -153,7 +149,6 @@ public class GetCipherAccessStateQueryTests
         sutProvider.GetDependency<IAccessRequestRepository>()
             .GetActiveApprovedByRequesterIdCipherIdAsync(userId, cipherId, _now)
             .Returns(approved);
-        // Access rule since removed; the startable approval must still surface.
         sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
             .Returns((GoverningRule?)null);
@@ -228,7 +223,6 @@ public class GetCipherAccessStateQueryTests
                 AllowsExtensions = true,
                 MaxExtensionDurationSeconds = 2 * 60 * 60,
             });
-        // A lease extends only a single time; an existing extension blocks another.
         sutProvider.GetDependency<IAccessRequestRepository>()
             .CountExtensionsByLeaseIdAsync(activeLease.Id).Returns(1);
 
@@ -287,7 +281,7 @@ public class GetCipherAccessStateQueryTests
         Assert.Equal(3600, result.MaxExtensionDurationSeconds);
     }
 
-    // The cap the extend call will enforce is the pinned rule's, so that is the one the control must publish.
+    // The extend call enforces the pinned rule's cap, so that is the one to publish.
     [Theory, BitAutoData]
     public async Task GetStateAsync_ActiveLease_PublishesThePinnedRulesCap(
         Guid userId, Guid cipherId, Guid orgId, Guid collectionId, Guid ruleId, AccessLease activeLease)
@@ -329,7 +323,6 @@ public class GetCipherAccessStateQueryTests
             .Returns(new CipherDetails { Id = cipherId });
     }
 
-    // The rule the lease was granted under, reached through the request that birthed it.
     private static void PinOriginatingRule(
         SutProvider<GetCipherAccessStateQuery> sutProvider, AccessLease lease, Guid ruleId,
         int maxExtensionDurationSeconds)
