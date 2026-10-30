@@ -86,6 +86,7 @@ public class SingleProviderSceneTests : IClassFixture<InPlaySeederApiApplication
             Assert.Equal(ProviderType.Msp, provider.Type);
             Assert.Equal(ProviderStatusType.Billable, provider.Status);
             Assert.True(provider.Enabled);
+            Assert.True(provider.UseEvents);
             Assert.Equal(GatewayType.Stripe, provider.Gateway);
             Assert.Equal("cus_test123", provider.GatewayCustomerId);
             Assert.Equal("sub_test123", provider.GatewaySubscriptionId);
