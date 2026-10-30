@@ -12,7 +12,8 @@
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
-    @Archives NVARCHAR(MAX) = NULL
+    @Archives NVARCHAR(MAX) = NULL,
+    @BrowserHealthExclusions NVARCHAR(MAX) = NULL -- not used
 AS
 BEGIN
     SET NOCOUNT ON

@@ -3328,6 +3328,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<string>("Attachments")
                         .HasColumnType("longtext");
 
+                    b.Property<string>("BrowserHealthExclusions")
+                        .HasColumnType("longtext");
+
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 

@@ -13,6 +13,7 @@
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
     @Archives NVARCHAR(MAX) = NULL,
+    @BrowserHealthExclusions NVARCHAR(MAX) = NULL, -- not used
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN

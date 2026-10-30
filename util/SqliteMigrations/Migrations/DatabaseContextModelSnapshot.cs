@@ -3317,6 +3317,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<string>("Attachments")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("BrowserHealthExclusions")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 

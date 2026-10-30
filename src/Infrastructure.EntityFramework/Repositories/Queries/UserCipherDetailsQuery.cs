@@ -71,7 +71,8 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                         OrganizationUseTotp = o.UseTotp,
                         c.Reprompt,
                         c.Key,
-                        c.Archives
+                        c.Archives,
+                        c.BrowserHealthExclusions
                     };
 
         var query2 = from c in dbContext.Ciphers
@@ -95,7 +96,8 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                          OrganizationUseTotp = false,
                          c.Reprompt,
                          c.Key,
-                         c.Archives
+                         c.Archives,
+                         c.BrowserHealthExclusions
                      };
 
         var union = query.Union(query2).Select(c => new CipherDetails
@@ -117,7 +119,8 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
             Manage = c.Manage,
             OrganizationUseTotp = c.OrganizationUseTotp,
             Key = c.Key,
-            ArchivedDate = GetArchivedDate(_userId, new Cipher { Id = c.Id, Archives = c.Archives })
+            ArchivedDate = GetArchivedDate(_userId, new Cipher { Id = c.Id, Archives = c.Archives }),
+            ExcludedFromBrowserHealth = _userId.HasValue && c.BrowserHealthExclusions != null && c.BrowserHealthExclusions.ToLowerInvariant().Contains($"\"{_userId}\":true")
         });
         return union;
     }
@@ -142,6 +145,7 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
             return null;
         }
     }
+
 
     private static Guid? GetFolderId(Guid? userId, Cipher cipher)
     {
