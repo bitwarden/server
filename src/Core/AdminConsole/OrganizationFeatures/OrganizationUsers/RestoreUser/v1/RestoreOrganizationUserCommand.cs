@@ -32,7 +32,8 @@ public class RestoreOrganizationUserCommand(
     IPolicyRequirementQuery policyRequirementQuery,
     ICollectionRepository collectionRepository,
     IAutomaticUserConfirmationPolicyEnforcementHandler automaticUserConfirmationPolicyEnforcementHandler,
-    IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand) : IRestoreOrganizationUserCommand
+    IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand,
+    TimeProvider timeProvider) : IRestoreOrganizationUserCommand
 {
     public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, string defaultCollectionName)
     {
@@ -110,6 +111,12 @@ public class RestoreOrganizationUserCommand(
         var status = organizationUser.GetPriorActiveOrganizationUserStatusType();
 
         await organizationUserRepository.RestoreAsync(organizationUser.Id, status);
+
+        if (status == OrganizationUserStatusType.Invited)
+        {
+            await organizationUserRepository.StartInviteReminderSequencesAsync(
+                [organizationUser.Id], timeProvider.GetUtcNow().UtcDateTime);
+        }
 
         if (organizationUser.UserId.HasValue
            && organization.UseMyItems
@@ -268,6 +275,15 @@ public class RestoreOrganizationUserCommand(
         await CreateDefaultCollectionsForConfirmedUsersAsync(organization, defaultCollectionName,
             result.Where(r => r.Item2 == "").Select(x => x.Item1).ToList());
 
+        var restoredInvitedUserIds = result
+            .Where(r => r.Item2 == "" && r.Item1.Status == OrganizationUserStatusType.Invited)
+            .Select(r => r.Item1.Id)
+            .ToList();
+        if (restoredInvitedUserIds.Count > 0)
+        {
+            await organizationUserRepository.StartInviteReminderSequencesAsync(
+                restoredInvitedUserIds, timeProvider.GetUtcNow().UtcDateTime);
+        }
 
         return result;
     }

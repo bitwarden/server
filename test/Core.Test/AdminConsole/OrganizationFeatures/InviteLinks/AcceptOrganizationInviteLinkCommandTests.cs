@@ -140,6 +140,42 @@ public class AcceptOrganizationInviteLinkCommandTests
             .AutoAddSeatsAsync(Arg.Any<Organization>(), Arg.Any<int>());
     }
 
+    [Theory, BitAutoData]
+    public async Task AcceptAsync_WithExistingEmailInvite_ClearsInviteReminders(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser invitedOrganizationUser,
+        SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
+    {
+        SetupHappyPath(organization, inviteLink, user, sutProvider);
+        invitedOrganizationUser.Status = OrganizationUserStatusType.Invited;
+        invitedOrganizationUser.Email = user.Email;
+        invitedOrganizationUser.UserId = null;
+        invitedOrganizationUser.InviteReminderDueDate = DateTime.UtcNow;
+        invitedOrganizationUser.InviteRemindersSentCount = 1;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationEmailAsync(organization.Id, user.Email)
+            .Returns(invitedOrganizationUser);
+
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
+        var result = await sutProvider.Sut.AcceptAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou =>
+                ou.Id == invitedOrganizationUser.Id &&
+                ou.InviteReminderDueDate == null &&
+                ou.InviteRemindersSentCount == null));
+    }
+
     // An Invited row already occupies a seat, so accepting it must not consume or expand capacity even when
     // the organization is full. Guards the Staged handling below from over-reaching.
     [Theory, BitAutoData]

@@ -118,6 +118,15 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     public byte? InviteRemindersSentCount { get; set; }
 
     /// <summary>
+    /// Clears the invite reminder schedule
+    /// </summary>
+    public void ClearInviteReminders()
+    {
+        InviteReminderDueDate = null;
+        InviteRemindersSentCount = null;
+    }
+
+    /// <summary>
     /// Checks whether the given reset password key is non-null and non-whitespace.
     /// </summary>
     public static bool IsValidResetPasswordKey(string? resetPasswordKey)

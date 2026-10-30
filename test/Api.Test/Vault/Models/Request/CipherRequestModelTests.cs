@@ -265,6 +265,96 @@ public class CipherRequestModelTests
         Assert.Equal(expectedData, cipher.Data);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ToCipher_Login_SerializesHttpAuthenticationEnabled(bool httpAuthenticationEnabled)
+    {
+        var request = LoginRequest(httpAuthenticationEnabled);
+
+        var cipher = new Cipher { Type = CipherType.Login };
+        request.ToCipher(cipher);
+
+        var data = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
+
+        Assert.NotNull(data);
+        Assert.Equal(httpAuthenticationEnabled, data.HttpAuthenticationEnabled);
+    }
+
+    [Fact]
+    public void ToCipher_Login_HttpAuthenticationEnabledUnset_OmitsProperty()
+    {
+        var request = LoginRequest(httpAuthenticationEnabled: null);
+
+        var cipher = new Cipher { Type = CipherType.Login };
+        request.ToCipher(cipher);
+
+        Assert.DoesNotContain(nameof(CipherLoginData.HttpAuthenticationEnabled), cipher.Data);
+        Assert.Null(JsonSerializer.Deserialize<CipherLoginData>(cipher.Data)!.HttpAuthenticationEnabled);
+    }
+
+    [Fact]
+    public void ToCipherDetails_Login_KeepsHttpAuthenticationEnabled()
+    {
+        var request = LoginRequest(httpAuthenticationEnabled: true);
+
+        var cipher = request.ToCipherDetails(Guid.NewGuid(), allowOrgIdSet: false);
+
+        Assert.True(JsonSerializer.Deserialize<CipherLoginData>(cipher.Data)!.HttpAuthenticationEnabled);
+    }
+
+    [Fact]
+    public void ToOrganizationCipher_Login_KeepsHttpAuthenticationEnabled()
+    {
+        var request = LoginRequest(httpAuthenticationEnabled: true);
+        request.OrganizationId = Guid.NewGuid().ToString();
+
+        var cipher = request.ToOrganizationCipher();
+
+        Assert.True(JsonSerializer.Deserialize<CipherLoginData>(cipher.Data)!.HttpAuthenticationEnabled);
+    }
+
+    [Fact]
+    public void ToOrganizationCipherDetails_Login_KeepsHttpAuthenticationEnabled()
+    {
+        var request = LoginRequest(httpAuthenticationEnabled: true);
+
+        var cipher = request.ToOrganizationCipherDetails(Guid.NewGuid());
+
+        Assert.True(JsonSerializer.Deserialize<CipherLoginData>(cipher.Data)!.HttpAuthenticationEnabled);
+    }
+
+    [Fact]
+    public void ToCipher_BlobEncryptedLogin_WithUnknownLoginField_StoresDataUnchanged()
+    {
+        const string blob =
+            "{\"format_version\":1,\"wrapped_cek\":\"abc\",\"envelope\":\"def\",\"http_authentication_enabled\":true}";
+        var request = new CipherRequestModel
+        {
+            Type = CipherType.Login,
+            Data = blob,
+            Login = new CipherLoginModel { HttpAuthenticationEnabled = false },
+        };
+
+        var cipher = new Cipher { Type = CipherType.Login };
+        request.ToCipher(cipher);
+
+        Assert.True(cipher.IsDataBlobEncrypted());
+        Assert.Equal(blob, cipher.Data);
+    }
+
+    private static CipherRequestModel LoginRequest(bool? httpAuthenticationEnabled) => new()
+    {
+        Type = CipherType.Login,
+        Name = "2.name|encrypted",
+        Login = new CipherLoginModel
+        {
+            Username = "2.username|encrypted",
+            AutofillOnPageLoad = true,
+            HttpAuthenticationEnabled = httpAuthenticationEnabled,
+        },
+    };
+
     [Fact]
     public void Validate_BlobEncrypted_NameOmitted_Passes()
     {

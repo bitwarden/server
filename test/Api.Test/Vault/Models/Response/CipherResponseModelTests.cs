@@ -1,4 +1,6 @@
 ﻿using System.Text.Json;
+using Bit.Api.Vault.Models;
+using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Authorization;
@@ -511,6 +513,55 @@ public class CipherResponseModelTests
         Assert.Equal(data, response.Data);
         Assert.Null(response.PartialData);
         Assert.Equal("2.password|encrypted", response.Login.Password);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    [InlineData(null)]
+    public void Constructor_Full_Login_MapsHttpAuthenticationEnabled(bool? httpAuthenticationEnabled)
+    {
+        var cipher = LoginCipher(JsonSerializer.Serialize(new CipherLoginData
+        {
+            Name = "2.name|encrypted",
+            HttpAuthenticationEnabled = httpAuthenticationEnabled,
+        }));
+
+        var response = new FullCipherMiniResponseModel(FullCipherAccess.Unrestricted(), cipher, _globalSettings, false);
+
+        Assert.Equal(httpAuthenticationEnabled, response.Login.HttpAuthenticationEnabled);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    [InlineData(null)]
+    public void Constructor_Full_Login_RoundTripsHttpAuthenticationEnabledFromRequest(bool? httpAuthenticationEnabled)
+    {
+        var request = new CipherRequestModel
+        {
+            Type = CipherType.Login,
+            Name = "2.name|encrypted",
+            Login = new CipherLoginModel { HttpAuthenticationEnabled = httpAuthenticationEnabled },
+        };
+        var cipher = request.ToCipher(LoginCipher(string.Empty));
+
+        var response = new FullCipherMiniResponseModel(FullCipherAccess.Unrestricted(), cipher, _globalSettings, false);
+
+        Assert.Equal(httpAuthenticationEnabled, response.Login.HttpAuthenticationEnabled);
+    }
+
+    [Fact]
+    public void Constructor_Full_BlobEncryptedLogin_WithUnknownLoginField_ReturnsDataUnchanged()
+    {
+        const string blob =
+            "{\"format_version\":1,\"wrapped_cek\":\"abc\",\"envelope\":\"def\",\"http_authentication_enabled\":true}";
+        var cipher = LoginCipher(blob);
+
+        var response = new FullCipherMiniResponseModel(FullCipherAccess.Unrestricted(), cipher, _globalSettings, false);
+
+        Assert.Equal(blob, response.Data);
+        Assert.Null(response.Login);
     }
 
     [Fact]
