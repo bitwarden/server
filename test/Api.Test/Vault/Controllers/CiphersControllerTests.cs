@@ -31,6 +31,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Routing;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using NSubstitute.ReturnsExtensions;
@@ -138,20 +139,20 @@ public class CiphersControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task PutCollections_vNextShouldThrowExceptionWhenCipherIsNullOrNoOrgValue(Guid id, CipherCollectionsRequestModel model, User user,
+    public async Task PutSharedFolders_vNextShouldThrowExceptionWhenCipherIsNullOrNoOrgValue(Guid id, CipherCollectionsRequestModel model, User user,
         SutProvider<CiphersController> sutProvider)
     {
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
         sutProvider.GetDependency<ICurrentContext>().OrganizationUser(Guid.NewGuid()).Returns(false);
         sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, user.Id).ReturnsNull();
 
-        var requestAction = async () => await sutProvider.Sut.PutCollections_vNext(id, model);
+        var requestAction = async () => await sutProvider.Sut.PutSharedFolders_vNext(id, model);
 
         await Assert.ThrowsAsync<NotFoundException>(requestAction);
     }
 
     [Theory, BitAutoData]
-    public async Task PutCollections_vNextShouldSaveUpdatedCipher(Guid id, CipherCollectionsRequestModel model, Guid userId, SutProvider<CiphersController> sutProvider)
+    public async Task PutSharedFolders_vNextShouldSaveUpdatedCipher(Guid id, CipherCollectionsRequestModel model, Guid userId, SutProvider<CiphersController> sutProvider)
     {
         SetupUserAndOrgMocks(id, userId, sutProvider);
         var cipherDetails = CreateCipherDetailsMock(id, userId);
@@ -161,13 +162,13 @@ public class CiphersControllerTests
         sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value).Returns(new OrganizationAbility { Id = cipherDetails.OrganizationId.Value });
         var cipherService = sutProvider.GetDependency<ICipherService>();
 
-        await sutProvider.Sut.PutCollections_vNext(id, model);
+        await sutProvider.Sut.PutSharedFolders_vNext(id, model);
 
         await cipherService.ReceivedWithAnyArgs().SaveCollectionsAsync(default, default, default, default);
     }
 
     [Theory, BitAutoData]
-    public async Task PutCollections_vNextReturnOptionalDetailsCipherUnavailableFalse(Guid id, CipherCollectionsRequestModel model, Guid userId, SutProvider<CiphersController> sutProvider)
+    public async Task PutSharedFolders_vNextReturnOptionalDetailsCipherUnavailableFalse(Guid id, CipherCollectionsRequestModel model, Guid userId, SutProvider<CiphersController> sutProvider)
     {
         SetupUserAndOrgMocks(id, userId, sutProvider);
         var cipherDetails = CreateCipherDetailsMock(id, userId);
@@ -176,14 +177,14 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
         sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value).Returns(new OrganizationAbility { Id = cipherDetails.OrganizationId.Value });
 
-        var result = await sutProvider.Sut.PutCollections_vNext(id, model);
+        var result = await sutProvider.Sut.PutSharedFolders_vNext(id, model);
 
         Assert.IsType<OptionalCipherDetailsResponseModel>(result);
         Assert.False(result.Unavailable);
     }
 
     [Theory, BitAutoData]
-    public async Task PutCollections_vNextReturnOptionalDetailsCipherUnavailableTrue(Guid id, CipherCollectionsRequestModel model, Guid userId, SutProvider<CiphersController> sutProvider)
+    public async Task PutSharedFolders_vNextReturnOptionalDetailsCipherUnavailableTrue(Guid id, CipherCollectionsRequestModel model, Guid userId, SutProvider<CiphersController> sutProvider)
     {
         SetupUserAndOrgMocks(id, userId, sutProvider);
         var cipherDetails = CreateCipherDetailsMock(id, userId);
@@ -191,10 +192,50 @@ public class CiphersControllerTests
 
         sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
 
-        var result = await sutProvider.Sut.PutCollections_vNext(id, model);
+        var result = await sutProvider.Sut.PutSharedFolders_vNext(id, model);
 
         Assert.IsType<OptionalCipherDetailsResponseModel>(result);
         Assert.True(result.Unavailable);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutSharedFolders_ThrowsNotFoundWhenCipherIsNull(Guid id, CipherCollectionsRequestModel model, User user,
+        SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, user.Id).ReturnsNull();
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PutSharedFolders(id, model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostBulkSharedFolders_ThrowsNotFoundWhenUserCannotModify(CipherBulkUpdateCollectionsRequestModel model,
+        Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(default).ReturnsNullForAnyArgs();
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostBulkSharedFolders(model));
+    }
+
+    [Theory]
+    [InlineData(nameof(CiphersController.PutCollections), nameof(CiphersController.PutSharedFolders), "{id}/shared-folders")]
+    [InlineData(nameof(CiphersController.PutCollections_vNext), nameof(CiphersController.PutSharedFolders_vNext), "{id}/shared-folders_v2")]
+    [InlineData(nameof(CiphersController.PutCollectionsAdmin), nameof(CiphersController.PutSharedFoldersAdmin), "{id}/shared-folders-admin")]
+    [InlineData(nameof(CiphersController.PostBulkCollections), nameof(CiphersController.PostBulkSharedFolders), "bulk-shared-folders")]
+    public void SharedFolderAliasRoutes_AreRoutedAndLegacyRoutesAreObsolete(string legacyName, string aliasName, string expectedTemplate)
+    {
+        var legacy = typeof(CiphersController).GetMethod(legacyName)!;
+        var alias = typeof(CiphersController).GetMethod(aliasName)!;
+
+        var obsolete = Assert.Single(legacy.GetCustomAttributes(typeof(ObsoleteAttribute), false).Cast<ObsoleteAttribute>());
+        Assert.Equal($"Replaced by /{expectedTemplate.Replace("{id}/", "")} route; retained for backwards compatibility", obsolete.Message);
+        Assert.Empty(alias.GetCustomAttributes(typeof(ObsoleteAttribute), false));
+
+        var legacyVerb = legacy.GetCustomAttributes(typeof(HttpMethodAttribute), false).Cast<HttpMethodAttribute>().Single();
+        var aliasVerb = alias.GetCustomAttributes(typeof(HttpMethodAttribute), false).Cast<HttpMethodAttribute>().Single();
+        Assert.Equal(legacyVerb.HttpMethods, aliasVerb.HttpMethods);
+        Assert.Equal(expectedTemplate, aliasVerb.Template);
     }
 
     private void SetupUserAndOrgMocks(Guid id, Guid userId, SutProvider<CiphersController> sutProvider)
