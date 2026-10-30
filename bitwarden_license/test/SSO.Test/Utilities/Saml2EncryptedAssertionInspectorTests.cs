@@ -116,8 +116,424 @@ public class Saml2EncryptedAssertionInspectorTests
         Assert.False(Saml2EncryptedAssertionInspector.UsesRsa15KeyTransport(null!));
     }
 
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_PlaintextAssertion_DoesNotThrow()
+    {
+        var envelope = BuildEnvelope("<saml:Assertion ID=\"_assertion\"><saml:Issuer>idp</saml:Issuer></saml:Assertion>");
+
+        Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope);
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_NoAssertions_DoesNotThrow()
+    {
+        Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(BuildEnvelope(string.Empty));
+    }
+
+    [Theory]
+    [InlineData(RsaOaepMgf1P)]
+    [InlineData(RsaOaep)]
+    public void EnsureAcceptedKeyTransportAlgorithms_AcceptedAlgorithm_DoesNotThrow(string algorithm)
+    {
+        var envelope = BuildEnvelope(BuildNestedEncryptedAssertion(algorithm));
+
+        Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope);
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_TwoAcceptedKeysInOneAssertion_DoesNotThrow()
+    {
+        var envelope = BuildEnvelope(
+            "<saml:EncryptedAssertion>" +
+            "<xenc:EncryptedData>" +
+            "<ds:KeyInfo>" +
+            $"<xenc:EncryptedKey><xenc:EncryptionMethod Algorithm=\"{RsaOaepMgf1P}\" /></xenc:EncryptedKey>" +
+            $"<xenc:EncryptedKey><xenc:EncryptionMethod Algorithm=\"{RsaOaep}\" /></xenc:EncryptedKey>" +
+            "</ds:KeyInfo>" +
+            "</xenc:EncryptedData>" +
+            "</saml:EncryptedAssertion>");
+
+        Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope);
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_DataEncryptionMethodBesideAcceptedKey_DoesNotThrow()
+    {
+        // The data encryption algorithm is not a key transport algorithm.
+        var envelope = BuildEnvelope(
+            "<saml:EncryptedAssertion>" +
+            "<xenc:EncryptedData>" +
+            "<xenc:EncryptionMethod Algorithm=\"http://www.w3.org/2001/04/xmlenc#aes256-cbc\" />" +
+            "<ds:KeyInfo>" +
+            $"<xenc:EncryptedKey><xenc:EncryptionMethod Algorithm=\"{RsaOaep}\" /></xenc:EncryptedKey>" +
+            "</ds:KeyInfo>" +
+            "</xenc:EncryptedData>" +
+            "</saml:EncryptedAssertion>");
+
+        Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope);
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_NestedRsa15Key_Throws()
+    {
+        var envelope = BuildEnvelope(BuildNestedEncryptedAssertion(RsaPkcs1));
+
+        var exception = Assert.Throws<Exception>(
+            () => Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope));
+
+        Assert.Equal(Saml2EncryptedAssertionInspector.KeyTransportAlgorithmNotAcceptedMessage, exception.Message);
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_Rsa15KeyBesideEncryptedData_Throws()
+    {
+        var envelope = BuildEnvelope(
+            "<saml:EncryptedAssertion>" +
+            "<xenc:EncryptedKey Id=\"_key\">" +
+            $"<xenc:EncryptionMethod Algorithm=\"{RsaPkcs1}\" />" +
+            "<xenc:ReferenceList><xenc:DataReference URI=\"#_data\" /></xenc:ReferenceList>" +
+            "</xenc:EncryptedKey>" +
+            "<xenc:EncryptedData Id=\"_data\">" +
+            "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
+            "</xenc:EncryptedData>" +
+            "</saml:EncryptedAssertion>");
+
+        Assert.Throws<Exception>(
+            () => Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope));
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_AcceptedKeyBeforeRsa15KeyInOneAssertion_Throws()
+    {
+        // Every key in an assertion must use an accepted algorithm.
+        var envelope = BuildEnvelope(
+            "<saml:EncryptedAssertion>" +
+            "<xenc:EncryptedData>" +
+            "<ds:KeyInfo>" +
+            $"<xenc:EncryptedKey><xenc:EncryptionMethod Algorithm=\"{RsaOaepMgf1P}\" /></xenc:EncryptedKey>" +
+            $"<xenc:EncryptedKey><xenc:EncryptionMethod Algorithm=\"{RsaPkcs1}\" /></xenc:EncryptedKey>" +
+            "</ds:KeyInfo>" +
+            "</xenc:EncryptedData>" +
+            "</saml:EncryptedAssertion>");
+
+        Assert.Throws<Exception>(
+            () => Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope));
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_OaepAssertionAndRsa15Assertion_Throws()
+    {
+        var envelope = BuildEnvelope(
+            BuildNestedEncryptedAssertion(RsaOaep) + BuildNestedEncryptedAssertion(RsaPkcs1));
+
+        Assert.Throws<Exception>(
+            () => Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope));
+    }
+
+    [Theory]
+    [InlineData("http://www.w3.org/2001/04/xmlenc#kw-aes256")]
+    [InlineData("urn:example:unknown-algorithm")]
+    [InlineData(" http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p ")]
+    [InlineData("HTTP://WWW.W3.ORG/2001/04/XMLENC#RSA-OAEP-MGF1P")]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void EnsureAcceptedKeyTransportAlgorithms_UnacceptedAlgorithm_Throws(string algorithm)
+    {
+        var envelope = BuildEnvelope(BuildNestedEncryptedAssertion(algorithm));
+
+        var exception = Assert.Throws<Exception>(
+            () => Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope));
+
+        Assert.Equal(Saml2EncryptedAssertionInspector.KeyTransportAlgorithmNotAcceptedMessage, exception.Message);
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_LongAlgorithmWithNewline_ThrowsConstantMessage()
+    {
+        var algorithm = "rsa-1_5\nlevel=something-else" + new string('a', 10 * 1024);
+        var envelope = BuildEnvelope(BuildNestedEncryptedAssertion(algorithm));
+
+        var exception = Assert.Throws<Exception>(
+            () => Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope));
+
+        Assert.Equal(Saml2EncryptedAssertionInspector.KeyTransportAlgorithmNotAcceptedMessage, exception.Message);
+    }
+
+    [Theory]
+    [InlineData("<xenc:EncryptedData><xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData></xenc:EncryptedData>")]
+    [InlineData("<xenc:EncryptedData><ds:KeyInfo><xenc:EncryptedKey><xenc:EncryptionMethod /></xenc:EncryptedKey></ds:KeyInfo></xenc:EncryptedData>")]
+    [InlineData("<xenc:EncryptedData><ds:KeyInfo><xenc:EncryptedKey /></ds:KeyInfo></xenc:EncryptedData>")]
+    public void EnsureAcceptedKeyTransportAlgorithms_MissingKeyOrAlgorithm_Throws(string content)
+    {
+        var envelope = BuildEnvelope($"<saml:EncryptedAssertion>{content}</saml:EncryptedAssertion>");
+
+        var exception = Assert.Throws<Exception>(
+            () => Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope));
+
+        Assert.Equal(Saml2EncryptedAssertionInspector.KeyTransportAlgorithmNotAcceptedMessage, exception.Message);
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_NamespacedAlgorithmAttributeOnly_Throws()
+    {
+        var envelope = BuildEnvelope(
+            "<saml:EncryptedAssertion>" +
+            "<xenc:EncryptedKey>" +
+            $"<xenc:EncryptionMethod xenc:Algorithm=\"{RsaOaepMgf1P}\" />" +
+            "</xenc:EncryptedKey>" +
+            "<xenc:EncryptedData><xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData></xenc:EncryptedData>" +
+            "</saml:EncryptedAssertion>");
+
+        Assert.Throws<Exception>(
+            () => Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope));
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_Rsa15KeyInsideEncryptedId_Throws()
+    {
+        var envelope = BuildEnvelope(
+            "<saml:EncryptedAssertion>" +
+            "<saml:EncryptedID>" +
+            "<xenc:EncryptedKey>" +
+            $"<xenc:EncryptionMethod Algorithm=\"{RsaPkcs1}\" />" +
+            "</xenc:EncryptedKey>" +
+            "</saml:EncryptedID>" +
+            "<xenc:EncryptedData><xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData></xenc:EncryptedData>" +
+            "</saml:EncryptedAssertion>");
+
+        Assert.Throws<Exception>(
+            () => Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope));
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_EncryptedAssertionBelowTopLevel_IsNotInspected()
+    {
+        var envelope = BuildEnvelope(
+            $"<saml:Advice>{BuildNestedEncryptedAssertion(RsaPkcs1)}</saml:Advice>");
+
+        Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope);
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_Rsa15KeyInEncryptedAssertionWithAlternatePrefixOrDefaultNamespace_Throws()
+    {
+        const string encryptedKey =
+            "<xenc:EncryptedKey xmlns:xenc=\"http://www.w3.org/2001/04/xmlenc#\">" +
+            $"<xenc:EncryptionMethod Algorithm=\"{RsaPkcs1}\" /></xenc:EncryptedKey>" +
+            "<xenc:EncryptedData xmlns:xenc=\"http://www.w3.org/2001/04/xmlenc#\">" +
+            "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
+            "</xenc:EncryptedData>";
+        var prefixed = BuildEnvelope(
+            "<s2:EncryptedAssertion xmlns:s2=\"urn:oasis:names:tc:SAML:2.0:assertion\">" +
+            encryptedKey + "</s2:EncryptedAssertion>");
+        var defaultNamespace = BuildEnvelope(
+            "<EncryptedAssertion xmlns=\"urn:oasis:names:tc:SAML:2.0:assertion\">" +
+            encryptedKey + "</EncryptedAssertion>");
+
+        Assert.Throws<Exception>(
+            () => Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(prefixed));
+        Assert.Throws<Exception>(
+            () => Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(defaultNamespace));
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_SecondEncryptionMethodInOneKey_IsNotRead()
+    {
+        // EncryptedKey.LoadXml reads the first EncryptionMethod, so decryption never uses the second one.
+        var envelope = BuildEnvelope(
+            "<saml:EncryptedAssertion>" +
+            "<xenc:EncryptedKey>" +
+            $"<xenc:EncryptionMethod Algorithm=\"{RsaOaepMgf1P}\" />" +
+            $"<xenc:EncryptionMethod Algorithm=\"{RsaPkcs1}\" />" +
+            "</xenc:EncryptedKey>" +
+            "<xenc:EncryptedData><xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData></xenc:EncryptedData>" +
+            "</saml:EncryptedAssertion>");
+
+        Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope);
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_PeerKeyReferencedByRetrievalMethod_DoesNotThrow()
+    {
+        var envelope = BuildEnvelope(BuildRetrievalMethodAssertion("#_key", "<ds:Object Id=\"_data\" />"));
+
+        Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope);
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_RetrievalMethodNamesNonKeyElement_Throws()
+    {
+        var envelope = BuildEnvelope(BuildRetrievalMethodAssertion("#_other", "<ds:Object Id=\"_other\" />"));
+
+        Assert.Throws<Exception>(
+            () => Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope));
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_RetrievalMethodNamesKeyAndNonKeyElement_Throws()
+    {
+        var envelope = BuildEnvelope(BuildRetrievalMethodAssertion("#_key", "<ds:Object Id=\"_key\" />"));
+
+        Assert.Throws<Exception>(
+            () => Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope));
+    }
+
+    [Theory]
+    [InlineData("id")]
+    [InlineData("ID")]
+    public void EnsureAcceptedKeyTransportAlgorithms_RetrievalMethodNamesNonKeyElementWithIdVariant_Throws(
+        string idAttribute)
+    {
+        var envelope = BuildEnvelope(
+            BuildRetrievalMethodAssertion("#_other", $"<ds:Object {idAttribute}=\"_other\" />"));
+
+        Assert.Throws<Exception>(
+            () => Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope));
+    }
+
+    [Theory]
+    [InlineData("https://example.com/key")]
+    [InlineData("#xpointer(id('_key'))")]
+    [InlineData("#")]
+    [InlineData("")]
+    [InlineData(null)]
+    [InlineData("#1invalid")]
+    [InlineData("#_missing")]
+    public void EnsureAcceptedKeyTransportAlgorithms_RetrievalMethodWithUnacceptedUri_Throws(string? uri)
+    {
+        var envelope = BuildEnvelope(BuildRetrievalMethodAssertion(uri, "<ds:Object Id=\"_data\" />"));
+
+        Assert.Throws<Exception>(
+            () => Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope));
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_TwoSiblingEncryptedData_Throws()
+    {
+        var encryptedData = BuildNestedEncryptedData(RsaOaepMgf1P);
+        var envelope = BuildEnvelope(
+            $"<saml:EncryptedAssertion>{encryptedData}{encryptedData}</saml:EncryptedAssertion>");
+
+        var exception = Assert.Throws<Exception>(
+            () => Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope));
+
+        Assert.Equal(Saml2EncryptedAssertionInspector.KeyTransportAlgorithmNotAcceptedMessage, exception.Message);
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_SecondEncryptedDataNestedDeeper_Throws()
+    {
+        var encryptedData = BuildNestedEncryptedData(RsaOaepMgf1P);
+        var envelope = BuildEnvelope(
+            "<saml:EncryptedAssertion>" +
+            encryptedData +
+            $"<ds:Object><ds:KeyInfo>{encryptedData}</ds:KeyInfo></ds:Object>" +
+            "</saml:EncryptedAssertion>");
+
+        var exception = Assert.Throws<Exception>(
+            () => Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope));
+
+        Assert.Equal(Saml2EncryptedAssertionInspector.KeyTransportAlgorithmNotAcceptedMessage, exception.Message);
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_AcceptedKeyWithoutEncryptedData_Throws()
+    {
+        var envelope = BuildEnvelope(
+            "<saml:EncryptedAssertion>" +
+            "<xenc:EncryptedKey>" +
+            $"<xenc:EncryptionMethod Algorithm=\"{RsaOaepMgf1P}\" />" +
+            "<xenc:CipherData><xenc:CipherValue>a2V5</xenc:CipherValue></xenc:CipherData>" +
+            "</xenc:EncryptedKey>" +
+            "</saml:EncryptedAssertion>");
+
+        var exception = Assert.Throws<Exception>(
+            () => Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope));
+
+        Assert.Equal(Saml2EncryptedAssertionInspector.KeyTransportAlgorithmNotAcceptedMessage, exception.Message);
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_ManyRetrievalMethodsNameOneKey_CompletesWithinTimeLimit()
+    {
+        var envelope = BuildEnvelope(BuildManyRetrievalMethodsAssertion(30_000, 1, string.Empty));
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope);
+        stopwatch.Stop();
+
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(5), $"Elapsed: {stopwatch.ElapsedMilliseconds} ms");
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_ManyRetrievalMethodsNameManyKeysWithOneId_CompletesWithinTimeLimit()
+    {
+        var envelope = BuildEnvelope(BuildManyRetrievalMethodsAssertion(30_000, 30_000, string.Empty));
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope);
+        stopwatch.Stop();
+
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(5), $"Elapsed: {stopwatch.ElapsedMilliseconds} ms");
+    }
+
+    [Fact]
+    public void EnsureAcceptedKeyTransportAlgorithms_ManyRetrievalMethodsNameKeysAndOneNonKeyElement_Throws()
+    {
+        var envelope = BuildEnvelope(
+            BuildManyRetrievalMethodsAssertion(1_000, 1_000, "<ds:Object Id=\"_key\" />"));
+
+        var exception = Assert.Throws<Exception>(
+            () => Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope));
+
+        Assert.Equal(Saml2EncryptedAssertionInspector.KeyTransportAlgorithmNotAcceptedMessage, exception.Message);
+    }
+
+    private static string BuildManyRetrievalMethodsAssertion(int retrievalMethodCount, int keyCount, string otherElement)
+    {
+        var encryptedKey =
+            "<xenc:EncryptedKey Id=\"_key\">" +
+            $"<xenc:EncryptionMethod Algorithm=\"{RsaOaepMgf1P}\" />" +
+            "<xenc:CipherData><xenc:CipherValue>a2V5</xenc:CipherValue></xenc:CipherData>" +
+            "</xenc:EncryptedKey>";
+        var retrievalMethod =
+            "<ds:RetrievalMethod URI=\"#_key\" Type=\"http://www.w3.org/2001/04/xmlenc#EncryptedKey\" />";
+        return "<saml:EncryptedAssertion>" +
+            string.Concat(Enumerable.Repeat(encryptedKey, keyCount)) +
+            "<xenc:EncryptedData>" +
+            "<ds:KeyInfo>" +
+            string.Concat(Enumerable.Repeat(retrievalMethod, retrievalMethodCount)) +
+            "</ds:KeyInfo>" +
+            "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
+            "</xenc:EncryptedData>" +
+            otherElement +
+            "</saml:EncryptedAssertion>";
+    }
+
+    private static string BuildRetrievalMethodAssertion(string? uri, string otherElement)
+    {
+        var uriAttribute = uri == null ? string.Empty : $" URI=\"{EscapeAttributeValue(uri)}\"";
+        return "<saml:EncryptedAssertion>" +
+            "<xenc:EncryptedKey Id=\"_key\">" +
+            $"<xenc:EncryptionMethod Algorithm=\"{RsaOaepMgf1P}\" />" +
+            "<xenc:CipherData><xenc:CipherValue>a2V5</xenc:CipherValue></xenc:CipherData>" +
+            "</xenc:EncryptedKey>" +
+            "<xenc:EncryptedData>" +
+            "<ds:KeyInfo>" +
+            $"<ds:RetrievalMethod{uriAttribute} Type=\"http://www.w3.org/2001/04/xmlenc#EncryptedKey\" />" +
+            "</ds:KeyInfo>" +
+            "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
+            "</xenc:EncryptedData>" +
+            otherElement +
+            "</saml:EncryptedAssertion>";
+    }
+
     private static string BuildNestedEncryptedAssertion(string algorithm) =>
         "<saml:EncryptedAssertion>" +
+        BuildNestedEncryptedData(algorithm) +
+        "</saml:EncryptedAssertion>";
+
+    private static string BuildNestedEncryptedData(string algorithm) =>
         "<xenc:EncryptedData>" +
         "<ds:KeyInfo>" +
         "<xenc:EncryptedKey>" +
@@ -126,8 +542,7 @@ public class Saml2EncryptedAssertionInspectorTests
         "</xenc:EncryptedKey>" +
         "</ds:KeyInfo>" +
         "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
-        "</xenc:EncryptedData>" +
-        "</saml:EncryptedAssertion>";
+        "</xenc:EncryptedData>";
 
     private static XmlElement BuildEnvelope(string assertionElement)
     {

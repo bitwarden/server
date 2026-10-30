@@ -7,8 +7,10 @@ using System.Xml;
 using Bit.Core;
 using Bit.Core.Settings;
 using Bitwarden.Server.Sdk.Features;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Sustainsys.Saml2;
 using Sustainsys.Saml2.AspNetCore2;
+using Sustainsys.Saml2.WebSso;
 
 namespace Bit.Sso.Utilities.Saml2;
 
@@ -22,6 +24,17 @@ public static class Saml2OptionsExtensions
             return false;
         }
 
+        var featureService = context.RequestServices.GetRequiredService<IFeatureService>();
+        if (featureService.IsEnabled(FeatureFlagKeys.PM42283_Rsa15Deprecation))
+        {
+            return await CouldHandleWithOaepGateAsync(options, scheme, context);
+        }
+
+        return await CouldHandleLegacyAsync(options, scheme, context);
+    }
+
+    private static async Task<bool> CouldHandleLegacyAsync(Saml2Options options, string scheme, HttpContext context)
+    {
         var idp = options.IdentityProviders.IsEmpty ? null : options.IdentityProviders.Default;
         if (idp == null)
         {
@@ -123,6 +136,102 @@ public static class Saml2OptionsExtensions
         }
 
         return true;
+    }
+
+    private static async Task<bool> CouldHandleWithOaepGateAsync(Saml2Options options, string scheme, HttpContext context)
+    {
+        var idp = options.IdentityProviders.IsEmpty ? null : options.IdentityProviders.Default;
+        if (idp == null)
+        {
+            return false;
+        }
+
+        var schemeMatchesQuery = context.Request.Query["scheme"].FirstOrDefault() == scheme;
+
+        XmlElement envelope;
+        // The scheme query parameter identifies only a request without a SAML message, such as a metadata
+        // or login-initiation request. A request with a message must pass the inspection below.
+        try
+        {
+            var requestData = context.ToHttpRequestData(new NoCookieManager(), _ => null);
+            var binding = options.Notifications.GetBinding(requestData);
+            if (binding == null)
+            {
+                return schemeMatchesQuery;
+            }
+            // The middleware already rejects the artifact binding. Artifact resolution needs a call to the identity
+            // provider, which this check never makes.
+            if (binding is Saml2ArtifactBinding)
+            {
+                return false;
+            }
+            envelope = binding.Unbind(requestData, null).Data;
+        }
+        catch
+        {
+            return false;
+        }
+
+        if (envelope == null)
+        {
+            return false;
+        }
+
+        // Double check the entity Ids
+        var entityId = envelope["Issuer", Saml2Namespaces.Saml2Name]?.InnerText.Trim();
+        if (!string.Equals(entityId, idp.EntityId.Id, StringComparison.InvariantCultureIgnoreCase))
+        {
+            return false;
+        }
+
+        // Check and notify before signature verification. A signature failure should not fail notification on an unapproved
+        // key transport algorithm. Any request, including a forged, unsigned, or improperly-constructed one 
+        // that satisfies the notification criteria, should notify.
+        NotifyWhenRsa15Deprecated(envelope, scheme, context);
+
+        // The signature check below decrypts. Reject an unaccepted key transport algorithm first.
+        Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope);
+
+        if (options.SPOptions.WantAssertionsSigned)
+        {
+            var featureService = context.RequestServices.GetRequiredService<IFeatureService>();
+            if (featureService.IsEnabled(FeatureFlagKeys.PM42982_WantAssertionsSigned))
+            {
+                Saml2AssertionSignatureVerifier.EnsureAssertionsSigned(envelope, options, idp);
+            }
+            else
+            {
+                // This can throw if an IdP sends encrypted assertions in an
+                // <EncryptedAssertion> node. Both <Assertion> and <EncryptedAssertion> are
+                // allowed per OASIS spec in an encrypted case. They are mutually exclusive
+                // on a per-assertion basis.
+                // PM-42982 exists to improve this site to handle all cases.
+                var assertion = envelope["Assertion", Saml2Namespaces.Saml2Name];
+                var isAssertionSigned = assertion != null && XmlHelpers.IsSignedByAny(assertion, idp.SigningKeys,
+                    options.SPOptions.ValidateCertificates, options.SPOptions.MinIncomingSigningAlgorithm);
+                if (!isAssertionSigned)
+                {
+                    throw new Exception("Cannot verify SAML assertion signature.");
+                }
+            }
+        }
+
+        return true;
+    }
+
+    // Reading the message needs no cookie. A cookie reader that finds none keeps Sustainsys.Saml2 from
+    // decrypting the RelayState cookie.
+    private sealed class NoCookieManager : ICookieManager
+    {
+        public string GetRequestCookie(HttpContext context, string key) => null;
+
+        public void AppendResponseCookie(HttpContext context, string key, string value, CookieOptions options)
+        {
+        }
+
+        public void DeleteCookie(HttpContext context, string key, CookieOptions options)
+        {
+        }
     }
 
     /// <summary>

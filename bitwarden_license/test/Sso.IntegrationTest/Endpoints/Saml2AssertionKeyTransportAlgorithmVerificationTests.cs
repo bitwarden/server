@@ -88,6 +88,32 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
     }
 
     /// <summary>
+    /// With the RSA 1.5 deprecation flag on, an RSA 1.5 request throws the gate message, and the
+    /// administrators still receive the email.
+    /// </summary>
+    [Fact]
+    public async Task CouldHandleAsync_WithRsa15KeyTransportAndRsa15DeprecationFlagOn_ThrowsAndStillSendsEmail()
+    {
+        // Arrange
+        using var arrangement = await ArrangeAsync(
+            Saml2AcsPostHarness.BuildEncryptedAssertion(Rsa15),
+            configure: b => b.WithMockedMailer().WithPM42283Rsa15DeprecationFlag());
+        var (samlOptions, organizationId, context, factory) = arrangement;
+        await SeedOrganizationUserAsync(
+            factory, organizationId, OrganizationUserType.Owner, OrganizationUserStatusType.Confirmed, NewEmail("owner"));
+        var probe = new MailProbe(arrangement.Mailer);
+
+        // Act
+        var exception = await Assert.ThrowsAsync<Exception>(
+            () => samlOptions.CouldHandleAsync(organizationId.ToString(), context));
+        await probe.Sent;
+
+        // Assert
+        Assert.Equal(Saml2EncryptedAssertionInspector.KeyTransportAlgorithmNotAcceptedMessage, exception.Message);
+        await arrangement.Mailer.Received(1).SendEmail(Arg.Any<Saml2Rsa15DeprecationMail>());
+    }
+
+    /// <summary>
     /// Posts two RSA 1.5 requests for the same organization, one after the other. It proves that
     /// the second request in the same email send cooldown sends no second email.
     /// </summary>
@@ -419,6 +445,8 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
             {
                 RequestServices = testData.Factory.Services.CreateScope().ServiceProvider,
             };
+            context.Request.Scheme = "https";
+            context.Request.Host = new HostString("sso.example.com");
             context.Request.Path = SsoConfigurationData.BuildSaml2AcsUrl(null, organizationId.ToString());
             context.Request.Method = HttpMethods.Post;
             context.Request.ContentType = "application/x-www-form-urlencoded";
