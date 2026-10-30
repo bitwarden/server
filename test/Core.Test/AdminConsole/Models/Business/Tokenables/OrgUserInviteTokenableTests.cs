@@ -1,12 +1,12 @@
 ﻿using AutoFixture.Xunit2;
-using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.Entities;
 using Bit.Core.Tokens;
 using NSubstitute;
 using Xunit;
 
 
-namespace Bit.Core.Test.Auth.Models.Business.Tokenables;
+namespace Bit.Core.Test.AdminConsole.Models.Business.Tokenables;
 
 // Note: test names follow MethodName_StateUnderTest_ExpectedBehavior pattern.
 public class OrgUserInviteTokenableTests
