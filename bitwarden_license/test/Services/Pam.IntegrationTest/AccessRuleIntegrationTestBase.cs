@@ -17,7 +17,7 @@ namespace Bit.Services.Pam.IntegrationTest;
 
 /// <summary>
 /// Base for the PAM integration tests: the Api host over SQLite, the PAM flag on, and an enterprise organization.
-/// Setup runs per test, so a test that turns a flag off does not leak into its siblings.
+/// Setup runs per test, so a test that turns the PAM flag off does not leak into its siblings.
 /// </summary>
 public abstract class AccessRuleIntegrationTestBase : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
