@@ -12,8 +12,8 @@ namespace Bit.Services.Pam.Api.Endpoints.Handlers;
 
 /// <summary>
 /// Handler for the <c>organizations/{orgId}/access-rules</c> resource. Authorization runs in the middleware (see
-/// <c>AccessRuleEndpoints</c>), so the handler and commands only check that a rule reached by id belongs to the
-/// route's organization.
+/// <c>AccessRuleEndpoints</c>), so the handler and commands only check that a rule reached by id, and each
+/// collection in the body, belongs to the route's organization.
 /// </summary>
 public class AccessRuleEndpointsHandler(
     IUserService userService,

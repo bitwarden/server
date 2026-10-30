@@ -64,8 +64,8 @@ public class AccessRequestDetails
     public string? RequesterEmail { get; set; }
 
     /// <summary>
-    /// Projects a request the caller just wrote, deriving <see cref="Status"/> as the repository reads do. The lease
-    /// fields stay null, since no produced lease can exist at these call sites.
+    /// Projects a request the caller just wrote, or read scoped to itself, deriving <see cref="Status"/> as the
+    /// repository reads do. The lease fields stay null, since no produced lease can exist at these call sites.
     /// </summary>
     public static AccessRequestDetails From(Entities.AccessRequest request, DateTime now)
     {

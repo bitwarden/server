@@ -300,8 +300,8 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
 
     /// <summary>
     /// Locks the row with a no-op write (EF has no portable UPDLOCK), so a concurrent activation has either committed
-    /// its lease or waits. Keep it separate from the guard: a blocked PostgreSQL statement resumes with stale
-    /// subqueries.
+    /// its lease or waits. Call it inside a transaction, or the lock ends with the statement. Keep it separate from
+    /// the guard: a blocked PostgreSQL statement resumes with stale subqueries.
     /// </summary>
     private static Task ClaimRequestRowAsync(DatabaseContext dbContext, Guid id)
         => dbContext.AccessRequests
