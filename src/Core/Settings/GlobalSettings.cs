@@ -768,6 +768,7 @@ public class GlobalSettings : IGlobalSettings
             set => _apiUri = value;
         }
 
+        public string FileConfigDirectory { get; set; }
     }
 
     public class AmazonSettings
