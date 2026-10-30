@@ -1,7 +1,9 @@
 ﻿#nullable enable
 
+using System.Reflection;
 using Bit.Api.Dirt.Controllers;
 using Bit.Api.Dirt.Utilities;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Enums;
@@ -15,6 +17,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.Extensions.Time.Testing;
+using Bitwarden.Server.Sdk.Features;
 using NSubstitute;
 using Xunit;
 
@@ -488,6 +491,38 @@ public class SlackIntegrationControllerTests
     {
         sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri.Api.Returns("https://api.example.com");
         sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri.VaultWithHash.Returns("https://vault.example.com/#");
+    }
+
+    [Theory]
+    [InlineData(nameof(SlackIntegrationController.RedirectAsync))]
+    public void OwnerEndpoints_AreGatedOnEventManagementForSlack(string methodName)
+    {
+        // A failed RequireFeature check answers 404 before the action runs. Running the attribute's FeatureCheck
+        // with the flag on and off pins the key, so the endpoint can't drift onto another flag or lose the gate.
+        var method = typeof(SlackIntegrationController).GetMethod(methodName);
+
+        Assert.NotNull(method);
+        var attribute = method.GetCustomAttributes<RequireFeatureAttribute>().SingleOrDefault();
+        Assert.NotNull(attribute);
+
+        var featureService = Substitute.For<IFeatureService>();
+        featureService.IsEnabled(FeatureFlagKeys.EventManagementForSlack, Arg.Any<bool>()).Returns(true);
+        Assert.True(attribute.FeatureCheck(featureService));
+
+        featureService.IsEnabled(FeatureFlagKeys.EventManagementForSlack, Arg.Any<bool>()).Returns(false);
+        Assert.False(attribute.FeatureCheck(featureService));
+    }
+
+    [Theory]
+    [InlineData(nameof(SlackIntegrationController.CreateAsync))]
+    public void AnonymousEndpoints_AreNotGated(string methodName)
+    {
+        // The OAuth callback is called by Slack without a user, so the flag would be evaluated for an
+        // anonymous context and organization targeting wouldn't match. RedirectAsync is the gate.
+        var method = typeof(SlackIntegrationController).GetMethod(methodName);
+
+        Assert.NotNull(method);
+        Assert.Empty(method.GetCustomAttributes<RequireFeatureAttribute>());
     }
 
     private static void AssertRedirectsToVault(IActionResult actionResult, Guid organizationId, string expectedResult)

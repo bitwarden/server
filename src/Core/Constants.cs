@@ -289,6 +289,7 @@ public static partial class FeatureFlagKeys
     public const string EventManagementForHuntress = "event-management-for-huntress";
     public const string EventManagementForSplunk = "event-management-for-splunk";
     public const string EventManagementForTeams = "event-management-for-teams";
+    public const string EventManagementForSlack = "event-management-for-slack";
     public const string Milestone11AppPageImprovements = "pm-30538-dirt-milestone-11-app-page-improvements";
     public const string AccessIntelligenceNewArchitecture = "pm-31936-access-intelligence-new-architecture";
     public const string PasskeyDirectoryReport = "inno-passkey-directory-report";
