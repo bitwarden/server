@@ -12,8 +12,8 @@ See [LIBRARY.md](../LIBRARY.md) for the shape all libraries under `src/Libraries
 `GetAccountSubscriptionPurchasePreviewHandler`) and the queries behind them
 (`IGetSubscriptionUpgradePreviewQuery`, `IGetSubscriptionPurchasePreviewQuery`) — and the
 `Bit.Invoicing` library they depend on. `MapUserSubscriptionEndpoints()` creates the group, applies its
-cross-cutting chain (tags, the `internal` group name, the `Application` policy, exception handling), and maps the endpoints below; the host mounts it at
-`/account/billing/subscription`.
+cross-cutting chain (tags, the `internal` group name, the `Application` policy, exception handling), and
+maps the endpoints below; the host mounts it at `/account/billing/subscription`.
 
 Everything else is `internal`. The only types a consumer reads are `Bit.Invoicing`'s `InvoicePreview`
 and `SubscriptionPreview`.

@@ -42,8 +42,8 @@ gates another: each endpoint declares its own. The Privileged Controls purchase 
 
 `MapOrganizationSubscriptionPurchaseEndpoints()` attaches a second group, which the host mounts at
 `/organizations/billing/subscription`. Its chain applies the `OrganizationSubscriptions` tag, the
-`internal` group name, the `Application` policy, basic exception handling, and an endpoint filter that sends `Cache-Control: no-store`.
-It has no `OrganizationBillingRequirement` and no organization id in its route, because the caller
+`internal` group name, the `Application` policy, basic exception handling, and an endpoint filter that
+sends `Cache-Control: no-store`. It has no `OrganizationBillingRequirement` and no organization id in its route, because the caller
 is buying an organization and doesn't have one yet. It lives here rather than in
 `Subscriptions.User` because libraries group endpoints by what they operate on, not by who calls
 them.
@@ -149,10 +149,12 @@ It returns the resulting `InvoicePreview` cart.
 
 A missing or unrecognized `tier`/`cadence` fails JSON binding with a 400 before the command runs. The
 command validates the rest itself. Caller-fixable problems are **400s**: the `premium` tier, Families on
-a monthly cadence, a move to the same tier (including a cadence-only change), a downgrade, a plan without Secrets Manager
-support for an SM-enabled org, an invalid billing address, or a tax location or tax id Stripe rejects.
-Data or Stripe state the caller
-cannot influence is logged with the organization id and surfaced as a **409**: a paid org with no
+a monthly cadence, a move to the same tier (including a cadence-only change) unless the subscription is
+`trialing`, in which case it is allowed ([the trial-end behavior above](#organization-plan-change-preview)), a downgrade, a plan without
+Secrets Manager support for an SM-enabled org, an invalid billing address, or a tax location or tax id
+Stripe rejects. The same-tier check runs after the subscription lookup and status check, so a same-tier
+request on a subscription that can't be previewed gets the 409 below, not a 400. Data or Stripe state the
+caller cannot influence is logged with the organization id and surfaced as a **409**: a paid org with no
 subscription, a subscription Stripe no longer has, a subscription in a status other than `trialing`,
 `active`, or `past_due`, a subscription whose line items don't match the current plan, or a missing
 seat count. A missing organization is a **404**. These map from the `BadRequestException`,
