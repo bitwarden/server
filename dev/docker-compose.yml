@@ -87,7 +87,7 @@ services:
       - ef
 
   idp:
-    image: kenchan0130/simplesamlphp:1.19.8
+    image: kenchan0130/simplesamlphp:1.19.9
     ports:
       - "8090:8080"
     environment:
