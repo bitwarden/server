@@ -210,13 +210,14 @@ through the handler unchanged. A Stripe card error from the charge is mapped by 
 
 ### Privileged Controls seat change
 
-`PUT .../privileged-controls` adjusts the organization's Privileged Controls seats by a relative amount and sets the
-autoscale limit. Its body, `PrivilegedControlsSeatsRequest`, carries `seatAdjustment` (seats to add, negative to remove;
-null or omitted leaves the count unchanged) and `maxAutoscaleSeats` (null for no limit). The handler adds the adjustment
-to the seats the organization holds now, so a client working from a stale count cannot undo a concurrent autoscale or
-another owner's change; a limit-only request sends an adjustment of 0 and never reaches Stripe. The handler adds no
-other validation of its own: the command and `PrivilegedControlsSeatChangeSetFactory` own every seat rule and reject
-the resulting total with their own messages.
+`PUT .../privileged-controls` changes the organization's Privileged Controls seats by a number to add or remove, rather
+than a new total, and sets the autoscale limit. Its body, `PrivilegedControlsSeatsRequest`, carries `seatAdjustment`
+(seats to add, negative to remove; null or omitted leaves the count unchanged) and `maxAutoscaleSeats` (null for no
+limit). The handler adds the adjustment to the seats the organization holds when the request arrives, not the count the
+client last saw, so a client working from a stale count cannot undo a concurrent autoscale or another owner's change; a
+limit-only request sends an adjustment of 0 and never reaches Stripe. The handler adds no other validation of its own:
+the command and `PrivilegedControlsSeatChangeSetFactory` own every seat rule and reject the resulting total with their
+own messages.
 
 The handler resolves the organization (404), runs `IIsOnPrivilegedControlsSalesInitiatedTrialQuery`, and rejects a
 sales-initiated trial with a 400 ("Work with your customer service representative to change your Privileged Controls
