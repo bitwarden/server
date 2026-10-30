@@ -28,6 +28,7 @@ public static class ReportingServiceCollectionExtensions
         services.AddScoped<IGetOrganizationReportApplicationDataQuery, GetOrganizationReportApplicationDataQuery>();
         services.AddScoped<IUpdateOrganizationReportApplicationDataCommand, UpdateOrganizationReportApplicationDataCommand>();
         services.AddScoped<IGetPasskeyDirectoryQuery, GetPasskeyDirectoryQuery>();
+        services.AddScoped<IExcludeCipherFromBrowserHealthCommand, ExcludeCipherFromBrowserHealthCommand>();
 
         // v2 file storage commands
         services.AddScoped<ICreateOrganizationReportCommand, CreateOrganizationReportCommand>();
