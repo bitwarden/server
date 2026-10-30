@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Bit.Api.Dirt.Models.Response;
 using Bit.Api.Dirt.Utilities;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Enums;
@@ -9,6 +10,7 @@ using Bit.Core.Dirt.Repositories;
 using Bit.Core.Dirt.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Settings;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,6 +25,7 @@ public class SlackIntegrationController(
     IGlobalSettings globalSettings,
     TimeProvider timeProvider) : Controller
 {
+    [RequireFeature(FeatureFlagKeys.EventManagementForSlack)]
     [HttpGet("{organizationId:guid}/integrations/slack/redirect")]
     public async Task<OrganizationIntegrationOAuthRedirectResponseModel> RedirectAsync(Guid organizationId)
     {
