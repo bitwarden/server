@@ -128,6 +128,7 @@ public class ConfirmOrganizationInviteLinkCommand(
         existingOrganizationUser.UserId = user.Id;
         existingOrganizationUser.Email = null;
         existingOrganizationUser.Key = orgUserKey;
+        existingOrganizationUser.ClearInviteReminders();
 
         await organizationUserRepository.ReplaceAsync(existingOrganizationUser);
 
