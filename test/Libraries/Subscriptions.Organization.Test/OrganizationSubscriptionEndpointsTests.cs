@@ -35,7 +35,7 @@ public class OrganizationSubscriptionEndpointsTests
         Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<OrganizationBillingRequirement>);
 
         // The group carries no feature gate: each endpoint declares its own, so a flag for one kind of endpoint
-        // (previews, a purchase) never gates another.
+        // (a purchase) never gates another.
         Assert.Empty(endpoint.Metadata.GetOrderedMetadata<IFeatureMetadata>());
 
         var tags = endpoint.Metadata.GetMetadata<ITagsMetadata>();
