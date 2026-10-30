@@ -130,11 +130,6 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
     {
         var currentPlan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
-        if (currentPlan.UpgradeSortOrder == newPlan.UpgradeSortOrder)
-        {
-            throw new BadRequestException("Your organization is already on this plan.");
-        }
-
         if (currentPlan.UpgradeSortOrder > newPlan.UpgradeSortOrder)
         {
             throw new BadRequestException("You can't downgrade your organization's plan.");
@@ -148,6 +143,11 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
                 "Organization ({OrganizationId}) subscription ({SubscriptionId}) has status ({Status}) that cannot be previewed",
                 organization.Id, subscription.Id, subscription.Status);
             throw new ConflictException(InvalidSubscriptionMessage);
+        }
+
+        if (currentPlan.UpgradeSortOrder == newPlan.UpgradeSortOrder && subscription.Status != SubscriptionStatus.Trialing)
+        {
+            throw new BadRequestException("Your organization is already on this plan.");
         }
 
         var itemsByPriceId = subscription.Items.ToDictionary(item => item.Price.Id);
