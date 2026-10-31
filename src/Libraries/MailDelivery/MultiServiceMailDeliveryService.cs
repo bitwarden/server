@@ -1,11 +1,9 @@
 ﻿using Bit.Core.Models.Mail;
-using Bit.Core.Settings;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Bit.Core.Platform.Mail.Delivery;
 
-public class MultiServiceMailDeliveryService : IMailDeliveryService
+internal class MultiServiceMailDeliveryService : IMailDeliveryService
 {
     private readonly IMailDeliveryService _sesService;
     private readonly IMailDeliveryService _sendGridService;
@@ -14,16 +12,15 @@ public class MultiServiceMailDeliveryService : IMailDeliveryService
     private static Random _random = new Random();
 
     public MultiServiceMailDeliveryService(
-        GlobalSettings globalSettings,
-        IWebHostEnvironment hostingEnvironment,
-        ILogger<AmazonSesMailDeliveryService> sesLogger,
-        ILogger<SendGridMailDeliveryService> sendGridLogger)
+        IOptions<MailDeliveryOptions> options,
+        AmazonSesMailDeliveryService sesService,
+        SendGridMailDeliveryService sendGridService)
     {
-        _sesService = new AmazonSesMailDeliveryService(globalSettings, hostingEnvironment, sesLogger);
-        _sendGridService = new SendGridMailDeliveryService(globalSettings, hostingEnvironment, sendGridLogger);
+        _sesService = sesService;
+        _sendGridService = sendGridService;
 
         // disabled by default (-1)
-        _sendGridPercentage = (globalSettings.Mail?.SendGridPercentage).GetValueOrDefault(-1);
+        _sendGridPercentage = options.Value.SendGridPercentage.GetValueOrDefault(-1);
     }
 
     public async Task SendEmailAsync(MailMessage message)

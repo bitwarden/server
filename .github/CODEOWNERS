@@ -109,6 +109,8 @@ src/Admin/Views/Tools @bitwarden/team-billing-dev
 .github/workflows/test.yml @bitwarden/team-platform-dev
 **/*Platform* @bitwarden/team-platform-dev
 src/Libraries/Push.Infrastructure @bitwarden/team-platform-dev
+src/Libraries/MailDelivery @bitwarden/team-platform-dev
+test/Libraries/MailDelivery.Test @bitwarden/team-platform-dev
 
 # The PushType enum is expected to be editted by anyone without need for Platform review
 src/Core/Platform/Push/PushType.cs

@@ -327,23 +327,8 @@ public static class ServiceCollectionExtensions
         services.AddOrganizationAbilityCache(globalSettings);
         services.AddProviderAbilityCache(globalSettings);
 
-        var awsConfigured = CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret);
-        if (awsConfigured && CoreHelpers.SettingHasValue(globalSettings.Mail?.SendGridApiKey))
-        {
-            services.AddSingleton<IMailDeliveryService, MultiServiceMailDeliveryService>();
-        }
-        else if (awsConfigured)
-        {
-            services.AddSingleton<IMailDeliveryService, AmazonSesMailDeliveryService>();
-        }
-        else if (CoreHelpers.SettingHasValue(globalSettings.Mail?.Smtp?.Host))
-        {
-            services.AddSingleton<IMailDeliveryService, MailKitSmtpMailDeliveryService>();
-        }
-        else
-        {
-            services.AddSingleton<IMailDeliveryService, NoopMailDeliveryService>();
-        }
+        services.ConfigureMailDeliveryOptionsFromGlobalSettings();
+        services.AddMailDelivery();
 
         services.AddPush(globalSettings);
         services.AddPushRegistration();

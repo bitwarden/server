@@ -1,43 +1,39 @@
 ﻿using Bit.Core.Models.Mail;
 using Bit.Core.Platform.Mail.Delivery;
-using Bit.Core.Settings;
-using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 using SendGrid;
 using SendGrid.Helpers.Mail;
-using Xunit;
 
-namespace Bit.Core.Test.Services;
+namespace Bit.MailDelivery.Test;
 
 public class SendGridMailDeliveryServiceTests : IDisposable
 {
     private readonly SendGridMailDeliveryService _sut;
 
-    private readonly GlobalSettings _globalSettings;
-    private readonly IWebHostEnvironment _hostingEnvironment;
+    private readonly MailDeliveryOptions _options;
+    private readonly IHostEnvironment _hostingEnvironment;
     private readonly ILogger<SendGridMailDeliveryService> _logger;
     private readonly ISendGridClient _sendGridClient;
 
     public SendGridMailDeliveryServiceTests()
     {
-        _globalSettings = new GlobalSettings
+        _options = new MailDeliveryOptions
         {
-            Mail =
-            {
-                SendGridApiKey = "SendGridApiKey",
-                SendGridApiHost = "https://api.sendgrid.com",
-                ReplyToEmail = "no-reply@bitwarden.com"
-            }
+            SendGridApiKey = "SendGridApiKey",
+            SendGridApiHost = "https://api.sendgrid.com",
+            ReplyToEmail = "no-reply@bitwarden.com"
         };
 
-        _hostingEnvironment = Substitute.For<IWebHostEnvironment>();
+        _hostingEnvironment = Substitute.For<IHostEnvironment>();
         _logger = Substitute.For<ILogger<SendGridMailDeliveryService>>();
         _sendGridClient = Substitute.For<ISendGridClient>();
 
         _sut = new SendGridMailDeliveryService(
             _sendGridClient,
-            _globalSettings,
+            Options.Create(_options),
             _hostingEnvironment,
             _logger
         );
