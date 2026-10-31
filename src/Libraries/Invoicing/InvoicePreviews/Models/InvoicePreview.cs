@@ -34,4 +34,7 @@ public record InvoicePreview
 
     /// <summary>When the subscriber is next charged.</summary>
     public DateTime? NextPaymentAttempt { get; init; }
+
+    /// <summary>The proration time this preview was priced at. Pass it back on the matching upgrade so proration uses the same instant; it is rejected once older than <see cref="Bit.Core.Billing.Subscriptions.InvoicePreviewQuote.ValidFor"/>. Null for previews that don't prorate.</summary>
+    public DateTime? ProrationDate { get; init; }
 }

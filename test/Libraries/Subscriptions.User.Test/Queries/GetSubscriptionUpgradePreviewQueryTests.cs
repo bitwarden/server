@@ -22,6 +22,7 @@ public class GetSubscriptionUpgradePreviewQueryTests
     private const string PremiumStoragePriceId = "storage-gb-annually";
     private const string SubscriptionId = "sub_premium";
     private const string CustomerId = "cus_premium";
+    private static readonly DateTime Frozen = new(2026, 10, 27, 12, 0, 0, DateTimeKind.Utc);
 
     private readonly RecordingLogger<GetSubscriptionUpgradePreviewQuery> _logger = new();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
@@ -30,7 +31,7 @@ public class GetSubscriptionUpgradePreviewQueryTests
     private readonly GetSubscriptionUpgradePreviewQuery _sut;
 
     public GetSubscriptionUpgradePreviewQueryTests() =>
-        _sut = new GetSubscriptionUpgradePreviewQuery(_logger, _pricingClient, _stripeAdapter, _invoicePreviewService);
+        _sut = new GetSubscriptionUpgradePreviewQuery(_logger, _pricingClient, _stripeAdapter, _invoicePreviewService, TimeProvider.System);
 
     [Theory]
     [InlineData(ProductTierType.Free)]
@@ -216,6 +217,34 @@ public class GetSubscriptionUpgradePreviewQueryTests
         Assert.DoesNotContain(items, i => i.Deleted is true);
     }
 
+    [Fact]
+    public async Task Run_PinsPreviewToTestClockTimeAndReturnsIt()
+    {
+        var subscription = SubscriptionWithItems(("si_pm", PremiumSeatPriceId));
+        subscription.TestClock = new Stripe.TestHelpers.TestClock { FrozenTime = Frozen };
+        ArrangeSubscription(subscription);
+        ArrangePremiumPlans();
+        ArrangeTargetPlan(PlanType.FamiliesAnnually, ProductTierType.Families, planId: "2020-families-org-annually");
+        ArrangePreview();
+
+        var result = await _sut.Run(PremiumUser(), Request(ProductTierType.Families));
+
+        Assert.Equal(Frozen, CapturedOptions().SubscriptionDetails.ProrationDate);
+        Assert.Equal(Frozen, result.ProrationDate);
+    }
+
+    [Fact]
+    public async Task Run_FetchesSubscriptionWithTestClockExpanded()
+    {
+        ArrangeFamiliesUpgrade();
+        ArrangePreview();
+
+        await _sut.Run(PremiumUser(), Request(ProductTierType.Families));
+
+        await _stripeAdapter.Received(1).GetSubscriptionAsync(
+            SubscriptionId, Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("test_clock")));
+    }
+
     [Theory]
     [InlineData(ProductTierType.Families, PlanType.FamiliesAnnually, PlanTierType.Families)]
     [InlineData(ProductTierType.Teams, PlanType.TeamsAnnually, PlanTierType.Teams)]
@@ -230,7 +259,7 @@ public class GetSubscriptionUpgradePreviewQueryTests
 
         var result = await _sut.Run(PremiumUser(), Request(targetProductTierType));
 
-        Assert.Same(preview, result);
+        Assert.Equal(preview with { ProrationDate = result.ProrationDate }, result);
         await _pricingClient.Received(1).GetPlanOrThrow(expectedPlanType);
         await _invoicePreviewService.Received(1).GetInvoicePreviewForBillingAddressAsync(
             Arg.Any<InvoiceCreatePreviewOptions>(), expectedTier, PlanCadenceType.Annually);

@@ -2,6 +2,7 @@
 using System.Text.Json.Serialization;
 using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Premium.Models;
 
 namespace Bit.Api.Billing.Models.Requests.Premium;
 
@@ -28,6 +29,8 @@ public class UpgradePremiumToOrganizationRequest
     [Required]
     public required CheckoutBillingAddressRequest BillingAddress { get; set; }
 
+    public DateTime? ProrationDate { get; set; }
+
     private PlanType PlanType
     {
         get
@@ -47,6 +50,15 @@ public class UpgradePremiumToOrganizationRequest
         }
     }
 
-    public (string OrganizationName, string Key, string PublicKey, string EncryptedPrivateKey, string? CollectionName, PlanType PlanType, Core.Billing.Payment.Models.BillingAddress BillingAddress) ToDomain() =>
-        (OrganizationName, Key, PublicKey, EncryptedPrivateKey, CollectionName, PlanType, BillingAddress.ToDomain());
+    public PremiumToOrganizationUpgrade ToDomain() => new()
+    {
+        OrganizationName = OrganizationName,
+        Key = Key,
+        PublicKey = PublicKey,
+        EncryptedPrivateKey = EncryptedPrivateKey,
+        CollectionName = CollectionName,
+        TargetPlanType = PlanType,
+        BillingAddress = BillingAddress.ToDomain(),
+        ProrationDate = ProrationDate
+    };
 }

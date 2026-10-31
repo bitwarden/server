@@ -1,12 +1,13 @@
 ﻿using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Payment.Queries;
+using Bit.Core.Billing.Premium.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions;
 using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Entities;
@@ -34,23 +35,9 @@ public interface IUpgradePremiumToOrganizationCommand
     /// Upgrades a Premium subscription to an Organization subscription.
     /// </summary>
     /// <param name="user">The user with an active Premium subscription to upgrade.</param>
-    /// <param name="organizationName">The name for the new organization.</param>
-    /// <param name="key">The encrypted organization key for the owner.</param>
-    /// <param name="publicKey">The organization's public key.</param>
-    /// <param name="encryptedPrivateKey">The organization's encrypted private key.</param>
-    /// <param name="collectionName">Optional name for the default collection.</param>
-    /// <param name="targetPlanType">The target organization plan type to upgrade to.</param>
-    /// <param name="billingAddress">The billing address for tax calculation.</param>
+    /// <param name="upgrade">The details of the organization to create and the plan to upgrade to.</param>
     /// <returns>A billing command result containing the new organization ID on success, or error details on failure.</returns>
-    Task<BillingCommandResult<Guid>> Run(
-        User user,
-        string organizationName,
-        string key,
-        string publicKey,
-        string encryptedPrivateKey,
-        string? collectionName,
-        PlanType targetPlanType,
-        BillingAddress billingAddress);
+    Task<BillingCommandResult<Guid>> Run(User user, PremiumToOrganizationUpgrade upgrade);
 }
 
 public class UpgradePremiumToOrganizationCommand(
@@ -67,20 +54,13 @@ public class UpgradePremiumToOrganizationCommand(
     IGetPaymentMethodQuery getPaymentMethodQuery,
     IOrganizationAbilityCacheService organizationAbilityCacheService,
     IPushNotificationService pushNotificationService,
-    ITaxService taxService)
+    ITaxService taxService,
+    TimeProvider timeProvider)
     : BaseBillingCommand<UpgradePremiumToOrganizationCommand>(logger), IUpgradePremiumToOrganizationCommand
 {
     private readonly ILogger<UpgradePremiumToOrganizationCommand> _logger = logger;
 
-    public Task<BillingCommandResult<Guid>> Run(
-        User user,
-        string organizationName,
-        string key,
-        string publicKey,
-        string encryptedPrivateKey,
-        string? collectionName,
-        PlanType targetPlanType,
-        BillingAddress billingAddress) => HandleAsync<Guid>(async () =>
+    public Task<BillingCommandResult<Guid>> Run(User user, PremiumToOrganizationUpgrade upgrade) => HandleAsync<Guid>(async () =>
     {
         // Validate that the user has an active Premium subscription
         if (user is not { Premium: true, GatewayCustomerId: not null and not "", GatewaySubscriptionId: not null and not "" })
@@ -100,7 +80,15 @@ public class UpgradePremiumToOrganizationCommand(
         }
 
         // Fetch the current Premium subscription from Stripe
-        var currentSubscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
+        var currentSubscription = await stripeAdapter.GetSubscriptionAsync(
+            user.GatewaySubscriptionId,
+            new SubscriptionGetOptions { Expand = [SubscriptionExpandablePropertyNames.TestClock] });
+
+        var prorationDate = upgrade.ProrationDate;
+        if (prorationDate.HasValue)
+        {
+            prorationDate = InvoicePreviewQuote.EnsureValid(prorationDate.Value, currentSubscription, timeProvider);
+        }
 
         // Fetch all premium plans to find which specific plan the user is on
         var premiumPlans = await pricingClient.ListPremiumPlans();
@@ -117,7 +105,7 @@ public class UpgradePremiumToOrganizationCommand(
         var usersPremiumPlan = premiumPlans.First(p => p.Seat.StripePriceId == passwordManagerItem.Price.Id);
 
         // Get the target organization plan
-        var targetPlan = await pricingClient.GetPlanOrThrow(targetPlanType);
+        var targetPlan = await pricingClient.GetPlanOrThrow(upgrade.TargetPlanType);
 
         var subscriptionItemOptions = BuildSubscriptionItemOptions(
             currentSubscription, usersPremiumPlan, targetPlan, passwordManagerItem);
@@ -127,37 +115,37 @@ public class UpgradePremiumToOrganizationCommand(
 
         // Create the Organization entity
         var organization = BuildOrganization(
-            organizationId, user, organizationName, publicKey, encryptedPrivateKey, targetPlan, currentSubscription.Id);
+            organizationId, user, upgrade.OrganizationName, upgrade.PublicKey, upgrade.EncryptedPrivateKey, targetPlan, currentSubscription.Id);
 
         // Update customer billing address for tax calculation
         var addressUpdateOptions = new CustomerUpdateOptions
         {
             Address = new AddressOptions
             {
-                Country = billingAddress.Country,
-                PostalCode = billingAddress.PostalCode
+                Country = upgrade.BillingAddress.Country,
+                PostalCode = upgrade.BillingAddress.PostalCode
             }
         };
 
         var customer = await stripeAdapter.UpdateCustomerAsync(user.GatewayCustomerId, addressUpdateOptions);
 
         // Add tax ID to the customer for accurate tax calculation if provided
-        if (billingAddress.TaxId != null)
+        if (upgrade.BillingAddress.TaxId != null)
         {
-            await AddTaxIdToCustomerAsync(user.GatewayCustomerId!, billingAddress.Country, billingAddress.TaxId);
+            await AddTaxIdToCustomerAsync(user.GatewayCustomerId!, upgrade.BillingAddress.Country, upgrade.BillingAddress.TaxId);
         }
 
         // Release any scheduled price increase before updating subscription
         await priceIncreaseScheduler.Release(user.GatewayCustomerId, currentSubscription.Id);
 
-        await UpdateSubscriptionAsync(currentSubscription.Id, organizationId, customer, subscriptionItemOptions);
+        await UpdateSubscriptionAsync(currentSubscription.Id, organizationId, customer, subscriptionItemOptions, prorationDate);
 
-        var organizationUser = await SaveOrganizationAsync(organization, user, key);
+        var organizationUser = await SaveOrganizationAsync(organization, user, upgrade.Key);
 
         // Create a default collection if a collection name is provided
-        if (!string.IsNullOrWhiteSpace(collectionName))
+        if (!string.IsNullOrWhiteSpace(upgrade.CollectionName))
         {
-            await CreateDefaultCollectionAsync(organization, organizationUser, collectionName);
+            await CreateDefaultCollectionAsync(organization, organizationUser, upgrade.CollectionName);
         }
 
         // Remove subscription from a user
@@ -281,7 +269,8 @@ public class UpgradePremiumToOrganizationCommand(
         string subscriptionId,
         Guid organizationId,
         Customer customer,
-        List<SubscriptionItemOptions> subscriptionItemOptions)
+        List<SubscriptionItemOptions> subscriptionItemOptions,
+        DateTime? prorationDate)
     {
         var usingPayPal = customer.Metadata?.ContainsKey(BraintreeCustomerIdKey) ?? false;
 
@@ -290,6 +279,7 @@ public class UpgradePremiumToOrganizationCommand(
         {
             Items = subscriptionItemOptions,
             ProrationBehavior = ProrationBehavior.AlwaysInvoice,
+            ProrationDate = prorationDate,
             BillingCycleAnchor = SubscriptionBillingCycleAnchor.Unchanged,
             AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
             Metadata = new Dictionary<string, string>

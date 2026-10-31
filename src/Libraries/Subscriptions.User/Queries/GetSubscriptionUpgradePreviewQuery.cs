@@ -2,6 +2,7 @@
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions;
 using Bit.Core.Exceptions;
 using Bit.Invoicing.InvoicePreviews;
 using Bit.Invoicing.InvoicePreviews.Models;
@@ -21,7 +22,8 @@ internal sealed class GetSubscriptionUpgradePreviewQuery(
     ILogger<GetSubscriptionUpgradePreviewQuery> logger,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter,
-    IInvoicePreviewService invoicePreviewService) : IGetSubscriptionUpgradePreviewQuery
+    IInvoicePreviewService invoicePreviewService,
+    TimeProvider timeProvider) : IGetSubscriptionUpgradePreviewQuery
 {
     private const string InvalidSubscriptionMessage =
         "Subscription is in an invalid state. Please contact support for assistance.";
@@ -74,6 +76,8 @@ internal sealed class GetSubscriptionUpgradePreviewQuery(
             Quantity = 1
         });
 
+        var prorationDate = InvoicePreviewQuote.GetProrationDate(subscription, timeProvider);
+
         var options = new InvoiceCreatePreviewOptions
         {
             AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = true },
@@ -83,13 +87,15 @@ internal sealed class GetSubscriptionUpgradePreviewQuery(
             SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
             {
                 Items = items,
-                ProrationBehavior = StripeConstants.ProrationBehavior.AlwaysInvoice
+                ProrationBehavior = StripeConstants.ProrationBehavior.AlwaysInvoice,
+                ProrationDate = prorationDate
             }
         };
 
         try
         {
-            return await invoicePreviewService.GetInvoicePreviewForBillingAddressAsync(options, targetPlanTier, PlanCadenceType.Annually);
+            var preview = await invoicePreviewService.GetInvoicePreviewForBillingAddressAsync(options, targetPlanTier, PlanCadenceType.Annually);
+            return preview with { ProrationDate = prorationDate };
         }
         catch (StripeException stripeException)
             when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.CustomerTaxLocationInvalid)
@@ -104,7 +110,8 @@ internal sealed class GetSubscriptionUpgradePreviewQuery(
     {
         try
         {
-            return await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
+            return await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId,
+                new SubscriptionGetOptions { Expand = [StripeConstants.SubscriptionExpandablePropertyNames.TestClock] });
         }
         catch (StripeException stripeException)
             when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.ResourceMissing)

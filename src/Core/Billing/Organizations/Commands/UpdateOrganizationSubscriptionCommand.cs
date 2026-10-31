@@ -39,6 +39,11 @@ public interface IUpdateOrganizationSubscriptionCommand
     /// <see cref="Subscription.Schedule"/>), it is reused to avoid a redundant Stripe call;
     /// otherwise the subscription is re-fetched.
     /// </param>
+    /// <param name="prorationDate">
+    /// An optional time to pin proration to, passed to Stripe as <c>ProrationDate</c> on direct subscription
+    /// updates. It is not applied when an annual-upgrade or cohort migration schedule is updated instead, because
+    /// schedule updates have no proration date. The command does not validate it; callers must.
+    /// </param>
     /// <returns>
     /// A <see cref="BillingCommandResult{T}"/> containing the updated <see cref="Subscription"/>
     /// on success, or an error result if validation or the Stripe operation fails.
@@ -46,7 +51,8 @@ public interface IUpdateOrganizationSubscriptionCommand
     Task<BillingCommandResult<Subscription>> Run(
         Organization organization,
         OrganizationSubscriptionChangeSet changeSet,
-        Subscription? subscription = null);
+        Subscription? subscription = null,
+        DateTime? prorationDate = null);
 }
 
 public class UpdateOrganizationSubscriptionCommand(
@@ -71,7 +77,8 @@ public class UpdateOrganizationSubscriptionCommand(
     public Task<BillingCommandResult<Subscription>> Run(
         Organization organization,
         OrganizationSubscriptionChangeSet changeSet,
-        Subscription? subscription = null) => HandleAsync<Subscription>(async () =>
+        Subscription? subscription = null,
+        DateTime? prorationDate = null) => HandleAsync<Subscription>(async () =>
     {
         subscription = HasRequiredExpansions(subscription)
             ? subscription
@@ -198,7 +205,12 @@ public class UpdateOrganizationSubscriptionCommand(
             }
         }
 
-        var options = new SubscriptionUpdateOptions { Items = items, ProrationBehavior = prorationBehavior };
+        var options = new SubscriptionUpdateOptions
+        {
+            Items = items,
+            ProrationBehavior = prorationBehavior,
+            ProrationDate = prorationDate
+        };
 
         if (paymentBehavior is not null)
         {

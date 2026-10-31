@@ -59,6 +59,15 @@ public static class StripeConstants
         public const string AppliesTo = "applies_to";
     }
 
+    public static class SubscriptionExpandablePropertyNames
+    {
+        /// <summary>
+        /// Expands the subscription's Stripe test clock. When a subscription is attached to a test clock, its
+        /// <c>FrozenTime</c> is Stripe's "now" for that subscription, so billing code uses it in place of the real clock.
+        /// </summary>
+        public const string TestClock = "test_clock";
+    }
+
     public static class ErrorCodes
     {
         public const string CustomerTaxLocationInvalid = "customer_tax_location_invalid";

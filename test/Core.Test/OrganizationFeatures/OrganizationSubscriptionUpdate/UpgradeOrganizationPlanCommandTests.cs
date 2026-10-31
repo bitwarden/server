@@ -8,6 +8,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -25,6 +26,7 @@ using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using OneOf.Types;
 using Xunit;
 
@@ -522,7 +524,7 @@ public class UpgradeOrganizationPlanCommandTests
 
         BillingCommandResult<None> successResult = new None();
         sutProvider.GetDependency<IUpgradeOrganizationPlanVNextCommand>()
-            .Run(organization, MockPlans.Get(upgrade.Plan), upgrade.Keys)
+            .Run(organization, MockPlans.Get(upgrade.Plan), upgrade.Keys, upgrade.ProrationDate)
             .Returns(successResult);
 
         var result = await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
@@ -531,7 +533,7 @@ public class UpgradeOrganizationPlanCommandTests
         Assert.Null(result.Item2);
         await sutProvider.GetDependency<IUpgradeOrganizationPlanVNextCommand>()
             .Received(1)
-            .Run(organization, MockPlans.Get(upgrade.Plan), upgrade.Keys);
+            .Run(organization, MockPlans.Get(upgrade.Plan), upgrade.Keys, upgrade.ProrationDate);
     }
 
     [Theory, BitAutoData]
@@ -552,12 +554,35 @@ public class UpgradeOrganizationPlanCommandTests
 
         BillingCommandResult<None> failureResult = new BadRequest("Something went wrong");
         sutProvider.GetDependency<IUpgradeOrganizationPlanVNextCommand>()
-            .Run(organization, MockPlans.Get(upgrade.Plan), upgrade.Keys)
+            .Run(organization, MockPlans.Get(upgrade.Plan), upgrade.Keys, upgrade.ProrationDate)
             .Returns(failureResult);
 
         var exception = await Assert.ThrowsAsync<BillingException>(
             () => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
         Assert.Equal("Something went wrong", exception.Response);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpgradePlan_FeatureFlagOn_ExpiredProrationDate_PropagatesInvoicePreviewExpiredException(
+        Organization organization,
+        OrganizationUpgrade upgrade,
+        SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
+            .Returns(true);
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(upgrade.Plan)
+            .Returns(MockPlans.Get(upgrade.Plan));
+        sutProvider.GetDependency<IUpgradeOrganizationPlanVNextCommand>()
+            .Run(organization, MockPlans.Get(upgrade.Plan), upgrade.Keys, upgrade.ProrationDate)
+            .ThrowsAsync(new InvoicePreviewExpiredException());
+
+        await Assert.ThrowsAsync<InvoicePreviewExpiredException>(
+            () => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
     }
 
     [Theory]

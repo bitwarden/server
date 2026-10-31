@@ -26,6 +26,7 @@ public class OrganizationUpgradeRequestModel
     public string BillingAddressCountry { get; set; }
     public string BillingAddressPostalCode { get; set; }
     public OrganizationKeysRequestModel Keys { get; set; }
+    public DateTime? ProrationDate { get; set; }
 
     public OrganizationUpgrade ToOrganizationUpgrade()
     {
@@ -44,7 +45,8 @@ public class OrganizationUpgradeRequestModel
                 BillingAddressCountry = BillingAddressCountry,
                 BillingAddressPostalCode = BillingAddressPostalCode
             },
-            Keys = Keys?.ToPublicKeyEncryptionKeyPairData()
+            Keys = Keys?.ToPublicKeyEncryptionKeyPairData(),
+            ProrationDate = ProrationDate
         };
 
         return orgUpgrade;
