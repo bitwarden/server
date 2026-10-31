@@ -11,7 +11,7 @@
   <ItemGroup>
     <PackageReference Include="Azure.Storage.Queues" Version="[12.27.1]" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="[10.0.10]" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="[10.0.10]" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="[10.0.13]" />
   </ItemGroup>
 
   <ItemGroup Label="Pinned transitive dependencies">
