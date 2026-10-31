@@ -68,11 +68,11 @@
       },
       "Microsoft.AspNetCore.SignalR.Protocols.MessagePack": {
         "type": "Direct",
-        "requested": "[10.0.10, 10.0.10]",
-        "resolved": "10.0.10",
-        "contentHash": "45zHBTO1MdNZbgxuVSukryXkAl/u0+X+0rjAwuGzVK2adFmM8gprw+0D8p0WWhlAnXZFUjUtXSkdF5up1ekf6w==",
+        "requested": "[10.0.13, 10.0.13]",
+        "resolved": "10.0.13",
+        "contentHash": "BIGRk2AjG07nNfOQJGPm9a17oPMsvwsfegPfDa1oCLlQU4R0o2WgRuw++iObtAQKtd2hFDU8GsgDctgsT44Fjw==",
         "dependencies": {
-          "MessagePack": "2.5.302"
+          "MessagePack": "2.5.303"
         }
       },
       "Microsoft.AspNetCore.SignalR.StackExchangeRedis": {
