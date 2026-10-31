@@ -188,9 +188,9 @@
       },
       "Handlebars.Net": {
         "type": "Direct",
-        "requested": "[2.1.6, 2.1.6]",
-        "resolved": "2.1.6",
-        "contentHash": "WsYWCEXsIM6hEOSOSRHtIYLjC8BnbT5MVmqhNKRqUI7qiv0t8x3nJiBTEv0ZZfvUAMAFnadGIzSsS/U2anVG1Q=="
+        "requested": "[2.4.3, 2.4.3]",
+        "resolved": "2.4.3",
+        "contentHash": "arsZCVYV/2f39W7KBRD3jnsluHAI8cNFGGbcfmY92GRnpyXZoJHleevuS6BTXJgNE44vtSeB3FbK6udZPa7K6w=="
       },
       "MailKit": {
         "type": "Direct",
