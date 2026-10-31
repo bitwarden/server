@@ -10,7 +10,7 @@
 
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Icons' " />
   <ItemGroup>
-    <PackageReference Include="AngleSharp" Version="[1.5.2]" />
+    <PackageReference Include="AngleSharp" Version="[1.8.5]" />
   </ItemGroup>
 
   <ItemGroup>
