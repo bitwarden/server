@@ -28,10 +28,8 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- The names are snapshotted so a later delete or rename cannot change what this event says. Actor and requester
-    -- resolve from [User] here; the rule, target system, and access connector names come from the caller instead,
-    -- because those entities can be deleted in the same action. The cipher and collection are recorded by id alone:
-    -- their names are vault data, which this store never holds.
+    -- Names are snapshotted so a later delete or rename cannot change the event. The rule, target system, and access
+    -- connector names come from the caller, since the same action can delete them; vault data is never stored.
     INSERT INTO [dbo].[AccessAuditEvent]
     (
         [Id],
