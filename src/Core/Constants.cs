@@ -316,6 +316,18 @@ public static partial class FeatureFlagKeys
     /* VFO */
     public const string VFO1Foundation = "vfo1-foundation";
 
+    /* Permanent */
+    // Operational flags that are never removed. They are exempt from the flag cleanup lifecycle.
+
+    /// <summary>
+    /// Beta sunset status for beta clients: "active", "warning", or "blocked". Target it on the
+    /// client-version-is-prerelease context attribute. Only exactly "active" or "warning" keeps a
+    /// beta running. Any other value blocks, and clients default to "blocked", so self-hosted
+    /// servers, which send no value, block beta clients. Set the off variation to "blocked" as a
+    /// kill switch.
+    /// </summary>
+    public const string BetaChannelStatus = "beta-channel-status";
+
     public static Dictionary<string, string> GetLocalOverrideFlagValues()
     {
         // place overriding values when needed locally (offline), or return null
