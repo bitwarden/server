@@ -105,7 +105,7 @@ Density-aware steps accept an optional `DensityProfile` that controls relationsh
 
 ## Access Shape
 
-A preset with an `accessShape` block (the `scale.*-migrated-*` presets) replaces the density group, collection and
+A preset with an `accessShape` block (the `scale.*-migrated-cyberdyne*` presets) replaces the density group, collection and
 cipher-assignment algorithms with `CreateShapedGroupsStep` and `CreateShapedCollectionsStep`. Presets without
 `accessShape` are unchanged. `PresetValidator.ValidateAccessShape` rejects density settings the shape would ignore;
 cipher types, permissions and orphan/archive/delete rates still apply. Shaped loops fail the run if they fall more
