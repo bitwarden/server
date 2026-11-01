@@ -320,11 +320,11 @@ public static partial class FeatureFlagKeys
     // Operational flags that are never removed. They are exempt from the flag cleanup lifecycle.
 
     /// <summary>
-    /// Beta sunset status for beta clients: "active", "warning", or "blocked". Target it on the
-    /// client-version-is-prerelease context attribute. Only exactly "active" or "warning" keeps a
-    /// beta running. Any other value blocks, and clients default to "blocked", so self-hosted
-    /// servers, which send no value, block beta clients. Set the off variation to "blocked" as a
-    /// kill switch.
+    /// Status of the beta channel: "open", "closing", or "closed". Target it on the
+    /// client-version-is-prerelease context attribute and serve "open" to beta clients. Only
+    /// exactly "open" or "closing" keeps the channel open. Clients default to "closed", so
+    /// self-hosted servers, which send no value, have no beta channel. Set the off variation to
+    /// "closed" as a kill switch.
     /// </summary>
     public const string BetaChannelStatus = "beta-channel-status";
 
