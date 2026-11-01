@@ -321,10 +321,9 @@ public static partial class FeatureFlagKeys
 
     /// <summary>
     /// Status of the beta channel: "open", "closing", or "closed". Target it on the
-    /// client-version-is-prerelease context attribute and serve "open" to beta clients. Only
-    /// exactly "open" or "closing" keeps the channel open. Clients default to "closed", so
-    /// self-hosted servers, which send no value, have no beta channel. Set the off variation to
-    /// "closed" as a kill switch.
+    /// client-version-is-prerelease context attribute. Clients fail open: only an explicit
+    /// "closing" or "closed" changes the channel. Self-hosted servers send "closed", so self-hosted
+    /// has no beta channel. Set the off variation to "open", and serve "closed" to end the beta.
     /// </summary>
     public const string BetaChannelStatus = "beta-channel-status";
 

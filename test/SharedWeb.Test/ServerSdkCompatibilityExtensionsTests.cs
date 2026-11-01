@@ -1,4 +1,5 @@
-﻿using Bit.SharedWeb.Utilities;
+﻿using Bit.Core;
+using Bit.SharedWeb.Utilities;
 using Bitwarden.Server.Sdk.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -93,6 +94,55 @@ public class ServerSdkCompatibilityExtensionsTests
         Assert.DoesNotContain(
             fakeProvider.Collector.GetSnapshot(),
             record => record.Level == LogLevel.Warning);
+    }
+
+    [Fact]
+    public void SelfHosted_WithoutOverride_SendsBetaChannelClosed()
+    {
+        using var provider = CreateProvider(new Dictionary<string, string?>
+        {
+            { "GlobalSettings:SelfHosted", "true" },
+        });
+
+        var options = provider.GetRequiredService<IOptions<FeatureFlagOptions>>().Value;
+        Assert.Equal("closed", Assert.Contains(FeatureFlagKeys.BetaChannelStatus, options.FlagValues));
+
+        using var scope = provider.CreateScope();
+        var all = scope.ServiceProvider.GetRequiredService<IFeatureService>().GetAll();
+        Assert.Equal("closed", Assert.Contains(FeatureFlagKeys.BetaChannelStatus, all).GetValue<string>());
+    }
+
+    [Theory]
+    [InlineData("Features:FlagValues:beta-channel-status")]
+    [InlineData("GlobalSettings:LaunchDarkly:FlagValues:beta-channel-status")]
+    public void SelfHosted_WithOverride_SendsTheOverride(string overrideKey)
+    {
+        using var provider = CreateProvider(new Dictionary<string, string?>
+        {
+            { "GlobalSettings:SelfHosted", "true" },
+            { overrideKey, "open" },
+        });
+
+        var options = provider.GetRequiredService<IOptions<FeatureFlagOptions>>().Value;
+        Assert.Equal("open", Assert.Contains(FeatureFlagKeys.BetaChannelStatus, options.FlagValues));
+
+        using var scope = provider.CreateScope();
+        var all = scope.ServiceProvider.GetRequiredService<IFeatureService>().GetAll();
+        Assert.Equal("open", Assert.Contains(FeatureFlagKeys.BetaChannelStatus, all).GetValue<string>());
+    }
+
+    [Fact]
+    public void Cloud_DoesNotGetTheSelfHostedBetaChannelDefault()
+    {
+        using var provider = CreateProvider(new Dictionary<string, string?>
+        {
+            { "GlobalSettings:SelfHosted", "false" },
+            { "GlobalSettings:LaunchDarkly:SdkKey", "cloud-sdk-key" },
+        });
+
+        var options = provider.GetRequiredService<IOptions<FeatureFlagOptions>>().Value;
+        Assert.Equal("cloud-sdk-key", options.LaunchDarkly.SdkKey);
+        Assert.DoesNotContain(FeatureFlagKeys.BetaChannelStatus, options.FlagValues.Keys);
     }
 
     private static ServiceProvider CreateProvider(

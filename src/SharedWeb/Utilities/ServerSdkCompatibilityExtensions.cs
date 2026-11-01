@@ -75,6 +75,13 @@ public static class ServerSdkCompatibilityExtensions
                 {
                     options.FlagValues.TryAdd(key, value);
                 }
+
+                // Self-hosted servers have no beta channel. Clients treat a missing value as open,
+                // so send "closed" unless the operator set a value above.
+                if (globalSettings.SelfHosted)
+                {
+                    options.FlagValues.TryAdd(FeatureFlagKeys.BetaChannelStatus, "closed");
+                }
             });
 
         // Server has a class that contains all the feature flag keys
