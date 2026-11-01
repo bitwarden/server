@@ -321,8 +321,7 @@ public static partial class FeatureFlagKeys
 
     /// <summary>
     /// Status of the beta channel: "open", "closing", or "closed". Clients fail open: only an
-    /// explicit "closing" or "closed" changes the channel. Self-hosted servers send "closed", so
-    /// self-hosted has no beta channel.
+    /// explicit "closing" or "closed" changes the channel.
     /// </summary>
     public const string BetaChannelStatus = "beta-channel-status";
 
