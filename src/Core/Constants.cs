@@ -320,10 +320,9 @@ public static partial class FeatureFlagKeys
     // Operational flags that are never removed. They are exempt from the flag cleanup lifecycle.
 
     /// <summary>
-    /// Status of the beta channel: "open", "closing", or "closed". Target it on the
-    /// client-version-is-prerelease context attribute. Clients fail open: only an explicit
-    /// "closing" or "closed" changes the channel. Self-hosted servers send "closed", so self-hosted
-    /// has no beta channel. Set the off variation to "open", and serve "closed" to end the beta.
+    /// Status of the beta channel: "open", "closing", or "closed". Clients fail open: only an
+    /// explicit "closing" or "closed" changes the channel. Self-hosted servers send "closed", so
+    /// self-hosted has no beta channel.
     /// </summary>
     public const string BetaChannelStatus = "beta-channel-status";
 
