@@ -23,7 +23,7 @@ public class RecoverAccountAuthorizationRequirement : IAuthorizationRequirement;
 /// </summary>
 /// <remarks>
 /// This prevents privilege escalation by ensuring that a user cannot recover the account of
-/// another user with a higher role or with provider membership.
+/// another user with a higher role, in either the organization or a provider.
 /// </remarks>
 public class RecoverAccountAuthorizationHandler(
     IOrganizationContext organizationContext,
@@ -51,7 +51,8 @@ public class RecoverAccountAuthorizationHandler(
         }
 
         // Step 2: check that the User has permissions with respect to any provider the target user is a member of.
-        // This prevents an organization admin performing privilege escalation into an unrelated provider.
+        // This prevents an organization admin performing privilege escalation into an unrelated provider,
+        // and prevents a provider member escalating into a higher role within their own provider.
         var canRecoverProviderMember = await CanRecoverProviderAsync(targetOrganizationUser);
         if (!canRecoverProviderMember)
         {

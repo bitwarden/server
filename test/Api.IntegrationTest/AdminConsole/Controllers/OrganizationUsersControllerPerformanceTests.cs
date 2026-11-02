@@ -218,7 +218,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
     }
 
     /// <summary>
-    /// Tests POST /organizations/{orgId}/users/remove
+    /// Tests DELETE /organizations/{orgId}/users
     /// </summary>
     [Theory(Skip = "Performance test")]
     [InlineData(10)]
@@ -359,7 +359,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
     }
 
     /// <summary>
-    /// Tests POST /organizations/{orgId}/users/delete-account
+    /// Tests DELETE /organizations/{orgId}/users/delete-account
     /// </summary>
     [Theory(Skip = "Performance test")]
     [InlineData(10)]

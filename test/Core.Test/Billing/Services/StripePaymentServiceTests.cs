@@ -1371,10 +1371,9 @@ public class StripePaymentServiceTests
         SutProvider<StripePaymentService> sutProvider,
         User subscriber)
     {
-        // Arrange — SchedulePersonalPriceIncrease (Premium and Families price increases) calls
-        // CreateAndConfigureScheduleAsync with no phaseMetadata argument at all, so the schedules it
-        // creates carry no phase metadata whatsoever. This is the exact shape PriceIncreaseScheduler
-        // produces for a personal or Families price-increase schedule. It must still be repriced here;
+        // Arrange — Premium and Families price-increase schedules created before the managing_system
+        // marker existed carry no metadata at all: no schedule-level marker and no phase metadata.
+        // This is the exact shape those legacy schedules have. It must still be repriced here;
         // this is the regression guard for the bug where the ownership gate was inverted and every
         // Premium/Families price-increase schedule (classified Foreign, since it carries no
         // migration-cohort metadata) silently stopped being repriced on this endpoint.

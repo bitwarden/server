@@ -34,15 +34,40 @@ CREATE TABLE [dbo].[AccessAuditEvent] (
 );
 GO
 
--- Subject and rotation ids have no foreign keys, so an event outlives what it references. [CorrelationId] has no
--- default, here or in EF, so a forgotten id fails instead of reading back as a lone in-doubt half.
-
--- [Id] breaks ties within an [OccurredDate], so a page can resume between an action's two halves. The INCLUDE lets
--- the collapse and the filters test candidates inside the index; EF has no equivalent.
+-- Subject and rotation ids are deliberately not foreign keyed, so an event outlives a delete or rename of what it
+-- references. Every stored name is plaintext: the subject cipher and collection are recorded by id only, so no vault
+-- data lands here.
+--
+-- [CorrelationId] deliberately has no default, here and on the three EF providers. An action's Attempt and Outcome
+-- must share one id for the read to collapse them, so the caller mints one per action; a DEFAULT NEWID() would let a
+-- forgotten id become a fresh one that correlates with nothing, which reads back as a lone in-doubt half rather than
+-- as an error.
+--
+-- [Id] is the third key column because [OccurredDate] is not unique: an action's Attempt and Outcome share a
+-- timestamp, and a page boundary landing among them cannot be resumed without a tiebreaker. The INCLUDE covers the
+-- collapse and the page read's filters, so a filtered page tests each candidate inside the index instead of opening
+-- the row, and AccessAuditEvent_ReadItemsByOrganizationId finds the subjects in range here. The INCLUDE has no EF
+-- equivalent to mirror onto the other three databases.
 CREATE NONCLUSTERED INDEX [IX_AccessAuditEvent_OrganizationId_OccurredDate_Id]
     ON [dbo].[AccessAuditEvent] ([OrganizationId] ASC, [OccurredDate] DESC, [Id] DESC)
     INCLUDE ([CorrelationId], [Phase], [CipherId], [CollectionId], [AccessRuleId], [RuleName],
         [Kind], [ActorId], [RequesterId]);
+GO
+
+-- One per subject column, so AccessAuditEvent_ReadItemsByOrganizationId reaches a subject's most recent event in
+-- range with one seek. Filtered to the events that name the subject: most name a cipher, few name a rule.
+-- Each INCLUDE is the one column the procedure reads from that seek: return another column per subject and it
+-- must be added here too, or every subject costs a key lookup.
+CREATE NONCLUSTERED INDEX [IX_AccessAuditEvent_OrganizationId_CipherId_OccurredDate_Id]
+    ON [dbo].[AccessAuditEvent] ([OrganizationId] ASC, [CipherId] ASC, [OccurredDate] DESC, [Id] DESC)
+    INCLUDE ([CollectionId])
+    WHERE [CipherId] IS NOT NULL;
+GO
+
+CREATE NONCLUSTERED INDEX [IX_AccessAuditEvent_OrganizationId_AccessRuleId_OccurredDate_Id]
+    ON [dbo].[AccessAuditEvent] ([OrganizationId] ASC, [AccessRuleId] ASC, [OccurredDate] DESC, [Id] DESC)
+    INCLUDE ([RuleName])
+    WHERE [AccessRuleId] IS NOT NULL;
 GO
 
 CREATE NONCLUSTERED INDEX [IX_AccessAuditEvent_CorrelationId]
