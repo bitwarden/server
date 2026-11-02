@@ -86,6 +86,17 @@ public class GetOrganizationRestartQuery(IPricingClient pricingClient) : IGetOrg
             }
         }
 
+        // Privileged Controls
+        var privilegedControlsItem = oldPlan.PrivilegedControls != null
+            ? canceledSubscription.Items.FirstOrDefault(item =>
+                item.Price.Id == oldPlan.PrivilegedControls.StripeSeatPlanId)
+            : null;
+
+        if (newPlan.PrivilegedControls != null && privilegedControlsItem != null)
+        {
+            items.Add(new OrganizationRestartItem(newPlan.PrivilegedControls.StripeSeatPlanId, privilegedControlsItem.Quantity));
+        }
+
         return new OrganizationRestart(newPlan, items);
     }
 }
