@@ -572,6 +572,17 @@
           "minimum": 0,
           "default": 14,
           "description": "Days before today the policy was enabled. Collections are dated then; items migrate between then and now."
+        },
+        "sizing": {
+          "type": "string",
+          "enum": ["sampled", "quantile"],
+          "default": "sampled",
+          "description": "How non-largest sizes come from the sizes histogram. sampled draws random log-uniform values inside each bucket, so totals vary with the seed. quantile takes each bucket's mid-quantiles, so the sizes and totals are the same for every seed; the seed only decides which members get which size."
+        },
+        "targetActiveItems": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Exact total of active items across all default collections. The drawn sizes are scaled to reach it; largest entries are kept as given. The run fails if the target is outside the range the non-empty count and the largest bucket max can reach."
         }
       }
     },

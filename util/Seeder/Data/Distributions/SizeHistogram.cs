@@ -3,7 +3,8 @@
 /// <summary>
 /// Draws long-tailed integer sizes from an empirical histogram of [Min, Max] buckets.
 /// Bucket counts are exact (largest-remainder, via <see cref="Distribution{T}"/>); values within a
-/// bucket are log-uniform so wide buckets keep their tail shape. Deterministic for a given <see cref="Random"/>.
+/// bucket are log-uniform so wide buckets keep their tail shape. <see cref="Draw"/> is deterministic for a given
+/// <see cref="Random"/>; <see cref="Quantiles"/> takes none.
 /// </summary>
 internal sealed class SizeHistogram
 {
@@ -47,7 +48,8 @@ internal sealed class SizeHistogram
         {
             for (var i = 0; i < bucketCount; i++)
             {
-                sizes.Add(LogUniform(min, max, random));
+                // A single-value bucket consumes no random number, so a seed keeps the stream it always had.
+                sizes.Add(min == max ? min : LogUniform(min, max, random.NextDouble()));
             }
         }
 
@@ -56,16 +58,32 @@ internal sealed class SizeHistogram
         return result;
     }
 
-    private static int LogUniform(int min, int max, Random random)
+    /// <summary>
+    /// Returns <paramref name="count"/> sizes, the mid-quantiles <c>(i + 0.5) / k</c> of each bucket's log-uniform
+    /// curve for its <c>k</c> exact draws, in bucket order. The same for every call, so callers shuffle.
+    /// </summary>
+    internal int[] Quantiles(int count)
     {
-        if (min == max)
+        var sizes = new List<int>(count);
+        foreach (var ((min, max), bucketCount) in _distribution.GetCounts(count))
         {
-            return min;
+            for (var i = 0; i < bucketCount; i++)
+            {
+                sizes.Add(LogUniform(min, max, (i + 0.5) / bucketCount));
+            }
         }
 
+        return sizes.ToArray();
+    }
+
+    /// <summary>
+    /// Maps <paramref name="u"/> in [0, 1) onto [<paramref name="min"/>, <paramref name="max"/>], log-uniformly.
+    /// </summary>
+    private static int LogUniform(int min, int max, double u)
+    {
         var lo = Math.Log(min + 1);
         var hi = Math.Log(max + 2);
-        var value = (int)Math.Exp(lo + random.NextDouble() * (hi - lo)) - 1;
+        var value = (int)Math.Exp(lo + u * (hi - lo)) - 1;
         return Math.Clamp(value, min, max);
     }
 
