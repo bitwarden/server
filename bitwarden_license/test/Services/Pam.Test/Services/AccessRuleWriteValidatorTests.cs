@@ -334,7 +334,10 @@ public class AccessRuleWriteValidatorTests
         Assert.Equal([collection.Id], result);
     }
 
-    /// <summary>Arranges a rule that passes every check, so each test sets up only the one it exercises.</summary>
+    /// <summary>
+    /// Sets up a rule that passes the field-level checks, with the conditions validator and the sibling lookup
+    /// stubbed to succeed, so each test only has to arrange the check it is exercising.
+    /// </summary>
     private static SutProvider<AccessRuleWriteValidator> SetupSutProvider(AccessRule rule)
     {
         var sutProvider = new SutProvider<AccessRuleWriteValidator>().Create();

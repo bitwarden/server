@@ -14,17 +14,23 @@ public sealed record GoverningRule(
     bool RequiresHumanApproval,
     IReadOnlyList<AccessCondition> Conditions)
 {
-    /// <summary>The resolved rule's id, pinned on a request at submit so later operations use the same rule.</summary>
+    /// <summary>
+    /// The identity of the resolved access rule. Resolution is deterministic (oldest rule wins; see
+    /// <see cref="Services.IGoverningRuleResolver"/>), so this is the rule that a request should pin at submit once
+    /// pinning is persisted. Until then it is re-resolved on every operation and can drift if the governing rules
+    /// change between submit and a later read.
+    /// </summary>
     public Guid RuleId { get; init; }
 
     /// <summary>
-    /// When true, a lease under this rule can be extended once, approved automatically, by up to
-    /// <see cref="MaxExtensionDurationSeconds"/>.
+    /// When true, a member holding an active lease under this rule may extend it once (always auto-approved), by up
+    /// to <see cref="MaxExtensionDurationSeconds"/>.
     /// </summary>
     public bool AllowsExtensions { get; init; }
 
     /// <summary>
-    /// The longest single extension in seconds; meaningful only when <see cref="AllowsExtensions"/> is true.
+    /// The longest a single extension under this rule may run, in seconds; meaningful only when
+    /// <see cref="AllowsExtensions"/> is true.
     /// </summary>
     public int? MaxExtensionDurationSeconds { get; init; }
 
@@ -40,6 +46,9 @@ public sealed record GoverningRule(
     /// </summary>
     public int? MaxLeaseDurationSeconds { get; init; }
 
+    /// <summary>
+    /// The rule's conditions minus its human-approval gate.
+    /// </summary>
     public IReadOnlyList<AccessCondition> AutomatedConditions =>
         Conditions.Where(condition => condition is not HumanApprovalCondition).ToList();
 

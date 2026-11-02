@@ -24,6 +24,7 @@ public class SingleActiveLeaseEvaluator : ISingleActiveLeaseEvaluator
         var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, cipherId);
         if (collectionCiphers.Count == 0)
         {
+            // No reachable collection: there is no path, so the constraint does not bind.
             return false;
         }
 
@@ -53,6 +54,7 @@ public class SingleActiveLeaseEvaluator : ISingleActiveLeaseEvaluator
             }
         }
 
+        // Every path is governed by a singleton rule: the constraint binds.
         return true;
     }
 }

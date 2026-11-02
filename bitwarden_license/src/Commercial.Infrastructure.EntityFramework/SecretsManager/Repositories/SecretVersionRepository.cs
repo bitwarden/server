@@ -8,6 +8,13 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Commercial.Infrastructure.EntityFramework.SecretsManager.Repositories;
 
+/// <summary>
+/// Read access to a secret's version history.
+/// </summary>
+/// <remarks>
+/// Versions are written only via <see cref="ISecretRepository"/>, inside the owning secret's
+/// transaction — see <c>SecretVersionWriter.AddWithPruningAsync</c> for the retention cap.
+/// </remarks>
 public class SecretVersionRepository : Repository<Core.SecretsManager.Entities.SecretVersion, SecretVersion, Guid>, ISecretVersionRepository
 {
     public SecretVersionRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)

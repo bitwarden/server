@@ -9,7 +9,7 @@ public class AccessRuleEngineTests
 {
     private readonly AccessRuleEngine _sut = new();
 
-    // No case here has a time-of-day condition, so the instant only has to be deterministic.
+    // Fixed instant: none of these cases carry a time-of-day condition, so the value only has to be deterministic.
     private static AccessSignals Signals() => new()
     {
         IpAddress = IPAddress.Parse("10.1.2.3"),
@@ -19,13 +19,15 @@ public class AccessRuleEngineTests
     [Fact]
     public void Evaluate_NoConditions_Allows()
     {
-        // A rule with no conditions auto-grants, while the access still flows through PAM for auditing.
+        // A rule with no conditions is vacuously satisfied: access is auto-granted while still flowing through
+        // PAM for audit logging.
         Assert.Equal(AccessEvaluationOutcome.Allow, _sut.Evaluate([], Signals()).Outcome);
     }
 
     [Fact]
     public void Evaluate_DefersToEachConditionsOwnResult()
     {
+        // The engine does not decide anything itself; it returns what the condition's Evaluate reports.
         Assert.Equal(AccessEvaluationOutcome.RequiresApproval,
             _sut.Evaluate([new StubCondition(AccessEvaluation.RequiresApproval)], Signals()).Outcome);
     }

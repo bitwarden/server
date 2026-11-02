@@ -6,7 +6,11 @@ using Bit.Services.Pam.Models;
 
 namespace Bit.Services.Pam.Services;
 
-/// <summary>Validation shared by the access rule create and update paths.</summary>
+/// <summary>
+/// The shared validation for the AccessRule create and update paths. Create and update differ only in whether the
+/// rule already exists, which both the name-uniqueness and collection-conflict checks express by comparing against
+/// <c>existingRuleId</c> — null for a create, so nothing is excluded from either check.
+/// </summary>
 public class AccessRuleWriteValidator : IAccessRuleWriteValidator
 {
     private readonly IAccessRuleRepository _repository;
@@ -53,8 +57,9 @@ public class AccessRuleWriteValidator : IAccessRuleWriteValidator
             throw new BadRequestException("The default lease duration cannot exceed the maximum lease duration.");
         }
 
-        // Refused on write rather than clamped on read, or the admin console would echo a value EffectiveMax ignores.
-        // Bounds each value, not a lease's total length once extended.
+        // Refused where it is written, not narrowed on every read: stored unchecked, an over-ceiling value is
+        // echoed back to the admin console verbatim while EffectiveMax quietly clamps it. Bounds each configured
+        // value, not the cumulative length of a repeatedly extended lease.
         if (rule.DefaultLeaseDurationSeconds is > LeaseDurationBounds.GlobalMaxSeconds
             || rule.MaxLeaseDurationSeconds is > LeaseDurationBounds.GlobalMaxSeconds
             || rule.MaxExtensionDurationSeconds is > LeaseDurationBounds.GlobalMaxSeconds)

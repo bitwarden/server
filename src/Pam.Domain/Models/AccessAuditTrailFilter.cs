@@ -3,8 +3,9 @@
 namespace Bit.Pam.Models;
 
 /// <summary>
-/// What one page of the PAM access-audit trail is narrowed to. An unset dimension matches everything; the
-/// organization is the resource being read, not a filter.
+/// What one page of the PAM access-audit trail is narrowed to. Every dimension is independent, and an unset one
+/// matches everything. The organization is not here: it is the resource being read, not a filter, and it is what the
+/// endpoint authorized.
 /// </summary>
 public class AccessAuditTrailFilter
 {
@@ -21,8 +22,9 @@ public class AccessAuditTrailFilter
     public IReadOnlyCollection<Guid> ActorIds { get; init; } = [];
 
     /// <summary>
-    /// Keeps events with no actor, which have no id to select by. Unions with <see cref="ActorIds"/> rather than
-    /// narrowing it.
+    /// Whether to keep events with no actor: the automatic ones, which have no id to select by. Unions with
+    /// <see cref="ActorIds"/> rather than narrowing it, because an auditor following one approver and the automatic
+    /// decisions alongside them is asking for both sets.
     /// </summary>
     public bool IncludeAutomatedActor { get; init; }
 
@@ -31,7 +33,9 @@ public class AccessAuditTrailFilter
     public IReadOnlyCollection<Guid> CipherIds { get; init; } = [];
 
     /// <summary>
-    /// Unions with <c>CipherIds</c> rather than narrowing it, since the two lists are halves of one Item selection.
+    /// Two lists rather than one, because a rule and a cipher are different columns and an id matched against the
+    /// wrong one would silently match nothing. They union with each other rather than narrowing, the one place two
+    /// dimensions here are OR-ed, because they are the two halves of a single Item selection.
     /// </summary>
     public IReadOnlyCollection<Guid> RuleIds { get; init; } = [];
 

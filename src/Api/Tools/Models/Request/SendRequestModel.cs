@@ -157,6 +157,9 @@ public class SendRequestModel
     public Send UpdateSend(Send existingSend, ISendAuthorizationService sendAuthorizationService)
     {
         existingSend = ToSendBase(existingSend, sendAuthorizationService);
+        // We can switch off of the existing Send's Type because in the create case
+        // (ToSend, above) this is set to the value from the request and in the update
+        // case we prevent changing it from the existing Type via a controller check
         switch (existingSend.Type)
         {
             case SendType.File:

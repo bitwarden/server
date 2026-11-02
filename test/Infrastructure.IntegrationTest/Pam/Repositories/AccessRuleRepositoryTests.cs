@@ -90,7 +90,8 @@ public class AccessRuleRepositoryTests
         // Act
         await accessRuleRepository.DeleteAsync(rule);
 
-        // Assert: detached rather than deleted, since the request records what was granted.
+        // Assert: the rule is gone and the request survives, detached rather than deleted -- its window and
+        // decision log remain the record of what was granted.
         Assert.Null(await accessRuleRepository.GetByIdAsync(rule.Id));
 
         var persisted = await accessRequestRepository.GetByIdAsync(request.Id);
@@ -100,8 +101,10 @@ public class AccessRuleRepositoryTests
     }
 
     /// <summary>
-    /// Organization cascades to AccessRequest and AccessLease, which reference each other under RESTRICT, so the
-    /// delete must not depend on which cascade a provider fires first.
+    /// Organization cascades to both AccessRequest and AccessLease, while the two reference each other under
+    /// RESTRICT (AccessRequest.ExtensionOfLeaseId and AccessLease.AccessRequestId) and requests additionally pin a
+    /// rule. Whichever cascade a provider fires first is blocked by the other, so this pins that deleting an
+    /// organization holding an extended lease succeeds everywhere rather than depending on cascade order.
     /// </summary>
     [DatabaseTheory, DatabaseData]
     public async Task OrganizationDeleteAsync_WithExtendedLease_Succeeds(
@@ -179,7 +182,7 @@ public class AccessRuleRepositoryTests
         // Act
         await organizationRepository.DeleteAsync(organization);
 
-        // Assert
+        // Assert: the organization and every PAM row hanging off it is gone.
         Assert.Null(await organizationRepository.GetByIdAsync(organization.Id));
         Assert.Null(await accessRuleRepository.GetByIdAsync(rule.Id));
         Assert.Null(await accessLeaseRepository.GetByIdAsync(lease.Id));

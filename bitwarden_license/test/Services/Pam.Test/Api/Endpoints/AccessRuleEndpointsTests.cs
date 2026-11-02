@@ -26,7 +26,9 @@ public class AccessRuleEndpointsTests
     private static List<RouteEndpoint> MaterializeEndpoints()
     {
         var builder = WebApplication.CreateSlimBuilder();
-        // Unregistered handlers would bind as a request body.
+        // The handlers must be known services so Minimal API binding treats the handler parameter as injected
+        // (not an inferred request body) — the same registration AddPamServices performs in the app.
+        // MapPamEndpoints maps every PAM group, so each group's handler has to be resolvable here.
         builder.Services.AddScoped<LeaseEndpointsHandler>();
         builder.Services.AddScoped<AccessRequestEndpointsHandler>();
         builder.Services.AddScoped<AccessRuleEndpointsHandler>();
@@ -41,7 +43,8 @@ public class AccessRuleEndpointsTests
         var app = builder.Build();
         app.MapPamEndpoints();
 
-        // Builds the endpoints without starting the request pipeline.
+        // Enumerating the data sources builds the endpoints — applying the route group's prefix, metadata, and
+        // conventions — without starting the request pipeline, the same set the OpenAPI generator discovers.
         return ((IEndpointRouteBuilder)app).DataSources
             .SelectMany(dataSource => dataSource.Endpoints)
             .OfType<RouteEndpoint>()
@@ -109,10 +112,12 @@ public class AccessRuleEndpointsTests
     [InlineData("Pam_AccessRules_Post", typeof(ManageAccessRulesRequirement))]
     [InlineData("Pam_AccessRules_Put", typeof(ManageAccessRulesRequirement))]
     [InlineData("Pam_AccessRules_Delete", typeof(ManageAccessRulesRequirement))]
-    // Restricted to rule managers, since it names credentials a rule fails to protect.
+    // Diagnostic and admin-only, since it names credentials a rule is failing to protect.
     [InlineData("Pam_AccessRules_GetBypassableCiphers", typeof(ManageAccessRulesRequirement))]
     public void MapPamEndpoints_AuthorizesRouteWithRequirement(string name, Type requirementType)
     {
+        // Reads require membership; writes require authority over rule authorship. The requirements are carried as
+        // endpoint metadata, which AuthorizationMiddleware combines with the group's Policies.Application.
         var endpoint = Assert.Single(
             MaterializeEndpoints(),
             e => e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == name);
@@ -149,7 +154,8 @@ public class AccessRuleEndpointsTests
     [Fact]
     public void MapPamEndpoints_AccessRulesNeverAuthorizeProvidersByMembership()
     {
-        // Access rules gate who can lease credentials, which is not a provider's to read or change.
+        // Access rules gate who can lease credentials out of an organization, which is not a provider's to read or
+        // change. MemberOrProviderRequirement would let them in, so no access-rule route may carry it.
         var endpoints = MaterializeEndpoints()
             .Where(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("AccessRules"))
             .ToList();

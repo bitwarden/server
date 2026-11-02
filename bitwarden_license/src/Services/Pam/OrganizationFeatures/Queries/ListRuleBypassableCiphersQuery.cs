@@ -43,8 +43,9 @@ public class ListRuleBypassableCiphersQuery : IListRuleBypassableCiphersQuery
 
         return collectionCiphers
             .GroupBy(cc => cc.CipherId)
+            // Reachable through at least one collection the rule governs…
             .Where(g => g.Any(cc => ruleCollectionIds.Contains(cc.CollectionId)))
-            // Gated is judged against every gating collection in the organization, not only this rule's.
+            // …but not gated, judged against every gating collection in the organization.
             .Where(g => !g.All(cc => gatingCollectionIds.Contains(cc.CollectionId)))
             .SelectMany(g => g.Where(cc => !gatingCollectionIds.Contains(cc.CollectionId)))
             .Select(cc => cc.CollectionId)

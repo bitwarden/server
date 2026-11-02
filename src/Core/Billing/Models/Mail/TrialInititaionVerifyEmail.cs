@@ -50,8 +50,8 @@ public class TrialInitiationVerifyEmail : RegisterVerifyEmail
     public bool PaymentOptional { get; set; }
 
     /// <summary>
-    /// Currently we only support one product type at a time, despite Product being a collection.
-    /// If we receive both PasswordManager and SecretsManager, we'll send the user to the PM trial route
+    /// Selects the sign-up route from the trial's products. Supported combinations are Password Manager,
+    /// Password Manager + Secrets Manager, and Password Manager + Privileged Controls.
     /// </summary>
     private string Route
     {

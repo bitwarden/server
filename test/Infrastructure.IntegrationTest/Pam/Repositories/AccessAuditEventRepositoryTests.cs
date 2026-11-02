@@ -11,7 +11,8 @@ namespace Bit.Infrastructure.IntegrationTest.Pam.Repositories;
 
 public class AccessAuditEventRepositoryTests
 {
-    // The store is append-only, so both halves persist and the read collapses them.
+    // Two rows are written, because the store is append-only and nothing is overwritten, and the read collapses
+    // them to the Outcome.
     [DatabaseTheory, DatabaseData]
     public async Task Create_ThenRead_CollapsesTheBeforeAfterPairToItsOutcome(
         IOrganizationRepository organizationRepository,
@@ -38,7 +39,7 @@ public class AccessAuditEventRepositoryTests
         Assert.Equal("looks good", row.Detail);
     }
 
-    // The collapse must not mistake this for an Outcome on the next page.
+    // The case the collapse must not confuse with "the Outcome is on the next page".
     [DatabaseTheory, DatabaseData]
     public async Task Read_AnActionWithNoOutcome_ComesBackAsItsAttempt(
         IOrganizationRepository organizationRepository,
@@ -59,7 +60,7 @@ public class AccessAuditEventRepositoryTests
         Assert.Equal(AccessAuditEventPhase.Attempt, row.Phase);
     }
 
-    // The collapse runs before the page is cut.
+    // The collapse happens before the page is cut, so a pair split by a boundary still reads as one row.
     [DatabaseTheory, DatabaseData]
     public async Task Read_APairSpanningAPageBoundary_StillCollapsesToOneRow(
         IOrganizationRepository organizationRepository,
@@ -89,7 +90,8 @@ public class AccessAuditEventRepositoryTests
         Assert.Equal([second, first], events.Select(e => e.AccessRequestId!.Value)); // newest first
     }
 
-    // Ties are ordinary, since an action's two halves are written at the same instant.
+    // Events sharing one instant are ordinary here, since an action's two halves are written at the same instant,
+    // so a boundary landing inside such a group must neither drop nor repeat any of them.
     [DatabaseTheory, DatabaseData]
     public async Task Read_EventsSharingAnInstant_ArePagedWithoutSkippingOrRepeating(
         IOrganizationRepository organizationRepository,
@@ -115,7 +117,8 @@ public class AccessAuditEventRepositoryTests
         Assert.Equal(requestIds.Order(), returned.Order());
     }
 
-    // An append between pages would shift an offset window and re-serve a row; a cursor anchored to a row does not.
+    // An event written between two page requests shifts an offset window down by one and re-serves a row. A cursor
+    // is anchored to a row instead of a position, so the new event falls outside the page.
     [DatabaseTheory, DatabaseData]
     public async Task Read_EventAppendedBetweenPages_DoesNotReserveRows(
         IOrganizationRepository organizationRepository,
@@ -125,7 +128,7 @@ public class AccessAuditEventRepositoryTests
         var now = DateTime.UtcNow;
         var requestIds = new List<Guid>();
 
-        // Distinct timestamps, so the only thing under test is the cursor.
+        // Distinct, descending timestamps, so the ordering is unambiguous and the only thing under test is the cursor.
         for (var i = 0; i < 4; i++)
         {
             var requestId = Guid.NewGuid();
@@ -133,7 +136,7 @@ public class AccessAuditEventRepositoryTests
             await CreateAtAsync(accessAuditEventRepository, organization.Id, now.AddMinutes(-i), requestId);
         }
 
-        // Until reaches past the appended event, so only the cursor keeps it off the second page.
+        // Reaches past the event appended below, so the cursor is the only thing keeping it off the second page.
         var since = now.AddDays(-1);
         var until = now.AddMinutes(5);
 
@@ -141,6 +144,7 @@ public class AccessAuditEventRepositoryTests
             organization.Id, new AccessAuditTrailFilter { Since = since, Until = until, PageSize = 2 });
         var firstPageIds = firstPage.Select(e => e.AccessRequestId!.Value).ToList();
 
+        // A PAM action emits while the caller is between pages.
         var appendedId = Guid.NewGuid();
         await CreateAtAsync(accessAuditEventRepository, organization.Id, now.AddMinutes(1), appendedId);
 
@@ -233,8 +237,8 @@ public class AccessAuditEventRepositoryTests
         Assert.Equal(3, events.Count);
     }
 
-    // A refused activation pairs a LeaseActivated Attempt with a LeaseActivationRejected Outcome, so filtering before
-    // the collapse would list it as activated.
+    // A refused activation writes its Attempt as LeaseActivated and its Outcome as LeaseActivationRejected, so
+    // filtering before the collapse would answer "activated" with an action that was refused.
     [DatabaseTheory, DatabaseData]
     public async Task Read_FiltersByKind_OnTheCollapsedRowRatherThanEitherHalf(
         IOrganizationRepository organizationRepository,
@@ -289,7 +293,7 @@ public class AccessAuditEventRepositoryTests
         Assert.DoesNotContain(events, e => e.AccessRequestId == approved);
     }
 
-    // The automatic bucket has no actor id of its own, hence the separate flag.
+    // An actor selection unions the chosen identities with the automatic bucket, which has no id of its own.
     [DatabaseTheory, DatabaseData]
     public async Task Read_FiltersByActor_AndUnionsTheAutomaticBucket(
         IOrganizationRepository organizationRepository,
@@ -345,11 +349,12 @@ public class AccessAuditEventRepositoryTests
             requesterIds: [requesterId], cipherIds: [cipherId]);
 
         Assert.DoesNotContain(byRequester, e => e.AccessRequestId == wrongRequester);
-        // Dimensions are AND-ed.
+        // Dimensions are AND-ed, so naming both narrows to the row satisfying each.
         Assert.Equal([wanted], byBoth.Select(e => e.AccessRequestId!.Value));
     }
 
-    // Unlike other dimensions, the two Item columns union, since a rule-administration event names no cipher.
+    // The two Item columns union where every other pair of dimensions intersects: a rule-administration event names
+    // a rule and no cipher.
     [DatabaseTheory, DatabaseData]
     public async Task Read_FiltersByItem_UnioningCiphersWithRules(
         IOrganizationRepository organizationRepository,
@@ -380,7 +385,7 @@ public class AccessAuditEventRepositoryTests
         Assert.DoesNotContain(byEither, e => e.AccessRequestId == onNeither);
     }
 
-    // The rotation columns are orthogonal to Kind, so any kind can carry them.
+    // The rotation columns are orthogonal to Kind; the rotation event kinds arrive with the rotation feature.
     [DatabaseTheory, DatabaseData]
     public async Task Create_ThenRead_RoundTripsRotationContext(
         IOrganizationRepository organizationRepository,
@@ -419,6 +424,7 @@ public class AccessAuditEventRepositoryTests
         Assert.Equal(PamRotationSyncState.TargetUpdated, stored.SyncState);
     }
 
+    // The Item filter's menu: one row per subject the trail names in range, however many events name it.
     [DatabaseTheory, DatabaseData]
     public async Task ReadItems_ReturnsOneRowPerSubjectTheTrailNames(
         IOrganizationRepository organizationRepository,
@@ -430,7 +436,7 @@ public class AccessAuditEventRepositoryTests
         var collectionId = Guid.NewGuid();
         var ruleId = Guid.NewGuid();
 
-        // The same cipher twice, so a duplicate would show as two Item filter options.
+        // The same cipher twice, so a duplicate would show up as two menu options for one item.
         await accessAuditEventRepository.CreateAsync(
             BuildEvent(organization.Id, AccessAuditEventKind.LeaseActivated, AccessAuditEventPhase.Outcome, now.AddMinutes(-5))
                 with
@@ -454,7 +460,8 @@ public class AccessAuditEventRepositoryTests
         Assert.Null(rule.CipherId);
     }
 
-    // Names are snapshotted per event, so a renamed rule has several; the menu labels it with the latest.
+    // The rule's name is snapshotted per event, so a renamed rule has several. The menu takes the most recent one, or
+    // it would offer an option labelled differently from the rows it selects.
     [DatabaseTheory, DatabaseData]
     public async Task ReadItems_TakesARenamedRulesMostRecentName(
         IOrganizationRepository organizationRepository,
@@ -532,7 +539,7 @@ public class AccessAuditEventRepositoryTests
         Assert.DoesNotContain(items, item => item.CipherId == hiddenCipherId);
     }
 
-    // A read-time join would return NULL here.
+    // Delete the rule the event names; a read-time join would return NULL here.
     [DatabaseTheory, DatabaseData]
     public async Task Read_SnapshotName_SurvivesEntityDeletion(
         IOrganizationRepository organizationRepository,
@@ -600,7 +607,10 @@ public class AccessAuditEventRepositoryTests
         Assert.DoesNotContain(events, e => e.RuleName == "renamed");
     }
 
-    /// <summary>Walks every page as a caller does, so whole-trail assertions exercise the resume position.</summary>
+    /// <summary>
+    /// Walks every page the way a caller does, so a test asserting on the whole trail also exercises the resume
+    /// position. <paramref name="pageSize"/> is deliberately small in the paging tests, to force boundaries.
+    /// </summary>
     private static async Task<List<AccessAuditEvent>> ReadAllAsync(
         IAccessAuditEventRepository repository,
         Guid organizationId,

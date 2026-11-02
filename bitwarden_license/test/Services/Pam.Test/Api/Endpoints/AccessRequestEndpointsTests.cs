@@ -15,14 +15,17 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Api.Endpoints;
 
 /// <summary>
-/// Locks the access-request wire contract (routes, names, methods, return types) the OpenAPI spec depends on.
+/// Locks the access-request wire contract (routes, names, methods, return types) that the generated OpenAPI spec
+/// and client bindings depend on, by reading the built <see cref="EndpointDataSource"/>.
 /// </summary>
 public class AccessRequestEndpointsTests
 {
     private static List<RouteEndpoint> MaterializeEndpoints()
     {
         var builder = WebApplication.CreateSlimBuilder();
-        // Unregistered handlers would bind as a request body.
+        // The handlers must be known services so Minimal API binding treats the handler parameter as injected
+        // (not an inferred request body) — the same registration AddPamServices performs in the app.
+        // MapPamEndpoints maps every PAM group, so each group's handler has to be resolvable here.
         builder.Services.AddScoped<LeaseEndpointsHandler>();
         builder.Services.AddScoped<AccessRequestEndpointsHandler>();
         builder.Services.AddScoped<AccessRuleEndpointsHandler>();
@@ -37,7 +40,8 @@ public class AccessRequestEndpointsTests
         var app = builder.Build();
         app.MapPamEndpoints();
 
-        // Builds the endpoints without starting the request pipeline.
+        // Enumerating the data sources builds the endpoints — applying the route group's prefix, metadata, and
+        // conventions — without starting the request pipeline, the same set the OpenAPI generator discovers.
         return ((IEndpointRouteBuilder)app).DataSources
             .SelectMany(dataSource => dataSource.Endpoints)
             .OfType<RouteEndpoint>()

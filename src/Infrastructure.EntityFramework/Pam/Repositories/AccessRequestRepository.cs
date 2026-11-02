@@ -28,7 +28,8 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
-        // ExtensionOfLeaseId stays null; an original request's lease points back via AccessLease.AccessRequestId.
+        // The request is created already resolved (Approved). ExtensionOfLeaseId stays NULL: it is reserved for
+        // extension requests; provenance for an original lease flows the other way, via AccessLease.AccessRequestId.
         var requestEntity = Mapper.Map<EfModel>(request);
         requestEntity.ExtensionOfLeaseId = null;
         requestEntity.Action = AccessRequestAction.Approved;
@@ -55,7 +56,8 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // A lapsed open request is derived Expired, so it does not block a fresh submission.
+        // Open (no action recorded) and still answerable: a lapsed unanswered request is derived Expired, so it no
+        // longer blocks a fresh submission or props up a dead pending banner.
         var request = await dbContext.AccessRequests
             .Where(r => r.RequesterId == requesterId
                 && r.CipherId == cipherId
@@ -72,8 +74,9 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Includes future windows for the client to show. Excludes extensions, which never produce a lease of their
-        // own.
+        // Future windows are included (the client shows the upcoming window); lapsed windows are excluded so the
+        // client never offers an activation the server would reject. Extension requests are excluded: an approved
+        // extension pushes its parent lease's end out in place and never produces a lease of its own.
         var request = await dbContext.AccessRequests
             .Where(r => r.RequesterId == requesterId
                 && r.CipherId == cipherId
@@ -114,7 +117,8 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // The caller is the requester, so no requester identity is loaded.
+        // Caller-scoped self-read: cipher/collection/requester names are omitted since they come from the caller's
+        // own vault.
         var requests = await dbContext.AccessRequests
             .Where(r => r.RequesterId == requesterId
                 && (since == null
@@ -167,7 +171,8 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
 
         var usersById = await GetUsersByIdAsync(dbContext, requests.Select(r => r.RequesterId));
 
-        // An open request has no lease or decisions yet.
+        // No lease lookup and no decisions: an open request has never been activated (a lease is only ever minted
+        // from Approved) and carries no approvers yet.
         return requests
             .Select(request => ProjectDetails(request, lease: null, now, usersById))
             .ToList();
@@ -223,8 +228,9 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
 
         if (rowsAffected > 0)
         {
-            // The request id comes from the resolved request, not the caller's decision copy, as the procedure reuses
-            // @AccessRequestId for both writes.
+            // The verdict belongs to the request being resolved, so its request id is derived from that request
+            // rather than trusted from the caller's copy — matching the stored procedure, which reuses its single
+            // @AccessRequestId for both the guarded UPDATE and the decision insert.
             var decisionEntity = Mapper.Map<EfDecision>(decision);
             decisionEntity.AccessRequestId = request.Id;
             decisionEntity.DeciderKind = AccessDeciderKind.Human;
@@ -242,7 +248,7 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
     }
 
     /// <remarks>
-    /// Runs in a transaction so the claim's row lock holds across both statements.
+    /// Runs in a transaction so the claim's row lock holds across both statements, not just its own.
     /// </remarks>
     public async Task<bool> CancelAsync(Guid id, DateTime now)
     {
@@ -253,7 +259,8 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
 
         await ClaimRequestRowAsync(dbContext, id);
 
-        // No decision is written, since a cancellation is not an approver verdict.
+        // No AccessDecision is written -- a cancellation is the requester acting on their own request, not an
+        // approver verdict.
         var rowsAffected = await RetractableRequests(dbContext, id, now)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(r => r.Action, AccessRequestAction.Cancelled)
@@ -281,7 +288,8 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
 
         if (rowsAffected > 0)
         {
-            // Bound to the retracted request, not the caller's decision copy, as in ResolveWithDecisionAsync.
+            // As in ResolveWithDecisionAsync, the retraction's verdict is bound to the request being retracted
+            // rather than to whatever the caller's decision names.
             var decisionEntity = Mapper.Map<EfDecision>(decision);
             decisionEntity.AccessRequestId = request.Id;
             decisionEntity.DeciderKind = AccessDeciderKind.Human;
@@ -299,18 +307,30 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
     }
 
     /// <summary>
-    /// Locks the row with a no-op write (EF has no portable UPDLOCK), so a concurrent activation has either committed
-    /// its lease or waits. Call it inside a transaction, or the lock ends with the statement. Keep it separate from
-    /// the guard: a blocked PostgreSQL statement resumes with stale subqueries.
+    /// Takes the request row's write lock so a retraction's lease probe can't run before the row is held; both
+    /// retraction writes test lease existence via a subquery the provider could otherwise evaluate before touching
+    /// AccessRequest at all, letting a concurrent
+    /// <see cref="Bit.Infrastructure.EntityFramework.Pam.Repositories.AccessLeaseRepository.CreateFromApprovedRequestAsync"/>
+    /// mint and commit in the gap.
     /// </summary>
+    /// <remarks>
+    /// By the time the guarded update runs, activation either is still blocked behind this transaction (and then
+    /// fails its own CAS), or already committed and the probe sees the lease it minted. EF has no portable UPDLOCK
+    /// hint, so the lock is taken by writing the row (a no-op write); this must run inside a transaction.
+    ///
+    /// Must stay a separate statement, not folded into the guard: on PostgreSQL, a single statement that blocks on a
+    /// concurrently-updated row resumes under ReadCommitted with its subqueries still on the original snapshot, so
+    /// the guard would miss the lease that appeared alongside the row it re-reads.
+    /// </remarks>
     private static Task ClaimRequestRowAsync(DatabaseContext dbContext, Guid id)
         => dbContext.AccessRequests
             .Where(r => r.Id == id)
             .ExecuteUpdateAsync(s => s.SetProperty(r => r.Action, r => r.Action));
 
     /// <summary>
-    /// Shared by both cancel writes so their guard cannot drift. A request with a produced lease is revoked instead,
-    /// and a lapsed one is already derived Expired.
+    /// The requests a retraction may still settle: open or approved-unactivated, window not lapsed, no produced
+    /// lease. Excludes a request with a produced lease (revoke that instead) or a lapsed window (already
+    /// derived-Expired). Shared by both cancel writes so the guarded set can't drift between them.
     /// </summary>
     private static IQueryable<EfModel> RetractableRequests(DatabaseContext dbContext, Guid id, DateTime now)
         => dbContext.AccessRequests
@@ -331,8 +351,12 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Serializable replaces the procedure's per-lease UPDLOCK, HOLDLOCK, but a losing concurrent extension may
-        // fail at commit (e.g. PostgreSQL 40001) instead of returning AlreadyExtended; callers should treat that as a
+        // A Serializable transaction is the closest cross-provider approximation of the stored procedure's per-lease
+        // UPDLOCK/HOLDLOCK range lock: it keeps a concurrent extension of the same lease from reading a
+        // pre-extension state and double-committing. Unlike the SQL Server proc (which blocks a concurrent caller
+        // until this transaction commits, then re-evaluates deterministically), a losing concurrent transaction here
+        // may instead fail at commit time with a provider-level serialization error (e.g. Postgres 40001) rather
+        // than cleanly returning AlreadyExtended -- callers should be prepared to treat such an exception as a
         // conflict.
         await using var transaction = await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
@@ -346,7 +370,8 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
 
         if (lease is null)
         {
-            // Still recorded, as a denied request that counts toward the extension cap; its window never applies.
+            // Nothing left to extend, but still recorded as an answerable denied request; the requested window is
+            // stored though never applied to any lease.
             await WriteExtensionAsync(dbContext, request, decision, now,
                 AccessRequestAction.Denied, AccessDecisionVerdict.Deny, denialComment);
 
@@ -365,8 +390,9 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
             return AccessLeaseExtendOutcome.AlreadyExtended;
         }
 
-        // No new lease is minted, which keeps the single-active-lease invariant; the lease's end moves to the
-        // request's NotAfter.
+        // The request's window spans the extension ([old lease end] .. [new lease end]); its NotAfter is the
+        // lease's new end. No new lease is minted -- extending reuses the existing lease, preserving the
+        // single-active-lease invariant.
         await WriteExtensionAsync(dbContext, request, decision, now,
             AccessRequestAction.Approved, AccessDecisionVerdict.Approve, comment: null);
 
@@ -379,8 +405,9 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
     }
 
     /// <summary>
-    /// Stages the extension request and its automatic decision. The action and verdict are decided here, not taken
-    /// from the caller's entities.
+    /// Stages the extension request and its automatic decision for insert. The caller supplies one set of entities
+    /// for both outcomes; the recorded action (approved, or denied since the parent lease is gone) is decided here,
+    /// not trusted from the caller.
     /// </summary>
     private async Task WriteExtensionAsync(DatabaseContext dbContext, CoreEntity request, AccessDecision decision,
         DateTime now, AccessRequestAction action, AccessDecisionVerdict verdict, string? comment)
@@ -390,7 +417,8 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         requestEntity.CreationDate = now;
         requestEntity.ActionDate = now;
 
-        // The request id comes from the new request, not the caller's decision copy, as the procedure reuses
+        // The automatic decision belongs to the extension request being created, so its request id is derived from
+        // that request rather than trusted from the caller's copy — matching the stored procedure, which reuses its
         // @AccessRequestId for both inserts.
         var decisionEntity = Mapper.Map<EfDecision>(decision);
         decisionEntity.AccessRequestId = requestEntity.Id;
@@ -406,6 +434,10 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         await dbContext.AccessDecisions.AddAsync(decisionEntity);
     }
 
+    /// <summary>
+    /// Batch-loads the display name/email for a set of user ids (used to denormalize requester/approver identity),
+    /// keyed by user id.
+    /// </summary>
     private static async Task<Dictionary<Guid, (string? Name, string? Email)>> GetUsersByIdAsync(
         DatabaseContext dbContext, IEnumerable<Guid> userIds)
     {
@@ -433,7 +465,11 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         }
     }
 
-    /// <summary>Every read projects through here, so none can skip stamping the derived statuses.</summary>
+    /// <summary>
+    /// The one path from a raw EF row to the read model: maps scalars, stamps derived statuses, and attaches
+    /// identity/decisions. Every read funnels through here so a projection can't silently skip stamping.
+    /// Mirrors the Dapper side's DetailsRow.Derive.
+    /// </summary>
     private AccessRequestDetails ProjectDetails(EfModel request, EfLease? lease, DateTime now,
         Dictionary<Guid, (string? Name, string? Email)>? usersById = null,
         Dictionary<Guid, List<AccessRequestDecision>>? decisionsByRequest = null)
@@ -451,12 +487,19 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         return details;
     }
 
+    /// <summary>
+    /// Stamps the derived statuses onto a details projection at the repository boundary. The derivation itself (and
+    /// why the lease's <em>own</em> action/NotAfter feed it) lives in
+    /// <see cref="AccessRequestDetails.StampDerivedStatuses"/>, shared with the Dapper repository's row hydration.
+    /// </summary>
     private static void ApplyDerivedStatuses(AccessRequestDetails details, EfModel request, EfLease? lease, DateTime now)
         => details.StampDerivedStatuses(
             request.Action, lease is null ? null : (lease.Id, lease.Action, lease.NotAfter), now);
 
     /// <summary>
-    /// Loads each request's produced lease. A request produces at most one, so taking the latest is only a fallback.
+    /// Batch-loads the most recently created lease per request id (a request produces at most one lease, ever;
+    /// picking the latest mirrors the stored procedures' <c>OUTER APPLY ... ORDER BY CreationDate DESC</c> belt-and-braces
+    /// guard), keyed by AccessRequestId.
     /// </summary>
     private static async Task<Dictionary<Guid, EfLease>> GetLatestLeaseByRequestIdsAsync(
         DatabaseContext dbContext, IEnumerable<Guid> requestIds)

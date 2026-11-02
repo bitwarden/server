@@ -767,13 +767,9 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
     [Fact]
     public void ThumbprintPlaceholder_InDevelopment_DoesNotThrow()
     {
-        // In local development, developers often have a placeholder thumbprint like "____"
-        // in their config because no real cert exists on their machine. The previous
-        // implementation threw InvalidOperationException at startup whenever GetCertificate
-        // returned null, even in Development — making local development impossible with a
-        // thumbprint configured. The current implementation defers the null check to the
-        // non-development guard further down, so Development environments start up cleanly
-        // and data protection simply uses its ephemeral default storage.
+        // Development does not use certificate key wrapping, so certificate acquisition is
+        // skipped entirely. Placeholder thumbprints therefore do not prevent local startup,
+        // and data protection retains its existing Development persistence behavior.
         using var services = CreateApp(
             new Dictionary<string, string?>
             {

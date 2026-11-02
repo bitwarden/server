@@ -9,7 +9,10 @@ using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 
 namespace Bit.Services.Pam.Api.Endpoints.Handlers;
 
-/// <summary>Handler for the <c>leases</c> resource.</summary>
+/// <summary>
+/// Handler for the <c>leases</c> resource. The Minimal API endpoints (see <c>LeaseEndpoints</c>) resolve this
+/// handler from DI.
+/// </summary>
 public class LeaseEndpointsHandler(
     IUserService userService,
     TimeProvider timeProvider,

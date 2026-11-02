@@ -133,6 +133,7 @@ public class CreateAccessRuleCommandTests
             && e.AccessRuleId == rule.Id && e.RuleName == "Production database"));
     }
 
+    // A failure writing collection links leaves the attempt without an outcome.
     [Theory, BitAutoData]
     public async Task CreateAsync_CollectionLinkWriteFails_EmitsAttemptButNoOutcome(AccessRule rule)
     {

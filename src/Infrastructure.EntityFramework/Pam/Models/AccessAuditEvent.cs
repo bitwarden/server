@@ -7,8 +7,9 @@ using Bit.Pam.Enums;
 namespace Bit.Infrastructure.EntityFramework.Pam.Models;
 
 /// <summary>
-/// Derives from no domain entity, since the write payload and the read model differ in shape. There is no mapper
-/// profile; the repository maps both directions.
+/// Derives from no domain entity, because the write payload (<see cref="Bit.Pam.Models.AccessAuditEventData"/>) and
+/// the read model (<see cref="Bit.Pam.Models.AccessAuditEvent"/>) are deliberately different shapes and neither
+/// carries an <c>Id</c>. There is no mapper profile; the repository maps both directions explicitly.
 /// </summary>
 public class AccessAuditEvent
 {
@@ -19,7 +20,8 @@ public class AccessAuditEvent
     public AccessAuditEventPhase Phase { get; set; }
     public DateTime OccurredDate { get; set; }
 
-    // Not foreign keys, nor are the rotation ids below, so an audit event outlives what it references.
+    // Deliberately not foreign keys, and neither are the rotation ids below: an audit event outlives what it
+    // references.
     public Guid? ActorId { get; set; }
     public Guid? RequesterId { get; set; }
     public Guid? CollectionId { get; set; }

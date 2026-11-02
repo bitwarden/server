@@ -5,7 +5,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Latest-ending across all members, since the singleton guard blocks until the last live lease frees the slot.
+    -- Whether anyone holds this cipher's lease now, matching the singleton guard's scope.
     SELECT TOP 1
         *
     FROM

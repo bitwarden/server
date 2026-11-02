@@ -16,8 +16,10 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Api.Endpoints.Handlers;
 
 /// <summary>
-/// Authorization runs in the middleware, so these tests pin resource scoping and the edit attribution handed to the
-/// commands.
+/// Whether the caller may touch the organization at all is settled by the authorization middleware before a handler
+/// runs (see <c>AccessRuleEndpoints</c>). What is left to the handler — and so what these tests pin — is resource
+/// scoping, that a rule reached by ID belongs to the organization on the route, and the edit attribution handed to
+/// the commands.
 /// </summary>
 [SutProviderCustomize]
 public class AccessRuleEndpointsHandlerTests
@@ -123,7 +125,9 @@ public class AccessRuleEndpointsHandlerTests
                 model.Collections);
     }
 
-    /// <summary>The command rejects an id belonging to another organization.</summary>
+    /// <summary>
+    /// The route's organization is what scopes the delete — the command rejects an ID belonging to any other.
+    /// </summary>
     [Theory, BitAutoData]
     public async Task Delete_DeletesWithinTheRouteOrganization_StampedWithTheCallingUser(
         Guid organizationId, Guid id, Guid userId, SutProvider<AccessRuleEndpointsHandler> sutProvider)

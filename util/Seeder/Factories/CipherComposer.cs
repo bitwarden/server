@@ -271,10 +271,10 @@ internal static class CipherComposer
         var history = new List<PasswordHistoryViewDto>(entryCount);
         for (var k = 1; k <= entryCount; k++)
         {
-            // Walk to a deterministic prior position in the pool. The offset must stay in [0, total) so
-            // Distribution.Select lands in a real bucket (otherwise every historical password collapses into the
-            // strongest tier), and must be non-zero so priorIndex != index — i.e. the prior password is genuinely
-            // distinct from the current one. 7919 is prime; multiplying by k varies offsets across entries.
+            // Walk to a deterministic prior position in the pool. The offset must stay in [0, total) because
+            // Distribution.Select throws outside that range, and must be non-zero so priorIndex != index — i.e. the
+            // prior password is genuinely distinct from the current one. 7919 is prime; multiplying by k varies
+            // offsets across entries.
             int priorIndex;
             if (total <= 1)
             {

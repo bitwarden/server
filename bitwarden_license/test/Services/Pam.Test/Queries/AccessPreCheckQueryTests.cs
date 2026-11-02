@@ -163,7 +163,7 @@ public class AccessPreCheckQueryTests
 
         Assert.True(result.CanStartLease);
         Assert.Null(result.SlotFreesAt);
-        // An unconstrained caller is startable whoever holds the cipher, so the cipher is never consulted.
+        // Contract, not optimization: an unconstrained caller must read as startable without the cipher being consulted.
         await sutProvider.GetDependency<IAccessLeaseRepository>()
             .DidNotReceive()
             .GetActiveByCipherIdAsync(Arg.Any<Guid>(), Arg.Any<DateTime>());
@@ -203,6 +203,7 @@ public class AccessPreCheckQueryTests
 
         Assert.False(result.CanStartLease);
         Assert.Equal(blockingLease.NotAfter, result.SlotFreesAt);
+        // Nothing about the holder travels with the answer.
         Assert.Equal(AccessApprovalMode.Automatic, result.ApprovalMode);
     }
 

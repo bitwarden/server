@@ -1,7 +1,9 @@
 ﻿namespace Bit.Pam.Enums;
 
 /// <summary>
-/// Lifecycle of a <see cref="Entities.AccessLease"/>. Only <see cref="Active"/> leases authorize access.
+/// A lease's position in its lifecycle <em>as of a read clock</em> — pure read-model vocabulary, never stored.
+/// Produced only by <see cref="AccessStatusDerivation.ComputeLeaseStatus"/> from the stored
+/// <see cref="AccessLeaseAction"/>; entities never carry it. Only <see cref="Active"/> leases authorize access.
 /// </summary>
 public enum AccessLeaseStatus : byte
 {

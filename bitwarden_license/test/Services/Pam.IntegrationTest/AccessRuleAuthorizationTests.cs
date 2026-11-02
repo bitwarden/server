@@ -9,9 +9,14 @@ using Xunit;
 namespace Bit.Services.Pam.IntegrationTest;
 
 /// <summary>
-/// Authorization for <c>organizations/{orgId}/access-rules</c> over the real request pipeline. The Pam.Test
-/// registration tests only prove the requirements are attached, not enforced.
+/// Authorization for <c>organizations/{orgId}/access-rules</c>, exercised over the real request pipeline.
 /// </summary>
+/// <remarks>
+/// The endpoint-registration tests in Pam.Test assert which requirements are attached to which route, but they stop
+/// before the pipeline runs — presence in metadata is not enforcement. These tests deliberately assert only that a
+/// caller was or was not denied, never what the handler returned; the round-trip behaviour is
+/// <see cref="AccessRuleCrudTests"/>'s subject.
+/// </remarks>
 public class AccessRuleAuthorizationTests(ApiApplicationFactory factory)
     : AccessRuleIntegrationTestBase(factory, "pam-access-rule-authz")
 {

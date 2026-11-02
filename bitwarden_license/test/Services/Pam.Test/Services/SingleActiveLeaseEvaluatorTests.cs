@@ -21,6 +21,7 @@ public class SingleActiveLeaseEvaluatorTests
             .GetManyByUserIdCipherIdAsync(userId, cipherId)
             .Returns(new List<CollectionCipher>());
 
+        // No path at all: the constraint does not bind.
         Assert.False(await sutProvider.Sut.AppliesAsync(userId, cipherId));
     }
 
@@ -45,7 +46,7 @@ public class SingleActiveLeaseEvaluatorTests
     {
         singletonRule.SingleActiveLease = true;
         SetupGovernedCollection(sutProvider, singletonCollection, singletonRule);
-        // An ungated path is an escape, since the caller can reach the cipher without a singleton rule.
+        // An ungated path is an escape: the caller can reach the cipher without any singleton rule.
         ungatedCollection.AccessRuleId = null;
         SetupReachableCollections(sutProvider, userId, cipherId, singletonCollection, ungatedCollection);
 
@@ -63,6 +64,7 @@ public class SingleActiveLeaseEvaluatorTests
         SetupGovernedCollection(sutProvider, plainCollection, plainRule);
         SetupReachableCollections(sutProvider, userId, cipherId, singletonCollection, plainCollection);
 
+        // A non-singleton rule on any path is an escape.
         Assert.False(await sutProvider.Sut.AppliesAsync(userId, cipherId));
     }
 
@@ -90,7 +92,7 @@ public class SingleActiveLeaseEvaluatorTests
         disabledRule.Enabled = false;
         SetupReachableCollections(sutProvider, userId, cipherId, singletonCollection, disabledCollection);
 
-        // A disabled rule governs nothing, so its path is an escape like an ungated one.
+        // A switched-off rule governs nothing, so its path is an escape exactly like an ungated one.
         Assert.False(await sutProvider.Sut.AppliesAsync(userId, cipherId));
     }
 
@@ -121,7 +123,7 @@ public class SingleActiveLeaseEvaluatorTests
     private static void SetupGovernedCollection(
         SutProvider<SingleActiveLeaseEvaluator> sutProvider, Collection collection, AccessRule rule)
     {
-        // Pinned so AutoFixture's bool sequence does not decide whether the path governs.
+        // Pinned rather than left to the fixture: enabled decides whether the path governs at all.
         rule.Enabled = true;
         collection.AccessRuleId = rule.Id;
         sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(rule.Id).Returns(rule);

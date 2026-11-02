@@ -19,6 +19,7 @@ public class ListAccessAuditTrailQueryTests
 
     private static DateTime RetentionFloor => _now.AddDays(-AccessHistoryWindow.RetentionDays);
 
+    // No range means the whole retention window.
     [Theory, BitAutoData]
     public async Task GetTrailAsync_WithNoBounds_ReadsTheWholeRetentionWindow(Guid organizationId)
     {
@@ -56,6 +57,7 @@ public class ListAccessAuditTrailQueryTests
         Assert.Equal(end, filter.Until);
     }
 
+    // No bound reaches past the retention window.
     [Theory, BitAutoData]
     public async Task GetTrailAsync_StartBeyondRetention_IsClampedToTheWindow(Guid organizationId)
     {
@@ -70,6 +72,7 @@ public class ListAccessAuditTrailQueryTests
         Assert.Equal(RetentionFloor, Assert.Single(filters).Since);
     }
 
+    // An inverted pair is swapped.
     [Theory, BitAutoData]
     public async Task GetTrailAsync_InvertedRange_IsSwapped(Guid organizationId)
     {
@@ -85,6 +88,7 @@ public class ListAccessAuditTrailQueryTests
         Assert.Equal(later, filter.Until);
     }
 
+    // A span wider than the retention window is rejected.
     [Theory, BitAutoData]
     public async Task GetTrailAsync_RangeWiderThanRetention_ThrowsBadRequest(Guid organizationId)
     {

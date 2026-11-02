@@ -27,6 +27,7 @@ public class ApproverCollectionAccessQuery : IApproverCollectionAccessQuery
         var assigned = await _collectionRepository.GetManyByUserIdAsync(userId);
         var manageable = assigned.Where(c => c.Manage).Select(c => c.Id).ToHashSet();
 
+        // Owners/Admins and EditAnyCollection custom users can manage every collection in an enabled organization.
         foreach (var org in _currentContext.Organizations)
         {
             await FoldInManageAllCollectionsAsync(org, manageable);

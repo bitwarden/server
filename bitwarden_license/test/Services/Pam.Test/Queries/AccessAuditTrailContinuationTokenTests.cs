@@ -24,6 +24,7 @@ public class AccessAuditTrailContinuationTokenTests
         Assert.Equal(row.Id, id);
     }
 
+    // Two rows at the same instant still produce different tokens, via the id.
     [Fact]
     public void From_TwoRowsSharingAnInstant_ProducesDistinctTokens()
     {
