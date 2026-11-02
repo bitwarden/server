@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PreAccess;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 
@@ -28,4 +29,14 @@ public interface IInviteLinkValidationService
         User user,
         OrganizationUserType proposedRole,
         IPreAccessPolicyEnforcer policyEnforcer);
+
+    /// <summary>
+    /// Checks that the organization has a seat available, or can auto-scale to one, when the membership would take
+    /// up a new seat. Only a new or Staged membership does.
+    /// </summary>
+    /// <param name="organization">The organization being joined.</param>
+    /// <param name="existingOrganizationUser">The user's existing membership, or <c>null</c> if new.</param>
+    Task<Error?> ValidateSeatAvailabilityAsync(
+        Organization organization,
+        OrganizationUser? existingOrganizationUser);
 }
