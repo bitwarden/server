@@ -508,24 +508,94 @@ public static class CoreHelpers
 
     /// <summary>
     /// Sanitizes a value for display in an email by neutralizing anything that looks like an
-    /// address or link (e.g. "@" and "scheme://"). It deliberately does NOT HTML-encode the
+    /// address or link (e.g. "@", ".x" and "scheme://"). It deliberately does NOT HTML-encode the
     /// result: the mail templates are rendered by Handlebars, which HTML-encodes interpolated
     /// values ({{ }}) by default. Encoding here as well produced double-encoded output.
     /// </summary>
+    /// <remarks>
+    /// This is a single left-to-right pass and runs in time linear to the input length, so it is
+    /// safe to call on caller-supplied input. A "scheme://" is any run of word characters
+    /// immediately followed by "://", or a "://" at the very start of the string. If stripping
+    /// one exposes another (e.g. "a:/b:///"), that one is stripped as well.
+    /// </remarks>
     public static string SanitizeForEmail(string value)
     {
-        var cleanedValue = value.Replace("@", "[at]");
-        var regexOptions = RegexOptions.CultureInvariant |
-            RegexOptions.Singleline |
-            RegexOptions.IgnoreCase;
-        cleanedValue = Regex.Replace(cleanedValue, @"(\.\w)",
-                m => string.Concat("[dot]", m.ToString().Last()), regexOptions);
-        while (Regex.IsMatch(cleanedValue, @"((^|\b)(\w*)://)", regexOptions))
+        if (string.IsNullOrEmpty(value))
         {
-            cleanedValue = Regex.Replace(cleanedValue, @"((^|\b)(\w*)://)",
-                string.Empty, regexOptions);
+            return value;
         }
-        return cleanedValue;
+
+        var builder = new StringBuilder(value.Length);
+        for (var i = 0; i < value.Length; i++)
+        {
+            var c = value[i];
+            switch (c)
+            {
+                case '@':
+                    builder.Append("[at]");
+                    break;
+                case '.' when i + 1 < value.Length && IsWordChar(value[i + 1]):
+                    builder.Append("[dot]");
+                    break;
+                default:
+                    builder.Append(c);
+                    break;
+            }
+
+            StripTrailingUrlScheme(builder);
+        }
+
+        return builder.ToString();
+    }
+
+    /// <summary>
+    /// If <paramref name="builder"/> ends with "://" that is either at the start of the buffer or
+    /// preceded by a word character, removes the "://" together with the word run before it.
+    /// </summary>
+    private static void StripTrailingUrlScheme(StringBuilder builder)
+    {
+        const string separator = "://";
+        var separatorStart = builder.Length - separator.Length;
+        if (separatorStart < 0)
+        {
+            return;
+        }
+
+        for (var j = 0; j < separator.Length; j++)
+        {
+            if (builder[separatorStart + j] != separator[j])
+            {
+                return;
+            }
+        }
+
+        if (separatorStart > 0 && !IsWordChar(builder[separatorStart - 1]))
+        {
+            return;
+        }
+
+        var schemeStart = separatorStart;
+        while (schemeStart > 0 && IsWordChar(builder[schemeStart - 1]))
+        {
+            schemeStart--;
+        }
+
+        builder.Length = schemeStart;
+    }
+
+    /// <summary>
+    /// Mirrors the regular expression <c>\w</c> class: letters, decimal digits, non-spacing marks
+    /// and connector punctuation (which includes "_").
+    /// </summary>
+    private static bool IsWordChar(char c)
+    {
+        if (char.IsLetterOrDigit(c))
+        {
+            return true;
+        }
+
+        var category = CharUnicodeInfo.GetUnicodeCategory(c);
+        return category is UnicodeCategory.NonSpacingMark or UnicodeCategory.ConnectorPunctuation;
     }
 
     public static string DateTimeToTableStorageKey(DateTime? date = null)
