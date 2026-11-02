@@ -10,14 +10,12 @@ using Bit.Core.Models.Mail;
 using Bit.Core.Platform.Mail.Delivery;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
-using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Sso.IntegrationTest.Utilities;
 using Bit.Sso.Utilities;
 using Bit.Sso.Utilities.Saml2;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Primitives;
 using NSubstitute;
 using Sustainsys.Saml2.AspNetCore2;
@@ -349,23 +347,20 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
     public async Task CouldHandleAsync_WithRsa15KeyTransport_DeliversEmailToMailCatcher()
     {
         // Arrange
-        var globalSettings = new GlobalSettings
-        {
-            Mail = new GlobalSettings.MailSettings
+        var smtpDeliveryService = new ServiceCollection()
+            .AddLogging()
+            .AddSingleton(Substitute.For<IHostEnvironment>())
+            .Configure<MailDeliveryOptions>(options =>
             {
-                ReplyToEmail = "no-reply@bitwarden.com",
-                Smtp = new GlobalSettings.MailSettings.SmtpSettings
-                {
-                    Host = "localhost",
-                    Port = 10250,
-                    StartTls = false,
-                    Ssl = false
-                }
-            },
-            SiteName = "Bitwarden"
-        };
-        var deliveryService = new SignalingMailDeliveryService(
-            new MailKitSmtpMailDeliveryService(globalSettings, NullLogger<MailKitSmtpMailDeliveryService>.Instance));
+                options.SiteName = "Bitwarden";
+                options.ReplyToEmail = "no-reply@bitwarden.com";
+                options.Smtp.Host = "localhost";
+                options.Smtp.Port = 10250;
+            })
+            .AddMailDelivery()
+            .BuildServiceProvider()
+            .GetRequiredService<IMailDeliveryService>();
+        var deliveryService = new SignalingMailDeliveryService(smtpDeliveryService);
         using var arrangement = await ArrangeAsync(
             Saml2AcsPostHarness.BuildEncryptedAssertion(Rsa15),
             configure: b => b.WithMailDeliveryService(deliveryService));
