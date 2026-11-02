@@ -24,13 +24,13 @@ public class SsoJitProvisionFinishTrustedDeviceRequestModel : IValidatableObject
     public required Guid OrganizationId { get; set; }
 
     /// <summary>
-    /// The user key encrypted with the organization public key. Required when
+    /// The user key encrypted by the organization's public key. Required when
     /// <see cref="AcceptOrganizationInvite"/> is true; ignored otherwise.
     /// For now, this is tied to <see cref="AcceptOrganizationInvite"/>.
     /// </summary>
     [EncryptedString]
     [EncryptedStringLength(1000)]
-    public string? ResetPasswordKey { get; set; }
+    public string? AccountRecoveryKey { get; set; }
 
     /// <summary>
     /// The body of <c>PUT devices/{identifier}/keys</c> for the device in the access token.
@@ -52,18 +52,18 @@ public class SsoJitProvisionFinishTrustedDeviceRequestModel : IValidatableObject
             yield return new ValidationResult($"{nameof(OrganizationId)} must be supplied.", [nameof(OrganizationId)]);
         }
 
-        if (Keys.AccountKeys != null && !IsV2Encryption(Keys))
+        if (Keys.AccountKeys != null && !Keys.AccountKeys.ToAccountKeysData().IsV2Encryption())
         {
             yield return new ValidationResult(
                 $"{nameof(Keys.AccountKeys)} are only supported for V2 encryption.", [nameof(Keys)]);
         }
 
         // For now, account recovery enrollment follows AcceptOrganizationInvite.
-        if (AcceptOrganizationInvite && !OrganizationUser.IsValidResetPasswordKey(ResetPasswordKey))
+        if (AcceptOrganizationInvite && !OrganizationUser.IsValidResetPasswordKey(AccountRecoveryKey))
         {
             yield return new ValidationResult(
-                $"{nameof(ResetPasswordKey)} must be supplied when {nameof(AcceptOrganizationInvite)} is true.",
-                [nameof(ResetPasswordKey)]);
+                $"{nameof(AccountRecoveryKey)} must be supplied when {nameof(AcceptOrganizationInvite)} is true.",
+                [nameof(AccountRecoveryKey)]);
         }
     }
 
@@ -73,23 +73,11 @@ public class SsoJitProvisionFinishTrustedDeviceRequestModel : IValidatableObject
         return new FinishSsoJitProvisionTrustedDeviceData
         {
             AccountKeys = Keys.AccountKeys?.ToAccountKeysData() ?? ToLegacyAccountKeysData(),
-            UserKeyId = Keys.AccountKeys == null ? null : KeyId.FromHexEncodedString(Keys.UserKeyId),
+            UserKeyId = KeyId.FromHexEncodedString(Keys.UserKeyId),
             OrganizationId = OrganizationId,
-            ResetPasswordKey = ResetPasswordKey,
+            ResetPasswordKey = AccountRecoveryKey,
             DeviceKeys = DeviceKeys == null ? null : ToTrustedDeviceKeysData(DeviceKeys, currentDeviceIdentifier)
         };
-    }
-
-    private static bool IsV2Encryption(KeysRequestModel keys)
-    {
-        try
-        {
-            return keys.AccountKeys.ToAccountKeysData().IsV2Encryption();
-        }
-        catch (Exception e) when (e is InvalidOperationException or ArgumentException)
-        {
-            return false;
-        }
     }
 
     // TODO: Drop together with the legacy KeysRequestModel fields. https://bitwarden.atlassian.net/browse/PM-27329

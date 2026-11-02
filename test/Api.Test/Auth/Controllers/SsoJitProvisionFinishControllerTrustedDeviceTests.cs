@@ -57,7 +57,7 @@ public class SsoJitProvisionFinishControllerTrustedDeviceTests
                 user,
                 Arg.Is<FinishSsoJitProvisionTrustedDeviceData>(data =>
                     data.OrganizationId == organizationId &&
-                    data.ResetPasswordKey == model.ResetPasswordKey &&
+                    data.ResetPasswordKey == model.AccountRecoveryKey &&
                     data.AccountKeys.IsV2Encryption() &&
                     data.AccountKeys.PublicKeyEncryptionKeyPairData.PublicKey == model.Keys.AccountKeys.AccountPublicKey &&
                     data.UserKeyId != null &&
@@ -117,7 +117,7 @@ public class SsoJitProvisionFinishControllerTrustedDeviceTests
                 UserKeyId = _userKeyId
             },
             OrganizationId = organizationId,
-            ResetPasswordKey = "4.YWJjZA==",
+            AccountRecoveryKey = "4.YWJjZA==",
             DeviceKeys = includeDeviceKeys
                 ? new DeviceKeysRequestModel
                 {

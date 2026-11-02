@@ -70,17 +70,17 @@ public class SsoJitProvisionFinishTrustedDeviceRequestModelTests
     public void Validate_AcceptInviteWithoutResetPasswordKey_ReturnsError(string? resetPasswordKey)
     {
         var model = CreateModel(CreateV2AccountKeys());
-        model.ResetPasswordKey = resetPasswordKey;
+        model.AccountRecoveryKey = resetPasswordKey;
 
         var result = Assert.Single(model.Validate(new ValidationContext(model)));
-        Assert.Contains(nameof(SsoJitProvisionFinishTrustedDeviceRequestModel.ResetPasswordKey), result.MemberNames);
+        Assert.Contains(nameof(SsoJitProvisionFinishTrustedDeviceRequestModel.AccountRecoveryKey), result.MemberNames);
     }
 
     [Fact]
     public void Validate_OpenInviteWithoutResetPasswordKey_NoErrors()
     {
         var model = CreateModel(CreateV2AccountKeys());
-        model.ResetPasswordKey = null;
+        model.AccountRecoveryKey = null;
         model.AcceptOrganizationInvite = false;
 
         Assert.Empty(model.Validate(new ValidationContext(model)));
@@ -155,7 +155,7 @@ public class SsoJitProvisionFinishTrustedDeviceRequestModelTests
                 UserKeyId = _userKeyId
             },
             OrganizationId = Guid.NewGuid(),
-            ResetPasswordKey = _resetPasswordKey,
+            AccountRecoveryKey = _resetPasswordKey,
             AcceptOrganizationInvite = true
         };
     }
