@@ -43,3 +43,4 @@ The full scale catalog is in [presets.md](../presets.md#scale). Other shapes wor
 | Same shape at 1/4 and 1/2                    | `scale.md-migrated-cyberdyne` / `scale.lg-migrated-cyberdyne` | 1.3K / 2.5K users, ~30k / ~61k items, ~254k / ~460k member-item pairs |
 | Same org before the migration finished       | `scale.xl-migrated-cyberdyne-premigration` | Same shared access, fewer default collection items, ~25k personal items still to migrate |
 | Same org at ~200k items                      | `scale.xl-migrated-cyberdyne-200k-shared` / `scale.xl-migrated-cyberdyne-200k-default-collections` | Worst case for sync and Access Intelligence / growth in default collections only |
+| ODO org without access shape, exact default-collection totals | `scale.lg-migrated-meridian-health` / `scale.md-migrated-meridian-clinics` | Exactly 18,000 active default-collection items (LG) / 2,776 with ~70 members still holding personal items (MD), the same on every reseed |
