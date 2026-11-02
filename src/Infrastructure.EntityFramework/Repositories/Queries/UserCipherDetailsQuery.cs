@@ -120,7 +120,7 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
             OrganizationUseTotp = c.OrganizationUseTotp,
             Key = c.Key,
             ArchivedDate = GetArchivedDate(_userId, new Cipher { Id = c.Id, Archives = c.Archives }),
-            ExcludedFromBrowserHealth = _userId.HasValue && c.BrowserHealthExclusions != null && c.BrowserHealthExclusions.ToLowerInvariant().Contains($"\"{_userId}\":true")
+            ExcludedRiskCategories = GetExcludedRiskCategories(_userId, c.BrowserHealthExclusions)
         });
         return union;
     }
@@ -146,6 +146,27 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
         }
     }
 
+
+    internal static string GetExcludedRiskCategories(Guid? userId, string browserHealthExclusions)
+    {
+        try
+        {
+            if (userId.HasValue && !string.IsNullOrWhiteSpace(browserHealthExclusions))
+            {
+                var exclusions = JsonSerializer.Deserialize<Dictionary<Guid, List<string>>>(browserHealthExclusions);
+                if (exclusions.TryGetValue(userId.Value, out var riskCategories))
+                {
+                    return JsonSerializer.Serialize(riskCategories);
+                }
+            }
+
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
     private static Guid? GetFolderId(Guid? userId, Cipher cipher)
     {

@@ -1,7 +1,8 @@
 CREATE PROCEDURE [dbo].[Cipher_UpdateManyBrowserHealthExclusions]
     @Ids AS [dbo].[GuidIdArray] READONLY,
     @UserId AS UNIQUEIDENTIFIER,
-    @Exclude AS BIT
+    @Exclude AS BIT,
+    @RiskCategory AS VARCHAR(50) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -9,11 +10,15 @@ BEGIN
     UPDATE
         C
     SET
-        [BrowserHealthExclusions] = JSON_MODIFY(
-            COALESCE(C.[BrowserHealthExclusions], N'{}'),
-            CONCAT('$."', @UserId, '"'),
-            IIF(@Exclude = 1, CAST(1 AS BIT), NULL) -- NULL removes the user's key
-        )
+        [BrowserHealthExclusions] = CASE
+            WHEN @Exclude = 1 THEN JSON_MODIFY(
+                COALESCE(C.[BrowserHealthExclusions], N'{}'),
+                CONCAT('$."', @UserId, '"'),
+                JSON_QUERY(JSON_MODIFY(N'[]', 'append $', @RiskCategory))
+            )
+            -- NULL removes the user's key
+            ELSE JSON_MODIFY(COALESCE(C.[BrowserHealthExclusions], N'{}'), CONCAT('$."', @UserId, '"'), NULL)
+        END
     FROM
         [dbo].[Cipher] C
         INNER JOIN @Ids I ON I.[Id] = C.[Id]
