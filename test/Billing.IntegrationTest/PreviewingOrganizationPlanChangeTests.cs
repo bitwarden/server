@@ -58,6 +58,21 @@ public class PreviewingOrganizationPlanChangeTests(StripeTestsFixture fixture)
             $"Expected discounted total ({discountedTotal}) to be less than baseline ({baselineTotal})");
     }
 
+    [BillingFact]
+    public async Task PlanChange_PaymentOptionalTrialWithoutPaymentMethod_ReturnsPreviewWithPositiveTotal()
+    {
+        var (client, _, organizationId, _) = await fixture.PrepareOrganizationOwnerAsync(
+            "preview-plan-change-payment-optional-trial@example.com", PlanType.TeamsAnnually);
+        await fixture.MakeOrganizationTrialPaymentOptionalAsync(organizationId);
+
+        var response = await client.PostAsJsonAsync(Route(organizationId), Body("enterprise", "annually"));
+
+        await Assert.SuccessResponseAsync(response);
+        var preview = (await response.Content.ReadFromJsonAsync<JsonObject>())!;
+        Assert.Equal("enterprise", preview["planTier"]!.GetValue<string>());
+        Assert.True(preview["total"]!.GetValue<decimal>() > 0m);
+    }
+
     private static string Route(Guid organizationId) =>
         $"/organizations/{organizationId}/billing/subscription/plan-change/preview";
 
