@@ -310,6 +310,7 @@ public static class ServiceCollectionExtensions
         services.TryAddTransient(typeof(IOtpTokenProvider<>), typeof(OtpTokenProvider<>));
         services.AddScoped<ITwoFactorEmailService, TwoFactorEmailService>();
         services.AddScoped<INewDeviceVerificationOtpStore, NewDeviceVerificationOtpStore>();
+        services.AddScoped<IUserVerificationOtpStore, UserVerificationOtpStore>();
         // Legacy mailer service
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();
