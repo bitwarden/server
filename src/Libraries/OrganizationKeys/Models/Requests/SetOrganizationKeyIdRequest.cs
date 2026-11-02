@@ -2,9 +2,9 @@
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.KeyManagement.Models.Requests;
+namespace Bit.OrganizationKeys.Models.Requests;
 
-public class SetOrganizationKeyIdRequestModel
+internal record SetOrganizationKeyIdRequest
 {
     /// <summary>
     /// Hex-encoded key id of the organization's current organization key.

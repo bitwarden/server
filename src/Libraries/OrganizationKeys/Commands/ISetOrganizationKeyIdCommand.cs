@@ -1,8 +1,8 @@
 ﻿using Bit.Core.KeyManagement.Models.Data;
 
-namespace Bit.Core.KeyManagement.Commands.Interfaces;
+namespace Bit.OrganizationKeys.Commands;
 
-public interface ISetOrganizationKeyIdCommand
+internal interface ISetOrganizationKeyIdCommand
 {
     /// <summary>
     /// Stores the key id of an organization's current organization key.

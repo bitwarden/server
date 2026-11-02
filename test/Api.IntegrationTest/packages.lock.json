@@ -1431,6 +1431,7 @@
           "OpenTelemetry.Instrumentation.Runtime": "[1.15.1, )",
           "OpenTelemetry.Instrumentation.SqlClient": "[1.15.2, )",
           "OrganizationAuthorization": "[0.0.1, )",
+          "OrganizationKeys": "[0.0.1, )",
           "Pam": "[2026.10.1, )",
           "SharedWeb": "[2026.10.1, )",
           "Subscriptions.Organization": "[0.0.1, )",
@@ -1618,6 +1619,15 @@
         "dependencies": {
           "Core": "[2026.10.1, )",
           "CurrentUser": "[0.0.1, )"
+        }
+      },
+      "organizationkeys": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.10.1, )",
+          "CurrentUser": "[0.0.1, )",
+          "ExceptionHandling": "[0.0.1, )",
+          "OrganizationAuthorization": "[0.0.1, )"
         }
       },
       "pam": {

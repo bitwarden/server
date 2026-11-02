@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
-using Bit.Api.KeyManagement.Models.Requests;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Enums;
@@ -10,9 +9,9 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Xunit;
 
-namespace Bit.Api.IntegrationTest.KeyManagement.Controllers;
+namespace Bit.Api.IntegrationTest.KeyManagement;
 
-public class OrganizationKeysControllerTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class OrganizationKeyIdEndpointTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private const string _organizationKeyId = "0123456789abcdef0123456789abcdef";
     private const string _otherOrganizationKeyId = "fedcba9876543210fedcba9876543210";
@@ -28,7 +27,7 @@ public class OrganizationKeysControllerTests : IClassFixture<ApiApplicationFacto
     private string _ownerEmail = null!;
     private Organization _organization = null!;
 
-    public OrganizationKeysControllerTests(ApiApplicationFactory factory)
+    public OrganizationKeyIdEndpointTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         _client = factory.CreateClient();
@@ -55,12 +54,12 @@ public class OrganizationKeysControllerTests : IClassFixture<ApiApplicationFacto
     }
 
     [Fact]
-    public async Task PostOrganizationKeyIdAsync_MalformedKeyId_BadRequest()
+    public async Task SetOrganizationKeyId_MalformedKeyId_BadRequest()
     {
         await _loginHelper.LoginAsync(_ownerEmail);
 
         var response = await _client.PostAsJsonAsync(OrganizationKeyIdUri(),
-            new { OrganizationKeyId = "not-a-key-id" });
+            RequestFor("not-a-key-id"));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         await AssertOrganizationKeyIdAsync(null);
@@ -69,7 +68,7 @@ public class OrganizationKeysControllerTests : IClassFixture<ApiApplicationFacto
     [Theory]
     [InlineData(OrganizationUserType.User)]
     [InlineData(OrganizationUserType.Custom)]
-    public async Task PostOrganizationKeyIdAsync_NotOwnerOrAdmin_ForbiddenAndKeyIdIsUnchanged(
+    public async Task SetOrganizationKeyId_NotOwnerOrAdmin_ForbiddenAndKeyIdIsUnchanged(
         OrganizationUserType type)
     {
         var memberEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
@@ -87,7 +86,7 @@ public class OrganizationKeysControllerTests : IClassFixture<ApiApplicationFacto
     }
 
     [Fact]
-    public async Task PostOrganizationKeyIdAsync_ProviderAdmin_ForbiddenAndKeyIdIsUnchanged()
+    public async Task SetOrganizationKeyId_ProviderAdmin_ForbiddenAndKeyIdIsUnchanged()
     {
         var providerAdminEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(providerAdminEmail);
@@ -106,7 +105,7 @@ public class OrganizationKeysControllerTests : IClassFixture<ApiApplicationFacto
     [Theory]
     [InlineData(OrganizationUserType.Owner)]
     [InlineData(OrganizationUserType.Admin)]
-    public async Task PostOrganizationKeyIdAsync_OwnerOrAdmin_StoresTheKeyId(OrganizationUserType type)
+    public async Task SetOrganizationKeyId_OwnerOrAdmin_StoresTheKeyId(OrganizationUserType type)
     {
         await LoginAsMemberWithOrganizationKeyAsync(type);
 
@@ -119,7 +118,7 @@ public class OrganizationKeysControllerTests : IClassFixture<ApiApplicationFacto
     [Theory]
     [InlineData(OrganizationUserType.Owner)]
     [InlineData(OrganizationUserType.Admin)]
-    public async Task PostOrganizationKeyIdAsync_OwnerOrAdmin_SyncReturnsTheKeyId(OrganizationUserType type)
+    public async Task SetOrganizationKeyId_OwnerOrAdmin_SyncReturnsTheKeyId(OrganizationUserType type)
     {
         await LoginAsMemberWithOrganizationKeyAsync(type);
 
@@ -137,7 +136,7 @@ public class OrganizationKeysControllerTests : IClassFixture<ApiApplicationFacto
     }
 
     [Fact]
-    public async Task PostOrganizationKeyIdAsync_AdminWithoutTheOrganizationKey_BadRequestAndKeyIdIsUnchanged()
+    public async Task SetOrganizationKeyId_AdminWithoutTheOrganizationKey_BadRequestAndKeyIdIsUnchanged()
     {
         var adminEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(adminEmail);
@@ -152,7 +151,7 @@ public class OrganizationKeysControllerTests : IClassFixture<ApiApplicationFacto
     }
 
     [Fact]
-    public async Task PostOrganizationKeyIdAsync_SameKeyIdTwice_SucceedsBothTimes()
+    public async Task SetOrganizationKeyId_SameKeyIdTwice_SucceedsBothTimes()
     {
         await _loginHelper.LoginAsync(_ownerEmail);
 
@@ -165,7 +164,7 @@ public class OrganizationKeysControllerTests : IClassFixture<ApiApplicationFacto
     }
 
     [Fact]
-    public async Task PostOrganizationKeyIdAsync_DifferentKeyIdAfterBackfill_ConflictAndKeyIdIsUnchanged()
+    public async Task SetOrganizationKeyId_DifferentKeyIdAfterBackfill_ConflictAndKeyIdIsUnchanged()
     {
         await _loginHelper.LoginAsync(_ownerEmail);
         var first = await _client.PostAsJsonAsync(OrganizationKeyIdUri(), RequestFor(_organizationKeyId));
@@ -177,11 +176,22 @@ public class OrganizationKeysControllerTests : IClassFixture<ApiApplicationFacto
         await AssertOrganizationKeyIdAsync(_organizationKeyId);
     }
 
+    [Fact]
+    public async Task SetOrganizationKeyId_OrganizationIdIsNotAGuid_NotFound()
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var response = await _client.PostAsJsonAsync("/organizations/not-a-guid/keys/organization-key-id",
+            RequestFor(_organizationKeyId));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        await AssertOrganizationKeyIdAsync(null);
+    }
+
     private string OrganizationKeyIdUri() =>
         $"/organizations/{_organization.Id}/keys/organization-key-id";
 
-    private static SetOrganizationKeyIdRequestModel RequestFor(string organizationKeyId) =>
-        new() { OrganizationKeyId = organizationKeyId };
+    private static object RequestFor(string organizationKeyId) => new { organizationKeyId };
 
     private async Task LoginAsMemberWithOrganizationKeyAsync(OrganizationUserType type)
     {
