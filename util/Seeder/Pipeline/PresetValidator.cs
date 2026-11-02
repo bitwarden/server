@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.Billing.Enums;
 using Bit.Seeder.Data.Distributions;
+using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Factories;
 
 namespace Bit.Seeder.Pipeline;
@@ -323,6 +324,15 @@ internal static class PresetValidator
             throw new InvalidOperationException(
                 $"Preset '{presetName}' has 'defaultCollections.sizes' with no positive weight. " +
                 "Give at least one bucket a weight above 0.");
+        }
+
+        // A name check rather than Enum.TryParse, which also accepts numbers and comma-joined names.
+        var sizingNames = Enum.GetNames<DefaultCollectionSizing>();
+        if (defaultCollections.Sizing is { } sizing && !sizingNames.Contains(sizing, StringComparer.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' has 'defaultCollections.sizing' '{sizing}'; " +
+                $"valid values are {string.Join(", ", sizingNames)}.");
         }
     }
 

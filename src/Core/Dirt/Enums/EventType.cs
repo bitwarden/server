@@ -174,6 +174,10 @@ public enum EventType : int
     Send_Accessed_File = 2511,
     Send_PolicyDisabled = 2512,
     Send_PolicyEnabled = 2513,
+    Send_Created_Item = 2514,
+    Send_Edited_Item = 2515,
+    Send_Deleted_Item = 2516,
+    Send_Accessed_Item = 2517,
 
     // PAM: the AccessAuditEventKind outcomes worth surfacing organization-wide. The PAM audit store keeps the full
     // trail.

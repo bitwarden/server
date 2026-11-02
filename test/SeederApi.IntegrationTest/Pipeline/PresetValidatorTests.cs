@@ -190,6 +190,18 @@ public class PresetValidatorTests
     }
 
     [Fact]
+    public void DefaultCollections_UnknownSizing_Throws()
+    {
+        var preset = ReadPreset(_defaultCollectionsEnterprise);
+        preset = preset with { DefaultCollections = preset.DefaultCollections! with { Sizing = "bogus" } };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _defaultCollectionsEnterprise));
+
+        Assert.Contains("'defaultCollections.sizing' 'bogus'", ex.Message);
+        Assert.Contains("valid values are Sampled, Quantile", ex.Message);
+    }
+
+    [Fact]
     public void DefaultCollections_LargestEntryBelowOne_Throws()
     {
         var preset = ReadPreset(_defaultCollectionsEnterprise);

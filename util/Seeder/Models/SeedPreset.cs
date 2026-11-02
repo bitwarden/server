@@ -73,6 +73,8 @@ internal record SeedPresetDefaultCollections
     public List<int>? Largest { get; init; }
     public double? DeletedRate { get; init; }
     public int? PolicyEnabledDaysAgo { get; init; }
+    public string? Sizing { get; init; }
+    public int? TargetActiveItems { get; init; }
 }
 
 internal record SeedPresetSizeBucket
