@@ -14,10 +14,10 @@ using Bit.Core.Exceptions;
 using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.Extensions.Time.Testing;
-using Bitwarden.Server.Sdk.Features;
 using NSubstitute;
 using Xunit;
 
