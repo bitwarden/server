@@ -12,9 +12,8 @@ namespace Bit.Seeder.Data;
 /// </summary>
 /// <remarks>
 /// Adding a new generator:
-///   1. Add private nullable field
-///   2. Add public property with lazy initialization
-///   3. Use in Recipe via _ctx.NewGenerator.Method()
+///   1. Add a public property that creates the generator on first access with <c>field ??= new ...</c>
+///   2. Use in Recipe via _ctx.NewGenerator.Method()
 /// </remarks>
 internal sealed class GeneratorContext
 {

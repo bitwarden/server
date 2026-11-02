@@ -54,6 +54,7 @@ public sealed record AccessEvaluation
     public static AccessEvaluation Combine(IEnumerable<AccessEvaluation> evaluations)
     {
         var requiresApproval = false;
+
         foreach (var evaluation in evaluations)
         {
             switch (evaluation.Outcome)

@@ -27,8 +27,8 @@ public class SalesAssistedTrialInvitationEmailView : BaseMailView
     public required ProductTierType ProductTier { get; set; }
 
     /// <summary>
-    /// Currently we only support one product type at a time, despite Products being a collection.
-    /// If we receive both PasswordManager and SecretsManager, we send the user to the PM trial route.
+    /// The trial's products, used to select the sign-up route. Supported selections are Password
+    /// Manager, Secrets Manager, and Password Manager + Privileged Controls.
     /// </summary>
     public required IEnumerable<ProductType> Products { get; set; }
 
@@ -86,9 +86,9 @@ public class SalesAssistedTrialInvitationEmailView : BaseMailView
     };
 
     /// <summary>
-    /// The destination URL for the invitation CTA. Mirrors the two-branch new-user routing in
-    /// <see cref="Bit.Core.Billing.Models.Mail.TrialInitiationVerifyEmail"/>:
+    /// The destination URL for the invitation CTA. Routing:
     /// <list type="bullet">
+    /// <item>PM + Privileged Controls trial → <c>privileged-controls-trial-initiation</c>;</item>
     /// <item>PM trial → <c>trial-initiation</c>;</item>
     /// <item>SM-only trial → <c>secrets-manager-trial-initiation</c>.</item>
     /// </list>

@@ -610,9 +610,8 @@ If you believe you need to change the version for a valid reason, please discuss
     }
 
     /// <summary>
-    /// Builds the base set of claims that VerifyData checks, excluding the conditionally-guarded
-    /// claims (UseMyItems, UseInviteLinks, UseRiskInsights). Callers can add or omit those claims
-    /// to test specific scenarios.
+    /// Builds the claims VerifyData compares unconditionally. Every claim VerifyData guards with a HasClaim check is
+    /// omitted; tests add the ones they are exercising.
     /// </summary>
     private static List<Claim> BuildBaseVerifyDataClaims(Organization organization, Guid installationId)
     {

@@ -19,8 +19,11 @@ CREATE TABLE [dbo].[AccessRequest] (
 );
 GO
 
-CREATE NONCLUSTERED INDEX [IX_AccessRequest_RequesterId_CipherId_Action]
-    ON [dbo].[AccessRequest] ([RequesterId] ASC, [CipherId] ASC, [Action] ASC);
+-- Supports the requester's open and approved request lookups per cipher; [NotAfter] lets the clock check seek.
+-- The INCLUDE settles the extension filter and the CreationDate ordering before any clustered lookup.
+CREATE NONCLUSTERED INDEX [IX_AccessRequest_RequesterId_CipherId_Action_NotAfter]
+    ON [dbo].[AccessRequest] ([RequesterId] ASC, [CipherId] ASC, [Action] ASC, [NotAfter] ASC)
+    INCLUDE ([ExtensionOfLeaseId], [CreationDate]);
 GO
 
 CREATE NONCLUSTERED INDEX [IX_AccessRequest_OrganizationId_Action]
@@ -28,15 +31,17 @@ CREATE NONCLUSTERED INDEX [IX_AccessRequest_OrganizationId_Action]
 GO
 
 -- Supports the approver's pending inbox; [NotAfter] lets the clock check seek, not scan.
+-- Mirrors IX_AccessLease_CollectionId_Action_NotAfter's access pattern.
 CREATE NONCLUSTERED INDEX [IX_AccessRequest_CollectionId_Action_NotAfter]
     ON [dbo].[AccessRequest] ([CollectionId] ASC, [Action] ASC, [NotAfter] ASC);
 GO
 
--- Supports the approver history read; [CreationDate] leads since the OR can't seek.
--- [Action]/[NotAfter] are INCLUDEd to settle the OR before the clustered lookup.
+-- Supports the approver history reads; [CreationDate] leads since the OR can't seek.
+-- [Action]/[NotAfter] are INCLUDEd to settle the OR before the clustered lookup; [RequesterId]/[ExtensionOfLeaseId]
+-- let the history page read its rows without one.
 CREATE NONCLUSTERED INDEX [IX_AccessRequest_CollectionId_CreationDate]
     ON [dbo].[AccessRequest] ([CollectionId] ASC, [CreationDate] ASC)
-    INCLUDE ([Action], [NotAfter]);
+    INCLUDE ([Action], [NotAfter], [RequesterId], [ExtensionOfLeaseId]);
 GO
 
 -- Supports the requester's TOP(250) history page via a backward scan on [CreationDate].

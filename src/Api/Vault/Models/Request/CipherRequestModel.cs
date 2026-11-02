@@ -20,8 +20,10 @@ public class CipherRequestModel : IValidatableObject
     public Guid? EncryptedFor { get; set; }
 
     /// <summary>
-    /// Hex-encoded key id of the user key the client held when it encrypted this cipher. Absent for
-    /// clients that predate the field. When present, it must match the acting user's current user key id.
+    /// Hex-encoded key id of the key the client held when it encrypted this cipher: the user key for a
+    /// user-owned cipher, the organization key for an organization cipher. Absent for clients that
+    /// predate the field. For a user-owned cipher it must match the acting user's current user key id;
+    /// for an organization cipher it is not validated, because organizations carry no key id yet.
     /// </summary>
     [KeyId]
     public string EncryptedByKeyId { get; set; }
