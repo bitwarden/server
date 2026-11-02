@@ -33,7 +33,8 @@ public class AccessRuleEngineTests
     [Fact]
     public void Evaluate_CombinesConditionResults_DenyWins()
     {
-        // AccessEvaluation.Combine does the folding; AccessEvaluationTests covers its full precedence.
+        // Folding is delegated to AccessEvaluation.Combine (deny > approval > allow); a single denying condition
+        // drives the whole rule to deny. The full precedence matrix is covered in AccessEvaluationTests.
         var conditions = new AccessCondition[]
         {
             new StubCondition(AccessEvaluation.Allow),
@@ -60,14 +61,15 @@ public class AccessRuleEngineTests
     [Fact]
     public void Evaluate_NullConditionEntry_DeniesClosed()
     {
-        // Only a malformed stored document yields a null entry, and it fails closed. Unknown kinds never reach
-        // the engine, since deserialization rejects them.
+        // A null entry (only reachable from a malformed stored document) cannot be evaluated, so it fails closed.
+        // An unknown condition kind can no longer reach the engine: it is rejected at JSON deserialization.
         var evaluation = _sut.Evaluate([null!], Signals());
 
         Assert.Equal(AccessEvaluationOutcome.Deny, evaluation.Outcome);
         Assert.Equal(DenyReason.UnsupportedCondition, evaluation.Reason);
     }
 
+    /// <summary>A condition with a fixed result, isolating the engine's folding from any real condition logic.</summary>
     private sealed class StubCondition(AccessEvaluation result) : AccessCondition
     {
         public AccessSignals? ReceivedSignals { get; private set; }

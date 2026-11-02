@@ -48,13 +48,13 @@ public sealed record AccessEvaluation
     };
 
     /// <summary>
-    /// Folds per-condition evaluations into one with deny &gt; requires-approval &gt; allow precedence, returning the
-    /// first deny as-is. An empty sequence returns <see cref="Allow"/>.
+    /// Folds a sequence of per-condition evaluations into one, with <b>deny &gt; requires-approval &gt; allow</b>
+    /// precedence: the first deny short-circuits and is returned as-is; otherwise any requires-approval wins over
+    /// allow. An empty sequence is vacuously satisfied and returns <see cref="Allow"/>.
     /// </summary>
     public static AccessEvaluation Combine(IEnumerable<AccessEvaluation> evaluations)
     {
         var requiresApproval = false;
-
         foreach (var evaluation in evaluations)
         {
             switch (evaluation.Outcome)

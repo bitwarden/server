@@ -75,8 +75,8 @@ public class AccessRuleAuthorizationTests(ApiApplicationFactory factory)
     [Fact]
     public async Task Read_AsProviderUserForTheOrganization_ReturnsForbidden()
     {
-        // Access rules gate who can lease credentials, so the group uses MemberRequirement, not
-        // MemberOrProviderRequirement.
+        // Providers manage an organization's billing and configuration, but access rules gate who can lease
+        // credentials out of it. The group deliberately uses MemberRequirement, not MemberOrProviderRequirement.
         await LoginAsProviderForOrganizationAsync();
 
         var response = await Client.GetAsync(AccessRulesUrl);
@@ -97,6 +97,7 @@ public class AccessRuleAuthorizationTests(ApiApplicationFactory factory)
     [Fact]
     public async Task Read_AsMember_IsNotForbidden()
     {
+        // Guards against the group requirement over-denying: reading rules is available to any member.
         var (memberEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(Factory,
             Organization.Id, OrganizationUserType.User);
         await LoginHelper.LoginAsync(memberEmail);
@@ -116,7 +117,11 @@ public class AccessRuleAuthorizationTests(ApiApplicationFactory factory)
         AssertReachedTheHandler(response);
     }
 
-    /// <summary>Also rejects NotFound, so a feature gate swallowing the route does not pass as authorized.</summary>
+    /// <summary>
+    /// Asserts a caller got past authorization without pinning what the handler did with a deliberately empty body.
+    /// NotFound is excluded as well as Forbidden: without it these would still pass if the PAM feature gate silently
+    /// swallowed the route, which would in turn make every denial above pass for the wrong reason.
+    /// </summary>
     private static void AssertReachedTheHandler(HttpResponseMessage response)
     {
         Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);

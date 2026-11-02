@@ -3,7 +3,9 @@
 namespace Bit.Services.Pam.Models;
 
 /// <summary>
-/// The access rule that governs a cipher for a particular caller. A null governing rule means the cipher is not
+/// The access rule that governs a cipher for a particular caller: which collection's rule applies, the owning
+/// organization, whether the rule requires human approval, and the parsed flat list of <see cref="AccessCondition"/>s
+/// so the rule engine can evaluate them against the caller's signals. A null governing rule means the cipher is not
 /// leasing-gated for the caller.
 /// </summary>
 public sealed record GoverningRule(

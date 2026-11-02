@@ -276,7 +276,6 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
                 minimum,
                 maximum
             );
-            // Always logged: an anomaly worth an audit trail, unlike the routine confirmation below.
             await DeleteSendAsync(send);
             return false;
         }

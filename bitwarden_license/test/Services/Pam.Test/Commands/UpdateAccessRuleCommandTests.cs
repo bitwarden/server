@@ -16,8 +16,8 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Commands;
 
 /// <summary>
-/// Validation lives in <see cref="AccessRuleWriteValidator"/> and its tests; these cover persistence, timestamps and
-/// collection links.
+/// The validation these commands share lives in <see cref="AccessRuleWriteValidator"/> and is covered by
+/// AccessRuleWriteValidatorTests; these tests cover persistence, timestamps, and collection association wiring.
 /// </summary>
 [SutProviderCustomize]
 public class UpdateAccessRuleCommandTests
@@ -121,6 +121,7 @@ public class UpdateAccessRuleCommandTests
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.UpdateAsync(Guid.NewGuid(), Guid.NewGuid(), update, []));
+        // A rule the caller cannot see is a 404 before anything about the payload is judged.
         await sutProvider.GetDependency<IAccessRuleWriteValidator>().DidNotReceiveWithAnyArgs()
             .ValidateAsync(default, default!, default!, default);
     }

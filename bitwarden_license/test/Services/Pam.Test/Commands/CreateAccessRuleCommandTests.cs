@@ -17,8 +17,8 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Commands;
 
 /// <summary>
-/// Validation lives in <see cref="AccessRuleWriteValidator"/> and its tests; these cover persistence, timestamps and
-/// collection links.
+/// The validation these commands share lives in <see cref="AccessRuleWriteValidator"/> and is covered by
+/// AccessRuleWriteValidatorTests; these tests cover persistence, timestamps, and collection association wiring.
 /// </summary>
 [SutProviderCustomize]
 public class CreateAccessRuleCommandTests

@@ -175,7 +175,9 @@ public class GoverningRuleResolverTests
     public async Task ResolveAsync_ConditionWithKindLast_ParsesTheCondition(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
     {
-        // Property order is meaningless in JSON, so a late "kind" has to parse rather than fail safe to human approval.
+        // Property order is meaningless in JSON, so a stored document that writes "kind" after the properties it
+        // discriminates has to read back as the condition it names — not fail safe to human approval, which would
+        // route a caller the allowlist auto-approves to an approver instead.
         rule.Conditions = """[{"cidrs":["10.0.0.0/8"],"kind":"ip_allowlist"}]""";
         SetupGovernedCollection(sutProvider, userId, cipherId, collection, rule);
 
@@ -191,8 +193,10 @@ public class GoverningRuleResolverTests
     public async Task ResolveAsync_ConditionWithNullCidrs_StillGoverns(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
     {
-        // "cidrs": null parses, so the condition itself has to survive the null and deny instead of throwing. A denial
-        // does not require approval.
+        // "cidrs": null parses, so this never reaches Parse's fail-safe: the condition itself has to survive the null
+        // and deny, or the NullReferenceException escapes from inside the engine. The rule still governs — an
+        // allowlist that matches nothing denies, which the auto path surfaces downstream, and a denial is not the
+        // same thing as requiring approval.
         rule.Conditions = """[{"kind":"ip_allowlist","cidrs":null}]""";
         SetupGovernedCollection(sutProvider, userId, cipherId, collection, rule);
 
@@ -208,7 +212,9 @@ public class GoverningRuleResolverTests
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
         Collection olderCollection, AccessRule olderRule, Collection newerCollection, AccessRule newerRule)
     {
-        // The older rule is the more restrictive one, and still wins.
+        // The older rule needs human approval; the newer one would auto-grant. Oldest wins even though it is the more
+        // restrictive path — the caller is routed to an approver rather than auto-granted (do not reintroduce the
+        // retired least-restrictive behaviour).
         olderRule.CreationDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         olderRule.Conditions = """[{"kind":"human_approval"}]""";
         newerRule.CreationDate = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -229,6 +235,8 @@ public class GoverningRuleResolverTests
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
         Collection olderCollection, AccessRule olderRule, Collection newerCollection, AccessRule newerRule)
     {
+        // The mirror of the previous case: here the oldest rule auto-grants and the newer one needs human approval, so
+        // the caller is auto-granted. Whichever is older governs, regardless of which is more permissive.
         olderRule.CreationDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         olderRule.Conditions = """[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]}]""";
         newerRule.CreationDate = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -249,8 +257,9 @@ public class GoverningRuleResolverTests
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
         Collection olderCollection, AccessRule olderRule, Collection newerCollection, AccessRule newerRule)
     {
-        // Selection never evaluates conditions, so a newer passing rule cannot pre-empt the oldest one; the auto path
-        // surfaces the denial.
+        // The oldest rule's IP allowlist fails for this caller; a newer rule would pass. Selection is structural, so
+        // the failing oldest rule still governs — the resolver never lets a newer path pre-empt it by evaluating
+        // conditions. (Downstream, the auto path then surfaces the denial; that is not the resolver's concern.)
         olderRule.CreationDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         olderRule.Conditions = """[{"kind":"ip_allowlist","cidrs":["192.168.0.0/16"]}]""";
         newerRule.CreationDate = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -271,7 +280,8 @@ public class GoverningRuleResolverTests
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
         Collection lowerCollection, AccessRule lowerRule, Collection higherCollection, AccessRule higherRule)
     {
-        // Breaking the tie on id keeps the choice stable; the higher id goes first so iteration order cannot decide.
+        // Two rules created at the same instant: the tie breaks on rule id (lowest wins) so the choice is total and
+        // stable rather than dependent on iteration order.
         var sharedCreation = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc);
         lowerRule.Id = new Guid("00000000-0000-0000-0000-000000000001");
         lowerRule.CreationDate = sharedCreation;
@@ -294,6 +304,8 @@ public class GoverningRuleResolverTests
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
         Collection olderCollection, AccessRule olderRule, Collection newerCollection, AccessRule newerRule)
     {
+        // The oldest rule is unparseable; a newer rule would auto-grant. Because the oldest rule governs, it fails safe
+        // to human approval rather than letting the newer parseable path auto-grant around it.
         olderRule.CreationDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         olderRule.Conditions = "not json";
         newerRule.CreationDate = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -313,7 +325,9 @@ public class GoverningRuleResolverTests
     public async Task ResolveAsync_GovernedRuleDeleted_ReturnsNull(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
     {
-        // GetByIdAsync is left unstubbed, so the rule reads as deleted after the collection was loaded.
+        // The collection still points at a rule id, but the rule no longer loads (deleted after the collection was
+        // read). It is dropped from the candidates, leaving nothing to govern — GetByIdAsync is left unstubbed so it
+        // returns null.
         collection.AccessRuleId = rule.Id;
         SetupReachableCollections(sutProvider, userId, cipherId, collection);
 

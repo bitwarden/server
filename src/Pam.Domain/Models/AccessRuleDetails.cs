@@ -2,6 +2,9 @@
 
 namespace Bit.Pam.Models;
 
+/// <summary>
+/// An <see cref="AccessRule"/> together with the IDs of the collections it governs.
+/// </summary>
 public class AccessRuleDetails : AccessRule
 {
     public IEnumerable<Guid> CollectionIds { get; set; } = [];

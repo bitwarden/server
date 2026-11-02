@@ -530,8 +530,9 @@ public class AccessRequestRepositoryTests
         ICollectionRepository collectionRepository,
         IAccessRequestRepository accessRequestRepository)
     {
-        // A request has many decisions, so an approval and a later retraction both surface rather than collapsing to a
-        // single resolver.
+        // AccessDecision is 1-to-many with AccessRequest, so the approvers array carries every human decision oldest
+        // first: an approval followed by a managing approver retracting the unactivated approval surfaces both, rather
+        // than collapsing to a single resolver.
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var collection = await collectionRepository.CreateTestCollectionAsync(organization);
         var now = DateTime.UtcNow;
@@ -662,8 +663,8 @@ public class AccessRequestRepositoryTests
         IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository)
     {
-        // An activated request's access is governed by its lease, which is revoked instead; cancelling the request
-        // would strand a live lease.
+        // Once a request has produced a lease the access it granted is governed by that lease, which must be revoked
+        // instead. Cancelling the request would strand an active lease behind a resolved-as-cancelled request.
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var collection = await collectionRepository.CreateTestCollectionAsync(organization);
         var now = DateTime.UtcNow;
@@ -780,8 +781,9 @@ public class AccessRequestRepositoryTests
         ICollectionRepository collectionRepository,
         IAccessRequestRepository accessRequestRepository)
     {
-        // Two approvers race on one pending request. The loser's verdict is not appended, or the decision log would
-        // contradict the request's status.
+        // Two approvers racing on the same pending request: the first wins, and the loser's verdict is never appended.
+        // Recording it anyway would leave the decision log contradicting the request's status — a Deny filed against a
+        // request that reads as Approved, with no way to tell which one took effect.
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var collection = await collectionRepository.CreateTestCollectionAsync(organization);
         var now = DateTime.UtcNow;
@@ -873,7 +875,8 @@ public class AccessRequestRepositoryTests
         IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository)
     {
-        // Retraction stops at activation, and the refused call must not orphan a Deny against a live approval.
+        // Retraction stops at activation (revoke the lease instead), and because the transition did not happen the
+        // approver's Deny is not recorded either — a no-op must not orphan a decision against a live approval.
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var collection = await collectionRepository.CreateTestCollectionAsync(organization);
         var now = DateTime.UtcNow;
@@ -982,8 +985,9 @@ public class AccessRequestRepositoryTests
         ICollectionRepository collectionRepository,
         IAccessRequestRepository accessRequestRepository)
     {
-        // The request page's read carries the requester identity, which the caller-scoped "mine" read omits, and the
-        // full decision log.
+        // The dedicated request page reads one request by id with the same denormalized projection the inbox reads use
+        // (requester identity) plus the full decision log — unlike the caller-scoped "mine" read which omits the
+        // requester display-name join.
         var requester = await userRepository.CreateTestUserAsync("requester");
         var approver = await userRepository.CreateTestUserAsync("approver");
         var organization = await organizationRepository.CreateTestOrganizationAsync();

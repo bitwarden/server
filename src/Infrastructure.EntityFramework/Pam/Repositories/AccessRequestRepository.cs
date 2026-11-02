@@ -478,8 +478,9 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
     }
 
     /// <summary>
-    /// Loads each request's decisions oldest first, with a human approver's name and email, like the procedures'
-    /// second result set.
+    /// Batch-loads every decision (human or automatic) for a set of request ids, ordered oldest-first within each
+    /// request, with a human decision's identity denormalized from the User join -- mirroring the stored
+    /// procedures' second decision result set.
     /// </summary>
     private static async Task<Dictionary<Guid, List<AccessRequestDecision>>> GetDecisionsByRequestIdsAsync(
         DatabaseContext dbContext, IEnumerable<Guid> requestIds)

@@ -52,6 +52,10 @@ public class AccessRuleEndpointsHandlerTests
         Assert.Equal(rule.Id, result.Id);
     }
 
+    /// <summary>
+    /// Membership in the route's organization is all the middleware establishes, so nothing but this check stops a
+    /// rule ID from one organization being read through another organization's route.
+    /// </summary>
     [Theory, BitAutoData]
     public async Task Get_ARuleBelongingToAnotherOrganization_ThrowsNotFound(
         AccessRuleDetails rule, Guid otherOrganizationId, SutProvider<AccessRuleEndpointsHandler> sutProvider)

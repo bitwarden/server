@@ -67,8 +67,7 @@ public record OrganizationSubscriptionChangeSet
 /// encapsulate the correct Stripe price IDs and proration behavior. Structural operations
 /// (plan upgrades, sponsorship swaps) automatically set
 /// <see cref="OrganizationSubscriptionChangeSet.ChargeImmediately"/> so that they are billed
-/// immediately, as does the first purchase of Privileged Controls seats. All other operations
-/// (add-ons, seat updates) default to proration.
+/// immediately. All other operations (add-ons, seat updates) default to proration.
 /// </summary>
 public class OrganizationSubscriptionChangeSetBuilder(Plan currentPlan)
 {

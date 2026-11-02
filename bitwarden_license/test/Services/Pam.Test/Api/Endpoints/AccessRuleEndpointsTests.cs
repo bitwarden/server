@@ -74,7 +74,8 @@ public class AccessRuleEndpointsTests
         var endpoint = Assert.Single(
             endpoints,
             e => e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == name);
-        // The raw pattern carries leading and trailing slashes.
+        // Trim slashes: the raw pattern carries routing's leading/trailing slashes (e.g. "/.../access-rules/")
+        // that the generated spec path does not.
         Assert.Equal(route, endpoint.RoutePattern.RawText?.Trim('/'));
         Assert.Contains(method, endpoint.Metadata.GetMetadata<HttpMethodMetadata>()!.HttpMethods);
     }
@@ -90,7 +91,12 @@ public class AccessRuleEndpointsTests
         Assert.Contains(produces, p => p.StatusCode == StatusCodes.Status404NotFound && p.Type == typeof(ErrorResponseModel));
     }
 
-    /// <summary>AuthorizationMiddleware combines both metadata shapes, so both are read.</summary>
+    /// <summary>
+    /// Collects the authorization requirements an endpoint carries. They arrive as two shapes of metadata:
+    /// <c>AuthorizeAttribute&lt;T&gt;</c> contributes <see cref="IAuthorizationRequirementData"/>, while a policy
+    /// built inline contributes an <see cref="AuthorizationPolicy"/>. AuthorizationMiddleware combines both, so a
+    /// test asking "what must this endpoint satisfy" has to read both.
+    /// </summary>
     private static List<IAuthorizationRequirement> RequirementsFor(Endpoint endpoint) =>
     [
         .. endpoint.Metadata.GetOrderedMetadata<AuthorizationPolicy>().SelectMany(policy => policy.Requirements),
@@ -121,7 +127,10 @@ public class AccessRuleEndpointsTests
     [Fact]
     public void MapPamEndpoints_AccessRuleWritesRequireMembershipBesidesThePermission()
     {
-        // The endpoint policy adds to the group's, so a write is never reachable on weaker terms than a read.
+        // A write must satisfy the group's MemberRequirement *in addition to* the permission: the endpoint policy
+        // adds to the group policy rather than replacing it, so a write is never reachable on weaker terms than a
+        // read. ManageAccessRulesRequirement independently excludes providers — see
+        // ManageAccessRulesRequirementTests.
         var writeRoutes = new[] { "Pam_AccessRules_Post", "Pam_AccessRules_Put", "Pam_AccessRules_Delete" };
 
         var endpoints = MaterializeEndpoints()

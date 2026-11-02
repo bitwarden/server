@@ -3,13 +3,15 @@
 namespace Bit.Pam.Models;
 
 /// <summary>
-/// An <see cref="Entities.AccessRequest"/> as reads return it: derived statuses, the produced lease, the decision log,
-/// and the requester's denormalized identity.
+/// A lease request projected for the approver inbox: every <see cref="Entities.AccessRequest"/> field plus the
+/// denormalized requester identity the client needs, the lease the request produced (if any), and the human resolver's
+/// identity/comment. Populated by a single join in the read procedures so the client avoids an N+1.
 /// </summary>
 public class AccessRequestDetails
 {
     public Guid Id { get; set; }
 
+    /// <summary>The parent lease for an extension request; null for original requests.</summary>
     public Guid? ExtensionOfLeaseId { get; set; }
 
     public Guid OrganizationId { get; set; }
@@ -17,6 +19,7 @@ public class AccessRequestDetails
     public Guid CipherId { get; set; }
     public Guid RequesterId { get; set; }
 
+    /// <summary>The access rule pinned on the request at submit, or null for requests created before pinning.</summary>
     public Guid? RuleId { get; set; }
 
     /// <inheritdoc cref="Entities.AccessRequest.NotBefore"/>

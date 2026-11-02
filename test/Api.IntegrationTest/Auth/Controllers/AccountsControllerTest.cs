@@ -1607,7 +1607,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     // which rotates the master password and wrapped user key as part of the email change. They
     // share the legacy-shaped PostEmailAsync helper at the end of this block.
     //
-    // The class-scoped Bitwarden.Server.Sdk.Features.IFeatureService substitute leaks Returns(...) values across tests in this
+    // The class-scoped IFeatureService substitute leaks Returns(...) values across tests in this
     // class, so every test sets the flag explicitly rather than relying on a default.
     //
     // TODO: PM-39120 - On flag cleanup, delete this entire block (all four _SelfServiceFlagOff_
@@ -1758,9 +1758,6 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         return await _client.SendAsync(message);
     }
 
-    // Salt is set to userEmail because during Stage 1 (PM-27044) the server requires
-    // salt == email. SetInitialPasswordData.ValidateDataForUser rejects divergent salts
-    // until Stage 3 (PM-28143).
     private static string CreateV2SetPasswordRequestJson(
         string userEmail,
         string orgIdentifier,

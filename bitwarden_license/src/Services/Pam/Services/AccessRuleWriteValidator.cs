@@ -103,8 +103,9 @@ public class AccessRuleWriteValidator : IAccessRuleWriteValidator
             throw new BadRequestException("One or more collections do not belong to this organization.");
         }
 
-        // The FK guarantees a set link names an existing rule, so only a link to another rule conflicts; for a create,
-        // any link does.
+        // Deletes clear Collection.AccessRuleId and the FK forbids dangling links, so any set link points at an
+        // existing rule; only a link to a different rule is a conflict. A rule being created has no id, so for it
+        // any link at all conflicts.
         if (collections.Any(c => c.AccessRuleId.HasValue && c.AccessRuleId != existingRuleId))
         {
             throw new BadRequestException("One or more collections are already governed by another access rule.");

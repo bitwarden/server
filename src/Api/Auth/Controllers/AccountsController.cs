@@ -857,8 +857,6 @@ public class AccountsController : Controller
         throw new BadRequestException(ModelState);
     }
 
-    // TODO: PM-44310 - Move the OTP request and verify out of IUserService
-    // and this action into Auth commands.
     [HttpPost("request-otp")]
     public async Task PostRequestOTP()
     {

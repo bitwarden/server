@@ -105,13 +105,6 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
         return Task.CompletedTask;
     }
 
-    // ---------------------------------------------------------------------
-    // get-email and delete
-    // ---------------------------------------------------------------------
-
-    /// <summary>
-    /// get-email reports the provider as enabled and returns a user verification token that delete accepts.
-    /// </summary>
     [Fact]
     public async Task GetEmail_ValidSecret_ReturnsTokenUsableForDelete()
     {
@@ -148,9 +141,6 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
         Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
     }
 
-    /// <summary>
-    /// Delete rejects a user verification token minted for a different user.
-    /// </summary>
     [Fact]
     public async Task DeleteEmail_WrongUserToken_BadRequest()
     {
@@ -167,9 +157,6 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
         Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
     }
 
-    /// <summary>
-    /// Delete rejects a user verification token that cannot be unprotected.
-    /// </summary>
     [Fact]
     public async Task DeleteEmail_TamperedToken_BadRequest()
     {

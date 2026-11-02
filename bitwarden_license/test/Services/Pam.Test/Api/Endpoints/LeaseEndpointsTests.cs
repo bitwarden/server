@@ -69,7 +69,8 @@ public class LeaseEndpointsTests
         var endpoint = Assert.Single(
             endpoints,
             e => e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == name);
-        // The raw pattern carries leading and trailing slashes.
+        // Trim slashes: the raw pattern carries routing's leading/trailing slashes (e.g. "/leases/active")
+        // that the generated spec path does not.
         Assert.Equal(route, endpoint.RoutePattern.RawText?.Trim('/'));
         Assert.Contains(method, endpoint.Metadata.GetMetadata<HttpMethodMetadata>()!.HttpMethods);
     }
