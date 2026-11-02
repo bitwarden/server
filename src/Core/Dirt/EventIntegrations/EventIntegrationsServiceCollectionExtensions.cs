@@ -30,10 +30,6 @@ public static class EventIntegrationsServiceCollectionExtensions
     /// Adds all event integrations commands, queries, and required cache infrastructure.
     /// This method is idempotent and can be called multiple times safely.
     /// </summary>
-    /// <remarks>
-    /// Also registers the Teams service (via <see cref="AddTeamsService"/>), which the configuration commands use to
-    /// validate Teams channels.
-    /// </remarks>
     public static IServiceCollection AddEventIntegrationsCommandsQueries(
         this IServiceCollection services,
         GlobalSettings globalSettings)

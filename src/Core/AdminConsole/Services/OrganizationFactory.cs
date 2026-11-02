@@ -124,7 +124,5 @@ public static class OrganizationFactory
             UseMyItems = license.UseMyItems,
             UseInviteLinks = license.UseInviteLinks,
             UsePam = license.UsePam,
-            // DO NOT add new properties here. This overload only serves licenses without a signed token and is
-            // deprecated: new properties can only be populated from the token in the other Create overload.
         };
 }

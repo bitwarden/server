@@ -41,7 +41,6 @@ public record ResourcePassword(string Hash) : SendAuthenticationMethod;
 public record EmailOtp(string[] emails) : SendAuthenticationMethod;
 
 /// <summary>
-/// The send cannot be accessed: it exists but is inaccessible (expired, disabled, max access exceeded,
-/// or past deletion date), or no send matches the given id.
+/// The send exists but cannot be accessed (expired, disabled, max access exceeded, or past deletion date).
 /// </summary>
 public record SendInaccessible : SendAuthenticationMethod;

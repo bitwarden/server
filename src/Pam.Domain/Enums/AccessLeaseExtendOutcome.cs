@@ -1,16 +1,23 @@
 ﻿namespace Bit.Pam.Enums;
 
-/// <summary>The result of a race-safe lease extension; each value is the code the stored procedure returns.</summary>
+/// <summary>
+/// The result of a race-safe lease extension. The extension stored procedure returns a distinct integer code so the
+/// caller can tell a lease that is no longer extendable apart from one that has already been extended.
+/// </summary>
 public enum AccessLeaseExtendOutcome
 {
+    /// <summary>The lease's window was extended (stored proc returned 1).</summary>
     Extended = 1,
 
     /// <summary>
-    /// The lease had ended or was ended early. The request is still recorded, as Denied with an automatic Deny
-    /// decision.
+    /// The lease was no longer active, or its window had already ended, when the guarded update ran (stored proc
+    /// returned 0). A concurrent revoke or expiry likely won.
     /// </summary>
     LeaseNotActive = 0,
 
-    /// <summary>A lease may be extended once. Nothing is persisted.</summary>
+    /// <summary>
+    /// The lease has already been extended (a lease may be extended once; stored proc returned -1). Nothing was
+    /// persisted.
+    /// </summary>
     AlreadyExtended = -1,
 }

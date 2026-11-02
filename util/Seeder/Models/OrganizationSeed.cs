@@ -27,7 +27,7 @@ internal record OrganizationSeed
     public required int Seats { get; init; }
 
     /// <summary>
-    /// Drives ~25 feature flags through <c>PlanFeatures.Apply</c>. Families rejects Secrets Manager.
+    /// Drives ~25 feature flags through <c>PlanFeatures.Apply</c>. Free and Families reject Secrets Manager.
     /// </summary>
     public PlanType PlanType { get; init; } = PlanType.EnterpriseAnnually;
 
@@ -62,18 +62,17 @@ internal record OrganizationSeed
     public string? GatewaySubscriptionId { get; init; }
 
     /// <summary>
-    /// Throws for plans without a Secrets Manager tier (e.g. Families).
+    /// Throws for plans without a Secrets Manager tier (Free, Families).
     /// </summary>
     public bool EnableSecretsManager { get; init; }
 
     /// <summary>
-    /// Defaults to the plan's base seats: <see cref="Seats"/> for paid plans, 2 for Free.
-    /// Ignored unless <see cref="EnableSecretsManager"/>.
+    /// Defaults to <see cref="Seats"/>. Ignored unless <see cref="EnableSecretsManager"/>.
     /// </summary>
     public int? SmSeats { get; init; }
 
     /// <summary>
-    /// Defaults to the plan's base allotment: 50 for Enterprise and Teams-Annual, 20 for Teams, 3 for Free.
+    /// Defaults to the plan's base allotment: 50 for Enterprise and Teams-Annual, 20 for Teams.
     /// Ignored unless <see cref="EnableSecretsManager"/>.
     /// </summary>
     public int? SmServiceAccounts { get; init; }
