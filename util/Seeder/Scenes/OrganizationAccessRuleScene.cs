@@ -24,17 +24,13 @@ public class OrganizationAccessRuleScene(
         public required string Name { get; set; }
         public string? Description { get; set; }
         public bool Enabled { get; set; } = true;
-        /// <summary>Collections the rule governs. Must belong to the organization.</summary>
         public IEnumerable<Guid>? CollectionIds { get; set; }
-        /// <summary>Adds an <c>ip_allowlist</c> condition with these CIDRs.</summary>
         public IReadOnlyList<string>? IpAllowlistCidrs { get; set; }
-        /// <summary>Adds a <c>human_approval</c> condition.</summary>
         public bool RequireHumanApproval { get; set; }
         public bool SingleActiveLease { get; set; }
         public int? DefaultLeaseDurationSeconds { get; set; }
         public int? MaxLeaseDurationSeconds { get; set; }
         public bool AllowsExtensions { get; set; }
-        /// <summary>Required and positive when <see cref="AllowsExtensions"/> is true.</summary>
         public int? MaxExtensionDurationSeconds { get; set; }
     }
 
