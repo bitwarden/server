@@ -31,9 +31,9 @@
       },
       "xunit.runner.visualstudio": {
         "type": "Direct",
-        "requested": "[3.1.2, 3.1.2]",
-        "resolved": "3.1.2",
-        "contentHash": "0W1J4AFaswO3ycVWiN8ApgJFMXLJ7OuR9XmDeoWmjPF1pwMz0I8UnyIiwXcytyBYKjXD3M2cXbLmCTLToUg3TA=="
+        "requested": "[4.0.1, 4.0.1]",
+        "resolved": "4.0.1",
+        "contentHash": "8CoAaZkniVekR1ycJyxn+hOz+6ZQCDPcoIsIs6ujd4WyFcBMlxGNU15Qb8Uxd4iO4UmOuETb0M6vzBbwX/mfLA=="
       },
       "AdaptiveCards": {
         "type": "Transitive",
