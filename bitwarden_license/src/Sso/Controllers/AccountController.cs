@@ -708,10 +708,9 @@ public class AccountController : Controller
         {
             await EnsureSeatAvailableAsync(organization);
 
-            if (willPromoteStagedOrgUser)
+            if (willPromoteStagedOrgUser && possibleOrgUser!.AccessPam)
             {
-                privilegedControlsSeatReservation = await _reservePrivilegedControlsSeatsCommand.RunAsync(
-                    organization, possibleOrgUser!.AccessPam ? 1 : 0);
+                privilegedControlsSeatReservation = await _reservePrivilegedControlsSeatsCommand.RunAsync(organization, 1);
                 if (!privilegedControlsSeatReservation.Success)
                 {
                     possibleOrgUser.AccessPam = false;
@@ -881,11 +880,14 @@ public class AccountController : Controller
         var previousRevisionDate = orgUser.RevisionDate;
         var previousAccessPam = orgUser.AccessPam;
 
-        var privilegedControlsSeatReservation =
-            await _reservePrivilegedControlsSeatsCommand.RunAsync(organization, orgUser.AccessPam ? 1 : 0);
-        if (!privilegedControlsSeatReservation.Success)
+        PrivilegedControlsSeatReservationResult? privilegedControlsSeatReservation = null;
+        if (orgUser.AccessPam)
         {
-            orgUser.AccessPam = false;
+            privilegedControlsSeatReservation = await _reservePrivilegedControlsSeatsCommand.RunAsync(organization, 1);
+            if (!privilegedControlsSeatReservation.Success)
+            {
+                orgUser.AccessPam = false;
+            }
         }
 
         orgUser.Status = OrganizationUserStatusType.Invited;
@@ -915,7 +917,7 @@ public class AccountController : Controller
             throw;
         }
 
-        if (privilegedControlsSeatReservation.Error is PrivilegedControlsSeatLimitReachedError)
+        if (privilegedControlsSeatReservation?.Error is PrivilegedControlsSeatLimitReachedError)
         {
             await _sendPrivilegedControlsSeatNeededEmailCommand.RunAsync(organization, orgUser.Email!);
         }

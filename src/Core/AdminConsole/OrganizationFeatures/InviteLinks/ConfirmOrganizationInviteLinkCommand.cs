@@ -129,11 +129,13 @@ public class ConfirmOrganizationInviteLinkCommand(
                 return seatReservationError;
             }
 
-            privilegedControlsSeatReservation = await reservePrivilegedControlsSeatsCommand.RunAsync(
-                organization, existingOrganizationUser.AccessPam ? 1 : 0);
-            if (!privilegedControlsSeatReservation.Success)
+            if (existingOrganizationUser.AccessPam)
             {
-                existingOrganizationUser.AccessPam = false;
+                privilegedControlsSeatReservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, 1);
+                if (!privilegedControlsSeatReservation.Success)
+                {
+                    existingOrganizationUser.AccessPam = false;
+                }
             }
         }
 

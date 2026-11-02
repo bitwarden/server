@@ -349,7 +349,9 @@ public class AcceptOrganizationInviteLinkCommandTests
         var result = await sutProvider.Sut.AcceptAsync(BuildRequest(organization, inviteLink, user));
 
         Assert.True(result.IsSuccess);
-        await sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>().Received(1).RunAsync(organization, 0);
+        await sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default!, default);
     }
 
     [Theory, BitAutoData]
