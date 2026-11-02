@@ -38,7 +38,7 @@ RUN . /tmp/rid.txt && dotnet publish \
 ###############################################
 #                  App stage                  #
 ###############################################
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine3.23 AS app
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0-alpine3.23 AS app
 
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
