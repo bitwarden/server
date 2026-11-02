@@ -141,6 +141,7 @@ public class SingleProviderScene(
                 Domain = domain,
                 Type = request.Type,
                 Status = status,
+                UseEvents = true,
                 GatewayCustomerId = request.GatewayCustomerId,
                 GatewaySubscriptionId = request.GatewaySubscriptionId
             },
