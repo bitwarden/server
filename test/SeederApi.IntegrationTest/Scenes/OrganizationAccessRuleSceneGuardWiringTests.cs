@@ -52,6 +52,7 @@ public class OrganizationAccessRuleSceneGuardWiringTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => SeedAsync(governedCollection.Id));
 
         Assert.Contains("already governed by an access rule", exception.Message);
+        await _collectionRepository.Received(1).GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>());
         await _accessRuleRepository.DidNotReceive().CreateAsync(Arg.Any<AccessRule>());
     }
 
@@ -63,6 +64,7 @@ public class OrganizationAccessRuleSceneGuardWiringTests
 
         var result = await SeedAsync(collection.Id, collection.Id);
 
+        await _collectionRepository.Received(1).GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>());
         await _collectionRepository.Received(1).SetAccessRuleAssociationsAsync(
             _organization.Id,
             result.Result.AccessRuleId,

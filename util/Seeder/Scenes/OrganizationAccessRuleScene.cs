@@ -42,9 +42,10 @@ public class OrganizationAccessRuleScene(
 
     public async Task<SceneResult<Result>> SeedAsync(Request request)
     {
-        var collectionIds = await organizationRepository.GetDistinctCollectionIdsOrThrowAsync(
+        var collections = await organizationRepository.GetDistinctCollectionsOrThrowAsync(
             collectionRepository, request.OrganizationId, request.CollectionIds ?? []);
-        await collectionRepository.ThrowIfCollectionsGovernedByAccessRuleAsync(collectionIds);
+        collections.ThrowIfCollectionsGovernedByAccessRule();
+        var collectionIds = collections.Select(c => c.Id).ToList();
 
         var accessRule = AccessRuleSeeder.Create(
             request.OrganizationId,

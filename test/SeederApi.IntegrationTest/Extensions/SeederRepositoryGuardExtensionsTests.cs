@@ -124,6 +124,84 @@ public class SeederRepositoryGuardExtensionsTests
         await collectionRepository.DidNotReceiveWithAnyArgs().GetManyByManyIdsAsync(default!);
     }
 
+    [Fact]
+    public async Task GetDistinctCollectionsOrThrowAsync_AllInOrganization_ReturnsCollections()
+    {
+        var first = NewCollection(_ownerId);
+        var second = NewCollection(_ownerId);
+        var (organizationRepository, collectionRepository) = CollectionGuardRepositories(second, first);
+
+        var collections = await organizationRepository.GetDistinctCollectionsOrThrowAsync(
+            collectionRepository, _ownerId, [first.Id, second.Id]);
+
+        Assert.Equal([first, second], collections);
+    }
+
+    [Fact]
+    public async Task GetDistinctCollectionsOrThrowAsync_InOtherOrganization_Throws()
+    {
+        var collection = NewCollection(_otherOwnerId);
+        var (organizationRepository, collectionRepository) = CollectionGuardRepositories(collection);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            organizationRepository.GetDistinctCollectionsOrThrowAsync(collectionRepository, _ownerId, [collection.Id]));
+
+        Assert.Equal($"One or more collections are not in organization {_ownerId}.", exception.Message);
+    }
+
+    [Fact]
+    public async Task GetDistinctCollectionsOrThrowAsync_Missing_Throws()
+    {
+        var collection = NewCollection(_ownerId);
+        var (organizationRepository, collectionRepository) = CollectionGuardRepositories(collection);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            organizationRepository.GetDistinctCollectionsOrThrowAsync(
+                collectionRepository, _ownerId, [collection.Id, Guid.NewGuid()]));
+
+        Assert.Equal($"One or more collections are not in organization {_ownerId}.", exception.Message);
+    }
+
+    [Fact]
+    public async Task GetDistinctCollectionsOrThrowAsync_OrganizationMissing_ThrowsWithoutQueryingCollections()
+    {
+        var organizationRepository = Substitute.For<IOrganizationRepository>();
+        organizationRepository.GetByIdAsync(_ownerId).Returns((Organization?)null);
+        var collectionRepository = Substitute.For<ICollectionRepository>();
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            organizationRepository.GetDistinctCollectionsOrThrowAsync(collectionRepository, _ownerId, [Guid.NewGuid()]));
+
+        Assert.Contains("not found", exception.Message);
+        await collectionRepository.DidNotReceiveWithAnyArgs().GetManyByManyIdsAsync(default!);
+    }
+
+    [Fact]
+    public async Task GetDistinctCollectionsOrThrowAsync_DuplicateIds_QueriesAndReturnsDistinct()
+    {
+        var collection = NewCollection(_ownerId);
+        var (organizationRepository, collectionRepository) = CollectionGuardRepositories(collection);
+
+        var collections = await organizationRepository.GetDistinctCollectionsOrThrowAsync(
+            collectionRepository, _ownerId, [collection.Id, collection.Id]);
+
+        Assert.Equal([collection], collections);
+        await collectionRepository.Received(1).GetManyByManyIdsAsync(
+            Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(new[] { collection.Id })));
+    }
+
+    [Fact]
+    public async Task GetDistinctCollectionsOrThrowAsync_Empty_ReturnsEmptyWithoutQueryingCollections()
+    {
+        var (organizationRepository, collectionRepository) = CollectionGuardRepositories();
+
+        var collections = await organizationRepository.GetDistinctCollectionsOrThrowAsync(
+            collectionRepository, _ownerId, []);
+
+        Assert.Empty(collections);
+        await collectionRepository.DidNotReceiveWithAnyArgs().GetManyByManyIdsAsync(default!);
+    }
+
     [Theory]
     [InlineData(OrganizationUserStatusType.Confirmed)]
     [InlineData(OrganizationUserStatusType.Revoked)]
@@ -236,42 +314,41 @@ public class SeederRepositoryGuardExtensionsTests
         await repository.Received(1).GetByOrganizationId(linkedId);
     }
 
-    [Theory]
-    [MemberData(nameof(NullOrEmptyIds))]
-    public async Task ThrowIfCollectionsGovernedByAccessRuleAsync_NullOrEmpty_DoesNotQuery(Guid[]? ids)
+    [Fact]
+    public void ThrowIfCollectionsGovernedByAccessRule_Empty_Passes()
     {
-        var repository = Substitute.For<ICollectionRepository>();
-
-        await repository.ThrowIfCollectionsGovernedByAccessRuleAsync(ids);
-
-        await repository.DidNotReceiveWithAnyArgs().GetManyByManyIdsAsync(default!);
+        Array.Empty<Collection>().ThrowIfCollectionsGovernedByAccessRule();
     }
 
     [Fact]
-    public async Task ThrowIfCollectionsGovernedByAccessRuleAsync_Ungoverned_Passes()
+    public void ThrowIfCollectionsGovernedByAccessRule_Ungoverned_Passes()
     {
-        var collection = NewCollection(_ownerId);
-        var repository = Substitute.For<ICollectionRepository>();
-        repository.GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>()).Returns([collection]);
-
-        await repository.ThrowIfCollectionsGovernedByAccessRuleAsync([collection.Id]);
+        new[] { NewCollection(_ownerId) }.ThrowIfCollectionsGovernedByAccessRule();
     }
 
     [Fact]
-    public async Task ThrowIfCollectionsGovernedByAccessRuleAsync_Governed_ThrowsWithCollectionId()
+    public void ThrowIfCollectionsGovernedByAccessRule_Governed_ThrowsWithCollectionId()
     {
         var ungoverned = NewCollection(_ownerId);
         var governed = NewCollection(_ownerId);
         governed.AccessRuleId = Guid.NewGuid();
-        var repository = Substitute.For<ICollectionRepository>();
-        repository.GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>()).Returns([ungoverned, governed]);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => repository.ThrowIfCollectionsGovernedByAccessRuleAsync([ungoverned.Id, governed.Id]));
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => new[] { ungoverned, governed }.ThrowIfCollectionsGovernedByAccessRule());
 
         Assert.Contains("already governed by an access rule", exception.Message);
         Assert.Contains(governed.Id.ToString(), exception.Message);
         Assert.DoesNotContain(ungoverned.Id.ToString(), exception.Message);
+    }
+
+    private static (IOrganizationRepository, ICollectionRepository) CollectionGuardRepositories(
+        params Collection[] stored)
+    {
+        var organizationRepository = Substitute.For<IOrganizationRepository>();
+        organizationRepository.GetByIdAsync(_ownerId).Returns(new Organization { Id = _ownerId });
+        var collectionRepository = Substitute.For<ICollectionRepository>();
+        collectionRepository.GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>()).Returns(stored);
+        return (organizationRepository, collectionRepository);
     }
 
     private static Group NewGroup(Guid organizationId) =>
