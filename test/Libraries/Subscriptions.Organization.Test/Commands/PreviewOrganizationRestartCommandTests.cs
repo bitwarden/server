@@ -132,7 +132,7 @@ public class PreviewOrganizationRestartCommandTests
         await _sut.Run(organization, Request());
 
         Assert.NotNull(options.Value);
-        Assert.Null(options.Value!.Discounts);
+        Assert.DoesNotContain("discounts", (await SentFormFields(options.Value!)).Keys);
     }
 
     [Fact]
@@ -147,8 +147,9 @@ public class PreviewOrganizationRestartCommandTests
         Assert.NotNull(options.Value);
         Assert.Equal("cus_1", options.Value!.Customer);
         Assert.Null(options.Value.CustomerDetails.TaxIds);
-        Assert.Null(options.Value.CustomerDetails.TaxExempt);
-        Assert.Null(options.Value.Discounts);
+        var fields = await SentFormFields(options.Value);
+        Assert.DoesNotContain("customer_details[tax_exempt]", fields.Keys);
+        Assert.DoesNotContain("discounts", fields.Keys);
     }
 
     [Theory]
@@ -217,6 +218,23 @@ public class PreviewOrganizationRestartCommandTests
     }
 
     [Fact]
+    public async Task Run_BusinessTaxIdInRequest_DoesNotSendTaxExemptOrDiscounts()
+    {
+        var organization = ArrangeCanceledOrganization();
+        ArrangeCustomer(organization, taxIdCount: 1, taxExempt: "exempt", couponId: "coupon_25");
+        _taxService.GetStripeTaxCode("DE", "DE123").Returns("eu_vat");
+        var options = CaptureOptions();
+
+        await _sut.Run(organization, Request(country: "DE", postalCode: "10115", taxId: new TaxIdSelection("eu_vat", "DE123")));
+
+        Assert.NotNull(options.Value);
+        var fields = await SentFormFields(options.Value!);
+        Assert.Equal("cus_1", fields["customer"]);
+        Assert.DoesNotContain("customer_details[tax_exempt]", fields.Keys);
+        Assert.DoesNotContain("discounts", fields.Keys);
+    }
+
+    [Fact]
     public async Task Run_TaxIdInRequest_SendsDerivedTaxId()
     {
         var organization = ArrangeCanceledOrganization();
@@ -247,6 +265,25 @@ public class PreviewOrganizationRestartCommandTests
         Assert.NotNull(options.Value);
         Assert.Equal("cus_1", options.Value!.Customer);
         Assert.Null(options.Value.CustomerDetails.TaxIds);
+    }
+
+    [Fact]
+    public async Task Run_Families_DoesNotSendTaxExemptOrDiscounts()
+    {
+        var organization = new OrganizationEntity { Id = Guid.NewGuid() };
+        var subscription = new Subscription { Status = StripeConstants.SubscriptionStatus.Canceled, CustomerId = "cus_1" };
+        _subscriberService.GetSubscription(organization).Returns(subscription);
+        _getOrganizationRestartQuery.Run(organization, subscription).Returns(
+            Restart(PlanType.FamiliesAnnually, ProductTierType.Families, true, ("price_seat", 1)));
+        var options = CaptureOptions();
+
+        await _sut.Run(organization, Request());
+
+        Assert.NotNull(options.Value);
+        var fields = await SentFormFields(options.Value!);
+        Assert.Equal("cus_1", fields["customer"]);
+        Assert.DoesNotContain("customer_details[tax_exempt]", fields.Keys);
+        Assert.DoesNotContain("discounts", fields.Keys);
     }
 
     [Theory]
@@ -414,6 +451,30 @@ public class PreviewOrganizationRestartCommandTests
         Total = 10m,
         AmountDue = 10m
     };
+
+    // Stripe.net sends an assigned null as an empty value for some properties, and a captured options
+    // object can't tell that apart from a property that was never assigned, so read the request it would send.
+    private static async Task<IReadOnlyDictionary<string, string>> SentFormFields(InvoiceCreatePreviewOptions options)
+    {
+        var handler = new RecordingHandler();
+        var client = new StripeClient("sk_test_unused", httpClient: new SystemNetHttpClient(new HttpClient(handler)));
+        await new InvoiceService(client).CreatePreviewAsync(options);
+        return handler.Body
+            .Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Select(pair => pair.Split('=', 2))
+            .ToDictionary(pair => Uri.UnescapeDataString(pair[0]), pair => Uri.UnescapeDataString(pair[1].Replace('+', ' ')));
+    }
+
+    private sealed class RecordingHandler : HttpMessageHandler
+    {
+        public string Body { get; private set; } = "";
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Body = request.Content is null ? "" : await request.Content.ReadAsStringAsync(cancellationToken);
+            return new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent("{\"object\":\"invoice\"}") };
+        }
+    }
 
     private sealed class Captured<T> where T : class
     {

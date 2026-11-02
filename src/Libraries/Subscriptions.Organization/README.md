@@ -181,7 +181,9 @@ tax ids when `customer_details.tax_ids` is omitted and rejects an empty list, so
   so the preview leaves `customer` off and copies what Stripe would have read from it: `tax_exempt` and the
   customer's coupon (as `discounts`). Stripe applies no balance to a preview without a customer, so the
   command applies it with Stripe's rule: `StartingBalance` carries a credit and
-  `AmountDue = max(0, Total + balance)`.
+  `AmountDue = max(0, Total + balance)`. `tax_exempt` and `discounts` are assigned only on this path,
+  because Stripe.net sends either one as an empty value when it is assigned `null`, and Stripe reads an
+  empty value as clearing the customer's setting.
 - **Every other business request:** the preview runs against the customer and sends the request's tax id
   when there is one, which overrides the ones on file. The customer's balance carries through to the cart.
 
