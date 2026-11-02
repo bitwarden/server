@@ -1,5 +1,4 @@
 ﻿using System.Globalization;
-using System.Security.Claims;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
@@ -16,13 +15,11 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.IntegrationTestCommon;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Fakes;
 using Bit.Test.Common.Helpers;
-using Duende.IdentityModel;
-using Duende.IdentityServer.Models;
-using Duende.IdentityServer.Stores;
 using Fido2NetLib;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
@@ -393,7 +390,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         {
             MemberDecryptionType = MemberDecryptionType.MasterPassword,
         };
-        await CreateSsoOrganizationAndUserAsync(
+        var code = await CreateSsoOrganizationAndUserAsync(
             localFactory, ssoConfigData, challenge, _testEmail, userTwoFactor: _userEmailTwoFactor);
 
         // Act
@@ -405,7 +402,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             { "deviceIdentifier", deviceId },
             { "deviceName", "edge" },
             { "grant_type", "authorization_code" },
-            { "code", "test_code" },
+            { "code", code },
             { "code_verifier", challenge },
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
         }));
@@ -429,7 +426,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         {
             MemberDecryptionType = MemberDecryptionType.MasterPassword,
         };
-        await CreateSsoOrganizationAndUserAsync(
+        var code = await CreateSsoOrganizationAndUserAsync(
             localFactory, ssoConfigData, challenge, _testEmail, userTwoFactor: _userEmailTwoFactor);
 
         // Act
@@ -441,7 +438,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             { "deviceIdentifier", deviceId },
             { "deviceName", "edge" },
             { "grant_type", "authorization_code" },
-            { "code", "test_code" },
+            { "code", code },
             { "code_verifier", challenge },
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
         }));
@@ -460,7 +457,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             { "twoFactorProvider", "1" },
             { "twoFactorRemember", "0" },
             { "grant_type", "authorization_code" },
-            { "code", "test_code" },
+            { "code", code },
             { "code_verifier", challenge },
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
         }));
@@ -485,7 +482,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             MemberDecryptionType = MemberDecryptionType.MasterPassword,
         };
 
-        await CreateSsoOrganizationAndUserAsync(
+        var code = await CreateSsoOrganizationAndUserAsync(
             localFactory, ssoConfigData, challenge, _testEmail, orgTwoFactor: _organizationTwoFactor);
 
         // Act
@@ -497,7 +494,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             { "deviceIdentifier", deviceId },
             { "deviceName", "edge" },
             { "grant_type", "authorization_code" },
-            { "code", "test_code" },
+            { "code", code },
             { "code_verifier", challenge },
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
         }));
@@ -743,7 +740,11 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         }
     }
 
-    private async Task<IdentityApplicationFactory> CreateSsoOrganizationAndUserAsync(
+    /// <summary>
+    /// Seeds an SSO user and organization, and stores an authorization code for them through the real code store.
+    /// </summary>
+    /// <returns>The authorization code to redeem with <paramref name="challenge"/>.</returns>
+    private async Task<string> CreateSsoOrganizationAndUserAsync(
         IdentityApplicationFactory factory,
         SsoConfigurationData ssoConfigurationData,
         string challenge,
@@ -753,24 +754,6 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         string userTwoFactor = null,
         Permissions permissions = null)
     {
-        var authorizationCode = new AuthorizationCode
-        {
-            ClientId = "web",
-            CreationTime = DateTime.UtcNow,
-            Lifetime = (int)TimeSpan.FromMinutes(5).TotalSeconds,
-            RedirectUri = "https://localhost:8080/sso-connector.html",
-            RequestedScopes = ["api", "offline_access"],
-            CodeChallenge = challenge.Sha256(),
-            CodeChallengeMethod = "plain",
-            Subject = null!, // Temporarily set it to null
-        };
-
-        factory.SubstituteService<IAuthorizationCodeStore>(service =>
-        {
-            service.GetAuthorizationCodeAsync("test_code")
-                .Returns(authorizationCode);
-        });
-
         var user = await factory.RegisterNewIdentityFactoryUserAsync(
             new RegisterFinishRequestModel
             {
@@ -837,18 +820,6 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             Data = JsonSerializer.Serialize(ssoConfigurationData, JsonHelpers.CamelCase),
         });
 
-        var subject = new ClaimsPrincipal(new ClaimsIdentity([
-            new Claim(JwtClaimTypes.Subject, user.Id.ToString()), // Get real user id
-            new Claim(JwtClaimTypes.Name, testEmail),
-            new Claim(JwtClaimTypes.IdentityProvider, "sso"),
-            new Claim("organizationId", organization.Id.ToString()),
-            new Claim(JwtClaimTypes.SessionId, "SOMETHING"),
-            new Claim(JwtClaimTypes.AuthenticationMethod, "external"),
-            new Claim(JwtClaimTypes.AuthenticationTime, new DateTimeOffset(DateTime.UtcNow.AddMinutes(-1)).ToUnixTimeSeconds().ToString())
-        ], "Duende.IdentityServer", JwtClaimTypes.Name, JwtClaimTypes.Role));
-
-        authorizationCode.Subject = subject;
-
-        return factory;
+        return await factory.StoreSsoAuthorizationCodeAsync(user.Id, testEmail, organization.Id, challenge);
     }
 }
