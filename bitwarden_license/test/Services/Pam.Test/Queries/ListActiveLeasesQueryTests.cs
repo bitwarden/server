@@ -42,7 +42,7 @@ public class ListActiveLeasesQueryTests
         var result = await sutProvider.Sut.GetActiveAsync(userId, _now);
 
         Assert.Single(result);
-        // The caller's clock is forwarded unchanged: the same instant filters the read and derives the response.
+        // The caller's clock is forwarded unchanged, so one instant filters the read and derives the response.
         await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1)
             .GetManyActiveByCollectionIdsAsync(manageable, _now);
     }

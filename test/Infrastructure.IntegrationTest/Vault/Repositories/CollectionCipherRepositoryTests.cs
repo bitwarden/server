@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -230,5 +231,75 @@ public class CollectionCipherRepositoryTests
         var remainingCollectionIds = await collectionCipherRepository.GetCollectionIdsByCipherIdAsync(cipher.Id);
         Assert.DoesNotContain(accessibleCollection.Id, remainingCollectionIds);
         Assert.Contains(inaccessibleCollection.Id, remainingCollectionIds);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetManyByUserIdAsync_WhenSeveralGroupsGrantSameCollection_ReturnsEachCollectionCipherOnce(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository,
+        ICollectionRepository collectionRepository,
+        ICipherRepository cipherRepository,
+        ICollectionCipherRepository collectionCipherRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            PlanType = PlanType.EnterpriseAnnually,
+            Plan = "Enterprise",
+            BillingEmail = "billing@example.com"
+        });
+
+        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            UserId = user.Id,
+            OrganizationId = organization.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.User,
+        });
+
+        var collection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Test Collection",
+            OrganizationId = organization.Id,
+        });
+
+        var cipher = await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = organization.Id,
+            Data = "",
+        });
+
+        await collectionCipherRepository.AddCollectionsForManyCiphersAsync(
+            organization.Id,
+            new[] { cipher.Id },
+            new[] { collection.Id });
+
+        for (var i = 0; i < 3; i++)
+        {
+            var group = new Group { OrganizationId = organization.Id, Name = $"Group {i}" };
+            await groupRepository.CreateAsync(group,
+                [new CollectionAccessSelection { Id = collection.Id, ReadOnly = true, HidePasswords = false, Manage = false }]);
+            await groupRepository.UpdateUsersAsync(group.Id, [orgUser.Id], DateTime.UtcNow);
+        }
+
+        // Act
+        var result = await collectionCipherRepository.GetManyByUserIdAsync(user.Id);
+
+        // Assert
+        var collectionCipher = Assert.Single(result);
+        Assert.Equal(collection.Id, collectionCipher.CollectionId);
+        Assert.Equal(cipher.Id, collectionCipher.CipherId);
     }
 }

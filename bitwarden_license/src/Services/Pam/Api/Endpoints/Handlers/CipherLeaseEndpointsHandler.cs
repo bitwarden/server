@@ -7,11 +7,7 @@ using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 
 namespace Bit.Services.Pam.Api.Endpoints.Handlers;
 
-/// <summary>
-/// Handler for the <c>leases/ciphers/{id}</c> resource: the per-cipher leasing entry points (pre-check, state,
-/// submit). The deprecated full-cipher read-back (<c>GET …/cipher</c>) is hosted by a small MVC controller
-/// in the Api project instead, since it depends on the Api Vault response models.
-/// </summary>
+/// <summary>Handler for the <c>leases/ciphers/{id}</c> resource.</summary>
 public class CipherLeaseEndpointsHandler(
     IUserService userService,
     TimeProvider timeProvider,

@@ -3,9 +3,8 @@
 namespace Bit.Pam.Models;
 
 /// <summary>
-/// The read model of a stored audit event. <see cref="Kind"/> carries the outcome, so there is no separate verdict
-/// field. <see cref="ActorId"/> is who performed the event and is null for an automatic one; <see cref="RequesterId"/>
-/// is the owner of the subject request or lease. Subject ids are populated according to <see cref="Kind"/>.
+/// The read model of a stored audit event. <see cref="Kind"/> carries the outcome and decides which subject ids are
+/// set; <see cref="RequesterId"/> owns the subject request or lease.
 /// </summary>
 public class AccessAuditEvent
 {
@@ -33,7 +32,7 @@ public class AccessAuditEvent
     public PamRotationSource? RotationSource { get; set; }
     public PamRotationSyncState? SyncState { get; set; }
 
-    /// <summary>An approver comment, an auto-denial reason, or a revoke reason, whichever the source row carried.</summary>
+    /// <summary>The reason, comment or message recorded with the event.</summary>
     public string? Detail { get; set; }
 
     public DateTime? LeaseNotBefore { get; set; }

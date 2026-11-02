@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Utilities.v2.Results;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.Utilities.v2.Results;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 
@@ -12,10 +13,9 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 /// <list type="bullet">
 ///     <item><see cref="InviteLinkRules.ValidateEligibility"/>.</item>
 ///     <item>The link supports confirmation.</item>
-///     <item>The user is not a provider user.</item>
 ///     <item><see cref="InviteLinkRules.ValidateConfirmMembershipStatus"/>.</item>
-///     <item>The organization has an available seat for a new or Staged member.</item>
-///     <item>The Require Two-Factor Authentication and Single Organization policies.</item>
+///     <item><see cref="IInviteLinkValidationService.ValidateJoinRequirementsAsync"/>.</item>
+///     <item><see cref="IJoinOrganizationPolicyValidationService.ValidateAccountRecoveryPolicy"/>.</item>
 /// </list>
 /// </remarks>
 public interface IConfirmOrganizationInviteLinkValidator

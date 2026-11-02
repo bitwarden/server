@@ -95,7 +95,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
         using (var connection = new SqlConnection(ConnectionString))
         {
-            // The procedure returns one row per access path, so rows are streamed and reduced to the most privileged per cipher.
+            // Rows are streamed and any repeated cipher is reduced to its most privileged row.
             var ciphers = new Dictionary<Guid, CipherDetails>();
             await foreach (var cipher in connection.QueryUnbufferedAsync<CipherDetails>(
                 sprocName,

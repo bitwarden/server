@@ -140,6 +140,63 @@ public class UserEmailTokenCodeQueryTests
         Assert.True(await twoFactorEmailService.VerifyTwoFactorLoginTokenAsync(user, DeviceIdentifier, response.Code));
     }
 
+    [Fact]
+    public async Task Execute_EmailTwoFactorSetup_ReturnsCodeAndBoundDevice()
+    {
+        var (query, cache, user) = Arrange();
+        EnableEmailTwoFactor(user);
+        var (twoFactorEmailService, mailService) = BuildTwoFactorEmailService(cache);
+        await twoFactorEmailService.SendTwoFactorSetupEmailAsync(user, DeviceIdentifier);
+
+        var response = await query.Execute(new UserEmailTokenCodeQuery.Request
+        {
+            Email = user.Email,
+            CodeType = UserEmailTokenCodeQuery.CodeType.EmailTwoFactorSetup,
+        });
+
+        Assert.True(response.Found);
+        Assert.Equal(EmailedCode(mailService), response.Code);
+        Assert.Equal(DeviceIdentifier, response.DeviceIdentifier);
+    }
+
+    [Fact]
+    public async Task Execute_EmailTwoFactorSetup_LeavesTheCodeRedeemable()
+    {
+        var (query, cache, user) = Arrange();
+        EnableEmailTwoFactor(user);
+        var (twoFactorEmailService, _) = BuildTwoFactorEmailService(cache);
+        await twoFactorEmailService.SendTwoFactorSetupEmailAsync(user, DeviceIdentifier);
+
+        var response = await query.Execute(new UserEmailTokenCodeQuery.Request
+        {
+            Email = user.Email,
+            CodeType = UserEmailTokenCodeQuery.CodeType.EmailTwoFactorSetup,
+        });
+
+        Assert.True(await twoFactorEmailService.VerifyTwoFactorSetupTokenAsync(user, DeviceIdentifier, response.Code));
+    }
+
+    /// <summary>
+    /// The login and setup codes share a provider name and differ only by purpose, so asking for one must not
+    /// return the other.
+    /// </summary>
+    [Fact]
+    public async Task Execute_EmailTwoFactor_DoesNotReturnTheSetupCode()
+    {
+        var (query, cache, user) = Arrange();
+        EnableEmailTwoFactor(user);
+        var (twoFactorEmailService, _) = BuildTwoFactorEmailService(cache);
+        await twoFactorEmailService.SendTwoFactorSetupEmailAsync(user, DeviceIdentifier);
+
+        var response = await query.Execute(new UserEmailTokenCodeQuery.Request
+        {
+            Email = user.Email,
+            CodeType = UserEmailTokenCodeQuery.CodeType.EmailTwoFactor,
+        });
+
+        Assert.False(response.Found);
+    }
+
     /// <summary>
     /// The user-verification OTP is written as a bare string under a different key, not in the envelope the other
     /// code types use, and the query still reads it.
@@ -148,7 +205,7 @@ public class UserEmailTokenCodeQueryTests
     public async Task Execute_UserVerification_ReturnsBareCachedCode()
     {
         var (query, cache, user) = Arrange();
-        var issuedCode = await new EmailTokenProvider(cache, Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>())
+        var issuedCode = await new EmailTokenProvider(cache)
             .GenerateAsync($"otp:{user.Email}", null!, user);
 
         var response = await query.Execute(new UserEmailTokenCodeQuery.Request

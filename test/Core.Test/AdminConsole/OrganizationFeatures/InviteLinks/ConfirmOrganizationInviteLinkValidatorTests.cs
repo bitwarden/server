@@ -1,18 +1,19 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PreAccess;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
-using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
-using Bit.Core.Test.Billing.Mocks.Plans;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -23,58 +24,16 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.InviteLinks;
 [SutProviderCustomize]
 public class ConfirmOrganizationInviteLinkValidatorTests
 {
-    // The two confirmations that consume a seat: a brand-new membership (no existing row), or a Staged row,
-    // which is excluded from the occupied seat count.
-    public static IEnumerable<object?[]> SeatConsumingMemberships() =>
+    public static IEnumerable<object[]> JoinRequirementsErrors() =>
     [
-        [null],
-        [new OrganizationUser { Status = OrganizationUserStatusType.Staged, Type = OrganizationUserType.User }],
+        [new CannotBeAdminOfMultipleFreeOrganizations(), typeof(ConfirmOnlyOneFreeOrganizationAdminAllowed)],
+        [new OtherOrganizationDoesNotAllowOtherMembership("user@example.com"), typeof(ConfirmOtherOrganizationDoesNotAllowOtherMembership)],
+        [new UserCannotBelongToAnotherOrganization("user@example.com"), typeof(ConfirmUserCannotBelongToAnotherOrganization)],
+        [new ProviderUsersCannotJoin(), typeof(ConfirmProviderUsersCannotAcceptInviteLink)],
+        [new UserIsAMemberOfAnotherOrganization(), typeof(ConfirmUserIsAMemberOfAnotherOrganization)],
+        [new UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy(), typeof(ConfirmUserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy)],
+        [new TwoFactorRequiredForMembership(), typeof(ConfirmTwoFactorRequiredForMembership)],
     ];
-
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_WithLinkNotFound_ReturnsInviteLinkNotFound(
-        ConfirmOrganizationInviteLinkValidationRequest request,
-        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
-    {
-        // Act
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        // Assert
-        Assert.True(result.IsError);
-        Assert.IsType<InviteLinkNotFound>(result.AsError);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_WithOrganizationNotUsingInviteLinks_ReturnsInviteLinkNotAvailable(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
-    {
-        organization.Enabled = true;
-        organization.UseInviteLinks = false;
-        inviteLink.OrganizationId = organization.Id;
-        inviteLink.Code = Guid.NewGuid().ToString();
-
-        sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
-            .GetByOrganizationIdAsync(organization.Id)
-            .Returns(inviteLink);
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
-            .Returns(organization);
-
-        var request = new ConfirmOrganizationInviteLinkValidationRequest
-        {
-            OrganizationId = organization.Id,
-            Code = Guid.Parse(inviteLink.Code),
-            User = user,
-        };
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        Assert.True(result.IsError);
-        Assert.IsType<ConfirmInviteLinkNotAvailable>(result.AsError);
-    }
 
     [Theory, BitAutoData]
     public async Task ValidateAsync_WithLinkThatDoesNotSupportConfirmation_ReturnsConfirmationNotSupported(
@@ -87,15 +46,8 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         SetupHappyPath(organization, inviteLink, user, sutProvider);
         inviteLink.SupportsConfirmation = false;
 
-        var request = new ConfirmOrganizationInviteLinkValidationRequest
-        {
-            OrganizationId = organization.Id,
-            Code = Guid.Parse(inviteLink.Code),
-            User = user,
-        };
-
         // Act
-        var result = await sutProvider.Sut.ValidateAsync(request);
+        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(inviteLink, user));
 
         // Assert
         Assert.True(result.IsError);
@@ -112,7 +64,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_WithUnverifiedEmail_ReturnsEmailNotVerified(
+    public async Task ValidateAsync_WhenEligibilityRuleFails_ReturnsMappedValidationError(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
@@ -120,21 +72,14 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     {
         // Arrange
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        user.EmailVerified = false;
-
-        var request = new ConfirmOrganizationInviteLinkValidationRequest
-        {
-            OrganizationId = organization.Id,
-            Code = Guid.Parse(inviteLink.Code),
-            User = user,
-        };
+        organization.UseInviteLinks = false;
 
         // Act
-        var result = await sutProvider.Sut.ValidateAsync(request);
+        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(inviteLink, user));
 
         // Assert
         Assert.True(result.IsError);
-        var error = Assert.IsType<ConfirmEmailNotVerified>(result.AsError);
+        var error = Assert.IsType<ConfirmInviteLinkNotAvailable>(result.AsError);
         Assert.IsAssignableFrom<IValidationError>(error);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -146,89 +91,14 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_WithEmailDomainNotAllowed_ReturnsEmailDomainNotAllowed(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
-    {
-        SetupHappyPath(organization, inviteLink, user, sutProvider);
-        inviteLink.AllowedDomains = "[\"allowed.example.com\"]";
-        user.Email = "user@notallowed.example.com";
-
-        var request = new ConfirmOrganizationInviteLinkValidationRequest
-        {
-            OrganizationId = organization.Id,
-            Code = Guid.Parse(inviteLink.Code),
-            User = user,
-        };
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        Assert.True(result.IsError);
-        Assert.IsType<ConfirmEmailDomainNotAllowed>(result.AsError);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_WithProviderUser_ReturnsProviderUsersCannotAcceptInviteLink(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        Bit.Core.AdminConsole.Entities.Provider.ProviderUser providerUser,
-        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
-    {
-        SetupHappyPath(organization, inviteLink, user, sutProvider);
-
-        sutProvider.GetDependency<IProviderUserRepository>()
-            .GetManyByUserAsync(user.Id)
-            .Returns([providerUser]);
-
-        var request = new ConfirmOrganizationInviteLinkValidationRequest
-        {
-            OrganizationId = organization.Id,
-            Code = Guid.Parse(inviteLink.Code),
-            User = user,
-        };
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        Assert.True(result.IsError);
-        Assert.IsType<ConfirmProviderUsersCannotAcceptInviteLink>(result.AsError);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_WithRevokedMember_ReturnsOrganizationAccessRevoked(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        OrganizationUser revokedOrganizationUser,
-        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
-    {
-        SetupHappyPath(organization, inviteLink, user, sutProvider);
-        revokedOrganizationUser.RevocationReason = RevocationReason.Manual;
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationAsync(organization.Id, user.Id)
-            .Returns(revokedOrganizationUser);
-
-        var request = new ConfirmOrganizationInviteLinkValidationRequest
-        {
-            OrganizationId = organization.Id,
-            Code = Guid.Parse(inviteLink.Code),
-            User = user,
-        };
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        Assert.True(result.IsError);
-        Assert.IsType<ConfirmOrganizationAccessRevoked>(result.AsError);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_WithRevokedEmailInvite_ReturnsOrganizationAccessRevoked(
+    public async Task ValidateAsync_WhenEmailInviteFailsMembershipStatusRule_ReturnsMappedValidationError(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
         OrganizationUser revokedEmailInvite,
         SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
     {
+        // Arrange
         SetupHappyPath(organization, inviteLink, user, sutProvider);
         revokedEmailInvite.RevocationReason = RevocationReason.Manual;
         revokedEmailInvite.Email = user.Email;
@@ -238,238 +108,118 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .GetByOrganizationEmailAsync(organization.Id, user.Email)
             .Returns(revokedEmailInvite);
 
-        var request = new ConfirmOrganizationInviteLinkValidationRequest
-        {
-            OrganizationId = organization.Id,
-            Code = Guid.Parse(inviteLink.Code),
-            User = user,
-        };
-        var result = await sutProvider.Sut.ValidateAsync(request);
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(inviteLink, user));
 
+        // Assert
         Assert.True(result.IsError);
         Assert.IsType<ConfirmOrganizationAccessRevoked>(result.AsError);
     }
 
+    [Theory]
+    [BitMemberAutoData(nameof(JoinRequirementsErrors))]
+    public async Task ValidateAsync_WhenJoinRequirementsFail_ReturnsMappedValidationError(
+        Error joinRequirementsError,
+        Type expectedErrorType,
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
+    {
+        // Arrange
+        SetupHappyPath(organization, inviteLink, user, sutProvider);
+
+        sutProvider.GetDependency<IInviteLinkValidationService>()
+            .ValidateJoinRequirementsAsync(
+                Arg.Any<Organization>(),
+                Arg.Any<User>(),
+                Arg.Any<OrganizationUserType>(),
+                Arg.Any<IPreAccessPolicyEnforcer>())
+            .Returns(new JoinRequirementsValidationResult(joinRequirementsError, AutoConfirmPolicyEnabled: false));
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(inviteLink, user));
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType(expectedErrorType, result.AsError);
+        Assert.IsAssignableFrom<IValidationError>(result.AsError);
+    }
+
     [Theory, BitAutoData]
-    public async Task ValidateAsync_WithConfirmedMember_ReturnsAlreadyOrganizationMember(
+    public async Task ValidateAsync_WhenAccountRecoveryPolicyFails_ReturnsMappedValidationError(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
+    {
+        // Arrange
+        SetupHappyPath(organization, inviteLink, user, sutProvider);
+
+        sutProvider.GetDependency<IJoinOrganizationPolicyValidationService>()
+            .ValidateAccountRecoveryPolicy(
+                Arg.Any<Guid>(),
+                Arg.Any<User>(),
+                Arg.Any<OrganizationUserType>(),
+                Arg.Any<IPreAccessPolicyEnforcer>(),
+                Arg.Any<string?>())
+            .Returns(new AccountRecoveryPolicyValidationResult(new ResetPasswordKeyRequired(), AutoEnrollEnabled: true));
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(inviteLink, user));
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<ConfirmResetPasswordKeyRequired>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_WithExistingMembership_ChecksRequirementsWithExistingRole(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
         OrganizationUser existingOrganizationUser,
         SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
     {
+        // Arrange
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        existingOrganizationUser.Status = OrganizationUserStatusType.Confirmed;
+        var existingRole = OrganizationUserType.Admin;
+        existingOrganizationUser.Type = existingRole;
+        existingOrganizationUser.Status = OrganizationUserStatusType.Accepted;
         existingOrganizationUser.RevocationReason = null;
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(organization.Id, user.Id)
             .Returns(existingOrganizationUser);
 
-        var request = new ConfirmOrganizationInviteLinkValidationRequest
-        {
-            OrganizationId = organization.Id,
-            Code = Guid.Parse(inviteLink.Code),
-            User = user,
-        };
+        var policyEnforcer = Substitute.For<IPreAccessPolicyEnforcer>();
+        sutProvider.GetDependency<IPreAccessEnforcerQuery>()
+            .RunAsync(organization.Id)
+            .Returns(policyEnforcer);
+
+        var request = BuildRequest(inviteLink, user) with { ResetPasswordKey = "2.resetPasswordKey" };
+
+        // Act
         var result = await sutProvider.Sut.ValidateAsync(request);
 
-        Assert.True(result.IsError);
-        Assert.IsType<ConfirmAlreadyOrganizationMember>(result.AsError);
-    }
-
-    [Theory]
-    [BitAutoData(OrganizationUserStatusType.Invited)]
-    [BitAutoData(OrganizationUserStatusType.Accepted)]
-    [BitAutoData(OrganizationUserStatusType.Staged)]
-    public async Task ValidateAsync_WithUnconfirmedExistingMember_IsAllowed(
-        OrganizationUserStatusType status,
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        OrganizationUser existingOrganizationUser,
-        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
-    {
-        SetupHappyPath(organization, inviteLink, user, sutProvider);
-        existingOrganizationUser.Status = status;
-        existingOrganizationUser.RevocationReason = null;
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationAsync(organization.Id, user.Id)
-            .Returns(existingOrganizationUser);
-
-        var request = new ConfirmOrganizationInviteLinkValidationRequest
-        {
-            OrganizationId = organization.Id,
-            Code = Guid.Parse(inviteLink.Code),
-            User = user,
-        };
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
+        // Assert
         Assert.True(result.IsSuccess);
-        Assert.Same(existingOrganizationUser, result.AsSuccess.ExistingOrganizationUser);
-    }
 
-    [Theory]
-    [BitMemberAutoData(nameof(SeatConsumingMemberships))]
-    public async Task ValidateAsync_WithSeatConsumingMembershipAndNoSeatsAvailable_ReturnsOrganizationHasNoAvailableSeats(
-        OrganizationUser? existingOrganizationUser,
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
-    {
-        SetupHappyPath(organization, inviteLink, user, sutProvider);
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationEmailAsync(organization.Id, user.Email)
-            .Returns(existingOrganizationUser);
-        organization.PlanType = PlanType.EnterpriseAnnually;
-        organization.Seats = 4;
-        organization.MaxAutoscaleSeats = 4;
-
-        sutProvider.GetDependency<IPricingClient>()
-            .GetPlan(organization.PlanType)
-            .Returns(new Enterprise2023Plan(isAnnual: true));
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
-            .Returns(new OrganizationSeatCounts { Users = 4, Sponsored = 0 });
-
-        var request = new ConfirmOrganizationInviteLinkValidationRequest
-        {
-            OrganizationId = organization.Id,
-            Code = Guid.Parse(inviteLink.Code),
-            User = user,
-        };
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        Assert.True(result.IsError);
-        Assert.IsType<ConfirmOrganizationHasNoAvailableSeats>(result.AsError);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_WithSingleOrganizationPolicyViolation_ReturnsError(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        OrganizationUser membershipInAnotherOrganization,
-        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
-    {
-        SetupHappyPath(organization, inviteLink, user, sutProvider);
-
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(new SingleOrganizationPolicyRequirement(
-                [new PolicyDetails { OrganizationId = organization.Id }]));
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByUserAsync(user.Id)
-            .Returns([membershipInAnotherOrganization]);
-
-        var request = new ConfirmOrganizationInviteLinkValidationRequest
-        {
-            OrganizationId = organization.Id,
-            Code = Guid.Parse(inviteLink.Code),
-            User = user,
-        };
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        Assert.True(result.IsError);
-        var error = Assert.IsType<ConfirmUserIsAMemberOfAnotherOrganization>(result.AsError);
-        Assert.IsAssignableFrom<IValidationError>(error);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_WhenMemberOfAnotherOrganizationWithSingleOrgPolicy_ReturnsMappedValidationError(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        Guid otherOrganizationId,
-        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
-    {
-        SetupHappyPath(organization, inviteLink, user, sutProvider);
-
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(new SingleOrganizationPolicyRequirement(
-            [
-                new PolicyDetails
-                {
-                    OrganizationId = otherOrganizationId,
-                    OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
-                }
-            ]));
-
-        var request = new ConfirmOrganizationInviteLinkValidationRequest
-        {
-            OrganizationId = organization.Id,
-            Code = Guid.Parse(inviteLink.Code),
-            User = user,
-        };
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        Assert.True(result.IsError);
-        var error = Assert.IsType<ConfirmUserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy>(result.AsError);
-        Assert.IsAssignableFrom<IValidationError>(error);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_WithTwoFactorRequiredAndUserLacks2FA_ReturnsError(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
-    {
-        SetupHappyPath(organization, inviteLink, user, sutProvider);
-
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
-            .Returns(new RequireTwoFactorPolicyRequirement(
-                [new PolicyDetails { OrganizationId = organization.Id }]));
-
-        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
-            .TwoFactorIsEnabledAsync(user)
-            .Returns(false);
-
-        var request = new ConfirmOrganizationInviteLinkValidationRequest
-        {
-            OrganizationId = organization.Id,
-            Code = Guid.Parse(inviteLink.Code),
-            User = user,
-        };
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        Assert.True(result.IsError);
-        Assert.IsType<ConfirmTwoFactorRequiredForMembership>(result.AsError);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_WithTwoFactorRequiredAndUserHas2FA_IsAllowed(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
-    {
-        SetupHappyPath(organization, inviteLink, user, sutProvider);
-
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
-            .Returns(new RequireTwoFactorPolicyRequirement(
-                [new PolicyDetails { OrganizationId = organization.Id }]));
-
-        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
-            .TwoFactorIsEnabledAsync(user)
-            .Returns(true);
-
-        var request = new ConfirmOrganizationInviteLinkValidationRequest
-        {
-            OrganizationId = organization.Id,
-            Code = Guid.Parse(inviteLink.Code),
-            User = user,
-        };
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IInviteLinkValidationService>()
+            .Received(1)
+            .ValidateJoinRequirementsAsync(
+                organization,
+                user,
+                existingRole,
+                policyEnforcer);
+        sutProvider.GetDependency<IJoinOrganizationPolicyValidationService>()
+            .Received(1)
+            .ValidateAccountRecoveryPolicy(
+                organization.Id,
+                user,
+                existingRole,
+                policyEnforcer,
+                request.ResetPasswordKey);
     }
 
     [Theory, BitAutoData]
@@ -479,123 +229,43 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         User user,
         SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
     {
+        // Arrange
         SetupHappyPath(organization, inviteLink, user, sutProvider);
 
-        var request = new ConfirmOrganizationInviteLinkValidationRequest
-        {
-            OrganizationId = organization.Id,
-            Code = Guid.Parse(inviteLink.Code),
-            User = user,
-        };
-        var result = await sutProvider.Sut.ValidateAsync(request);
+        sutProvider.GetDependency<IJoinOrganizationPolicyValidationService>()
+            .ValidateAccountRecoveryPolicy(
+                Arg.Any<Guid>(),
+                Arg.Any<User>(),
+                Arg.Any<OrganizationUserType>(),
+                Arg.Any<IPreAccessPolicyEnforcer>(),
+                Arg.Any<string?>())
+            .Returns(new AccountRecoveryPolicyValidationResult(null, AutoEnrollEnabled: true));
 
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(BuildRequest(inviteLink, user));
+
+        // Assert
         Assert.True(result.IsSuccess);
-        Assert.Same(inviteLink, result.AsSuccess.InviteLink);
         Assert.Same(organization, result.AsSuccess.Organization);
         Assert.Null(result.AsSuccess.ExistingOrganizationUser);
+        Assert.True(result.AsSuccess.AccountRecoveryAutoEnrollEnabled);
+
+        await sutProvider.GetDependency<IInviteLinkValidationService>()
+            .Received(1)
+            .ValidateJoinRequirementsAsync(
+                organization,
+                user,
+                OrganizationUserType.User,
+                Arg.Any<IPreAccessPolicyEnforcer>());
     }
 
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_WithExistingInvitedUser_SkipsSeatCheckAndReturnsContext(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        OrganizationUser invitedOrganizationUser,
-        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
-    {
-        SetupHappyPath(organization, inviteLink, user, sutProvider);
-        invitedOrganizationUser.Status = OrganizationUserStatusType.Invited;
-        invitedOrganizationUser.Email = user.Email;
-        invitedOrganizationUser.UserId = null;
-        invitedOrganizationUser.RevocationReason = null;
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationEmailAsync(organization.Id, user.Email)
-            .Returns(invitedOrganizationUser);
-
-        var request = new ConfirmOrganizationInviteLinkValidationRequest
+    private static ConfirmOrganizationInviteLinkValidationRequest BuildRequest(OrganizationInviteLink inviteLink, User user) =>
+        new()
         {
-            OrganizationId = organization.Id,
+            OrganizationId = inviteLink.OrganizationId,
             Code = Guid.Parse(inviteLink.Code),
             User = user,
         };
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        Assert.True(result.IsSuccess);
-        Assert.Same(invitedOrganizationUser, result.AsSuccess.ExistingOrganizationUser);
-
-        await sutProvider.GetDependency<IPricingClient>()
-            .DidNotReceiveWithAnyArgs()
-            .GetPlan(Arg.Any<PlanType>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_WithFreeAdminMembership_AdminLimitReached_ReturnsError(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        OrganizationUser existingOrganizationUser,
-        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
-    {
-        SetupHappyPath(organization, inviteLink, user, sutProvider);
-        organization.PlanType = PlanType.Free;
-        existingOrganizationUser.Type = OrganizationUserType.Admin;
-        existingOrganizationUser.Status = OrganizationUserStatusType.Accepted;
-        existingOrganizationUser.RevocationReason = null;
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationAsync(organization.Id, user.Id)
-            .Returns(existingOrganizationUser);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetCountByFreeOrganizationAdminUserAsync(user.Id)
-            .Returns(1);
-
-        var request = new ConfirmOrganizationInviteLinkValidationRequest
-        {
-            OrganizationId = organization.Id,
-            Code = Guid.Parse(inviteLink.Code),
-            User = user,
-        };
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        Assert.True(result.IsError);
-        Assert.IsType<ConfirmOnlyOneFreeOrganizationAdminAllowed>(result.AsError);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_WithFreeAdminMembership_NotAtLimit_IsAllowed(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        OrganizationUser existingOrganizationUser,
-        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
-    {
-        SetupHappyPath(organization, inviteLink, user, sutProvider);
-        organization.PlanType = PlanType.Free;
-        existingOrganizationUser.Type = OrganizationUserType.Admin;
-        existingOrganizationUser.Status = OrganizationUserStatusType.Accepted;
-        existingOrganizationUser.RevocationReason = null;
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationAsync(organization.Id, user.Id)
-            .Returns(existingOrganizationUser);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetCountByFreeOrganizationAdminUserAsync(user.Id)
-            .Returns(0);
-
-        var request = new ConfirmOrganizationInviteLinkValidationRequest
-        {
-            OrganizationId = organization.Id,
-            Code = Guid.Parse(inviteLink.Code),
-            User = user,
-        };
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        Assert.True(result.IsSuccess);
-        Assert.Same(existingOrganizationUser, result.AsSuccess.ExistingOrganizationUser);
-    }
 
     private static void SetupHappyPath(
         Organization org,
@@ -605,8 +275,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     {
         org.Enabled = true;
         org.UseInviteLinks = true;
-        org.Seats = 10;
-        org.MaxAutoscaleSeats = null;
         org.PlanType = PlanType.EnterpriseAnnually;
         link.OrganizationId = org.Id;
         link.Code = Guid.NewGuid().ToString();
@@ -623,14 +291,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .GetByIdAsync(org.Id)
             .Returns(org);
 
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetOccupiedSeatCountByOrganizationIdAsync(org.Id)
-            .Returns(new OrganizationSeatCounts { Users = 1, Sponsored = 0 });
-
-        sutProvider.GetDependency<IPricingClient>()
-            .GetPlan(org.PlanType)
-            .Returns(new Enterprise2023Plan(isAnnual: true));
-
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(org.Id, user.Id)
             .Returns((OrganizationUser?)null);
@@ -639,20 +299,21 @@ public class ConfirmOrganizationInviteLinkValidatorTests
             .GetByOrganizationEmailAsync(org.Id, user.Email)
             .Returns((OrganizationUser?)null);
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByUserAsync(user.Id)
-            .Returns(new List<OrganizationUser>());
+        sutProvider.GetDependency<IInviteLinkValidationService>()
+            .ValidateJoinRequirementsAsync(
+                Arg.Any<Organization>(),
+                Arg.Any<User>(),
+                Arg.Any<OrganizationUserType>(),
+                Arg.Any<IPreAccessPolicyEnforcer>())
+            .Returns(new JoinRequirementsValidationResult(null, AutoConfirmPolicyEnabled: false));
 
-        sutProvider.GetDependency<IProviderUserRepository>()
-            .GetManyByUserAsync(user.Id)
-            .Returns([]);
-
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(new SingleOrganizationPolicyRequirement([]));
-
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
-            .Returns(new RequireTwoFactorPolicyRequirement([]));
+        sutProvider.GetDependency<IJoinOrganizationPolicyValidationService>()
+            .ValidateAccountRecoveryPolicy(
+                Arg.Any<Guid>(),
+                Arg.Any<User>(),
+                Arg.Any<OrganizationUserType>(),
+                Arg.Any<IPreAccessPolicyEnforcer>(),
+                Arg.Any<string?>())
+            .Returns(new AccountRecoveryPolicyValidationResult(null, AutoEnrollEnabled: false));
     }
 }

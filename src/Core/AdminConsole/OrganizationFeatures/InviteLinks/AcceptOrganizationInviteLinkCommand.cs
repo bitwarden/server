@@ -134,6 +134,7 @@ public class AcceptOrganizationInviteLinkCommand(
         existingOrganizationUser.Status = OrganizationUserStatusType.Accepted;
         existingOrganizationUser.UserId = user.Id;
         existingOrganizationUser.Email = null;
+        existingOrganizationUser.ClearInviteReminders();
 
         if (autoConfirmPolicyEnabled)
         {
