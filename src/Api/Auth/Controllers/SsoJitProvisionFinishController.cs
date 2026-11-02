@@ -165,7 +165,7 @@ public class SsoJitProvisionFinishController(
     /// </summary>
     private static void ThrowIfAccountKeysInitialized(User user)
     {
-        if (user.PublicKey != null || user.PrivateKey != null)
+        if (!string.IsNullOrWhiteSpace(user.PublicKey) || !string.IsNullOrWhiteSpace(user.PrivateKey))
         {
             throw new BadRequestException("User account keys are already initialized.");
         }
