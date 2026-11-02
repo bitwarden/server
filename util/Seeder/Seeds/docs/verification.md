@@ -217,7 +217,7 @@ WHERE OrganizationId = @OrgId;
 Verifies `cipherAssignment.archivedRate`, `deletedRate`, and `archivedAndDeletedOverlapRate` against the
 personal (non-org) cipher pool — see Q11 for the same rates verified against the org pool, which is archived
 independently. Only applies to presets with `density.personalCiphers` set (Sterling Cooper, Wayne Enterprises,
-Weyland-Yutani, and `xl-migrated-cyberdyne-premigration`, which sets `deletedRate` only). Only confirmed members, owner included, get personal ciphers: `CreateUsersStep` adds only
+Weyland-Yutani, `md-migrated-meridian-clinics`, and `xl-migrated-cyberdyne-premigration`, which sets `deletedRate` only). Only confirmed members, owner included, get personal ciphers: `CreateUsersStep` adds only
 confirmed users to `UserDigests`, the list `GeneratePersonalCiphersStep` walks, so invited, accepted and revoked
 members own none. With the realistic status mix, 214 members are confirmed in Sterling Cooper, 851 in Wayne
 Enterprises and 4,251 in Weyland-Yutani, and the personal-cipher distribution still gives some of them none.
@@ -547,6 +547,30 @@ confirmed.
 default collections.
 
 `scale.xl-migrated-cyberdyne-200k-shared` reaches ~2.6M pairs (8.4% not confirmed) with ~212k items fetched.
+
+### 11. Meridian Health (LG and MD, quantile default collections)
+
+`scale.lg-migrated-meridian-health` and `scale.md-migrated-meridian-clinics` set `defaultCollections.sizing: quantile`,
+so the default-collection values below are exact: a reseed gives the same numbers, and they would not move under another
+seed. Their density blocks copy Wayne Enterprises' shapes and rates (section 6) except `personalCiphers`: Wayne uses
+`realistic`, LG sets none and MD sets `pendingMigration`. Section 6's counts are for Wayne's 1,000 members and 10,000
+ciphers, so they don't carry over; Q1–Q9 and Q11 are not documented here. Values were measured on SQL Server.
+
+| Check                          | `lg-migrated-meridian-health`                        | `md-migrated-meridian-clinics`                                                                                      |
+| ------------------------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Q12 default collections        | 1,296 (1,301 confirmed minus the Owner and 4 Admins) | 342 (347 confirmed minus the Owner and 4 Admins)                                                                    |
+| Q12 non-empty                  | 544                                                  | 79                                                                                                                  |
+| Q12 active items               | 18,000 (`targetActiveItems`)                         | 2,776                                                                                                               |
+| Q12 trashed                    | 1,350                                                | 208                                                                                                                 |
+| Q12 top 5 active               | 820, 568, 560, 514, 466                              | 457, 264, 210, 150, 143                                                                                             |
+| Q12 `NonEmptyWithPendingItems` | 0                                                    | 0                                                                                                                   |
+| Q13 `DefaultCollectionItems`   | 19,350                                               | 2,984                                                                                                               |
+| Q10 archived personal ciphers  | 0 (no personal ciphers)                              | 50 of 1,628 personal ciphers (6% rate = 97, clamped to the 50 cap)                                                  |
+| Q10 deleted personal ciphers   | 0                                                    | 25 of 1,628 (3% rate clamped to 25). All 25 are also archived (2% overlap = 32, clamped to 25) — 0 are delete-only. |
+
+In LG every `largest` value (820, 560, 390, 380, 375) is present unchanged; the largest drawn size is 568, and the
+smallest non-empty collection holds 1 active item. MD's `pendingMigration` personal items sit on 70 members, whose
+default collections stay empty.
 
 ---
 

@@ -62,11 +62,20 @@ internal sealed class PreviewOrganizationRestartCommand(
         };
         var cadence = restart.Plan.IsAnnual ? PlanCadenceType.Annually : PlanCadenceType.Monthly;
 
-        // Only the request's tax ID is sent. Restart replaces the customer's tax IDs with the request's, so
-        // the ones on file must not leak into the preview.
+        // Families restarts keep the tax IDs on file, so the preview uses them and ignores the request's.
+        var effectiveTaxId = tier == PlanTierType.Families ? null : requestTaxId;
+
+        // Restart replaces a business customer's tax IDs with the request's, deleting them all when the request has none. Given a
+        // customer, Stripe falls back to its on-file tax IDs and rejects an empty tax_ids list, so to preview without them we leave
+        // the customer off and copy what Stripe would have read from it: tax exempt status and coupon here, balance below.
+        var customer = tier != PlanTierType.Families && effectiveTaxId is null
+            ? await subscriberService.GetCustomerOrThrow(organization, new CustomerGetOptions { Expand = ["tax_ids"] })
+            : null;
+        var previewWithoutCustomer = customer?.TaxIds?.Data is { Count: > 0 };
+
         var options = new InvoiceCreatePreviewOptions
         {
-            Customer = canceledSubscription.CustomerId,
+            Customer = previewWithoutCustomer ? null : canceledSubscription.CustomerId,
             SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
             {
                 Items = restart.Items
@@ -79,13 +88,31 @@ internal sealed class PreviewOrganizationRestartCommand(
             {
                 Address = address,
                 TaxIds = BillingAddressResolver.ResolveTaxIds(
-                    taxService, logger, request.BillingAddress.Country!, requestTaxId)
-            }
+                    taxService, logger, request.BillingAddress.Country!, effectiveTaxId),
+                TaxExempt = previewWithoutCustomer ? customer!.TaxExempt : null
+            },
+            Discounts = previewWithoutCustomer && customer!.Discount?.Source?.CouponId is { } couponId
+                ? [new InvoiceDiscountOptions { Coupon = couponId }]
+                : null
         };
 
         try
         {
-            return await invoicePreviewService.GetInvoicePreviewForBillingAddressAsync(options, tier, cadence);
+            var preview = await invoicePreviewService.GetInvoicePreviewForBillingAddressAsync(options, tier, cadence);
+
+            if (!previewWithoutCustomer)
+            {
+                return preview;
+            }
+
+            // Stripe applies no customer balance to a preview sent without the customer, so apply it here with
+            // Stripe's rule: a credit (negative balance) reduces the amount due to a floor of zero, a debt adds to it.
+            var balance = customer!.Balance / 100m;
+            return preview with
+            {
+                StartingBalance = balance < 0 ? balance : null,
+                AmountDue = Math.Max(0, preview.Total + balance)
+            };
         }
         catch (StripeException stripeException)
             when (stripeException.StripeError?.Code == ErrorCodes.CustomerTaxLocationInvalid)

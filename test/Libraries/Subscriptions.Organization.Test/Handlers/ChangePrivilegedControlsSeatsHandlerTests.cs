@@ -30,7 +30,7 @@ public class ChangePrivilegedControlsSeatsHandlerTests
         _organizationRepository.GetByIdAsync(organizationId).Returns((OrganizationEntity?)null);
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => _sut.HandleAsync(organizationId, new PrivilegedControlsSeatsRequest { Seats = 15 }));
+            () => _sut.HandleAsync(organizationId, new PrivilegedControlsSeatsRequest { SeatAdjustment = 5 }));
 
         Assert.Null(_trialQuery.ReceivedOrganization);
         Assert.False(_command.Called);
@@ -43,7 +43,7 @@ public class ChangePrivilegedControlsSeatsHandlerTests
         _trialQuery.Result = true;
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => _sut.HandleAsync(organization.Id, new PrivilegedControlsSeatsRequest { Seats = 15, MaxAutoscaleSeats = 20 }));
+            () => _sut.HandleAsync(organization.Id, new PrivilegedControlsSeatsRequest { SeatAdjustment = 5, MaxAutoscaleSeats = 20 }));
 
         Assert.Equal(TrialMessage, exception.Message);
         Assert.Same(organization, _trialQuery.ReceivedOrganization);
@@ -51,12 +51,12 @@ public class ChangePrivilegedControlsSeatsHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_NotOnTrial_PassesOrganizationSeatsAndLimitToCommand()
+    public async Task HandleAsync_NotOnTrial_AddsAdjustmentToCurrentSeatsAndPassesLimitToCommand()
     {
         var organization = ArrangeOrganization();
         _trialQuery.Result = false;
 
-        await _sut.HandleAsync(organization.Id, new PrivilegedControlsSeatsRequest { Seats = 15, MaxAutoscaleSeats = 20 });
+        await _sut.HandleAsync(organization.Id, new PrivilegedControlsSeatsRequest { SeatAdjustment = 5, MaxAutoscaleSeats = 20 });
 
         Assert.True(_command.Called);
         Assert.Same(organization, _command.ReceivedOrganization);
@@ -70,7 +70,7 @@ public class ChangePrivilegedControlsSeatsHandlerTests
         var organization = ArrangeOrganization();
         _trialQuery.Result = false;
 
-        await _sut.HandleAsync(organization.Id, new PrivilegedControlsSeatsRequest { Seats = 12 });
+        await _sut.HandleAsync(organization.Id, new PrivilegedControlsSeatsRequest { SeatAdjustment = 2 });
 
         Assert.True(_command.Called);
         Assert.Same(organization, _command.ReceivedOrganization);
@@ -78,9 +78,43 @@ public class ChangePrivilegedControlsSeatsHandlerTests
         Assert.Null(_command.ReceivedMaxAutoscaleSeats);
     }
 
-    private OrganizationEntity ArrangeOrganization()
+    [Fact]
+    public async Task HandleAsync_NegativeAdjustment_SubtractsFromCurrentSeats()
     {
-        var organization = new OrganizationEntity { Id = Guid.NewGuid() };
+        var organization = ArrangeOrganization();
+        _trialQuery.Result = false;
+
+        await _sut.HandleAsync(organization.Id, new PrivilegedControlsSeatsRequest { SeatAdjustment = -3 });
+
+        Assert.Equal(7, _command.ReceivedSeats);
+    }
+
+    [Fact]
+    public async Task HandleAsync_OmittedAdjustment_KeepsCurrentSeatsAndPassesLimit()
+    {
+        var organization = ArrangeOrganization();
+        _trialQuery.Result = false;
+
+        await _sut.HandleAsync(organization.Id, new PrivilegedControlsSeatsRequest { MaxAutoscaleSeats = 25 });
+
+        Assert.Equal(10, _command.ReceivedSeats);
+        Assert.Equal(25, _command.ReceivedMaxAutoscaleSeats);
+    }
+
+    [Fact]
+    public async Task HandleAsync_OrganizationWithoutSeats_TreatsCurrentSeatsAsZero()
+    {
+        var organization = ArrangeOrganization(pamSeats: null);
+        _trialQuery.Result = false;
+
+        await _sut.HandleAsync(organization.Id, new PrivilegedControlsSeatsRequest { SeatAdjustment = 5 });
+
+        Assert.Equal(5, _command.ReceivedSeats);
+    }
+
+    private OrganizationEntity ArrangeOrganization(int? pamSeats = 10)
+    {
+        var organization = new OrganizationEntity { Id = Guid.NewGuid(), PamSeats = pamSeats };
         _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
         return organization;
     }

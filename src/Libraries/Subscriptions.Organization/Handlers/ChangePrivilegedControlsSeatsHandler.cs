@@ -23,7 +23,8 @@ internal sealed class ChangePrivilegedControlsSeatsHandler(
                 "Work with your customer service representative to change your Privileged Controls seats.");
         }
 
-        // An omitted seat count is forwarded as 0 so the factory rejects it with its "at least one seat" message.
-        await changePrivilegedControlsSeatsCommand.Run(organization, request.Seats ?? 0, request.MaxAutoscaleSeats);
+        // The adjustment is applied to the seats the server holds now, not the count the client last saw.
+        var seats = organization.PamSeats.GetValueOrDefault() + request.SeatAdjustment.GetValueOrDefault();
+        await changePrivilegedControlsSeatsCommand.Run(organization, seats, request.MaxAutoscaleSeats);
     }
 }

@@ -14,5 +14,6 @@ public class TwoFactorRememberTokenableFactory(
         {
             ExpirationDate = timeProvider.GetUtcNow().UtcDateTime
                 .AddDays(globalSettings.TwoFactorRememberTokenLifetimeInDays),
+            TimeProvider = timeProvider,
         };
 }
