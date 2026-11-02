@@ -143,14 +143,17 @@ The address is passed to Stripe via `CustomerDetails` so tax can be estimated wi
 a Free org has none until it adds a payment method. The tax id sent in the request, or the customer's
 on-file tax id when the request omits one, is forwarded so a VAT-registered business is quoted the tax it
 will actually be charged. Its Stripe tax-id type is derived from the value with `ITaxService`, falling
-back to the submitted code when it can't be derived. A trialing subscription's change prorates to $0 mid-trial, so the preview ends
-the trial in the hypothetical (`trial_end = now`) and returns what the subscriber pays once it converts.
-It returns the resulting `InvoicePreview` cart.
+back to the submitted code when it can't be derived. A trialing subscription is previewed as a purchase
+of the target plan against the organization's customer, with no `subscription` set, so the preview works
+whether or not a payment method is on file and returns what the subscriber pays once the trial converts.
+The subscription's own coupons are passed explicitly, or the customer's coupon when the subscription has
+none. Active and `past_due` subscriptions get the prorated plan-change preview. It returns the resulting
+`InvoicePreview` cart.
 
 A missing or unrecognized `tier`/`cadence` fails JSON binding with a 400 before the command runs. The
 command validates the rest itself. Caller-fixable problems are **400s**: the `premium` tier, Families on
 a monthly cadence, a move to the same tier (including a cadence-only change) unless the subscription is
-`trialing`, in which case it is allowed ([the trial-end behavior above](#organization-plan-change-preview)), a downgrade, a plan without
+`trialing`, in which case it is allowed ([the trialing behavior above](#organization-plan-change-preview)), a downgrade, a plan without
 Secrets Manager support for an SM-enabled org, an invalid billing address, or a tax location or tax id
 Stripe rejects. The same-tier check runs after the subscription lookup and status check, so a same-tier
 request on a subscription that can't be previewed gets the 409 below, not a 400. Data or Stripe state the
