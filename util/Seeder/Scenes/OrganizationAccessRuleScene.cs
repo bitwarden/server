@@ -26,7 +26,7 @@ public class OrganizationAccessRuleScene(
         public string? Description { get; set; }
         public bool Enabled { get; set; } = true;
         public IEnumerable<Guid>? CollectionIds { get; set; }
-        public IReadOnlyList<string>? IpAllowlistCidrs { get; set; }
+        public IEnumerable<string>? IpAllowlistCidrs { get; set; }
         public bool RequireHumanApproval { get; set; }
         public bool SingleActiveLease { get; set; }
         public int? DefaultLeaseDurationSeconds { get; set; }

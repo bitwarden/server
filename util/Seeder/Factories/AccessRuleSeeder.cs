@@ -16,7 +16,7 @@ internal static class AccessRuleSeeder
     internal static AccessRule Create(
         Guid organizationId,
         string name,
-        IReadOnlyList<string>? ipAllowlistCidrs = null,
+        IEnumerable<string>? ipAllowlistCidrs = null,
         bool requireHumanApproval = false,
         string? description = null,
         bool enabled = true,
@@ -55,20 +55,21 @@ internal static class AccessRuleSeeder
     /// Mirrors the Pam conditions wire format (flat array discriminated by <c>kind</c>), which lives in
     /// bitwarden_license and cannot be referenced from the Seeder.
     /// </summary>
-    internal static string SerializeConditions(IReadOnlyList<string>? ipAllowlistCidrs, bool requireHumanApproval)
+    internal static string SerializeConditions(IEnumerable<string>? ipAllowlistCidrs, bool requireHumanApproval)
     {
         var conditions = new List<object>();
 
         if (ipAllowlistCidrs is not null)
         {
-            if (ipAllowlistCidrs.Count == 0)
+            var cidrs = ipAllowlistCidrs.ToList();
+            if (cidrs.Count == 0)
             {
                 throw new ArgumentException(
                     "ipAllowlistCidrs must contain at least one CIDR; omit it for no IP condition.",
                     nameof(ipAllowlistCidrs));
             }
 
-            foreach (var cidr in ipAllowlistCidrs)
+            foreach (var cidr in cidrs)
             {
                 if (string.IsNullOrWhiteSpace(cidr) || !IPNetwork.TryParse(cidr, out _))
                 {
@@ -76,7 +77,7 @@ internal static class AccessRuleSeeder
                 }
             }
 
-            conditions.Add(new IpAllowlistCondition(ipAllowlistCidrs));
+            conditions.Add(new IpAllowlistCondition(cidrs));
         }
 
         if (requireHumanApproval)
