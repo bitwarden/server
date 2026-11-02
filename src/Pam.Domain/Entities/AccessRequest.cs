@@ -5,19 +5,14 @@ using Bit.Pam.Enums;
 namespace Bit.Pam.Entities;
 
 /// <summary>
-/// A request to lease access to a cipher in a leasing-governed collection. Auto-approved requests are created
-/// already <see cref="AccessRequestStatus.Approved"/>; requests that require human approval are created
-/// <see cref="AccessRequestStatus.Pending"/> and resolved later by an approver. Neither approval mints the lease —
-/// the requester activates the approved request within its window, and that activation produces the
-/// <see cref="AccessLease"/>.
+/// A request to lease a cipher in a leasing-governed collection, created Approved on the automatic path or open for
+/// an approver. The requester activates an approved request to mint its <see cref="AccessLease"/>.
 /// </summary>
 public class AccessRequest : ITableObject<Guid>
 {
     public Guid Id { get; set; }
 
-    /// <summary>
-    /// NULL for original requests. Set only for extension requests, which point at the lease being extended.
-    /// </summary>
+    /// <summary>The lease an extension request extends; null otherwise.</summary>
     public Guid? ExtensionOfLeaseId { get; set; }
 
     public Guid OrganizationId { get; set; }
@@ -52,8 +47,8 @@ public class AccessRequest : ITableObject<Guid>
     public DateTime? ActionDate { get; set; }
 
     /// <summary>
-    /// The governing rule, resolved once at submit (oldest wins) so later operations read the same rule. Null once the
-    /// rule is deleted, or when no stored rule gated the cipher.
+    /// The governing rule, resolved once at submit so later operations read the same rule. Null once the rule is
+    /// deleted, or when no stored rule gated the cipher.
     /// </summary>
     public Guid? RuleId { get; set; }
 

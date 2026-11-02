@@ -24,10 +24,11 @@ namespace Bit.Seeder.Pipeline;
 /// Flushes accumulated entities from <see cref="SeederContext"/> to the database via BulkCopy.
 /// </summary>
 /// <remarks>
-/// Entities are committed in foreign-key-safe order (Organizations → OrgApiKeys → Users → OrgUsers → … → Folders → Ciphers).
+/// Entities are committed in foreign-key-safe order (Organizations → OrgApiKeys → Policies → Users → OrgUsers → … → Folders → Ciphers).
 /// Most Core entities require AutoMapper conversion to their EF counterparts before insert;
 /// a few (CollectionCipher) share the same type across layers and copy directly.
 /// Cipher uses a seeder-internal <see cref="CipherBulkRow"/> projection — see <see cref="BulkInsertCiphers"/>.
+/// With data protection disabled, User uses <see cref="UserBulkRow"/> — see <see cref="BulkInsertUnprotectedUsers"/>.
 /// Each list is cleared after insert so the context is ready for the next pipeline run.
 ///
 /// CollectionUser and CollectionGroup require an explicit table name in BulkCopyOptions because

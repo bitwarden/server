@@ -1,15 +1,16 @@
 ﻿namespace Bit.Sso.Utilities;
 
 /// <summary>
-/// Builds redirect URLs back to the web client's /login from the SSO callback
-/// when authentication is refused for a recoverable reason. Localizes the URL
-/// contract in one place so future scenarios reuse the same shape rather than
-/// duplicating query-string composition at each catch site.
+/// Builds redirect URLs the SSO callback sends the browser to when authentication
+/// is refused. Two shapes are supported: a <c>/login</c> redirect for cases the
+/// user can retry after a stashed-invite match, and a <c>/sso-login-failed</c>
+/// direct redirect for cases with no user-side remediation. Localized here so
+/// query-string composition doesn't drift across catch sites.
 /// </summary>
 public static class SsoRedirectUrlBuilder
 {
     /// <summary>
-    /// Stable error codes appended to the redirect URL as the `error` query
+    /// Stable error codes appended to the /login redirect URL as the `error` query
     /// param. The web client's WebLoginComponentService switches on these.
     /// Adding a new scenario: add a constant here, update the switch in
     /// web-login-component.service.ts, add a matching i18n key.

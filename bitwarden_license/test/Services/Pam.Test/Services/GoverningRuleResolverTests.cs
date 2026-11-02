@@ -16,7 +16,7 @@ namespace Bit.Services.Pam.Test.Services;
 [SutProviderCustomize]
 public class GoverningRuleResolverTests
 {
-    // Resolution is structural: the oldest rule wins, and the gate is read off its conditions, never evaluated.
+    // The approval gate is read off the conditions, never evaluated. IGoverningRuleResolver documents the tier order.
 
     // In range for the 10.0.0.0/8 allowlists below and out of range for the 192.168.0.0/16 ones, which deny.
     private static readonly AccessSignals _signals = new()
@@ -25,6 +25,13 @@ public class GoverningRuleResolverTests
         // No rule below has a time condition, so the instant only has to be fixed.
         Timestamp = new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero),
     };
+
+    private const string _humanApproval = """[{"kind":"human_approval"}]""";
+    private const string _admits = """[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]}]""";
+    private const string _admitsWithHumanApproval =
+        """[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]},{"kind":"human_approval"}]""";
+    private const string _denies = """[{"kind":"ip_allowlist","cidrs":["192.168.0.0/16"]}]""";
+    private const string _unreadable = "not json";
 
     [Theory, BitAutoData]
     public async Task ResolveAsync_NoReachableCollections_ReturnsNull(
@@ -175,9 +182,7 @@ public class GoverningRuleResolverTests
     public async Task ResolveAsync_ConditionWithKindLast_ParsesTheCondition(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
     {
-        // Property order is meaningless in JSON, so a stored document that writes "kind" after the properties it
-        // discriminates has to read back as the condition it names — not fail safe to human approval, which would
-        // route a caller the allowlist auto-approves to an approver instead.
+        // Property order is meaningless in JSON, so a late "kind" has to parse rather than fail safe to human approval.
         rule.Conditions = """[{"cidrs":["10.0.0.0/8"],"kind":"ip_allowlist"}]""";
         SetupGovernedCollection(sutProvider, userId, cipherId, collection, rule);
 
@@ -193,10 +198,8 @@ public class GoverningRuleResolverTests
     public async Task ResolveAsync_ConditionWithNullCidrs_StillGoverns(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
     {
-        // "cidrs": null parses, so this never reaches Parse's fail-safe: the condition itself has to survive the null
-        // and deny, or the NullReferenceException escapes from inside the engine. The rule still governs — an
-        // allowlist that matches nothing denies, which the auto path surfaces downstream, and a denial is not the
-        // same thing as requiring approval.
+        // "cidrs": null parses, so the condition itself has to survive the null and deny instead of throwing. A denial
+        // does not require approval.
         rule.Conditions = """[{"kind":"ip_allowlist","cidrs":null}]""";
         SetupGovernedCollection(sutProvider, userId, cipherId, collection, rule);
 
@@ -208,71 +211,64 @@ public class GoverningRuleResolverTests
     }
 
     [Theory, BitAutoData]
-    public async Task ResolveAsync_MultipleRules_OldestCreationDateWins(
+    public async Task ResolveAsync_AutomaticAndHumanApproval_TheCallersSignalsPickTheRule(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
         Collection olderCollection, AccessRule olderRule, Collection newerCollection, AccessRule newerRule)
     {
-        // The older rule needs human approval; the newer one would auto-grant. Oldest wins even though it is the more
-        // restrictive path — the caller is routed to an approver rather than auto-granted (do not reintroduce the
-        // retired least-restrictive behaviour).
+        // The human-approval rule is older, so only the tier puts the automatic rule first.
         olderRule.CreationDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        olderRule.Conditions = """[{"kind":"human_approval"}]""";
+        olderRule.Conditions = _humanApproval;
         newerRule.CreationDate = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
-        newerRule.Conditions = """[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]}]""";
+        newerRule.Conditions = _admits;
         SetupGovernedCollections(sutProvider, userId, cipherId,
             (olderCollection, olderRule), (newerCollection, newerRule));
+        var outOfRange = _signals with { IpAddress = IPAddress.Parse("192.168.1.1") };
 
-        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
+        var admitted = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
+        var fallback = await sutProvider.Sut.ResolveAsync(userId, cipherId, outOfRange);
 
-        Assert.NotNull(result);
-        Assert.True(result!.RequiresHumanApproval);
-        Assert.Equal(olderCollection.Id, result.CollectionId);
-        Assert.Equal(olderRule.Id, result.RuleId);
+        Assert.NotNull(admitted);
+        Assert.False(admitted!.RequiresHumanApproval);
+        Assert.Equal(newerRule.Id, admitted.RuleId);
+        Assert.Equal(newerCollection.Id, admitted.CollectionId);
+        Assert.NotNull(fallback);
+        Assert.True(fallback!.RequiresHumanApproval);
+        Assert.Equal(olderRule.Id, fallback.RuleId);
+        Assert.Equal(olderCollection.Id, fallback.CollectionId);
     }
 
-    [Theory, BitAutoData]
-    public async Task ResolveAsync_MultipleRules_OlderAutomaticWinsOverNewerHumanApproval(
+    [Theory]
+    // The older automatic rule denies, so the next tier governs.
+    [BitAutoData(_denies, _humanApproval, false)]
+    [BitAutoData(_denies, _admits, false)]
+    // Still governed when every rule denies, or the read gate would release the cipher to this caller.
+    [BitAutoData(_denies, _denies, true)]
+    // Same tier, so age decides.
+    [BitAutoData(_admits, "[]", true)]
+    // The newer rule's allowlist admits, but its approval gate keeps it in the approval tier.
+    [BitAutoData(_humanApproval, _admitsWithHumanApproval, true)]
+    // An unreadable rule's fail-safe approval could not activate, so any readable rule goes first.
+    [BitAutoData(_unreadable, _humanApproval, false)]
+    [BitAutoData(_unreadable, _denies, false)]
+    public async Task ResolveAsync_TwoRules_TierThenAgeDecides(
+        string olderConditions, string newerConditions, bool olderGoverns,
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
         Collection olderCollection, AccessRule olderRule, Collection newerCollection, AccessRule newerRule)
     {
-        // The mirror of the previous case: here the oldest rule auto-grants and the newer one needs human approval, so
-        // the caller is auto-granted. Whichever is older governs, regardless of which is more permissive.
         olderRule.CreationDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        olderRule.Conditions = """[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]}]""";
+        olderRule.Conditions = olderConditions;
         newerRule.CreationDate = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
-        newerRule.Conditions = """[{"kind":"human_approval"}]""";
-        SetupGovernedCollections(sutProvider, userId, cipherId,
-            (olderCollection, olderRule), (newerCollection, newerRule));
+        newerRule.Conditions = newerConditions;
+        (Collection collection, AccessRule rule) older = (olderCollection, olderRule), newer = (newerCollection, newerRule);
+        var (winner, loser) = olderGoverns ? (older, newer) : (newer, older);
+        // The expected loser goes first, so iteration order cannot pick the winner.
+        SetupGovernedCollections(sutProvider, userId, cipherId, loser, winner);
 
         var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
 
         Assert.NotNull(result);
-        Assert.False(result!.RequiresHumanApproval);
-        Assert.Equal(olderCollection.Id, result.CollectionId);
-        Assert.Equal(olderRule.Id, result.RuleId);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ResolveAsync_OldestRuleFailsAutomatedConditions_StillGoverns(
-        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
-        Collection olderCollection, AccessRule olderRule, Collection newerCollection, AccessRule newerRule)
-    {
-        // The oldest rule's IP allowlist fails for this caller; a newer rule would pass. Selection is structural, so
-        // the failing oldest rule still governs — the resolver never lets a newer path pre-empt it by evaluating
-        // conditions. (Downstream, the auto path then surfaces the denial; that is not the resolver's concern.)
-        olderRule.CreationDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        olderRule.Conditions = """[{"kind":"ip_allowlist","cidrs":["192.168.0.0/16"]}]""";
-        newerRule.CreationDate = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
-        newerRule.Conditions = """[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]}]""";
-        SetupGovernedCollections(sutProvider, userId, cipherId,
-            (olderCollection, olderRule), (newerCollection, newerRule));
-
-        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
-
-        Assert.NotNull(result);
-        Assert.False(result!.RequiresHumanApproval);
-        Assert.Equal(olderCollection.Id, result.CollectionId);
-        Assert.Equal(olderRule.Id, result.RuleId);
+        Assert.Equal(winner.rule.Id, result!.RuleId);
+        Assert.Equal(winner.collection.Id, result.CollectionId);
     }
 
     [Theory, BitAutoData]
@@ -280,15 +276,14 @@ public class GoverningRuleResolverTests
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
         Collection lowerCollection, AccessRule lowerRule, Collection higherCollection, AccessRule higherRule)
     {
-        // Two rules created at the same instant: the tie breaks on rule id (lowest wins) so the choice is total and
-        // stable rather than dependent on iteration order.
+        // Same tier, so only the id can break the tie; the higher id goes first so iteration order cannot decide.
         var sharedCreation = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc);
         lowerRule.Id = new Guid("00000000-0000-0000-0000-000000000001");
         lowerRule.CreationDate = sharedCreation;
-        lowerRule.Conditions = """[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]}]""";
+        lowerRule.Conditions = _humanApproval;
         higherRule.Id = new Guid("00000000-0000-0000-0000-000000000002");
         higherRule.CreationDate = sharedCreation;
-        higherRule.Conditions = """[{"kind":"human_approval"}]""";
+        higherRule.Conditions = _humanApproval;
         SetupGovernedCollections(sutProvider, userId, cipherId,
             (higherCollection, higherRule), (lowerCollection, lowerRule));
 
@@ -300,34 +295,10 @@ public class GoverningRuleResolverTests
     }
 
     [Theory, BitAutoData]
-    public async Task ResolveAsync_OldestRuleMalformed_FailsSafeToHumanApprovalEvenWithNewerAutoPath(
-        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
-        Collection olderCollection, AccessRule olderRule, Collection newerCollection, AccessRule newerRule)
-    {
-        // The oldest rule is unparseable; a newer rule would auto-grant. Because the oldest rule governs, it fails safe
-        // to human approval rather than letting the newer parseable path auto-grant around it.
-        olderRule.CreationDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        olderRule.Conditions = "not json";
-        newerRule.CreationDate = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
-        newerRule.Conditions = """[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]}]""";
-        SetupGovernedCollections(sutProvider, userId, cipherId,
-            (olderCollection, olderRule), (newerCollection, newerRule));
-
-        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
-
-        Assert.NotNull(result);
-        Assert.True(result!.RequiresHumanApproval);
-        Assert.Equal(olderCollection.Id, result.CollectionId);
-        Assert.IsType<HumanApprovalCondition>(Assert.Single(result.Conditions));
-    }
-
-    [Theory, BitAutoData]
     public async Task ResolveAsync_GovernedRuleDeleted_ReturnsNull(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
     {
-        // The collection still points at a rule id, but the rule no longer loads (deleted after the collection was
-        // read). It is dropped from the candidates, leaving nothing to govern — GetByIdAsync is left unstubbed so it
-        // returns null.
+        // GetByIdAsync is left unstubbed, so the rule reads as deleted after the collection was loaded.
         collection.AccessRuleId = rule.Id;
         SetupReachableCollections(sutProvider, userId, cipherId, collection);
 
@@ -463,7 +434,7 @@ public class GoverningRuleResolverTests
 
         await sutProvider.Sut.ResolvePinnedAsync(rule.Id, collectionId);
 
-        // Re-deriving reachability would apply oldest-wins over today's rules, the drift the pin prevents.
+        // Re-deriving reachability would re-run selection over today's rules, the drift the pin prevents.
         await sutProvider.GetDependency<ICollectionCipherRepository>().DidNotReceiveWithAnyArgs()
             .GetManyByUserIdCipherIdAsync(default, default);
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs()
@@ -532,6 +503,8 @@ public class GoverningRuleResolverTests
         sutProvider.GetDependency<ICollectionRepository>()
             .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(collections.ToList());
+        // Real engine, so selection evaluates the allowlists against _signals. Named, as the mock is registered by name.
+        sutProvider.SetDependency<IAccessRuleEngine>(new AccessRuleEngine(), "ruleEngine").Create();
     }
 
     private static void SetupGovernedCollection(

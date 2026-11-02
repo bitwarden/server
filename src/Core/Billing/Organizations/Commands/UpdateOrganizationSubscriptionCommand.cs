@@ -132,7 +132,7 @@ public class UpdateOrganizationSubscriptionCommand(
 
         if (activeSchedule is { Phases.Count: > 0 })
         {
-            // PM-40537: only rewrite schedules our code created, identified by phase metadata.
+            // PM-40537: only rewrite schedules our code created, as classified by SubscriptionScheduleOwnershipMapper.
             var annualUpgradePlans = await ResolveAnnualUpgradePhasePlansAsync(organization, subscription);
             var schedulePlans = annualUpgradePlans
                                 ?? await ResolveCohortMigrationPhasePlansAsync(organization, subscription);

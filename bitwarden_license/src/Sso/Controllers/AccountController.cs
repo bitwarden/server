@@ -566,7 +566,7 @@ public class AccountController : Controller
     /// 3. Creating a new User for an existing OrganizationUser (created by invitation), then establishing an SsoUser link
     ///     - User is signing in with a pending invitation.
     /// </summary>
-    /// <param name="provider">The external identity provider.</param>
+    /// <param name="organizationId">The organization whose SSO configuration the user signed in through.</param>
     /// <param name="providerUserId">The external identity provider's user identifier.</param>
     /// <param name="claims">The claims from the external IdP.</param>
     /// <param name="userIdentifier">The user identifier used for manual SSO linking.</param>
@@ -628,14 +628,14 @@ public class AccountController : Controller
 
             /*
              * ----------------------------------------------------
-             *              Critical Code Check Here
+             *              Critical Code Checks Here
              *
-             * We want to ensure a user is not in the invited state
+             * We want to ensure a user is not in the invited or staged state
              * explicitly. Users in the invited state cannot complete
              * SSO authentication. Instead of failing with a server
              * error page, we throw a typed exception so the SSO
              * callback can redirect the user back to the web client's
-             * /login with a toast prompting them to sign in with their
+             * /login with a error prompting them to sign in with their
              * master password and accept the invite first.
              *
              * The security-critical property is unchanged: no SsoUser
@@ -907,6 +907,7 @@ public class AccountController : Controller
         if (orgUser != null)
         {
             // Invited is allowed at this point because we know the user is trying to accept an org invite.
+            // Staged users are handled earlier and converted to invited. 
             EnforceAllowedOrgUserStatus(
                 orgUser.Status,
                 allowedStatuses: [
@@ -973,12 +974,13 @@ public class AccountController : Controller
     /// <summary>
     /// Attempts to get an <see cref="OrganizationUser"/> for a given organization
     /// by first checking for an existing user relationship, and if none is found,
-    /// by looking up an invited user via their email address.
+    /// by looking up the organization user via their email address for rows not
+    /// yet linked to a User by Id.
     /// </summary>
     /// <param name="user">The existing user entity to be looked up in OrganizationUsers table.</param>
     /// <param name="organizationId">Organization id from the provider data.</param>
-    /// <param name="email">Email to use as a fallback in case of an invited user not in the Org Users
-    /// table yet.</param>
+    /// <param name="email">Email used to look up an OrganizationUser row that isn't
+    /// linked to a User by Id yet.</param>
     private async Task<OrganizationUser?> GetOrganizationUserByUserAndOrgIdOrEmailAsync(
         User? user,
         Guid organizationId,
@@ -995,9 +997,10 @@ public class AccountController : Controller
         }
 
         // If no Org User found by Existing User Id - search all the organization's users via email.
-        // This covers users who are Invited but haven't accepted their invite yet.
+        // This covers users whose OrganizationUser row isn't yet linked to a User by Id
         if (email != null)
         {
+            // NOTE: this can return users in any status - so we count on the caller to enforce that the status is valid for SSO login.
             orgUser ??= await _organizationUserRepository.GetByOrganizationEmailAsync(organizationId, email);
         }
 

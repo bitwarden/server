@@ -68,6 +68,10 @@ public class SingleProviderScene(
     {
         [Required]
         public required PlanType PlanType { get; set; }
+
+        /// <summary>
+        /// The plan's seat minimum. Allocated seats are derived from the linked client organizations.
+        /// </summary>
         public int Seats { get; set; }
     }
 

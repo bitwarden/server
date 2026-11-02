@@ -2048,7 +2048,7 @@ public class UpcomingInvoiceHandlerTests
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert — schedule updated: Phase 1 skipped, Phase 2 included with cleared discounts
+        // Assert — schedule updated: Phase 1 skipped, Phase 2 included, consumed coupon not re-added
         await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
             Arg.Is("sub_sched_789"),
             Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
