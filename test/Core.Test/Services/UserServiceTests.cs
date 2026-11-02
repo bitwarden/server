@@ -11,6 +11,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
+using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
@@ -196,13 +197,20 @@ public class UserServiceTests
             .VerifyHashedPassword(user, "hashed_test_password", "test_password")
             .Returns(PasswordVerificationResult.Success);
 
+        sutProvider.GetDependency<IUserVerificationOtpStore>()
+            .ValidateAndConsumeAsync(user, "otp_token")
+            .Returns(true);
+
         var actualIsVerified = await sutProvider.Sut.VerifySecretAsync(user, secret);
 
         Assert.Equal(expectedIsVerified, actualIsVerified);
 
-        await sutProvider.GetDependency<IUserTwoFactorTokenProvider<User>>()
+        await sutProvider.GetDependency<IUserVerificationOtpStore>()
             .Received(shouldCheck.HasFlag(ShouldCheck.OTP) ? 1 : 0)
-            .ValidateAsync(Arg.Any<string>(), secret, Arg.Any<UserManager<User>>(), user);
+            .ValidateAndConsumeAsync(user, secret);
+        await sutProvider.GetDependency<IUserVerificationOtpStore>()
+            .DidNotReceiveWithAnyArgs()
+            .ValidateAndConsumeWithFailureLimitAsync(default!, default);
 
         sutProvider.GetDependency<IPasswordHasher<User>>()
             .Received(shouldCheck.HasFlag(ShouldCheck.Password) ? 1 : 0)
@@ -365,28 +373,6 @@ public class UserServiceTests
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceiveWithAnyArgs()
             .SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(default, default);
-    }
-
-    [Theory]
-    [BitAutoData("")]
-    [BitAutoData("null")]
-    public async Task SendOTPAsync_UserEmailNull_ThrowsBadRequest(
-        string email,
-        SutProvider<UserService> sutProvider, User user)
-    {
-        user.Email = email == "null" ? null : "";
-        var expectedMessage = "No user email.";
-        try
-        {
-            await sutProvider.Sut.SendOTPAsync(user);
-        }
-        catch (BadRequestException ex)
-        {
-            Assert.Equal(ex.Message, expectedMessage);
-            await sutProvider.GetDependency<IMailService>()
-                .DidNotReceive()
-                .SendOTPEmailAsync(Arg.Any<string>(), Arg.Any<string>());
-        }
     }
 
     [Theory, BitAutoData]
