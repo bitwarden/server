@@ -10,7 +10,8 @@ namespace Bit.Core.Test.Auth.Models.Business.Tokenables;
 
 public class TwoFactorRememberTokenableFactoryTests
 {
-    private static readonly DateTime _now = new(2026, 10, 2, 12, 0, 0, DateTimeKind.Utc);
+    // Tokens are validated against the real clock, so a fixed date eventually expires them
+    private static readonly DateTime _now = DateTime.UtcNow;
 
     private static TwoFactorRememberTokenableFactory GetSut(int lifetimeInDays)
     {
