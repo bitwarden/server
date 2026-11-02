@@ -273,6 +273,7 @@ public static partial class FeatureFlagKeys
     public const string PM29968_FillAfterSave = "pm-29968-fill-after-save";
     public const string PM32380_BtnTextAddCreate = "pm-32380-btn-text-add-create";
     public const string PM40201_DeriveSSHKeys = "pm-40201-derive-ssh-keys";
+    public const string PM45335_ExtensionWelcomePage = "pm-45335-extension-welcome-page";
 
     /* Secrets Manager Team */
     public const string SecretsVersioning = "sm-1587-secrets-versioning";
