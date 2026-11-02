@@ -10,6 +10,7 @@ using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -223,6 +224,92 @@ public class InviteLinkValidationServiceTests
         // Assert
         Assert.Null(result.Error);
         Assert.True(result.AutoConfirmPolicyEnabled);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateSeatAvailabilityAsync_WithNewMembershipAndNoSeats_ReturnsNoAvailableSeats(
+        Organization organization,
+        SutProvider<InviteLinkValidationService> sutProvider)
+    {
+        // Arrange
+        SetupNoAvailableSeats(organization, sutProvider);
+
+        // Act
+        var result = await sutProvider.Sut.ValidateSeatAvailabilityAsync(organization, existingOrganizationUser: null);
+
+        // Assert
+        var error = Assert.IsType<OrganizationHasNoAvailableSeats>(result);
+        Assert.Equal(organization.DisplayName(), error.OrgName);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateSeatAvailabilityAsync_WithStagedMembershipAndNoSeats_ReturnsNoAvailableSeats(
+        Organization organization,
+        OrganizationUser existingOrganizationUser,
+        SutProvider<InviteLinkValidationService> sutProvider)
+    {
+        // Arrange
+        SetupNoAvailableSeats(organization, sutProvider);
+        existingOrganizationUser.Status = OrganizationUserStatusType.Staged;
+
+        // Act
+        var result = await sutProvider.Sut.ValidateSeatAvailabilityAsync(organization, existingOrganizationUser);
+
+        // Assert
+        var error = Assert.IsType<OrganizationHasNoAvailableSeats>(result);
+        Assert.Equal(organization.DisplayName(), error.OrgName);
+    }
+
+    // An invited membership already takes up a seat, so a full organization doesn't block it.
+    [Theory, BitAutoData]
+    public async Task ValidateSeatAvailabilityAsync_WithInvitedMembershipAndNoSeats_ReturnsNoError(
+        Organization organization,
+        OrganizationUser existingOrganizationUser,
+        SutProvider<InviteLinkValidationService> sutProvider)
+    {
+        // Arrange
+        SetupNoAvailableSeats(organization, sutProvider);
+        existingOrganizationUser.Status = OrganizationUserStatusType.Invited;
+
+        // Act
+        var result = await sutProvider.Sut.ValidateSeatAvailabilityAsync(organization, existingOrganizationUser);
+
+        // Assert
+        Assert.Null(result);
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetOccupiedSeatCountByOrganizationIdAsync(Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateSeatAvailabilityAsync_WithNewMembershipAndSeatsAvailable_ReturnsNoError(
+        Organization organization,
+        SutProvider<InviteLinkValidationService> sutProvider)
+    {
+        // Arrange
+        organization.Seats = 10;
+        organization.MaxAutoscaleSeats = 10;
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Users = 9 });
+
+        // Act
+        var result = await sutProvider.Sut.ValidateSeatAvailabilityAsync(organization, existingOrganizationUser: null);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    // Fills the organization's seats with no room left to auto-scale.
+    private static void SetupNoAvailableSeats(
+        Organization organization,
+        SutProvider<InviteLinkValidationService> sutProvider)
+    {
+        organization.Seats = 10;
+        organization.MaxAutoscaleSeats = 10;
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Users = 10 });
     }
 
     private static void SetupAllChecksPass(

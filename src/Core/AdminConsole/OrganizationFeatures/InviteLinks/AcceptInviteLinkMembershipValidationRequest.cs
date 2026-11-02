@@ -1,35 +1,30 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 
 /// <summary>
 /// Request for <see cref="IAcceptInviteLinkMembershipValidator"/>. Carries everything needed to decide
-/// whether a user may accept an invite link into <see cref="Organization"/>, including the organization
-/// record (so target-org policies can be read directly).
+/// whether a user may accept an organization's invite link.
 /// </summary>
 public record AcceptInviteLinkMembershipValidationRequest
 {
-    public required Organization Organization { get; init; }
+    /// <summary>
+    /// The organization the user is attempting to join.
+    /// </summary>
+    public required Guid OrganizationId { get; init; }
+
+    /// <summary>
+    /// The secret code embedded in the invite link the user is attempting to use.
+    /// </summary>
+    public required Guid Code { get; init; }
+
+    /// <summary>
+    /// The authenticated user attempting to accept the invite link.
+    /// </summary>
     public required User User { get; init; }
 
     /// <summary>
-    /// The user's existing membership in the organization, if any. Non-null only for a pending email
-    /// invitation (an <c>Invited</c> row) or a Staged provisioning row. Null for a brand-new member joining
-    /// purely via the link.
+    /// The user's account recovery (reset password) key, if supplied.
     /// </summary>
-    public OrganizationUser? ExistingMembership { get; init; }
-
     public string? ResetPasswordKey { get; init; }
-
-    /// <summary>
-    /// Whether the Automatic User Confirmation policy is enabled for the organization being joined.
-    /// </summary>
-    public bool AutoConfirmPolicyEnabled { get; init; }
-
-    /// <summary>
-    /// Whether the joining user must be auto-enrolled in account recovery because the Account Recovery
-    /// Administration policy has auto-enrollment enabled.
-    /// </summary>
-    public bool AccountRecoveryAutoEnroll { get; init; }
 }
