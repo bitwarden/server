@@ -13,6 +13,8 @@ using Bit.Core.Services;
 using Bit.Core.Services.Mail;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
@@ -227,7 +229,20 @@ public class HandlebarsMailServiceTests
             SiteName = "Bitwarden",
         };
 
-        var mailDeliveryService = new MailKitSmtpMailDeliveryService(globalSettings, Substitute.For<ILogger<MailKitSmtpMailDeliveryService>>());
+        var mailDeliveryService = new ServiceCollection()
+            .AddLogging()
+            .AddSingleton(Substitute.For<IHostEnvironment>())
+            .Configure<MailDeliveryOptions>(options =>
+            {
+                options.SiteName = globalSettings.SiteName;
+                options.ReplyToEmail = globalSettings.Mail.ReplyToEmail;
+                options.Smtp.Host = globalSettings.Mail.Smtp.Host;
+                options.Smtp.TrustServer = globalSettings.Mail.Smtp.TrustServer;
+                options.Smtp.Port = globalSettings.Mail.Smtp.Port;
+            })
+            .AddMailDelivery()
+            .BuildServiceProvider()
+            .GetRequiredService<IMailDeliveryService>();
         var distributedCache = Substitute.For<IDistributedCache>();
         var logger = Substitute.For<ILogger<HandlebarsMailService>>();
 
