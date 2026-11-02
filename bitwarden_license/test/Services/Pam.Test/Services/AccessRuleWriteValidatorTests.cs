@@ -324,7 +324,7 @@ public class AccessRuleWriteValidatorTests
     {
         var sutProvider = SetupSutProvider(rule);
         collection.OrganizationId = rule.OrganizationId;
-        collection.AccessRuleId = rule.Id;
+        collection.AccessRuleId = rule.Id;   // already governed by the rule under update
         sutProvider.GetDependency<ICollectionRepository>()
             .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new List<Collection> { collection });
