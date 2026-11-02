@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Enables CS1591 (missing XML comment on a public type or member). -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.SimpleEmail" Version="[4.0.2.5]" />
+    <PackageReference Include="MailKit" Version="[4.17.0]" />
+    <PackageReference Include="SendGrid" Version="[9.29.3]" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="MailDelivery.Test" />
+    <!-- NSubstitute needs this to substitute generic interfaces over internal types, e.g. ILogger<SendGridMailDeliveryService>. -->
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+  </ItemGroup>
+
+</Project>
