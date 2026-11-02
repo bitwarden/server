@@ -4,11 +4,18 @@ using Bit.Pam.Enums;
 
 namespace Bit.Pam.Entities;
 
-/// <summary>A grant of access to a cipher, minted when its approved <see cref="AccessRequest"/> is activated.</summary>
+/// <summary>
+/// An active grant of access to a cipher, born from an approved <see cref="AccessRequest"/>. Only
+/// <see cref="AccessLeaseStatus.Active"/> leases inside their <see cref="NotBefore"/>/<see cref="NotAfter"/> window
+/// authorize access.
+/// </summary>
 public class AccessLease : ITableObject<Guid>
 {
     public Guid Id { get; set; }
 
+    /// <summary>
+    /// The request that birthed this lease.
+    /// </summary>
     public Guid AccessRequestId { get; set; }
 
     public Guid OrganizationId { get; set; }

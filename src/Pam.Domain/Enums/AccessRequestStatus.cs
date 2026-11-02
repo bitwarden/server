@@ -1,26 +1,25 @@
 ﻿namespace Bit.Pam.Enums;
 
 /// <summary>
-/// A request's lifecycle state as of a read clock, never stored; derived by
-/// <see cref="AccessStatusDerivation.ComputeStatus"/>. An activated request stays <see cref="Approved"/>, and the
-/// produced lease records the activation.
+/// Lifecycle of a <see cref="Entities.AccessRequest"/>. A request starts <see cref="Pending"/> and moves to exactly
+/// one terminal state. Auto-approved requests are created already <see cref="Approved"/>. Activation is not a state of
+/// its own: a request promoted to a lease stays <see cref="Approved"/>, and the produced lease is what records that it
+/// happened.
 /// </summary>
 public enum AccessRequestStatus : byte
 {
+    /// <summary>Opened and awaiting a human approver's decision.</summary>
     Pending = 0,
 
-    /// <summary>Activatable while its window is open, already activated, or an applied extension.</summary>
+    /// <summary>Approved automatically or by an approver; the requester can activate it into a lease within its window.</summary>
     Approved = 1,
 
-    /// <summary>Refused, or retracted by an approver before activation; no lease is produced.</summary>
+    /// <summary>An approver refused the request; no lease is produced.</summary>
     Denied = 2,
 
-    /// <summary>Withdrawn by the requester.</summary>
+    /// <summary>Withdrawn by the requester before it was decided.</summary>
     Cancelled = 3,
 
-    /// <summary>
-    /// The window lapsed while the request was unanswered or its approval unactivated. An empty decision log means
-    /// unanswered; one holding an approval means unactivated.
-    /// </summary>
+    /// <summary>The approval window lapsed with no decision recorded: nobody answered.</summary>
     Expired = 4,
 }

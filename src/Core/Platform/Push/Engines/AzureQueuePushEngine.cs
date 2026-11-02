@@ -10,17 +10,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Platform.Push.Internal;
 
-/// <summary>
-/// Sends notifications to the Notifications service by writing them to the notifications Azure
-/// Queue, where AzureQueueHostedService dequeues them and fans them out over SignalR. Registered for
-/// cloud-hosted installations that have a notifications queue configured; the self-hosted equivalent
-/// is <see cref="NotificationsApiPushEngine"/>.
-/// </summary>
-/// <remarks>
-/// Every notification is written, whatever client type it is bound for; this engine filters nothing.
-/// Which connections receive one is decided by the Notifications service, and a mobile app holding a
-/// SignalR connection is delivered to like any other client.
-/// </remarks>
 public class AzureQueuePushEngine : IPushEngine
 {
     private readonly QueueClient _queueClient;

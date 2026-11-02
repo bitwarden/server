@@ -65,8 +65,8 @@ public sealed class NotificationsApplicationFactory : IAsyncDisposable, IAsyncLi
                 config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     { "OpenTelemetry:Enabled", "false" },
-                    // SelfHosted = true maps the /send endpoint, and skips cloud-only background services
-                    // at startup.
+                    // SelfHosted = true activates the [SelfHosted(SelfHostedOnly = true)] filter on
+                    // SendController, and skips cloud-only background services at startup.
                     { "globalSettings:selfHosted", "true" },
                     // The host portion of this URI is irrelevant; all backchannel requests (OIDC discovery,
                     // JWKS) are routed directly to the Identity test server via BackchannelHttpHandler.
