@@ -53,7 +53,6 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
         // If the license has a Token (claims-based), extract all properties from claims BEFORE validation
         // This ensures that CanUseLicense validation has access to the correct values from claims
         // Otherwise, fall back to using the properties already on the license object (backward compatibility)
-        // PamSeats is the one exception: it postdates the legacy hash, so an unsigned value is discarded (PM-44602).
         if (claimsPrincipal != null)
         {
             license.Name = claimsPrincipal.GetValue<string>(OrganizationLicenseConstants.Name);

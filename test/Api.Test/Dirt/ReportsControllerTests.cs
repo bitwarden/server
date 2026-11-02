@@ -324,8 +324,6 @@ public class ReportsControllerTests
                 _.PasswordHealthReportApplicationIds == request.PasswordHealthReportApplicationIds));
     }
 
-    // GetPasskeyDirectory - not organization scoped, so it is not gated on UseRiskInsights
-
     [Theory, BitAutoData]
     public async Task GetPasskeyDirectory_ReturnsExpectedEntries(SutProvider<ReportsController> sutProvider)
     {

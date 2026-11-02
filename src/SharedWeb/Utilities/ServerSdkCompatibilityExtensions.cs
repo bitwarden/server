@@ -16,7 +16,8 @@ public static class ServerSdkCompatibilityExtensions
     /// <summary>
     /// Wires the server up to the <c>Bitwarden.Server.Sdk</c> feature flag pipeline: maps the
     /// existing <see cref="GlobalSettings.LaunchDarkly"/> settings onto <see cref="FeatureFlagOptions"/>,
-    /// and registers a server-aware <see cref="IContextBuilder"/>.
+    /// registers a server-aware <see cref="IContextBuilder"/>, and registers the deprecated
+    /// <see cref="Bit.Core.Services.IFeatureService"/> as a shim that delegates to the new SDK service.
     /// </summary>
     /// <remarks>
     /// Assumes the SDK's own feature flag services have already been registered (either through

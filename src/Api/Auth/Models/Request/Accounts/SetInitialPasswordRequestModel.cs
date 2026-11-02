@@ -118,9 +118,8 @@ public class SetInitialPasswordRequestModel : IValidatableObject
             yield break;
         }
 
-        // TODO: the following legacy shape validation can be removed once client-side changes in
-        // https://bitwarden.atlassian.net/browse/PM-35599 have been merged and have aged out according
-        // to the Bitwarden release support policy. See comment on SetInitialPasswordV1Async() for further details.
+        // V1 registration
+        // TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
         if (string.IsNullOrEmpty(MasterPasswordHash))
         {
             yield return new ValidationResult("MasterPasswordHash must be supplied.");
