@@ -73,6 +73,33 @@ public class PreviewingOrganizationPlanChangeTests(StripeTestsFixture fixture)
         Assert.True(preview["total"]!.GetValue<decimal>() > 0m);
     }
 
+    [BillingFact]
+    public async Task PlanChange_TrialWithCustomerAndSubscriptionCoupons_AppliesOnlySubscriptionCoupon()
+    {
+        // Verifies in real Stripe that a subscription's own discount takes precedence over the customer's.
+        var (client, _, organizationId, _) = await fixture.PrepareOrganizationOwnerAsync(
+            "preview-plan-change-coupon-precedence@example.com", PlanType.TeamsAnnually);
+        await fixture.MakeOrganizationTrialPaymentOptionalAsync(organizationId);
+        var customerId = await fixture.GetOrganizationGatewayCustomerIdAsync(organizationId);
+        var subscriptionId = await fixture.GetOrganizationGatewaySubscriptionIdAsync(organizationId);
+
+        await fixture.SeedAndAttachSubscriptionCouponAsync(subscriptionId, $"sub_coupon_{Guid.NewGuid():N}", percentOff: 50);
+        var subscriptionOnly = await PreviewTotalAsync(client, organizationId);
+
+        await fixture.SeedAndAttachCustomerCouponAsync(customerId, $"cust_coupon_{Guid.NewGuid():N}", percentOff: 25);
+        var both = await PreviewTotalAsync(client, organizationId);
+
+        Assert.Equal(subscriptionOnly, both);
+    }
+
+    private static async Task<decimal> PreviewTotalAsync(HttpClient client, Guid organizationId)
+    {
+        var response = await client.PostAsJsonAsync(Route(organizationId), Body("enterprise", "annually"));
+        await Assert.SuccessResponseAsync(response);
+        var preview = (await response.Content.ReadFromJsonAsync<JsonObject>())!;
+        return preview["total"]!.GetValue<decimal>();
+    }
+
     private static string Route(Guid organizationId) =>
         $"/organizations/{organizationId}/billing/subscription/plan-change/preview";
 

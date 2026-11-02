@@ -160,14 +160,20 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
         // Stripe can't preview a trial ending on a subscription that has no payment method (it would cancel at
         // the end of the trial), so a trialing subscription is previewed as a new purchase of the target plan.
         // A purchase preview doesn't pick up the customer's coupon on its own (verified against Stripe test
-        // mode), so the customer's and the subscription's coupons are both passed explicitly.
+        // mode), so coupons are passed explicitly. A subscription's own discounts take precedence over the
+        // customer's, which only applies when the subscription has none.
         if (subscription.Status == SubscriptionStatus.Trialing)
         {
-            var couponIds = new[] { subscription.Customer?.Discount?.Source?.CouponId }
-                .Concat(subscription.Discounts?.Select(discount => discount.Source?.CouponId) ?? [])
+            var subscriptionCouponIds = (subscription.Discounts ?? [])
+                .Select(discount => discount.Source?.CouponId)
                 .Where(couponId => !string.IsNullOrEmpty(couponId))
                 .Distinct()
                 .ToList();
+            var couponIds = subscriptionCouponIds.Count > 0
+                ? subscriptionCouponIds
+                : new[] { subscription.Customer?.Discount?.Source?.CouponId }
+                    .Where(couponId => !string.IsNullOrEmpty(couponId))
+                    .ToList();
             var discounts = couponIds.Count > 0
                 ? couponIds.Select(couponId => new InvoiceDiscountOptions { Coupon = couponId }).ToList()
                 : null;
