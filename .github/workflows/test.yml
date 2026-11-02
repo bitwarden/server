@@ -49,8 +49,8 @@ jobs:
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
 
-      # The EF migration assemblies are generated code with millions of lines. Instrumenting them
-      # adds many minutes of coverage report generation to any test project that references them.
+      # Exclude the EF migration assemblies from coverage: coverage of generated migration code has
+      # no value, and instrumenting their millions of lines adds many minutes to the test run.
       - name: Test OSS solution
         run: dotnet test ./test --configuration Debug --logger "trx;LogFileName=oss-test-results.trx" /p:CoverletOutputFormatter="cobertura" --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Exclude="[*Migrations]*"
 
