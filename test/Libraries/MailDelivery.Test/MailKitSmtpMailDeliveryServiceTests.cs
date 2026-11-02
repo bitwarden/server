@@ -1,31 +1,30 @@
 ﻿using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Platform.Mail.Delivery;
-using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NSubstitute;
-using Xunit;
 
-namespace Bit.Core.Test.Services;
+namespace Bit.MailDelivery.Test;
 
 public class MailKitSmtpMailDeliveryServiceTests
 {
-    private readonly GlobalSettings _globalSettings;
+    private readonly MailDeliveryOptions _options;
     private readonly ILogger<MailKitSmtpMailDeliveryService> _logger;
 
     public MailKitSmtpMailDeliveryServiceTests()
     {
-        _globalSettings = new GlobalSettings();
+        _options = new MailDeliveryOptions();
         _logger = Substitute.For<ILogger<MailKitSmtpMailDeliveryService>>();
 
-        _globalSettings.Mail.Smtp.Host = "unittests.example.com";
-        _globalSettings.Mail.ReplyToEmail = "noreply@unittests.example.com";
+        _options.Smtp.Host = "unittests.example.com";
+        _options.ReplyToEmail = "noreply@unittests.example.com";
     }
 
     private MailKitSmtpMailDeliveryService CreateSut(bool trustServer = false)
     {
-        _globalSettings.Mail.Smtp.TrustServer = trustServer;
-        return new MailKitSmtpMailDeliveryService(_globalSettings, _logger);
+        _options.Smtp.TrustServer = trustServer;
+        return new MailKitSmtpMailDeliveryService(Options.Create(_options), _logger);
     }
 
     [Fact]

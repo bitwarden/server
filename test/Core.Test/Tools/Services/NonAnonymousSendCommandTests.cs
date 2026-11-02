@@ -1494,6 +1494,7 @@ public class NonAnonymousSendCommandTests
         yield return new object[] { SendType.File, AuthType.None, EventType.Send_Created_File };
         yield return new object[] { SendType.File, AuthType.Email, EventType.Send_Created_File_WithEmailVerification };
         yield return new object[] { SendType.File, AuthType.Password, EventType.Send_Created_File_WithPasswordProtection };
+        yield return new object[] { SendType.Item, AuthType.Email, EventType.Send_Created_Item };
     }
 
     [Theory]
@@ -1540,6 +1541,7 @@ public class NonAnonymousSendCommandTests
     [Theory]
     [InlineData(SendType.Text, EventType.Send_Edited_Text)]
     [InlineData(SendType.File, EventType.Send_Edited_File)]
+    [InlineData(SendType.Item, EventType.Send_Edited_Item)]
     public async Task SaveSendAsync_ExistingSend_LogsExpectedEventType(
         SendType sendType, EventType expectedEventType)
     {
@@ -1682,6 +1684,7 @@ public class NonAnonymousSendCommandTests
     [Theory]
     [InlineData(SendType.Text, EventType.Send_Deleted_Text)]
     [InlineData(SendType.File, EventType.Send_Deleted_File)]
+    [InlineData(SendType.Item, EventType.Send_Deleted_Item)]
     public async Task DeleteSendAsync_LogsExpectedEventType(
         SendType sendType, EventType expectedEventType)
     {

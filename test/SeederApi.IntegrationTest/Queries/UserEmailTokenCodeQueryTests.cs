@@ -198,15 +198,14 @@ public class UserEmailTokenCodeQueryTests
     }
 
     /// <summary>
-    /// The user-verification OTP is written as a bare string under a different key, not in the envelope the other
-    /// code types use, and the query still reads it.
+    /// The user verification OTP is bound to the user's email. No device identifier is used, and none should be
+    /// returned.
     /// </summary>
     [Fact]
-    public async Task Execute_UserVerification_ReturnsBareCachedCode()
+    public async Task Execute_UserVerification_ReturnsCodeWithoutDevice()
     {
         var (query, cache, user) = Arrange();
-        var issuedCode = await new EmailTokenProvider(cache)
-            .GenerateAsync($"otp:{user.Email}", null!, user);
+        var issuedCode = await BuildUserVerificationOtpStore(cache).IssueAsync(user);
 
         var response = await query.Execute(new UserEmailTokenCodeQuery.Request
         {
@@ -217,6 +216,22 @@ public class UserEmailTokenCodeQueryTests
         Assert.True(response.Found);
         Assert.Equal(issuedCode, response.Code);
         Assert.Null(response.DeviceIdentifier);
+    }
+
+    [Fact]
+    public async Task Execute_UserVerification_LeavesTheCodeRedeemable()
+    {
+        var (query, cache, user) = Arrange();
+        var store = BuildUserVerificationOtpStore(cache);
+        await store.IssueAsync(user);
+
+        var response = await query.Execute(new UserEmailTokenCodeQuery.Request
+        {
+            Email = user.Email,
+            CodeType = UserEmailTokenCodeQuery.CodeType.UserVerification,
+        });
+
+        Assert.True(await store.ValidateAndConsumeWithFailureLimitAsync(user, response.Code));
     }
 
     [Fact]
@@ -286,11 +301,18 @@ public class UserEmailTokenCodeQueryTests
     private static OtpTokenProvider<DefaultOtpTokenProviderOptions> BuildOtpTokenProvider(IDistributedCache cache)
     {
         return new OtpTokenProvider<DefaultOtpTokenProviderOptions>(
-            cache, new OptionsWrapper<DefaultOtpTokenProviderOptions>(new DefaultOtpTokenProviderOptions()));
+            cache,
+            new OptionsWrapper<DefaultOtpTokenProviderOptions>(new DefaultOtpTokenProviderOptions()),
+            TimeProvider.System);
     }
 
     private static NewDeviceVerificationOtpStore BuildOtpStore(IDistributedCache cache)
     {
         return new NewDeviceVerificationOtpStore(BuildOtpTokenProvider(cache), cache);
+    }
+
+    private static UserVerificationOtpStore BuildUserVerificationOtpStore(IDistributedCache cache)
+    {
+        return new UserVerificationOtpStore(BuildOtpTokenProvider(cache));
     }
 }

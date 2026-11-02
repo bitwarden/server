@@ -257,7 +257,8 @@ internal static class PresetLoader
                 seed: shape is not null ? shapeSeed + 2 : 1,
                 density?.CipherTypeDistribution,
                 density?.PersonalCipherDistribution,
-                preset.PersonalCiphers?.CountPerUser ?? 0);
+                preset.PersonalCiphers?.CountPerUser ?? 0,
+                ParseEnum(preset.DefaultCollections.Sizing, DefaultCollectionSizing.Sampled));
         }
 
         if (preset.PersonalCiphers is not null && preset.PersonalCiphers.CountPerUser > 0)
