@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Repositories;
 using Bit.Pam.Repositories;
+using Bit.Seeder.Extensions;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Services;
 
@@ -41,34 +42,12 @@ public class OrganizationAccessRuleScene(
 
     public async Task<SceneResult<Result>> SeedAsync(Request request)
     {
-        var organization = await organizationRepository.GetByIdAsync(request.OrganizationId);
-        if (organization == null)
-        {
-            throw new InvalidOperationException($"Organization {request.OrganizationId} not found.");
-        }
-
-        var collectionIds = request.CollectionIds?.Distinct().ToList() ?? [];
-        if (collectionIds.Count > 0)
-        {
-            var found = await collectionRepository.GetManyByManyIdsAsync(collectionIds);
-            var foundIds = found.Where(c => c.OrganizationId == organization.Id).Select(c => c.Id).ToHashSet();
-            var missing = collectionIds.Where(id => !foundIds.Contains(id)).ToList();
-            if (missing.Count > 0)
-            {
-                throw new InvalidOperationException(
-                    $"Collections not found in organization {organization.Id}: {string.Join(", ", missing)}.");
-            }
-
-            var governed = found.Where(c => c.AccessRuleId != null).Select(c => c.Id).ToList();
-            if (governed.Count > 0)
-            {
-                throw new InvalidOperationException(
-                    $"Collections already governed by an access rule: {string.Join(", ", governed)}.");
-            }
-        }
+        var collectionIds = await organizationRepository.GetDistinctCollectionIdsOrThrowAsync(
+            collectionRepository, request.OrganizationId, request.CollectionIds ?? []);
+        await collectionRepository.ThrowIfCollectionsGovernedByAccessRuleAsync(collectionIds);
 
         var accessRule = AccessRuleSeeder.Create(
-            organization.Id,
+            request.OrganizationId,
             request.Name,
             request.IpAllowlistCidrs,
             request.RequireHumanApproval,
@@ -85,7 +64,7 @@ public class OrganizationAccessRuleScene(
         if (collectionIds.Count > 0)
         {
             await collectionRepository.SetAccessRuleAssociationsAsync(
-                organization.Id, accessRule.Id, collectionIds, []);
+                request.OrganizationId, accessRule.Id, collectionIds, []);
         }
 
         return new SceneResult<Result>(

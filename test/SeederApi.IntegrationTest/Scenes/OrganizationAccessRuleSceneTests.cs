@@ -56,6 +56,31 @@ public class OrganizationAccessRuleSceneTests : IClassFixture<InPlaySeederApiApp
         Assert.Equal(0, await CountRulesAsync(org.OrganizationId));
     }
 
+    [Fact]
+    public async Task SeedAsync_SameOrganizationCollection_GovernsCollection()
+    {
+        var playId = Guid.NewGuid().ToString();
+        var org = await _client.SeedOrganizationAsync(playId);
+        var collectionResult = await _client.PostSceneAsync(playId, nameof(OrganizationCollectionScene),
+            new OrganizationCollectionScene.Request
+            {
+                OrganizationId = org.OrganizationId,
+                OrganizationKeyB64 = org.OrganizationKeyB64,
+                Name = "Collection"
+            });
+        var collectionId = collectionResult.GetProperty("collectionId").GetGuid();
+        var request = Rule(org.OrganizationId, "Office");
+        request.CollectionIds = [collectionId];
+
+        var result = await _client.PostSceneAsync(playId, nameof(OrganizationAccessRuleScene), request);
+
+        var accessRuleId = result.GetProperty("accessRuleId").GetGuid();
+        Assert.True(await _factory.QueryAsync(db => db.AccessRules.AnyAsync(r =>
+            r.Id == accessRuleId && r.OrganizationId == org.OrganizationId)));
+        Assert.True(await _factory.QueryAsync(db => db.Collections.AnyAsync(c =>
+            c.Id == collectionId && c.AccessRuleId == accessRuleId)));
+    }
+
     private static OrganizationAccessRuleScene.Request Rule(Guid organizationId, string name) =>
         new() { OrganizationId = organizationId, Name = name };
 

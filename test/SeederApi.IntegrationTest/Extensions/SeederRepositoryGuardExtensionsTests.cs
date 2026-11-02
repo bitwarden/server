@@ -236,6 +236,44 @@ public class SeederRepositoryGuardExtensionsTests
         await repository.Received(1).GetByOrganizationId(linkedId);
     }
 
+    [Theory]
+    [MemberData(nameof(NullOrEmptyIds))]
+    public async Task ThrowIfCollectionsGovernedByAccessRuleAsync_NullOrEmpty_DoesNotQuery(Guid[]? ids)
+    {
+        var repository = Substitute.For<ICollectionRepository>();
+
+        await repository.ThrowIfCollectionsGovernedByAccessRuleAsync(ids);
+
+        await repository.DidNotReceiveWithAnyArgs().GetManyByManyIdsAsync(default!);
+    }
+
+    [Fact]
+    public async Task ThrowIfCollectionsGovernedByAccessRuleAsync_Ungoverned_Passes()
+    {
+        var collection = NewCollection(_ownerId);
+        var repository = Substitute.For<ICollectionRepository>();
+        repository.GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>()).Returns([collection]);
+
+        await repository.ThrowIfCollectionsGovernedByAccessRuleAsync([collection.Id]);
+    }
+
+    [Fact]
+    public async Task ThrowIfCollectionsGovernedByAccessRuleAsync_Governed_ThrowsWithCollectionId()
+    {
+        var ungoverned = NewCollection(_ownerId);
+        var governed = NewCollection(_ownerId);
+        governed.AccessRuleId = Guid.NewGuid();
+        var repository = Substitute.For<ICollectionRepository>();
+        repository.GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>()).Returns([ungoverned, governed]);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => repository.ThrowIfCollectionsGovernedByAccessRuleAsync([ungoverned.Id, governed.Id]));
+
+        Assert.Contains("already governed by an access rule", exception.Message);
+        Assert.Contains(governed.Id.ToString(), exception.Message);
+        Assert.DoesNotContain(ungoverned.Id.ToString(), exception.Message);
+    }
+
     private static Group NewGroup(Guid organizationId) =>
         new() { Id = Guid.NewGuid(), OrganizationId = organizationId, Name = "group" };
 

@@ -88,6 +88,26 @@ internal static class SeederRepositoryGuardExtensions
         return distinctIds;
     }
 
+    public static async Task ThrowIfCollectionsGovernedByAccessRuleAsync(
+        this ICollectionRepository collectionRepository, IEnumerable<Guid>? collectionIds)
+    {
+        var distinctIds = collectionIds?.Distinct().ToList();
+        if (distinctIds is not { Count: > 0 })
+        {
+            return;
+        }
+
+        var governedIds = (await collectionRepository.GetManyByManyIdsAsync(distinctIds))
+            .Where(c => c.AccessRuleId != null)
+            .Select(c => c.Id)
+            .ToList();
+        if (governedIds.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Collections already governed by an access rule: {string.Join(", ", governedIds)}.");
+        }
+    }
+
     public static Task ThrowIfUserNotConfirmedOrRevokedMemberOfOrganizationAsync(
         this IOrganizationUserRepository organizationUserRepository, Guid userId, Guid organizationId)
         => ThrowIfAnyNotOwnedAsync(
