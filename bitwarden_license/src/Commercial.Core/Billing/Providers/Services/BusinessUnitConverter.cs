@@ -362,7 +362,7 @@ public class BusinessUnitConverter(
                 token,
                 user.Email,
                 organization.Id,
-                globalSettings.OrganizationInviteExpirationHours))
+                globalSettings.ProviderInviteExpirationHours))
         {
             Fail("Email token is invalid.");
         }
