@@ -296,7 +296,7 @@ public abstract class CipherResponseModel : CipherMiniResponseModel
         Favorite = cipher.Favorite;
         Edit = cipher.Edit;
         ArchivedDate = cipher.ArchivedDate;
-        ExcludedRiskCategories = cipher.ExcludedRiskCategories == null
+        Exclusions = cipher.ExcludedRiskCategories == null
             ? null
             : JsonSerializer.Deserialize<List<string>>(cipher.ExcludedRiskCategories);
         ViewPassword = cipher.ViewPassword;
@@ -315,7 +315,7 @@ public abstract class CipherResponseModel : CipherMiniResponseModel
     public bool Edit { get; set; }
     public bool ViewPassword { get; set; }
     public DateTime? ArchivedDate { get; set; }
-    public IEnumerable<string>? ExcludedRiskCategories { get; set; }
+    public IEnumerable<string>? Exclusions { get; set; }
     public CipherPermissionsResponseModel Permissions { get; set; }
 }
 
