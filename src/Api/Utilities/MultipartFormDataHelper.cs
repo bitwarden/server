@@ -65,6 +65,53 @@ public static class MultipartFormDataHelper
         }
     }
 
+    /// <summary>
+    /// Streams a multipart upload whose non-file fields (<c>key</c>, <c>lastKnownRevisionDate</c>) precede the file
+    /// section, in any order. Reads the body once via <see cref="MultipartReader"/> and never touches
+    /// <c>Request.Form</c>, which would buffer and consume the body before the file could be streamed.
+    /// The callback receives the raw <c>lastKnownRevisionDate</c> value, or null if the field was not sent.
+    /// </summary>
+    public static async Task GetFileAsync(this HttpRequest request,
+        Func<Stream, string, string, string, Task> callback)
+    {
+        var boundary = GetBoundary(MediaTypeHeaderValue.Parse(request.ContentType),
+            _defaultFormOptions.MultipartBoundaryLengthLimit);
+        var reader = new MultipartReader(boundary, request.Body);
+
+        string key = null;
+        string lastKnownRevisionDate = null;
+
+        MultipartSection section;
+        while ((section = await reader.ReadNextSectionAsync()) != null)
+        {
+            if (!ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out var content))
+            {
+                return;
+            }
+
+            if (HasFileContentDisposition(content))
+            {
+                var fileName = HeaderUtilities.RemoveQuotes(content.FileName).ToString();
+                using (section.Body)
+                {
+                    await callback(section.Body, fileName, key, lastKnownRevisionDate);
+                }
+                return;
+            }
+
+            if (HasDispositionName(content, "key"))
+            {
+                using var sr = new StreamReader(section.Body);
+                key = await sr.ReadToEndAsync();
+            }
+            else if (HasDispositionName(content, "lastKnownRevisionDate"))
+            {
+                using var sr = new StreamReader(section.Body);
+                lastKnownRevisionDate = await sr.ReadToEndAsync();
+            }
+        }
+    }
+
     public static async Task GetSendFileAsync(this HttpRequest request, Func<Stream, string,
         SendRequestModel, Task> callback)
     {

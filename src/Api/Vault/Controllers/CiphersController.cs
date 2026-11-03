@@ -1629,10 +1629,10 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        // Extract lastKnownRevisionDate from form data if present
-        DateTime? lastKnownRevisionDate = GetLastKnownRevisionDateFromForm();
-        await Request.GetFileAsync(async (stream, fileName, key) =>
+        // lastKnownRevisionDate is read from the multipart stream, since reading Request.Form would consume the body
+        await Request.GetFileAsync(async (stream, fileName, key, lastKnownRevisionDateValue) =>
         {
+            var lastKnownRevisionDate = ParseLastKnownRevisionDate(lastKnownRevisionDateValue);
             await _cipherService.CreateAttachmentAsync(cipher, stream, fileName, key,
                     Request.ContentLength.GetValueOrDefault(0), user.Id, false, lastKnownRevisionDate);
         });
@@ -1656,11 +1656,10 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        // Extract lastKnownRevisionDate from form data if present
-        DateTime? lastKnownRevisionDate = GetLastKnownRevisionDateFromForm();
-
-        await Request.GetFileAsync(async (stream, fileName, key) =>
+        // lastKnownRevisionDate is read from the multipart stream, since reading Request.Form would consume the body
+        await Request.GetFileAsync(async (stream, fileName, key, lastKnownRevisionDateValue) =>
         {
+            var lastKnownRevisionDate = ParseLastKnownRevisionDate(lastKnownRevisionDateValue);
             await _cipherService.CreateAttachmentAsync(cipher, stream, fileName, key,
                     Request.ContentLength.GetValueOrDefault(0), userId, true, lastKnownRevisionDate);
         });
@@ -1968,19 +1967,19 @@ public class CiphersController : Controller
         return await _cipherRepository.GetByIdAsync(cipherId, userId);
     }
 
-    private DateTime? GetLastKnownRevisionDateFromForm()
+    private static DateTime? ParseLastKnownRevisionDate(string dateValue)
     {
-        DateTime? lastKnownRevisionDate = null;
-        if (Request.Form.TryGetValue("lastKnownRevisionDate", out var dateValue))
+        if (dateValue == null)
         {
-            if (!DateTime.TryParse(dateValue, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedDate))
-            {
-                throw new BadRequestException("Invalid lastKnownRevisionDate format.");
-            }
-            lastKnownRevisionDate = parsedDate;
+            return null;
         }
 
-        return lastKnownRevisionDate;
+        if (!DateTime.TryParse(dateValue, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedDate))
+        {
+            throw new BadRequestException("Invalid lastKnownRevisionDate format.");
+        }
+
+        return parsedDate;
     }
 #nullable enable
 
