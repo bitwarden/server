@@ -93,6 +93,24 @@ public class OrganizationPrivilegedControlsEndpointsTests
         Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>);
     }
 
+    [Fact]
+    public void MapOrganizationPrivilegedControlsEndpoints_MapsDeleteRemoveForStandaloneOrganizationOwners()
+    {
+        var app = WebApplication.CreateBuilder().Build();
+
+        app.MapGroup("/{organizationId:guid}").MapOrganizationPrivilegedControlsEndpoints();
+
+        var endpoint = FindEndpoint(app,
+            e => e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == "RemovePrivilegedControls");
+
+        Assert.Equal(["DELETE"], endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()!.HttpMethods);
+        Assert.EndsWith("/privileged-controls", endpoint.RoutePattern.RawText);
+
+        var authorizeAttributes = endpoint.Metadata.GetOrderedMetadata<AuthorizeAttribute>();
+        Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<OrganizationBillingRequirement>);
+        Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>);
+    }
+
     private static RouteEndpoint FindEndpoint(WebApplication app, Func<RouteEndpoint, bool> predicate) =>
         ((IEndpointRouteBuilder)app).DataSources
             .SelectMany(dataSource => dataSource.Endpoints)

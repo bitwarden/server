@@ -37,7 +37,13 @@ public class AcceptInviteLinkMembershipValidatorTests
     {
         // Arrange
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        inviteLink.AllowedDomains = "[\"allowed.com\"]";
+        sutProvider.GetDependency<IInviteLinkValidationService>()
+            .ValidateEligibility(
+                inviteLink,
+                Guid.Parse(inviteLink.Code),
+                organization,
+                user)
+            .Returns(new EmailDomainNotAllowed(organization.Name));
 
         // Act
         var result = await sutProvider.Sut.ValidateAsync(BuildRequest(inviteLink, user));
