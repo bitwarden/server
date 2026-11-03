@@ -7,7 +7,7 @@ using Bit.Core.Enums;
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 
 /// <summary>
-/// Read-only checks shared by the invite link validators.
+/// Read-only checks shared by the invite link validators that need to load data.
 /// </summary>
 public interface IInviteLinkValidationService
 {

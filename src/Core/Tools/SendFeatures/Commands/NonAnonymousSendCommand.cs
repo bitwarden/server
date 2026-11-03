@@ -83,7 +83,11 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
             return;
         }
 
-        await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, ResolveSendCreatedEventType(send));
+        var sendCreatedEventType = ResolveSendCreatedEventType(send);
+        if (sendCreatedEventType.HasValue)
+        {
+            await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, sendCreatedEventType.Value);
+        }
     }
 
     private async Task LogSendUpdatedEventAsync(Send send)
@@ -97,9 +101,13 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         {
             await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Edited_Text);
         }
-        else
+        else if (send.Type == SendType.File)
         {
             await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Edited_File);
+        }
+        else if (send.Type == SendType.Item)
+        {
+            await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Edited_Item);
         }
     }
 
@@ -114,9 +122,13 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         {
             await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Deleted_Text);
         }
-        else
+        else if (send.Type == SendType.File)
         {
             await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Deleted_File);
+        }
+        else if (send.Type == SendType.Item)
+        {
+            await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Deleted_Item);
         }
     }
 
@@ -137,7 +149,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         return string.Join(",", normalized);
     }
 
-    private static EventType ResolveSendCreatedEventType(Send send)
+    private static EventType? ResolveSendCreatedEventType(Send send)
     {
         // send.AuthType is populated by SendRequestModel.ToSendBase before SaveSendAsync runs
         var authType = send.AuthType ?? AuthType.None;
@@ -149,7 +161,9 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
             (SendType.Text, _) => EventType.Send_Created_Text,
             (SendType.File, AuthType.Password) => EventType.Send_Created_File_WithPasswordProtection,
             (SendType.File, AuthType.Email) => EventType.Send_Created_File_WithEmailVerification,
-            _ => EventType.Send_Created_File,
+            (SendType.File, _) => EventType.Send_Created_File,
+            (SendType.Item, _) => EventType.Send_Created_Item,
+            _ => null,
         };
     }
 

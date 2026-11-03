@@ -14,6 +14,7 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserApiKey.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserEmail;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
+using Bit.Core.Auth.UserFeatures.UserVerification;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -56,6 +57,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IUserRepository _userRepository;
     private readonly IRotateUserApiKeyCommand _rotateUserApiKeyCommand;
     private readonly ISelfServiceChangeEmailCommand _selfServiceChangeEmailCommand;
+    private readonly IUserVerificationOtpCommand _userVerificationOtpCommand;
     private readonly ICurrentContext _currentContext;
 
     private const string _deviceIdentifier = "device-identifier";
@@ -81,6 +83,7 @@ public class AccountsControllerTests : IDisposable
         _userRepository = Substitute.For<IUserRepository>();
         _rotateUserApiKeyCommand = Substitute.For<IRotateUserApiKeyCommand>();
         _selfServiceChangeEmailCommand = Substitute.For<ISelfServiceChangeEmailCommand>();
+        _userVerificationOtpCommand = Substitute.For<IUserVerificationOtpCommand>();
         _currentContext = Substitute.For<ICurrentContext>();
         _currentContext.DeviceIdentifier = _deviceIdentifier;
 
@@ -104,6 +107,7 @@ public class AccountsControllerTests : IDisposable
             _userRepository,
             _rotateUserApiKeyCommand,
             _selfServiceChangeEmailCommand,
+            _userVerificationOtpCommand,
             _currentContext,
             Substitute.For<ILogger<AccountsController>>()
         );
@@ -1043,44 +1047,38 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Theory, BitAutoData]
-    public async Task VerifyOTP_ValidOtp_EmailNotVerified_VerifiesEmail(User user, VerifyOTPRequestModel model)
+    public async Task PostRequestOTP_SendsOtpToPrincipalUser(User user)
     {
         // Arrange
-        user.EmailVerified = false;
         ConfigureUserServiceToReturnValidPrincipalFor(user);
-        _userService.VerifyOTPAsync(user, model.OTP).Returns(Task.FromResult(true));
+
+        // Act
+        await _sut.PostRequestOTP();
+
+        // Assert
+        await _userVerificationOtpCommand.Received(1).SendOtpAsync(user);
+    }
+
+    [Theory, BitAutoData]
+    public async Task VerifyOTP_ValidOtp_DoesNotThrow(User user, VerifyOTPRequestModel model)
+    {
+        // Arrange
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        _userVerificationOtpCommand.VerifyOtpAsync(user, model.OTP).Returns(true);
 
         // Act
         await _sut.VerifyOTP(model);
 
         // Assert
-        Assert.True(user.EmailVerified);
-        await _userService.Received(1).SaveUserAsync(user);
+        await _userVerificationOtpCommand.Received(1).VerifyOtpAsync(user, model.OTP);
     }
 
     [Theory, BitAutoData]
-    public async Task VerifyOTP_ValidOtp_EmailAlreadyVerified_DoesNotSaveUser(User user, VerifyOTPRequestModel model)
+    public async Task VerifyOTP_InvalidOtp_ThrowsInvalidToken(User user, VerifyOTPRequestModel model)
     {
         // Arrange
-        user.EmailVerified = true;
         ConfigureUserServiceToReturnValidPrincipalFor(user);
-        _userService.VerifyOTPAsync(user, model.OTP).Returns(Task.FromResult(true));
-
-        // Act
-        await _sut.VerifyOTP(model);
-
-        // Assert
-        Assert.True(user.EmailVerified);
-        await _userService.DidNotReceiveWithAnyArgs().SaveUserAsync(default!);
-    }
-
-    [Theory, BitAutoData]
-    public async Task VerifyOTP_InvalidOtp_ThrowsAndDoesNotVerifyEmail(User user, VerifyOTPRequestModel model)
-    {
-        // Arrange
-        user.EmailVerified = false;
-        ConfigureUserServiceToReturnValidPrincipalFor(user);
-        _userService.VerifyOTPAsync(user, model.OTP).Returns(Task.FromResult(false));
+        _userVerificationOtpCommand.VerifyOtpAsync(user, model.OTP).Returns(false);
 
         // Act
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.VerifyOTP(model));
@@ -1088,8 +1086,6 @@ public class AccountsControllerTests : IDisposable
         // Assert
         Assert.Contains("Invalid token",
             exception.ModelState!.Values.SelectMany(x => x.Errors).Select(x => x.ErrorMessage));
-        Assert.False(user.EmailVerified);
-        await _userService.DidNotReceiveWithAnyArgs().SaveUserAsync(default!);
     }
 
     [Theory]
