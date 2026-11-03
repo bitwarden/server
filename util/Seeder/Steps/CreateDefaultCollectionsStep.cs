@@ -6,6 +6,7 @@ using Bit.Core.Vault.Enums;
 using Bit.RustSDK;
 using Bit.Seeder.Data;
 using Bit.Seeder.Data.Distributions;
+using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Data.Generators;
 using Bit.Seeder.Data.Static;
 using Bit.Seeder.Factories;
@@ -32,7 +33,8 @@ internal sealed class CreateDefaultCollectionsStep(
     int seed,
     Distribution<CipherType>? typeDist = null,
     Distribution<(int Min, int Max)>? personalDist = null,
-    int personalCountPerUser = 0) : IStep
+    int personalCountPerUser = 0,
+    DefaultCollectionSizing sizing = DefaultCollectionSizing.Sampled) : IStep
 {
     private const string _defaultName = "My Items";
 
@@ -198,12 +200,13 @@ internal sealed class CreateDefaultCollectionsStep(
     /// <summary>
     /// Active item counts per member: <see cref="SeedPresetDefaultCollections.NonEmptyRate"/> of members are
     /// non-empty, the first of them get <see cref="SeedPresetDefaultCollections.Largest"/>, the rest draw from
-    /// <see cref="SeedPresetDefaultCollections.Sizes"/> (1 item each without it). Non-empty members are chosen by
+    /// <see cref="SeedPresetDefaultCollections.Sizes"/> (1 item each without it), scaled to
+    /// <see cref="SeedPresetDefaultCollections.TargetActiveItems"/> when it is set. Non-empty members are chosen by
     /// shuffling <paramref name="candidates"/>, the members with no pending personal items; the rest stay empty.
     /// </summary>
     /// <exception cref="InvalidOperationException">
-    /// Thrown when <c>largest</c> has more entries than non-empty members, or there are more non-empty members than
-    /// candidates.
+    /// Thrown when <c>largest</c> has more entries than non-empty members, <c>targetActiveItems</c> is out of reach,
+    /// or there are more non-empty members than candidates.
     /// </exception>
     private int[] ComputeActiveCounts(int memberCount, int[] candidates, Random random)
     {
@@ -218,15 +221,24 @@ internal sealed class CreateDefaultCollectionsStep(
                 $"(nonEmptyRate × {memberCount} eligible members). Raise nonEmptyRate or shorten largest.");
         }
 
+        var drawCount = nonEmpty - largest.Count;
+        var target = options.TargetActiveItems;
+        var cap = options.Sizes is { Count: > 0 } sizes ? sizes.Max(b => b.Max) : 1;
+        if (target is not null)
+        {
+            RequireReachableTarget(target.Value, largest.Sum(), drawCount, cap, memberCount);
+        }
+
         if (nonEmpty == 0)
         {
             return counts;
         }
 
-        var drawCount = nonEmpty - largest.Count;
-        var drawn = options.Sizes is { Count: > 0 }
-            ? new SizeHistogram(options.Sizes.Select(b => (b.Min, b.Max, b.Weight))).Draw(drawCount, random)
-            : Enumerable.Repeat(1, drawCount).ToArray();
+        var drawn = DrawSizes(drawCount, random);
+        if (target is not null)
+        {
+            ScaleToTarget(drawn, target.Value, largest.Sum(), cap);
+        }
 
         var values = largest.Concat(drawn).ToArray();
         if (values.Length > candidates.Length)
@@ -246,12 +258,83 @@ internal sealed class CreateDefaultCollectionsStep(
     }
 
     /// <summary>
+    /// Sizes for the non-empty members after <c>largest</c>: random draws from the histogram for
+    /// <see cref="DefaultCollectionSizing.Sampled"/>, its mid-quantiles for <see cref="DefaultCollectionSizing.Quantile"/>,
+    /// and 1 each without <see cref="SeedPresetDefaultCollections.Sizes"/>.
+    /// </summary>
+    private int[] DrawSizes(int count, Random random)
+    {
+        if (options.Sizes is not { Count: > 0 })
+        {
+            return Enumerable.Repeat(1, count).ToArray();
+        }
+
+        var histogram = new SizeHistogram(options.Sizes.Select(b => (b.Min, b.Max, b.Weight)));
+        return sizing switch
+        {
+            DefaultCollectionSizing.Sampled => histogram.Draw(count, random),
+            DefaultCollectionSizing.Quantile => histogram.Quantiles(count),
+        };
+    }
+
+    /// <summary>
+    /// Rejects a <c>targetActiveItems</c> that the drawn members cannot reach at 1 to <paramref name="cap"/> items
+    /// each on top of the untouched <c>largest</c> entries.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when the target is outside that range.</exception>
+    private static void RequireReachableTarget(int target, int largestSum, int drawCount, int cap, int memberCount)
+    {
+        var lowest = (long)largestSum + drawCount;
+        var highest = largestSum + (long)drawCount * cap;
+        if (target < lowest || target > highest)
+        {
+            throw new InvalidOperationException(
+                $"'defaultCollections.targetActiveItems' {target} is outside the reachable range [{lowest}, {highest}]: " +
+                $"largest totals {largestSum}, and the other {drawCount} non-empty members (nonEmptyRate × {memberCount} " +
+                $"eligible members, minus largest) hold 1 to {cap} items each (the highest sizes max, or 1 without sizes). " +
+                "Change targetActiveItems, nonEmptyRate, largest or sizes.");
+        }
+    }
+
+    /// <summary>
+    /// Scales <paramref name="drawn"/> so it adds up to <paramref name="target"/> minus the <c>largest</c> entries,
+    /// each entry staying between 1 and <paramref name="cap"/>.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when scaling stops short of the target, which <see cref="SizeHistogram.ScaleTo"/> does silently when
+    /// a bucket with <c>min</c> 0 drew zeros it never moves.
+    /// </exception>
+    private static void ScaleToTarget(int[] drawn, int target, int largestSum, int cap)
+    {
+        var drawnTarget = target - largestSum;
+        SizeHistogram.ScaleTo(drawn, drawnTarget, cap);
+
+        if (drawn.Sum() != drawnTarget)
+        {
+            throw new InvalidOperationException(
+                $"'defaultCollections.targetActiveItems' {target} was not reached: scaling stopped at " +
+                $"{largestSum + drawn.Sum()} because {drawn.Count(d => d == 0)} drawn sizes are 0. " +
+                "Raise the min of the sizes buckets that start at 0.");
+        }
+    }
+
+    /// <summary>
     /// Trashed items per member on top of the active ones (<see cref="SeedPresetDefaultCollections.DeletedRate"/>
-    /// of the active count, randomly rounded), so the active counts keep their shape.
+    /// of the active count), so the active counts keep their shape. <see cref="DefaultCollectionSizing.Sampled"/>
+    /// rounds each member randomly; <see cref="DefaultCollectionSizing.Quantile"/> apportions an exact total.
     /// </summary>
     private int[] ComputeTrashCounts(int[] activeCounts, Random random)
     {
         var deletedRate = options.DeletedRate ?? 0;
+        return sizing switch
+        {
+            DefaultCollectionSizing.Sampled => RoundTrashRandomly(activeCounts, deletedRate, random),
+            DefaultCollectionSizing.Quantile => ApportionTrash(activeCounts, deletedRate),
+        };
+    }
+
+    private static int[] RoundTrashRandomly(int[] activeCounts, double deletedRate, Random random)
+    {
         var trashCounts = new int[activeCounts.Length];
 
         for (var u = 0; u < activeCounts.Length; u++)
@@ -260,6 +343,33 @@ internal sealed class CreateDefaultCollectionsStep(
             {
                 trashCounts[u] = (int)(activeCounts[u] * deletedRate + random.NextDouble());
             }
+        }
+
+        return trashCounts;
+    }
+
+    /// <summary>
+    /// Largest-remainder apportionment of <c>round(sum(active) × rate)</c>: every member gets the floor or ceiling of
+    /// its own share, ties broken by active count then index, so no <see cref="Random"/> is involved.
+    /// </summary>
+    /// <remarks>
+    /// <c>decimal</c> keeps shares like 40 × 0.075 exactly 3 instead of a binary neighbour that would floor to 2.
+    /// </remarks>
+    private static int[] ApportionTrash(int[] activeCounts, double deletedRate)
+    {
+        var rate = (decimal)deletedRate;
+        var shares = activeCounts.Select(active => active * rate).ToArray();
+        var trashCounts = shares.Select(share => (int)decimal.Floor(share)).ToArray();
+        var total = (int)Math.Round(activeCounts.Sum() * rate);
+
+        var roundedUp = Enumerable.Range(0, activeCounts.Length)
+            .OrderByDescending(u => shares[u] - trashCounts[u])
+            .ThenByDescending(u => activeCounts[u])
+            .ThenBy(u => u)
+            .Take(total - trashCounts.Sum());
+        foreach (var u in roundedUp)
+        {
+            trashCounts[u]++;
         }
 
         return trashCounts;

@@ -202,6 +202,11 @@ public class OtpTokenProviderTests
 
         // Assert
         Assert.False(result);
+
+        // Verify cache was not called
+        await sutProvider.GetDependency<IDistributedCache>()
+            .DidNotReceive()
+            .GetAsync(Arg.Any<string>());
     }
 
     [Theory, BitAutoData]
@@ -215,6 +220,11 @@ public class OtpTokenProviderTests
 
         // Assert
         Assert.False(result);
+
+        // Verify cache was not called
+        await sutProvider.GetDependency<IDistributedCache>()
+            .DidNotReceive()
+            .GetAsync(Arg.Any<string>());
     }
 
     // Tests for null/empty purpose and uniqueIdentifier parameters
@@ -283,6 +293,105 @@ public class OtpTokenProviderTests
         // Verify cache was not called
         await sutProvider.GetDependency<IDistributedCache>()
             .DidNotReceive()
+            .SetAsync(Arg.Any<string>(), Arg.Any<byte[]>(), Arg.Any<DistributedCacheEntryOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateTokenAsync_NullTokenProviderName_ReturnsFalse(
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
+        string token,
+        string purpose,
+        string uniqueIdentifier)
+    {
+        // Act
+        var result = await sutProvider.Sut.ValidateTokenAsync(token, null, purpose, uniqueIdentifier);
+
+        // Assert
+        Assert.False(result);
+
+        // Verify cache was not called
+        await sutProvider.GetDependency<IDistributedCache>()
+            .DidNotReceive()
+            .GetAsync(Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateTokenAsync_EmptyTokenProviderName_ReturnsFalse(
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
+        string token,
+        string purpose,
+        string uniqueIdentifier)
+    {
+        // Act
+        var result = await sutProvider.Sut.ValidateTokenAsync(token, "", purpose, uniqueIdentifier);
+
+        // Assert
+        Assert.False(result);
+
+        // Verify cache was not called
+        await sutProvider.GetDependency<IDistributedCache>()
+            .DidNotReceive()
+            .GetAsync(Arg.Any<string>());
+    }
+
+    /// <summary>
+    /// Each required input is checked before any cache access, so a missing input neither reads nor changes a
+    /// stored token or its failure count.
+    /// </summary>
+    [Theory]
+    [BitAutoData("", "provider", "purpose", "id")]
+    [BitAutoData(new object?[] { null, "provider", "purpose", "id" })]
+    [BitAutoData("123456", "", "purpose", "id")]
+    [BitAutoData("123456", null, "purpose", "id")]
+    [BitAutoData("123456", "provider", "", "id")]
+    [BitAutoData("123456", "provider", null, "id")]
+    [BitAutoData("123456", "provider", "purpose", "")]
+    [BitAutoData("123456", "provider", "purpose", null)]
+    public async Task ValidateTokenWithFailureLimitAsync_NullOrEmptyInput_ReturnsFalseWithoutCacheAccess(
+        string token,
+        string tokenProviderName,
+        string purpose,
+        string uniqueIdentifier,
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider)
+    {
+        // Act
+        var result = await sutProvider.Sut.ValidateTokenWithFailureLimitAsync(
+            token, tokenProviderName, purpose, uniqueIdentifier, maxFailedAttempts: 5);
+
+        // Assert
+        Assert.False(result);
+
+        var cache = sutProvider.GetDependency<IDistributedCache>();
+        await cache.DidNotReceive().GetAsync(Arg.Any<string>());
+        await cache.DidNotReceive().RemoveAsync(Arg.Any<string>());
+        await cache.DidNotReceive()
+            .SetAsync(Arg.Any<string>(), Arg.Any<byte[]>(), Arg.Any<DistributedCacheEntryOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateTokenWithFailureLimitAsync_TokenNotFound_ReturnsFalseWithoutCacheWrite(
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
+        string purpose,
+        string uniqueIdentifier,
+        string token)
+    {
+        // Arrange
+        var expectedCacheKey = $"{_defaultTokenProviderName}_{purpose}_{uniqueIdentifier}";
+
+        sutProvider.GetDependency<IDistributedCache>()
+            .GetAsync(expectedCacheKey)
+            .Returns((byte[])null);
+
+        // Act
+        var result = await sutProvider.Sut.ValidateTokenWithFailureLimitAsync(
+            token, _defaultTokenProviderName, purpose, uniqueIdentifier, maxFailedAttempts: 5);
+
+        // Assert
+        Assert.False(result);
+
+        var cache = sutProvider.GetDependency<IDistributedCache>();
+        await cache.DidNotReceive().RemoveAsync(Arg.Any<string>());
+        await cache.DidNotReceive()
             .SetAsync(Arg.Any<string>(), Arg.Any<byte[]>(), Arg.Any<DistributedCacheEntryOptions>());
     }
 
