@@ -18,10 +18,7 @@ public class GetOrganizationInviteValidatorTests
 {
     [Theory, BitAutoData]
     public async Task ValidateAsync_WhenEligibilityFails_ReturnsEligibilityError(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        OrganizationUser existingOrganizationUser,
+        Organization organization, OrganizationInviteLink inviteLink, User user, OrganizationUser existingOrganizationUser,
         SutProvider<GetOrganizationInviteValidator> sutProvider)
     {
         // Arrange
@@ -47,10 +44,7 @@ public class GetOrganizationInviteValidatorTests
 
     [Theory, BitAutoData]
     public async Task ValidateAsync_WithAcceptLinkAndAcceptedMembership_ReturnsAlreadyOrganizationMember(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        OrganizationUser existingOrganizationUser,
+        Organization organization, OrganizationInviteLink inviteLink, User user, OrganizationUser existingOrganizationUser,
         SutProvider<GetOrganizationInviteValidator> sutProvider)
     {
         // Arrange
@@ -80,10 +74,7 @@ public class GetOrganizationInviteValidatorTests
     // Confirm promotes an Accepted membership, so the same membership that blocks an accept link is allowed here.
     [Theory, BitAutoData]
     public async Task ValidateAsync_WithConfirmationLinkAndAcceptedMembership_ReturnsValidRequest(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        OrganizationUser existingOrganizationUser,
+        Organization organization, OrganizationInviteLink inviteLink, User user, OrganizationUser existingOrganizationUser,
         SutProvider<GetOrganizationInviteValidator> sutProvider)
     {
         // Arrange
@@ -103,9 +94,7 @@ public class GetOrganizationInviteValidatorTests
 
     [Theory, BitAutoData]
     public async Task ValidateAsync_WhenNoSeatsAvailable_ReturnsNoAvailableSeats(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
+        Organization organization, OrganizationInviteLink inviteLink, User user,
         SutProvider<GetOrganizationInviteValidator> sutProvider)
     {
         // Arrange
@@ -132,9 +121,7 @@ public class GetOrganizationInviteValidatorTests
 
     [Theory, BitAutoData]
     public async Task ValidateAsync_WhenJoinRequirementsFail_ReturnsJoinRequirementsError(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
+        Organization organization, OrganizationInviteLink inviteLink, User user,
         SutProvider<GetOrganizationInviteValidator> sutProvider)
     {
         // Arrange
