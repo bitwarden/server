@@ -29,6 +29,15 @@ public class CipherBrowserHealthExclusionRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
+    public async Task ExcludeAsync_EmptyIds_ReturnsZero(
+        ICipherBrowserHealthExclusionRepository sut, IUserRepository userRepository)
+    {
+        var user = await userRepository.CreateTestUserAsync();
+
+        Assert.Equal(0, await sut.ExcludeAsync([], user.Id, "weak"));
+    }
+
+    [DatabaseTheory, DatabaseData]
     public async Task ExcludeAsync_OrganizationCipher_ReturnsZero(
         ICipherBrowserHealthExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository,
         IOrganizationRepository organizationRepository)
