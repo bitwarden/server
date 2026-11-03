@@ -13,8 +13,7 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Queries;
 
 /// <summary>
-/// A cipher is gated only where every reachable collection gates it; these tests cover which
-/// combinations leave it exposed, and which collection is the reported gap.
+/// A cipher is gated only where every collection reaching it is gated; the ungated ones are the reported gaps.
 /// </summary>
 [SutProviderCustomize]
 public class ListRuleBypassableCiphersQueryTests
@@ -28,10 +27,6 @@ public class ListRuleBypassableCiphersQueryTests
     private static CollectionCipher Mapping(Guid collectionId, Guid cipherId) =>
         new() { CollectionId = collectionId, CipherId = cipherId };
 
-    /// <summary>
-    /// Wires the three reads the query composes: the rule by id, the organization's gating collections, and the
-    /// organization's cipher mappings.
-    /// </summary>
     private static void Arrange(
         SutProvider<ListRuleBypassableCiphersQuery> sutProvider,
         Guid organizationId,
@@ -64,9 +59,6 @@ public class ListRuleBypassableCiphersQueryTests
         Assert.Empty(result);
     }
 
-    /// <summary>
-    /// The ungated collection is the gap; the rule's own collection is not.
-    /// </summary>
     [Theory, BitAutoData]
     public async Task GetUngatedCollectionIdsAsync_AlsoInUngatedCollection_ReportsThatCollection(
         Guid organizationId, Guid ruleId, Guid gatedCollectionId, Guid ungatedCollectionId, Guid cipherId)
@@ -83,9 +75,6 @@ public class ListRuleBypassableCiphersQueryTests
         Assert.Equal([ungatedCollectionId], result);
     }
 
-    /// <summary>
-    /// A cipher shared with a collection another enabled rule governs is still fully gated.
-    /// </summary>
     [Theory, BitAutoData]
     public async Task GetUngatedCollectionIdsAsync_SharedWithCollectionGatedByAnotherRule_ReturnsEmpty(
         Guid organizationId, Guid ruleId,
@@ -103,9 +92,7 @@ public class ListRuleBypassableCiphersQueryTests
         Assert.Empty(result);
     }
 
-    /// <summary>
-    /// A disabled rule gates nothing, so nothing can bypass it.
-    /// </summary>
+    /// <summary>A disabled rule gates nothing, so nothing can bypass it.</summary>
     [Theory, BitAutoData]
     public async Task GetUngatedCollectionIdsAsync_RuleDisabled_ReturnsEmpty(
         Guid organizationId, Guid ruleId, Guid gatedCollectionId, Guid ungatedCollectionId, Guid cipherId)
@@ -122,9 +109,6 @@ public class ListRuleBypassableCiphersQueryTests
         Assert.Empty(result);
     }
 
-    /// <summary>
-    /// Only ciphers the rule governs are assessed.
-    /// </summary>
     [Theory, BitAutoData]
     public async Task GetUngatedCollectionIdsAsync_CipherOutsideTheRule_IsNotReported(
         Guid organizationId, Guid ruleId, Guid gatedCollectionId, Guid unrelatedCollectionId,
@@ -142,9 +126,6 @@ public class ListRuleBypassableCiphersQueryTests
         Assert.Empty(result);
     }
 
-    /// <summary>
-    /// A gap is reported a single time no matter how many exposed ciphers share it.
-    /// </summary>
     [Theory, BitAutoData]
     public async Task GetUngatedCollectionIdsAsync_DeduplicatesAcrossCiphers(
         Guid organizationId, Guid ruleId, Guid gatedCollectionId, Guid ungatedCollectionId,
@@ -165,9 +146,6 @@ public class ListRuleBypassableCiphersQueryTests
         Assert.Equal([ungatedCollectionId], result);
     }
 
-    /// <summary>
-    /// Every ungated collection is reported.
-    /// </summary>
     [Theory, BitAutoData]
     public async Task GetUngatedCollectionIdsAsync_SeveralGaps_ReportsAllOfThem(
         Guid organizationId, Guid ruleId, Guid gatedCollectionId,
@@ -191,9 +169,6 @@ public class ListRuleBypassableCiphersQueryTests
         Assert.Contains(secondUngatedId, result);
     }
 
-    /// <summary>
-    /// Gaps come only from exposed ciphers; a fully gated cipher's collections are never reported.
-    /// </summary>
     [Theory, BitAutoData]
     public async Task GetUngatedCollectionIdsAsync_IgnoresCollectionsOfProtectedCiphers(
         Guid organizationId, Guid ruleId,
@@ -231,9 +206,6 @@ public class ListRuleBypassableCiphersQueryTests
             .GetManyByOrganizationIdAsync(default);
     }
 
-    /// <summary>
-    /// A rule belonging to another organization reports no gaps.
-    /// </summary>
     [Theory, BitAutoData]
     public async Task GetUngatedCollectionIdsAsync_RuleBelongsToAnotherOrganization_ReturnsEmpty(
         Guid organizationId, Guid otherOrganizationId, Guid ruleId, Guid gatedCollectionId)
@@ -250,9 +222,6 @@ public class ListRuleBypassableCiphersQueryTests
             .GetManyByOrganizationIdAsync(default);
     }
 
-    /// <summary>
-    /// A rule governing no collection reports no gaps without reading the mappings.
-    /// </summary>
     [Theory, BitAutoData]
     public async Task GetUngatedCollectionIdsAsync_RuleGovernsNoCollection_ReturnsEmptyWithoutReadingMappings(
         Guid organizationId, Guid ruleId)

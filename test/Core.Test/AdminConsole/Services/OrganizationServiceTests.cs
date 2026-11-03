@@ -2,11 +2,11 @@
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Commands;
@@ -1832,6 +1832,32 @@ public class OrganizationServiceTests
     [Theory]
     [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
         InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]
+    public async Task InviteUser_EmailBelongsToStagedUser_SavesThePromotedRowWithTheReminderSequence(
+        Organization organization, OrganizationUserInvite invite, string externalId, OrganizationUser invitor,
+        OrganizationUser stagedUser, SutProvider<OrganizationService> sutProvider)
+    {
+        stagedUser.Status = OrganizationUserStatusType.Staged;
+        InviteUser_ArrangeExistingOrgUser(organization, invite, stagedUser, sutProvider);
+
+        var before = DateTime.UtcNow;
+        await sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, systemUser: null, invite, externalId);
+        var after = DateTime.UtcNow;
+
+        // The promotion is saved after the invites are sent, so it must carry the sequence the send started.
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceAsync(
+                Arg.Is<OrganizationUser>(ou =>
+                    ou.Id == stagedUser.Id &&
+                    ou.InviteRemindersSentCount == 0 &&
+                    ou.InviteReminderDueDate >= before.AddDays(InviteReminderConstants.ReminderIntervalDays) &&
+                    ou.InviteReminderDueDate <= after.AddDays(InviteReminderConstants.ReminderIntervalDays)),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>());
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
+        InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]
     public async Task InviteUser_EmailBelongsToStagedUser_AndInviteFails_NeverWritesTheRow(
         Organization organization, OrganizationUserInvite invite, string externalId, OrganizationUser invitor,
         OrganizationUser stagedUser, SutProvider<OrganizationService> sutProvider)
@@ -1960,6 +1986,8 @@ public class OrganizationServiceTests
         Assert.Equal("{\"accessReports\":true}", stagedUser.Permissions);
         Assert.False(stagedUser.AccessSecretsManager);
         Assert.Equal(provisionedRevisionDate, stagedUser.RevisionDate);
+        Assert.Null(stagedUser.InviteReminderDueDate);
+        Assert.Null(stagedUser.InviteRemindersSentCount);
 
         // The row predates this call, so demoting it is the revert; it must never be deleted.
         await sutProvider.GetDependency<IOrganizationUserRepository>()

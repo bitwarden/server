@@ -1,8 +1,9 @@
 ﻿using System.Text.Json.Serialization;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Entities;
 using Bit.Core.Tokens;
 
-namespace Bit.Core.Auth.Models.Business.Tokenables;
+namespace Bit.Core.AdminConsole.Models.Business.Tokenables;
 
 public class OrgUserInviteTokenable : ExpiringTokenable
 {

@@ -14,6 +14,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 
 /// <inheritdoc />
 public class InviteLinkValidationService(
+    IOrganizationRepository organizationRepository,
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationUserValidationService organizationUserValidationService,
     IJoinOrganizationPolicyValidationService joinOrganizationPolicyValidationService,
@@ -144,4 +145,21 @@ public class InviteLinkValidationService(
             { Status: OrganizationUserStatusType.Confirmed } => new AlreadyOrganizationMember(organization.DisplayName()),
             _ => null
         };
+
+    public async Task<Error?> ValidateSeatAvailabilityAsync(
+        Organization organization,
+        OrganizationUser? existingOrganizationUser)
+    {
+        // Only a new or Staged membership takes up a new seat.
+        if (existingOrganizationUser is not null && existingOrganizationUser.Status != OrganizationUserStatusType.Staged)
+        {
+            return null;
+        }
+
+        var occupiedSeatCount = (await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)).Total;
+
+        return OrganizationSeatAvailability.HasAvailableSeats(organization, occupiedSeatCount)
+            ? null
+            : new OrganizationHasNoAvailableSeats(organization.DisplayName());
+    }
 }

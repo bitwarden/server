@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Entities;
 
-namespace Bit.Core.Auth.Models.Business.Tokenables;
+namespace Bit.Core.AdminConsole.Models.Business.Tokenables;
 
 public interface IOrgUserInviteTokenableFactory
 {

@@ -40,7 +40,6 @@ public class AccessRuleRepositoryTests
         await collectionRepository.SetAccessRuleAssociationsAsync(
             organization.Id, rule.Id, [collection.Id], []);
 
-        // Sanity check: the collection is governed by the rule before deletion.
         var details = await accessRuleRepository.GetDetailsByIdAsync(rule.Id);
         Assert.NotNull(details);
         Assert.Contains(collection.Id, details.CollectionIds);
@@ -48,7 +47,7 @@ public class AccessRuleRepositoryTests
         // Act
         await accessRuleRepository.DeleteAsync(rule);
 
-        // Assert: the rule is gone, but the collection survives with its association cleared.
+        // Assert
         Assert.Null(await accessRuleRepository.GetByIdAsync(rule.Id));
 
         var actualCollection = await collectionRepository.GetByIdAsync(collection.Id);
@@ -57,9 +56,8 @@ public class AccessRuleRepositoryTests
     }
 
     /// <summary>
-    /// A request pins its governing rule in AccessRequest.RuleId, and FK_AccessRequest_AccessRule does not cascade
-    /// (NO ACTION on SQL Server, RESTRICT on the EF providers), so deleting a rule any request has pinned fails
-    /// outright unless the delete path detaches those requests first.
+    /// FK_AccessRequest_AccessRule does not cascade (NO ACTION on SQL Server, RESTRICT on EF), so the delete has to
+    /// detach pinned requests first.
     /// </summary>
     [DatabaseTheory, DatabaseData]
     public async Task DeleteAsync_WithPinnedRequests_DetachesRequestsAndDeletesRule(
@@ -90,8 +88,7 @@ public class AccessRuleRepositoryTests
         // Act
         await accessRuleRepository.DeleteAsync(rule);
 
-        // Assert: the rule is gone and the request survives, detached rather than deleted -- its window and
-        // decision log remain the record of what was granted.
+        // Assert: detached rather than deleted, since the request records what was granted.
         Assert.Null(await accessRuleRepository.GetByIdAsync(rule.Id));
 
         var persisted = await accessRequestRepository.GetByIdAsync(request.Id);
@@ -101,10 +98,8 @@ public class AccessRuleRepositoryTests
     }
 
     /// <summary>
-    /// Organization cascades to both AccessRequest and AccessLease, while the two reference each other under
-    /// RESTRICT (AccessRequest.ExtensionOfLeaseId and AccessLease.AccessRequestId) and requests additionally pin a
-    /// rule. Whichever cascade a provider fires first is blocked by the other, so this pins that deleting an
-    /// organization holding an extended lease succeeds everywhere rather than depending on cascade order.
+    /// Organization cascades to AccessRequest and AccessLease, which reference each other under RESTRICT, so the
+    /// delete must not depend on which cascade a provider fires first.
     /// </summary>
     [DatabaseTheory, DatabaseData]
     public async Task OrganizationDeleteAsync_WithExtendedLease_Succeeds(
@@ -122,7 +117,6 @@ public class AccessRuleRepositoryTests
         var requesterId = Guid.NewGuid();
         var cipherId = Guid.NewGuid();
 
-        // An approved request that pins the rule, activated into a lease...
         var request = await accessRequestRepository.CreateAsync(new AccessRequest
         {
             OrganizationId = organization.Id,
@@ -152,7 +146,7 @@ public class AccessRuleRepositoryTests
         Assert.Equal(AccessLeaseMintOutcome.Minted,
             await accessLeaseRepository.CreateFromApprovedRequestAsync(lease, now, false));
 
-        // ...and an extension request pointing back at that lease, closing the reference cycle.
+        // The extension points back at the lease, closing the reference cycle.
         var extension = new AccessRequest
         {
             Id = CombGuid.Generate(),
@@ -182,7 +176,7 @@ public class AccessRuleRepositoryTests
         // Act
         await organizationRepository.DeleteAsync(organization);
 
-        // Assert: the organization and every PAM row hanging off it is gone.
+        // Assert
         Assert.Null(await organizationRepository.GetByIdAsync(organization.Id));
         Assert.Null(await accessRuleRepository.GetByIdAsync(rule.Id));
         Assert.Null(await accessLeaseRepository.GetByIdAsync(lease.Id));
@@ -191,11 +185,8 @@ public class AccessRuleRepositoryTests
     }
 
     /// <summary>
-    /// Organization cascades to both Collection and AccessRule, while Collection -> AccessRule is RESTRICT, so
-    /// deleting an organization that still has a governed collection depends on those two cascade paths being
-    /// applied in the right order. EF's OrganizationRepository.DeleteAsync deletes neither table explicitly — it
-    /// relies on the database cascade when the organization row is removed — so this pins that org deletion
-    /// survives an active association on every provider.
+    /// Organization cascades to Collection and AccessRule while Collection does not cascade to AccessRule, so the
+    /// delete must not depend on which cascade path a provider applies first.
     /// </summary>
     [DatabaseTheory, DatabaseData]
     public async Task OrganizationDeleteAsync_WithGovernedCollection_Succeeds(
@@ -230,7 +221,7 @@ public class AccessRuleRepositoryTests
         // Act
         await organizationRepository.DeleteAsync(organization);
 
-        // Assert: the organization and everything hanging off it is gone.
+        // Assert
         Assert.Null(await organizationRepository.GetByIdAsync(organization.Id));
         Assert.Null(await accessRuleRepository.GetByIdAsync(rule.Id));
         Assert.Null(await collectionRepository.GetByIdAsync(collection.Id));
@@ -251,8 +242,7 @@ public class AccessRuleRepositoryTests
             Conditions = """{"kind":"human_approval"}""",
         });
 
-        // Act: delete the rule, then create a new one reusing its name. A hard delete removes the row, so the unique
-        // index on (OrganizationId, Name) no longer reserves the name.
+        // Act: a hard delete frees the name in the unique (OrganizationId, Name) index.
         await accessRuleRepository.DeleteAsync(original);
 
         var recreated = await accessRuleRepository.CreateAsync(new AccessRule
@@ -262,7 +252,7 @@ public class AccessRuleRepositoryTests
             Conditions = """{"kind":"human_approval"}""",
         });
 
-        // Assert: a distinct, live rule owns the name and the original stays gone.
+        // Assert
         Assert.NotEqual(original.Id, recreated.Id);
         Assert.Null(await accessRuleRepository.GetByIdAsync(original.Id));
 
@@ -271,11 +261,7 @@ public class AccessRuleRepositoryTests
         Assert.Equal("Reusable Name", live.Name);
     }
 
-    /// <summary>
-    /// The read is org-scoped: MSSQL filters in <c>AccessRule_ReadByOrganizationId</c> and EF filters in the query,
-    /// so a rule belonging to another organization must never appear. Leaking one would expose the conditions
-    /// gating access to data the caller cannot see.
-    /// </summary>
+    /// <summary>Leaking another organization's rule would expose the conditions gating its data.</summary>
     [DatabaseTheory, DatabaseData]
     public async Task GetManyByOrganizationIdAsync_ReturnsOnlyTheOrganizationsRules(
         IOrganizationRepository organizationRepository,
@@ -298,9 +284,8 @@ public class AccessRuleRepositoryTests
     }
 
     /// <summary>
-    /// Every column has to survive the round trip. The two stacks hydrate differently -- Dapper maps sproc columns
-    /// onto <see cref="AccessRuleDetails"/> directly while EF maps the entity through AutoMapper -- so a column
-    /// missing from one side is a silent divergence rather than a failure.
+    /// Dapper maps the sproc's columns straight onto the entity while EF maps through AutoMapper, so a column missing
+    /// on one side diverges silently.
     /// </summary>
     [DatabaseTheory, DatabaseData]
     public async Task GetManyByOrganizationIdAsync_RoundTripsEveryField(
@@ -345,10 +330,8 @@ public class AccessRuleRepositoryTests
     }
 
     /// <summary>
-    /// The details read returns each rule with the collections it governs. Both stacks assemble that from a second
-    /// query keyed by rule -- MSSQL returns a second result set, EF groups in memory -- so this pins that the
-    /// collections land on the right rule and that an ungoverning rule comes back with an empty list rather than
-    /// null or another rule's collections.
+    /// Both stacks attach collections to each <see cref="AccessRuleDetails"/> from a second query, so an ungoverning
+    /// rule has to get an empty list rather than null or another rule's collections.
     /// </summary>
     [DatabaseTheory, DatabaseData]
     public async Task GetManyDetailsByOrganizationIdAsync_GroupsGovernedCollectionsByRule(
@@ -383,10 +366,7 @@ public class AccessRuleRepositoryTests
         Assert.Empty(actualUngoverning.CollectionIds);
     }
 
-    /// <summary>
-    /// The details read is org-scoped on both the rules and the collections hung off them, so neither another
-    /// organization's rules nor its collection IDs may appear.
-    /// </summary>
+    /// <summary>Scoped on the collections as well as the rules.</summary>
     [DatabaseTheory, DatabaseData]
     public async Task GetManyDetailsByOrganizationIdAsync_ReturnsOnlyTheOrganizationsRules(
         IOrganizationRepository organizationRepository,
