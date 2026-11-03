@@ -23,7 +23,7 @@ public class SsoJitProvisionFinishControllerTrustedDeviceTests
     : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private const string _route = "sso-jit-provision-finish/trusted-device";
-    private const string _resetPasswordKey = "4.YWJjZA==";
+    private const string _accountRecoveryKey = "4.YWJjZA==";
     private const string _wrappedPrivateKey = "7.AOs41Hd8OQiCPXjyJKCiDA==";
     private const string _wrappedSigningKey = "7.DRv74Kg1RSlFSam1MNFlGD==";
     private const string _deviceEncryptedUserKey = "4.ZGV2aWNlLXVzZXIta2V5";
@@ -126,7 +126,7 @@ public class SsoJitProvisionFinishControllerTrustedDeviceTests
 
         var updatedOrgUser = await _factory.GetService<IOrganizationUserRepository>().GetByIdAsync(orgUser.Id);
         Assert.NotNull(updatedOrgUser);
-        Assert.Equal(_resetPasswordKey, updatedOrgUser.ResetPasswordKey);
+        Assert.Equal(_accountRecoveryKey, updatedOrgUser.ResetPasswordKey);
         Assert.Equal(OrganizationUserStatusType.Accepted, updatedOrgUser.Status);
     }
 
@@ -261,7 +261,7 @@ public class SsoJitProvisionFinishControllerTrustedDeviceTests
                 }
             },
             ["organizationId"] = _organization.Id,
-            ["resetPasswordKey"] = _resetPasswordKey,
+            ["accountRecoveryKey"] = _accountRecoveryKey,
         };
 
         if (includeDeviceKeys)

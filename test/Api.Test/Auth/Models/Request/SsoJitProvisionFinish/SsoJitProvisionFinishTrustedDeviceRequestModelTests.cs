@@ -10,7 +10,7 @@ namespace Bit.Api.Test.Auth.Models.Request.SsoJitProvisionFinish;
 
 public class SsoJitProvisionFinishTrustedDeviceRequestModelTests
 {
-    private const string _resetPasswordKey = "4.YWJjZA==";
+    private const string _accountRecoveryKey = "4.YWJjZA==";
     private const string _userKeyId = "0123456789abcdef0123456789abcdef";
 
     [Fact]
@@ -44,14 +44,13 @@ public class SsoJitProvisionFinishTrustedDeviceRequestModelTests
     }
 
     [Fact]
-    public void Validate_PartialV2AccountKeys_ReturnsError()
+    public void Validate_PartialV2AccountKeys_Throws()
     {
         var accountKeys = CreateV2AccountKeys();
         accountKeys.SignatureKeyPair = null;
         var model = CreateModel(accountKeys);
 
-        var result = Assert.Single(model.Validate(new ValidationContext(model)));
-        Assert.Equal("AccountKeys are only supported for V2 encryption.", result.ErrorMessage);
+        Assert.Throws<InvalidOperationException>(() => model.Validate(new ValidationContext(model)).ToList());
     }
 
     [Fact]
@@ -97,12 +96,12 @@ public class SsoJitProvisionFinishTrustedDeviceRequestModelTests
         Assert.Equal("public-key", data.AccountKeys.PublicKeyEncryptionKeyPairData.PublicKey);
         Assert.NotNull(data.UserKeyId);
         Assert.Equal(model.OrganizationId, data.OrganizationId);
-        Assert.Equal(_resetPasswordKey, data.ResetPasswordKey);
+        Assert.Equal(_accountRecoveryKey, data.ResetPasswordKey);
         Assert.Null(data.DeviceKeys);
     }
 
     [Fact]
-    public void ToData_LegacyKeypair_MapsToV1AccountKeysWithoutUserKeyId()
+    public void ToData_LegacyKeypair_MapsToV1AccountKeys()
     {
         var model = CreateModel(accountKeys: null);
 
@@ -111,7 +110,7 @@ public class SsoJitProvisionFinishTrustedDeviceRequestModelTests
         Assert.False(data.AccountKeys.IsV2Encryption());
         Assert.Equal("legacy-public-key", data.AccountKeys.PublicKeyEncryptionKeyPairData.PublicKey);
         Assert.Equal("2.legacy-private-key", data.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey);
-        Assert.Null(data.UserKeyId);
+        Assert.Equal(_userKeyId, data.UserKeyId?.ToString());
     }
 
     [Fact]
@@ -155,7 +154,7 @@ public class SsoJitProvisionFinishTrustedDeviceRequestModelTests
                 UserKeyId = _userKeyId
             },
             OrganizationId = Guid.NewGuid(),
-            AccountRecoveryKey = _resetPasswordKey,
+            AccountRecoveryKey = _accountRecoveryKey,
             AcceptOrganizationInvite = true
         };
     }

@@ -24,7 +24,7 @@ public class FinishSsoJitProvisionTrustedDeviceData
     public required Guid OrganizationId { get; init; }
 
     /// <summary>
-    /// The user key encrypted by the organization's public key, for admin account recovery enrollment.
+    /// The user key encapsulated by the organization's public key, for admin account recovery enrollment.
     /// Required when the organization invite is accepted; ignored otherwise.
     /// For now, this is tied to accepting the organization invite.
     /// </summary>

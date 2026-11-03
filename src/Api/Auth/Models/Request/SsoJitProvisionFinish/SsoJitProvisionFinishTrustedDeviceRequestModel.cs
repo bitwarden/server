@@ -24,7 +24,7 @@ public class SsoJitProvisionFinishTrustedDeviceRequestModel : IValidatableObject
     public required Guid OrganizationId { get; set; }
 
     /// <summary>
-    /// The user key encrypted by the organization's public key. Required when
+    /// The user key encapsulated by the organization's public key. Required when
     /// <see cref="AcceptOrganizationInvite"/> is true; ignored otherwise.
     /// For now, this is tied to <see cref="AcceptOrganizationInvite"/>.
     /// </summary>
