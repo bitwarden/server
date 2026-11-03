@@ -367,7 +367,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             { "client_secret", user.ApiKey },
             { "scope", "api" },
             { "DeviceIdentifier", deviceId },
-            { "DeviceType",  ((int)DeviceType.FirefoxBrowser).ToString() },
+            { "DeviceType",  ((int)DeviceType.FirefoxBrowser).ToString(CultureInfo.InvariantCulture) },
             { "DeviceName", "firefox" },
         }));
 
@@ -397,14 +397,14 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         var context = await localFactory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "scope", "api offline_access" },
-            { "client_id", "web" },
+            { "client_id", SsoAuthorizationCodeTestHelpers.ClientId },
             { "deviceType", "12" },
             { "deviceIdentifier", deviceId },
             { "deviceName", "edge" },
             { "grant_type", "authorization_code" },
             { "code", code },
             { "code_verifier", challenge },
-            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+            { "redirect_uri", SsoAuthorizationCodeTestHelpers.RedirectUri }
         }));
 
         // Assert
@@ -433,14 +433,14 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         var failedTokenContext = await localFactory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "scope", "api offline_access" },
-            { "client_id", "web" },
+            { "client_id", SsoAuthorizationCodeTestHelpers.ClientId },
             { "deviceType", "12" },
             { "deviceIdentifier", deviceId },
             { "deviceName", "edge" },
             { "grant_type", "authorization_code" },
             { "code", code },
             { "code_verifier", challenge },
-            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+            { "redirect_uri", SsoAuthorizationCodeTestHelpers.RedirectUri }
         }));
 
         Assert.Equal(StatusCodes.Status400BadRequest, failedTokenContext.Response.StatusCode);
@@ -449,7 +449,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         var twoFactorProvidedContext = await localFactory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "scope", "api offline_access" },
-            { "client_id", "web" },
+            { "client_id", SsoAuthorizationCodeTestHelpers.ClientId },
             { "deviceType", "12" },
             { "deviceIdentifier", deviceId },
             { "deviceName", "edge" },
@@ -459,7 +459,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             { "grant_type", "authorization_code" },
             { "code", code },
             { "code_verifier", challenge },
-            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+            { "redirect_uri", SsoAuthorizationCodeTestHelpers.RedirectUri }
         }));
 
 
@@ -489,14 +489,14 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         var context = await localFactory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "scope", "api offline_access" },
-            { "client_id", "web" },
+            { "client_id", SsoAuthorizationCodeTestHelpers.ClientId },
             { "deviceType", "12" },
             { "deviceIdentifier", deviceId },
             { "deviceName", "edge" },
             { "grant_type", "authorization_code" },
             { "code", code },
             { "code_verifier", challenge },
-            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+            { "redirect_uri", SsoAuthorizationCodeTestHelpers.RedirectUri }
         }));
 
         // Assert

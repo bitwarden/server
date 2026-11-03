@@ -120,9 +120,10 @@ public class AuthorizationCodeStoreTests
         await persistedGrantStore.StoreAsync(Arg.Do<PersistedGrant>(g => storedGrant = g));
         var sut = CreateSut(persistedGrantStore);
         var handle = await sut.StoreAuthorizationCodeAsync(CreateAuthorizationCode());
+        persistedGrantStore.GetAsync(storedGrant.Key).Returns(storedGrant);
+        Assert.NotNull(await sut.GetAuthorizationCodeAsync(handle)); // Lookup reaches the grant.
 
         storedGrant.Type = IdentityServerConstants.PersistedGrantTypes.RefreshToken;
-        persistedGrantStore.GetAsync(storedGrant.Key).Returns(storedGrant);
 
         // Act
         var result = await sut.GetAuthorizationCodeAsync(handle);

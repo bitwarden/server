@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Globalization;
+using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -331,7 +332,7 @@ public class IdentityServerSsoTests
         var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "scope", "api offline_access" },
-            { "client_id", "web" },
+            { "client_id", SsoAuthorizationCodeTestHelpers.ClientId },
             { "deviceType", "10" },
             { "deviceIdentifier", deviceIdentifier },
             { "deviceName", "firefox" },
@@ -341,7 +342,7 @@ public class IdentityServerSsoTests
             { "grant_type", "authorization_code" },
             { "code", code },
             { "code_verifier", challenge },
-            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+            { "redirect_uri", SsoAuthorizationCodeTestHelpers.RedirectUri }
         }));
 
         // Assert
@@ -400,7 +401,7 @@ public class IdentityServerSsoTests
         var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "scope", "api offline_access" },
-            { "client_id", "web" },
+            { "client_id", SsoAuthorizationCodeTestHelpers.ClientId },
             { "deviceType", "10" },
             { "deviceIdentifier", "test_id" },
             { "deviceName", "firefox" },
@@ -410,7 +411,7 @@ public class IdentityServerSsoTests
             { "grant_type", "authorization_code" },
             { "code", code },
             { "code_verifier", challenge },
-            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+            { "redirect_uri", SsoAuthorizationCodeTestHelpers.RedirectUri }
         }));
 
         // Assert
@@ -473,7 +474,7 @@ public class IdentityServerSsoTests
         var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "scope", "api offline_access" },
-            { "client_id", "web" },
+            { "client_id", SsoAuthorizationCodeTestHelpers.ClientId },
             { "deviceType", "10" },
             { "deviceIdentifier", "test_id" },
             { "deviceName", "firefox" },
@@ -483,7 +484,7 @@ public class IdentityServerSsoTests
             { "grant_type", "authorization_code" },
             { "code", code },
             { "code_verifier", challenge },
-            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+            { "redirect_uri", SsoAuthorizationCodeTestHelpers.RedirectUri }
         }));
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
@@ -670,18 +671,18 @@ public class IdentityServerSsoTests
         var form = new Dictionary<string, string>
         {
             { "scope", "api offline_access" },
-            { "client_id", "web" },
+            { "client_id", SsoAuthorizationCodeTestHelpers.ClientId },
             { "twoFactorToken", "TEST" },
             { "twoFactorProvider", "5" }, // RememberMe Provider
             { "twoFactorRemember", "0" },
             { "grant_type", "authorization_code" },
             { "code", code },
             { "code_verifier", challenge },
-            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+            { "redirect_uri", SsoAuthorizationCodeTestHelpers.RedirectUri }
         };
         if (includeDevice)
         {
-            form["deviceType"] = ((int)DeviceType.FirefoxBrowser).ToString();
+            form["deviceType"] = ((int)DeviceType.FirefoxBrowser).ToString(CultureInfo.InvariantCulture);
             form["deviceIdentifier"] = SsoDeviceIdentifier;
             form["deviceName"] = "firefox";
         }
@@ -723,7 +724,7 @@ public class IdentityServerSsoTests
             new Dictionary<string, string>
             {
                 { "scope", "api offline_access" },
-                { "client_id", "web" },
+                { "client_id", SsoAuthorizationCodeTestHelpers.ClientId },
                 { "deviceType", "10" },
                 { "deviceIdentifier", "test_id" },
                 { "deviceName", "firefox" },
@@ -733,7 +734,7 @@ public class IdentityServerSsoTests
                 { "grant_type", "authorization_code" },
                 { "code", code },
                 { "code_verifier", challenge },
-                { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+                { "redirect_uri", SsoAuthorizationCodeTestHelpers.RedirectUri }
             }));
 
         // If this fails, surface detailed error information to aid debugging
