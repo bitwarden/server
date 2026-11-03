@@ -18,6 +18,12 @@
           "LaunchDarkly.ServerSdk": "8.14.1"
         }
       },
+      "Bitwarden.Server.Sdk.RestrictedDependencies": {
+        "type": "Direct",
+        "requested": "[0.1.0-stack.1, )",
+        "resolved": "0.1.0-stack.1",
+        "contentHash": "TC6ejaN6gvs5pqa3knMdavrnRQ5CuwmJJDYiTTPf60oEgIOC1vYsSOFw9pw9bVRUBA7v+k+SnYuG802igOVJRw=="
+      },
       "Stripe.net": {
         "type": "Direct",
         "requested": "[52.1.0, 52.1.0]",
