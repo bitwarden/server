@@ -21,6 +21,7 @@ public class SubscriptionsUserServiceCollectionExtensionsTests
         services.AddSingleton(Substitute.For<ISubscriptionDiscountService>());
         services.AddSingleton(Substitute.For<IUserService>());
         services.AddSingleton(Substitute.For<IBitwardenEnvironment>());
+        services.AddSingleton(TimeProvider.System);
         services.AddLogging();
 
         services.AddUserSubscriptions();
