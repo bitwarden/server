@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Dirt.Services.Implementations;
 using Bit.Test.Common.AutoFixture;

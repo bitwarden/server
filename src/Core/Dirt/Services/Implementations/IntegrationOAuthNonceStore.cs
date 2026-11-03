@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Utilities;

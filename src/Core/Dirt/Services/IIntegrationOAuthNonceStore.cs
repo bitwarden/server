@@ -1,4 +1,4 @@
-namespace Bit.Core.Dirt.Services;
+﻿namespace Bit.Core.Dirt.Services;
 
 /// <summary>
 /// Tracks the single active OAuth nonce for an integration so each OAuth <c>state</c> can be redeemed at most once.

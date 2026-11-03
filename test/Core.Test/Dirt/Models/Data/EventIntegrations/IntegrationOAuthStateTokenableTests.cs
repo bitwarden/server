@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Enums;
