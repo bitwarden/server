@@ -1,8 +1,6 @@
-﻿using System.Collections.Concurrent;
-using System.Globalization;
+﻿using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
-using System.Security.Claims;
 using System.Text.Json;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.IntegrationTest.Factories;
@@ -22,12 +20,10 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
+using Bit.IntegrationTestCommon;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.Helpers;
 using Core.Auth.Enums;
-using Duende.IdentityModel;
-using Duende.IdentityServer.Models;
-using Duende.IdentityServer.Stores;
 using Microsoft.Extensions.Caching.Distributed;
 using NSubstitute;
 using Xunit;
@@ -50,18 +46,12 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
     private const string DeviceIdentifier = "two-factor-email-device";
     private const string OtherDeviceIdentifier = "two-factor-email-other-device";
     private const string AuthRequestAccessCode = "auth-request-access-code";
-    private const string SsoRedirectUri = "https://localhost:8080/sso-connector.html";
+    private const string SsoRedirectUri = SsoAuthorizationCodeTestHelpers.RedirectUri;
     private const string InvalidTwoFactorTokenMessage = "Two-step token is invalid. Try again.";
     private const string CannotSendTwoFactorEmailMessage = "Cannot send two-factor email.";
     private const string DeviceIdentifierRequiredMessage = "A valid device identifier is required.";
     private const string InvalidSsoSessionTokenMessage =
         "a valid, non-expired SSO Email 2FA Session token is required to send 2FA emails.";
-
-    /// <summary>
-    /// Authorization codes the substituted Identity code store hands out, keyed by code. The store is created
-    /// once per class fixture, so each SSO test registers its own uniquely named code here.
-    /// </summary>
-    private static readonly ConcurrentDictionary<string, AuthorizationCode> _ssoAuthorizationCodes = new();
 
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
@@ -82,9 +72,6 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
             svc.CompleteTwoFactorWebAuthnRegistrationAsync(default!, default, default!, default!).ReturnsForAnyArgs(true));
         _factory.SubstituteService<IMailService>(_ => { });
         _factory.ShareIdentityPersistentCache();
-        _factory.Identity.SubstituteService<IAuthorizationCodeStore>(store =>
-            store.GetAuthorizationCodeAsync(Arg.Any<string>())
-                .Returns(call => Task.FromResult(_ssoAuthorizationCodes.GetValueOrDefault(call.Arg<string>()))));
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
         _mailService = _factory.GetService<IMailService>();
@@ -1091,30 +1078,10 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
         });
 
         var codeVerifier = new string('c', 50);
-        var authorizationCodeKey = $"sso-code-{Guid.NewGuid()}";
-        _ssoAuthorizationCodes[authorizationCodeKey] = new AuthorizationCode
-        {
-            ClientId = "web",
-            CreationTime = DateTime.UtcNow,
-            Lifetime = (int)TimeSpan.FromMinutes(5).TotalSeconds,
-            RedirectUri = SsoRedirectUri,
-            RequestedScopes = ["api", "offline_access"],
-            CodeChallenge = codeVerifier.Sha256(),
-            CodeChallengeMethod = "plain",
-            Subject = new ClaimsPrincipal(new ClaimsIdentity([
-                new Claim(JwtClaimTypes.Subject, user.Id.ToString()),
-                new Claim(JwtClaimTypes.Name, _userEmail),
-                new Claim(JwtClaimTypes.IdentityProvider, "sso"),
-                new Claim("organizationId", organization.Id.ToString()),
-                new Claim(JwtClaimTypes.SessionId, "SOMETHING"),
-                new Claim(JwtClaimTypes.AuthenticationMethod, "external"),
-                new Claim(JwtClaimTypes.AuthenticationTime,
-                    new DateTimeOffset(DateTime.UtcNow.AddMinutes(-1)).ToUnixTimeSeconds()
-                        .ToString(CultureInfo.InvariantCulture))
-            ], "Duende.IdentityServer", JwtClaimTypes.Name, JwtClaimTypes.Role)),
-        };
+        var authorizationCode = await _factory.Identity.StoreSsoAuthorizationCodeAsync(
+            user.Id, _userEmail, organization.Id, codeVerifier);
 
-        return new SsoLogin(authorizationCodeKey, codeVerifier);
+        return new SsoLogin(authorizationCode, codeVerifier);
     }
 
     private async Task<JsonElement> PostSsoTokenAsync(SsoLogin sso, string deviceIdentifier, string? twoFactorToken)
