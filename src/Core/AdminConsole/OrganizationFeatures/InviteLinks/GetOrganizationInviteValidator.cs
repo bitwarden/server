@@ -18,8 +18,11 @@ public class GetOrganizationInviteValidator(
     public async Task<ValidationResult<OrganizationInviteLinkValidationRequest>> ValidateAsync(
         OrganizationInviteLinkValidationRequest request)
     {
-        var eligibilityError = InviteLinkRules.ValidateEligibility(
-            request.ExistingInviteLink, request.Code, request.Organization, request.User);
+        var eligibilityError = inviteLinkValidationService.ValidateEligibility(
+            request.ExistingInviteLink,
+            request.Code,
+            request.Organization,
+            request.User);
         if (eligibilityError is not null)
         {
             return Invalid(request, eligibilityError);
@@ -60,7 +63,7 @@ public class GetOrganizationInviteValidator(
     /// The existing membership must allow the step the link leads to: confirming, or accepting.
     /// </summary>
     /// <remarks>
-    /// Must run after <see cref="InviteLinkRules.ValidateEligibility"/>, which guarantees the invite link and
+    /// Must run after <see cref="IInviteLinkValidationService.ValidateEligibility"/>, which guarantees the invite link and
     /// organization exist.
     /// </remarks>
     private static Error? ValidateMembershipStatus(OrganizationInviteLinkValidationRequest request) =>
