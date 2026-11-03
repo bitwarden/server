@@ -38,7 +38,14 @@ public class CipherBrowserHealthExclusionRepository : BaseEntityFrameworkReposit
                 ? new Dictionary<Guid, List<string>>()
                 : CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, List<string>>>(cipher.BrowserHealthExclusions)
                   ?? new Dictionary<Guid, List<string>>();
-            exclusions[userId] = [riskCategory];
+            if (!exclusions.TryGetValue(userId, out var riskCategories) || riskCategories == null)
+            {
+                exclusions[userId] = [riskCategory];
+            }
+            else if (!riskCategories.Contains(riskCategory))
+            {
+                riskCategories.Add(riskCategory);
+            }
             cipher.BrowserHealthExclusions = CoreHelpers.ClassToJsonData(exclusions);
         }
 

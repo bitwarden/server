@@ -11,10 +11,22 @@ BEGIN
         C
     SET
         [BrowserHealthExclusions] = CASE
-            WHEN @Exclude = 1 THEN JSON_MODIFY(
+            -- First exclusion for this user: start the user's array
+            WHEN @Exclude = 1 AND JSON_QUERY(C.[BrowserHealthExclusions], CONCAT('$."', @UserId, '"')) IS NULL THEN JSON_MODIFY(
                 COALESCE(C.[BrowserHealthExclusions], N'{}'),
                 CONCAT('$."', @UserId, '"'),
                 JSON_QUERY(JSON_MODIFY(N'[]', 'append $', @RiskCategory))
+            )
+            -- Category already excluded: keep the value
+            WHEN @Exclude = 1 AND EXISTS (
+                SELECT 1
+                FROM OPENJSON(C.[BrowserHealthExclusions], CONCAT('$."', @UserId, '"'))
+                WHERE [value] = @RiskCategory
+            ) THEN C.[BrowserHealthExclusions]
+            WHEN @Exclude = 1 THEN JSON_MODIFY(
+                C.[BrowserHealthExclusions],
+                CONCAT('append $."', @UserId, '"'),
+                @RiskCategory
             )
             -- NULL removes the user's key
             ELSE JSON_MODIFY(COALESCE(C.[BrowserHealthExclusions], N'{}'), CONCAT('$."', @UserId, '"'), NULL)

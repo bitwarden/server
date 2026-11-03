@@ -2,6 +2,6 @@
 
 public interface ICipherBrowserHealthExclusionRepository
 {
-    /// <summary>Excludes the user's personal, not-deleted logins from browser health, recording the risk category, which must not be empty. Returns how many were excluded.</summary>
+    /// <summary>Excludes the user's personal, not-deleted logins from browser health, adding the risk category to the user's list once. The category must not be empty. Returns how many were excluded.</summary>
     Task<int> ExcludeAsync(IEnumerable<Guid> cipherIds, Guid userId, string riskCategory);
 }

@@ -80,7 +80,7 @@ public class CipherBrowserHealthExclusionRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task ExcludeAsync_AlreadyExcluded_ReturnsOneAndReplacesRiskCategory(
+    public async Task ExcludeAsync_AnotherRiskCategory_ReturnsOneAndAddsIt(
         ICipherBrowserHealthExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
     {
         var user = await userRepository.CreateTestUserAsync();
@@ -88,7 +88,19 @@ public class CipherBrowserHealthExclusionRepositoryTests
         await sut.ExcludeAsync([cipher.Id], user.Id, "weak");
 
         Assert.Equal(1, await sut.ExcludeAsync([cipher.Id], user.Id, "exposed"));
-        Assert.Equal(["exposed"], RiskCategories(await cipherRepository.GetByIdAsync(cipher.Id, user.Id)));
+        Assert.Equal(["weak", "exposed"], RiskCategories(await cipherRepository.GetByIdAsync(cipher.Id, user.Id)));
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task ExcludeAsync_SameRiskCategoryTwice_StoresItOnce(
+        ICipherBrowserHealthExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
+    {
+        var user = await userRepository.CreateTestUserAsync();
+        var cipher = await CreateCipherAsync(cipherRepository, user.Id);
+        await sut.ExcludeAsync([cipher.Id], user.Id, "weak");
+
+        Assert.Equal(1, await sut.ExcludeAsync([cipher.Id], user.Id, "weak"));
+        Assert.Equal(["weak"], RiskCategories(await cipherRepository.GetByIdAsync(cipher.Id, user.Id)));
     }
 
     [DatabaseTheory, DatabaseData]
