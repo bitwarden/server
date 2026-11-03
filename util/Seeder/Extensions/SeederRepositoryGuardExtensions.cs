@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
@@ -69,9 +70,19 @@ internal static class SeederRepositoryGuardExtensions
                 ids,
                 (await collectionRepository.GetManyByManyIdsAsync(ids)).Select(c => (c.Id, c.OrganizationId)),
                 organizationId),
-            $"One or more collections are not in organization {organizationId}.");
+            CollectionsNotInOrganizationMessage(organizationId));
 
     public static async Task<List<Guid>> GetDistinctCollectionIdsOrThrowAsync(
+        this IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        Guid organizationId,
+        IEnumerable<Guid> collectionIds)
+        => (await organizationRepository.GetDistinctCollectionsOrThrowAsync(
+                collectionRepository, organizationId, collectionIds))
+            .Select(c => c.Id)
+            .ToList();
+
+    public static async Task<List<Collection>> GetDistinctCollectionsOrThrowAsync(
         this IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
         Guid organizationId,
@@ -83,9 +94,33 @@ internal static class SeederRepositoryGuardExtensions
         }
 
         var distinctIds = collectionIds.Distinct().ToList();
-        await collectionRepository.ThrowIfCollectionsNotInOrganizationAsync(distinctIds, organizationId);
+        if (distinctIds.Count == 0)
+        {
+            return [];
+        }
 
-        return distinctIds;
+        var collections = await collectionRepository.GetManyByManyIdsAsync(distinctIds);
+        if (!AllResolvedToOwner(distinctIds, collections.Select(c => (c.Id, c.OrganizationId)), organizationId))
+        {
+            throw new InvalidOperationException(CollectionsNotInOrganizationMessage(organizationId));
+        }
+
+        var collectionsById = collections.DistinctBy(c => c.Id).ToDictionary(c => c.Id);
+        return distinctIds.Select(id => collectionsById[id]).ToList();
+    }
+
+    public static void ThrowIfCollectionsGovernedByAccessRule(this IEnumerable<Collection> collections)
+    {
+        var governedIds = collections
+            .Where(c => c.AccessRuleId != null)
+            .Select(c => c.Id)
+            .Distinct()
+            .ToList();
+        if (governedIds.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Collections already governed by an access rule: {string.Join(", ", governedIds)}.");
+        }
     }
 
     public static Task ThrowIfUserNotConfirmedOrRevokedMemberOfOrganizationAsync(
@@ -161,4 +196,7 @@ internal static class SeederRepositoryGuardExtensions
 
         return requestedIds.All(matched.Contains);
     }
+
+    private static string CollectionsNotInOrganizationMessage(Guid organizationId) =>
+        $"One or more collections are not in organization {organizationId}.";
 }
