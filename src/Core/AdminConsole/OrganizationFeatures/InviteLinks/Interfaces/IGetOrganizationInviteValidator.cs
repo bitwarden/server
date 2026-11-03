@@ -12,8 +12,8 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 ///     matches, its organization is enabled and supports invite links, the user's email domain is allowed, and the
 ///     email is verified.</item>
 ///     <item>The existing membership's status:
-///     <see cref="InviteLinkValidationService.ValidateConfirmMembershipStatus"/> when the link supports confirmation,
-///     otherwise <see cref="InviteLinkValidationService.ValidateAcceptMembershipStatus"/>.</item>
+///     <see cref="InviteLinkRules.ValidateConfirmMembershipStatus"/> when the link supports confirmation,
+///     otherwise <see cref="InviteLinkRules.ValidateAcceptMembershipStatus"/>.</item>
 ///     <item><see cref="IInviteLinkValidationService.ValidateSeatAvailabilityAsync"/>.</item>
 ///     <item><see cref="IInviteLinkValidationService.ValidateJoinRequirementsAsync"/>.</item>
 /// </list>

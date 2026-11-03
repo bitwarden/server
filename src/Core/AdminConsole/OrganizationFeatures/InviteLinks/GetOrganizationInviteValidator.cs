@@ -68,6 +68,6 @@ public class GetOrganizationInviteValidator(
     /// </remarks>
     private static Error? ValidateMembershipStatus(OrganizationInviteLinkValidationRequest request) =>
         request.ExistingInviteLink!.SupportsConfirmation
-            ? InviteLinkValidationService.ValidateConfirmMembershipStatus(request.Organization!, request.ExistingOrganizationUser)
-            : InviteLinkValidationService.ValidateAcceptMembershipStatus(request.Organization!, request.ExistingOrganizationUser);
+            ? InviteLinkRules.ValidateConfirmMembershipStatus(request.Organization!, request.ExistingOrganizationUser)
+            : InviteLinkRules.ValidateAcceptMembershipStatus(request.Organization!, request.ExistingOrganizationUser);
 }
