@@ -170,7 +170,7 @@ public class CipherBrowserHealthExclusionRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task ReplaceAsync_CipherDetails_PreservesBrowserHealthExclusions(
+    public async Task ReplaceAsync_CipherDetails_PreservesExclusions(
         ICipherBrowserHealthExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
     {
         var user = await userRepository.CreateTestUserAsync();
@@ -185,7 +185,7 @@ public class CipherBrowserHealthExclusionRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task ReplaceAsync_Cipher_PreservesBrowserHealthExclusions(
+    public async Task ReplaceAsync_Cipher_PreservesExclusions(
         ICipherBrowserHealthExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
     {
         var user = await userRepository.CreateTestUserAsync();

@@ -585,7 +585,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             {
                 var mappedEntity = Mapper.Map<Cipher>(cipher);
                 dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
-                dbContext.Entry(entity).Property(c => c.BrowserHealthExclusions).IsModified = false;
+                dbContext.Entry(entity).Property(c => c.Exclusions).IsModified = false;
                 await dbContext.SaveChangesAsync();
             }
         }
@@ -664,7 +664,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
 
                 var mappedEntity = Mapper.Map<Cipher>(cipher);
                 dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
-                dbContext.Entry(entity).Property(c => c.BrowserHealthExclusions).IsModified = false;
+                dbContext.Entry(entity).Property(c => c.Exclusions).IsModified = false;
 
                 if (cipher.OrganizationId.HasValue)
                 {

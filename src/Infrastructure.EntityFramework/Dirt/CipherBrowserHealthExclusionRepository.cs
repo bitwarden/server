@@ -34,9 +34,9 @@ public class CipherBrowserHealthExclusionRepository : BaseEntityFrameworkReposit
 
         foreach (var cipher in ciphers)
         {
-            var exclusions = string.IsNullOrWhiteSpace(cipher.BrowserHealthExclusions)
+            var exclusions = string.IsNullOrWhiteSpace(cipher.Exclusions)
                 ? new Dictionary<Guid, List<string>>()
-                : CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, List<string>>>(cipher.BrowserHealthExclusions)
+                : CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, List<string>>>(cipher.Exclusions)
                   ?? new Dictionary<Guid, List<string>>();
             if (!exclusions.TryGetValue(userId, out var riskCategories) || riskCategories == null)
             {
@@ -46,7 +46,7 @@ public class CipherBrowserHealthExclusionRepository : BaseEntityFrameworkReposit
             {
                 riskCategories.Add(riskCategory);
             }
-            cipher.BrowserHealthExclusions = CoreHelpers.ClassToJsonData(exclusions);
+            cipher.Exclusions = CoreHelpers.ClassToJsonData(exclusions);
         }
 
         if (ciphers.Count > 0)

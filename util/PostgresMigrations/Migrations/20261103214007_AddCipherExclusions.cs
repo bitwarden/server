@@ -2,18 +2,18 @@
 
 #nullable disable
 
-namespace Bit.SqliteMigrations.Migrations;
+namespace Bit.PostgresMigrations.Migrations;
 
 /// <inheritdoc />
-public partial class AddCipherBrowserHealthExclusions : Migration
+public partial class AddCipherExclusions : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.AddColumn<string>(
-            name: "BrowserHealthExclusions",
+            name: "Exclusions",
             table: "Cipher",
-            type: "TEXT",
+            type: "text",
             nullable: true);
     }
 
@@ -21,7 +21,7 @@ public partial class AddCipherBrowserHealthExclusions : Migration
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropColumn(
-            name: "BrowserHealthExclusions",
+            name: "Exclusions",
             table: "Cipher");
     }
 }

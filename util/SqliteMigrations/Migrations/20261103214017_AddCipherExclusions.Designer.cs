@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20261026215402_AddCipherBrowserHealthExclusions")]
-    partial class AddCipherBrowserHealthExclusions
+    [Migration("20261103214017_AddCipherExclusions")]
+    partial class AddCipherExclusions
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -3320,9 +3320,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<string>("Attachments")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("BrowserHealthExclusions")
-                        .HasColumnType("TEXT");
-
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
@@ -3330,6 +3327,9 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("DeletedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Exclusions")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Favorites")

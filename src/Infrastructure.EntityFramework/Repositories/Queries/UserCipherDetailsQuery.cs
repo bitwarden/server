@@ -72,7 +72,7 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                         c.Reprompt,
                         c.Key,
                         c.Archives,
-                        c.BrowserHealthExclusions
+                        c.Exclusions
                     };
 
         var query2 = from c in dbContext.Ciphers
@@ -97,7 +97,7 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                          c.Reprompt,
                          c.Key,
                          c.Archives,
-                         c.BrowserHealthExclusions
+                         c.Exclusions
                      };
 
         var union = query.Union(query2).Select(c => new CipherDetails
@@ -120,7 +120,7 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
             OrganizationUseTotp = c.OrganizationUseTotp,
             Key = c.Key,
             ArchivedDate = GetArchivedDate(_userId, new Cipher { Id = c.Id, Archives = c.Archives }),
-            ExcludedRiskCategories = GetExcludedRiskCategories(_userId, c.BrowserHealthExclusions)
+            ExcludedRiskCategories = GetExcludedRiskCategories(_userId, c.Exclusions)
         });
         return union;
     }

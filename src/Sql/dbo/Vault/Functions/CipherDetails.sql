@@ -37,7 +37,7 @@ SELECT
     END [ArchivedDate],
     CASE
         WHEN @UserId IS NULL THEN NULL
-        ELSE JSON_QUERY(C.[BrowserHealthExclusions], CONCAT('$."', @UserId, '"'))
+        ELSE JSON_QUERY(C.[Exclusions], CONCAT('$."', @UserId, '"'))
     END [ExcludedRiskCategories]
 FROM
     [dbo].[Cipher] C;

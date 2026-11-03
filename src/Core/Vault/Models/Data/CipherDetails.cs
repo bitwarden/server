@@ -11,7 +11,7 @@ public class CipherDetails : CipherOrganizationDetails
     public bool Manage { get; set; }
     // Per-user archived date from Archives JSON.
     public DateTime? ArchivedDate { get; set; }
-    // Per-user risk categories (JSON array) from BrowserHealthExclusions JSON.
+    // Per-user risk categories (JSON array) from the Exclusions JSON.
     public string? ExcludedRiskCategories { get; set; }
     public CipherDetails() { }
 

@@ -1,7 +1,7 @@
-IF COL_LENGTH('[dbo].[Cipher]', 'BrowserHealthExclusions') IS NULL
+IF COL_LENGTH('[dbo].[Cipher]', 'Exclusions') IS NULL
 BEGIN
     ALTER TABLE [dbo].[Cipher]
-        ADD [BrowserHealthExclusions] NVARCHAR(MAX) NULL;
+        ADD [Exclusions] NVARCHAR(MAX) NULL;
 END
 GO
 
@@ -44,7 +44,7 @@ SELECT
     END [ArchivedDate],
     CASE
         WHEN @UserId IS NULL THEN NULL
-        ELSE JSON_QUERY(C.[BrowserHealthExclusions], CONCAT('$."', @UserId, '"'))
+        ELSE JSON_QUERY(C.[Exclusions], CONCAT('$."', @UserId, '"'))
     END [ExcludedRiskCategories]
 FROM
     [dbo].[Cipher] C;
@@ -71,7 +71,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Cipher_Create]
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
     @Archives NVARCHAR(MAX) = NULL,
-    @BrowserHealthExclusions NVARCHAR(MAX) = NULL -- not used
+    @Exclusions NVARCHAR(MAX) = NULL -- not used
 AS
 BEGIN
     SET NOCOUNT ON
@@ -135,7 +135,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Cipher_Update]
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
     @Archives NVARCHAR(MAX) = NULL,
-    @BrowserHealthExclusions NVARCHAR(MAX) = NULL -- not used
+    @Exclusions NVARCHAR(MAX) = NULL -- not used
 AS
 BEGIN
     SET NOCOUNT ON
@@ -185,7 +185,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Cipher_CreateWithCollections]
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
     @Archives NVARCHAR(MAX) = NULL,
-    @BrowserHealthExclusions NVARCHAR(MAX) = NULL, -- not used
+    @Exclusions NVARCHAR(MAX) = NULL, -- not used
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
@@ -220,7 +220,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Cipher_UpdateWithCollections]
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
     @Archives NVARCHAR(MAX) = NULL,
-    @BrowserHealthExclusions NVARCHAR(MAX) = NULL, -- not used
+    @Exclusions NVARCHAR(MAX) = NULL, -- not used
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
@@ -293,7 +293,7 @@ CREATE OR ALTER PROCEDURE [dbo].[CipherDetails_Create]
     @ArchivedDate DATETIME2(7) = NULL,
     @Archives NVARCHAR(MAX) = NULL, -- not used
     @ExcludedRiskCategories NVARCHAR(MAX) = NULL, -- not used
-    @BrowserHealthExclusions NVARCHAR(MAX) = NULL -- not used
+    @Exclusions NVARCHAR(MAX) = NULL -- not used
 AS
 BEGIN
     SET NOCOUNT ON
@@ -368,7 +368,7 @@ CREATE OR ALTER PROCEDURE [dbo].[CipherDetails_CreateWithCollections]
     @ArchivedDate DATETIME2(7) = NULL,
     @Archives NVARCHAR(MAX) = NULL, -- not used
     @ExcludedRiskCategories NVARCHAR(MAX) = NULL, -- not used
-    @BrowserHealthExclusions NVARCHAR(MAX) = NULL, -- not used
+    @Exclusions NVARCHAR(MAX) = NULL, -- not used
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
@@ -412,7 +412,7 @@ CREATE OR ALTER PROCEDURE [dbo].[CipherDetails_Update]
     @ArchivedDate DATETIME2(7) = NULL,
     @Archives NVARCHAR(MAX) = NULL, -- not used
     @ExcludedRiskCategories NVARCHAR(MAX) = NULL, -- not used
-    @BrowserHealthExclusions NVARCHAR(MAX) = NULL -- not used
+    @Exclusions NVARCHAR(MAX) = NULL -- not used
 AS
 BEGIN
     SET NOCOUNT ON
@@ -525,7 +525,7 @@ SELECT
 END
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[Cipher_UpdateManyBrowserHealthExclusions]
+CREATE OR ALTER PROCEDURE [dbo].[Cipher_UpdateManyExclusions]
     @Ids AS [dbo].[GuidIdArray] READONLY,
     @UserId AS UNIQUEIDENTIFIER,
     @Exclude AS BIT,
@@ -537,26 +537,26 @@ BEGIN
     UPDATE
         C
     SET
-        [BrowserHealthExclusions] = CASE
+        [Exclusions] = CASE
             -- First exclusion for this user: start the user's array
-            WHEN @Exclude = 1 AND JSON_QUERY(C.[BrowserHealthExclusions], CONCAT('$."', @UserId, '"')) IS NULL THEN JSON_MODIFY(
-                COALESCE(C.[BrowserHealthExclusions], N'{}'),
+            WHEN @Exclude = 1 AND JSON_QUERY(C.[Exclusions], CONCAT('$."', @UserId, '"')) IS NULL THEN JSON_MODIFY(
+                COALESCE(C.[Exclusions], N'{}'),
                 CONCAT('$."', @UserId, '"'),
                 JSON_QUERY(JSON_MODIFY(N'[]', 'append $', @RiskCategory))
             )
             -- Category already excluded: keep the value
             WHEN @Exclude = 1 AND EXISTS (
                 SELECT 1
-                FROM OPENJSON(C.[BrowserHealthExclusions], CONCAT('$."', @UserId, '"'))
+                FROM OPENJSON(C.[Exclusions], CONCAT('$."', @UserId, '"'))
                 WHERE [value] = @RiskCategory
-            ) THEN C.[BrowserHealthExclusions]
+            ) THEN C.[Exclusions]
             WHEN @Exclude = 1 THEN JSON_MODIFY(
-                C.[BrowserHealthExclusions],
+                C.[Exclusions],
                 CONCAT('append $."', @UserId, '"'),
                 @RiskCategory
             )
             -- NULL removes the user's key
-            ELSE JSON_MODIFY(COALESCE(C.[BrowserHealthExclusions], N'{}'), CONCAT('$."', @UserId, '"'), NULL)
+            ELSE JSON_MODIFY(COALESCE(C.[Exclusions], N'{}'), CONCAT('$."', @UserId, '"'), NULL)
         END
     FROM
         [dbo].[Cipher] C

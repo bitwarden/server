@@ -13,7 +13,7 @@
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
     @Archives NVARCHAR(MAX) = NULL,
-    @BrowserHealthExclusions NVARCHAR(MAX) = NULL -- not used
+    @Exclusions NVARCHAR(MAX) = NULL -- not used
 AS
 BEGIN
     SET NOCOUNT ON

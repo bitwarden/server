@@ -26,7 +26,7 @@ public class CipherBrowserHealthExclusionRepository : BaseRepository, ICipherBro
 
         await using var connection = new SqlConnection(ConnectionString);
         return await connection.ExecuteScalarAsync<int>(
-            "[dbo].[Cipher_UpdateManyBrowserHealthExclusions]",
+            "[dbo].[Cipher_UpdateManyExclusions]",
             new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId, Exclude = true, RiskCategory = riskCategory },
             commandType: CommandType.StoredProcedure);
     }
