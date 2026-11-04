@@ -21,7 +21,7 @@ BEGIN
             WHEN @Exclude = 1 AND EXISTS (
                 SELECT 1
                 FROM OPENJSON(C.[Exclusions], CONCAT('$."', @UserId, '"'))
-                WHERE [value] = @RiskCategory
+                WHERE [value] COLLATE Latin1_General_BIN2 = @RiskCategory -- exact match, like EF
             ) THEN C.[Exclusions]
             WHEN @Exclude = 1 THEN JSON_MODIFY(
                 C.[Exclusions],

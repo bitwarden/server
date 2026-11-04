@@ -38,6 +38,19 @@ public class CipherBrowserHealthExclusionRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
+    public async Task ExcludeAsync_SameRiskCategoryDifferentCase_StoresBoth(
+        ICipherBrowserHealthExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository)
+    {
+        var user = await userRepository.CreateTestUserAsync();
+        var cipher = await CreateCipherAsync(cipherRepository, user.Id);
+        await sut.ExcludeAsync([cipher.Id], user.Id, "weak");
+
+        await sut.ExcludeAsync([cipher.Id], user.Id, "Weak");
+
+        Assert.Equal(["weak", "Weak"], RiskCategories(await cipherRepository.GetByIdAsync(cipher.Id, user.Id)));
+    }
+
+    [DatabaseTheory, DatabaseData]
     public async Task ExcludeAsync_OrganizationCipher_ReturnsZero(
         ICipherBrowserHealthExclusionRepository sut, ICipherRepository cipherRepository, IUserRepository userRepository,
         IOrganizationRepository organizationRepository)
