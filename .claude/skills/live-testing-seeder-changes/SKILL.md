@@ -59,7 +59,7 @@ RUN="${TMPDIR:-/tmp}/seeder-run"; mkdir -p "$RUN"; chmod 700 "$RUN"
 dotnet run --project util/SeederUtility -- preset --name <name> --mangle > "$RUN/seed-<id>.out" 2> "$RUN/seed-<id>.err"; echo "exit=$?"
 grep -vi 'apikey' "$RUN/seed-<id>.out" | sed -E 's/[A-Za-z0-9]{30,}/<redacted>/g'
 grep -v $'\x1b' "$RUN/seed-<id>.err"
-rm "$RUN/seed-<id>".{out,err}
+rm "$RUN/seed-<id>".{out,err}   # only after the mangle-map and SSO-wiring reads below
 ```
 
 The same recipe and the `seed()` guard below apply to `organization` and `individual` runs when regression.md names one. Keep the two streams apart; the CLI separates them on purpose (`ConsoleOutput`, `Program.PrintBanner`). Stdout holds the result rows: IDs, owner, password, counts, the ApiKey and Stripe IDs. Stderr holds the ANSI banner, the `--- Mangled Data Map` block, the SSO wiring block and errors. Every banner line starts with an ESC byte, so `grep -v $'\x1b'` on stderr drops the banner and keeps the rest; do not send stderr to `/dev/null`, because the mangle map and errors are there. The mangle-map header check reads the stderr file: `grep -q -- '--- Mangled Data Map' <file>.err`. There is no flag that turns the banner off. `--output json` exists only on `preset --list`: `preset --list --output json 2>/dev/null | jq -r '.organization[], .individual[]'` lists the preset names (the `build-seeded-databases.yml` workflow relies on the same split).
