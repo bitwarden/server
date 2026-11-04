@@ -154,8 +154,8 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
     }
 
     /// <param name="twoFactorRemember">
-    /// "1" asks the server to remember the device. Pass "0" to mirror a client re-authenticating
-    /// with a stored remember token, which is what clients actually send in that case.
+    /// "1" asks the server to issue a 2FA remember token. Pass "0" to mirror a client re-authenticating
+    /// with a stored 2FA remember token, which is what clients actually send in that case.
     /// </param>
     public async Task<HttpContext> ContextFromPasswordWithTwoFactorAsync(
         string username,
@@ -188,7 +188,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
 
     /// <summary>
     /// Completes a two-factor login and returns the access token alongside the <c>TwoFactorToken</c>
-    /// response field, which is the remember token when the server issued one.
+    /// response field, which is the 2FA remember token when the server issued one.
     /// </summary>
     /// <returns>
     /// <c>RememberToken</c> is null when the response carried no <c>TwoFactorToken</c> field at all —

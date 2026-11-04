@@ -18,12 +18,12 @@ namespace Bit.Identity.IntegrationTest.Endpoints;
 /// End-to-end coverage for the "remember this device" flow: a token issued by one login is honored
 /// by the next, and is refused when it should not be.
 /// </summary>
-public class RememberedDeviceLoginTests
+public class TwoFactorRememberTokenLoginTests
 {
-    private const string _testEmail = "test+rememberdevice@email.com";
+    private const string _testEmail = "test+twofactorremembertoken@email.com";
     private const string _testPassword = "master_password_hash";
     private const string _userEmailTwoFactor =
-        """{"1": { "Enabled": true, "MetaData": { "Email": "test+rememberdevice@email.com"}}}""";
+        """{"1": { "Enabled": true, "MetaData": { "Email": "test+twofactorremembertoken@email.com"}}}""";
 
     /// <summary>
     /// The numeric value of <see cref="TwoFactorProviderType.Remember"/>.
@@ -76,7 +76,7 @@ public class RememberedDeviceLoginTests
     }
 
     /// <summary>
-    /// A two-factor login that asks to be remembered gets a token back.
+    /// A two-factor login that asks for a 2FA remember token gets one back.
     /// </summary>
     [Fact]
     public async Task RememberRequested_ResponseCarriesRememberToken()
@@ -122,8 +122,8 @@ public class RememberedDeviceLoginTests
     }
 
     /// <summary>
-    /// A login that presents a remember token must not be issued another one, or an active user's
-    /// remember-me would renew forever. Replayed with and without asking to be remembered again, since
+    /// A login that presents a 2FA remember token must not be issued another one, or an active user's
+    /// 2FA remember token would renew forever. Replayed with and without asking for another 2FA remember token, since
     /// a client can send <c>TwoFactorRemember=1</c> regardless.
     /// </summary>
     [Theory]
@@ -208,22 +208,22 @@ public class RememberedDeviceLoginTests
     }
 
     /// <summary>
-    /// Using a recovery code tears two-factor down, and the user's remembered devices
-    /// stop being remembered with it.
+    /// Using a recovery code tears two-factor down, and the user's 2FA remember tokens
+    /// stop being honored with it.
     /// </summary>
     /// <remarks>
     /// The replay happens <em>after</em> two-factor is re-enabled, deliberately. While the account
     /// has no second factor, no challenge is issued at all and the replay would log in on the
     /// password alone, so it would say nothing about whether the revocation worked.
     /// <para>
-    /// The recovery login is sent with and without asking to be remembered. Either way it must not
-    /// come back with a new remember token, which would undo the revocation for that device.
+    /// The recovery login is sent with and without asking for a 2FA remember token. Either way it must not
+    /// come back with a new 2FA remember token, which would undo the revocation for that device.
     /// </para>
     /// </remarks>
     [Theory]
     [InlineData("0")]
     [InlineData("1")]
-    public async Task RecoveryCodeTeardown_RevokesRememberedDevices(string twoFactorRemember)
+    public async Task RecoveryCodeTeardown_RevokesTwoFactorRememberTokens(string twoFactorRemember)
     {
         var (factory, user) = await CreateFactoryWithTwoFactorUserAsync();
         var userRepository = factory.Services.GetRequiredService<IUserRepository>();
@@ -252,7 +252,7 @@ public class RememberedDeviceLoginTests
             Assert.False(teardownBody.RootElement.TryGetProperty("TwoFactorToken", out _));
         }
 
-        // Put a second factor back, so the replay below is decided by the remembered-device state
+        // Put a second factor back, so the replay below is decided by the 2FA remember token state
         // rather than by the account simply having no second factor.
         var recoveredUser = await userRepository.GetByEmailAsync(_testEmail);
         Assert.NotNull(recoveredUser);
@@ -300,8 +300,8 @@ public class RememberedDeviceLoginTests
         using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = body.RootElement;
 
-        // A refused remember token falls back to a challenge rather than a generic auth failure:
-        // the password was fine, the device just is not remembered.
+        // A refused 2FA remember token falls back to a challenge rather than a generic auth failure:
+        // the password was fine, the 2FA remember token is just no longer honored.
         Assert.False(root.TryGetProperty("access_token", out _));
         var error = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
         Assert.Equal("Two factor required.", error);

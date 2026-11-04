@@ -6,7 +6,7 @@ using Quartz;
 namespace Bit.Admin.Auth.Jobs;
 
 /// <summary>
-/// Clears out remember-token rows whose expiry has passed. Hygiene rather than correctness — an
+/// Clears out `TwoFactorRememberToken` rows whose expiry has passed. Hygiene rather than correctness — an
 /// expired row is refused at validation time regardless, the row count is bounded by the number of
 /// devices, and the expiry index makes the sweep cheap. Weekly is sufficient.
 /// </summary>

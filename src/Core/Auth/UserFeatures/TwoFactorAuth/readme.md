@@ -2,27 +2,33 @@
 
 This area of the codebase covers enrollment and management of the multi-factor authentication providers Bitwarden supports — Authenticator (TOTP), YubiKey OTP, Duo (personal and organization), WebAuthn, and Email — plus supporting flows such as recovery codes, login-time challenges, and administrative resets. The sections below document specific aspects of the 2FA domain.
 
-## Remembered devices
+## 2FA remember tokens
 
-A user completing 2FA can ask for the device to be remembered. The server records the device in `TwoFactorRememberToken` — one row per `(UserId, DeviceId)` — and issues a `TwoFactorRememberTokenable` carrying a copy of that row's `Stamp`. On a later login the client presents the token as `TwoFactorProviderType.Remember` and skips the challenge.
+### Issuance
+
+When a user completes 2FA, they can optionally select the "Don't ask again on this device for 30 days" checkbox on the `/2fa` screen. When this box is checked, the server records a row in the `TwoFactorRememberToken` table — one row per `(UserId, DeviceId)` — and issues a 2FA remember token (see `TwoFactorRememberTokenable`) carrying a copy of that row's `Stamp`. On a later login the client presents the token as `TwoFactorProviderType.Remember` and skips the 2FA challenge.
 
 ### Revocation
 
-The token is only honored while the stamp it carries still matches the row's. `IRevokeTwoFactorRememberTokensCommand.RevokeAllForUserAsync` writes a new stamp to every row for a user, which stops every remember token recorded in those rows from being honored at once. The rows are kept, so `CreationDate` still records when each device was first remembered and `RevisionDate` records when it was cut off.
+A 2FA remember token is only honored while the `Stamp` it carries still matches its corresponding `TwoFactorRememberToken` row. `IRevokeTwoFactorRememberTokensCommand.RevokeAllForUserAsync` writes a new `Stamp` to every row for a user, which stops every 2FA remember token issued against these rows from being honored at once. The rows are kept, so `CreationDate` still records when each device was first issued a 2FA remember token and `RevisionDate` records when it was cut off.
 
-Revocation is deliberately narrow. It affects remember-me only — access tokens, refresh tokens, and live sessions are untouched, so it does not sign the user out anywhere. Their devices simply have to complete 2FA again on the next login.
+Three flows revoke, all of them teardowns that leave the account with no effective second factor:
 
-Three flows revoke, all of them teardowns that leave the account with no second factor:
+| Flow                                                   | Where                                       |
+| ------------------------------------------------------ | ------------------------------------------- |
+| An administrator resets a member's 2FA                 | `ResetUserTwoFactorCommand.ResetAsync`      |
+| A user disables 2FA with a recovery code               | `UserService.RecoverTwoFactorAsync`         |
+| A user removes a provider and 2FA is no longer enabled | `UserService.DisableTwoFactorProviderAsync` |
 
-| Flow | Where |
-| --- | --- |
-| An administrator resets a member's 2FA | `ResetUserTwoFactorCommand.ResetAsync` |
-| A user disables 2FA with a recovery code | `UserService.RecoverTwoFactorAsync` |
-| A user removes their **last** 2FA provider | `UserService.DisableTwoFactorProviderAsync` |
+Removing a provider does **not** revoke if the user still has working 2FA, so their 2FA remember tokens stay valid. A provider that requires premium does not count when the user has no premium access, so removing the only non-premium provider revokes even though a premium-only provider remains.
 
-Removing one of several providers does **not** revoke: the user still has working 2FA, so their devices stay remembered. Untrusting a device (Trusted Device Encryption) does not revoke either — that is a separate mechanism.
+A password change or account key rotation also stops every 2FA remember token from being honored, without a call to `RevokeAllForUserAsync`. Each `TwoFactorRememberTokenable` carries a copy of `User.SecurityStamp` from the time it was issued. The server compares that copy with the current `User.SecurityStamp` on every use. Both events rotate `User.SecurityStamp`, so no existing 2FA remember token matches.
 
-Two further properties hold without any explicit call. A password change or account key rotation rotates `User.SecurityStamp`, which remember tokens also carry and which is compared on every use. And while the account has no 2FA at all, whether its own or enforced by its organization, no second factor is requested at login, so a remember token is not consulted.
+Untrusting a device (Trusted Device Encryption) does not revoke 2FA remember tokens — that is a separate mechanism.
+
+### Cleanup
+
+Revoked `TwoFactorRememberToken` rows stay until their `ExpirationDate` passes. `DeleteExpiredTwoFactorRememberTokensJob` then deletes them.
 
 ## User Verification
 
@@ -81,14 +87,14 @@ Replays of a still-valid token against the same `(UserId, ProviderType)` are int
 
 Every per-provider 2FA management endpoint follows the same shape:
 
-| Provider       | GET (mints)                                   | Chain (replays)                            | PUT (replays)                                                                     | DELETE (replays)                                                                         |
-| -------------- | --------------------------------------------- | ------------------------------------------ | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Authenticator  | `POST /two-factor/get-authenticator`          | —                                          | `PUT /two-factor/authenticator`                                                   | `DELETE /two-factor/authenticator`                                                       |
-| YubiKey        | `POST /two-factor/get-yubikey`                | —                                          | `PUT /two-factor/yubikey`                                                         | `DELETE /two-factor/yubikey`                                                             |
-| Duo (personal) | `POST /two-factor/get-duo`                    | —                                          | `PUT /two-factor/duo`                                                             | `DELETE /two-factor/duo`                                                                 |
-| Duo (org)      | `POST /organizations/{id}/two-factor/get-duo` | —                                          | `PUT /organizations/{id}/two-factor/duo`                                          | `DELETE /organizations/{id}/two-factor/duo`                                              |
-| WebAuthn       | `POST /two-factor/get-webauthn`               | `POST /two-factor/get-webauthn-challenge`  | `PUT /two-factor/webauthn`                                                        | `DELETE /two-factor/webauthn` (per-credential), `DELETE /two-factor/webauthn/all` (bulk) |
-| Email          | `POST /two-factor/get-email`                  | `POST /two-factor/send-email`              | `PUT /two-factor/email`                                                           | `DELETE /two-factor/email`                                                               |
+| Provider       | GET (mints)                                   | Chain (replays)                           | PUT (replays)                            | DELETE (replays)                                                                         |
+| -------------- | --------------------------------------------- | ----------------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Authenticator  | `POST /two-factor/get-authenticator`          | —                                         | `PUT /two-factor/authenticator`          | `DELETE /two-factor/authenticator`                                                       |
+| YubiKey        | `POST /two-factor/get-yubikey`                | —                                         | `PUT /two-factor/yubikey`                | `DELETE /two-factor/yubikey`                                                             |
+| Duo (personal) | `POST /two-factor/get-duo`                    | —                                         | `PUT /two-factor/duo`                    | `DELETE /two-factor/duo`                                                                 |
+| Duo (org)      | `POST /organizations/{id}/two-factor/get-duo` | —                                         | `PUT /organizations/{id}/two-factor/duo` | `DELETE /organizations/{id}/two-factor/duo`                                              |
+| WebAuthn       | `POST /two-factor/get-webauthn`               | `POST /two-factor/get-webauthn-challenge` | `PUT /two-factor/webauthn`               | `DELETE /two-factor/webauthn` (per-credential), `DELETE /two-factor/webauthn/all` (bulk) |
+| Email          | `POST /two-factor/get-email`                  | `POST /two-factor/send-email`             | `PUT /two-factor/email`                  | `DELETE /two-factor/email`                                                               |
 
 The Chain column captures interior steps that replay an existing UV token and return data the next call needs — for WebAuthn, `get-webauthn-challenge` replays the `get-webauthn` token and returns FIDO2 registration options for the PUT; for Email, `send-email` replays the `get-email` token and ships an OTP to the user's inbox that the PUT then carries back alongside the same UV token. No new UV token is minted at the chain step; the original one stays valid through the PUT.
 
