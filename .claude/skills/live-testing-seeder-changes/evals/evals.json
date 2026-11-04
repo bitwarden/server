@@ -1,0 +1,133 @@
+{
+  "skill_name": "live-testing-seeder-changes",
+  "evals": [
+    {
+      "id": 1,
+      "name": "access-shape-step-change",
+      "prompt": "I just changed CreateShapedGroupsStep so later hot groups pick their department before drawing overlap members from the parent. Before I push, write me the regression test plan for this Seeder change: what to seed, what to check and in what order. Don't run anything yet. Save the plan as plan.md.",
+      "expected_output": "A plan that maps Steps/ to regression.md's access-shape row, seeds the scale.*-migrated-cyberdyne presets one at a time with --mangle, compares exact counts (Q9/Q12/Q13, grants, hot group sizes) with a baseline, runs the test suite, reads the DB only through exploring-bitwarden-data, and handles the ApiKey in CLI logs.",
+      "files": [],
+      "assertions": [
+        "Every seed command includes --mangle",
+        "Database reads go through the exploring-bitwarden-data skill",
+        "CLI logs are treated as carrying the org ApiKey",
+        "Seeds run one at a time",
+        "Plan never proposes writing to, resetting or cleaning the local database",
+        "Plan has Claude run the seeds and checks instead of handing commands to the developer",
+        "Plan checks that the Playwright MCP is connected before any browser work and stops if it is not",
+        "Uses regression.md to pick presets and assertions",
+        "Seeds the scale.*-migrated-cyberdyne presets",
+        "Expects exact count matches against a baseline for access-shape presets",
+        "Checks hot group sizes"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "validator-rule-variant-matrix",
+      "prompt": "A PR reviewer asked me to add a PresetValidator rule that rejects `defaultCollections.sizes: []`. Write the end-to-end test plan you'd follow to prove the rule works on real seeds and that the shipped presets still seed exactly the same. Plan only: don't seed, query or build anything. Save it as plan.md.",
+      "expected_output": "A plan with unit tests plus fault injection, a temp-preset variant (untracked folder, rebuild because presets are embedded, --no-build seeding, proof no org row was written, cleanup), shipped default-collections presets seeded with --mangle and compared to a baseline (Q12 invariants), read-only SQL via exploring-bitwarden-data.",
+      "files": [],
+      "assertions": [
+        "Every seed command includes --mangle",
+        "Database reads go through the exploring-bitwarden-data skill",
+        "CLI logs are treated as carrying the org ApiKey",
+        "Seeds run one at a time",
+        "Plan never proposes writing to, resetting or cleaning the local database",
+        "Plan has Claude run the seeds and checks instead of handing commands to the developer",
+        "Plan checks that the Playwright MCP is connected before any browser work and stops if it is not",
+        "Adds a PresetValidatorTests case and proves it with fault injection",
+        "Seeds a temp variant from an untracked preset folder and rebuilds because presets are embedded",
+        "Proves the rejected variant wrote no org row",
+        "Re-seeds shipped default-collections presets and compares Q12",
+        "Cleans up temp presets and checks git status"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "composer-and-scene-with-web-vault",
+      "prompt": "I touched CipherComposer's login URI rate and the SeederApi SingleOrganizationScene in the same branch. Write a plan for regression testing both end to end, including the web vault and Access Intelligence. Plan only: don't run commands that touch the database, the SeederApi or the browser. Save it as plan.md.",
+      "expected_output": "A plan using regression.md rows for CipherComposer and scenes, an Enterprise preset for Access Intelligence (not a Families org), SeederApi on :5047 with credentials read from user-secrets without echoing and responses redacted, Playwright web vault checks with token-safe console handling, HIBP request-volume caveat, and the 'Claude runs it' rule.",
+      "files": [],
+      "assertions": [
+        "Every seed command includes --mangle",
+        "Database reads go through the exploring-bitwarden-data skill",
+        "CLI logs are treated as carrying the org ApiKey",
+        "Seeds run one at a time",
+        "Plan never proposes writing to, resetting or cleaning the local database",
+        "Plan has Claude run the seeds and checks instead of handing commands to the developer",
+        "Plan checks that the Playwright MCP is connected before any browser work and stops if it is not",
+        "Uses regression.md rows for CipherComposer and scenes",
+        "Runs Access Intelligence on an Enterprise org, not a Families one",
+        "Reads SeederApi credentials from user-secrets without printing them",
+        "Redacts SeederApi responses",
+        "Notes the HIBP request volume limit"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "sso-step-change-login-in-scope",
+      "prompt": "I changed CreateSsoConfigStep to retry the IdP metadata fetch three times before throwing. Write the end-to-end test plan I should follow, including actually logging in through the local IdP as the seeded owner. Plan only: don't seed, query, edit dev files or open a browser. Save it as plan.md.",
+      "expected_output": "A plan that seeds features.local-sso with --mangle, asserts the SsoConfig row per regression.md, shows the dev/.env and authsources.php edits from the CLI's SSO wiring block and waits for the developer, restarts the IdP with the compose idp profile, checks the IdP metadata URL and the SP org URL, logs in through the IdP with the Playwright MCP, and verifies the SsoUser row by UserId and ExternalId.",
+      "files": [],
+      "assertions": [
+        "Every seed command includes --mangle",
+        "Database reads go through the exploring-bitwarden-data skill",
+        "CLI logs are treated as carrying the org ApiKey",
+        "Seeds run one at a time",
+        "Plan never proposes writing to, resetting or cleaning the local database",
+        "Plan has Claude run the seeds and checks instead of handing commands to the developer",
+        "Plan checks that the Playwright MCP is connected before any browser work and stops if it is not",
+        "Seeds features.local-sso with --mangle and asserts the SsoConfig row per regression.md",
+        "Includes an SSO login through the local IdP driven by the Playwright MCP",
+        "Shows the dev/.env and authsources.php edits and waits for the developer instead of editing them",
+        "Restarts the IdP with the compose idp profile and checks the IdP metadata URL and the SP org URL",
+        "Verifies the SsoUser row by UserId and ExternalId",
+        "Says GUIDs are copied from tool output, not retyped",
+        "Never prints values from dev/.env or user-secrets"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "composer-rate-change-sso-out-of-scope",
+      "prompt": "I raised UriPer100Logins in CipherComposer to 85 after re-measuring prod and updated Data/README.md. Write the regression plan that proves the generated presets still seed and the login content shares land where the README says, including a look at a few logins in the web vault. Plan only: don't seed, query or open a browser. Save it as plan.md.",
+      "expected_output": "A plan that seeds scale.xs-central-perk plus one preset with personal ciphers per regression.md's CipherComposer row, checks the URI share with the Data LIKE pattern from regression.md, treats cipher-count drift across mangled runs as a known non-regression, opens a few logins in the web vault by route and reads URIs from input values, and does not seed features.local-sso, wire the IdP or plan an SSO login.",
+      "files": [],
+      "assertions": [
+        "Every seed command includes --mangle",
+        "Database reads go through the exploring-bitwarden-data skill",
+        "CLI logs are treated as carrying the org ApiKey",
+        "Seeds run one at a time",
+        "Plan never proposes writing to, resetting or cleaning the local database",
+        "Plan has Claude run the seeds and checks instead of handing commands to the developer",
+        "Plan checks that the Playwright MCP is connected before any browser work and stops if it is not",
+        "Does not seed features.local-sso, wire the IdP or plan an SSO login",
+        "Seeds scale.xs-central-perk plus one preset with personal ciphers per regression.md's CipherComposer row",
+        "Checks the URI share with the \"Uris\":[{ Data LIKE pattern from regression.md",
+        "Treats cipher-count drift across mangled runs as a known non-regression",
+        "Opens items in the web vault by route and reads URIs from input values"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "stripe-trial-days-canary",
+      "prompt": "I changed CreateOrganizationBillingStep so the trial length comes from --trial-days instead of a constant. Plan the end-to-end regression for the org Stripe path, including the canary seed. Plan only: don't seed, query, or call Stripe. Save it as plan.md.",
+      "expected_output": "A plan that asks the developer before any --stripe-billing run and says it creates real customers in the shared Stripe test account, names globalSettings.PricingUri as a prerequisite, compares a --stripe-billing seed with a plain seed of the same preset, checks Gateway=0, cus_ and sub_ IDs and ExpirationDate against the trial length, reports an orphaned org from an expired key without cleaning it, and includes no SSO seeding or IdP wiring.",
+      "files": [],
+      "assertions": [
+        "Every seed command includes --mangle",
+        "Database reads go through the exploring-bitwarden-data skill",
+        "CLI logs are treated as carrying the org ApiKey",
+        "Seeds run one at a time",
+        "Plan never proposes writing to, resetting or cleaning the local database",
+        "Plan has Claude run the seeds and checks instead of handing commands to the developer",
+        "Plan checks that the Playwright MCP is connected before any browser work and stops if it is not",
+        "Asks the developer before any --stripe-billing run and says it creates real customers in the shared Stripe test account",
+        "Names globalSettings.PricingUri as a prerequisite",
+        "Compares a --stripe-billing seed with a plain seed of the same preset",
+        "Checks Gateway=0, cus_ and sub_ IDs, and ExpirationDate against the trial length",
+        "Reports an orphaned org from an expired key without cleaning it",
+        "Does not include SSO seeding or IdP wiring"
+      ]
+    }
+  ]
+}
