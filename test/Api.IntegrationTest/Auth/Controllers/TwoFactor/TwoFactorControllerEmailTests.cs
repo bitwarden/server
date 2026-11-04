@@ -849,39 +849,48 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
     public async Task DeleteEmail_TwoFactorAuthNoLongerEnabled_RevokesTwoFactorRememberTokens()
     {
         await EnrollUserInEmail();
-        var user = (await _userRepository.GetByEmailAsync(_userEmail))!;
+        var (device, _) = await SeedTwoFactorRememberTokenAsync("stamp-before-teardown");
 
-        var deviceRepository = _factory.GetService<IDeviceRepository>();
-        var rememberTokenRepository = _factory.GetService<ITwoFactorRememberTokenRepository>();
+        await DeleteEmailProviderAsync();
 
-        var device = await deviceRepository.CreateAsync(new Device
-        {
-            UserId = user.Id,
-            Name = "chrome-test",
-            Type = DeviceType.ChromeBrowser,
-            Identifier = Guid.NewGuid().ToString(),
-            Active = true,
-            LastActivityDate = DateTime.UtcNow,
-        });
-        await rememberTokenRepository.UpsertAsync(new TwoFactorRememberToken
-        {
-            UserId = user.Id,
-            DeviceId = device.Id,
-            Stamp = "stamp-before-teardown",
-            ExpirationDate = DateTime.UtcNow.AddDays(30),
-        });
+        await AssertTwoFactorRememberTokenStampAsync(device, expectRotated: true, "stamp-before-teardown");
+    }
 
-        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-email",
-            new { MasterPasswordHash = MasterPasswordHash });
-        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "email");
+    /// <summary>
+    /// Removing one provider while another still works leaves 2FA enabled, so the 2FA remember token is
+    /// not revoked. Uses the real <c>TwoFactorIsEnabledQuery</c>; the unit tests mock it.
+    /// </summary>
+    [Fact]
+    public async Task DeleteEmail_OtherProviderRemains_DoesNotRevokeTwoFactorRememberTokens()
+    {
+        await SetUserTwoFactorProvidersJsonAsync(_userRepository, _userEmail,
+            CombineProvidersJson(
+                BuildEmailProvidersJson(_userEmail),
+                BuildAuthenticatorProvidersJson("JBSWY3DPEHPK3PXP")));
+        var (device, _) = await SeedTwoFactorRememberTokenAsync("stamp-untouched");
 
-        var disableResponse = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/email",
-            new TwoFactorEmailDeleteRequestModel { UserVerificationToken = uvToken });
-        Assert.Equal(HttpStatusCode.NoContent, disableResponse.StatusCode);
+        await DeleteEmailProviderAsync();
 
-        var row = await rememberTokenRepository.GetByUserIdDeviceIdAsync(user.Id, device.Id);
-        Assert.NotNull(row);
-        Assert.NotEqual("stamp-before-teardown", row.Stamp);
+        await AssertTwoFactorRememberTokenStampAsync(device, expectRotated: false, "stamp-untouched");
+    }
+
+    /// <summary>
+    /// A provider that requires premium does not count for a user without premium. Removing Email leaves
+    /// only YubiKey, so 2FA is no longer effectively enabled and the 2FA remember token is revoked, even
+    /// though a provider remains. Uses the real <c>TwoFactorIsEnabledQuery</c>; the unit tests mock it.
+    /// </summary>
+    [Fact]
+    public async Task DeleteEmail_OnlyPremiumProviderRemainsAndUserHasNoPremium_RevokesTwoFactorRememberTokens()
+    {
+        await SetUserTwoFactorProvidersJsonAsync(_userRepository, _userEmail,
+            CombineProvidersJson(
+                BuildEmailProvidersJson(_userEmail),
+                BuildYubiKeyProvidersJson()));
+        var (device, _) = await SeedTwoFactorRememberTokenAsync("stamp-before-teardown");
+
+        await DeleteEmailProviderAsync();
+
+        await AssertTwoFactorRememberTokenStampAsync(device, expectRotated: true, "stamp-before-teardown");
     }
 
     // ---------------------------------------------------------------------
@@ -893,6 +902,57 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
     private Task EnrollUserInEmail() =>
         SetUserTwoFactorProvidersJsonAsync(
             _userRepository, _userEmail, BuildEmailProvidersJson(_userEmail));
+
+    /// <summary>Merges single-provider JSON objects into one object holding all of the providers.</summary>
+    private static string CombineProvidersJson(params string[] providersJson) =>
+        "{" + string.Join(",", providersJson.Select(json => json[1..^1])) + "}";
+
+    private async Task<(Device Device, TwoFactorRememberToken Row)> SeedTwoFactorRememberTokenAsync(string stamp)
+    {
+        var user = await GetUserAsync();
+        var device = await _factory.GetService<IDeviceRepository>().CreateAsync(new Device
+        {
+            UserId = user.Id,
+            Name = "chrome-test",
+            Type = DeviceType.ChromeBrowser,
+            Identifier = Guid.NewGuid().ToString(),
+            Active = true,
+            LastActivityDate = DateTime.UtcNow,
+        });
+        var row = await _factory.GetService<ITwoFactorRememberTokenRepository>().UpsertAsync(
+            new TwoFactorRememberToken
+            {
+                UserId = user.Id,
+                DeviceId = device.Id,
+                Stamp = stamp,
+                ExpirationDate = DateTime.UtcNow.AddDays(30),
+            });
+        return (device, row);
+    }
+
+    private async Task DeleteEmailProviderAsync()
+    {
+        var uvToken = await GetEmailUserVerificationTokenAsync();
+        var response = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/email",
+            new TwoFactorEmailDeleteRequestModel { UserVerificationToken = uvToken });
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
+
+    private async Task AssertTwoFactorRememberTokenStampAsync(Device device, bool expectRotated, string originalStamp)
+    {
+        var user = await GetUserAsync();
+        var row = await _factory.GetService<ITwoFactorRememberTokenRepository>()
+            .GetByUserIdDeviceIdAsync(user.Id, device.Id);
+        Assert.NotNull(row);
+        if (expectRotated)
+        {
+            Assert.NotEqual(originalStamp, row.Stamp);
+        }
+        else
+        {
+            Assert.Equal(originalStamp, row.Stamp);
+        }
+    }
 
     private async Task<User> GetUserAsync()
     {
