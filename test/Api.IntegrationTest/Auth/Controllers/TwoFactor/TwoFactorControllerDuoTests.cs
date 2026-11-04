@@ -74,6 +74,28 @@ public class TwoFactorControllerDuoTests : IClassFixture<ApiApplicationFactory>,
         Assert.Null(refreshed!.GetTwoFactorProvider(TwoFactorProviderType.Duo));
     }
 
+    /// <summary>
+    /// Removing the only provider leaves 2FA no longer enabled, so the user's 2FA remember tokens are
+    /// revoked. The user has no premium, so the premium-only provider does not count either way.
+    /// </summary>
+    [Fact]
+    public async Task DeleteDuo_TwoFactorAuthNoLongerEnabled_RevokesTwoFactorRememberTokens()
+    {
+        await EnrollUserInDuo();
+        var device = await SeedTwoFactorRememberTokenAsync(_factory, _userEmail, "stamp-before-teardown");
+
+        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-duo",
+            new { MasterPasswordHash = MasterPasswordHash });
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "duo");
+
+        var disableResponse = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/duo",
+            new TwoFactorDuoDeleteRequestModel { UserVerificationToken = uvToken });
+        Assert.Equal(HttpStatusCode.NoContent, disableResponse.StatusCode);
+
+        await AssertTwoFactorRememberTokenRotatedAsync(_factory, _userEmail, device, "stamp-before-teardown");
+    }
+
     [Fact]
     public async Task PutDuo_ValidTokenAndPremium_UpdatesProvider()
     {

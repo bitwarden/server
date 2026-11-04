@@ -204,6 +204,28 @@ public class TwoFactorControllerWebAuthnTests : IClassFixture<ApiApplicationFact
         Assert.Null(refreshed!.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn));
     }
 
+    /// <summary>
+    /// Removing the only provider leaves 2FA no longer enabled, so the user's 2FA remember tokens are
+    /// revoked. Covers the bulk-disable endpoint.
+    /// </summary>
+    [Fact]
+    public async Task DeleteWebAuthnAll_TwoFactorAuthNoLongerEnabled_RevokesTwoFactorRememberTokens()
+    {
+        await EnrollUserInWebAuthn();
+        var device = await SeedTwoFactorRememberTokenAsync(_factory, _userEmail, "stamp-before-teardown");
+
+        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-webauthn",
+            new { MasterPasswordHash = MasterPasswordHash });
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "webAuthn");
+
+        var disableResponse = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/webauthn/all",
+            new TwoFactorWebAuthnDeleteAllRequestModel { UserVerificationToken = uvToken });
+        Assert.Equal(HttpStatusCode.NoContent, disableResponse.StatusCode);
+
+        await AssertTwoFactorRememberTokenRotatedAsync(_factory, _userEmail, device, "stamp-before-teardown");
+    }
+
     [Fact]
     public async Task DeleteWebAuthnAll_SingleCredentialEnrollment_RemovesProvider()
     {

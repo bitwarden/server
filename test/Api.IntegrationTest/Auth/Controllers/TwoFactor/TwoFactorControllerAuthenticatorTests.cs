@@ -128,6 +128,34 @@ public class TwoFactorControllerAuthenticatorTests : IClassFixture<ApiApplicatio
         Assert.Null(refreshed!.GetTwoFactorProvider(TwoFactorProviderType.Authenticator));
     }
 
+    /// <summary>
+    /// Removing the only provider leaves 2FA no longer enabled, so the user's 2FA remember tokens are
+    /// revoked. Same <c>DisableTwoFactorProviderAsync</c> path as Email.
+    /// </summary>
+    [Fact]
+    public async Task DeleteAuthenticator_TwoFactorAuthNoLongerEnabled_RevokesTwoFactorRememberTokens()
+    {
+        await EnrollUserInAuthenticator();
+        var device = await SeedTwoFactorRememberTokenAsync(_factory, _userEmail, "stamp-before-teardown");
+
+        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-authenticator",
+            new { MasterPasswordHash = MasterPasswordHash });
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        var root = await ReadJsonRootAsync(getResponse);
+        var key = root.GetProperty("authenticator").GetProperty("key").GetString()!;
+        var uvToken = root.GetProperty("userVerificationToken").GetString()!;
+
+        var disableResponse = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/authenticator",
+            new TwoFactorAuthenticatorDeleteRequestModel
+            {
+                Key = key,
+                UserVerificationToken = uvToken,
+            });
+        Assert.Equal(HttpStatusCode.NoContent, disableResponse.StatusCode);
+
+        await AssertTwoFactorRememberTokenRotatedAsync(_factory, _userEmail, device, "stamp-before-teardown");
+    }
+
     [Fact]
     public async Task PutAuthenticator_ValidTokenAndCode_UpdatesProvider()
     {
