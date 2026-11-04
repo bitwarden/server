@@ -8,7 +8,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 /// <remarks>
 /// The following are validated, in this order:
 /// <list type="bullet">
-///     <item><see cref="InviteLinkRules.ValidateEligibility"/>: the invite link exists and its code
+///     <item><see cref="IInviteLinkValidationService.ValidateEligibility"/>: the invite link exists and its code
 ///     matches, its organization is enabled and supports invite links, the user's email domain is allowed, and the
 ///     email is verified.</item>
 ///     <item>The existing membership's status:
