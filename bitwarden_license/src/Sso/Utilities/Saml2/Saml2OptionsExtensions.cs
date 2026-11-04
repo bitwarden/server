@@ -7,7 +7,6 @@ using System.Xml;
 using Bit.Core;
 using Bit.Core.Settings;
 using Bitwarden.Server.Sdk.Features;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Sustainsys.Saml2;
 using Sustainsys.Saml2.AspNetCore2;
 using Sustainsys.Saml2.WebSso;
@@ -153,7 +152,10 @@ public static class Saml2OptionsExtensions
         // or login-initiation request. A request with a message must pass the inspection below.
         try
         {
-            var requestData = context.ToHttpRequestData(new NoCookieManager(), _ => null);
+            // Sustainsys.Saml2 finds the binding and reads the SAML message from an HttpRequestData.
+            // The handler uses the same GetBinding and Unbind calls, so this method reads the same message.
+            // This method needs no RelayState cookie, so it passes NoopCookieManager and no real cookie decryptor.
+            var requestData = context.ToHttpRequestData(new NoopCookieManager(), _ => null);
             var binding = options.Notifications.GetBinding(requestData);
             if (binding == null)
             {
@@ -217,21 +219,6 @@ public static class Saml2OptionsExtensions
         }
 
         return true;
-    }
-
-    // Reading the message needs no cookie. A cookie reader that finds none keeps Sustainsys.Saml2 from
-    // decrypting the RelayState cookie.
-    private sealed class NoCookieManager : ICookieManager
-    {
-        public string GetRequestCookie(HttpContext context, string key) => null;
-
-        public void AppendResponseCookie(HttpContext context, string key, string value, CookieOptions options)
-        {
-        }
-
-        public void DeleteCookie(HttpContext context, string key, CookieOptions options)
-        {
-        }
     }
 
     /// <summary>
