@@ -37,7 +37,7 @@ public class TwoFactorLoginRememberTokenTests : IClassFixture<IdentityApplicatio
     }
 
     /// <summary>
-    /// The remember-me token returned by an earlier two-factor login completes a later login on its own.
+    /// The 2FA remember token returned by an earlier two-factor login completes a later login on its own.
     /// </summary>
     [Fact]
     public async Task TokenEndpoint_GrantTypePassword_ValidRememberToken_Success()

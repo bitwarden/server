@@ -846,7 +846,7 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
     }
 
     [Fact]
-    public async Task DeleteEmail_RemovesLastProvider_RevokesRememberedDevices()
+    public async Task DeleteEmail_TwoFactorAuthNoLongerEnabled_RevokesTwoFactorRememberTokens()
     {
         await EnrollUserInEmail();
         var user = (await _userRepository.GetByEmailAsync(_userEmail))!;
