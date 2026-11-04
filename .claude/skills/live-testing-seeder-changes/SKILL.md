@@ -20,14 +20,14 @@ If it is not, stop: tell the developer to install it (`claude plugin install pla
 - Read the database only through the `exploring-bitwarden-data` skill. Write to it only through the Seeder: the CLI (`preset`, `organization`, `individual`) and SeederApi create scenes. Never reset, clean or delete data by any other path, including the SeederApi `DELETE` endpoints, and never offer to; say what needs clearing and wait.
 - Run the seeds, queries and browser checks yourself. Hand the developer a command only when the permission system blocks it.
 - Pass `--mangle` on every seed, so runs stay additive and a preset can be re-seeded.
-- The CLI prints the org ApiKey row on stdout. Redirect stdout and stderr to separate temp files, read stdout through the step 2 grep, which hides only that row, and delete both files. Everything else it prints is mock data, including the master password, which is the documented default.
+- The CLI prints the org ApiKey row on stdout. Redirect stdout and stderr to separate temp files, read stdout through the step 2 grep, which hides that row and masks any key-length token, and delete both files. Everything else it prints is mock data, including the master password, which is the documented default.
 - Vault console and network output holds `access_token` URLs from the SignalR hub. Always pass `filename:` under `$RUN` to `browser_console_messages` and `browser_network_requests`, never print either inline, and read the file only through `grep -v 'access_token'`. `.playwright-mcp/*.log` holds the same output; never `Read` or `cat` it, and step 9 deletes it.
 - Files under `dev/` (`.env`, `authsources.php`, `saml20-sp-remote.php`, `secrets.json`) are the developer's and gitignored. Never print values from them to the console. Show the edit; the developer applies it.
 - When reading user-secrets or a connection string, parse the one key you need with `sed -nE`; on a miss print `<not found>`, never the value. Never run `dotnet user-secrets list` unfiltered.
 - `BulkCommitter` has no transaction. Never kill a seed mid-commit.
 - Give every `dotnet run`, `dotnet build` and `dotnet test` a 10-minute timeout (the first build compiles the Rust SDK). The 2-minute default would kill a long seed mid-commit.
 - Copy GUIDs from tool output; never retype them.
-- Keep every temp file in one folder, `RUN="${TMPDIR:-/tmp}/seeder-run"; mkdir -p "$RUN"`. Set it at the top of each command, because shell state does not persist between calls. Step 9 deletes it with one `rm -rf`, so no glob can abort the cleanup. Run scripts and loops under `bash`: the session shell may be zsh, where an unmatched glob aborts the whole command and an unquoted variable is not split into words.
+- Keep every temp file in one folder, `RUN="${TMPDIR:-/tmp}/seeder-run"; mkdir -p "$RUN"; chmod 700 "$RUN"`. Set it at the top of each command, because shell state does not persist between calls. Step 9 deletes it with one `rm -rf`, so no glob can abort the cleanup. Run scripts and loops under `bash`: the session shell may be zsh, where an unmatched glob aborts the whole command and an unquoted variable is not split into words.
 
 ## Seeder documentation
 
@@ -55,9 +55,9 @@ Open each document when its row says; read `util/Seeder/CLAUDE.md` and regressio
 ### 2. Seed one preset at a time
 
 ```bash
-RUN="${TMPDIR:-/tmp}/seeder-run"; mkdir -p "$RUN"
+RUN="${TMPDIR:-/tmp}/seeder-run"; mkdir -p "$RUN"; chmod 700 "$RUN"
 dotnet run --project util/SeederUtility -- preset --name <name> --mangle > "$RUN/seed-<id>.out" 2> "$RUN/seed-<id>.err"; echo "exit=$?"
-grep -vi 'apikey' "$RUN/seed-<id>.out"
+grep -vi 'apikey' "$RUN/seed-<id>.out" | sed -E 's/[A-Za-z0-9]{30,}/<redacted>/g'
 grep -v $'\x1b' "$RUN/seed-<id>.err"
 rm "$RUN/seed-<id>".{out,err}
 ```
