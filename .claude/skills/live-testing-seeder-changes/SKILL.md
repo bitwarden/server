@@ -112,28 +112,11 @@ Then match the running loop with `pgrep -f "[s]eed.sh"` (the brackets keep the p
 
 ### 7. Web vault
 
-1. Log in by selector: `browser_type` into `[data-testid="login-email-input"]`, then `[data-testid="login-master-password-input"]` with `submit: true`.
-2. Switch accounts by clearing `localStorage`, `sessionStorage` and every IndexedDB database, then `location.replace('<vault>/?r=<n>#/login')` with a new `<n>`. A hash-only change keeps the session.
-3. Skip onboarding gates by going straight to the route (`#/vault`, `#/organizations/<orgId>/vault`). Click "Skip" when the welcome tour appears; it swallows clicks until dismissed. The tour shows for accounts under 30 days old until that user acknowledges it, and clearing storage resets that, so every seeded account gets it.
-4. Lists are virtualized: scroll `main.cdk-virtual-scrollable` in `browser_evaluate` and collect rows. Open an item by `#/vault?collectionId=<c>&itemId=<id>&action=view` and press a real Escape before the next one. Input values are in `input.value`, not `innerText`. An identity's country is the last line of `[data-testid="address"]` (a read-only textarea) and its SSN is `[data-testid="ssn"]`; read both with `.value`.
-5. Access Intelligence (`#/organizations/<orgId>/access-intelligence`) needs `UseRiskInsights=1`, which Families plans lack. It sends one HIBP request per login, and large orgs fail on connection resets; that is client behavior, not seeded data.
-6. If the Playwright MCP has a persistent profile, every session shares it and Chromium locks it to one browser. Don't drive the browser from two sessions at once.
-7. Policy rows (`#/organizations/<orgId>/settings/policies`) are buttons named by title, description and On or Off. A `browser_evaluate` lookup for `bit-dialog` or `[role=dialog]` returned nothing for the policy drawer. Click the row with `browser_click` on a snapshot ref, read the drawer from the snapshot file (`spinbutton`, `checkbox` and `combobox` entries), and close it with `[data-testid="bit-dialog-dismiss"]`.
+Run the web vault checks in the plan. Drive the browser as [references/web-vault.md](references/web-vault.md) describes.
 
 ### 8. SSO login (when in scope)
 
-1. Seed `features.local-sso` with the step 2 recipe. The stderr output ends with an "SSO wiring" block: the login identifier, the org GUID for the Aspire `sso-org-id` parameter, the two `IDP_SP_*` lines for `dev/.env`, and the `authsources.php` entry for the owner. Copy the block before the `rm`. The steps below are the compose path.
-2. Show the developer the `.env` and `authsources.php` edits from that block, with a username and password you choose in place of `<username>:<password>`, and wait for them to say the edit is in place. The entry's `email` must match the seeded owner exactly, mangle prefix included, and its `uid` must be unique. `saml20-sp-remote.php` is a copy of its `.example`; if a failed `up` left a directory with that name, `rmdir` it first.
-3. Restart and check the IdP. Compose `version` and platform warnings are harmless, as is "Headers already sent" in the IdP log on metadata requests.
-
-   ```bash
-   (cd dev && docker compose --profile idp up -d)
-   curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8090/simplesaml/saml2/idp/metadata.php   # IdP up: 200
-   curl -s -o /dev/null -w '%{http_code}\n' http://localhost:51822/saml2/<orgId>                      # SP resolves the org: 200
-   ```
-
-4. In the vault: type the owner email, click `[data-testid="login-sso-button"]`, enter the identifier on `#/sso`, fill `#username` and `#password` on the IdP page with the values from step 8.2, then unlock on `#/lock` with `[data-testid="lock-master-password-input"]`.
-5. Verify through SQL: `dbo.SsoUser` has a row for the owner's `UserId` with `ExternalId` equal to the `uid` from `authsources.php`.
+When SSO is in scope (step 1.5), follow [references/sso-login.md](references/sso-login.md). Seed with the step 2 recipe and copy the "SSO wiring" block from stderr before the `rm`.
 
 ### 9. Report and clean up
 
