@@ -278,6 +278,9 @@ public static partial class FeatureFlagKeys
     public const string SecretsVersioning = "sm-1587-secrets-versioning";
 
     /* Skunkworks Team */
+    public const string DesktopWebAuthnClientWindows = "pm-46060-desktop-webauthn-client-windows";
+    public const string DesktopWebAuthnClientMacOs = "pm-46059-desktop-webauthn-client-macos";
+    public const string DesktopWebAuthnClientLinux = "pm-46061-desktop-webauthn-client-linux";
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
     public const string WindowsNativeCredentialSync = "windows-native-credential-sync";
 
