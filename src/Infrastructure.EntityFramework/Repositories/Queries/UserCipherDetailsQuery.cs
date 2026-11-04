@@ -147,13 +147,13 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
     }
 
 
-    internal static string GetExcludedRiskCategories(Guid? userId, string browserHealthExclusions)
+    internal static string GetExcludedRiskCategories(Guid? userId, string exclusionsJson)
     {
         try
         {
-            if (userId.HasValue && !string.IsNullOrWhiteSpace(browserHealthExclusions))
+            if (userId.HasValue && !string.IsNullOrWhiteSpace(exclusionsJson))
             {
-                var exclusions = JsonSerializer.Deserialize<Dictionary<Guid, List<string>>>(browserHealthExclusions);
+                var exclusions = JsonSerializer.Deserialize<Dictionary<Guid, List<string>>>(exclusionsJson);
                 if (exclusions.TryGetValue(userId.Value, out var riskCategories))
                 {
                     return JsonSerializer.Serialize(riskCategories);
