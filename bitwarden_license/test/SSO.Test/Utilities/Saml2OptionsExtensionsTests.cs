@@ -779,6 +779,34 @@ public class Saml2OptionsExtensionsTests
         Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
     }
 
+    // The PM42283_Rsa15Deprecation and PM42982_WantAssertionsSigned flags are independent. With the
+    // PM42982_WantAssertionsSigned flag off, the signature check reads only a plaintext assertion.
+    [Fact]
+    public async Task CouldHandleAsync_SignedPlaintextAssertionAndRsa15DeprecationFlagOnAndPM42982FlagOff_ReturnsTrue()
+    {
+        var signingCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test IdP");
+        var options = BuildOptions(wantAssertionsSigned: true, signingCertificate: signingCertificate);
+        var testContext = BuildPostContext(
+            BuildResponseXml(Saml2TestXml.BuildSignedAssertion(signingCertificate).OuterXml),
+            featureFlagEnabled: false, rsa15DeprecationFlag: true);
+
+        Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_UnsignedPlaintextAssertionAndRsa15DeprecationFlagOnAndPM42982FlagOff_Throws()
+    {
+        var signingCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test IdP");
+        var options = BuildOptions(wantAssertionsSigned: true, signingCertificate: signingCertificate);
+        var testContext = BuildPostContext(
+            BuildResponseXml(Saml2TestXml.BuildAssertionDocument().DocumentElement!.OuterXml),
+            featureFlagEnabled: false, rsa15DeprecationFlag: true);
+
+        var exception = await Assert.ThrowsAsync<Exception>(
+            () => options.CouldHandleAsync(Scheme, testContext.Context));
+        Assert.Equal("Cannot verify SAML assertion signature.", exception.Message);
+    }
+
     [Fact]
     public async Task CouldHandleAsync_PostWithBenignFormAndRsa15QueryMessageAndRsa15DeprecationFlagOn_Throws()
     {
