@@ -6,6 +6,9 @@ using Bit.Api.Auth.Models.Request;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Enums;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity.TokenProviders;
@@ -893,6 +896,26 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
         await AssertTwoFactorRememberTokenStampAsync(device, expectRotated: true, "stamp-before-teardown");
     }
 
+    /// <summary>
+    /// Both effects of removing a provider so that 2FA is no longer enabled happen together: the 2FA
+    /// remember tokens are revoked (before the save), and the user is revoked from organizations that
+    /// require 2FA (after it).
+    /// </summary>
+    [Fact]
+    public async Task DeleteEmail_TwoFactorAuthNoLongerEnabledWithTwoFactorPolicy_RevokesTokensAndOrganizationUser()
+    {
+        await EnrollUserInEmail();
+        var (device, _) = await SeedTwoFactorRememberTokenAsync("stamp-before-teardown");
+        var organizationUser = await JoinOrganizationRequiringTwoFactorAsync();
+
+        await DeleteEmailProviderAsync();
+
+        await AssertTwoFactorRememberTokenStampAsync(device, expectRotated: true, "stamp-before-teardown");
+        var revoked = await _factory.GetService<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(revoked);
+        Assert.Equal(OrganizationUserStatusType.Revoked, revoked.Status);
+    }
+
     // ---------------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------------
@@ -928,6 +951,36 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
                 ExpirationDate = DateTime.UtcNow.AddDays(30),
             });
         return (device, row);
+    }
+
+    /// <summary>
+    /// Adds the test user as a confirmed member of an organization that enforces the two-factor policy.
+    /// The organization needs a separate confirmed owner: the command that revokes non-compliant members
+    /// refuses to leave an organization without one, and reports that as an error result rather than
+    /// throwing, so the member would silently stay confirmed.
+    /// </summary>
+    private async Task<OrganizationUser> JoinOrganizationRequiringTwoFactorAsync()
+    {
+        var ownerEmail = $"two-factor-owner-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(ownerEmail);
+        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(
+            _factory,
+            plan: PlanType.EnterpriseAnnually,
+            ownerEmail: ownerEmail,
+            passwordManagerSeats: 10,
+            paymentMethod: PaymentMethodType.Card);
+
+        organization.UsePolicies = true;
+        await _factory.GetService<IOrganizationRepository>().ReplaceAsync(organization);
+        await _factory.GetService<IPolicyRepository>().CreateAsync(new Policy
+        {
+            OrganizationId = organization.Id,
+            Type = PolicyType.TwoFactorAuthentication,
+            Enabled = true,
+        });
+
+        return await OrganizationTestHelpers.CreateUserAsync(
+            _factory, organization.Id, _userEmail, OrganizationUserType.User);
     }
 
     private async Task DeleteEmailProviderAsync()
