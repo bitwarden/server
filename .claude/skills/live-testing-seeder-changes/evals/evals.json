@@ -128,6 +128,29 @@
         "Reports an orphaned org from an expired key without cleaning it",
         "Does not include SSO seeding or IdP wiring"
       ]
+    },
+    {
+      "id": 7,
+      "name": "plain-seed-request-delegates",
+      "prompt": "Can you seed me an org with about 50 users so I have something to log into?",
+      "expected_output": "Does not start a live test. Seeds through the seeding-bitwarden-data skill with one preset command and lists the logins.",
+      "files": [],
+      "assertions": [
+        "Does not plan baselines, a variant matrix, Playwright checks or a findings report",
+        "Seeds through the seeding-bitwarden-data skill"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "seeded-data-question-delegates",
+      "prompt": "How many ciphers did the Planet Express preset create in my local database?",
+      "expected_output": "Does not start a live test or seed anything. Answers with a read-only query through the exploring-bitwarden-data skill.",
+      "files": [],
+      "assertions": [
+        "Does not run dotnet run --project util/SeederUtility",
+        "Does not plan baselines, a variant matrix, Playwright checks or a findings report",
+        "Answers through the exploring-bitwarden-data skill"
+      ]
     }
   ]
 }
