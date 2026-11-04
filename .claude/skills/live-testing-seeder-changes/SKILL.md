@@ -1,7 +1,7 @@
 ---
 name: live-testing-seeder-changes
-description: Perform a live regression-test of a Bitwarden Seeder change e2e on a local stack. Seeds the presets regression.md maps to the change, compares counts with a baseline through read-only SQL, runs a variant matrix for validator and shape changes, exercises SeederApi scenes and the Stripe canary, checks the web vault with the Playwright MCP, logs in through the local IdP when the change touches SSO, and writes a findings report.
-when_to_use: Use for "regression testing the seeder", "e2e test this Seeder PR", "check the presets still seed the same", "run the null/empty matrix Seeder regression", "verify a review fix on real seeds", "verify the Seeder CLI"
+description: Perform a live regression-test of a Bitwarden Seeder change e2e on a local stack. Seeds the presets regression.md maps to the change, compares counts with a baseline through read-only SQL, runs a variant matrix for validator and shape changes, exercises SeederApi scenes and the Stripe canary, checks the web vault with the Playwright MCP, logs in through the local IdP when the change touches SSO, and writes a findings report. Use only when the user explicitly asks for a live or e2e test of a Seeder change. DO NOT use for ordinary seeding (use seeding-bitwarden-data) or for querying seeded data (use exploring-bitwarden-data).
+when_to_use: Use for "regression testing the seeder", "e2e test this Seeder PR", "run the null/empty matrix Seeder regression", "verify a review fix on real seeds"
 allowed-tools: Read, Skill, Write, Bash(dotnet test *), Bash(dotnet run --project util/SeederUtility:*)
 argument-hint: "[sso]"
 ---
