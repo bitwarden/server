@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Bit.Api.Dirt.Models.Request;
 using Bit.Api.Dirt.Models.Response;
 using Bit.Api.Dirt.Utilities;
 using Bit.Core.Context;
@@ -76,12 +77,88 @@ public class SlackIntegrationController(
         return new OrganizationIntegrationOAuthRedirectResponseModel(redirectUrl);
     }
 
+    /// <summary>
+    /// The OAuth callback Slack sends the browser to. It's a top-level navigation, so no bearer token is present and
+    /// the endpoint is anonymous. It only validates the state and hands the code to the web vault, which finishes
+    /// the setup through <see cref="CompleteAsync"/> as an authenticated Organization Owner.
+    /// </summary>
     [HttpGet("integrations/slack/create", Name = "SlackIntegration_Create")]
     [AllowAnonymous]
     public async Task<IActionResult> CreateAsync(
         [FromQuery] string? code,
         [FromQuery] string? state,
         [FromQuery] string? error)
+    {
+        var (_, integration) = await GetIntegrationForStateAsync(state);
+
+        if (integration.Configuration is not null)
+        {
+            return RedirectToVault(integration, IntegrationOAuthCallbackRedirect.AlreadyConnected);
+        }
+
+        // Slack returns "error" instead of "code" when the user declines consent
+        if (!string.IsNullOrEmpty(error) || string.IsNullOrEmpty(code))
+        {
+            return RedirectToVault(integration, IntegrationOAuthCallbackRedirect.Canceled);
+        }
+
+        return Redirect(IntegrationOAuthCallbackRedirect.BuildAuthorizedUrl(
+            globalSettings, integration.OrganizationId, IntegrationType.Slack, code, state!));
+    }
+
+    [HttpPost("{organizationId:guid}/integrations/slack/complete")]
+    public async Task<OrganizationIntegrationOAuthCompleteResponseModel> CompleteAsync(
+        Guid organizationId,
+        [FromBody] OrganizationIntegrationOAuthCompleteRequestModel model)
+    {
+        // Binds completion to an owner of the org the state was issued for, so a state sent to someone else is useless
+        if (!await currentContext.OrganizationOwner(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var (oAuthState, integration) = await GetIntegrationForStateAsync(model.State);
+        if (integration.OrganizationId != organizationId)
+        {
+            throw new NotFoundException();
+        }
+
+        if (integration.Configuration is not null)
+        {
+            return new OrganizationIntegrationOAuthCompleteResponseModel(IntegrationOAuthCallbackRedirect.AlreadyConnected);
+        }
+
+        // Each state can be redeemed once, whatever the outcome, so a leaked state cannot be replayed
+        if (!await nonceStore.TryConsumeAsync(integration.Id, oAuthState.Nonce))
+        {
+            throw new NotFoundException();
+        }
+
+        // Slack requires the same redirect URI the authorize request used
+        string? callbackUrl = BuildCallbackUrl();
+        if (string.IsNullOrEmpty(callbackUrl))
+        {
+            return new OrganizationIntegrationOAuthCompleteResponseModel(IntegrationOAuthCallbackRedirect.Failed);
+        }
+
+        var token = await slackService.ObtainTokenViaOAuth(model.Code, callbackUrl);
+        if (string.IsNullOrEmpty(token))
+        {
+            return new OrganizationIntegrationOAuthCompleteResponseModel(IntegrationOAuthCallbackRedirect.Failed);
+        }
+
+        integration.Configuration = JsonSerializer.Serialize(new SlackIntegration(token));
+        await integrationRepository.UpsertAsync(integration);
+
+        return new OrganizationIntegrationOAuthCompleteResponseModel(IntegrationOAuthCallbackRedirect.Success);
+    }
+
+    /// <summary>
+    /// Unprotects the OAuth state and fetches the Initiated integration it was issued for.
+    /// </summary>
+    /// <exception cref="NotFoundException">The state is missing, invalid, expired, or doesn't match a Slack integration.</exception>
+    private async Task<(IntegrationOAuthStateTokenable OAuthState, OrganizationIntegration Integration)>
+        GetIntegrationForStateAsync(string? state)
     {
         // The state is protected server-side, so a valid one could only have come from RedirectAsync
         if (string.IsNullOrEmpty(state) ||
@@ -92,47 +169,13 @@ public class SlackIntegrationController(
             throw new NotFoundException();
         }
 
-        // Fetch existing Initiated record. Only redirect to the web vault once the state matches it.
         var integration = await integrationRepository.GetByIdAsync(oAuthState.IntegrationId);
         if (integration is null || !oAuthState.IsValidFor(integration))
         {
             throw new NotFoundException();
         }
 
-        if (integration.Configuration is not null)
-        {
-            return RedirectToVault(integration, IntegrationOAuthCallbackRedirect.AlreadyConnected);
-        }
-
-        // Each state can be redeemed once, whatever the outcome, so a leaked state cannot be replayed
-        if (!await nonceStore.TryConsumeAsync(integration.Id, oAuthState.Nonce))
-        {
-            throw new NotFoundException();
-        }
-
-        // Slack returns "error" instead of "code" when the user declines consent
-        if (!string.IsNullOrEmpty(error) || string.IsNullOrEmpty(code))
-        {
-            return RedirectToVault(integration, IntegrationOAuthCallbackRedirect.Canceled);
-        }
-
-        // Fetch token from Slack and store to DB
-        string? callbackUrl = BuildCallbackUrl();
-        if (string.IsNullOrEmpty(callbackUrl))
-        {
-            return RedirectToVault(integration, IntegrationOAuthCallbackRedirect.Failed);
-        }
-        var token = await slackService.ObtainTokenViaOAuth(code, callbackUrl);
-
-        if (string.IsNullOrEmpty(token))
-        {
-            return RedirectToVault(integration, IntegrationOAuthCallbackRedirect.Failed);
-        }
-
-        integration.Configuration = JsonSerializer.Serialize(new SlackIntegration(token));
-        await integrationRepository.UpsertAsync(integration);
-
-        return RedirectToVault(integration, IntegrationOAuthCallbackRedirect.Success);
+        return (oAuthState, integration);
     }
 
     private RedirectResult RedirectToVault(OrganizationIntegration integration, string result) =>
