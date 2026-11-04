@@ -14,12 +14,7 @@ public sealed record GoverningRule(
     bool RequiresHumanApproval,
     IReadOnlyList<AccessCondition> Conditions)
 {
-    /// <summary>
-    /// The identity of the resolved access rule. Resolution is deterministic (oldest rule wins; see
-    /// <see cref="Services.IGoverningRuleResolver"/>), so this is the rule that a request should pin at submit once
-    /// pinning is persisted. Until then it is re-resolved on every operation and can drift if the governing rules
-    /// change between submit and a later read.
-    /// </summary>
+    /// <summary>The resolved rule's id, pinned on a request at submit so later operations use the same rule.</summary>
     public Guid RuleId { get; init; }
 
     /// <summary>
