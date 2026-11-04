@@ -529,7 +529,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Cipher_UpdateManyExclusions]
     @Ids AS [dbo].[GuidIdArray] READONLY,
     @UserId AS UNIQUEIDENTIFIER,
     @Exclude AS BIT,
-    @RiskCategory AS VARCHAR(50) = NULL
+    @RiskCategory AS NVARCHAR(50) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
