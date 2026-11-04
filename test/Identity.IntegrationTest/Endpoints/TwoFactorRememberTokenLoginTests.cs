@@ -2,6 +2,7 @@
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -272,6 +273,61 @@ public class TwoFactorRememberTokenLoginTests
         Assert.False(root.TryGetProperty("access_token", out _));
         var error = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
         Assert.Equal("Two factor required.", error);
+    }
+
+    /// <summary>
+    /// A wrong recovery code must not tear anything down. Revocation only happens once the code is verified,
+    /// so a failed attempt leaves the user's 2FA remember tokens honored. Otherwise anyone who knows the
+    /// password could cut off every remembered device by guessing.
+    /// </summary>
+    [Fact]
+    public async Task WrongRecoveryCode_DoesNotRevokeTwoFactorRememberTokens()
+    {
+        var (factory, user) = await CreateFactoryWithTwoFactorUserAsync();
+        var userRepository = factory.Services.GetRequiredService<IUserRepository>();
+
+        user.TwoFactorRecoveryCode = "recoverycode123";
+        await userRepository.ReplaceAsync(user);
+
+        var emailCode = await EmailLoginCodeAsync(
+            factory, _testEmail, IdentityApplicationFactory.DefaultDeviceIdentifier);
+        var (_, rememberToken) = await factory.TokensFromPasswordWithTwoFactorAsync(
+            _testEmail, _testPassword, twoFactorProviderType: _emailProvider, twoFactorToken: emailCode);
+        Assert.False(string.IsNullOrEmpty(rememberToken));
+
+        var device = await factory.GetService<IDeviceRepository>()
+            .GetByIdentifierAsync(IdentityApplicationFactory.DefaultDeviceIdentifier, user.Id);
+        Assert.NotNull(device);
+        var rememberTokenRepository = factory.GetService<ITwoFactorRememberTokenRepository>();
+        var rowBefore = await rememberTokenRepository.GetByUserIdDeviceIdAsync(user.Id, device.Id);
+        Assert.NotNull(rowBefore);
+
+        // Attempt recovery with the wrong code. It must be refused.
+        var wrongCode = await factory.ContextFromPasswordWithTwoFactorAsync(
+            _testEmail,
+            _testPassword,
+            twoFactorProviderType: _recoveryCodeProvider,
+            twoFactorToken: "not-the-recovery-code",
+            twoFactorRemember: "0");
+        using (var wrongCodeBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(wrongCode))
+        {
+            Assert.False(wrongCodeBody.RootElement.TryGetProperty("access_token", out _));
+        }
+
+        // The row's stamp is untouched...
+        var rowAfter = await rememberTokenRepository.GetByUserIdDeviceIdAsync(user.Id, device.Id);
+        Assert.NotNull(rowAfter);
+        Assert.Equal(rowBefore.Stamp, rowAfter.Stamp);
+
+        // ...so the old 2FA remember token still skips the challenge.
+        var replay = await factory.ContextFromPasswordWithTwoFactorAsync(
+            _testEmail,
+            _testPassword,
+            twoFactorProviderType: _rememberProvider,
+            twoFactorToken: rememberToken!,
+            twoFactorRemember: "0");
+        using var replayBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(replay);
+        AssertHelper.AssertJsonProperty(replayBody.RootElement, "access_token", JsonValueKind.String);
     }
 
     /// <summary>
