@@ -126,6 +126,7 @@ public class SsoTestDataBuilder
     /// does not.
     /// </summary>
     /// <param name="key">The fully qualified setting name, using <c>:</c> between sections.</param>
+    /// <param name="value">The value of the setting.</param>
     public SsoTestDataBuilder WithConfiguration(string key, string? value)
     {
         _configuration[key] = value;
