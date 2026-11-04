@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using Bit.Admin.AdminConsole.Jobs;
 using Bit.Admin.Auth.Jobs;
 using Bit.Admin.Tools.Jobs;
 using Bit.Core.Dirt.Services;
@@ -88,6 +89,11 @@ public class JobsHostedService : BaseJobsHostedService
             .StartNow()
             .WithCronSchedule("0 */5 * * * ?")
             .Build();
+        var everyWeekdayTopOfTheHourTrigger = TriggerBuilder.Create()
+            .WithIdentity("EveryWeekdayTopOfTheHourTrigger")
+            .StartNow()
+            .WithCronSchedule("0 0 * ? * MON-FRI", x => x.InTimeZone(timeZone))
+            .Build();
 
         var jobs = new List<Tuple<Type, ITrigger>>
         {
@@ -99,6 +105,7 @@ public class JobsHostedService : BaseJobsHostedService
             new Tuple<Type, ITrigger>(typeof(DeleteAuthRequestsJob), everyFifteenMinutesTrigger),
             new Tuple<Type, ITrigger>(typeof(DeleteUnverifiedOrganizationDomainsJob), everyDayAtTwoAmUtcTrigger),
             new Tuple<Type, ITrigger>(typeof(OrganizationDeleteTasksJob), organizationDeleteTasksTrigger),
+            new Tuple<Type, ITrigger>(typeof(SendInviteRemindersJob), everyWeekdayTopOfTheHourTrigger),
         };
 
         if (!(_globalSettings.SqlServer?.DisableDatabaseMaintenanceJobs ?? false))
@@ -134,5 +141,6 @@ public class JobsHostedService : BaseJobsHostedService
         services.AddTransient<DeleteCiphersJob>();
         services.AddTransient<DeleteAuthRequestsJob>();
         services.AddTransient<DeleteUnverifiedOrganizationDomainsJob>();
+        services.AddTransient<SendInviteRemindersJob>();
     }
 }
