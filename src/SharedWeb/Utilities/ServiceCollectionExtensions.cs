@@ -158,6 +158,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<ICipherService, CipherService>();
         services.TryAddScoped<ICipherSyncPushService, CipherSyncPushService>();
+        services.TryAddScoped<IPartialCipherWriteGuard, PartialCipherWriteGuard>();
         // PAM credential leasing is commercial; OSS builds never gate. The commercial Pam library
         // overrides this default by registering the real gate after AddBaseServices, where the last
         // registration wins — the shape AddOosServices uses for IProviderService. That override must
@@ -316,6 +317,7 @@ public static class ServiceCollectionExtensions
         services.TryAddTransient(typeof(IOtpTokenProvider<>), typeof(OtpTokenProvider<>));
         services.AddScoped<ITwoFactorEmailService, TwoFactorEmailService>();
         services.AddScoped<INewDeviceVerificationOtpStore, NewDeviceVerificationOtpStore>();
+        services.AddScoped<IUserVerificationOtpStore, UserVerificationOtpStore>();
         // Legacy mailer service
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();
@@ -333,23 +335,8 @@ public static class ServiceCollectionExtensions
         services.AddOrganizationAbilityCache(globalSettings);
         services.AddProviderAbilityCache(globalSettings);
 
-        var awsConfigured = CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret);
-        if (awsConfigured && CoreHelpers.SettingHasValue(globalSettings.Mail?.SendGridApiKey))
-        {
-            services.AddSingleton<IMailDeliveryService, MultiServiceMailDeliveryService>();
-        }
-        else if (awsConfigured)
-        {
-            services.AddSingleton<IMailDeliveryService, AmazonSesMailDeliveryService>();
-        }
-        else if (CoreHelpers.SettingHasValue(globalSettings.Mail?.Smtp?.Host))
-        {
-            services.AddSingleton<IMailDeliveryService, MailKitSmtpMailDeliveryService>();
-        }
-        else
-        {
-            services.AddSingleton<IMailDeliveryService, NoopMailDeliveryService>();
-        }
+        services.ConfigureMailDeliveryOptionsFromGlobalSettings();
+        services.AddMailDelivery();
 
         services.AddPush(globalSettings);
         services.AddPushRegistration();

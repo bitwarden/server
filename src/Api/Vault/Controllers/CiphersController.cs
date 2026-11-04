@@ -1064,6 +1064,18 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
+        // This writes straight to the repository, so the service-level gate does not cover it. A caller who can
+        // edit every cipher also reaches unassigned ones, so takes the "/admin" decision.
+        var ciphers = model.CipherIds.Select(id => new Cipher { Id = id });
+        if (await CanEditAllCiphersAsync(model.OrganizationId))
+        {
+            await _cipherLeaseGate.EnsureCanMutateManyAsAdminAsync(userId, model.OrganizationId, ciphers);
+        }
+        else
+        {
+            await _cipherLeaseGate.EnsureCanMutateManyAsync(userId, ciphers);
+        }
+
         if (model.RemoveCollections)
         {
             await _collectionCipherRepository.RemoveCollectionsForManyCiphersAsync(model.OrganizationId, model.CipherIds, model.CollectionIds);

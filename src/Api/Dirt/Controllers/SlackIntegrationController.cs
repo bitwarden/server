@@ -2,6 +2,7 @@
 using Bit.Api.Dirt.Models.Request;
 using Bit.Api.Dirt.Models.Response;
 using Bit.Api.Dirt.Utilities;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Enums;
@@ -11,6 +12,7 @@ using Bit.Core.Dirt.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -27,6 +29,7 @@ public class SlackIntegrationController(
     IIntegrationOAuthNonceStore nonceStore,
     TimeProvider timeProvider) : Controller
 {
+    [RequireFeature(FeatureFlagKeys.EventManagementForSlack)]
     [HttpGet("{organizationId:guid}/integrations/slack/redirect")]
     public async Task<OrganizationIntegrationOAuthRedirectResponseModel> RedirectAsync(Guid organizationId)
     {

@@ -16,12 +16,15 @@ public interface IGlobalSettings
     string LicenseCertificatePath { get; set; }
     int OrganizationInviteExpirationHours { get; set; }
     int OrganizationInviteReminderBatchSize { get; set; }
+    int EmergencyAccessInviteExpirationHours { get; set; }
+    int ProviderInviteExpirationHours { get; set; }
     int TwoFactorUserVerificationTokenLifetimeInMinutes { get; set; }
     int TwoFactorRememberTokenLifetimeInDays { get; set; }
     int DeviceLastActivityCacheTtlHours { get; set; }
     bool DisableUserRegistration { get; set; }
     bool SuppressOnboardingInterstitials { get; set; }
     bool EnableEmailVerification { get; set; }
+    bool EnableOpenInviteLinkEmailVerification { get; set; }
     bool EnableNewDeviceVerification { get; set; }
     IInstallationSettings Installation { get; set; }
     IFileStorageSettings Attachment { get; set; }

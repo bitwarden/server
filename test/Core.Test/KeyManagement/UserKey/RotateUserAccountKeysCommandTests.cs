@@ -620,6 +620,38 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task PasswordChangeAndRotateUserAccountKeysAsync_RotationAndPasswordChangeDatesAreEqual(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, PasswordChangeAndRotateUserAccountKeysData model)
+    {
+        SetTestKdfAndSaltForUserAndModel(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV1ExistingUser(user, signatureRepository);
+        SetV1ModelUser(model.BaseData);
+
+        sutProvider.GetDependency<IUserService>()
+            .CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+
+        // The password service stamps its own read of the clock, which must not leak into the dates.
+        sutProvider.GetDependency<IMasterPasswordService>()
+            .PrepareUpdateExistingMasterPasswordAsync(user, Arg.Any<UpdateExistingPasswordData>())
+            .Returns(_ =>
+            {
+                user.LastPasswordChangeDate = DateTime.UtcNow.AddSeconds(5);
+                return OneOf<User, IdentityError[]>.FromT0(user);
+            });
+
+        var before = DateTime.UtcNow;
+
+        await sutProvider.Sut.PasswordChangeAndRotateUserAccountKeysAsync(user, model);
+
+        // Both dates carry one fresh timestamp taken after the password service ran.
+        Assert.NotNull(user.LastKeyRotationDate);
+        Assert.Equal(user.LastPasswordChangeDate, user.LastKeyRotationDate);
+        Assert.InRange(user.LastKeyRotationDate!.Value, before, DateTime.UtcNow);
+    }
+
+    [Theory, BitAutoData]
     public async Task PasswordChangeAndRotateUserAccountKeysAsync_MasterPasswordServiceFails_ReturnsFailedAndSkipsPersist(
         SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, PasswordChangeAndRotateUserAccountKeysData model)
     {

@@ -128,4 +128,67 @@ public class UsersControllerTests
             "Contact support if the problem persists.",
             (string)sutProvider.Sut.TempData["Error"]);
     }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_EnrolledMemberWithUpgradeToken_NeedsRecoveryKeyV2Update(
+        User user,
+        OrganizationUser orgUser,
+        SutProvider<UsersController> sutProvider)
+    {
+        StubEditGetDependencies(sutProvider, user);
+        orgUser.ResetPasswordKey = "enrolled";
+        orgUser.V2UpgradeToken = "{}";
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns(new List<OrganizationUser> { orgUser });
+
+        var result = await sutProvider.Sut.Edit(user.Id);
+
+        var model = Assert.IsType<UserEditModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.True(model.User.Crypto.NeedsRecoveryKeyV2Update);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task View_MemberWithoutUpgradeToken_DoesNotNeedRecoveryKeyV2Update(
+        User user,
+        OrganizationUser orgUser,
+        SutProvider<UsersController> sutProvider)
+    {
+        StubEditGetDependencies(sutProvider, user);
+        orgUser.ResetPasswordKey = "enrolled";
+        orgUser.V2UpgradeToken = null;
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns(new List<OrganizationUser> { orgUser });
+
+        var result = await sutProvider.Sut.View(user.Id);
+
+        var model = Assert.IsType<UserViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.False(model.Crypto.NeedsRecoveryKeyV2Update);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task View_UpgradeTokenButNotEnrolled_DoesNotNeedRecoveryKeyV2Update(
+        User user,
+        OrganizationUser orgUser,
+        SutProvider<UsersController> sutProvider)
+    {
+        StubEditGetDependencies(sutProvider, user);
+        orgUser.ResetPasswordKey = null;
+        orgUser.V2UpgradeToken = "{}";
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns(new List<OrganizationUser> { orgUser });
+
+        var result = await sutProvider.Sut.View(user.Id);
+
+        var model = Assert.IsType<UserViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.False(model.Crypto.NeedsRecoveryKeyV2Update);
+    }
 }

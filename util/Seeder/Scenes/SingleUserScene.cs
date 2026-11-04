@@ -64,6 +64,10 @@ public class SingleUserScene(
         /// Enrolls the user in email two-factor authentication, delivered to the (mangled) account email.
         /// </summary>
         public bool EnrollInEmail2Fa { get; set; } = false;
+        /// <summary>
+        /// Stores an undecryptable private key, the state the web Data Recovery tool detects and replaces.
+        /// </summary>
+        public bool CorruptPrivateKey { get; set; } = false;
     }
 
     private const int MinKdfIterations = 5_000;
@@ -112,6 +116,13 @@ public class SingleUserScene(
             });
             // UserService.SetTwoFactorProvider generates a recovery code on enrollment; mirror it.
             user.TwoFactorRecoveryCode = CoreHelpers.SecureRandomString(32, upper: false, special: false);
+        }
+
+        if (request.CorruptPrivateKey)
+        {
+            // Corrupt the first IV char so the MAC check fails (mirrors QA's manual DB script).
+            var privateKey = user.PrivateKey!;
+            user.PrivateKey = privateKey[..2] + (privateKey[2] == 'X' ? 'Y' : 'X') + privateKey[3..];
         }
 
         await userRepository.CreateAsync(user);

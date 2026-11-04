@@ -9,14 +9,9 @@ using Xunit;
 namespace Bit.Services.Pam.IntegrationTest;
 
 /// <summary>
-/// Authorization for <c>organizations/{orgId}/access-rules</c>, exercised over the real request pipeline.
+/// Authorization for <c>organizations/{orgId}/access-rules</c> over the real request pipeline. The Pam.Test
+/// registration tests only prove the requirements are attached, not enforced.
 /// </summary>
-/// <remarks>
-/// The endpoint-registration tests in Pam.Test assert which requirements are attached to which route, but they stop
-/// before the pipeline runs — presence in metadata is not enforcement. These tests deliberately assert only that a
-/// caller was or was not denied, never what the handler returned; the round-trip behaviour is
-/// <see cref="AccessRuleCrudTests"/>'s subject.
-/// </remarks>
 public class AccessRuleAuthorizationTests(ApiApplicationFactory factory)
     : AccessRuleIntegrationTestBase(factory, "pam-access-rule-authz")
 {
@@ -80,8 +75,8 @@ public class AccessRuleAuthorizationTests(ApiApplicationFactory factory)
     [Fact]
     public async Task Read_AsProviderUserForTheOrganization_ReturnsForbidden()
     {
-        // Providers manage an organization's billing and configuration, but access rules gate who can lease
-        // credentials out of it. The group deliberately uses MemberRequirement, not MemberOrProviderRequirement.
+        // Access rules gate who can lease credentials, so the group uses MemberRequirement, not
+        // MemberOrProviderRequirement.
         await LoginAsProviderForOrganizationAsync();
 
         var response = await Client.GetAsync(AccessRulesUrl);
@@ -102,7 +97,6 @@ public class AccessRuleAuthorizationTests(ApiApplicationFactory factory)
     [Fact]
     public async Task Read_AsMember_IsNotForbidden()
     {
-        // Guards against the group requirement over-denying: reading rules is available to any member.
         var (memberEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(Factory,
             Organization.Id, OrganizationUserType.User);
         await LoginHelper.LoginAsync(memberEmail);
@@ -122,11 +116,7 @@ public class AccessRuleAuthorizationTests(ApiApplicationFactory factory)
         AssertReachedTheHandler(response);
     }
 
-    /// <summary>
-    /// Asserts a caller got past authorization without pinning what the handler did with a deliberately empty body.
-    /// NotFound is excluded as well as Forbidden: without it these would still pass if the PAM feature gate silently
-    /// swallowed the route, which would in turn make every denial above pass for the wrong reason.
-    /// </summary>
+    /// <summary>Also rejects NotFound, so a feature gate swallowing the route does not pass as authorized.</summary>
     private static void AssertReachedTheHandler(HttpResponseMessage response)
     {
         Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);

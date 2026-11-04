@@ -42,6 +42,7 @@ public class ProviderBillingService(
     IGlobalSettings globalSettings,
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
+    IOrganizationService organizationService,
     IPriceIncreaseScheduler priceIncreaseScheduler,
     IPricingClient pricingClient,
     IProviderInvoiceItemRepository providerInvoiceItemRepository,
@@ -148,7 +149,7 @@ public class ProviderBillingService(
         await ScaleSeats(provider, organization.PlanType, organization.Seats!.Value);
 
         await Task.WhenAll(
-            organizationRepository.ReplaceAsync(organization),
+            organizationService.ReplaceAndUpdateCacheAsync(organization),
             providerOrganizationRepository.CreateAsync(providerOrganization)
         );
 

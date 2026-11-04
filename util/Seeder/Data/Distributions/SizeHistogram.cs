@@ -3,7 +3,8 @@
 /// <summary>
 /// Draws long-tailed integer sizes from an empirical histogram of [Min, Max] buckets.
 /// Bucket counts are exact (largest-remainder, via <see cref="Distribution{T}"/>); values within a
-/// bucket are log-uniform so wide buckets keep their tail shape. Deterministic for a given <see cref="Random"/>.
+/// bucket are log-uniform so wide buckets keep their tail shape. <see cref="Draw"/> is deterministic for a given
+/// <see cref="Random"/>; <see cref="Quantiles"/> takes none.
 /// </summary>
 internal sealed class SizeHistogram
 {
@@ -47,7 +48,8 @@ internal sealed class SizeHistogram
         {
             for (var i = 0; i < bucketCount; i++)
             {
-                sizes.Add(LogUniform(min, max, random));
+                // A single-value bucket consumes no random number, so a seed keeps the stream it always had.
+                sizes.Add(min == max ? min : LogUniform(min, max, random.NextDouble()));
             }
         }
 
@@ -56,16 +58,109 @@ internal sealed class SizeHistogram
         return result;
     }
 
-    private static int LogUniform(int min, int max, Random random)
+    /// <summary>
+    /// Returns <paramref name="count"/> sizes, the mid-quantiles <c>(i + 0.5) / k</c> of each bucket's log-uniform
+    /// curve for its <c>k</c> exact draws, in bucket order. The same for every call, so callers shuffle.
+    /// </summary>
+    internal int[] Quantiles(int count)
     {
-        if (min == max)
+        var sizes = new List<int>(count);
+        foreach (var ((min, max), bucketCount) in _distribution.GetCounts(count))
         {
-            return min;
+            for (var i = 0; i < bucketCount; i++)
+            {
+                sizes.Add(LogUniform(min, max, (i + 0.5) / bucketCount));
+            }
         }
 
+        return sizes.ToArray();
+    }
+
+    /// <summary>
+    /// Maps <paramref name="u"/> in [0, 1) onto [<paramref name="min"/>, <paramref name="max"/>], log-uniformly.
+    /// </summary>
+    private static int LogUniform(int min, int max, double u)
+    {
         var lo = Math.Log(min + 1);
         var hi = Math.Log(max + 2);
-        var value = (int)Math.Exp(lo + random.NextDouble() * (hi - lo)) - 1;
+        var value = (int)Math.Exp(lo + u * (hi - lo)) - 1;
         return Math.Clamp(value, min, max);
+    }
+
+    /// <summary>
+    /// Scales the non-zero entries of <paramref name="sizes"/> so they sum to <paramref name="target"/>,
+    /// keeping every non-zero entry at least 1 and at most <paramref name="cap"/>.
+    /// </summary>
+    internal static void ScaleTo(int[] sizes, int target, int cap)
+    {
+        var current = sizes.Sum(s => (long)s);
+        if (current == 0 || target <= 0)
+        {
+            return;
+        }
+
+        var factor = (double)target / current;
+        for (var i = 0; i < sizes.Length; i++)
+        {
+            if (sizes[i] > 0)
+            {
+                sizes[i] = Math.Clamp((int)Math.Round(sizes[i] * factor), 1, cap);
+            }
+        }
+
+        // Rounding drift: nudge the largest entries until the total matches. Stop only after a full pass in which
+        // no entry could move, so a reachable target is always reached.
+        var diff = target - sizes.Sum();
+        var order = Enumerable.Range(0, sizes.Length).Where(i => sizes[i] > 0)
+            .OrderByDescending(i => sizes[i]).ToArray();
+        var stuck = 0;
+        for (var k = 0; diff != 0 && stuck < order.Length; k++)
+        {
+            var i = order[k % order.Length];
+            var step = Math.Sign(diff);
+            if (sizes[i] + step >= 1 && sizes[i] + step <= cap)
+            {
+                sizes[i] += step;
+                diff -= step;
+                stuck = 0;
+            }
+            else
+            {
+                stuck++;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Pareto-distributed weights (x_min = 1), used to give members a heavy-tailed affinity.
+    /// </summary>
+    internal static double[] ParetoWeights(int count, double alpha, Random random)
+    {
+        var weights = new double[count];
+        for (var i = 0; i < count; i++)
+        {
+            weights[i] = Math.Pow(1.0 - random.NextDouble(), -1.0 / alpha);
+        }
+        return weights;
+    }
+
+    /// <summary>
+    /// Weighted sampling without replacement (Efraimidis–Spirakis). Indices whose weight is 0 or that
+    /// <paramref name="eligible"/> rejects are skipped.
+    /// </summary>
+    internal static List<int> SampleWithoutReplacement(
+        double[] weights, int take, Random random, Func<int, bool>? eligible = null)
+    {
+        var keyed = new List<(double Key, int Index)>(weights.Length);
+        for (var i = 0; i < weights.Length; i++)
+        {
+            if (weights[i] <= 0 || (eligible is not null && !eligible(i)))
+            {
+                continue;
+            }
+            keyed.Add((Math.Pow(random.NextDouble(), 1.0 / weights[i]), i));
+        }
+
+        return keyed.OrderByDescending(k => k.Key).Take(take).Select(k => k.Index).ToList();
     }
 }

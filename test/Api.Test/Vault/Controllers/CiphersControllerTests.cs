@@ -3746,4 +3746,112 @@ public class CiphersControllerTests
             .DidNotReceiveWithAnyArgs()
             .DeleteAttachmentAsync(default, default, default, default);
     }
+
+    [Theory, BitAutoData]
+    public async Task PutPartial_UpdatesWithoutTheLeaseGate(
+        User user, Guid folderId, Guid cipherId, SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+        var cipherDetails = new CipherDetails
+        {
+            Id = cipherId,
+            UserId = user.Id,
+            Type = Core.Vault.Enums.CipherType.SecureNote,
+            Data = "{}",
+        };
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId, user.Id)
+            .Returns(Task.FromResult(cipherDetails));
+
+        // Folder and favorite are per user and leave Data unchanged, so they need no lease.
+        await sutProvider.Sut.PutPartial(
+            cipherId, new CipherPartialRequestModel { Favorite = true, FolderId = folderId.ToString() });
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1).UpdatePartialAsync(cipherId, user.Id, folderId, true);
+        await sutProvider.GetDependency<ICipherLeaseGate>()
+            .DidNotReceiveWithAnyArgs().EnsureCanMutateAsync(default, default!);
+    }
+
+    [Theory]
+    [BitAutoData(false)]
+    [BitAutoData(true)]
+    public async Task PostBulkCollections_LeasingGatedCipher_ThrowsAndDoesNotWrite(
+        bool removeCollections, Guid userId, Guid organizationId, Guid cipherId, Guid collectionId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>()
+            .GetOrganization(organizationId)
+            .Returns(new CurrentContextOrganization { Id = organizationId, Type = OrganizationUserType.User });
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(userId)
+            .Returns(new List<CipherDetails>
+            {
+                new() { Id = cipherId, OrganizationId = organizationId, Edit = true, ViewPassword = true },
+            });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByUserIdAsync(userId)
+            .Returns(new List<CollectionDetails>
+            {
+                new() { Id = collectionId, OrganizationId = organizationId, ReadOnly = false },
+            });
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .EnsureCanMutateManyAsync(userId, Arg.Is<IEnumerable<Cipher>>(c => c.Single().Id == cipherId))
+            .ThrowsAsync(new NotFoundException());
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostBulkCollections(
+            new CipherBulkUpdateCollectionsRequestModel
+            {
+                OrganizationId = organizationId,
+                CipherIds = [cipherId],
+                CollectionIds = [collectionId],
+                RemoveCollections = removeCollections,
+            }));
+
+        await sutProvider.GetDependency<ICollectionCipherRepository>()
+            .DidNotReceiveWithAnyArgs().AddCollectionsForManyCiphersAsync(default, default, default);
+        await sutProvider.GetDependency<ICollectionCipherRepository>()
+            .DidNotReceiveWithAnyArgs().RemoveCollectionsForManyCiphersAsync(default, default, default);
+    }
+
+    /// <remarks>
+    /// Edit any collection reaches unassigned ciphers, which the member decision reads as not gated.
+    /// </remarks>
+    [Theory, BitAutoData]
+    public async Task PostBulkCollections_CallerCanEditAllCiphers_TakesTheAdminDecision(
+        Guid userId, Guid organizationId, Guid cipherId, Guid collectionId,
+        CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
+    {
+        organization.Id = organizationId;
+        organization.Type = OrganizationUserType.Custom;
+        organization.Permissions.EditAnyCollection = true;
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organizationId).Returns(organization);
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<Cipher> { new() { Id = cipherId, OrganizationId = organizationId } });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<Collection> { new() { Id = collectionId, OrganizationId = organizationId } });
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .EnsureCanMutateManyAsAdminAsync(userId, organizationId,
+                Arg.Is<IEnumerable<Cipher>>(c => c.Single().Id == cipherId))
+            .ThrowsAsync(new NotFoundException());
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostBulkCollections(
+            new CipherBulkUpdateCollectionsRequestModel
+            {
+                OrganizationId = organizationId,
+                CipherIds = [cipherId],
+                CollectionIds = [collectionId],
+            }));
+
+        await sutProvider.GetDependency<ICollectionCipherRepository>()
+            .DidNotReceiveWithAnyArgs().AddCollectionsForManyCiphersAsync(default, default, default);
+        await sutProvider.GetDependency<ICipherLeaseGate>()
+            .DidNotReceiveWithAnyArgs().EnsureCanMutateManyAsync(default, default!);
+    }
 }

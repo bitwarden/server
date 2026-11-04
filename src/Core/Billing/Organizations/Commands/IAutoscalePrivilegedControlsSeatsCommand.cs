@@ -13,8 +13,8 @@ public interface IAutoscalePrivilegedControlsSeatsCommand
 {
     /// <summary>
     /// Adds Privileged Controls seats when the seats in use plus <paramref name="seatsToAdd"/> exceed the seats the
-    /// organization has bought. Nothing changes when the bought seats already cover that total. The seat minimum is
-    /// never checked. When a limit is set and the total equals it, the organization's Owners are emailed.
+    /// organization has bought. Nothing changes when the bought seats already cover that total. When a limit is set
+    /// and the total equals it, the organization's Owners are emailed.
     /// </summary>
     /// <param name="organization">The organization that already has Privileged Controls.</param>
     /// <param name="seatsToAdd">

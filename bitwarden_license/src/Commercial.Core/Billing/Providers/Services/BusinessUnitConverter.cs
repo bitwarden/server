@@ -31,7 +31,7 @@ public class BusinessUnitConverter(
     GlobalSettings globalSettings,
     ILogger<BusinessUnitConverter> logger,
     IMailService mailService,
-    IOrganizationRepository organizationRepository,
+    IOrganizationService organizationService,
     IOrganizationUserRepository organizationUserRepository,
     IPricingClient pricingClient,
     IProviderOrganizationRepository providerOrganizationRepository,
@@ -172,7 +172,7 @@ public class BusinessUnitConverter(
 
         // Complete database updates for provider setup.
         await Task.WhenAll(
-            organizationRepository.ReplaceAsync(organization),
+            organizationService.ReplaceAndUpdateCacheAsync(organization),
             providerOrganizationRepository.ReplaceAsync(providerOrganization),
             providerRepository.ReplaceAsync(provider),
             providerUserRepository.ReplaceAsync(providerUser));
@@ -362,7 +362,7 @@ public class BusinessUnitConverter(
                 token,
                 user.Email,
                 organization.Id,
-                globalSettings.OrganizationInviteExpirationHours))
+                globalSettings.ProviderInviteExpirationHours))
         {
             Fail("Email token is invalid.");
         }

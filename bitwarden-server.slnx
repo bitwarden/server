@@ -23,6 +23,7 @@
     <Project Path="src/Libraries/Data/Data.csproj" />
     <Project Path="src/Libraries/ExceptionHandling/ExceptionHandling.csproj" />
     <Project Path="src/Libraries/Invoicing/Invoicing.csproj" />
+    <Project Path="src/Libraries/MailDelivery/MailDelivery.csproj" />
     <Project Path="src/Libraries/OrganizationAuthorization/OrganizationAuthorization.csproj" />
     <Project Path="src/Libraries/GlobalSettingsBridge/GlobalSettingsBridge.csproj" />
     <Project Path="src/Libraries/Push.Infrastructure/Push.Infrastructure.csproj" />
@@ -71,11 +72,11 @@
     <Project Path="test/Billing.IntegrationTest/Billing.IntegrationTest.csproj" />
     <Project Path="test/Billing.Test/Billing.Test.csproj" />
     <Project Path="test/Common/Common.csproj" />
-    <Project Path="test/Core.IntegrationTest/Core.IntegrationTest.csproj" />
     <Project Path="test/Core.Test/Core.Test.csproj" />
     <Project Path="test/Libraries/Data.Test/Data.Test.csproj" />
     <Project Path="test/Libraries/ExceptionHandling.Test/ExceptionHandling.Test.csproj" />
     <Project Path="test/Libraries/Invoicing.Test/Invoicing.Test.csproj" />
+    <Project Path="test/Libraries/MailDelivery.Test/MailDelivery.Test.csproj" />
     <Project Path="test/Libraries/OrganizationAuthorization.Test/OrganizationAuthorization.Test.csproj" />
     <Project Path="test/Libraries/GlobalSettingsBridge.Test/GlobalSettingsBridge.Test.csproj" />
     <Project Path="test/Libraries/SerilogFileLogging.Test/SerilogFileLogging.Test.csproj" />

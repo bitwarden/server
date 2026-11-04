@@ -123,6 +123,8 @@ curl -X POST http://localhost:5000/seed \
   for production-realistic logins.
 - `enrollInEmail2Fa` — when true, enrolls the user in email two-factor authentication, delivered to the (mangled)
   account email. The response includes `twoFactorRecoveryCode` so the recovery login flow can be tested.
+- `corruptPrivateKey` — when true, stores an undecryptable private key. The web Data Recovery tool only flags it
+  when the user also has at least one personal cipher (seed one with `UserLoginCipherScene`).
 
 Enum fields (`gateway`) must be sent as their **numeric value**. In the example below, `gateway: 0` is `Stripe`.
 
@@ -139,6 +141,70 @@ curl -X POST http://localhost:5000/seed \
       "gateway": 0,
       "gatewayCustomerId": "cus_123",
       "gatewaySubscriptionId": "sub_456"
+    }
+  }'
+```
+
+### Seeding a PAM Access Rule
+
+`OrganizationAccessRuleScene` creates a PAM access rule in an existing organization and makes it govern the given
+collections (seed them with `OrganizationCollectionScene`). The response contains `accessRuleId`.
+
+To see seeded rules in the web vault, the organization must have `usePam: true` (pass `overrides.usePam: true` to
+`SingleOrganizationScene`; it defaults to false) and the viewing user must be an organization admin. In the example
+below, `planType: 20` is `EnterpriseAnnually`.
+
+```bash
+curl -X POST http://localhost:5000/seed \
+  -H "Content-Type: application/json" \
+  -d '{
+    "template": "SingleOrganizationScene",
+    "arguments": {
+      "ownerUserId": "<userId>",
+      "planType": 20,
+      "name": "Acme",
+      "domain": "acme.example",
+      "seats": 5,
+      "overrides": {
+        "usePam": true
+      }
+    }
+  }'
+```
+
+Rule request fields:
+
+- `organizationId`, `name` (required). Names must be unique within the organization; the database's unique index
+  rejects a duplicate.
+- `collectionIds`: collections the rule governs; each must belong to the organization and must not already be governed
+  by another access rule (a collection belongs to at most one rule).
+- `ipAllowlistCidrs`: adds an `ip_allowlist` condition with these CIDRs. An invalid CIDR or an empty list is rejected;
+  omit the field for no IP condition.
+- `requireHumanApproval`: adds a `human_approval` condition. With neither condition, requests auto-approve.
+- `description`, `enabled` (default true), `singleActiveLease`, `defaultLeaseDurationSeconds`,
+  `maxLeaseDurationSeconds`, `allowsExtensions`, `maxExtensionDurationSeconds` (required and positive when
+  `allowsExtensions` is true).
+
+Duration fields are in seconds. The web vault edit form only offers these presets:
+
+- `defaultLeaseDurationSeconds`, `maxLeaseDurationSeconds`: 900, 1800, 3600, 14400, 28800, 86400, 172800, 604800,
+  2592000
+- `maxExtensionDurationSeconds`: 1800, 3600, 7200, 14400, 28800
+
+Any other value is accepted by the seeder, but the edit form displays it snapped to the nearest preset and overwrites it
+if an admin saves the rule there.
+
+```bash
+curl -X POST http://localhost:5000/seed \
+  -H "Content-Type: application/json" \
+  -d '{
+    "template": "OrganizationAccessRuleScene",
+    "arguments": {
+      "organizationId": "<organizationId>",
+      "name": "Office network only",
+      "collectionIds": ["<collectionId>"],
+      "ipAllowlistCidrs": ["10.0.0.0/8"],
+      "requireHumanApproval": true
     }
   }'
 ```

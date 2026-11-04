@@ -8,6 +8,7 @@ using Bit.Subscriptions.Organization.Commands;
 using Bit.Subscriptions.Organization.Handlers;
 using Bit.Subscriptions.Organization.Queries;
 using Bitwarden.Server.Sdk.Environment;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Xunit;
@@ -26,6 +27,7 @@ public class SubscriptionsOrganizationServiceCollectionExtensionsTests
         services.AddSingleton(Substitute.For<ITaxService>());
         services.AddSingleton(Substitute.For<IUserService>());
         services.AddSingleton(Substitute.For<IBitwardenEnvironment>());
+        services.AddSingleton(Substitute.For<IFeatureService>());
         services.AddLogging();
 
         services.AddOrganizationSubscriptions();
@@ -90,5 +92,23 @@ public class SubscriptionsOrganizationServiceCollectionExtensionsTests
         using var scope = services.BuildServiceProvider().CreateScope();
 
         Assert.NotNull(scope.ServiceProvider.GetService<PurchasePrivilegedControlsHandler>());
+    }
+
+    [Fact]
+    public void AddOrganizationSubscriptions_RegistersRemovePrivilegedControlsHandler()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(Substitute.For<IPricingClient>());
+        services.AddSingleton(Substitute.For<IStripeAdapter>());
+        services.AddSingleton(Substitute.For<IOrganizationRepository>());
+        services.AddSingleton(Substitute.For<IUpdateOrganizationSubscriptionCommand>());
+        services.AddSingleton(Substitute.For<IOrganizationService>());
+        services.AddSingleton(Substitute.For<IBitwardenEnvironment>());
+        services.AddLogging();
+
+        services.AddOrganizationSubscriptions();
+        using var scope = services.BuildServiceProvider().CreateScope();
+
+        Assert.NotNull(scope.ServiceProvider.GetService<RemovePrivilegedControlsHandler>());
     }
 }

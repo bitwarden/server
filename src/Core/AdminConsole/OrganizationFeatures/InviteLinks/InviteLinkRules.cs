@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -12,53 +11,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 /// </summary>
 public static class InviteLinkRules
 {
-    /// <summary>
-    /// Checks that the invite link can be used by the user, in this order:
-    /// <list type="bullet">
-    /// <item>The invite link exists and its code matches.</item>
-    /// <item>The organization exists, is enabled, and supports invite links.</item>
-    /// <item>The user's email domain is on the link's allowed domain list.</item>
-    /// <item>The user's email is verified.</item>
-    /// </list>
-    /// </summary>
-    /// <param name="inviteLink">The organization's invite link, or <c>null</c> if it has none.</param>
-    /// <param name="code">The secret code from the invite link the user is using.</param>
-    /// <param name="organization">The organization the invite link belongs to, or <c>null</c> if it does not exist.</param>
-    /// <param name="user">The authenticated user using the invite link.</param>
-    /// <returns><c>null</c> when allowed, otherwise the error explaining why.</returns>
-    public static Error? ValidateEligibility(OrganizationInviteLink? inviteLink, Guid code, Organization? organization, User user)
-    {
-        if (inviteLink is null || !inviteLink.CodeMatches(code.ToString()))
-        {
-            return new InviteLinkNotFound();
-        }
-
-        if (organization is null or { Enabled: false })
-        {
-            return new InviteLinkNotFound();
-        }
-
-        if (!organization.UseInviteLinks)
-        {
-            return new InviteLinkNotAvailable();
-        }
-
-        // Order matters: the client starts email verification on EmailNotVerified, so reject disallowed domains
-        // first. Otherwise the user would verify their email only to be rejected afterwards.
-        if (!InviteLinkDomainValidator.IsEmailDomainAllowed(user.Email, inviteLink.GetAllowedDomains()))
-        {
-            return new EmailDomainNotAllowed(organization.DisplayName());
-        }
-
-        // Security: allowed domains only provide protection if the user has proven control over their email address.
-        if (!user.EmailVerified)
-        {
-            return new EmailNotVerified();
-        }
-
-        return null;
-    }
-
     /// <summary>
     /// Checks that the user's existing membership allows accepting an invite link: it must not be revoked, and the
     /// user must not already be an accepted or confirmed member.

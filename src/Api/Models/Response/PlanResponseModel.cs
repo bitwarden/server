@@ -147,13 +147,11 @@ public class PlanResponseModel : ResponseModel
             StripeSeatPlanId = plan.StripeSeatPlanId;
             SeatPrice = plan.SeatPrice;
             BaseSeats = plan.BaseSeats;
-            DefaultSeatMinimum = plan.DefaultSeatMinimum;
         }
         // Seats
         public string StripeSeatPlanId { get; init; }
         public decimal SeatPrice { get; init; }
         public int BaseSeats { get; init; }
-        public int DefaultSeatMinimum { get; init; }
     }
 
     public record PasswordManagerPlanFeaturesResponseModel

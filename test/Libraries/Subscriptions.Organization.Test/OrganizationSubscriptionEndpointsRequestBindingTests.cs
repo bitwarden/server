@@ -320,8 +320,7 @@ public class OrganizationSubscriptionEndpointsRequestBindingTests
             ProductTier = ProductTierType.Enterprise;
             PrivilegedControls = new PrivilegedControlsPlanFeatures
             {
-                StripeSeatPlanId = "privileged-controls-enterprise-seat-annually",
-                DefaultSeatMinimum = 1
+                StripeSeatPlanId = "privileged-controls-enterprise-seat-annually"
             };
         }
     }

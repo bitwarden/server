@@ -298,6 +298,27 @@ public static class RecipeBuilderExtensions
     }
 
     /// <summary>
+    /// Adds groups with overlapping, long-tailed membership (access shape). Replaces <see cref="AddGroups"/>.
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <param name="count">Number of groups to generate, including the everyone and hot groups</param>
+    /// <param name="shape">The preset's access shape; its <c>groups</c> block drives membership</param>
+    /// <param name="seed">Random seed for the group shape</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no users exist</exception>
+    internal static RecipeBuilder AddShapedGroups(this RecipeBuilder builder, int count, SeedPresetAccessShape shape, int seed)
+    {
+        if (!builder.HasRosterUsers && !builder.HasGeneratedUsers)
+        {
+            throw new InvalidOperationException(
+                "Groups require users. Call UseRoster() or AddUsers() first.");
+        }
+
+        builder.AddStep(_ => new CreateShapedGroupsStep(count, shape, seed));
+        return builder;
+    }
+
+    /// <summary>
     /// Generate collections with random assignments.
     /// </summary>
     /// <param name="builder">The recipe builder</param>
@@ -333,6 +354,34 @@ public static class RecipeBuilderExtensions
         }
 
         builder.AddStep(_ => CreateCollectionsStep.FromStructure(structure));
+        return builder;
+    }
+
+    /// <summary>
+    /// Adds shared collections with long-tailed target sizes and shaped group and member grants, built from the
+    /// access shape. Replaces <see cref="AddCollections(RecipeBuilder, int, DensityProfile?)"/>.
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <param name="count">Number of collections to create</param>
+    /// <param name="shape">The preset's access shape</param>
+    /// <param name="permissions">Permission mix applied to group and direct grants</param>
+    /// <param name="seed">Random seed for the shape</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no users exist</exception>
+    internal static RecipeBuilder AddShapedCollections(
+        this RecipeBuilder builder,
+        int count,
+        SeedPresetAccessShape shape,
+        Distribution<PermissionWeight> permissions,
+        int seed)
+    {
+        if (!builder.HasRosterUsers && !builder.HasGeneratedUsers)
+        {
+            throw new InvalidOperationException(
+                "Collections require users. Call UseRoster() or AddUsers() first.");
+        }
+
+        builder.AddStep(_ => new CreateShapedCollectionsStep(count, shape, permissions, seed));
         return builder;
     }
 
@@ -563,6 +612,7 @@ public static class RecipeBuilderExtensions
     /// <param name="typeDist">Distribution of cipher types. Uses realistic defaults if null.</param>
     /// <param name="personalDist">The personal cipher distribution given to AddPersonalCiphers(); members it gives items keep an empty collection</param>
     /// <param name="personalCountPerUser">The flat personal cipher count given to AddPersonalCiphers(); 0 when none</param>
+    /// <param name="sizing">How the non-largest sizes come from the size histogram</param>
     /// <returns>The builder for fluent chaining</returns>
     /// <exception cref="InvalidOperationException">Thrown when WithGenerator() was not called</exception>
     internal static RecipeBuilder AddDefaultCollections(
@@ -572,7 +622,8 @@ public static class RecipeBuilderExtensions
         int seed,
         Distribution<CipherType>? typeDist = null,
         Distribution<(int Min, int Max)>? personalDist = null,
-        int personalCountPerUser = 0)
+        int personalCountPerUser = 0,
+        DefaultCollectionSizing sizing = DefaultCollectionSizing.Sampled)
     {
         if (!builder.HasGenerator)
         {
@@ -580,7 +631,7 @@ public static class RecipeBuilderExtensions
                 "Default collections require a generator. Call WithGenerator() first.");
         }
 
-        builder.AddStep(_ => new CreateDefaultCollectionsStep(options, policyEnabledDate, seed, typeDist, personalDist, personalCountPerUser));
+        builder.AddStep(_ => new CreateDefaultCollectionsStep(options, policyEnabledDate, seed, typeDist, personalDist, personalCountPerUser, sizing));
         return builder;
     }
 

@@ -235,7 +235,7 @@ public class PricingClientTests
     }
 
     [Fact]
-    public async Task GetPlan_WithPrivilegedControls_ReturnsPlanWithSeatMinimums()
+    public async Task GetPlan_WithPrivilegedControls_ReturnsPrivilegedControlsSeatPlan()
     {
         // Arrange
         var mockHttp = new MockHttpMessageHandler();
@@ -271,8 +271,7 @@ public class PricingClientTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(10, result.PrivilegedControls.DefaultSeatMinimum);
-        Assert.Equal(new[] { 4, 6, 8 }, result.PrivilegedControls.PromotionalSeatMinimums);
+        Assert.Equal("privileged-controls-enterprise-seat-annually", result.PrivilegedControls.StripeSeatPlanId);
     }
 
     [Fact]

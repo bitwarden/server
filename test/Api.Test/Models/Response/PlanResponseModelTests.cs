@@ -19,7 +19,6 @@ public class PlanResponseModelTests
         Assert.NotNull(model.PrivilegedControls);
         Assert.Equal(expectedStripeSeatPlanId, model.PrivilegedControls.StripeSeatPlanId);
         Assert.Equal(expectedSeatPrice, model.PrivilegedControls.SeatPrice);
-        Assert.Equal(10, model.PrivilegedControls.DefaultSeatMinimum);
     }
 
     [Fact]

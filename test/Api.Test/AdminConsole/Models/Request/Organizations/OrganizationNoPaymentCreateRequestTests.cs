@@ -197,17 +197,17 @@ public class OrganizationNoPaymentCreateRequestTests
                 EncryptedPrivateKey = "test-encrypted-private-key"
             },
             UsePrivilegedControls = true,
-            PamSeatMinimum = 6
+            PamSeats = 6
         };
 
         var signup = model.ToOrganizationSignup(new Bit.Core.Entities.User());
 
         Assert.True(signup.UsePrivilegedControls);
-        Assert.Equal(6, signup.PamSeatMinimum);
+        Assert.Equal(6, signup.PamSeats);
     }
 
     [Fact]
-    public void Validate_PamSeatMinimum_BelowRange_FailsValidation()
+    public void Validate_PamSeats_BelowRange_FailsValidation()
     {
         var model = new OrganizationNoPaymentCreateRequest
         {
@@ -220,12 +220,12 @@ public class OrganizationNoPaymentCreateRequestTests
                 PublicKey = "test-public-key",
                 EncryptedPrivateKey = "test-encrypted-private-key"
             },
-            PamSeatMinimum = 0
+            PamSeats = 0
         };
 
         var results = ValidateModel(model);
 
-        Assert.Contains(results, r => r.MemberNames.Contains(nameof(OrganizationNoPaymentCreateRequest.PamSeatMinimum)));
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(OrganizationNoPaymentCreateRequest.PamSeats)));
     }
 
     private static List<ValidationResult> ValidateModel(object model)

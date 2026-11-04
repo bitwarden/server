@@ -160,11 +160,11 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
     {
         var organization = CreateOrganization();
         SetSeatsInUse(organization, _seatsInUse);
-        var seatChange = SucceedWith();
+        var changeSet = SucceedWith();
 
         await _sut.Run(organization, 5);
 
-        await _updateOrganizationSubscriptionCommand.Received(1).Run(organization, seatChange.ChangeSet);
+        await _updateOrganizationSubscriptionCommand.Received(1).Run(organization, changeSet);
     }
 
     [Fact]
@@ -303,8 +303,8 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
     {
         var organization = CreateOrganization(maxAutoscalePamSeats: 15);
         SetSeatsInUse(organization, _seatsInUse);
-        var seatChange = SucceedWith();
-        _updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet)
+        var changeSet = SucceedWith();
+        _updateOrganizationSubscriptionCommand.Run(organization, changeSet)
             .Returns(new BadRequest("Your card was declined."));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, 5));
@@ -323,19 +323,17 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
             .Returns(new[] { new OrganizationUserUserDetails { Email = _ownerEmail } });
     }
 
-    private PrivilegedControlsSeatChange SucceedWith()
+    private OrganizationSubscriptionChangeSet SucceedWith()
     {
-        var seatChange = new PrivilegedControlsSeatChange(
-            new OrganizationSubscriptionChangeSet
-            {
-                Changes = [new UpdateItemQuantity("privileged-controls-enterprise-seat-annually", 15)]
-            },
-            10);
-        _seatChangeSetFactory.CreateAsync(Arg.Any<OrganizationEntity>(), Arg.Any<int>()).Returns(seatChange);
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity("privileged-controls-enterprise-seat-annually", 15)]
+        };
+        _seatChangeSetFactory.CreateAsync(Arg.Any<OrganizationEntity>(), Arg.Any<int>()).Returns(changeSet);
         _updateOrganizationSubscriptionCommand
-            .Run(Arg.Any<OrganizationEntity>(), seatChange.ChangeSet, Arg.Any<Subscription?>())
+            .Run(Arg.Any<OrganizationEntity>(), changeSet, Arg.Any<Subscription?>())
             .Returns(new Subscription());
-        return seatChange;
+        return changeSet;
     }
 
     private static OrganizationEntity CreateOrganization(
@@ -349,7 +347,6 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
             PlanType = PlanType.EnterpriseAnnually,
             UsePam = usePam,
             PamSeats = pamSeats,
-            PamSeatMinimum = 10,
             MaxAutoscalePamSeats = maxAutoscalePamSeats,
             GatewayCustomerId = "cus_123",
             GatewaySubscriptionId = gatewaySubscriptionId

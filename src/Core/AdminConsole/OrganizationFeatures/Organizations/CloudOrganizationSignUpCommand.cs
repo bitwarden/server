@@ -72,6 +72,11 @@ public class CloudOrganizationSignUpCommand(
             ValidateSecretsManagerPlan(plan, signup);
         }
 
+        if (signup.UsePrivilegedControls && featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support))
+        {
+            ValidatePrivilegedControlsSeats(plan, signup);
+        }
+
         if (!signup.IsFromProvider)
         {
             await ValidateSignUpPoliciesAsync(signup.Owner.Id);
@@ -272,7 +277,7 @@ public class CloudOrganizationSignUpCommand(
                 },
             PrivilegedControls = new OrganizationSubscriptionCreation.PrivilegedControlsPurchase
             {
-                RequestedSeatMinimum = signup.PamSeatMinimum
+                Seats = signup.PamSeats!.Value
             },
             CustomerSetup = sale.CustomerSetup,
             IsFromSecretsManagerTrial = signup.IsFromSecretsManagerTrial,
@@ -284,6 +289,19 @@ public class CloudOrganizationSignUpCommand(
             Owner = signup.Owner,
             CloudRegion = globalSettings.BaseServiceUri.CloudRegion
         };
+    }
+
+    private static void ValidatePrivilegedControlsSeats(Plan plan, OrganizationSignup signup)
+    {
+        if (signup.PamSeats is null)
+        {
+            throw new BadRequestException("Privileged Controls seats are required.");
+        }
+
+        if (signup.PamSeats > plan.PasswordManager.BaseSeats + signup.AdditionalSeats)
+        {
+            throw new BadRequestException(new PrivilegedControlsSeatsMustNotExceedPasswordManagerSeatsError().Message);
+        }
     }
 
     private static void ValidatePlan(Plan plan, int additionalSeats, string productType)

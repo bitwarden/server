@@ -1,11 +1,11 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Entities;
-using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
@@ -20,6 +20,7 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Fakes;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
@@ -566,10 +567,127 @@ public class SendOrganizationInvitesCommandTests
                 info.OrgUserTokenPairs.Count() == 2));
     }
 
+    [Theory, BitAutoData]
+    public async Task SendInvitesAsync_AfterSendingEmails_StartsReminderSequenceFiveDaysOut(
+        Organization organization,
+        OrganizationUser firstInvite,
+        OrganizationUser secondInvite)
+    {
+        var now = DateTime.Parse("2026-10-27T12:00:00Z").ToUniversalTime();
+        var sutProvider = SetupSutProviderWithNoExistingUsersAndFakeTime(now);
+
+        // Act
+        await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([firstInvite, secondInvite], organization));
+
+        // Assert - count resets and the first reminder is due 5 days after the invite
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
+            .StartInviteReminderSequencesAsync(
+                Arg.Is<IEnumerable<Guid>>(ids =>
+                    ids.Count() == 2 && ids.Contains(firstInvite.Id) && ids.Contains(secondInvite.Id)),
+                now.AddDays(InviteReminderConstants.ReminderIntervalDays));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendInvitesAsync_WhenSendFails_DoesNotStartReminders(
+        Organization organization,
+        OrganizationUser invite)
+    {
+        var sutProvider = SetupSutProviderWithNoExistingUsersAndFakeTime(DateTime.UtcNow);
+
+        sutProvider.GetDependency<IMailService>()
+            .SendUpdatedOrganizationInviteEmailsAsync(Arg.Any<OrganizationInvitesInfo>())
+            .Returns(Task.FromException(new Exception("boom")));
+
+        // Act
+        await Assert.ThrowsAsync<Exception>(() =>
+            sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([invite], organization)));
+
+        // Assert
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceive()
+            .StartInviteReminderSequencesAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<DateTime>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendInvitesAsync_ForInitialOrganizationOwner_DoesNotStartReminders(
+        Organization organization,
+        OrganizationUser invite)
+    {
+        var sutProvider = SetupSutProviderWithNoExistingUsersAndFakeTime(DateTime.UtcNow);
+
+        // Act
+        await sutProvider.Sut.SendInvitesAsync(
+            new SendInvitesRequest([invite], organization, initOrganization: true));
+
+        // Assert
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceive()
+            .StartInviteReminderSequencesAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<DateTime>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendInvitesAsync_WhenNothingToSend_DoesNotStartReminders(
+        Organization organization,
+        OrganizationUser inviteWithoutEmail)
+    {
+        var sutProvider = SetupSutProviderWithNoExistingUsersAndFakeTime(DateTime.UtcNow);
+
+        inviteWithoutEmail.Email = null;
+        inviteWithoutEmail.UserId = null;
+
+        // Act
+        await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([inviteWithoutEmail], organization));
+
+        // Assert
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceive()
+            .StartInviteReminderSequencesAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<DateTime>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendInvitesAsync_DoesNotSaveTheFullRow(
+        Organization organization,
+        OrganizationUser invite)
+    {
+        var sutProvider = SetupSutProviderWithNoExistingUsersAndFakeTime(DateTime.UtcNow);
+
+        // Act
+        await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([invite], organization));
+
+        // Assert - a full-row save after the send would clear the reminder columns the start just set
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceive()
+            .ReplaceAsync(Arg.Any<OrganizationUser>());
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceive()
+            .ReplaceManyAsync(Arg.Any<IEnumerable<OrganizationUser>>());
+    }
+
     private void SetupSutProvider(SutProvider<SendOrganizationInvitesCommand> sutProvider)
     {
         sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
         sutProvider.Create();
+    }
+
+    private SutProvider<SendOrganizationInvitesCommand> SetupSutProviderWithNoExistingUsersAndFakeTime(DateTime now)
+    {
+        var sutProvider = new SutProvider<SendOrganizationInvitesCommand>();
+        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
+        sutProvider.WithFakeTimeProvider().Create();
+
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(now);
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetManyByEmailsAsync(Arg.Any<IEnumerable<string>>())
+            .Returns([]);
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([]);
+
+        sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
+            .CreateToken(Arg.Any<OrganizationUser>())
+            .Returns(info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
+            {
+                ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
+            });
+
+        return sutProvider;
     }
 
     private void SetupSutProviderWithNoExistingUsers(SutProvider<SendOrganizationInvitesCommand> sutProvider)

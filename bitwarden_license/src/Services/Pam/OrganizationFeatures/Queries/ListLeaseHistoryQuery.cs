@@ -26,8 +26,7 @@ public class ListLeaseHistoryQuery : IListLeaseHistoryQuery
             return new List<AccessLease>();
         }
 
-        // Shares the one history window (AccessHistoryWindow) so request and lease history reach equally far back.
-        // `now` also decides which leases count as ended, and the caller derives response statuses against it too.
+        // The same window as request history, so both reach equally far back.
         return await _accessLeaseRepository.GetManyEndedByCollectionIdsAsync(
             manageableCollectionIds, now.AddDays(-AccessHistoryWindow.RetentionDays), now);
     }

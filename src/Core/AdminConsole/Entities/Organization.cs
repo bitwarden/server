@@ -276,8 +276,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// </summary>
     public int? MaxAutoscalePamSeats { get; set; }
     /// <summary>
-    /// The minimum number of Privileged Access Management seats the organization's subscription must retain.
-    /// NULL if the organization has never purchased Privileged Access Management.
+    /// No longer used. Kept only because the column still exists in the database; don't read or write it.
     /// </summary>
     public int? PamSeatMinimum { get; set; }
     /// <summary>

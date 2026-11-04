@@ -79,7 +79,7 @@ public class OrganizationCreateRequestModel : IValidatableObject
     public bool UsePrivilegedControls { get; set; }
 
     [Range(1, int.MaxValue)]
-    public int? PamSeatMinimum { get; set; }
+    public int? PamSeats { get; set; }
 
     public bool IsFromSecretsManagerTrial { get; set; }
 
@@ -113,7 +113,7 @@ public class OrganizationCreateRequestModel : IValidatableObject
             AdditionalServiceAccounts = AdditionalServiceAccounts.GetValueOrDefault(),
             UseSecretsManager = UseSecretsManager,
             UsePrivilegedControls = UsePrivilegedControls,
-            PamSeatMinimum = PamSeatMinimum,
+            PamSeats = PamSeats,
             IsFromSecretsManagerTrial = IsFromSecretsManagerTrial,
             TaxInfo = new TaxInfo
             {

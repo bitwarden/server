@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Organizations.Commands;
+﻿using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
@@ -11,8 +12,7 @@ internal interface IAddPrivilegedControlsToExistingSubscriptionCommand
 {
     /// <summary>
     /// Handles an organization's first Privileged Controls purchase: buys the initial seats, sets the autoscale
-    /// limit, turns on Privileged Controls, and saves the plan's default seat minimum when the organization has
-    /// none yet. The customer is charged immediately.
+    /// limit, and turns on Privileged Controls. The customer is charged immediately.
     /// </summary>
     /// <param name="organization">The organization making its first purchase.</param>
     /// <param name="seats">The number of Privileged Controls seats to buy.</param>
@@ -45,13 +45,18 @@ internal sealed class AddPrivilegedControlsToExistingSubscriptionCommand(
             throw new BadRequestException("Cannot set max seat autoscaling below the Privileged Controls seat count.");
         }
 
-        var seatChange = await seatChangeSetFactory.CreateAsync(organization, seats);
-        (await updateOrganizationSubscriptionCommand.Run(organization, seatChange.ChangeSet)).GetValueOrThrowHttpException();
+        if (!BillingExtensions.PrivilegedControlsAutoscaleLimitFits(maxAutoscaleSeats, organization.MaxAutoscaleSeats))
+        {
+            throw new BadRequestException(
+                "You cannot set a Privileged Controls autoscale limit higher than the Password Manager autoscale limit.");
+        }
+
+        var changeSet = await seatChangeSetFactory.CreateAsync(organization, seats);
+        (await updateOrganizationSubscriptionCommand.Run(organization, changeSet)).GetValueOrThrowHttpException();
 
         organization.PamSeats = seats;
         organization.MaxAutoscalePamSeats = maxAutoscaleSeats;
         organization.UsePam = true;
-        organization.PamSeatMinimum = seatChange.SeatMinimum;
         await organizationService.ReplaceAndUpdateCacheAsync(organization);
     }
 }

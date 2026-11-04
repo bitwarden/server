@@ -35,7 +35,7 @@ public class BusinessUnitConverterTests
     private readonly GlobalSettings _globalSettings = new();
     private readonly ILogger<BusinessUnitConverter> _logger = Substitute.For<ILogger<BusinessUnitConverter>>();
     private readonly IMailService _mailService = Substitute.For<IMailService>();
-    private readonly IOrganizationRepository _organizationRepository = Substitute.For<IOrganizationRepository>();
+    private readonly IOrganizationService _organizationService = Substitute.For<IOrganizationService>();
     private readonly IOrganizationUserRepository _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IProviderOrganizationRepository _providerOrganizationRepository = Substitute.For<IProviderOrganizationRepository>();
@@ -51,7 +51,7 @@ public class BusinessUnitConverterTests
         _globalSettings,
         _logger,
         _mailService,
-        _organizationRepository,
+        _organizationService,
         _organizationUserRepository,
         _pricingClient,
         _providerOrganizationRepository,
@@ -157,7 +157,7 @@ public class BusinessUnitConverterTests
                 arguments.Items[1].Price == updatedPriceId &&
                 arguments.Items[1].Quantity == organization.Seats));
 
-        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(arguments =>
+        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(arguments =>
             arguments.PlanType == PlanType.EnterpriseAnnually &&
             arguments.Status == OrganizationStatusType.Managed &&
             arguments.UseRiskInsights == enterpriseAnnually.HasRiskInsights &&
@@ -198,6 +198,43 @@ public class BusinessUnitConverterTests
         };
 
         _subscriberService.GetSubscription(organization).Returns(subscription);
+
+        var businessUnitConverter = BuildConverter();
+
+        await Assert.ThrowsAsync<BillingException>(() =>
+            businessUnitConverter.FinalizeConversion(organization, userId, token, providerKey, organizationKey));
+
+        await _organizationUserRepository.DidNotReceiveWithAnyArgs()
+            .GetByOrganizationAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task FinalizeConversion_TokenExpiredForProviderLifetime_ThrowsBillingException(
+        Organization organization,
+        Guid userId,
+        string providerKey,
+        string organizationKey)
+    {
+        organization.PlanType = PlanType.EnterpriseAnnually2020;
+        organization.UseSecretsManager = false;
+
+        _globalSettings.ProviderInviteExpirationHours = 1;
+        _globalSettings.OrganizationInviteExpirationHours = 168;
+
+        _subscriberService.GetSubscription(organization).Returns(new Subscription
+        {
+            Status = StripeConstants.SubscriptionStatus.Active
+        });
+
+        var user = new User { Id = Guid.NewGuid(), Email = "provider-admin@example.com" };
+        _userRepository.GetByIdAsync(userId).Returns(user);
+
+        var dataProtector = new MockDataProtector(organization, user.Email)
+        {
+            Token = $"BusinessUnitConversionInvite {organization.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow.AddHours(-2))}"
+        };
+        _dataProtectionProvider.CreateProtector($"{nameof(BusinessUnitConverter)}DataProtector").Returns(dataProtector);
+        var token = dataProtector.Protect(dataProtector.Token);
 
         var businessUnitConverter = BuildConverter();
 

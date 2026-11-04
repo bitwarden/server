@@ -105,8 +105,7 @@ public class HandlebarsMailService : IMailService
         ProductTierType productTier,
         IEnumerable<ProductType> products,
         int trialLength,
-        bool paymentOptional = false,
-        int? pamSeatMinimum = null)
+        bool paymentOptional = false)
     {
         var message = CreateDefaultMessage("Verify your email", email);
         var model = new TrialInitiationVerifyEmail
@@ -119,8 +118,7 @@ public class HandlebarsMailService : IMailService
             ProductTier = productTier,
             Product = products,
             TrialLength = trialLength,
-            PaymentOptional = paymentOptional,
-            PamSeatMinimum = pamSeatMinimum
+            PaymentOptional = paymentOptional
         };
         await AddMessageContentAsync(message, "Billing.TrialInitiationVerifyEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
