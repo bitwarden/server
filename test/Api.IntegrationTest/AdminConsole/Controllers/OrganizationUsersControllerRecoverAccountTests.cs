@@ -608,6 +608,42 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
         Assert.Equal("stamp-untouched", row.Stamp);
     }
 
+    [Fact]
+    public async Task RecoverAccount_ResetMasterPasswordAndTwoFactor_RevokesTwoFactorRememberTokens()
+    {
+        // Arrange
+        var (ownerEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.Owner);
+        await _loginHelper.LoginAsync(ownerEmail);
+
+        var (targetEmail, targetOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+        await SetResetPasswordKeyAsync(targetOrgUser);
+
+        var userRepository = _factory.GetService<IUserRepository>();
+        var targetUser = (await userRepository.GetByEmailAsync(targetEmail))!;
+        var (device, _) = await SeedTwoFactorRememberTokenAsync(targetUser, "stamp-before-reset");
+
+        // Act
+        var response = await _client.PutAsJsonAsync(
+            $"organizations/{_organization.Id}/users/{targetOrgUser.Id}/recover-account",
+            new OrganizationUserResetPasswordRequestModel
+            {
+                ResetMasterPassword = true,
+                ResetTwoFactor = true,
+                NewMasterPasswordHash = "new-master-password-hash",
+                Key = "2.AAECAwQFBgcICQoLDA0ODw==|QmFzZTY0UGFydA==|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+            });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        var rememberTokenRepository = _factory.GetService<ITwoFactorRememberTokenRepository>();
+        var row = await rememberTokenRepository.GetByUserIdDeviceIdAsync(targetUser.Id, device.Id);
+        Assert.NotNull(row);
+        Assert.NotEqual("stamp-before-reset", row.Stamp);
+    }
+
     private async Task<(Device Device, TwoFactorRememberToken Row)> SeedTwoFactorRememberTokenAsync(
         User user, string stamp)
     {
