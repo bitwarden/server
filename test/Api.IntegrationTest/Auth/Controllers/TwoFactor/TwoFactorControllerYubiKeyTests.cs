@@ -74,6 +74,28 @@ public class TwoFactorControllerYubiKeyTests : IClassFixture<ApiApplicationFacto
         Assert.Null(refreshed!.GetTwoFactorProvider(TwoFactorProviderType.YubiKey));
     }
 
+    /// <summary>
+    /// Removing the only provider leaves 2FA no longer enabled, so the user's 2FA remember tokens are
+    /// revoked. The user has no premium, so the premium-only provider does not count either way.
+    /// </summary>
+    [Fact]
+    public async Task DeleteYubiKey_TwoFactorAuthNoLongerEnabled_RevokesTwoFactorRememberTokens()
+    {
+        await EnrollUserInYubiKey();
+        var device = await SeedTwoFactorRememberTokenAsync(_factory, _userEmail, "stamp-before-teardown");
+
+        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-yubikey",
+            new { MasterPasswordHash = MasterPasswordHash });
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "yubiKey");
+
+        var disableResponse = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/yubikey",
+            new TwoFactorYubiKeyDeleteRequestModel { UserVerificationToken = uvToken });
+        Assert.Equal(HttpStatusCode.NoContent, disableResponse.StatusCode);
+
+        await AssertTwoFactorRememberTokenRotatedAsync(_factory, _userEmail, device, "stamp-before-teardown");
+    }
+
     [Fact]
     public async Task PutYubiKey_ValidTokenAndPremium_UpdatesProvider()
     {
