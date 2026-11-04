@@ -363,16 +363,24 @@ public class AcceptOrganizationInviteLinkCommandTests
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
+        invitedOrganizationUser.OrganizationId = organization.Id;
         invitedOrganizationUser.Status = OrganizationUserStatusType.Invited;
         invitedOrganizationUser.Email = user.Email;
         invitedOrganizationUser.UserId = null;
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationEmailAsync(organization.Id, user.Email)
-            .Returns(invitedOrganizationUser);
+        invitedOrganizationUser.AccessPam = true;
+        SetupValidationResult(sutProvider, new AcceptInviteLinkMembershipValidationResult
+        {
+            Organization = organization,
+            ExistingOrganizationUser = invitedOrganizationUser,
+        });
 
         var result = await sutProvider.Sut.AcceptAsync(BuildRequest(organization, inviteLink, user));
 
         Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou =>
+                ou.Id == invitedOrganizationUser.Id && ou.Status == OrganizationUserStatusType.Accepted));
         await sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
             .DidNotReceiveWithAnyArgs()
             .RunAsync(default!, default);
