@@ -100,7 +100,7 @@ public class TwoFactorRememberTokenRepositoryTests
 
         Assert.NotNull(updated);
         Assert.Equal("stamp-two", updated.Stamp);
-        // Same row rather than a second one, and the row still records when the device was first remembered.
+        // Same row rather than a second one, and the row still records when a 2FA remember token was first issued for the device.
         Assert.Equal(inserted.Id, updated.Id);
         Assert.Equal(inserted.CreationDate, updated.CreationDate);
         Assert.True(updated.RevisionDate >= inserted.RevisionDate);
@@ -111,7 +111,7 @@ public class TwoFactorRememberTokenRepositoryTests
     // -------------------------------------------------------------------------------------------
 
     /// <summary>
-    /// Two logins requesting "remember me" for the same device at the same instant must not produce a
+    /// Two logins requesting a 2FA remember token for the same device at the same instant must not produce a
     /// unique-key violation, which would surface to the user as a failed login.
     /// </summary>
     /// <remarks>
@@ -296,7 +296,7 @@ public class TwoFactorRememberTokenRepositoryTests
         Assert.NotNull(afterOne);
         Assert.NotNull(afterTwo);
 
-        // Every device the user remembered is cut off, and the rows are kept rather than deleted.
+        // Every 2FA remember token the user holds is cut off, and the rows are kept rather than deleted.
         Assert.NotEqual(beforeOne.Stamp, afterOne.Stamp);
         Assert.NotEqual(beforeTwo.Stamp, afterTwo.Stamp);
         Assert.Equal(beforeOne.Id, afterOne.Id);

@@ -534,7 +534,7 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
     }
 
     [Fact]
-    public async Task RecoverAccount_ResetTwoFactorOnly_RevokesRememberedDevices()
+    public async Task RecoverAccount_ResetTwoFactorOnly_RevokesTwoFactorRememberTokens()
     {
         // Arrange
         var (ownerEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
@@ -547,7 +547,7 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
 
         var userRepository = _factory.GetService<IUserRepository>();
         var targetUser = (await userRepository.GetByEmailAsync(targetEmail))!;
-        var (device, _) = await SeedRememberedDeviceAsync(targetUser, "stamp-before-reset");
+        var (device, _) = await SeedTwoFactorRememberTokenAsync(targetUser, "stamp-before-reset");
 
         // Act
         var response = await _client.PutAsJsonAsync(
@@ -569,11 +569,11 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
 
     /// <summary>
     /// The two flags are independent. A password-only recovery is not a two-factor teardown, so it
-    /// does not rotate the remember-token rows. (The password change itself still invalidates
-    /// existing remember tokens through the security stamp.)
+    /// does not rotate the 2FA remember token rows. (The password change itself still invalidates
+    /// existing 2FA remember tokens through the security stamp.)
     /// </summary>
     [Fact]
-    public async Task RecoverAccount_ResetMasterPasswordOnly_LeavesRememberedDevicesAlone()
+    public async Task RecoverAccount_ResetMasterPasswordOnly_LeavesTwoFactorRememberTokensAlone()
     {
         // Arrange
         var (ownerEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
@@ -586,7 +586,7 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
 
         var userRepository = _factory.GetService<IUserRepository>();
         var targetUser = (await userRepository.GetByEmailAsync(targetEmail))!;
-        var (device, _) = await SeedRememberedDeviceAsync(targetUser, "stamp-untouched");
+        var (device, _) = await SeedTwoFactorRememberTokenAsync(targetUser, "stamp-untouched");
 
         // Act
         var response = await _client.PutAsJsonAsync(
@@ -608,7 +608,7 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
         Assert.Equal("stamp-untouched", row.Stamp);
     }
 
-    private async Task<(Device Device, TwoFactorRememberToken Row)> SeedRememberedDeviceAsync(
+    private async Task<(Device Device, TwoFactorRememberToken Row)> SeedTwoFactorRememberTokenAsync(
         User user, string stamp)
     {
         var device = await _factory.GetService<IDeviceRepository>().CreateAsync(new Device

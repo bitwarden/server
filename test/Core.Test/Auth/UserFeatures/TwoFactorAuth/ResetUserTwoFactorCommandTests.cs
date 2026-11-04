@@ -80,7 +80,7 @@ public class ResetUserTwoFactorCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ResetAsync_RevokesRememberedDevices(User user)
+    public async Task ResetAsync_RevokesTwoFactorRememberTokens(User user)
     {
         // Arrange
         var sutProvider = GetSutProvider();
