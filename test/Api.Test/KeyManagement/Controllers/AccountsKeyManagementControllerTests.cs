@@ -43,6 +43,7 @@ public class AccountsKeyManagementControllerTests
         "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
     private static readonly string _mockEncryptedType7String = "7.AOs41Hd8OQiCPXjyJKCiDA==";
     private const string _mockKeyId = "0123456789abcdef0123456789abcdef";
+    private const string _mockOldKeyId = "fedcba9876543210fedcba9876543210";
 
 
     [Theory]
@@ -124,6 +125,7 @@ public class AccountsKeyManagementControllerTests
         RotateUserAccountKeysAndDataRequestModel data, User user)
     {
         data.AccountKeys.SignatureKeyPair = null;
+        data.OldUserKeyId = _mockOldKeyId;
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
         sutProvider.GetDependency<IRotateUserAccountKeysCommand>().PasswordChangeAndRotateUserAccountKeysAsync(Arg.Any<User>(), Arg.Any<PasswordChangeAndRotateUserAccountKeysData>())
             .Returns(IdentityResult.Success);
@@ -165,6 +167,9 @@ public class AccountsKeyManagementControllerTests
 
                 && d.BaseData.AccountKeys!.PublicKeyEncryptionKeyPairData.WrappedPrivateKey == data.AccountKeys.PublicKeyEncryptionKeyPair!.WrappedPrivateKey
                 && d.BaseData.AccountKeys!.PublicKeyEncryptionKeyPairData.PublicKey == data.AccountKeys.PublicKeyEncryptionKeyPair!.PublicKey
+
+                && d.BaseData.OldUserKeyId!.ToString() == _mockOldKeyId
+                && d.BaseData.NewUserKeyId!.ToString() == _mockKeyId
             ));
     }
 
@@ -234,9 +239,10 @@ public class AccountsKeyManagementControllerTests
         RotateUserAccountKeysAndDataRequestModel data, User user)
     {
         data.AccountKeys.SignatureKeyPair = null;
-        // Old clients send neither the key id of the user key contained in the unlock data, nor the key id of the
-        // key being rotated to.
+        // Old clients send no key ids: not for the user key contained in the unlock data, not for the key being
+        // rotated away from, and not for the key being rotated to.
         data.AccountUnlockData.MasterPasswordUnlockData.ContainedKeyId = null;
+        data.OldUserKeyId = null;
         data.NewUserKeyId = null;
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
         sutProvider.GetDependency<IRotateUserAccountKeysCommand>()
@@ -250,6 +256,7 @@ public class AccountsKeyManagementControllerTests
             .PasswordChangeAndRotateUserAccountKeysAsync(Arg.Is(user),
                 Arg.Is<PasswordChangeAndRotateUserAccountKeysData>(d =>
                     d.MasterPasswordUnlockData.ContainedKeyId == null
+                    && d.BaseData.OldUserKeyId == null
                     && d.BaseData.NewUserKeyId == null));
     }
 
@@ -770,6 +777,7 @@ public class AccountsKeyManagementControllerTests
                 && d.MasterPasswordUnlockData.Salt == request.UnlockMethodData.MasterPasswordUnlockData.Salt
                 && d.MasterPasswordUnlockData.MasterKeyWrappedUserKey == request.UnlockMethodData.MasterPasswordUnlockData.MasterKeyWrappedUserKey
                 && d.MasterPasswordUnlockData.ContainedKeyId!.ToString() == _mockKeyId
+                && d.BaseData.OldUserKeyId!.ToString() == _mockOldKeyId
                 && d.BaseData.NewUserKeyId!.ToString() == _mockKeyId
 
                 && d.BaseData.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey == request.WrappedAccountCryptographicState.PublicKeyEncryptionKeyPair.WrappedPrivateKey
@@ -788,9 +796,9 @@ public class AccountsKeyManagementControllerTests
         SutProvider<AccountsKeyManagementController> sutProvider, RotateUserKeysRequestModel request, User user)
     {
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-        // Old clients send neither the key id of the user key contained in the unlock data, nor the key id of the
-        // key being rotated to.
-        request = SetupValidRotateUserKeysRequest(request, null);
+        // Old clients send no key ids: not for the user key contained in the unlock data, not for the key being
+        // rotated away from, and not for the key being rotated to.
+        request = SetupValidRotateUserKeysRequest(request, null, null);
 
         await sutProvider.Sut.RotateUserKeysAsync(request);
 
@@ -799,6 +807,7 @@ public class AccountsKeyManagementControllerTests
         await sutProvider.GetDependency<IRotateUserAccountKeysCommand>().Received(1)
             .MasterPasswordRotateUserAccountKeysAsync(Arg.Is(user), Arg.Is<MasterPasswordRotateUserAccountKeysData>(d =>
                 d.MasterPasswordUnlockData.ContainedKeyId == null
+                && d.BaseData.OldUserKeyId == null
                 && d.BaseData.NewUserKeyId == null));
     }
 
@@ -914,7 +923,7 @@ public class AccountsKeyManagementControllerTests
     }
 
     private static RotateUserKeysRequestModel SetupValidRotateUserKeysRequest(RotateUserKeysRequestModel request,
-        string? keyId = _mockKeyId)
+        string? keyId = _mockKeyId, string? oldKeyId = _mockOldKeyId)
     {
         request.WrappedAccountCryptographicState.SignatureKeyPair = new SignatureKeyPairRequestModel
         {
@@ -939,6 +948,7 @@ public class AccountsKeyManagementControllerTests
             },
             KeyConnectorKeyWrappedUserKey = null,
         };
+        request.OldUserKeyId = oldKeyId;
         request.NewUserKeyId = keyId;
         return request;
     }

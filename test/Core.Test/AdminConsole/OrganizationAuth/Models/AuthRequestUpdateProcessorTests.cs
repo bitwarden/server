@@ -218,7 +218,7 @@ public class AuthRequestUpdateProcessorTests
         var callback = Substitute.For<Func<OrganizationAdminAuthRequest, string, Task>>();
         sut.Process();
         await sut.SendApprovalEmail(callback);
-        await callback.Received()(sut.ProcessedAuthRequest, "iOS - device-id");
+        await callback.Received()(sut.ProcessedAuthRequest, "iOS");
     }
 
     private static T Approve<T>(T authRequest) where T : AuthRequest

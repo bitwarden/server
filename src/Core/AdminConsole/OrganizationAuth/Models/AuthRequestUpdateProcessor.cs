@@ -80,11 +80,7 @@ public class AuthRequestUpdateProcessor
             // This unknown case can't be unit tested without adding an enum
             // with no display attribute. Faith and trust are required!
             .GetCustomAttribute<DisplayAttribute>()?.Name ?? "Unknown Device Type";
-        var deviceTypeAndIdentifierDisplayString =
-            string.IsNullOrWhiteSpace(_unprocessedAuthRequest.RequestDeviceIdentifier)
-                ? deviceTypeDisplayName
-                : $"{deviceTypeDisplayName} - {_unprocessedAuthRequest.RequestDeviceIdentifier}";
-        await callback(ProcessedAuthRequest, deviceTypeAndIdentifierDisplayString);
+        await callback(ProcessedAuthRequest, deviceTypeDisplayName);
     }
 
     private void Approve()

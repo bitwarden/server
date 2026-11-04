@@ -1,4 +1,4 @@
-﻿using Bit.Core.Services;
+﻿using Bitwarden.Server.Sdk.Features;
 
 namespace Bit.Core.AdminConsole.Utilities;
 

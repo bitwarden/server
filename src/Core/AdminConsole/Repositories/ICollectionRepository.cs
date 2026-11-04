@@ -48,6 +48,14 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     Task<ICollection<CollectionAdminDetails>> GetManySharedByOrganizationIdWithPermissionsAsync(Guid organizationId, Guid userId, bool includeAccessRelationships);
 
     /// <summary>
+    /// Returns all shared and default collections for an organization, including the caller's effective
+    /// permissions and full access relationships. Always includes access relationships.
+    /// Purpose-built for reporting surfaces that need complete member attribution.
+    /// This does not perform any authorization checks internally!
+    /// </summary>
+    Task<ICollection<CollectionAdminDetails>> GetManyOrganizationCollectionsWithPermissionsAsync(Guid organizationId, Guid userId);
+
+    /// <summary>
     /// Returns the collection by Id, including permission info for the specified user.
     /// This does not perform any authorization checks internally!
     /// Optionally, you can include access relationships for other Groups/Users and the collection.

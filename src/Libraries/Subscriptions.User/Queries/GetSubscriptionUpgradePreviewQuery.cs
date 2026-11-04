@@ -89,12 +89,13 @@ internal sealed class GetSubscriptionUpgradePreviewQuery(
 
         try
         {
-            return await invoicePreviewService.GetInvoicePreviewAsync(options, targetPlanTier, PlanCadenceType.Annually);
+            return await invoicePreviewService.GetInvoicePreviewForBillingAddressAsync(options, targetPlanTier, PlanCadenceType.Annually);
         }
         catch (StripeException stripeException)
             when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.CustomerTaxLocationInvalid)
         {
             throw new BadRequestException(
+                BillingErrorKeys.BillingAddress,
                 "Your location wasn't recognized. Please ensure your country and postal code are valid and try again.");
         }
     }

@@ -80,10 +80,21 @@ public static class StripeConstants
         ];
     }
 
+    /// <summary>The values of a Stripe error's <c>type</c> field, as opposed to its <c>code</c> (<see cref="ErrorCodes"/>).</summary>
+    public static class ErrorTypes
+    {
+        public const string CardError = "card_error";
+    }
+
     public static class Intervals
     {
         public const string Month = "month";
         public const string Year = "year";
+    }
+
+    public static class InvoiceAutomaticTaxStatus
+    {
+        public const string Complete = "complete";
     }
 
     public static class InvoiceStatus
@@ -115,8 +126,20 @@ public static class StripeConstants
         public const string MigrationCohortId = "migration_cohort_id";
         public const string MigrationCohortName = "migration_cohort_name";
         public const string MigrationGraceServiceAccounts = "migration_grace_service_accounts";
+        public const string ManagingSystem = "managing_system";
         public const string CancellingUserId = "cancellingUserId";
         public const string PurchasableReference = "purchasable_reference";
+    }
+
+    /// <summary>
+    /// The values carried in <see cref="MetadataKeys.ManagingSystem"/>: the part of our code that created
+    /// and owns a subscription schedule.
+    /// </summary>
+    public static class ManagingSystems
+    {
+        public const string AnnualUpgrade = "annual_upgrade";
+        public const string BusinessPriceIncrease = "business_price_increase";
+        public const string PersonalPriceIncrease = "personal_price_increase";
     }
 
     /// <summary>
@@ -128,6 +151,7 @@ public static class StripeConstants
         public const string PasswordManagerStorage = "pm-storage";
         public const string SecretsManagerSeat = "sm-seat";
         public const string SecretsManagerServiceAccount = "sm-service-account";
+        public const string PrivilegedControlsSeat = "pam-seat";
     }
 
     public static class CancellationOrigins

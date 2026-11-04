@@ -18,6 +18,7 @@ public class SetInitialPasswordRequestModel : IValidatableObject
     public string? MasterPasswordHash { get; set; }
 
     [Obsolete("Use MasterPasswordUnlock instead")]
+    [EncryptedString]
     public string? Key { get; set; }
 
     [Obsolete("Use MasterPasswordUnlock instead")]

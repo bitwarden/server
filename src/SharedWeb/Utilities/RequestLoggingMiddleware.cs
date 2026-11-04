@@ -1,7 +1,7 @@
 ﻿using System.Collections;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 

@@ -8,8 +8,10 @@ public class DeadLetterCleanupHostedService : BackgroundService
 {
     internal const int BatchSize = 32;
 
+    // The longest delay Task.Delay accepts
+    internal static readonly TimeSpan MaxSweepInterval = TimeSpan.FromMilliseconds(uint.MaxValue - 1);
+
     private static readonly TimeSpan _receiveWaitTime = TimeSpan.FromSeconds(5);
-    private static readonly TimeSpan _sweepInterval = TimeSpan.FromHours(1);
 
     private readonly ILogger<DeadLetterCleanupHostedService> _logger;
     private readonly GlobalSettings _globalSettings;
@@ -37,6 +39,7 @@ public class DeadLetterCleanupHostedService : BackgroundService
             return;
         }
 
+        var sweepInterval = SweepInterval(_globalSettings, _logger);
         var topicName = _globalSettings.EventLogging.AzureServiceBus.IntegrationTopicName;
         var subscriptionNames = IntegrationSubscriptionNames(_globalSettings).ToList();
 
@@ -61,7 +64,7 @@ public class DeadLetterCleanupHostedService : BackgroundService
 
             try
             {
-                await Task.Delay(_sweepInterval, _timeProvider, stoppingToken);
+                await Task.Delay(sweepInterval, _timeProvider, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -130,6 +133,24 @@ public class DeadLetterCleanupHostedService : BackgroundService
         // A short read does not mean the sub-queue is drained, so keep sweeping until a batch comes back
         // empty or a message falls inside the retention window
         return (deleted, true);
+    }
+
+    internal static TimeSpan SweepInterval(GlobalSettings globalSettings, ILogger logger)
+    {
+        var configured = globalSettings.EventLogging.AzureServiceBus.DeadLetterSweepInterval;
+        if (configured > TimeSpan.Zero && configured <= MaxSweepInterval)
+        {
+            return configured;
+        }
+
+        // Below the range there is no pause between sweeps; above it Task.Delay throws and stops the host
+        var fallback = GlobalSettings.EventLoggingSettings.AzureServiceBusSettings.DefaultDeadLetterSweepInterval;
+        logger.LogWarning(
+            "Dead letter sweep interval {Configured} is outside the supported range. Sweeping every {Fallback} instead.",
+            configured,
+            fallback);
+
+        return fallback;
     }
 
     internal static IEnumerable<string> IntegrationSubscriptionNames(GlobalSettings globalSettings)

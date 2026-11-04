@@ -5,55 +5,31 @@ using Bit.Pam.Enums;
 namespace Bit.Pam.Entities;
 
 /// <summary>
-/// A single decision on a <see cref="AccessRequest"/>. A request can accumulate several: the approval itself (an
-/// <see cref="AccessDeciderKind.Automatic"/> verdict for auto-approval, or a <see cref="AccessDeciderKind.Human"/>
-/// verdict once approver endpoints land), plus the human audit decision recorded when the produced lease is later
-/// revoked or cancelled (<see cref="Repositories.IAccessLeaseRepository.RevokeAsync"/>) or an unactivated request is
-/// retracted (<see cref="Repositories.IAccessRequestRepository.CancelWithDecisionAsync"/>).
+/// One decision on an <see cref="AccessRequest"/>. Besides its approval or denial, a request gets a human Deny when
+/// its lease is ended early or an approver retracts it.
 /// </summary>
 public class AccessDecision : ITableObject<Guid>
 {
     public Guid Id { get; set; }
 
-    /// <summary>
-    /// The request this decision was made on.
-    /// </summary>
     public Guid AccessRequestId { get; set; }
 
-    /// <summary>
-    /// Discriminates the decision: determines whether <see cref="ApproverId"/> or <see cref="ConditionKind"/> is populated.
-    /// </summary>
     public AccessDeciderKind DeciderKind { get; set; }
 
-    /// <summary>
-    /// The human approver. NULL when <see cref="DeciderKind"/> is <see cref="AccessDeciderKind.Automatic"/>.
-    /// </summary>
+    /// <summary>Null for an automatic decision.</summary>
     public Guid? ApproverId { get; set; }
 
-    /// <summary>
-    /// The condition kind that decided (e.g. <see cref="AccessConditionKind.IpAllowlist"/>). NULL when
-    /// <see cref="DeciderKind"/> is <see cref="AccessDeciderKind.Human"/>.
-    /// </summary>
+    /// <summary>Null for a human decision, and not yet populated for automatic ones.</summary>
     public AccessConditionKind? ConditionKind { get; set; }
 
-    /// <summary>
-    /// The approve-or-deny outcome recorded by this decision.
-    /// </summary>
     public AccessDecisionVerdict Verdict { get; set; }
 
-    /// <summary>
-    /// Human comment, or a future automatic-evaluation reason string.
-    /// </summary>
+    /// <summary>An approver's comment, or the reason for an automatic denial.</summary>
     public string? Comment { get; set; }
 
-    /// <summary>
-    /// Forward-compatible snapshot of the inputs the evaluation saw. Null in this slice (no signals are evaluated).
-    /// </summary>
+    /// <summary>Always null; reserved for a snapshot of the inputs an evaluation saw.</summary>
     public string? EvaluationContext { get; set; }
 
-    /// <summary>
-    /// When the decision was recorded, stamped in UTC at construction.
-    /// </summary>
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
 
     public void SetNewId()

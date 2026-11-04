@@ -13,17 +13,29 @@ feature flag keys the library owns (`InvoicingFeatureFlags`) as known flags. The
 `SubscriptionPreview` record family under `InvoicePreviews/Models/` (including `PlanTierType`). The
 service, builder, mappers, reference table, and Stripe client are internal.
 
+`IInvoicePreviewService.GetInvoicePreviewAsync(options, tier, cadence)` is the shared entry point:
+callers (this library's own queries, and feature libraries such as `Subscriptions.Organization`) build
+a Stripe `InvoiceCreatePreviewOptions` and hand it here to get back the projected `InvoicePreview`.
+Previews built from a billing address the customer typed (cart previews for purchases, upgrades, plan
+changes, and restarts) use `GetInvoicePreviewForBillingAddressAsync` instead: it throws a
+`BadRequestException` keyed `BillingAddress` when Stripe couldn't calculate tax, which is how Stripe
+reports an address it can't locate. Previews that use the address on file (the renewal preview) keep
+the non-validating `GetInvoicePreviewAsync`.
+
 `IGetSubscriptionPreviewQuery.Run(ISubscriber)` builds the `SubscriptionPreview` for a subscriber's
 upcoming renewal: the invoice preview wrapped in the subscription-level envelope (status, storage,
-cancellation, and suspension). The `Organization` path is wired; the `User`/Premium path is stubbed
-for its own screen slice.
+cancellation, and suspension). Both the `Organization` path and the `User`/Premium path are wired —
+`Bit.Subscriptions.Organization` and `Bit.Subscriptions.User` map renewal preview endpoints onto them.
 
 ## Stripe boundary
 
-Invoicing owns the Stripe interaction behind invoice previews — the `IStripeAdapter` calls that
-hydrate invoice and subscription data — and projects the results into the vendor-neutral models on
-its public surface. Feature libraries above it never call Stripe themselves; they consume preview
-data through this surface, and reference Stripe SDK types only to pass data to and from it.
+Invoicing owns the projection behind invoice previews — the final `IStripeAdapter` call that fetches the
+preview invoice — and projects the results into the vendor-neutral models on its public surface. Feature
+libraries above it consume preview data through this surface. Until a shared `Bit.Subscriptions` library
+exists, a feature library may also read Stripe data directly through `IStripeAdapter` (for example, to
+read a subscription while building a plan-change request); reading Stripe this way is allowed for now.
+The ideal end state is that these Stripe calls move to a lower-level library that owns Stripe access for
+every library above it — Invoicing included — rather than Invoicing owning all of it.
 
 ### Proration months come from the line period
 
@@ -43,7 +55,8 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | From Core | Used for |
 | --- | --- |
 | `IStripeAdapter` | Fetching the preview invoice from Stripe |
-| `StripeConstants` | The `purchasable_reference` metadata key and reference values |
+| `StripeConstants` | The `purchasable_reference` metadata key and reference values, and the invoice automatic tax status |
+| `BillingErrorKeys` | The `BillingAddress` key on the error thrown when Stripe couldn't calculate tax |
 | `PlanCadenceType` | The billing cadence carried on the preview |
 | `ProductType` | Routing a reference to its product family |
 | `BitwardenDiscountType` | The type of a projected discount |

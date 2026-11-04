@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Dirt.Enums;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
@@ -84,7 +85,33 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     /// <param name="organization">The organization entity with updated properties (enabled, keys, status)</param>
     /// <param name="confirmOwnerAction">Action to confirm the organization owner, obtained from
     /// <see cref="IOrganizationUserRepository.BuildConfirmOwnerAction"/></param>
-    Task InitializeOrganizationAsync(Organization organization, Func<DbConnection, DbTransaction, Task> confirmOwnerAction);
+    /// <param name="additionalActions">Optional actions that run in the same transaction, after
+    /// <paramref name="confirmOwnerAction"/>. If one fails, all changes roll back.</param>
+    Task InitializeOrganizationAsync(Organization organization, Func<DbConnection, DbTransaction, Task> confirmOwnerAction,
+        IEnumerable<DatabaseTransactionAction>? additionalActions = null);
+
+    /// <summary>
+    /// Returns an action that sets the key id of the organization's symmetric key, for use in a transaction with the
+    /// write that establishes the key.
+    /// <para>
+    /// The key id is set once: the action only updates an organization that has no key id. It throws when no row is
+    /// updated, so the containing transaction rolls back instead of committing a key without a matching key id.
+    /// </para>
+    /// </summary>
+    /// <param name="organizationId">The organization identifier.</param>
+    /// <param name="organizationKeyId">Key id of the organization key.</param>
+    DatabaseTransactionAction BuildSetOrganizationKeyIdAction(Guid organizationId, KeyId organizationKeyId);
+
+    /// <summary>
+    /// Sets the key id of the organization's symmetric key, when the organization has no key id.
+    /// <para>
+    /// For backfilling organizations that predate the key id.
+    /// </para>
+    /// </summary>
+    /// <param name="organizationId">The organization identifier.</param>
+    /// <param name="organizationKeyId">Key id of the organization key.</param>
+    /// <returns>True when the key id was set; false when the organization already has a key id or does not exist.</returns>
+    Task<bool> SetOrganizationKeyIdAsync(Guid organizationId, KeyId organizationKeyId);
 
     /// <summary>
     /// Deletes the organization and, within the same database transaction, enqueues one

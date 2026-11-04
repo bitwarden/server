@@ -1,0 +1,51 @@
+﻿using Bit.Pam.Enums;
+
+namespace Bit.Pam.Models;
+
+/// <summary>
+/// The read model of a stored audit event. <see cref="Kind"/> carries the outcome and decides which subject ids are
+/// set; <see cref="RequesterId"/> owns the subject request or lease.
+/// </summary>
+public class AccessAuditEvent
+{
+    public Guid Id { get; set; }
+
+    public AccessAuditEventKind Kind { get; set; }
+    public AccessAuditEventPhase Phase { get; set; }
+
+    /// <summary>Correlates an action's Attempt/Outcome pair; the trail read collapses them into one entry.</summary>
+    public Guid CorrelationId { get; set; }
+
+    public DateTime OccurredDate { get; set; }
+    public Guid OrganizationId { get; set; }
+    public Guid? ActorId { get; set; }
+    public Guid? RequesterId { get; set; }
+    public Guid? CollectionId { get; set; }
+    public Guid? CipherId { get; set; }
+    public Guid? AccessRequestId { get; set; }
+    public Guid? AccessLeaseId { get; set; }
+    public Guid? AccessRuleId { get; set; }
+    public Guid? TargetSystemId { get; set; }
+    public Guid? AccessConnectorId { get; set; }
+    public Guid? RotationConfigId { get; set; }
+    public Guid? RotationJobId { get; set; }
+    public PamRotationSource? RotationSource { get; set; }
+    public PamRotationSyncState? SyncState { get; set; }
+
+    /// <summary>The reason, comment or message recorded with the event.</summary>
+    public string? Detail { get; set; }
+
+    public DateTime? LeaseNotBefore { get; set; }
+    public DateTime? LeaseNotAfter { get; set; }
+
+    // Frozen at write time. Any may be null when the referenced row is gone.
+    public string? ActorName { get; set; }
+    public string? ActorEmail { get; set; }
+    public string? RequesterName { get; set; }
+    public string? RequesterEmail { get; set; }
+    public string? RuleName { get; set; }
+    public string? TargetSystemName { get; set; }
+    public string? AccessConnectorName { get; set; }
+
+    public bool Automated => ActorId is null;
+}

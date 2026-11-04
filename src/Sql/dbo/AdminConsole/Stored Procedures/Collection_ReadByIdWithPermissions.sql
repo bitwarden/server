@@ -8,18 +8,26 @@ BEGIN
 
 	SELECT
 	    C.*,
-	    MIN(CASE
+	    ISNULL(MIN(CASE
+	        -- A group with no grant on this collection is not a restriction; ignore it
+	        WHEN
+	            CU.[CollectionId] IS NULL AND CG.[CollectionId] IS NULL
+	        THEN NULL
 	        WHEN
 	            COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) = 0
 	        THEN 0
 	        ELSE 1
-	    END) AS [ReadOnly],
-	    MIN (CASE
+	    END), 0) AS [ReadOnly],
+	    ISNULL(MIN(CASE
+	        -- A group with no grant on this collection is not a restriction; ignore it
+	        WHEN
+	            CU.[CollectionId] IS NULL AND CG.[CollectionId] IS NULL
+	        THEN NULL
 	        WHEN
 	            COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
 	        THEN 0
 	        ELSE 1
-	    END) AS [HidePasswords],
+	    END), 0) AS [HidePasswords],
 	    MAX(CASE
 	        WHEN
 	            COALESCE(CU.[Manage], CG.[Manage], 0) = 0

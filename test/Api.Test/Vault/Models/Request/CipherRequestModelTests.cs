@@ -265,6 +265,96 @@ public class CipherRequestModelTests
         Assert.Equal(expectedData, cipher.Data);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ToCipher_Login_SerializesHttpAuthenticationEnabled(bool httpAuthenticationEnabled)
+    {
+        var request = LoginRequest(httpAuthenticationEnabled);
+
+        var cipher = new Cipher { Type = CipherType.Login };
+        request.ToCipher(cipher);
+
+        var data = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
+
+        Assert.NotNull(data);
+        Assert.Equal(httpAuthenticationEnabled, data.HttpAuthenticationEnabled);
+    }
+
+    [Fact]
+    public void ToCipher_Login_HttpAuthenticationEnabledUnset_OmitsProperty()
+    {
+        var request = LoginRequest(httpAuthenticationEnabled: null);
+
+        var cipher = new Cipher { Type = CipherType.Login };
+        request.ToCipher(cipher);
+
+        Assert.DoesNotContain(nameof(CipherLoginData.HttpAuthenticationEnabled), cipher.Data);
+        Assert.Null(JsonSerializer.Deserialize<CipherLoginData>(cipher.Data)!.HttpAuthenticationEnabled);
+    }
+
+    [Fact]
+    public void ToCipherDetails_Login_KeepsHttpAuthenticationEnabled()
+    {
+        var request = LoginRequest(httpAuthenticationEnabled: true);
+
+        var cipher = request.ToCipherDetails(Guid.NewGuid(), allowOrgIdSet: false);
+
+        Assert.True(JsonSerializer.Deserialize<CipherLoginData>(cipher.Data)!.HttpAuthenticationEnabled);
+    }
+
+    [Fact]
+    public void ToOrganizationCipher_Login_KeepsHttpAuthenticationEnabled()
+    {
+        var request = LoginRequest(httpAuthenticationEnabled: true);
+        request.OrganizationId = Guid.NewGuid().ToString();
+
+        var cipher = request.ToOrganizationCipher();
+
+        Assert.True(JsonSerializer.Deserialize<CipherLoginData>(cipher.Data)!.HttpAuthenticationEnabled);
+    }
+
+    [Fact]
+    public void ToOrganizationCipherDetails_Login_KeepsHttpAuthenticationEnabled()
+    {
+        var request = LoginRequest(httpAuthenticationEnabled: true);
+
+        var cipher = request.ToOrganizationCipherDetails(Guid.NewGuid());
+
+        Assert.True(JsonSerializer.Deserialize<CipherLoginData>(cipher.Data)!.HttpAuthenticationEnabled);
+    }
+
+    [Fact]
+    public void ToCipher_BlobEncryptedLogin_WithUnknownLoginField_StoresDataUnchanged()
+    {
+        const string blob =
+            "{\"format_version\":1,\"wrapped_cek\":\"abc\",\"envelope\":\"def\",\"http_authentication_enabled\":true}";
+        var request = new CipherRequestModel
+        {
+            Type = CipherType.Login,
+            Data = blob,
+            Login = new CipherLoginModel { HttpAuthenticationEnabled = false },
+        };
+
+        var cipher = new Cipher { Type = CipherType.Login };
+        request.ToCipher(cipher);
+
+        Assert.True(cipher.IsDataBlobEncrypted());
+        Assert.Equal(blob, cipher.Data);
+    }
+
+    private static CipherRequestModel LoginRequest(bool? httpAuthenticationEnabled) => new()
+    {
+        Type = CipherType.Login,
+        Name = "2.name|encrypted",
+        Login = new CipherLoginModel
+        {
+            Username = "2.username|encrypted",
+            AutofillOnPageLoad = true,
+            HttpAuthenticationEnabled = httpAuthenticationEnabled,
+        },
+    };
+
     [Fact]
     public void Validate_BlobEncrypted_NameOmitted_Passes()
     {
@@ -318,6 +408,199 @@ public class CipherRequestModelTests
         var results = ValidateModel(request);
 
         Assert.Empty(results);
+    }
+
+    // A valid EncString (type 2 AesCbc256_B64) so [EncryptedString] on Name passes and
+    // IValidatableObject.Validate is called (it is skipped when property annotations fail).
+    private const string ValidEncString =
+        "2.AAECAwQFBgcICQoLDA0ODw==|aGVsbG8=|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=";
+
+    [Fact]
+    public void ToCipher_LegacyAttachmentsMap_DoesNotClearKeyOfKeyedAttachment()
+    {
+        const string attachmentId = "attachment-id";
+        var cipher = new Cipher { Type = CipherType.Login };
+        cipher.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            {
+                attachmentId,
+                new CipherAttachment.MetaData
+                {
+                    AttachmentId = attachmentId,
+                    FileName = ValidEncString,
+                    Key = ValidEncString,
+                }
+            }
+        });
+
+        var request = new CipherRequestModel
+        {
+            Type = CipherType.Login,
+            Name = ValidEncString,
+            Login = new CipherLoginModel(),
+            Attachments = new Dictionary<string, string> { { attachmentId, ValidEncString } },
+        };
+
+        request.ToCipher(cipher);
+
+        var attachment = cipher.GetAttachments()[attachmentId];
+        Assert.Equal(ValidEncString, attachment.Key);
+        Assert.Equal(ValidEncString, attachment.FileName);
+    }
+
+    [Fact]
+    public void ToCipher_LegacyAttachmentsMap_StillAppliesToKeylessAttachment()
+    {
+        const string attachmentId = "attachment-id";
+        const string newFileName = "2.BBECAwQFBgcICQoLDA0ODw==|aGVsbG8=|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=";
+        var cipher = new Cipher { Type = CipherType.Login };
+        cipher.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            {
+                attachmentId,
+                new CipherAttachment.MetaData
+                {
+                    AttachmentId = attachmentId,
+                    FileName = ValidEncString,
+                    Key = null,
+                }
+            }
+        });
+
+        var request = new CipherRequestModel
+        {
+            Type = CipherType.Login,
+            Name = ValidEncString,
+            Login = new CipherLoginModel(),
+            Attachments = new Dictionary<string, string> { { attachmentId, newFileName } },
+        };
+
+        request.ToCipher(cipher);
+
+        var attachment = cipher.GetAttachments()[attachmentId];
+        Assert.Null(attachment.Key);
+        Assert.Equal(newFileName, attachment.FileName);
+    }
+
+    [Fact]
+    public void Validate_LegacyAttachmentsMap_NonEncryptedFileName_Fails()
+    {
+        var request = new CipherRequestModel
+        {
+            Type = CipherType.Login,
+            Name = ValidEncString,
+            Attachments = new Dictionary<string, string> { { "attachment-id", "OWNED-not-an-encstring" } },
+        };
+
+        var results = ValidateModel(request);
+
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(CipherRequestModel.Attachments)));
+    }
+
+    [Fact]
+    public void Validate_LegacyAttachmentsMap_EncryptedFileName_Passes()
+    {
+        var request = new CipherRequestModel
+        {
+            Type = CipherType.Login,
+            Name = ValidEncString,
+            Attachments = new Dictionary<string, string> { { "attachment-id", ValidEncString } },
+        };
+
+        var results = ValidateModel(request);
+
+        Assert.Empty(results);
+    }
+
+    [Theory]
+    [InlineData(CipherType.Login)]
+    [InlineData(CipherType.Card)]
+    [InlineData(CipherType.Identity)]
+    [InlineData(CipherType.SecureNote)]
+    [InlineData(CipherType.SSHKey)]
+    [InlineData(CipherType.BankAccount)]
+    [InlineData(CipherType.DriversLicense)]
+    [InlineData(CipherType.Passport)]
+    public void Validate_DataIsJsonArray_ReturnsDataError(CipherType type)
+    {
+        var request = new CipherRequestModel
+        {
+            Type = type,
+            Name = ValidEncString,
+            Data = "[]",
+        };
+
+        var results = ValidateModel(request);
+
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(CipherRequestModel.Data)));
+    }
+
+    [Theory]
+    [InlineData(CipherType.Login)]
+    [InlineData(CipherType.Card)]
+    [InlineData(CipherType.Identity)]
+    [InlineData(CipherType.SecureNote)]
+    [InlineData(CipherType.SSHKey)]
+    [InlineData(CipherType.BankAccount)]
+    [InlineData(CipherType.DriversLicense)]
+    [InlineData(CipherType.Passport)]
+    public void Validate_DataIsEmptyJsonObject_Passes(CipherType type)
+    {
+        var request = new CipherRequestModel
+        {
+            Type = type,
+            Name = ValidEncString,
+            Data = "{}",
+        };
+
+        var results = ValidateModel(request);
+
+        Assert.DoesNotContain(results, r => r.MemberNames.Contains(nameof(CipherRequestModel.Data)));
+    }
+
+    [Theory]
+    [InlineData(CipherType.Login)]
+    [InlineData(CipherType.Card)]
+    [InlineData(CipherType.Identity)]
+    [InlineData(CipherType.SecureNote)]
+    [InlineData(CipherType.SSHKey)]
+    [InlineData(CipherType.BankAccount)]
+    [InlineData(CipherType.DriversLicense)]
+    [InlineData(CipherType.Passport)]
+    public void Validate_DataIsJsonNull_ReturnsDataError(CipherType type)
+    {
+        var request = new CipherRequestModel
+        {
+            Type = type,
+            Name = ValidEncString,
+            Data = "null",
+        };
+
+        var results = ValidateModel(request);
+
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(CipherRequestModel.Data)));
+    }
+
+    [Theory]
+    [InlineData(CipherType.Login)]
+    [InlineData(CipherType.Card)]
+    [InlineData(CipherType.Identity)]
+    [InlineData(CipherType.SecureNote)]
+    [InlineData(CipherType.SSHKey)]
+    [InlineData(CipherType.BankAccount)]
+    [InlineData(CipherType.DriversLicense)]
+    [InlineData(CipherType.Passport)]
+    public void Validate_BlobEncryptedData_SkipsTypeCheck(CipherType type)
+    {
+        var request = new CipherRequestModel
+        {
+            Type = type,
+            Data = "{\"format_version\":1,\"wrapped_cek\":\"abc\"}",
+        };
+
+        var results = ValidateModel(request);
+
+        Assert.DoesNotContain(results, r => r.MemberNames.Contains(nameof(CipherRequestModel.Data)));
     }
 
     private static List<ValidationResult> ValidateModel(CipherRequestModel request)

@@ -66,6 +66,22 @@ public class SendResponseModelTests
     }
 
     [Fact]
+    public void ItemSend_ReturnsMetadata()
+    {
+        var itemId = Guid.NewGuid();
+        var send = new Send
+        {
+            Type = SendType.Item,
+            Data = JsonSerializer.Serialize(new SendItemData("name", null, SendEncryptionType.V1, "sealed_blob",
+                new SendItemMetadata { ItemId = itemId, CreationDate = DateTime.UtcNow, RevisionDate = DateTime.UtcNow })),
+        };
+
+        var responseModel = new SendResponseModel(send);
+
+        Assert.Equal(itemId, responseModel.Data?.Metadata?.ItemId);
+    }
+
+    [Fact]
     public void ItemSend_NullData_Throws()
     {
         var send = new Send

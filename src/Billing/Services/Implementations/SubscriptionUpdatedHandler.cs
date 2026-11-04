@@ -43,7 +43,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IProviderService _providerService;
     private readonly IPushNotificationAdapter _pushNotificationAdapter;
     private readonly IPriceIncreaseScheduler _priceIncreaseScheduler;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IOrganizationPlanMigrationCohortRepository _cohortRepository;
     private readonly IOrganizationPlanMigrationCohortAssignmentRepository _cohortAssignmentRepository;
     private readonly ILogger<SubscriptionUpdatedHandler> _logger;
@@ -64,7 +64,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IProviderService providerService,
         IPushNotificationAdapter pushNotificationAdapter,
         IPriceIncreaseScheduler priceIncreaseScheduler,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         IOrganizationPlanMigrationCohortRepository cohortRepository,
         IOrganizationPlanMigrationCohortAssignmentRepository cohortAssignmentRepository,
         ILogger<SubscriptionUpdatedHandler> logger)
@@ -497,7 +497,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             organization.UsersGetPremium = familiesPlan.UsersGetPremium;
             organization.Seats = familiesPlan.PasswordManager.BaseSeats;
 
-            await _organizationRepository.ReplaceAsync(organization);
+            await _organizationService.ReplaceAndUpdateCacheAsync(organization);
 
             _logger.LogInformation(
                 "Updated organization ({OrganizationId}) to FamiliesAnnually plan after schedule transition",
@@ -647,7 +647,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 organization.Seats = (int)Math.Max(Math.Max(1L, billedSeatQuantity), (long)(organization.SmSeats ?? 0));
             }
 
-            await _organizationRepository.ReplaceAsync(organization);
+            await _organizationService.ReplaceAndUpdateCacheAsync(organization);
 
             var sourceProvidedServiceAccounts = sourcePlan.SecretsManager?.BaseServiceAccount ?? 0;
             var targetProvidedServiceAccounts = targetPlan.SecretsManager?.BaseServiceAccount ?? 0;
@@ -787,7 +787,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             }
 
             organization.ChangePlan(targetPlan);
-            await _organizationRepository.ReplaceAsync(organization);
+            await _organizationService.ReplaceAndUpdateCacheAsync(organization);
 
             _logger.LogInformation(
                 "Schedule-triggered annual upgrade applied for organization ({OrganizationId}): PlanType {SourcePlanType} -> {TargetPlanType}",

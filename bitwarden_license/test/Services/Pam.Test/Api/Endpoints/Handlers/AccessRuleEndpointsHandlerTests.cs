@@ -1,6 +1,7 @@
-﻿using System.Text.Json;
-using Bit.Core.Context;
+﻿using System.Security.Claims;
+using System.Text.Json;
 using Bit.Core.Exceptions;
+using Bit.Core.Services;
 using Bit.Pam.Entities;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
@@ -15,14 +16,13 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Api.Endpoints.Handlers;
 
 /// <summary>
-/// Whether the caller may touch the organization at all is settled by the authorization middleware before a handler
-/// runs (see <c>AccessRuleEndpoints</c>). What is left to the handler — and so what these tests pin — is resource
-/// scoping, that a rule reached by ID belongs to the organization on the route, and the edit attribution handed to
-/// the commands.
+/// Authorization runs in the middleware, so these tests pin resource scoping and the edit attribution handed to the
+/// commands.
 /// </summary>
 [SutProviderCustomize]
 public class AccessRuleEndpointsHandlerTests
 {
+    private static readonly ClaimsPrincipal _user = new();
     [Theory, BitAutoData]
     public async Task GetAll_ReturnsTheOrganizationsRules(
         Guid organizationId,
@@ -52,10 +52,6 @@ public class AccessRuleEndpointsHandlerTests
         Assert.Equal(rule.Id, result.Id);
     }
 
-    /// <summary>
-    /// Membership in the route's organization is all the middleware establishes, so nothing but this check stops a
-    /// rule ID from one organization being read through another organization's route.
-    /// </summary>
     [Theory, BitAutoData]
     public async Task Get_ARuleBelongingToAnotherOrganization_ThrowsNotFound(
         AccessRuleDetails rule, Guid otherOrganizationId, SutProvider<AccessRuleEndpointsHandler> sutProvider)
@@ -86,12 +82,12 @@ public class AccessRuleEndpointsHandlerTests
         SutProvider<AccessRuleEndpointsHandler> sutProvider)
     {
         var model = RequestModel();
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(_user).Returns(userId);
         sutProvider.GetDependency<ICreateAccessRuleCommand>()
             .CreateAsync(Arg.Any<AccessRule>(), Arg.Any<IEnumerable<Guid>>())
             .Returns(created);
 
-        await sutProvider.Sut.Post(organizationId, model);
+        await sutProvider.Sut.Post(_user, organizationId, model);
 
         await sutProvider.GetDependency<ICreateAccessRuleCommand>().Received(1)
             .CreateAsync(
@@ -108,12 +104,12 @@ public class AccessRuleEndpointsHandlerTests
         SutProvider<AccessRuleEndpointsHandler> sutProvider)
     {
         var model = RequestModel();
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(_user).Returns(userId);
         sutProvider.GetDependency<IUpdateAccessRuleCommand>()
             .UpdateAsync(organizationId, id, Arg.Any<AccessRule>(), Arg.Any<IEnumerable<Guid>>())
             .Returns(updated);
 
-        await sutProvider.Sut.Put(organizationId, id, model);
+        await sutProvider.Sut.Put(_user, organizationId, id, model);
 
         await sutProvider.GetDependency<IUpdateAccessRuleCommand>().Received(1)
             .UpdateAsync(
@@ -123,17 +119,17 @@ public class AccessRuleEndpointsHandlerTests
                 model.Collections);
     }
 
-    /// <summary>
-    /// The route's organization is what scopes the delete — the command rejects an ID belonging to any other.
-    /// </summary>
+    /// <summary>The command rejects an id belonging to another organization.</summary>
     [Theory, BitAutoData]
-    public async Task Delete_DeletesWithinTheRouteOrganization(
-        Guid organizationId, Guid id, SutProvider<AccessRuleEndpointsHandler> sutProvider)
+    public async Task Delete_DeletesWithinTheRouteOrganization_StampedWithTheCallingUser(
+        Guid organizationId, Guid id, Guid userId, SutProvider<AccessRuleEndpointsHandler> sutProvider)
     {
-        await sutProvider.Sut.Delete(organizationId, id);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(_user).Returns(userId);
+
+        await sutProvider.Sut.Delete(_user, organizationId, id);
 
         await sutProvider.GetDependency<IDeleteAccessRuleCommand>().Received(1)
-            .DeleteAsync(organizationId, id);
+            .DeleteAsync(organizationId, id, userId);
     }
 
     private static AccessRuleRequestModel RequestModel() => new()

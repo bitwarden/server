@@ -41,6 +41,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     private static readonly string _mockEncryptedType7String2 = "7.Mi1iaXR3YXJkZW4tZGF0YQo=";
     private static readonly string _mockEncryptedType7WrappedSigningKey = "7.DRv74Kg1RSlFSam1MNFlGD==";
     private const string _mockKeyId = "0123456789abcdef0123456789abcdef";
+    private const string _mockOldKeyId = "fedcba9876543210fedcba9876543210";
 
     private readonly HttpClient _client;
     private readonly IEmergencyAccessRepository _emergencyAccessRepository;
@@ -1034,6 +1035,136 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     }
 
     [Theory]
+    [BitAutoData]
+    public async Task RotateUserKeysAsync_OldUserKeyIdDoesNotMatchStoredKeyId_Conflict(
+        RotateUserKeysRequestModel request)
+    {
+        var user = await SetupUserForKeyRotationAsync(_mockEncryptedType7String, true);
+        SetupMasterPasswordRotateUserAccount(request, user);
+        request.OldUserKeyId = "00112233445566778899aabbccddeeff";
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userNewState);
+        Assert.Equal(user.Key, userNewState.Key);
+        Assert.Equal(_mockOldKeyId, userNewState.UserKeyId);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserKeysAsync_MalformedOldUserKeyId_BadRequest(RotateUserKeysRequestModel request)
+    {
+        var user = await SetupUserForKeyRotationAsync(_mockEncryptedType7String, true);
+        SetupMasterPasswordRotateUserAccount(request, user);
+        request.OldUserKeyId = "not-a-key-id";
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PasswordChangeAndRotateUserAccountKeysAsync_OldUserKeyIdDoesNotMatchStoredKeyId_Conflict(
+        RotateUserAccountKeysAndDataRequestModel request)
+    {
+        var user = await SetupUserForKeyRotationAsync();
+        SetupRotateUserAccountUnlockData(request, user);
+        SetupRotateUserAccountData(request);
+        SetupRotateUserAccountKeys(request, isV2Crypto: false);
+        request.OldUserKeyId = "00112233445566778899aabbccddeeff";
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userNewState);
+        Assert.Equal(user.Key, userNewState.Key);
+        Assert.Equal(user.MasterPassword, userNewState.MasterPassword);
+        Assert.Equal(_mockOldKeyId, userNewState.UserKeyId);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserKeysAsync_WithoutOldUserKeyId_RecordsTheNewUserKeyId(
+        RotateUserKeysRequestModel request)
+    {
+        var user = await SetupUserForKeyRotationAsync(_mockEncryptedType7String, true);
+        SetupMasterPasswordRotateUserAccount(request, user);
+        // A client that predates the field sends no old key id; it is accepted until the field is required.
+        request.OldUserKeyId = null;
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
+        response.EnsureSuccessStatusCode();
+
+        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userNewState);
+        Assert.Equal(_mockKeyId, userNewState.UserKeyId);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserKeysAsync_NoStoredUserKeyId_RecordsTheNewUserKeyId(
+        RotateUserKeysRequestModel request)
+    {
+        var user = await SetupUserForKeyRotationAsync(_mockEncryptedType7String, true);
+        // An account that has not reported its key id yet has nothing to compare the old key id against.
+        user.SetUserKeyId(null);
+        await _userRepository.ReplaceAsync(user);
+        SetupMasterPasswordRotateUserAccount(request, user);
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
+        response.EnsureSuccessStatusCode();
+
+        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userNewState);
+        Assert.Equal(_mockKeyId, userNewState.UserKeyId);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PasswordChangeAndRotateUserAccountKeysAsync_WithoutOldUserKeyId_RecordsTheNewUserKeyId(
+        RotateUserAccountKeysAndDataRequestModel request)
+    {
+        var user = await SetupUserForKeyRotationAsync();
+        SetupRotateUserAccountUnlockData(request, user);
+        SetupRotateUserAccountData(request);
+        SetupRotateUserAccountKeys(request, isV2Crypto: false);
+        // A client that predates the field sends no old key id; it is accepted until the field is required.
+        request.OldUserKeyId = null;
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
+        response.EnsureSuccessStatusCode();
+
+        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userNewState);
+        Assert.Equal(_mockKeyId, userNewState.UserKeyId);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PasswordChangeAndRotateUserAccountKeysAsync_NoStoredUserKeyId_RecordsTheNewUserKeyId(
+        RotateUserAccountKeysAndDataRequestModel request)
+    {
+        var user = await SetupUserForKeyRotationAsync();
+        // An account that has not reported its key id yet has nothing to compare the old key id against.
+        user.SetUserKeyId(null);
+        await _userRepository.ReplaceAsync(user);
+        SetupRotateUserAccountUnlockData(request, user);
+        SetupRotateUserAccountData(request);
+        SetupRotateUserAccountKeys(request, isV2Crypto: false);
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
+        response.EnsureSuccessStatusCode();
+
+        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userNewState);
+        Assert.Equal(_mockKeyId, userNewState.UserKeyId);
+    }
+
+    [Theory]
     [BitAutoData(false)]
     [BitAutoData(true)]
     public async Task RotateUserKeysAsync_TdeUserRotation_Success(bool setupAsV2Encryption, RotateUserKeysRequestModel request)
@@ -1188,6 +1319,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         user.MasterPassword = password;
         user.PublicKey = "publicKey";
         user.PrivateKey = privateKey ?? _mockEncryptedString;
+        user.SetUserKeyId(KeyId.FromHexEncodedString(_mockOldKeyId));
 
         // If creating signature key pair, user should already have V2 signed state
         if (createSignatureKeyPair)
@@ -1228,6 +1360,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
         // Key ids; the contained key id must match the key id of the user key being rotated to.
         request.AccountUnlockData.MasterPasswordUnlockData.ContainedKeyId = _mockKeyId;
+        request.OldUserKeyId = _mockOldKeyId;
         request.NewUserKeyId = _mockKeyId;
 
         // Unlock data arrays
@@ -1297,6 +1430,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
     private static void SetupCommonRotate(RotateUserKeysRequestModel request, bool upgradeToken = false)
     {
+        request.OldUserKeyId = _mockOldKeyId;
         request.NewUserKeyId = _mockKeyId;
 
         if (upgradeToken)
@@ -1383,6 +1517,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         user.MasterPassword = null;
         user.PublicKey = "publicKey";
         user.PrivateKey = _mockEncryptedString;
+        user.SetUserKeyId(KeyId.FromHexEncodedString(_mockOldKeyId));
         if (setupAsV2Encryption)
         {
             user.PrivateKey = _mockEncryptedType7String;
@@ -1430,6 +1565,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         user.UsesKeyConnector = true;
         user.PublicKey = "publicKey";
         user.PrivateKey = _mockEncryptedString;
+        user.SetUserKeyId(KeyId.FromHexEncodedString(_mockOldKeyId));
         if (setupAsV2Encryption)
         {
             user.PrivateKey = _mockEncryptedType7String;

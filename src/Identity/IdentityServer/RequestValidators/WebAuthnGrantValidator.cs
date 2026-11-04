@@ -42,7 +42,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         ISsoConfigRepository ssoConfigRepository,
         IUserRepository userRepository,
         IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IAssertWebAuthnLoginCredentialCommand assertWebAuthnLoginCredentialCommand,
         IPolicyRequirementQuery policyRequirementQuery,

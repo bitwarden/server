@@ -3,7 +3,7 @@
 
 using AutoMapper;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
-using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
+using Bit.Infrastructure.EntityFramework.Providers.Models;
 
 namespace Bit.Infrastructure.EntityFramework.Models;
 

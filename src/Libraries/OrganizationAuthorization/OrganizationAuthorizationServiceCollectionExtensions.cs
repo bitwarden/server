@@ -1,4 +1,5 @@
 ﻿using Bit.Api.AdminConsole.Authorization.Providers;
+using Bit.CurrentUser;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -13,11 +14,13 @@ public static class OrganizationAuthorizationServiceCollectionExtensions
     /// </summary>
     /// <remarks>
     /// The host is still responsible for registering Core's services: these handlers resolve
-    /// <c>IProviderUserRepository</c> and <c>IUserService</c> from the container.
+    /// <c>IProviderUserRepository</c> from the container, and <see cref="OrganizationContext"/> resolves
+    /// <c>IUserService</c>.
     /// </remarks>
     public static IServiceCollection AddOrganizationAuthorization(this IServiceCollection services)
     {
         services.AddHttpContextAccessor();
+        services.AddCurrentUser();
 
         services.TryAddScoped<IOrganizationContext, OrganizationContext>();
 

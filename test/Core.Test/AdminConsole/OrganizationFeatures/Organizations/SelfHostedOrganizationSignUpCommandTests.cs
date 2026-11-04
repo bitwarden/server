@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
+using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -86,6 +87,76 @@ public class SelfHostedOrganizationSignUpCommandTests
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
             .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncOrgKeys && n.TargetId == owner.Id));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SignUpAsync_WithPamLicense_GrantsOwnerPamAccess(
+        User owner, string ownerKey, string collectionName,
+        string publicKey, string privateKey,
+        SutProvider<SelfHostedOrganizationSignUpCommand> sutProvider)
+    {
+        // Arrange
+        var globalSettings = sutProvider.GetDependency<IGlobalSettings>();
+        var license = CreateValidOrganizationLicense(globalSettings);
+
+        SetupCommonMocks(sutProvider, owner);
+        SetupLicenseValidation(sutProvider, license);
+
+        sutProvider.GetDependency<ILicensingService>()
+            .GetClaimsPrincipalFromLicense(license)
+            .Returns(new ClaimsPrincipal(new ClaimsIdentity([
+                new Claim(OrganizationLicenseConstants.UsePam, "true"),
+                new Claim(OrganizationLicenseConstants.UseSecretsManager, "false")])));
+
+        sutProvider.GetDependency<IDeviceRepository>()
+            .GetManyByUserIdAsync(owner.Id)
+            .Returns(new List<Device>());
+
+        // Act
+        await sutProvider.Sut.SignUpAsync(license, owner, ownerKey, collectionName, publicKey, privateKey);
+
+        // Assert
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .CreateAsync(Arg.Is<OrganizationUser>(user =>
+                user.Type == OrganizationUserType.Owner &&
+                user.AccessPam &&
+                !user.AccessSecretsManager));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SignUpAsync_WithoutPamLicense_DoesNotGrantOwnerPamAccess(
+        User owner, string ownerKey, string collectionName,
+        string publicKey, string privateKey,
+        SutProvider<SelfHostedOrganizationSignUpCommand> sutProvider)
+    {
+        // Arrange
+        var globalSettings = sutProvider.GetDependency<IGlobalSettings>();
+        var license = CreateValidOrganizationLicense(globalSettings);
+
+        SetupCommonMocks(sutProvider, owner);
+        SetupLicenseValidation(sutProvider, license);
+
+        sutProvider.GetDependency<ILicensingService>()
+            .GetClaimsPrincipalFromLicense(license)
+            .Returns(new ClaimsPrincipal(new ClaimsIdentity([
+                new Claim(OrganizationLicenseConstants.UsePam, "false"),
+                new Claim(OrganizationLicenseConstants.UseSecretsManager, "true")])));
+
+        sutProvider.GetDependency<IDeviceRepository>()
+            .GetManyByUserIdAsync(owner.Id)
+            .Returns(new List<Device>());
+
+        // Act
+        await sutProvider.Sut.SignUpAsync(license, owner, ownerKey, collectionName, publicKey, privateKey);
+
+        // Assert
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .CreateAsync(Arg.Is<OrganizationUser>(user =>
+                user.Type == OrganizationUserType.Owner &&
+                !user.AccessPam &&
+                user.AccessSecretsManager));
     }
 
     [Theory, BitAutoData]

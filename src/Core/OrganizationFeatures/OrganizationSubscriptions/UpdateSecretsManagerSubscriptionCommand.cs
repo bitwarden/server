@@ -33,7 +33,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IEventService _eventService;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand;
     private readonly IStripeAdapter _stripeAdapter;
 
@@ -48,7 +48,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         IOrganizationAbilityCacheService organizationAbilityCacheService,
         IEventService eventService,
         IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         IStripeAdapter stripeAdapter)
     {
         _organizationUserRepository = organizationUserRepository;

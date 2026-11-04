@@ -14,7 +14,7 @@ public class SetKeyConnectorKeyRequestModelTests
     private const string _wrappedUserKey = "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
     private const string _publicKey = "public-key";
     private const string _privateKey = "private-key";
-    private const string _userKey = "user-key";
+    private const string _userKey = "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
     private const string _orgIdentifier = "org-identifier";
 
     [Fact]

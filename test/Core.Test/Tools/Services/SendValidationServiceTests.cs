@@ -10,7 +10,11 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Data;
+using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.Services;
+using Bit.Core.Vault.Models.Data;
+using Bit.Core.Vault.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -33,7 +37,6 @@ public class SendValidationServiceTests
         send.Type = SendType.File;
         user.Premium = false;
         user.Storage = 1024L * 1024L * 1024L; // 1 GB used
-        user.EmailVerified = true;
 
         sutProvider.GetDependency<Bit.Core.Settings.GlobalSettings>().SelfHosted = false;
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).Returns(user);
@@ -65,7 +68,6 @@ public class SendValidationServiceTests
         send.Type = SendType.File;
         user.Premium = true;
         user.MaxStorageGb = 10;
-        user.EmailVerified = true;
 
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).Returns(user);
         sutProvider.GetDependency<IUserService>().CanAccessPremium(user).Returns(true);
@@ -75,6 +77,31 @@ public class SendValidationServiceTests
 
         // Assert - should NOT call pricing service for individual premium users
         await sutProvider.GetDependency<IPricingClient>().DidNotReceive().GetAvailablePremiumPlan();
+    }
+
+    [Theory, BitAutoData]
+    public async Task StorageRemainingForSendAsync_EmailNotVerified_ReturnsStorage(
+        SutProvider<SendValidationService> sutProvider,
+        Send send,
+        User user)
+    {
+        // Arrange
+        send.UserId = user.Id;
+        send.OrganizationId = null;
+        send.Type = SendType.File;
+        user.Premium = true;
+        user.MaxStorageGb = 10;
+        user.Storage = 0;
+        user.EmailVerified = false;
+
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).Returns(user);
+        sutProvider.GetDependency<IUserService>().CanAccessPremium(user).Returns(true);
+
+        // Act
+        var result = await sutProvider.Sut.StorageRemainingForSendAsync(send);
+
+        // Assert
+        Assert.True(result > 0);
     }
 
     [Theory, BitAutoData]
@@ -88,7 +115,6 @@ public class SendValidationServiceTests
         send.OrganizationId = null;
         send.Type = SendType.File;
         user.Premium = false;
-        user.EmailVerified = true;
 
         sutProvider.GetDependency<Bit.Core.Settings.GlobalSettings>().SelfHosted = true;
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).Returns(user);
@@ -314,5 +340,211 @@ public class SendValidationServiceTests
             Assert.Equal($"Due to an Enterprise policy your Sends must have deletion dates no more than {kvp.Value} from their creation dates", exception.Message);
         }
 
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_ItemNotOwned_Throws(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId, CipherDetails cipherDetails)
+    {
+        cipherDetails.UserId = Guid.NewGuid();
+        cipherDetails.OrganizationId = null;
+        SetItemMetadata(send, cipherDetails.Id);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ValidateUserCanSaveAsync(userId, send));
+        Assert.Equal("Item not found.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_ItemNotFound_Throws(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId, Guid itemId)
+    {
+        SetItemMetadata(send, itemId);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(itemId, userId).Returns((CipherDetails?)null);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ValidateUserCanSaveAsync(userId, send));
+        Assert.Equal("Item not found.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_ItemWithoutUser_Throws(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid itemId)
+    {
+        SetItemMetadata(send, itemId);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ValidateUserCanSaveAsync(null, send));
+        Assert.Equal("Item not found.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_ItemOwned_Success(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId, CipherDetails cipherDetails)
+    {
+        cipherDetails.UserId = userId;
+        cipherDetails.OrganizationId = null;
+        cipherDetails.ArchivedDate = null;
+        cipherDetails.DeletedDate = null;
+        cipherDetails.Type = Core.Vault.Enums.CipherType.Login;
+        SetItemMetadata(send, cipherDetails.Id);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<DisableSendPolicyRequirement>(userId)
+            .Returns(new DisableSendPolicyRequirement());
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(userId)
+            .Returns(new SendOptionsPolicyRequirement());
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendControlsPolicyRequirement>(userId)
+            .Returns(new SendControlsPolicyRequirement { WhoCanAccess = SendWhoCanAccessType.Any });
+
+        // No exception implies success
+        await sutProvider.Sut.ValidateUserCanSaveAsync(userId, send);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_ItemIdUnchanged_SkipsOwnershipCheck(
+        SutProvider<SendValidationService> sutProvider, Send send, Send stored, Guid userId, Guid itemId)
+    {
+        // E.g. removing auth from a Send whose item was later deleted must still succeed.
+        SetItemMetadata(send, itemId);
+        SetItemMetadata(stored, itemId);
+        sutProvider.GetDependency<ISendRepository>().GetByIdAsync(send.Id).Returns(stored);
+        StubPolicies(sutProvider, userId);
+
+        await sutProvider.Sut.ValidateUserCanSaveAsync(userId, send);
+
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().GetByIdAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_ItemIdChanged_NotOwned_Throws(
+        SutProvider<SendValidationService> sutProvider, Send send, Send stored, Guid userId, CipherDetails cipherDetails)
+    {
+        cipherDetails.UserId = Guid.NewGuid();
+        cipherDetails.OrganizationId = null;
+        SetItemMetadata(send, cipherDetails.Id);
+        SetItemMetadata(stored, Guid.NewGuid());
+        sutProvider.GetDependency<ISendRepository>().GetByIdAsync(send.Id).Returns(stored);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ValidateUserCanSaveAsync(userId, send));
+        Assert.Equal("Item not found.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_OrganizationItemWithEditAndViewPasswordPermissions_Success(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId, CipherDetails cipherDetails)
+    {
+        var orgId = Guid.NewGuid();
+        cipherDetails.UserId = null;
+        cipherDetails.OrganizationId = orgId;
+        cipherDetails.ArchivedDate = null;
+        cipherDetails.DeletedDate = null;
+        cipherDetails.Type = Core.Vault.Enums.CipherType.Login;
+        cipherDetails.Edit = true;
+        cipherDetails.ViewPassword = true;
+        SetItemMetadata(send, cipherDetails.Id);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<DisableSendPolicyRequirement>(userId)
+            .Returns(new DisableSendPolicyRequirement());
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(userId)
+            .Returns(new SendOptionsPolicyRequirement());
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendControlsPolicyRequirement>(userId)
+            .Returns(new SendControlsPolicyRequirement { WhoCanAccess = SendWhoCanAccessType.Any });
+
+        // No exception implies success
+        await sutProvider.Sut.ValidateUserCanSaveAsync(userId, send);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_OrganizationItemWithoutEditPermission_Throws(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId, CipherDetails cipherDetails)
+    {
+        var orgId = Guid.NewGuid();
+        cipherDetails.UserId = null;
+        cipherDetails.OrganizationId = orgId;
+        cipherDetails.ArchivedDate = null;
+        cipherDetails.DeletedDate = null;
+        cipherDetails.Type = Core.Vault.Enums.CipherType.Login;
+        cipherDetails.Edit = false;
+        cipherDetails.ViewPassword = true;
+        SetItemMetadata(send, cipherDetails.Id);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ValidateUserCanSaveAsync(userId, send));
+        Assert.Equal("Item not found.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_OrganizationItemWithoutViewPasswordPermission_Throws(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId, CipherDetails cipherDetails)
+    {
+        var orgId = Guid.NewGuid();
+        cipherDetails.UserId = null;
+        cipherDetails.OrganizationId = orgId;
+        cipherDetails.ArchivedDate = null;
+        cipherDetails.DeletedDate = null;
+        cipherDetails.Type = Core.Vault.Enums.CipherType.Login;
+        cipherDetails.Edit = true;
+        cipherDetails.ViewPassword = false;
+        SetItemMetadata(send, cipherDetails.Id);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ValidateUserCanSaveAsync(userId, send));
+        Assert.Equal("Item not found.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_ArchivedItem_Throws(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId, CipherDetails cipherDetails)
+    {
+        cipherDetails.UserId = userId;
+        cipherDetails.ArchivedDate = DateTime.Now;
+        SetItemMetadata(send, cipherDetails.Id);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ValidateUserCanSaveAsync(userId, send));
+        Assert.Equal("Item not found.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_DeletedItem_Throws(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId, CipherDetails cipherDetails)
+    {
+        cipherDetails.UserId = userId;
+        cipherDetails.DeletedDate = DateTime.Now;
+        SetItemMetadata(send, cipherDetails.Id);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ValidateUserCanSaveAsync(userId, send));
+        Assert.Equal("Item not found.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_SSHKeyItem_Throws(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId, CipherDetails cipherDetails)
+    {
+        cipherDetails.UserId = userId;
+        cipherDetails.Type = Core.Vault.Enums.CipherType.SSHKey;
+        SetItemMetadata(send, cipherDetails.Id);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ValidateUserCanSaveAsync(userId, send));
+        Assert.Equal("Item not found.", exception.Message);
+    }
+
+    private static void StubPolicies(SutProvider<SendValidationService> sutProvider, Guid userId)
+    {
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<DisableSendPolicyRequirement>(userId)
+            .Returns(new DisableSendPolicyRequirement());
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(userId)
+            .Returns(new SendOptionsPolicyRequirement());
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendControlsPolicyRequirement>(userId)
+            .Returns(new SendControlsPolicyRequirement { WhoCanAccess = SendWhoCanAccessType.Any });
+    }
+
+    private static void SetItemMetadata(Send send, Guid itemId)
+    {
+        send.Type = SendType.Item;
+        send.Emails = null;
+        send.Data = System.Text.Json.JsonSerializer.Serialize(new SendItemData("name", null, SendEncryptionType.V1,
+            "sealed_blob", new SendItemMetadata { ItemId = itemId, CreationDate = DateTime.UtcNow, RevisionDate = DateTime.UtcNow }));
     }
 }

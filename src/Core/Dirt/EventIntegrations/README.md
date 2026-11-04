@@ -185,9 +185,14 @@ rabbitmqctl set_policy dlq-ttl "^integration-dead-letter-queue$" '{"message-ttl"
 
 Azure Service Bus dead letters do not expire. TTL does not apply to a `$DeadLetterQueue`, and Azure holds those
 messages until a receiver completes them. `DeadLetterCleanupHostedService` in the events processor is
-what completes them. It sweeps hourly, receiving from each integration subscription's dead letter sub-queue and
-deleting every message enqueued longer ago than `GlobalSettings.EventLogging.AzureServiceBus.DeadLetterRetention`.
+what completes them. It receives from each integration subscription's dead letter sub-queue and
+deletes every message enqueued longer ago than `GlobalSettings.EventLogging.AzureServiceBus.DeadLetterRetention`.
 Zero or a negative value disables the sweep and the service exits at startup, which is the default.
+
+`GlobalSettings.EventLogging.AzureServiceBus.DeadLetterSweepInterval` is how long the service waits between sweeps
+and defaults to one hour. It must be positive and no longer than the 49 days `Task.Delay` accepts; outside that range
+the service logs a warning and sweeps on the default interval instead. Configuration binds a bare number as days, so
+an interval meant as hours needs `hh:mm:ss`.
 
 A sweep stops at the first message inside the retention window, because dead letters are received oldest first.
 
@@ -302,7 +307,7 @@ stored at each status.
 | Webhook          | `null` or `{ "Scheme": "Bearer", "Token": "AUTH-TOKEN", "Uri": "https://example.com" }`                                                                                                                                                                                                     | `null` or `{ "Scheme": "Bearer", "Token":"AUTH-TOKEN", "Uri": "https://example.com" }`<br/><br/>Whatever is defined at this level takes precedence |
 | Hec              | `{ "Scheme": "Bearer", "Token": "AUTH-TOKEN", "Uri": "https://example.com" }`                                                                                                                                                                                                               | Always `null`                                                                                                                                      |
 | Datadog          | `{ "ApiKey": "TheKey12345", "Uri": "https://api.us5.datadoghq.com/api/v1/events"}`                                                                                                                                                                                                          | Always `null`                                                                                                                                      |
-| Teams            | **Initiated**: `null`<br/>**In Progress**: <br/> `{ "TenantID": "tenant", "Teams": ["Id": "team", DisplayName: "MyTeam"]}`<br/>**Completed**: <br/>`{ "TenantID": "tenant", "Teams": ["Id": "team", DisplayName: "MyTeam"], "ServiceUrl":"https://example.com", ChannelId: "channel-1234"}` | Always `null`                                                                                                                                      |
+| Teams            | **Initiated**: `null`<br/>**In Progress**: <br/> `{ "TenantID": "tenant", "Teams": ["Id": "team", DisplayName: "MyTeam"]}`<br/>**Completed**: <br/>`{ "TenantID": "tenant", "Teams": ["Id": "team", DisplayName: "MyTeam"], "ServiceUrl":"https://example.com", ChannelId: "channel-1234"}` | `null` (team's General channel)<br/>`{ "ChannelId": "19:...@thread.tacv2" }` (standard channel)                                                    |
 
 ## Filtering
 

@@ -71,9 +71,8 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
                 .GetMember(updatedAuthRequest.RequestDeviceType.ToString())
                 .FirstOrDefault()?
                 .GetCustomAttribute<DisplayAttribute>()?.Name ?? "Unknown";
-            var deviceTypeAndIdentifier = $"{deviceTypeDisplayName} - {updatedAuthRequest.RequestDeviceIdentifier}";
             await _mailService.SendTrustedDeviceAdminApprovalEmailAsync(user.Email, approvalDateTime,
-                updatedAuthRequest.RequestIpAddress, deviceTypeAndIdentifier);
+                updatedAuthRequest.RequestIpAddress, deviceTypeDisplayName);
         }
     }
 

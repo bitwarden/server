@@ -1,0 +1,50 @@
+<mjml>
+  <mj-head>
+    <mj-include path="../../../components/head.mjml" />
+    <mj-include path="../components/admin-console-head.mjml" />
+  </mj-head>
+
+  <mj-body css-class="border-fix">
+    <!-- Blue Header Section -->
+    <mj-wrapper css-class="border-fix" padding="20px 20px 10px 20px">
+      <mj-bw-ac-hero
+        img-src="https://assets.bitwarden.com/email/v1/ac-spot-enterprise.png"
+        title="{{OrganizationName}} invited you to join them on Bitwarden"
+        button-text="<b>Accept invite</b>"
+        button-url="{{Url}}"
+      />
+    </mj-wrapper>
+
+    <!-- Main Content -->
+    <mj-wrapper padding="5px 20px 8px 20px">
+      <mj-section background-color="#fff" padding="10px 10px 16px 10px">
+        <mj-column>
+          <mj-text
+            css-class="ac-text"
+            padding="15px 15px 0px 15px"
+          >
+            This is your final reminder to join the <b>{{OrganizationName}}</b>
+            vault on Bitwarden. If you do not accept, your access will expire
+            and you'll need to request a new invite from your admin to gain
+            access.
+          </mj-text>
+          <mj-text
+            css-class="ac-text"
+            padding="15px 15px 0px 15px"
+          >
+            Accept now to keep your access to shared logins, passkeys, and
+            secure notes uninterrupted.
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+
+    <!-- Learn More Section -->
+    <mj-wrapper padding="8px 20px 10px 20px">
+      <mj-bw-ac-learn-more-footer />
+    </mj-wrapper>
+
+    <!-- Footer -->
+    <mj-include path="../../../components/footer.mjml" />
+  </mj-body>
+</mjml>

@@ -18,6 +18,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Billing.Subscriptions.Queries;
+using Bit.Core.Billing.Subscriptions.Schedules;
 using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Billing.Tax.Services.Implementations;
 using Bit.Core.Services;
@@ -26,6 +27,7 @@ using Bit.Core.Services.Implementations;
 namespace Bit.Core.Billing.Extensions;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 public static class ServiceCollectionExtensions
 {
@@ -38,6 +40,7 @@ public static class ServiceCollectionExtensions
         services.AddLicenseServices();
         services.AddLicenseOperations();
         services.AddPricingClient();
+        services.AddTransient<ISubscriptionScheduleCreator, SubscriptionScheduleCreator>();
         services.AddTransient<IPriceIncreaseScheduler, PriceIncreaseScheduler>();
         services.AddTransient<IBusinessPlanRenewalNotificationService, BusinessPlanRenewalNotificationService>();
         services.AddTransient<IBusinessPlanMigrationCoordinator, BusinessPlanMigrationCoordinator>();
@@ -47,15 +50,19 @@ public static class ServiceCollectionExtensions
         services.AddPremiumQueries();
         services.AddTransient<IGetOrganizationMetadataQuery, GetOrganizationMetadataQuery>();
         services.AddTransient<IGetOrganizationWarningsQuery, GetOrganizationWarningsQuery>();
+        services.AddTransient<ICountNewPamSeatsRequiredQuery, CountNewPamSeatsRequiredQuery>();
         services.AddTransient<IGetCohortAssignmentStateQuery, GetCohortAssignmentStateQuery>();
         services.AddTransient<IExportCohortAssignmentsQuery, ExportCohortAssignmentsQuery>();
         services.AddTransient<IRestartSubscriptionCommand, RestartSubscriptionCommand>();
+        services.AddTransient<IGetOrganizationRestartQuery, GetOrganizationRestartQuery>();
         services.AddTransient<IPreviewOrganizationTaxCommand, PreviewOrganizationTaxCommand>();
         services.AddTransient<IGetBitwardenSubscriptionQuery, GetBitwardenSubscriptionQuery>();
         services.AddTransient<IReinstateSubscriptionCommand, ReinstateSubscriptionCommand>();
         services.AddTransient<IBraintreeService, BraintreeService>();
         services.AddTransient<IAddSecretsManagerSubscriptionCommand, AddSecretsManagerSubscriptionCommand>();
         services.AddTransient<IUpdateOrganizationSubscriptionCommand, UpdateOrganizationSubscriptionCommand>();
+        services.TryAddTransient<IExtendOrganizationTrialCommand, ExtendOrganizationTrialCommand>();
+        services.TryAddTransient<IGetOrganizationTrialQuery, GetOrganizationTrialQuery>();
         services.AddTransient<IUpgradeOrganizationPlanVNextCommand, UpgradeOrganizationPlanVNextCommand>();
         services.AddTransient<ICreateBillingPortalSessionCommand, CreateBillingPortalSessionCommand>();
         services.AddTransient<IGetChurnOfferCohortMembershipQuery, GetChurnOfferCohortMembershipQuery>();

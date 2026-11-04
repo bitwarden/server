@@ -17,7 +17,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using NSubstitute;
 using Xunit;
-using AuthenticationSchemes = Bit.Core.AuthenticationSchemes;
+using AuthenticationSchemes = Bit.Core.Auth.IdentityServer.AuthenticationSchemes;
 
 namespace Bit.Sso.IntegrationTest.Controllers;
 
@@ -102,8 +102,11 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
     }
 
+    /*
+    * Test to verify /Account/ExternalCallback returns error when the organization has no SSO config.
+    */
     [Fact]
-    public async Task ExternalCallback_FindUserFromExternalProviderAsync_OrganizationOrSsoConfigNotFound_ReturnsError()
+    public async Task ExternalCallback_WithNoSsoConfig_ReturnsError()
     {
         // Arrange
         var testData = await new SsoTestDataBuilder()
@@ -114,7 +117,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
 
-        // Assert - Should fail because user has invalid status
+        // Assert - Should fail because the organization has no SSO config
         var stringResponse = await response.Content.ReadAsStringAsync();
         Assert.Contains("Organization not found or SSO configuration not enabled", stringResponse);
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
@@ -622,7 +625,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
                 var authService = Substitute.For<IAuthenticationService>();
                 authService.AuthenticateAsync(
                         Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
+                        AuthenticationSchemes.SsoExternalCookie)
                     .Returns(MockSuccessfulAuthResult.Build(organizationId, providerUserId, testEmail, testName, null, userIdentifier));
                 services.AddSingleton(authService);
             });
@@ -698,10 +701,8 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     * NOTE: This test uses the substitute pattern instead of SsoTestDataBuilder because:
     * - Organization.Id is of type Guid and cannot be set to a non-GUID value
     * - The auth mock scheme must be a non-GUID string to trigger this error path
-    * - This cannot be tested since ln 438 in AccountController.FindUserFromExternalProviderAsync throws a different exception
-    *   before reaching the organization lookup exception.
     */
-    [Fact(Skip = "This test cannot be executed because the organization ID must be a GUID. See note in test summary.")]
+    [Fact]
     public async Task ExternalCallback_WithInvalidProviderGuid_ReturnsError()
     {
         // Arrange
@@ -718,7 +719,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
                 var authService = Substitute.For<IAuthenticationService>();
                 authService.AuthenticateAsync(
                         Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
+                        AuthenticationSchemes.SsoExternalCookie)
                     .Returns(MockSuccessfulAuthResult.Build(invalidScheme, providerUserId, testEmail, testName));
                 services.AddSingleton(authService);
             });
@@ -729,7 +730,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
 
         // Assert - Should fail because provider is not a valid organization GUID
         var stringResponse = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Organization not found from identifier.", stringResponse);
+        Assert.Contains($"SSO provider, {invalidScheme} is not an organization id", stringResponse);
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
     }
 

@@ -3,10 +3,8 @@
 namespace Bit.Services.Pam.Engine;
 
 /// <summary>
-/// Evaluates an access rule's conditions — a flat list of <see cref="AccessCondition"/> ANDed together — against
-/// the request-time <see cref="AccessSignals"/>, deciding whether access is allowed, denied, or gated on human
-/// approval. The engine is pure: it reads no state and issues no leases. Lease lifecycle is owned by the lease
-/// commands and queries, which call the engine to decide whether a lease may be issued or its data handed over.
+/// Evaluates an access rule's <see cref="AccessCondition"/>s, ANDed together, against the request-time
+/// <see cref="AccessSignals"/>. Pure: it reads no state and issues no leases.
 /// </summary>
 public interface IAccessRuleEngine
 {

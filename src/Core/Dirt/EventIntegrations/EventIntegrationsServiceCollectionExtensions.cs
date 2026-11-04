@@ -30,6 +30,10 @@ public static class EventIntegrationsServiceCollectionExtensions
     /// Adds all event integrations commands, queries, and required cache infrastructure.
     /// This method is idempotent and can be called multiple times safely.
     /// </summary>
+    /// <remarks>
+    /// Also registers the Teams service (via <see cref="AddTeamsService"/>), which the configuration commands use to
+    /// validate Teams channels.
+    /// </remarks>
     public static IServiceCollection AddEventIntegrationsCommandsQueries(
         this IServiceCollection services,
         GlobalSettings globalSettings)
@@ -40,6 +44,9 @@ public static class EventIntegrationsServiceCollectionExtensions
 
         // Add Validator
         services.TryAddSingleton<IOrganizationIntegrationConfigurationValidator, OrganizationIntegrationConfigurationValidator>();
+
+        // Configuration commands validate Teams channels
+        services.AddTeamsService(globalSettings);
 
         // Add all commands/queries
         services.AddOrganizationIntegrationCommandsQueries();
@@ -227,10 +234,17 @@ public static class EventIntegrationsServiceCollectionExtensions
     /// - TeamsService and its interfaces (IBot, ITeamsService)
     /// - IBotFrameworkHttpAdapter with Teams credentials
     /// - HttpClient for Teams API calls
-    /// Otherwise, registers a NoopTeamsService that performs no operations.
+    /// Otherwise, registers a NoopTeamsService that performs no operations. Does nothing if an ITeamsService is
+    /// already registered, so it's safe to call more than once.
     /// </remarks>
     public static IServiceCollection AddTeamsService(this IServiceCollection services, GlobalSettings globalSettings)
     {
+        // TryAdd alone isn't enough: registering the HttpClient again would add a second SSRF handler.
+        if (services.Any(s => s.ServiceType == typeof(ITeamsService)))
+        {
+            return services;
+        }
+
         if (CoreHelpers.SettingHasValue(globalSettings.Teams.ClientId) &&
             CoreHelpers.SettingHasValue(globalSettings.Teams.ClientSecret) &&
             CoreHelpers.SettingHasValue(globalSettings.Teams.Scopes))

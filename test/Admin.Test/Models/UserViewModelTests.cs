@@ -1,7 +1,9 @@
 ﻿using Bit.Admin.Models;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Vault.Entities;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Test.Common.Constants;
 
 namespace Admin.Test.Models;
 
@@ -112,7 +114,7 @@ public class UserViewModelTests
 
         var verifiedDomain = true;
 
-        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), verifiedDomain);
+        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), verifiedDomain, false);
 
         Assert.True(actual.ClaimedAccount);
     }
@@ -123,7 +125,7 @@ public class UserViewModelTests
     {
         var verifiedDomain = false;
 
-        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), verifiedDomain);
+        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), verifiedDomain, false);
 
         Assert.False(actual.ClaimedAccount);
     }
@@ -132,8 +134,113 @@ public class UserViewModelTests
     [BitAutoData]
     public void MapUserViewModel_WithNullVerifiedDomain_ReturnsUserViewModel(User user)
     {
-        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), null);
+        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), null, false);
 
         Assert.Null(actual.ClaimedAccount);
+    }
+
+    [Fact]
+    public void Crypto_NoUserKeyId_UserKeyIdIsNull()
+    {
+        var user = new User { UserKeyId = null };
+
+        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), null, false);
+
+        Assert.Null(actual.Crypto.UserKeyId);
+    }
+
+    [Fact]
+    public void Crypto_UserKeyIdSet_ReturnsKeyId()
+    {
+        var user = new User { UserKeyId = "0123456789abcdef0123456789abcdef" };
+
+        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), null, false);
+
+        Assert.Equal(user.UserKeyId, actual.Crypto.UserKeyId);
+    }
+
+    [Theory]
+    [InlineData(2, TestEncryptionConstants.V2PrivateKey, true)]
+    [InlineData(null, TestEncryptionConstants.V2PrivateKey, false)]
+    [InlineData(2, TestEncryptionConstants.AES256_CBC_HMAC_Encstring, false)]
+    public void Crypto_UsesV2Keys_MatchesHasV2Encryption(int? securityVersion, string privateKey, bool expected)
+    {
+        var user = new User { SecurityVersion = securityVersion, PrivateKey = privateKey };
+
+        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), null, false);
+
+        Assert.Equal(expected, actual.Crypto.UsesV2Keys);
+    }
+
+    [Theory]
+    [InlineData("{}", true)]
+    [InlineData(null, false)]
+    public void Crypto_RotatedFromV1_TrueWhenV2UpgradeTokenPresent(string? token, bool expected)
+    {
+        var user = new User { V2UpgradeToken = token };
+
+        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), null, false);
+
+        Assert.Equal(expected, actual.Crypto.LastRotationFromV1);
+    }
+
+    [Theory]
+    [InlineData(0, true)]
+    [InlineData(1, false)]
+    [InlineData(-1, false)]
+    public void Crypto_RotatedWithPasswordChange_RequiresEqualTimestamps(int offsetSeconds, bool expected)
+    {
+        var rotation = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var user = new User
+        {
+            LastKeyRotationDate = rotation,
+            LastPasswordChangeDate = rotation.AddSeconds(offsetSeconds),
+        };
+
+        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), null, false);
+
+        Assert.Equal(expected, actual.Crypto.KeyRotatedWithPasswordChange);
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(false, false)]
+    public void Crypto_RotatedWithPasswordChange_FalseWhenADateIsMissing(bool hasRotation, bool hasPasswordChange)
+    {
+        var now = DateTime.UtcNow;
+        var user = new User
+        {
+            LastKeyRotationDate = hasRotation ? now : null,
+            LastPasswordChangeDate = hasPasswordChange ? now : null,
+        };
+
+        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), null, false);
+
+        Assert.False(actual.Crypto.KeyRotatedWithPasswordChange);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Crypto_NeedsRecoveryKeyV2Update_PassedThrough(bool needsUpdate)
+    {
+        var actual = UserViewModel.MapViewModel(new User(), true, Array.Empty<Cipher>(), null, needsUpdate);
+
+        Assert.Equal(needsUpdate, actual.Crypto.NeedsRecoveryKeyV2Update);
+    }
+
+    [Theory]
+    [InlineData(KdfType.PBKDF2_SHA256, 599_999, true)]
+    [InlineData(KdfType.PBKDF2_SHA256, 600_000, false)]
+    [InlineData(KdfType.PBKDF2_SHA256, 1_000_000, false)]
+    [InlineData(KdfType.Argon2id, 1, false)]
+    public void Crypto_NeedsKdfUpdate_OnlyLowPbkdf2(KdfType kdf, int iterations, bool expected)
+    {
+        var user = new User { Kdf = kdf, KdfIterations = iterations };
+
+        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), null, false);
+
+        Assert.Equal(expected, actual.Crypto.NeedsKdfUpdate);
     }
 }

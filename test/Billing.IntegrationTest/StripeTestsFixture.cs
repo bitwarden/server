@@ -426,6 +426,16 @@ public class StripeTestsFixture : IAsyncLifetime
     }
 
     /// <summary>
+    /// Returns a Stripe price's metadata, e.g. to confirm it carries the
+    /// <c>purchasable_reference</c> the invoice preview projection keys off.
+    /// </summary>
+    public async Task<IDictionary<string, string>> GetPriceMetadataAsync(string priceId)
+    {
+        var price = await CreateStripeClient().V1.Prices.GetAsync(priceId);
+        return price.Metadata;
+    }
+
+    /// <summary>
     /// Returns whether the Stripe customer currently has an active discount (coupon expanded).
     /// </summary>
     public async Task<bool> CustomerHasDiscountAsync(string customerId)
@@ -602,9 +612,11 @@ public class StripeTestsFixture : IAsyncLifetime
     /// <summary>
     /// Seeds an active <see cref="SubscriptionDiscount"/> with audience
     /// <see cref="DiscountAudienceType.UserHasNoPreviousSubscriptions"/> applicable to the
-    /// Premium product, plus a real Stripe coupon backing it. Returns the coupon id.
+    /// given Stripe products (the Premium product by default), plus a real Stripe coupon backing it.
+    /// Returns the coupon id.
     /// </summary>
-    public async Task<string> SeedNoPreviousSubscriptionsDiscountAsync(string couponId)
+    public async Task<string> SeedNoPreviousSubscriptionsDiscountAsync(
+        string couponId, IReadOnlyList<string>? stripeProductIds = null)
     {
         AssertCouponIdIsNotReserved(couponId);
 
@@ -626,7 +638,7 @@ public class StripeTestsFixture : IAsyncLifetime
         await repo.CreateAsync(new SubscriptionDiscount
         {
             StripeCouponId = couponId,
-            StripeProductIds = [StripeConstants.ProductIDs.Premium],
+            StripeProductIds = stripeProductIds?.ToList() ?? [StripeConstants.ProductIDs.Premium],
             PercentOff = 10,
             Duration = "once",
             Name = "New-User Premium Discount",

@@ -8,6 +8,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -30,7 +31,8 @@ public class TwoFactorAuthenticationValidator(
     IOrganizationRepository organizationRepository,
     IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> ssoEmail2faSessionTokeFactory,
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-    ICurrentContext currentContext) : ITwoFactorAuthenticationValidator
+    ICurrentContext currentContext,
+    ITwoFactorEmailService twoFactorEmailService) : ITwoFactorAuthenticationValidator
 {
     private readonly IUserService _userService = userService;
     private readonly UserManager<User> _userManager = userManager;
@@ -41,6 +43,7 @@ public class TwoFactorAuthenticationValidator(
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _ssoEmail2faSessionTokeFactory = ssoEmail2faSessionTokeFactory;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
     private readonly ICurrentContext _currentContext = currentContext;
+    private readonly ITwoFactorEmailService _twoFactorEmailService = twoFactorEmailService;
 
     public async Task<Tuple<bool, Organization>> RequiresTwoFactorAsync(User user, ValidatedTokenRequest request)
     {
@@ -121,7 +124,8 @@ public class TwoFactorAuthenticationValidator(
         User user,
         Organization organization,
         TwoFactorProviderType type,
-        string token)
+        string token,
+        string deviceIdentifier)
     {
         if (organization != null && type == TwoFactorProviderType.OrganizationDuo)
         {
@@ -157,6 +161,12 @@ public class TwoFactorAuthenticationValidator(
             user.GetTwoFactorProvider(type) == null)
         {
             return false;
+        }
+
+        // Email codes are bound to the device they were issued to, so they are verified with that device.
+        if (type == TwoFactorProviderType.Email)
+        {
+            return await _twoFactorEmailService.VerifyTwoFactorLoginTokenAsync(user, deviceIdentifier, token);
         }
 
         // Finally, verify the token based on the provider type.
@@ -220,9 +230,11 @@ public class TwoFactorAuthenticationValidator(
             return twoFactorParams;
         }
 
-        // Individual 2FA providers use the UserManager built-in TwoFactor flow so we can generate the token before building the params
-        var token = await _userManager.GenerateTwoFactorTokenAsync(user,
-            CoreHelpers.CustomProviderName(type));
+        // Individual 2FA providers use the UserManager built-in TwoFactor flow so we can generate the token before building the params.
+        // Email is skipped: its code is issued and emailed separately, when the client asks for it.
+        var token = type == TwoFactorProviderType.Email
+            ? null
+            : await _userManager.GenerateTwoFactorTokenAsync(user, CoreHelpers.CustomProviderName(type));
         switch (type)
         {
             case TwoFactorProviderType.Duo:

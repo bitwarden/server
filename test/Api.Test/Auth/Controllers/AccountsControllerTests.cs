@@ -14,6 +14,7 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserApiKey.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserEmail;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
+using Bit.Core.Auth.UserFeatures.UserVerification;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -49,13 +50,14 @@ public class AccountsControllerTests : IDisposable
     private readonly ITdeSetPasswordCommand _tdeSetPasswordCommand;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly IReplaceAdminSetTemporaryPasswordCommand _replaceAdminSetTemporaryPasswordCommand;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
     private readonly ITwoFactorEmailService _twoFactorEmailService;
     private readonly IChangeKdfCommand _changeKdfCommand;
     private readonly IUserRepository _userRepository;
     private readonly IRotateUserApiKeyCommand _rotateUserApiKeyCommand;
     private readonly ISelfServiceChangeEmailCommand _selfServiceChangeEmailCommand;
+    private readonly IUserVerificationOtpCommand _userVerificationOtpCommand;
     private readonly ICurrentContext _currentContext;
 
     private const string _deviceIdentifier = "device-identifier";
@@ -74,13 +76,14 @@ public class AccountsControllerTests : IDisposable
         _tdeSetPasswordCommand = Substitute.For<ITdeSetPasswordCommand>();
         _tdeOffboardingPasswordCommand = Substitute.For<ITdeOffboardingPasswordCommand>();
         _replaceAdminSetTemporaryPasswordCommand = Substitute.For<IReplaceAdminSetTemporaryPasswordCommand>();
-        _featureService = Substitute.For<IFeatureService>();
+        _featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
         _userAccountKeysQuery = Substitute.For<IUserAccountKeysQuery>();
         _twoFactorEmailService = Substitute.For<ITwoFactorEmailService>();
         _changeKdfCommand = Substitute.For<IChangeKdfCommand>();
         _userRepository = Substitute.For<IUserRepository>();
         _rotateUserApiKeyCommand = Substitute.For<IRotateUserApiKeyCommand>();
         _selfServiceChangeEmailCommand = Substitute.For<ISelfServiceChangeEmailCommand>();
+        _userVerificationOtpCommand = Substitute.For<IUserVerificationOtpCommand>();
         _currentContext = Substitute.For<ICurrentContext>();
         _currentContext.DeviceIdentifier = _deviceIdentifier;
 
@@ -104,6 +107,7 @@ public class AccountsControllerTests : IDisposable
             _userRepository,
             _rotateUserApiKeyCommand,
             _selfServiceChangeEmailCommand,
+            _userVerificationOtpCommand,
             _currentContext,
             Substitute.For<ILogger<AccountsController>>()
         );
@@ -1040,6 +1044,48 @@ public class AccountsControllerTests : IDisposable
         // Assert
         await _twoFactorEmailService.Received(1)
             .SendNewDeviceVerificationEmailAsync(user, _deviceIdentifier);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostRequestOTP_SendsOtpToPrincipalUser(User user)
+    {
+        // Arrange
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+
+        // Act
+        await _sut.PostRequestOTP();
+
+        // Assert
+        await _userVerificationOtpCommand.Received(1).SendOtpAsync(user);
+    }
+
+    [Theory, BitAutoData]
+    public async Task VerifyOTP_ValidOtp_DoesNotThrow(User user, VerifyOTPRequestModel model)
+    {
+        // Arrange
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        _userVerificationOtpCommand.VerifyOtpAsync(user, model.OTP).Returns(true);
+
+        // Act
+        await _sut.VerifyOTP(model);
+
+        // Assert
+        await _userVerificationOtpCommand.Received(1).VerifyOtpAsync(user, model.OTP);
+    }
+
+    [Theory, BitAutoData]
+    public async Task VerifyOTP_InvalidOtp_ThrowsInvalidToken(User user, VerifyOTPRequestModel model)
+    {
+        // Arrange
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        _userVerificationOtpCommand.VerifyOtpAsync(user, model.OTP).Returns(false);
+
+        // Act
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.VerifyOTP(model));
+
+        // Assert
+        Assert.Contains("Invalid token",
+            exception.ModelState!.Values.SelectMany(x => x.Errors).Select(x => x.ErrorMessage));
     }
 
     [Theory]

@@ -9,7 +9,7 @@ using Bit.Core.Billing.Organizations.PlanMigration.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Jobs;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
+using Bitwarden.Server.Sdk.Features;
 using Quartz;
 using Stripe;
 

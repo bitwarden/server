@@ -113,6 +113,7 @@ public class GroupsController : Controller
     [HttpPost]
     [ProducesResponseType(typeof(GroupResponseModel), (int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
+    [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<IActionResult> Post([FromBody] GroupCreateUpdateRequestModel model)
     {
         var group = model.ToGroup(_currentContext.OrganizationId.Value);

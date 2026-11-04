@@ -15,6 +15,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 
 namespace Bit.Core.Services;
@@ -504,7 +505,7 @@ public class EventService : IEventService
                 OrganizationId = secret.OrganizationId,
                 Type = type,
                 SecretId = secret.Id,
-                UserId = userId,
+                ActingUserId = userId,
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
             eventMessages.Add(e);
@@ -558,7 +559,7 @@ public class EventService : IEventService
                 OrganizationId = project.OrganizationId,
                 Type = type,
                 ProjectId = project.Id,
-                UserId = userId,
+                ActingUserId = userId,
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
             eventMessages.Add(e);
@@ -621,7 +622,7 @@ public class EventService : IEventService
                 Type = type,
                 GrantedServiceAccountId = policy.GrantedServiceAccountId,
                 ServiceAccountId = serviceAccountId,
-                UserId = policy.OrganizationUserId,
+                OrganizationUserId = policy.OrganizationUserId,
                 ActingUserId = actingUserId,
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
@@ -793,6 +794,64 @@ public class EventService : IEventService
         {
             await _eventWriteService.CreateAsync(events.First());
         }
+    }
+
+    public async Task LogSendEventsAsync(IEnumerable<(Send send, EventType type)> events, Guid organizationId)
+    {
+        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
+        if (!CanUseEvents(orgAbility))
+        {
+            return;
+        }
+
+        var providerId = await GetProviderIdAsync(organizationId);
+
+        var eventMessages = events
+            .Where(e => e.send.UserId.HasValue)
+            .Select(e => new EventMessage(_currentContext)
+            {
+                OrganizationId = organizationId,
+                ProviderId = providerId,
+                UserId = e.send.UserId,
+                ActingUserId = _currentContext?.UserId,
+                Type = e.type,
+                SendId = e.send.Id,
+                Date = DateTime.UtcNow
+            })
+            .ToList();
+
+        if (eventMessages.Count > 0)
+        {
+            await _eventWriteService.CreateManyAsync(eventMessages);
+        }
+    }
+
+    public async Task LogPamAccessEventAsync(EventType type, PamAccessEventContext context)
+    {
+        var organizationAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(context.OrganizationId);
+        if (!CanUseEvents(organizationAbility))
+        {
+            return;
+        }
+
+        // A system action has no request to take an IP address or device type from, so it is recorded as a
+        // server-side action.
+        var e = context.SystemUser.HasValue
+            ? new EventMessage { SystemUser = context.SystemUser, DeviceType = DeviceType.Server }
+            : new EventMessage(_currentContext) { ActingUserId = context.ActingUserId };
+
+        e.Type = type;
+        e.OrganizationId = context.OrganizationId;
+        e.ProviderId = await GetProviderIdAsync(context.OrganizationId);
+        e.InstallationId = GetInstallationId();
+        e.UserId = context.UserId;
+        e.CipherId = context.CipherId;
+        e.CollectionId = context.CollectionId;
+        e.AccessRequestId = context.AccessRequestId;
+        e.AccessLeaseId = context.AccessLeaseId;
+        e.Date = context.Date;
+
+        await _eventWriteService.CreateAsync(e);
     }
 
     private (Guid? actingUserId, Guid? serviceAccountId) MapIdentityClientType(

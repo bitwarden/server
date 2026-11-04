@@ -41,6 +41,26 @@ public record EnterprisePlan : Plan
 
         PasswordManager = new EnterprisePasswordManagerFeatures(isAnnual);
         SecretsManager = new EnterpriseSecretsManagerFeatures(isAnnual);
+        PrivilegedControls = new EnterprisePrivilegedControlsFeatures(isAnnual);
+    }
+
+    private record EnterprisePrivilegedControlsFeatures : PrivilegedControlsPlanFeatures
+    {
+        public EnterprisePrivilegedControlsFeatures(bool isAnnual)
+        {
+            BaseSeats = 0;
+
+            if (isAnnual)
+            {
+                StripeSeatPlanId = "privileged-controls-enterprise-seat-annually";
+                SeatPrice = 72;
+            }
+            else
+            {
+                StripeSeatPlanId = "privileged-controls-enterprise-seat-monthly";
+                SeatPrice = 6;
+            }
+        }
     }
 
     private record EnterpriseSecretsManagerFeatures : SecretsManagerPlanFeatures

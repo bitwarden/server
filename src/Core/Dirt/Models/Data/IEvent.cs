@@ -30,4 +30,6 @@ public interface IEvent
     Guid? ServiceAccountId { get; set; }
     Guid? GrantedServiceAccountId { get; set; }
     Guid? SendId { get; set; }
+    Guid? AccessRequestId { get; set; }
+    Guid? AccessLeaseId { get; set; }
 }

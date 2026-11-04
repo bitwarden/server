@@ -11,6 +11,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tools.Entities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -727,6 +728,80 @@ public class EventServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task LogSendEventsAsync_UsesGivenOrganizationId_NotActingUsersOwnMemberships(
+        Send send1, Send send2, EventType eventType, Guid organizationId, Guid actingUserId,
+        SutProvider<EventService> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { UseEvents = true, Enabled = true });
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().ProviderIdForOrg(organizationId).Returns((Guid?)null);
+
+        await sutProvider.Sut.LogSendEventsAsync(
+            new[] { (send1, eventType), (send2, eventType) }, organizationId);
+
+        await sutProvider.GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
+                events.Count() == 2
+                && events.All(e => e.Type == eventType && e.OrganizationId == organizationId && e.ActingUserId == actingUserId && e.ProviderId == null)
+                && events.Any(e => e.SendId == send1.Id && e.UserId == send1.UserId)
+                && events.Any(e => e.SendId == send2.Id && e.UserId == send2.UserId)));
+        await sutProvider.GetDependency<ICurrentContext>()
+            .DidNotReceiveWithAnyArgs()
+            .OrganizationMembershipAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogSendEventsAsync_ActingUserIsProviderForOrg_AttributesRowToProvider(
+        Send send, EventType eventType, Guid organizationId, Guid providerId,
+        SutProvider<EventService> sutProvider)
+    {
+        // A provider user (e.g. MSP staff) managing the org via the provider relationship, rather than
+        // a direct org member, should still surface in that provider's own event log.
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { UseEvents = true, Enabled = true });
+        sutProvider.GetDependency<ICurrentContext>().ProviderIdForOrg(organizationId).Returns(providerId);
+
+        await sutProvider.Sut.LogSendEventsAsync(new[] { (send, eventType) }, organizationId);
+
+        await sutProvider.GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
+                events.Single().ProviderId == providerId && events.Single().OrganizationId == organizationId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogSendEventsAsync_SkipsSendsWithNoUserId(
+        Send send, EventType eventType, Guid organizationId, SutProvider<EventService> sutProvider)
+    {
+        send.UserId = null;
+
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { UseEvents = true, Enabled = true });
+
+        await sutProvider.Sut.LogSendEventsAsync(new[] { (send, eventType) }, organizationId);
+
+        await sutProvider.GetDependency<IEventWriteService>().DidNotReceiveWithAnyArgs().CreateManyAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogSendEventsAsync_WhenEventsDisabled_DoesNotLog(
+        Send send, EventType eventType, Guid organizationId, SutProvider<EventService> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { UseEvents = false, Enabled = true });
+
+        await sutProvider.Sut.LogSendEventsAsync(new[] { (send, eventType) }, organizationId);
+
+        await sutProvider.GetDependency<IEventWriteService>().DidNotReceiveWithAnyArgs().CreateManyAsync(default);
+    }
+
+    [Theory, BitAutoData]
     public async Task LogUserEvent_IncludeAcceptedStatusOrgs_InvitedOrgUser_DoesNotCreateOrgScopedEvent(
         Guid userId, EventType eventType, OrganizationUser orgUser, SutProvider<EventService> sutProvider)
     {
@@ -956,5 +1031,119 @@ public class EventServiceTests
         var expectedIds = providers.Select(provider => provider.Id);
         await sutProvider.GetDependency<IProviderAbilityCacheService>().Received(1)
             .GetProviderAbilitiesAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.OrderBy(x => x).SequenceEqual(expectedIds.OrderBy(x => x))));
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogPamAccessEventAsync_LogsRequiredInfo(
+        Guid organizationId, Guid actingUserId, Guid requesterId, Guid cipherId, Guid collectionId,
+        Guid accessRequestId, Guid accessLeaseId, Guid providerId, Guid installationId, string ipAddress,
+        DeviceType deviceType, DateTime occurredAt, SutProvider<EventService> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { Id = organizationId, Enabled = true, UseEvents = true });
+        sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
+        sutProvider.GetDependency<ICurrentContext>().InstallationId.Returns(installationId);
+        sutProvider.GetDependency<ICurrentContext>().ProviderIdForOrg(organizationId).Returns(providerId);
+
+        // Act
+        await sutProvider.Sut.LogPamAccessEventAsync(EventType.Pam_AccessLease_Activated, new PamAccessEventContext
+        {
+            OrganizationId = organizationId,
+            Date = occurredAt,
+            ActingUserId = actingUserId,
+            UserId = requesterId,
+            CipherId = cipherId,
+            CollectionId = collectionId,
+            AccessRequestId = accessRequestId,
+            AccessLeaseId = accessLeaseId,
+        });
+
+        // Assert
+        await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateAsync(Arg.Is<IEvent>(e =>
+            e.Type == EventType.Pam_AccessLease_Activated &&
+            e.OrganizationId == organizationId &&
+            e.ActingUserId == actingUserId &&
+            e.UserId == requesterId &&
+            // Cipher/collection are top-level event fields, which files the event under the item's own history.
+            e.CipherId == cipherId &&
+            e.CollectionId == collectionId &&
+            e.AccessRequestId == accessRequestId &&
+            e.AccessLeaseId == accessLeaseId &&
+            e.ProviderId == providerId &&
+            e.InstallationId == installationId &&
+            e.IpAddress == ipAddress &&
+            e.DeviceType == deviceType &&
+            e.SystemUser == null &&
+            // The time PAM recorded the action, not the time the fan-out ran.
+            e.Date == occurredAt));
+    }
+
+    // PAM's own audit store is unconditional; this fan-out is where event entitlement is enforced.
+    [Theory]
+    [BitAutoData(false, true)]
+    [BitAutoData(true, false)]
+    [BitAutoData(false, false)]
+    public async Task LogPamAccessEventAsync_WithoutEventEntitlement_LogsNothing(
+        bool enabled, bool useEvents, Guid organizationId, Guid actingUserId, DateTime occurredAt,
+        SutProvider<EventService> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { Id = organizationId, Enabled = enabled, UseEvents = useEvents });
+
+        // Act
+        await sutProvider.Sut.LogPamAccessEventAsync(EventType.Pam_AccessRequest_Submitted, new PamAccessEventContext
+        {
+            OrganizationId = organizationId,
+            Date = occurredAt,
+            ActingUserId = actingUserId,
+        });
+
+        // Assert
+        await sutProvider.GetDependency<IEventWriteService>().DidNotReceiveWithAnyArgs().CreateAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogPamAccessEventAsync_WithSystemUser_RecordsAServerSideAction(
+        Guid organizationId, Guid requesterId, Guid accessRequestId, Guid providerId, Guid installationId,
+        string ipAddress, DeviceType deviceType, DateTime occurredAt, SutProvider<EventService> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { Id = organizationId, Enabled = true, UseEvents = true });
+        sutProvider.GetDependency<ICurrentContext>().ProviderIdForOrg(organizationId).Returns(providerId);
+        sutProvider.GetDependency<ICurrentContext>().InstallationId.Returns(installationId);
+        // A system-user action has no request behind it; the request's IP address and device type must not be
+        // attributed to it.
+        sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
+
+        // Act
+        await sutProvider.Sut.LogPamAccessEventAsync(EventType.Pam_AccessRequest_Denied, new PamAccessEventContext
+        {
+            OrganizationId = organizationId,
+            Date = occurredAt,
+            UserId = requesterId,
+            AccessRequestId = accessRequestId,
+            SystemUser = EventSystemUser.Pam,
+        });
+
+        // Assert
+        await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateAsync(Arg.Is<IEvent>(e =>
+            e.Type == EventType.Pam_AccessRequest_Denied &&
+            e.OrganizationId == organizationId &&
+            e.SystemUser == EventSystemUser.Pam &&
+            e.ActingUserId == null &&
+            e.UserId == requesterId &&
+            e.AccessRequestId == accessRequestId &&
+            e.ProviderId == providerId &&
+            e.InstallationId == installationId &&
+            e.DeviceType == Bit.Core.Enums.DeviceType.Server &&
+            e.IpAddress == null));
     }
 }

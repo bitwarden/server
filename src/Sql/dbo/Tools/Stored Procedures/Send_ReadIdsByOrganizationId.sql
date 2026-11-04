@@ -4,7 +4,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Get the IDs of all users in an org --
+    -- Get the IDs of all active users in an org --
     DECLARE @OrgUserIds AS [GuidIdArray];
     INSERT INTO @OrgUserIds
     SELECT DISTINCT
@@ -14,6 +14,7 @@ BEGIN
     WHERE
         [OrganizationId] = @OrganizationId
         AND [UserId] IS NOT NULL
+        AND [Status] IN (1, 2) -- 1 = Accepted, 2 = Confirmed
 
     -- Get the IDs of all Sends associated with those users --
     SELECT

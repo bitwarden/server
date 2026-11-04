@@ -1,6 +1,9 @@
 ﻿#nullable enable
 
+using System.Reflection;
 using Bit.Api.Dirt.Controllers;
+using Bit.Api.Dirt.Utilities;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Enums;
@@ -8,8 +11,10 @@ using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Dirt.Services;
 using Bit.Core.Exceptions;
+using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.Extensions.Time.Testing;
@@ -32,6 +37,7 @@ public class SlackIntegrationControllerTests
     {
         integration.Type = IntegrationType.Slack;
         integration.Configuration = null;
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -44,20 +50,21 @@ public class SlackIntegrationControllerTests
             .Returns(integration);
 
         var state = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
-        var requestAction = await sutProvider.Sut.CreateAsync(_validSlackCode, state.ToString());
+        var requestAction = await sutProvider.Sut.CreateAsync(_validSlackCode, state.ToString(), null);
 
         await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1)
             .UpsertAsync(Arg.Any<OrganizationIntegration>());
-        Assert.IsType<CreatedResult>(requestAction);
+        AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.Success);
     }
 
     [Theory, BitAutoData]
-    public async Task CreateAsync_CodeIsEmpty_ThrowsBadRequest(
+    public async Task CreateAsync_CodeIsEmpty_RedirectsWithCanceled(
         SutProvider<SlackIntegrationController> sutProvider,
         OrganizationIntegration integration)
     {
         integration.Type = IntegrationType.Slack;
         integration.Configuration = null;
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -67,17 +74,21 @@ public class SlackIntegrationControllerTests
             .Returns(integration);
         var state = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
 
-        await Assert.ThrowsAsync<BadRequestException>(async () =>
-            await sutProvider.Sut.CreateAsync(string.Empty, state.ToString()));
+        var requestAction = await sutProvider.Sut.CreateAsync(string.Empty, state.ToString(), null);
+
+        AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.Canceled);
+        await sutProvider.GetDependency<ISlackService>().DidNotReceiveWithAnyArgs()
+            .ObtainTokenViaOAuth(default!, default!);
     }
 
     [Theory, BitAutoData]
-    public async Task CreateAsync_CallbackUrlIsEmpty_ThrowsBadRequest(
+    public async Task CreateAsync_CallbackUrlIsEmpty_RedirectsWithFailed(
         SutProvider<SlackIntegrationController> sutProvider,
         OrganizationIntegration integration)
     {
         integration.Type = IntegrationType.Slack;
         integration.Configuration = null;
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -87,17 +98,19 @@ public class SlackIntegrationControllerTests
             .Returns(integration);
         var state = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
 
-        await Assert.ThrowsAsync<BadRequestException>(async () =>
-            await sutProvider.Sut.CreateAsync(_validSlackCode, state.ToString()));
+        var requestAction = await sutProvider.Sut.CreateAsync(_validSlackCode, state.ToString(), null);
+
+        AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.Failed);
     }
 
     [Theory, BitAutoData]
-    public async Task CreateAsync_SlackServiceReturnsEmpty_ThrowsBadRequest(
+    public async Task CreateAsync_SlackServiceReturnsEmpty_RedirectsWithFailed(
         SutProvider<SlackIntegrationController> sutProvider,
         OrganizationIntegration integration)
     {
         integration.Type = IntegrationType.Slack;
         integration.Configuration = null;
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -110,13 +123,36 @@ public class SlackIntegrationControllerTests
             .Returns(string.Empty);
         var state = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
 
-        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.CreateAsync(_validSlackCode, state.ToString()));
+        var requestAction = await sutProvider.Sut.CreateAsync(_validSlackCode, state.ToString(), null);
+
+        AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.Failed);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_ProviderReturnsError_RedirectsWithCanceled(
+        SutProvider<SlackIntegrationController> sutProvider,
+        OrganizationIntegration integration)
+    {
+        integration.Type = IntegrationType.Slack;
+        integration.Configuration = null;
+        SetBaseServiceUriApi(sutProvider);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(integration.Id)
+            .Returns(integration);
+        var state = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
+
+        var requestAction = await sutProvider.Sut.CreateAsync(null, state.ToString(), "access_denied");
+
+        AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.Canceled);
+        await sutProvider.GetDependency<ISlackService>().DidNotReceiveWithAnyArgs()
+            .ObtainTokenViaOAuth(default!, default!);
     }
 
     [Theory, BitAutoData]
     public async Task CreateAsync_StateEmpty_ThrowsNotFound(
         SutProvider<SlackIntegrationController> sutProvider)
     {
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -125,7 +161,7 @@ public class SlackIntegrationControllerTests
             .ObtainTokenViaOAuth(_validSlackCode, Arg.Any<string>())
             .Returns(_slackToken);
 
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validSlackCode, string.Empty));
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validSlackCode, string.Empty, null));
     }
 
     [Theory, BitAutoData]
@@ -134,6 +170,7 @@ public class SlackIntegrationControllerTests
         OrganizationIntegration integration)
     {
         var timeProvider = new FakeTimeProvider(new DateTime(2024, 4, 3, 2, 1, 0, DateTimeKind.Utc));
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -145,7 +182,7 @@ public class SlackIntegrationControllerTests
         timeProvider.Advance(TimeSpan.FromMinutes(30));
 
         sutProvider.SetDependency<TimeProvider>(timeProvider);
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validSlackCode, state.ToString()));
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validSlackCode, state.ToString(), null));
     }
 
     [Theory, BitAutoData]
@@ -153,6 +190,7 @@ public class SlackIntegrationControllerTests
         SutProvider<SlackIntegrationController> sutProvider,
         OrganizationIntegration integration)
     {
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -163,7 +201,7 @@ public class SlackIntegrationControllerTests
 
         var state = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
 
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validSlackCode, state.ToString()));
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validSlackCode, state.ToString(), null));
     }
 
     [Theory, BitAutoData]
@@ -176,6 +214,7 @@ public class SlackIntegrationControllerTests
         wrongOrgIntegration.Type = IntegrationType.Slack;
         wrongOrgIntegration.Configuration = null;
 
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -189,16 +228,17 @@ public class SlackIntegrationControllerTests
 
         var state = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
 
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validSlackCode, state.ToString()));
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validSlackCode, state.ToString(), null));
     }
 
     [Theory, BitAutoData]
-    public async Task CreateAsync_StateHasNonEmptyIntegration_ThrowsNotFound(
+    public async Task CreateAsync_StateHasNonEmptyIntegration_RedirectsWithAlreadyConnected(
         SutProvider<SlackIntegrationController> sutProvider,
         OrganizationIntegration integration)
     {
         integration.Type = IntegrationType.Slack;
         integration.Configuration = "{}";
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -211,7 +251,11 @@ public class SlackIntegrationControllerTests
             .Returns(integration);
 
         var state = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validSlackCode, state.ToString()));
+        var requestAction = await sutProvider.Sut.CreateAsync(_validSlackCode, state.ToString(), null);
+
+        AssertRedirectsToVault(requestAction, integration.OrganizationId, IntegrationOAuthCallbackRedirect.AlreadyConnected);
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceiveWithAnyArgs()
+            .UpsertAsync(default!);
     }
 
     [Theory, BitAutoData]
@@ -221,6 +265,7 @@ public class SlackIntegrationControllerTests
     {
         integration.Type = IntegrationType.Hec;
         integration.Configuration = null;
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -233,7 +278,7 @@ public class SlackIntegrationControllerTests
             .Returns(integration);
 
         var state = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validSlackCode, state.ToString()));
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validSlackCode, state.ToString(), null));
     }
 
     [Theory, BitAutoData]
@@ -246,6 +291,7 @@ public class SlackIntegrationControllerTests
         var fakeTime = new FakeTimeProvider(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
         sutProvider.SetDependency<TimeProvider>(fakeTime, "timeProvider").Create();
 
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -263,9 +309,9 @@ public class SlackIntegrationControllerTests
 
         var expectedState = IntegrationOAuthState.FromIntegration(integration, fakeTime);
 
-        var requestAction = await sutProvider.Sut.RedirectAsync(integration.OrganizationId);
+        var response = await sutProvider.Sut.RedirectAsync(integration.OrganizationId);
 
-        Assert.IsType<RedirectResult>(requestAction);
+        Assert.Equal(expectedUrl, response.Url);
         await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1)
             .CreateAsync(Arg.Any<OrganizationIntegration>());
         sutProvider.GetDependency<ISlackService>().Received(1).GetRedirectUrl(Arg.Any<string>(), expectedState.ToString());
@@ -284,6 +330,7 @@ public class SlackIntegrationControllerTests
         var fakeTime = new FakeTimeProvider(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
         sutProvider.SetDependency<TimeProvider>(fakeTime, "timeProvider").Create();
 
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -296,11 +343,11 @@ public class SlackIntegrationControllerTests
             .Returns([integration]);
         sutProvider.GetDependency<ISlackService>().GetRedirectUrl(Arg.Any<string>(), Arg.Any<string>()).Returns(expectedUrl);
 
-        var requestAction = await sutProvider.Sut.RedirectAsync(organizationId);
+        var response = await sutProvider.Sut.RedirectAsync(organizationId);
 
         var expectedState = IntegrationOAuthState.FromIntegration(integration, fakeTime);
 
-        Assert.IsType<RedirectResult>(requestAction);
+        Assert.Equal(expectedUrl, response.Url);
         sutProvider.GetDependency<ISlackService>().Received(1).GetRedirectUrl(Arg.Any<string>(), expectedState.ToString());
     }
 
@@ -315,6 +362,7 @@ public class SlackIntegrationControllerTests
         integration.Type = IntegrationType.Slack;
         var expectedUrl = "https://localhost/";
 
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -335,6 +383,7 @@ public class SlackIntegrationControllerTests
         SutProvider<SlackIntegrationController> sutProvider,
         Guid organizationId)
     {
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -356,6 +405,7 @@ public class SlackIntegrationControllerTests
         integration.Configuration = null;
         var expectedUrl = "https://localhost/";
 
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -383,5 +433,104 @@ public class SlackIntegrationControllerTests
             .Returns(false);
 
         await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.RedirectAsync(organizationId));
+    }
+
+    [Theory]
+    [BitAutoData("https://api.example.com", "https://api.example.com/organizations/integrations/slack/create")]
+    [BitAutoData("https://bitwarden.example.com/api/", "https://bitwarden.example.com/api/organizations/integrations/slack/create")]
+    public async Task RedirectAsync_CallbackUrlUsesConfiguredApiBaseUrl(
+        string apiBaseUrl,
+        string expectedCallbackUrl,
+        SutProvider<SlackIntegrationController> sutProvider,
+        OrganizationIntegration integration)
+    {
+        integration.Configuration = null;
+        sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri.Api.Returns(apiBaseUrl);
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.Sut.Url
+            .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
+            .Returns("/organizations/integrations/slack/create");
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(integration.OrganizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetManyByOrganizationAsync(integration.OrganizationId)
+            .Returns([]);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .CreateAsync(Arg.Any<OrganizationIntegration>())
+            .Returns(integration);
+        sutProvider.GetDependency<ISlackService>()
+            .GetRedirectUrl(expectedCallbackUrl, Arg.Any<string>())
+            .Returns("https://slack.example.com/authorize");
+
+        var response = await sutProvider.Sut.RedirectAsync(integration.OrganizationId);
+
+        Assert.Equal("https://slack.example.com/authorize", response.Url);
+        sutProvider.GetDependency<ISlackService>().Received(1)
+            .GetRedirectUrl(expectedCallbackUrl, Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RedirectAsync_ApiBaseUriInvalid_ThrowsBadRequest(
+        SutProvider<SlackIntegrationController> sutProvider,
+        Guid organizationId)
+    {
+        sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri.Api.Returns(string.Empty);
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.Sut.Url
+            .RouteUrl(Arg.Any<UrlRouteContext>())
+            .Returns("/organizations/integrations/slack/create");
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.RedirectAsync(organizationId));
+    }
+
+    private static void SetBaseServiceUriApi(SutProvider<SlackIntegrationController> sutProvider)
+    {
+        sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri.Api.Returns("https://api.example.com");
+        sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri.VaultWithHash.Returns("https://vault.example.com/#");
+    }
+
+    [Theory]
+    [InlineData(nameof(SlackIntegrationController.RedirectAsync))]
+    public void OwnerEndpoints_AreGatedOnEventManagementForSlack(string methodName)
+    {
+        // A failed RequireFeature check answers 404 before the action runs. Running the attribute's FeatureCheck
+        // with the flag on and off pins the key, so the endpoint can't drift onto another flag or lose the gate.
+        var method = typeof(SlackIntegrationController).GetMethod(methodName);
+
+        Assert.NotNull(method);
+        var attribute = method.GetCustomAttributes<RequireFeatureAttribute>().SingleOrDefault();
+        Assert.NotNull(attribute);
+
+        var featureService = Substitute.For<IFeatureService>();
+        featureService.IsEnabled(FeatureFlagKeys.EventManagementForSlack, Arg.Any<bool>()).Returns(true);
+        Assert.True(attribute.FeatureCheck(featureService));
+
+        featureService.IsEnabled(FeatureFlagKeys.EventManagementForSlack, Arg.Any<bool>()).Returns(false);
+        Assert.False(attribute.FeatureCheck(featureService));
+    }
+
+    [Theory]
+    [InlineData(nameof(SlackIntegrationController.CreateAsync))]
+    public void AnonymousEndpoints_AreNotGated(string methodName)
+    {
+        // The OAuth callback is called by Slack without a user, so the flag would be evaluated for an
+        // anonymous context and organization targeting wouldn't match. RedirectAsync is the gate.
+        var method = typeof(SlackIntegrationController).GetMethod(methodName);
+
+        Assert.NotNull(method);
+        Assert.Empty(method.GetCustomAttributes<RequireFeatureAttribute>());
+    }
+
+    private static void AssertRedirectsToVault(IActionResult actionResult, Guid organizationId, string expectedResult)
+    {
+        var redirect = Assert.IsType<RedirectResult>(actionResult);
+        Assert.Equal(
+            $"https://vault.example.com/#/organizations/{organizationId}/integrations/event-management" +
+            $"?integration=slack&result={expectedResult}",
+            redirect.Url);
     }
 }

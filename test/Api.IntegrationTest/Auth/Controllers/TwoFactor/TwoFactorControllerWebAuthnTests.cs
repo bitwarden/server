@@ -11,7 +11,7 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Tokens;
-using Bit.IntegrationTestCommon.Fido2;
+using Bit.Test.Common.Fakes;
 using NSubstitute;
 using Xunit;
 using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorIntegrationTestHelpers;

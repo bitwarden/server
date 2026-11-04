@@ -10,6 +10,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 
 namespace Bit.Core.Services;
@@ -57,4 +58,11 @@ public interface IEventService
     Task LogServiceAccountEventAsync(Guid userId, List<ServiceAccount> serviceAccount, EventType type, IdentityClientType identityClientType, DateTime? date = null);
     Task LogSendEventAsync(Guid sendOwnerUserId, Guid sendId, EventType type,
         IReadOnlyDictionary<Guid, SendAccessEventOrgContext> organizationContext = null);
+    Task LogSendEventsAsync(IEnumerable<(Send send, EventType type)> events, Guid organizationId);
+
+    /// <summary>
+    /// Copies one PAM access event to the organization's event log, gated on its event entitlement like any
+    /// organization event. PAM's own audit store stays the system of record.
+    /// </summary>
+    Task LogPamAccessEventAsync(EventType type, PamAccessEventContext context);
 }

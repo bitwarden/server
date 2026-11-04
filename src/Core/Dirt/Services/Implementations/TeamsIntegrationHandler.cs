@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Core.Dirt.Models.Data.EventIntegrations;
-using Microsoft.Rest;
+using Microsoft.Bot.Schema;
 
 namespace Bit.Core.Dirt.Services.Implementations;
 
@@ -21,7 +21,7 @@ public class TeamsIntegrationHandler(
 
             return IntegrationHandlerResult.Succeed(message);
         }
-        catch (HttpOperationException ex)
+        catch (ErrorResponseException ex) when (ex.Response is not null)
         {
             var category = ClassifyHttpStatusCode(ex.Response.StatusCode);
             return IntegrationHandlerResult.Fail(

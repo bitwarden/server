@@ -40,7 +40,7 @@ dotnet run --project .. -- preset --list --output json
 Each build produces two tags:
 
 - **Latest**: `seeded-{db}:{preset-name}-latest` — e.g. `seeded-postgres:qa-dunder-mifflin-enterprise-full-latest`. Moves with every build.
-- **Versioned**: `seeded-{db}:{preset-name}-{git-sha}` — e.g. `seeded-postgres:qa-dunder-mifflin-enterprise-full-abc1234`. Immutable, so a deployment can pin a known build.
+- **Versioned**: `seeded-{db}:{preset-name}-{git-sha}` — e.g. `seeded-postgres:qa-dunder-mifflin-enterprise-full-abc1234`. Pins one build. The workflow keeps the newest 2 per preset and database and deletes the rest, so a tag lasts about 2 weeks on the weekly schedule. Use `-latest` for anything longer-lived.
 
 Either tag works with any copy of the data protection key, because CI pins one key for every build.
 

@@ -1088,4 +1088,33 @@ public class SyncControllerTests
         Assert.DoesNotContain(result.Ciphers, c => c.Type == CipherType.Passport);
         Assert.Contains(result.Ciphers, c => c.Type == CipherType.Login);
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_ItemTypeSends_FilteredWhenFlagDisabled(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+
+        sutProvider.GetDependency<ISendRepository>()
+            .GetManyByUserIdAsync(user.Id).Returns([new Send { Type = Core.Tools.Enums.SendType.Item }]);
+
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.TemporaryItemSharing).Returns(false);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.DoesNotContain(result.Sends, s => s.Type == Core.Tools.Enums.SendType.Item);
+    }
 }

@@ -1,8 +1,10 @@
-﻿using Bit.Core.Auth.Identity;
-using Bit.ExceptionHandling;
+﻿using Bit.Core;
+using Bit.Core.Auth.Identity;
 using Bit.Invoicing;
 using Bit.OrganizationAuthorization;
+using Bit.Subscriptions.Organization.Filters;
 using Bit.Subscriptions.Organization.Handlers;
+using Bit.Subscriptions.Organization.Models.Requests;
 using Bit.Subscriptions.Organization.Requirements;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -22,19 +24,43 @@ public static class OrganizationSubscriptionEndpointsExtensions
     /// </summary>
     public static RouteGroupBuilder MapOrganizationSubscriptionEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var group = endpoints.MapGroup("");
-        group.WithTags("OrganizationSubscriptions");
-        group.WithGroupName("internal");
-        group.RequireAuthorization(Policies.Application);
-        group.RequireAuthorization(new AuthorizeAttribute<OrganizationBillingRequirement>());
-        group.WithBasicExceptionHandling();
-        group.RequireFeature(InvoicingFeatureFlags.PM36631_PreviewDrivenCart);
+        var group = endpoints.MapOrganizationScopedGroup();
+        group.AddEndpointFilter<RouteGroupBuilder, StripeCardErrorEndpointFilter>();
 
         group.MapGet("preview",
-                async ([FromRoute] Guid organizationId, [FromServices] OrganizationSubscriptionEndpointsHandler handler) => await handler.GetPreviewAsync(organizationId))
+                async ([FromRoute] Guid organizationId, [FromServices] GetOrganizationSubscriptionPreviewHandler handler) => await handler.HandleAsync(organizationId))
             .RequireAuthorization(new AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>())
+            .RequireFeature(InvoicingFeatureFlags.PM36631_PreviewDrivenCart)
             .WithName("GetOrganizationSubscriptionPreview")
             .WithDescription("Previews the organization's upcoming subscription renewal.");
+
+        group.MapPost("plan-change/preview",
+                async ([FromRoute] Guid organizationId, [FromBody] PreviewOrganizationPlanChangeRequest request,
+                        [FromServices] PreviewOrganizationPlanChangeHandler handler) => await handler.HandleAsync(organizationId, request))
+            .RequireAuthorization(new AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>())
+            .RequireFeature(InvoicingFeatureFlags.PM36631_PreviewDrivenCart)
+            .WithName("PreviewOrganizationPlanChange")
+            .WithDescription("Previews the cost of changing the organization's plan.");
+
+        group.MapPost("restart/preview",
+                async ([FromRoute] Guid organizationId, [FromBody] PreviewOrganizationRestartRequest request,
+                        [FromServices] PreviewOrganizationRestartHandler handler) => await handler.HandleAsync(organizationId, request))
+            .RequireFeature(InvoicingFeatureFlags.PM36631_PreviewDrivenCart)
+            .WithName("PreviewOrganizationRestart")
+            .WithDescription("Previews the cost of restarting the organization's canceled subscription.");
+
+        group.MapPost("privileged-controls/purchase",
+                async ([FromRoute] Guid organizationId, [FromBody] PurchasePrivilegedControlsRequest request,
+                        [FromServices] PurchasePrivilegedControlsHandler handler) =>
+                {
+                    await handler.HandleAsync(organizationId, request);
+                    return Results.NoContent();
+                })
+            .AddEndpointFilter<RouteHandlerBuilder, RequestValidationEndpointFilter<PurchasePrivilegedControlsRequest>>()
+            .RequireAuthorization(new AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>())
+            .RequireFeature(FeatureFlagKeys.PM39883_Pam_Billing_Support)
+            .WithName("PurchasePrivilegedControls")
+            .WithDescription("Purchases Privileged Controls seats for an organization that does not have them yet.");
 
         return group;
     }

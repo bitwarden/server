@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.UserFeatures.UserEmail;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -26,6 +27,7 @@ public class UpdateOrganizationUserCommand(
     IOrganizationUserRepository organizationUserRepository,
     IUpdateOrganizationUserValidator validator,
     ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
+    ICountNewPamSeatsRequiredQuery countNewPamSeatsRequiredQuery,
     IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
     IPricingClient pricingClient,
     IEventService eventService,
@@ -60,6 +62,15 @@ public class UpdateOrganizationUserCommand(
         if (request.IsEnablingSecretsManager())
         {
             var commandError = await TryEnablingSecretsManagerAsync(request);
+            if (commandError is not null)
+            {
+                return commandError;
+            }
+        }
+
+        if (request.IsEnablingPam())
+        {
+            var commandError = await TryEnablingPamAsync(request);
             if (commandError is not null)
             {
                 return commandError;
@@ -186,6 +197,19 @@ public class UpdateOrganizationUserCommand(
             {
                 return new CouldNotIncreaseSeatsOfSecretManager(ex.Message);
             }
+        }
+
+        return null;
+    }
+
+    private async Task<CommandError?> TryEnablingPamAsync(UpdateOrganizationUserRequest request)
+    {
+        var additionalPamSeatsRequired =
+            await countNewPamSeatsRequiredQuery.CountNewPamSeatsRequiredAsync(request.Organization, 1);
+        // Only self-hosted instances are limited here: they cannot change their subscription. Cloud grants are not seat-limited by this command.
+        if (additionalPamSeatsRequired > 0 && globalSettings.SelfHosted)
+        {
+            return new CannotAutoscalePamSeatsOnSelfHost();
         }
 
         return null;

@@ -79,7 +79,13 @@ public class SendRequestModelTests
             Data = new SendDataModel
             {
                 EncryptionVersion = SendEncryptionType.V1,
-                Data = "{ \"name\": \"ENCRYPTED_VALUE\" }"
+                Data = "{ \"name\": \"ENCRYPTED_VALUE\" }",
+                Metadata = new SendItemMetadataModel
+                {
+                    ItemId = Guid.NewGuid(),
+                    CreationDate = DateTime.UtcNow,
+                    RevisionDate = DateTime.UtcNow,
+                },
             },
             Type = SendType.Item,
         };
@@ -96,6 +102,82 @@ public class SendRequestModelTests
         var sendItemData = JsonSerializer.Deserialize<SendItemData>(send.Data);
         Assert.Equal(sendItemData.EncryptionVersion, sendRequest.Data.EncryptionVersion);
         Assert.Equal(sendItemData.Data, sendRequest.Data.Data);
+    }
+
+    [Fact]
+    public void ToSend_Item_StoresMetadata()
+    {
+        var itemId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        var encryptedFolderName = "encrypted_folder_name";
+        var encryptedCollectionName = "encrypted_collection_name";
+        var encryptedOrgName = "encrypted_org_name";
+        var sendRequest = new SendRequestModel
+        {
+            AuthType = AuthType.Email,
+            DeletionDate = DateTime.UtcNow.AddDays(5),
+            Key = "encrypted_key",
+            Name = "encrypted_name",
+            Emails = "owner@bitwarden.com",
+            Data = new SendDataModel
+            {
+                EncryptionVersion = SendEncryptionType.V1,
+                Data = "sealed_blob",
+                Metadata = new SendItemMetadataModel
+                {
+                    ItemId = itemId,
+                    CreationDate = now,
+                    RevisionDate = now,
+                    FolderName = encryptedFolderName,
+                    CollectionNames = [encryptedCollectionName],
+                    OrganizationName = encryptedOrgName,
+                },
+            },
+            Type = SendType.Item,
+        };
+
+        var send = sendRequest.ToSend(Guid.NewGuid(), Substitute.For<ISendAuthorizationService>());
+
+        var sendItemData = JsonSerializer.Deserialize<SendItemData>(send.Data);
+        Assert.Equal(itemId, sendItemData.Metadata?.ItemId);
+        Assert.Equal(now, sendItemData.Metadata?.CreationDate);
+        Assert.Equal(now, sendItemData.Metadata?.RevisionDate);
+        Assert.Equal(encryptedFolderName, sendItemData.Metadata?.FolderName);
+        Assert.Single(sendItemData.Metadata.CollectionNames);
+        Assert.Equal(encryptedCollectionName, sendItemData.Metadata.CollectionNames[0]);
+        Assert.Equal(encryptedOrgName, sendItemData.Metadata.OrganizationName);
+    }
+
+    [Fact]
+    public void ToSend_Item_NullMetadata()
+    {
+        var sendRequest = new SendRequestModel
+        {
+            AuthType = AuthType.Email,
+            DeletionDate = DateTime.UtcNow.AddDays(5),
+            Key = "encrypted_key",
+            Name = "encrypted_name",
+            Emails = "owner@bitwarden.com",
+            Data = new SendDataModel { EncryptionVersion = SendEncryptionType.V1, Data = "sealed_blob" },
+            Type = SendType.Item,
+        };
+
+        var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
+
+        Assert.Throws<ArgumentNullException>(() => sendRequest.ToSend(Guid.NewGuid(), sendAuthorizationService));
+    }
+
+    [Fact]
+    public void SendDataModel_MissingMetadata_IsInvalid()
+    {
+        var model = new SendDataModel { EncryptionVersion = SendEncryptionType.V1, Data = "sealed_blob" };
+
+        var results = new List<System.ComponentModel.DataAnnotations.ValidationResult>();
+        var valid = System.ComponentModel.DataAnnotations.Validator.TryValidateObject(
+            model, new System.ComponentModel.DataAnnotations.ValidationContext(model), results, true);
+
+        Assert.False(valid);
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(SendDataModel.Metadata)));
     }
 
     [Fact]

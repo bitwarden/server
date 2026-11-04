@@ -95,4 +95,46 @@ public class OrganizationIntegrationConfigurationDetailsTests
         var result = sut.MergedConfiguration;
         Assert.Equal(expected, result.ToJsonString());
     }
+
+    [Fact]
+    public void MergedConfiguration_TeamsWithChannelId_OverridesInstallChannel()
+    {
+        var serviceUrl = new Uri("https://smba.example.com/amer/tenant/");
+        var integration = new TeamsIntegration(
+            TenantId: "tenant",
+            Teams: [],
+            ChannelId: "19:general@thread.tacv2",
+            ServiceUrl: serviceUrl);
+
+        var sut = new OrganizationIntegrationConfigurationDetails();
+        sut.Configuration = JsonSerializer.Serialize(new TeamsIntegrationConfiguration(ChannelId: "19:alerts@thread.tacv2"));
+        sut.IntegrationConfiguration = JsonSerializer.Serialize(integration);
+
+        var result = sut.MergedConfiguration.Deserialize<TeamsIntegrationConfigurationDetails>();
+
+        Assert.NotNull(result);
+        Assert.Equal("19:alerts@thread.tacv2", result.ChannelId);
+        Assert.Equal(serviceUrl, result.ServiceUrl);
+    }
+
+    [Fact]
+    public void MergedConfiguration_TeamsWithNullConfiguration_UsesInstallChannel()
+    {
+        var serviceUrl = new Uri("https://smba.example.com/amer/tenant/");
+        var integration = new TeamsIntegration(
+            TenantId: "tenant",
+            Teams: [],
+            ChannelId: "19:general@thread.tacv2",
+            ServiceUrl: serviceUrl);
+
+        var sut = new OrganizationIntegrationConfigurationDetails();
+        sut.Configuration = null;
+        sut.IntegrationConfiguration = JsonSerializer.Serialize(integration);
+
+        var result = sut.MergedConfiguration.Deserialize<TeamsIntegrationConfigurationDetails>();
+
+        Assert.NotNull(result);
+        Assert.Equal("19:general@thread.tacv2", result.ChannelId);
+        Assert.Equal(serviceUrl, result.ServiceUrl);
+    }
 }

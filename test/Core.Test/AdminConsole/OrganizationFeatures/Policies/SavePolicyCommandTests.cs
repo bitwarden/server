@@ -538,7 +538,7 @@ public class SavePolicyCommandTests
 
     private static void ArrangeVfo1Enabled(SutProvider<SavePolicyCommand> sutProvider)
     {
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.VFO1Foundation)
             .Returns(true);
     }

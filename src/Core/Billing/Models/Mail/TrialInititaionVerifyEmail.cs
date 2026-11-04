@@ -50,8 +50,8 @@ public class TrialInitiationVerifyEmail : RegisterVerifyEmail
     public bool PaymentOptional { get; set; }
 
     /// <summary>
-    /// Currently we only support one product type at a time, despite Product being a collection.
-    /// If we receive both PasswordManager and SecretsManager, we'll send the user to the PM trial route
+    /// Selects the sign-up route from the trial's products. Supported combinations are Password Manager,
+    /// Password Manager + Secrets Manager, and Password Manager + Privileged Controls.
     /// </summary>
     private string Route
     {
@@ -62,9 +62,17 @@ public class TrialInitiationVerifyEmail : RegisterVerifyEmail
                 return "create-organization";
             }
 
-            return Product.Any(p => p == ProductType.PasswordManager)
-                ? "trial-initiation"
-                : "secrets-manager-trial-initiation";
+            var hasPasswordManager = Product.Contains(ProductType.PasswordManager);
+
+            return hasPasswordManager switch
+            {
+                true when Product.Contains(ProductType.PrivilegedControls) => "privileged-controls-trial-initiation",
+                // Password Manager only or Password Manager + Secrets Manager
+                true => "trial-initiation",
+                // Secrets Manager only.
+                _ => "secrets-manager-trial-initiation"
+            };
+
         }
     }
 }

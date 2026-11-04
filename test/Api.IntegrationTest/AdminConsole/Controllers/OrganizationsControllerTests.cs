@@ -4,9 +4,11 @@ using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Tokens;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
@@ -192,5 +194,68 @@ public class OrganizationsControllerTests : IClassFixture<ApiApplicationFactory>
         Assert.NotNull(updatedOrg);
         Assert.Equal(_organizationName, updatedOrg.Name);
         Assert.Equal(_billingEmail, updatedOrg.BillingEmail);
+    }
+
+    [Fact]
+    public async Task PostDeleteRecoverToken_ValidToken_DeletesOrganization()
+    {
+        // Arrange
+        var token = _factory.GetService<IDataProtectorTokenFactory<OrgDeleteTokenable>>()
+            .Protect(new OrgDeleteTokenable(_organization, _factory.GetService<TimeProvider>()));
+
+        // Act
+        var response = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/delete-recover-token",
+            new OrganizationVerifyDeleteRecoverRequestModel { Token = token });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var organizationRepository = _factory.GetService<IOrganizationRepository>();
+        Assert.Null(await organizationRepository.GetByIdAsync(_organization.Id));
+    }
+
+    [Fact]
+    public async Task PostDeleteRecoverToken_ExpiredToken_ReturnsBadRequestAndDoesNotDeleteOrganization()
+    {
+        // Arrange
+        var token = _factory.GetService<IDataProtectorTokenFactory<OrgDeleteTokenable>>()
+            .Protect(new OrgDeleteTokenable { Id = _organization.Id, ExpirationDate = DateTime.UtcNow.AddHours(-1) });
+
+        // Act
+        var response = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/delete-recover-token",
+            new OrganizationVerifyDeleteRecoverRequestModel { Token = token });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var organizationRepository = _factory.GetService<IOrganizationRepository>();
+        Assert.NotNull(await organizationRepository.GetByIdAsync(_organization.Id));
+    }
+
+    [Fact]
+    public async Task PostDeleteRecoverToken_TokenForAnotherOrganization_ReturnsBadRequestAndDoesNotDeleteEither()
+    {
+        // Arrange
+        var otherOwnerEmail = $"org-integration-test-{Guid.NewGuid()}@example.com";
+        await _factory.LoginWithNewAccount(otherOwnerEmail);
+        var (otherOrganization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
+            plan: PlanType.EnterpriseAnnually,
+            ownerEmail: otherOwnerEmail,
+            passwordManagerSeats: 5,
+            paymentMethod: PaymentMethodType.Card);
+
+        var token = _factory.GetService<IDataProtectorTokenFactory<OrgDeleteTokenable>>()
+            .Protect(new OrgDeleteTokenable(otherOrganization, _factory.GetService<TimeProvider>()));
+
+        // Act
+        var response = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/delete-recover-token",
+            new OrganizationVerifyDeleteRecoverRequestModel { Token = token });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var organizationRepository = _factory.GetService<IOrganizationRepository>();
+        Assert.NotNull(await organizationRepository.GetByIdAsync(_organization.Id));
+        Assert.NotNull(await organizationRepository.GetByIdAsync(otherOrganization.Id));
     }
 }

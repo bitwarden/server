@@ -2,7 +2,7 @@
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.Jobs;
-using Bit.Core.Services;
+using Bitwarden.Server.Sdk.Features;
 using Quartz;
 
 namespace Bit.Api.AdminConsole.Jobs;

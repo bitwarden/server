@@ -2,6 +2,7 @@
 #nullable disable
 
 using System.Security.Claims;
+using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
@@ -117,7 +118,7 @@ public class SsoController : Controller
         }
         var organizationId = ssoConfig.OrganizationId.ToString();
 
-        var scheme = "sso";
+        var scheme = AuthenticationSchemes.IdentitySsoOidc;
         var props = new AuthenticationProperties
         {
             RedirectUri = Url.Action(nameof(ExternalCallback)),
@@ -147,7 +148,7 @@ public class SsoController : Controller
     {
         // Read external identity from the temporary cookie
         var result = await HttpContext.AuthenticateAsync(
-            Core.AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+            AuthenticationSchemes.IdentityExternalCookie);
         if (result?.Succeeded != true)
         {
             throw new Exception("External authentication error");
@@ -188,7 +189,7 @@ public class SsoController : Controller
         }, localSignInProps);
 
         // Delete temporary cookie used during external authentication
-        await HttpContext.SignOutAsync(Core.AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+        await HttpContext.SignOutAsync(AuthenticationSchemes.IdentityExternalCookie);
 
         // Retrieve return URL
         var returnUrl = result.Properties.Items["return_url"] ?? "~/";
@@ -228,6 +229,12 @@ public class SsoController : Controller
     private async Task<(User user, string provider, string providerUserId, IEnumerable<Claim> claims)>
         FindUserFromExternalProviderAsync(AuthenticateResult result)
     {
+        if (!result.Properties.Items.TryGetValue("scheme", out var provider) ||
+            provider != AuthenticationSchemes.IdentitySsoOidc)
+        {
+            throw new Exception("External authentication error");
+        }
+
         var externalUser = result.Principal;
 
         // Try to determine the unique id of the external user (issued by the provider)
@@ -241,9 +248,13 @@ public class SsoController : Controller
         var claims = externalUser.Claims.ToList();
         claims.Remove(userIdClaim);
 
-        var provider = result.Properties.Items["scheme"];
         var providerUserId = userIdClaim.Value;
-        var user = await _userRepository.GetByIdAsync(new Guid(providerUserId));
+        if (!Guid.TryParse(providerUserId, out var userId))
+        {
+            throw new Exception("Unknown userid");
+        }
+
+        var user = await _userRepository.GetByIdAsync(userId);
 
         return (user, provider, providerUserId, claims);
     }

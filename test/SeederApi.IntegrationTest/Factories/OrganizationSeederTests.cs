@@ -44,6 +44,21 @@ public class OrganizationSeederTests
     }
 
     [Fact]
+    public void Create_FamiliesAndEnterprise_AreSelfHostable()
+    {
+        var families = OrganizationSeeder.Create(
+            Seed() with { PlanType = PlanType.FamiliesAnnually }, new NoOpManglerService());
+        var teams = OrganizationSeeder.Create(
+            Seed() with { PlanType = PlanType.TeamsAnnually }, new NoOpManglerService());
+        var enterprise = OrganizationSeeder.Create(
+            Seed() with { PlanType = PlanType.EnterpriseAnnually }, new NoOpManglerService());
+
+        Assert.True(families.SelfHost);
+        Assert.False(teams.SelfHost);
+        Assert.True(enterprise.SelfHost);
+    }
+
+    [Fact]
     public void Create_OverridesLayerOnTopOfPlanDefaults()
     {
         // Free turns UseGroups off; the override must win, proving overrides run after PlanFeatures.Apply.
