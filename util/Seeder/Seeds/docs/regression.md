@@ -136,6 +136,6 @@ Do not chase these.
 
 ## Reporting back
 
-Per seed, give the developer: org name and ID, owner and member emails, **master password**, and the SSO identifier where relevant. Separate what SQL confirmed from what the browser showed.
+Per seed, give the developer: org name and ID, owner email, the member emails a browser check used, the **master password** when not the default, and the SSO identifier where relevant. Separate what SQL confirmed from what the browser showed.
 
 Browse at whatever host `globalSettings:baseServiceUri:vault` is set to — Identity derives the allowed `redirect_uri` from it, so reaching the vault by any other hostname fails SSO with `Invalid redirect_uri`. The plain dev default is `https://localhost:8080`; the Aspire AppHost uses `https://bitwarden.test:8080` and needs a matching `/etc/hosts` entry.

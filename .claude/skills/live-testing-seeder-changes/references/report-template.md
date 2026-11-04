@@ -34,10 +34,10 @@ Run <YYYY-MM-DD>, <start>–<end> UTC. Branch `<branch>` at `<short sha>`, datab
 
 ## Seeds
 
-Every account uses the Seeder's default master password (`util/Seeder/CLAUDE.md`) unless `--password` was passed.
+Every account uses the Seeder's default master password (`util/Seeder/CLAUDE.md`). A seed run with `--password` gives its password in the Login column; an SSO seed gives its login identifier there.
 
-| Preset | Org | Org ID | Owner |
-| --- | --- | --- | --- |
-| `<preset>` | <mangled org name> | `<org id>` | `<owner email>` |
+| Preset | Org | Org ID | Owner | Login |
+| --- | --- | --- | --- | --- |
+| `<preset>` | <mangled org name> | `<org id>` | `<owner email>` | <default, `--password` value, or SSO identifier> |
 
 Seeded orgs stay in `<database>`.

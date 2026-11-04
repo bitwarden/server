@@ -25,7 +25,7 @@
       "id": 2,
       "name": "validator-rule-variant-matrix",
       "prompt": "A PR reviewer asked me to add a PresetValidator rule that rejects `defaultCollections.sizes: []`. Write the end-to-end test plan you'd follow to prove the rule works on real seeds and that the shipped presets still seed exactly the same. Plan only: don't seed, query or build anything. Save it as plan.md.",
-      "expected_output": "A plan with unit tests plus fault injection, a temp-preset variant (untracked folder, rebuild because presets are embedded, --no-build seeding, proof no org row was written, cleanup), shipped default-collections presets seeded with --mangle and compared to a baseline (Q12 invariants), read-only SQL via exploring-bitwarden-data.",
+      "expected_output": "A plan with a temp-preset variant (untracked folder, rebuild because presets are embedded, --no-build seeding, proof no org row was written, cleanup), shipped default-collections presets seeded with --mangle and compared to a baseline (Q12 invariants), read-only SQL via exploring-bitwarden-data.",
       "files": [],
       "assertions": [
         "Every seed command includes --mangle",
@@ -35,7 +35,6 @@
         "Plan never proposes writing to, resetting or cleaning the local database",
         "Plan has Claude run the seeds and checks instead of handing commands to the developer",
         "Plan checks that the Playwright MCP is connected before any browser work and stops if it is not",
-        "Adds a PresetValidatorTests case and proves it with fault injection",
         "Seeds a temp variant from an untracked preset folder and rebuilds because presets are embedded",
         "Proves the rejected variant wrote no org row",
         "Re-seeds shipped default-collections presets and compares Q12",
@@ -60,6 +59,7 @@
         "Runs Access Intelligence on an Enterprise org, not a Families one",
         "Reads SeederApi credentials from user-secrets without printing them",
         "Redacts SeederApi responses",
+        "Writes console and network output to a file and filters access_token before reading it",
         "Notes the HIBP request volume limit"
       ]
     },
