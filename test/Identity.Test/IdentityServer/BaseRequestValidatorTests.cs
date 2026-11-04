@@ -1172,6 +1172,79 @@ public class BaseRequestValidatorTests
             "TwoFactorRecoveryRequested flag should be set for audit/logging");
     }
 
+    /// <summary>
+    /// A successful 2FA login that asks for a 2FA remember token (TwoFactorRemember = "1") is only issued one
+    /// when the provider allows it. A <c>Remember</c> login must not renew itself, and a <c>RecoveryCode</c>
+    /// login removes 2FA, so neither mints a new token. <c>Email</c> is the control: it proves that the
+    /// request really would have been issued a token, so the other two cases can fail.
+    /// </summary>
+    [Theory]
+    [BitAutoData(TwoFactorProviderType.RecoveryCode, false)]
+    [BitAutoData(TwoFactorProviderType.Remember, false)]
+    [BitAutoData(TwoFactorProviderType.Email, true)]
+    public async Task ValidateAsync_TwoFactorRememberRequested_IssuesTwoFactorRememberTokenOnlyForAllowedProviders(
+        TwoFactorProviderType providerType,
+        bool expectTokenIssued,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        [AuthFixtures.CustomValidatorRequestContext]
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        var user = requestContext.User;
+        const string twoFactorToken = "valid-two-factor-token";
+
+        _sut.isValid = true;
+
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(user, tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(true, null)));
+
+        // The user asks for a 2FA remember token and completes 2FA with the provider under test
+        tokenRequest.Raw["TwoFactorRemember"] = "1";
+        tokenRequest.Raw["TwoFactorProvider"] = ((int)providerType).ToString();
+        tokenRequest.Raw["TwoFactorToken"] = twoFactorToken;
+
+        _twoFactorAuthenticationValidator
+            .VerifyTwoFactorAsync(user, null, providerType, twoFactorToken, Arg.Any<string>())
+            .Returns(Task.FromResult(new TwoFactorVerificationResult(true)));
+
+        _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+
+        _userService.IsLegacyUser(Arg.Any<string>())
+            .Returns(false);
+
+        _userAccountKeysQuery.Run(Arg.Any<User>()).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
+                "test-private-key",
+                "test-public-key"
+            )
+        });
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        Assert.False(context.GrantResult.IsError, "Authentication should succeed for the provider under test");
+
+        if (expectTokenIssued)
+        {
+            await _issueTwoFactorRememberTokenCommand.Received(1)
+                .IssueAsync(Arg.Any<User>(), Arg.Any<Device>());
+        }
+        else
+        {
+            await _issueTwoFactorRememberTokenCommand.DidNotReceive()
+                .IssueAsync(Arg.Any<User>(), Arg.Any<Device>());
+        }
+    }
+
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_ClientVersionValidator_IsInvoked(
