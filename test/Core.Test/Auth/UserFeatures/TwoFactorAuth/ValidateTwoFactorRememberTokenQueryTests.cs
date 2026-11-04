@@ -41,7 +41,8 @@ public class ValidateTwoFactorRememberTokenQueryTests
             DeviceIdentifier = _deviceIdentifier,
             Stamp = stamp,
             SecurityStamp = user.SecurityStamp,
-            // Real clock: ExpiringTokenable reads DateTime.UtcNow directly.
+            // Real clock, relative to now: a tokenable built here uses the system clock (its TimeProvider is
+            // internal to Core), so a fixed date would eventually read as expired and make the tests flaky.
             ExpirationDate = DateTime.UtcNow.AddDays(30),
         };
 
@@ -219,8 +220,8 @@ public class ValidateTwoFactorRememberTokenQueryTests
     {
         var sutProvider = GetSutProvider();
         var (tokenable, _) = ArrangeValid(sutProvider, user, deviceId);
-        // Real clock on purpose: ExpiringTokenable.IsExpired reads DateTime.UtcNow directly, so the
-        // injected TimeProvider cannot reach it.
+        // Real clock on purpose: a tokenable built here uses the system clock, which the injected
+        // FakeTimeProvider cannot reach. Keep the offset relative to now.
         tokenable.ExpirationDate = DateTime.UtcNow.AddMinutes(-1);
 
         Assert.False(await sutProvider.Sut.ValidateAsync(user, _deviceIdentifier, _token));
