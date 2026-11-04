@@ -3,12 +3,7 @@
 public interface IRevokeTwoFactorRememberTokensCommand
 {
     /// <summary>
-    /// Stops every remember token recorded for this user from being honored, on all of their devices.
+    /// Stops every 2FA remember token recorded for this user from being honored, on all of their devices.
     /// </summary>
-    /// <remarks>
-    /// Scoped to remember-me only: access tokens, refresh tokens, and live sessions are unaffected,
-    /// so this does not log the user out anywhere. Devices stay remembered as rows — they simply
-    /// require a two-factor challenge again on next login.
-    /// </remarks>
     Task RevokeAllForUserAsync(Guid userId);
 }

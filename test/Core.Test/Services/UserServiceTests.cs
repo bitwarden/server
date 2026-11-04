@@ -267,7 +267,7 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task DisableTwoFactorProviderAsync_LastProviderRemoved_RevokesRememberedDevices(
+    public async Task DisableTwoFactorProviderAsync_TwoFactorAuthNoLongerEnabled_RevokesTwoFactorRememberTokens(
         SutProvider<UserService> sutProvider, User user)
     {
         // Arrange
@@ -289,12 +289,13 @@ public class UserServiceTests
     }
 
     /// <summary>
-    /// Removing the last provider revokes the remember tokens before anything is saved. If token revocation
-    /// fails, the removal is not persisted, so the user can simply retry instead of being left with no
-    /// two-factor and remember tokens that would still validate upon re-enabling 2FA.
+    /// Removing a provider such that 2FA is no longer enabled revokes the 2FA remember tokens before
+    /// anything is saved. If revocation fails, the removal is not persisted, so the user can simply
+    /// retry instead of being left with 2FA disabled and 2FA remember tokens that would still validate
+    /// upon re-enabling 2FA.
     /// </summary>
     [Theory, BitAutoData]
-    public async Task DisableTwoFactorProviderAsync_LastProviderRemoved_RememberTokenRevocationFails_DoesNotSaveRemoval(
+    public async Task DisableTwoFactorProviderAsync_TwoFactorAuthNoLongerEnabled_RememberTokenRevocationFails_DoesNotSaveRemoval(
         SutProvider<UserService> sutProvider, User user)
     {
         // Arrange
@@ -546,7 +547,7 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task RecoverTwoFactorAsync_CorrectCode_RevokesRememberedDevices(
+    public async Task RecoverTwoFactorAsync_CorrectCode_RevokesTwoFactorRememberTokens(
         User user, SutProvider<UserService> sutProvider)
     {
         // Arrange

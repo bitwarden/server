@@ -101,7 +101,7 @@ public class ValidateTwoFactorRememberTokenQueryTests
     }
 
     /// <summary>
-    /// The account-wide check: rotating the user's security stamp invalidates every remember token they hold.
+    /// The account-wide check: rotating the user's security stamp invalidates every 2FA remember token they hold.
     /// </summary>
     [Theory, BitAutoData]
     public async Task ValidateAsync_UserSecurityStampRotated_ReturnsFalse(

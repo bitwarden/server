@@ -750,11 +750,13 @@ public class UserService : UserManager<User>, IUserService
         providers.Remove(type);
         user.SetTwoFactorProviders(providers);
 
+        // Check if two factor authentication in general is now disabled for the user.
         // Evaluated before the save, against the in-memory user that no longer has the provider.
         // Revoking before the save means a failed revoke leaves the provider in place, so the user can
         // simply retry. If evaluated after the save, the early return at the top would block any retry.
-        var removedLastProvider = !await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
-        if (removedLastProvider)
+        var twoFactorAuthNoLongerEnabled = !await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
+
+        if (twoFactorAuthNoLongerEnabled)
         {
             await _revokeTwoFactorRememberTokensCommand.RevokeAllForUserAsync(user.Id);
         }
@@ -762,7 +764,7 @@ public class UserService : UserManager<User>, IUserService
         await SaveUserAsync(user);
         await _eventService.LogUserEventAsync(user.Id, EventType.User_Disabled2fa);
 
-        if (removedLastProvider)
+        if (twoFactorAuthNoLongerEnabled)
         {
             // Revokes the user from organizations that require 2FA.
             await CheckPoliciesOnTwoFactorRemovalAsync(user);
