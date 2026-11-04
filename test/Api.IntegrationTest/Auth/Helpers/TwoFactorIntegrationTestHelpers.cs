@@ -1,19 +1,19 @@
 ﻿using System.Text;
 using System.Text.Json;
-using Xunit;
-using Bit.Core.Enums;
-using Bit.Core.Auth.Repositories;
-using Bit.Core.Auth.Entities;
 using Bit.Api.IntegrationTest.Factories;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.Test.Common.Fakes;
 using Core.Auth.Enums;
 using NSubstitute;
+using Xunit;
 
 namespace Bit.Api.IntegrationTest.Auth.Helpers;
 
