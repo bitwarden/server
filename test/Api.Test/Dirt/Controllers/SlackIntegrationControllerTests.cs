@@ -1,7 +1,7 @@
 ﻿#nullable enable
 
-using System.Text.Json;
 using System.Reflection;
+using System.Text.Json;
 using Bit.Api.Dirt.Controllers;
 using Bit.Api.Dirt.Models.Request;
 using Bit.Api.Dirt.Utilities;
