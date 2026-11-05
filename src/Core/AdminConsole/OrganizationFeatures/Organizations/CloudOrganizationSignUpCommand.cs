@@ -76,7 +76,8 @@ public class CloudOrganizationSignUpCommand(
             ValidateSecretsManagerPlan(plan, signup);
         }
 
-        // A request for Privileged Controls that isn't allowed is ignored, so the org is created without it.
+        // A self-serve request for Privileged Controls with the flag off is ignored, so the org is created without it;
+        // a sales-assisted request with a missing or invalid token is rejected.
         var usePrivilegedControls = signup.UsePrivilegedControls && CanSignUpWithPrivilegedControls(signup);
         if (usePrivilegedControls)
         {
@@ -258,21 +259,42 @@ public class CloudOrganizationSignUpCommand(
     }
 
     /// <summary>
-    /// A verified sign-up from a sales invitation can always include Privileged Controls, because sales sells it at
-    /// GA. Any other sign-up is self-serve and needs <see cref="FeatureFlagKeys.PM39883_Pam_Billing_Support"/> on.
+    /// Whether the sign-up may include Privileged Controls. With <see cref="FeatureFlagKeys.PM39883_Pam_Billing_Support"/>
+    /// on, any sign-up may. With it off, only a verified sales-assisted sign-up may; this gate is deleted with the flag.
     /// </summary>
+    /// <exception cref="BadRequestException">The flag is off and the sales-assisted token is missing or invalid.</exception>
     private bool CanSignUpWithPrivilegedControls(OrganizationSignup signup) =>
-        IsVerifiedSalesAssistedSignUp(signup) ||
-        featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support);
+        featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support) ||
+        IsVerifiedSalesAssistedSignUp(signup);
 
     /// <summary>
-    /// A sales-assisted sign-up must present the sales invitation token issued to the owner's email, still unexpired.
+    /// True when the sign-up uses the sales-assisted initiation path, carries a sales invitation token, and that token
+    /// is valid for the owner's email (case-insensitively) and unexpired. The token proves a sales invitation to this
+    /// email, not which products sales offered. False for any other initiation path.
     /// </summary>
-    private bool IsVerifiedSalesAssistedSignUp(OrganizationSignup signup) =>
-        signup.InitiationPath == TrialInitiationConstants.SalesAssistedTrialInitiationPath &&
-        !string.IsNullOrWhiteSpace(signup.SalesAssistedToken) &&
-        SalesAssistedRegistrationTokenable.ValidateSalesAssistedRegistrationToken(
-            salesAssistedRegistrationTokenDataFactory, signup.SalesAssistedToken, signup.Owner.Email) == null;
+    /// <exception cref="BadRequestException">The sales-assisted token is missing or invalid.</exception>
+    private bool IsVerifiedSalesAssistedSignUp(OrganizationSignup signup)
+    {
+        if (signup.InitiationPath != TrialInitiationConstants.SalesAssistedTrialInitiationPath)
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(signup.SalesAssistedToken))
+        {
+            throw new BadRequestException("A sales invitation token is required to include Privileged Controls.");
+        }
+
+        var tokenValidationError = SalesAssistedRegistrationTokenable.ValidateSalesAssistedRegistrationToken(
+            salesAssistedRegistrationTokenDataFactory, signup.SalesAssistedToken, signup.Owner.Email);
+
+        if (tokenValidationError != null)
+        {
+            throw new BadRequestException(tokenValidationError.ErrorMessage);
+        }
+
+        return true;
+    }
 
     private OrganizationSubscriptionCreation BuildPrivilegedControlsPurchase(
         OrganizationSale sale, OrganizationSignup signup)
