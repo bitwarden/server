@@ -277,6 +277,7 @@ public class EmergencyAccessTakeoverTests : IClassFixture<ApiApplicationFactory>
     public async Task PostPassword_V2_MismatchedKdfOrSalt_BadRequest(
         string mismatchKind, string perturbedSide, string expectedError)
     {
+        var device = await SeedTwoFactorRememberTokenAsync(_factory, _grantorEmail, "stamp-before-rejected-takeover");
         await _loginHelper.LoginAsync(_granteeEmail);
 
         var (auth, unlock) = BuildMismatchedAuthAndUnlock(mismatchKind, perturbedSide);
@@ -294,6 +295,10 @@ public class EmergencyAccessTakeoverTests : IClassFixture<ApiApplicationFactory>
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains(expectedError, content);
+
+        // A rejected takeover must not cut off the grantor's 2FA remember tokens.
+        await AssertTwoFactorRememberTokenUnchangedAsync(
+            _factory, _grantorEmail, device, "stamp-before-rejected-takeover");
     }
 
     /// <summary>
@@ -318,6 +323,7 @@ public class EmergencyAccessTakeoverTests : IClassFixture<ApiApplicationFactory>
         Assert.NotNull(emergencyAccess);
         emergencyAccess.Status = invalidStatus;
         await _emergencyAccessRepository.ReplaceAsync(emergencyAccess);
+        var device = await SeedTwoFactorRememberTokenAsync(_factory, _grantorEmail, "stamp-before-rejected-takeover");
 
         await _loginHelper.LoginAsync(_granteeEmail);
 
@@ -335,6 +341,10 @@ public class EmergencyAccessTakeoverTests : IClassFixture<ApiApplicationFactory>
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("Emergency Access not valid.", content);
+
+        // A rejected takeover must not cut off the grantor's 2FA remember tokens.
+        await AssertTwoFactorRememberTokenUnchangedAsync(
+            _factory, _grantorEmail, device, "stamp-before-rejected-takeover");
     }
 
     /// <summary>
