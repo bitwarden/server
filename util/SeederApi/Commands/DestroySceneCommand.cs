@@ -1,7 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Pam.Repositories;
 using Bit.SeederApi.Commands.Interfaces;
 using Bit.SeederApi.Services;
 
@@ -14,6 +16,8 @@ public class DestroySceneCommand(
     IPlayItemRepository playItemRepository,
     IProviderRepository providerRepository,
     IOrganizationRepository organizationRepository,
+    IPamAccessConnectorRepository pamAccessConnectorRepository,
+    IApiKeyRepository apiKeyRepository,
     IGlobalSettings globalSettings) : IDestroySceneCommand
 {
     public async Task<object?> DestroyAsync(string playId)
@@ -72,7 +76,22 @@ public class DestroySceneCommand(
             {
                 try
                 {
+                    // Org deletion cascades the PamAccessConnector rows but not the ApiKeys they reference
+                    // (FK_PamAccessConnector_ApiKey is NO ACTION), so read the ids first and delete the keys after.
+                    var accessConnectorApiKeyIds = (await pamAccessConnectorRepository.GetManyByOrganizationIdAsync(org.Id))
+                        .Select(c => c.ApiKeyId)
+                        .ToList();
+
                     await organizationRepository.DeleteAsync(org);
+
+                    foreach (var apiKeyId in accessConnectorApiKeyIds)
+                    {
+                        var apiKey = await apiKeyRepository.GetByIdAsync(apiKeyId);
+                        if (apiKey != null)
+                        {
+                            await apiKeyRepository.DeleteAsync(apiKey);
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
