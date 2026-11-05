@@ -11,25 +11,20 @@ namespace Bit.Core.Vault.Authorization;
 /// A client that does not understand the shape must have gated ciphers <em>omitted entirely</em> rather
 /// than be sent a partial one: it would render an item with no credentials as though it were empty, and
 /// saving it back would overwrite the withheld fields with the blanks the client holds. Dropping the
-/// item is the lesser harm — it reappears once the client is updated.
+/// item is the lesser harm — the user sees it in the web vault, where they can request access.
 /// </remarks>
 public static class PartialCipherSupport
 {
     /// <summary>
-    /// Whether the calling client can be sent partial ciphers: the web vault, and a browser extension
-    /// while <see cref="FeatureFlagKeys.PamBrowserPartialCiphers"/> is on.
+    /// Whether the calling client can be sent partial ciphers: the web vault and browser extensions.
     /// </summary>
     /// <remarks>
     /// Fails safe: an absent or unrecognized device type maps to <see cref="ClientType.All"/>, which is
     /// not supported, so an unknown caller is treated as unable to handle the shape.
-    /// TODO: restore the <see cref="Constants.PamPartialCipherMinimumVersion"/> check on
-    /// <paramref name="clientVersion"/>; it is temporarily disabled.
+    /// The web vault is served from the same deployment as the server, so there is no version skew to
+    /// account for. Browser extensions have no minimum-version check yet, so an older extension also
+    /// receives the shape.
     /// </remarks>
-    public static bool IsSupportedBy(DeviceType? deviceType, Version? clientVersion, bool browserExtensionsEnabled) =>
-        DeviceTypes.ToClientType(deviceType) switch
-        {
-            ClientType.Web => true,
-            ClientType.Browser => browserExtensionsEnabled,
-            _ => false,
-        };
+    public static bool IsSupportedBy(DeviceType? deviceType) =>
+        DeviceTypes.ToClientType(deviceType) is ClientType.Web or ClientType.Browser;
 }
