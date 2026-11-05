@@ -312,6 +312,27 @@ public class CreateOrganizationSubscriptionCommandTests
         Assert.Null(_capturedSubscriptionOptions!.TrialSettings);
     }
 
+    // Literal strings on purpose: the initiation path must match the clients-repo InitiationPath enum, and the
+    // metadata value is persisted in Stripe, so changing either should fail this test.
+    [Fact]
+    public async Task Run_SalesAssistedInitiationPath_SetsSalesAssistedTrialMetadata()
+    {
+        StubSuccessfulPurchase();
+
+        var creation = Creation(trialDays: 7) with
+        {
+            Trial = new OrganizationSubscriptionCreation.TrialSetup
+            {
+                Length = 7,
+                InitiationPath = "Sales assisted trial from admin portal"
+            }
+        };
+
+        await _command.Run(Organization(), creation);
+
+        Assert.Equal("sales-assisted", _capturedSubscriptionOptions!.Metadata["trialInitiationPath"]);
+    }
+
     [Fact]
     public async Task Run_NoPaymentMethodAndTrial_SetsMissingPaymentMethodCancel()
     {

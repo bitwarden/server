@@ -85,8 +85,9 @@ public class OrganizationNoPaymentCreateRequest
     public string InitiationPath { get; set; }
 
     /// <summary>
-    /// The sales invitation token from a sales-assisted trial link. Required for a sales-assisted sign-up to include
-    /// Privileged Controls while self-serve Privileged Controls is off.
+    /// The sales invitation token from a sales-assisted trial link. Honoured only together with the sales-assisted
+    /// initiation path; with self-serve Privileged Controls off, a sales-assisted sign-up that includes Privileged
+    /// Controls with a missing or invalid token is rejected.
     /// </summary>
     public string SalesAssistedToken { get; set; }
 

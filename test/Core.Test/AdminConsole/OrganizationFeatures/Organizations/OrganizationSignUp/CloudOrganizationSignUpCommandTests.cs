@@ -35,6 +35,8 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Organizations.Organiza
 [SutProviderCustomize]
 public class CloudOrganizationSignUpCommandTests
 {
+    private const int PamSeatsAbovePasswordManagerSeats = 11;
+
     [Theory]
     [BitAutoData(PlanType.FamiliesAnnually)]
     [BitAutoData(PlanType.FamiliesAnnually2025)]
@@ -566,7 +568,7 @@ public class CloudOrganizationSignUpCommandTests
     public async Task SignUpAsync_PrivilegedControls_SeatsAbovePmSeats_Throws(
         OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
     {
-        ArrangePrivilegedControlsSignup(signup, sutProvider, pamSeats: 11);
+        ArrangePrivilegedControlsSignup(signup, sutProvider, pamSeats: PamSeatsAbovePasswordManagerSeats);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
@@ -876,7 +878,7 @@ public class CloudOrganizationSignUpCommandTests
     public async Task SignUpAsync_PrivilegedControls_ValidTokenOnSelfServePath_FlagOff_IgnoresPrivilegedControls(
         OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
     {
-        ArrangePrivilegedControlsSignup(signup, sutProvider, pamSeats: 11, pamBillingSupport: false);
+        ArrangePrivilegedControlsSignup(signup, sutProvider, pamSeats: PamSeatsAbovePasswordManagerSeats, pamBillingSupport: false);
         signup.InitiationPath = "Password Manager trial from marketing website";
         signup.SalesAssistedToken = "sales-assisted-token";
         ArrangeSalesAssistedToken(sutProvider, signup.SalesAssistedToken, SalesAssistedTokenable(signup.Owner.Email));
@@ -893,8 +895,7 @@ public class CloudOrganizationSignUpCommandTests
         string initiationPath,
         OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
     {
-        // Seats above the Password Manager seats would fail validation if the request were honored.
-        ArrangePrivilegedControlsSignup(signup, sutProvider, pamSeats: 11, pamBillingSupport: false);
+        ArrangePrivilegedControlsSignup(signup, sutProvider, pamSeats: PamSeatsAbovePasswordManagerSeats, pamBillingSupport: false);
         signup.InitiationPath = initiationPath;
         signup.SalesAssistedToken = null;
 
@@ -921,7 +922,8 @@ public class CloudOrganizationSignUpCommandTests
             .Run(default!, default!);
     }
 
-    // Callers ask for 11 seats, above the Password Manager seats, which would fail validation if the request were honored.
+    // Callers ask for PamSeatsAbovePasswordManagerSeats (ArrangePrivilegedControlsSignup sets 10 Password Manager seats),
+    // so an honored request would fail validation instead of finalizing.
     private static async Task AssertPrivilegedControlsIgnoredAsync(
         SutProvider<CloudOrganizationSignUpCommand> sutProvider)
     {

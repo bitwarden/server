@@ -192,6 +192,10 @@ public static partial class FeatureFlagKeys
     public const string PM35215_BusinessPlanPriceMigration = "pm-35215-business-plan-price-migration";
     public const string PM38333_AnnualBillingSavings = "pm-38333-annual-billing-savings";
     public const string PM38728_SendInvoicePriceMigration = "pm-38728-send-invoice-price-migration";
+    /// <summary>
+    /// Gates self-serve Privileged Controls: the purchase, seat change, removal and trial endpoints, and sign-up without
+    /// a sales invitation token. Sales-assisted provisioning runs regardless of this flag.
+    /// </summary>
     public const string PM39883_Pam_Billing_Support = "pm-39883-pam-billing-support";
 
     /* Key Management Team */

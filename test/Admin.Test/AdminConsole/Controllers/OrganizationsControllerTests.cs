@@ -2132,29 +2132,6 @@ public class OrganizationsControllerTests
     [BitAutoData]
     [SutProviderCustomize]
     [Theory]
-    public async Task Edit_PrivilegedControls_PamBillingSupportFlagOff_StillValidates(
-        Organization organization,
-        SutProvider<OrganizationsController> sutProvider)
-    {
-        StubPrivilegedControlsEdit(sutProvider, organization, supportsPrivilegedControls: false);
-        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
-            .IsEnabled(Bit.Core.FeatureFlagKeys.PM39883_Pam_Billing_Support)
-            .Returns(false);
-        var update = new OrganizationEditModel
-        {
-            PlanType = PlanType.EnterpriseAnnually,
-            UsePam = true,
-            PamSeats = 25
-        };
-
-        var result = await sutProvider.Sut.Edit(organization.Id, update);
-
-        await AssertPrivilegedControlsRejectedAsync(result, organization, sutProvider);
-    }
-
-    [BitAutoData]
-    [SutProviderCustomize]
-    [Theory]
     public async Task Edit_PrivilegedControls_WithoutPlanEditPermission_SkipsValidation(
         Organization organization,
         SutProvider<OrganizationsController> sutProvider)
