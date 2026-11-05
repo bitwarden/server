@@ -79,6 +79,8 @@ public static class MailDeliveryServiceCollectionExtensions
         options.Smtp.Host = ValueOrNull(options.Smtp.Host);
         options.Smtp.Username = ValueOrNull(options.Smtp.Username);
         options.Smtp.Password = ValueOrNull(options.Smtp.Password);
+        options.Smtp.ClientSecret = ValueOrNull(options.Smtp.ClientSecret);
+        options.Smtp.OAuth.ClientSecret = ValueOrNull(options.Smtp.OAuth.ClientSecret);
         options.SendGridApiKey = ValueOrNull(options.SendGridApiKey);
         options.Amazon.AccessKeySecret = ValueOrNull(options.Amazon.AccessKeySecret);
     }

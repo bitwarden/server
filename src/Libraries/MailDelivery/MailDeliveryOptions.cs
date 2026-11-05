@@ -1,6 +1,28 @@
 ﻿namespace Bit.Core.Platform.Mail.Delivery;
 
 /// <summary>
+/// SMTP authentication mechanisms supported by <see cref="MailDeliveryOptions.SmtpOptions"/>.
+/// </summary>
+public enum SmtpAuthType
+{
+    /// <summary>
+    /// Username and password authentication. The default; requires no OAuth configuration.
+    /// </summary>
+    Password,
+
+    /// <summary>
+    /// A generic OAuth 2.0 client-credentials provider, fully specified via
+    /// <see cref="MailDeliveryOptions.SmtpOptions.OAuthOptions"/>.
+    /// </summary>
+    CustomOAuth,
+
+    /// <summary>
+    /// Microsoft Entra OAuth 2.0 client-credentials authentication for Microsoft 365 SMTP.
+    /// </summary>
+    MicrosoftOAuth,
+}
+
+/// <summary>
 /// Settings for delivering mail. The provider is chosen from which settings are configured:
 /// <list type="number">
 ///   <item>Amazon SES and SendGrid both configured: SES, with <see cref="SendGridPercentage"/> of mail sent through SendGrid instead.</item>
@@ -108,6 +130,71 @@ public sealed class MailDeliveryOptions
         /// Accept the server certificate without validation.
         /// </summary>
         public bool TrustServer { get; set; }
+
+        /// <summary>
+        /// Authentication mechanism used when connecting. Defaults to <see cref="SmtpAuthType.Password"/>,
+        /// which requires no OAuth properties.
+        /// </summary>
+        public SmtpAuthType AuthType { get; set; }
+
+        /// <summary>
+        /// Microsoft Entra tenant ID. Shorthand for <see cref="OAuth"/>'s <see cref="OAuthOptions.TokenEndpoint"/>:
+        /// when <see cref="AuthType"/> is <see cref="SmtpAuthType.MicrosoftOAuth"/> and
+        /// <see cref="OAuthOptions.TokenEndpoint"/> is unset, the endpoint is derived from this value.
+        /// Ignored for other <see cref="AuthType"/> values.
+        /// </summary>
+        public string? TenantId { get; set; }
+
+        /// <summary>
+        /// OAuth client ID. Shorthand for <see cref="OAuthOptions.ClientId"/>: used when
+        /// <see cref="OAuthOptions.ClientId"/> is unset.
+        /// </summary>
+        public string? ClientId { get; set; }
+
+        /// <summary>
+        /// OAuth client secret. Shorthand for <see cref="OAuthOptions.ClientSecret"/>: used when
+        /// <see cref="OAuthOptions.ClientSecret"/> is unset.
+        /// </summary>
+        public string? ClientSecret { get; set; }
+
+        /// <summary>
+        /// OAuth settings used when <see cref="AuthType"/> is not <see cref="SmtpAuthType.Password"/>.
+        /// </summary>
+        public OAuthOptions OAuth { get; set; } = new();
+
+        /// <summary>
+        /// OAuth token endpoint configuration for SMTP authentication.
+        /// </summary>
+        public sealed class OAuthOptions
+        {
+            /// <summary>
+            /// The OAuth token endpoint URL. For <see cref="SmtpAuthType.MicrosoftOAuth"/>, this can be
+            /// omitted in favor of <see cref="SmtpOptions.TenantId"/>, from which it is derived.
+            /// </summary>
+            public string? TokenEndpoint { get; set; }
+
+            /// <summary>
+            /// The OAuth grant type. Defaults to <c>client_credentials</c> when unset, which is the only
+            /// supported value.
+            /// </summary>
+            public string? GrantType { get; set; }
+
+            /// <summary>
+            /// OAuth client ID. Falls back to <see cref="SmtpOptions.ClientId"/> when unset.
+            /// </summary>
+            public string? ClientId { get; set; }
+
+            /// <summary>
+            /// OAuth client secret. Falls back to <see cref="SmtpOptions.ClientSecret"/> when unset.
+            /// </summary>
+            public string? ClientSecret { get; set; }
+
+            /// <summary>
+            /// OAuth scope requested from the token endpoint. A default is applied for
+            /// <see cref="SmtpAuthType.MicrosoftOAuth"/> when unset.
+            /// </summary>
+            public string? Scope { get; set; }
+        }
     }
 
     /// <summary>

@@ -28,6 +28,15 @@ public class ConfigureMailDeliveryOptionsFromGlobalSettingsTests
             { "globalSettings:mail:smtp:username", "user" },
             { "globalSettings:mail:smtp:password", "password" },
             { "globalSettings:mail:smtp:trustServer", "true" },
+            { "globalSettings:mail:smtp:authType", "MicrosoftOAuth" },
+            { "globalSettings:mail:smtp:tenantId", "tenant-id" },
+            { "globalSettings:mail:smtp:clientId", "client-id" },
+            { "globalSettings:mail:smtp:clientSecret", "client-secret" },
+            { "globalSettings:mail:smtp:oAuth:tokenEndpoint", "https://login.example.com/token" },
+            { "globalSettings:mail:smtp:oAuth:grantType", "client_credentials" },
+            { "globalSettings:mail:smtp:oAuth:clientId", "oauth-client-id" },
+            { "globalSettings:mail:smtp:oAuth:clientSecret", "oauth-client-secret" },
+            { "globalSettings:mail:smtp:oAuth:scope", "https://outlook.office365.com/.default" },
             { "globalSettings:amazon:accessKeyId", "key-id" },
             { "globalSettings:amazon:accessKeySecret", "key-secret" },
             { "globalSettings:amazon:region", "us-east-1" },
@@ -48,6 +57,15 @@ public class ConfigureMailDeliveryOptionsFromGlobalSettingsTests
         Assert.Equal("user", options.Smtp.Username);
         Assert.Equal("password", options.Smtp.Password);
         Assert.True(options.Smtp.TrustServer);
+        Assert.Equal(SmtpAuthType.MicrosoftOAuth, options.Smtp.AuthType);
+        Assert.Equal("tenant-id", options.Smtp.TenantId);
+        Assert.Equal("client-id", options.Smtp.ClientId);
+        Assert.Equal("client-secret", options.Smtp.ClientSecret);
+        Assert.Equal("https://login.example.com/token", options.Smtp.OAuth.TokenEndpoint);
+        Assert.Equal("client_credentials", options.Smtp.OAuth.GrantType);
+        Assert.Equal("oauth-client-id", options.Smtp.OAuth.ClientId);
+        Assert.Equal("oauth-client-secret", options.Smtp.OAuth.ClientSecret);
+        Assert.Equal("https://outlook.office365.com/.default", options.Smtp.OAuth.Scope);
         Assert.Equal("key-id", options.Amazon.AccessKeyId);
         Assert.Equal("key-secret", options.Amazon.AccessKeySecret);
         Assert.Equal("us-east-1", options.Amazon.Region);
@@ -65,6 +83,8 @@ public class ConfigureMailDeliveryOptionsFromGlobalSettingsTests
             { "globalSettings:mail:smtp:host", placeholder },
             { "globalSettings:mail:smtp:username", placeholder },
             { "globalSettings:mail:smtp:password", placeholder },
+            { "globalSettings:mail:smtp:clientSecret", placeholder },
+            { "globalSettings:mail:smtp:oAuth:clientSecret", placeholder },
             { "globalSettings:amazon:accessKeySecret", placeholder },
         });
 
@@ -72,6 +92,8 @@ public class ConfigureMailDeliveryOptionsFromGlobalSettingsTests
         Assert.Null(options.Smtp.Host);
         Assert.Null(options.Smtp.Username);
         Assert.Null(options.Smtp.Password);
+        Assert.Null(options.Smtp.ClientSecret);
+        Assert.Null(options.Smtp.OAuth.ClientSecret);
         Assert.Null(options.Amazon.AccessKeySecret);
     }
 
