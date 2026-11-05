@@ -54,11 +54,6 @@ internal sealed class AutoscalePrivilegedControlsSeatsCommand(
                 return new AutoscalePrivilegedControlsSeatsResult(false, organization.MaxAutoscalePamSeats);
             }
 
-            if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
-            {
-                throw new BadRequestException("No subscription found.");
-            }
-
             if (!await isOnTrialQuery.Run(organization))
             {
                 var changeSet = await seatChangeSetFactory.CreateAsync(organization, seatsNeeded);

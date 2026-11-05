@@ -103,19 +103,21 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
     [Theory]
     [InlineData(null)]
     [InlineData("")]
-    [InlineData(" ")]
-    public async Task RunAsync_NoGatewaySubscriptionAndSeatsShort_ThrowsBadRequestAndChangesNothing(string? gatewaySubscriptionId)
+    public async Task RunAsync_NoGatewaySubscriptionOnTrialAndSeatsShort_SavesSeatsWithoutTouchingStripe(
+        string? gatewaySubscriptionId)
     {
         var organization = CreateOrganization(gatewaySubscriptionId: gatewaySubscriptionId);
         SetSeatsInUse(organization, _seatsInUse);
+        _isOnTrialQuery.Result = true;
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.RunAsync(organization, 3));
+        var result = await _sut.RunAsync(organization, 3);
 
-        Assert.Equal("No subscription found.", exception.Message);
-        Assert.Equal(_boughtSeats, organization.PamSeats);
+        Assert.True(result.Success);
+        Assert.Equal(13, organization.PamSeats);
+        await _replaceOrganizationAndUpdateCacheCommand.Received(1).RunAsync(organization);
         await _seatChangeSetFactory.DidNotReceive().CreateAsync(Arg.Any<OrganizationEntity>(), Arg.Any<int>());
-        await _replaceOrganizationAndUpdateCacheCommand.DidNotReceive()
-            .RunAsync(Arg.Any<OrganizationEntity>(), Arg.Any<EventType?>());
+        await _updateOrganizationSubscriptionCommand.DidNotReceive()
+            .Run(Arg.Any<OrganizationEntity>(), Arg.Any<OrganizationSubscriptionChangeSet>(), Arg.Any<Subscription?>());
     }
 
     [Fact]
