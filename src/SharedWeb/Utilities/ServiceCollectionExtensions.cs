@@ -28,6 +28,7 @@ using Bit.Core.Billing.Providers.Services.NoopImplementations;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Billing.TrialInitiation;
+using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Dirt.Reports.ReportFeatures;
 using Bit.Core.Dirt.Reports.Services;
 using Bit.Core.Entities;
@@ -241,6 +242,12 @@ public static class ServiceCollectionExtensions
                 DuoUserStateTokenable.DataProtectorPurpose,
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<DuoUserStateTokenable>>>()));
+        services.AddSingleton<IDataProtectorTokenFactory<IntegrationOAuthStateTokenable>>(serviceProvider =>
+            new DataProtectorTokenFactory<IntegrationOAuthStateTokenable>(
+                IntegrationOAuthStateTokenable.ClearTextPrefix,
+                IntegrationOAuthStateTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<IntegrationOAuthStateTokenable>>>()));
         services.AddSingleton<IDataProtectorTokenFactory<TwoFactorRememberTokenable>>(serviceProvider =>
             new DataProtectorTokenFactory<TwoFactorRememberTokenable>(
                 TwoFactorRememberTokenable.ClearTextPrefix,
