@@ -15,6 +15,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Tokens;
 using Microsoft.AspNetCore.Identity;
 using Xunit;
+using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorIntegrationTestHelpers;
 
 namespace Bit.Api.IntegrationTest.Auth.Controllers;
 
@@ -211,6 +212,51 @@ public class EmergencyAccessControllerTest : IClassFixture<ApiApplicationFactory
         Assert.False(updatedGrantor.VerifyDevices);
         Assert.NotEqual(grantorTwoFactorProvidersBefore, updatedGrantor.TwoFactorProviders);
         Assert.Empty(updatedGrantor.GetTwoFactorProviders() ?? []);
+    }
+
+    /// <summary>
+    /// A takeover removes the grantor's 2FA, so the 2FA remember tokens they had issued stop being honored
+    /// too: the row's stamp is rotated. Uses the V2 payload, which finishes through
+    /// <c>FinishRecoveryTakeoverAsync</c>.
+    /// </summary>
+    [Fact]
+    public async Task PostPassword_V2_RevokesGrantorTwoFactorRememberTokens()
+    {
+        // Arrange: the grantor has 2FA and a device holding a 2FA remember token. The request must echo the
+        // grantor's stored KDF, so set it explicitly rather than relying on the factory default.
+        var grantor = await _userRepository.GetByEmailAsync(_grantorEmail);
+        Assert.NotNull(grantor);
+        grantor.Kdf = _defaultKdfRequest.KdfType;
+        grantor.KdfIterations = _defaultKdfRequest.Iterations;
+        grantor.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+        {
+            [TwoFactorProviderType.Email] = new() { Enabled = true },
+        });
+        await _userRepository.ReplaceAsync(grantor);
+        var device = await SeedTwoFactorRememberTokenAsync(_factory, _grantorEmail, "stamp-before-takeover");
+
+        await _loginHelper.LoginAsync(_granteeEmail);
+
+        var requestModel = new EmergencyAccessPasswordRequestModel
+        {
+            AuthenticationData = BuildAuthData(_defaultKdfRequest, _grantorEmail),
+            UnlockData = BuildUnlockData(_defaultKdfRequest, _grantorEmail),
+        };
+
+        // Act
+        using var message = new HttpRequestMessage(
+            HttpMethod.Post, $"/emergency-access/{_emergencyAccessId}/password");
+        message.Content = JsonContent.Create(requestModel);
+        var response = await _client.SendAsync(message);
+
+        // Assert
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync();
+            Assert.Fail($"Expected success but got {response.StatusCode}. Error: {errorContent}");
+        }
+
+        await AssertTwoFactorRememberTokenRotatedAsync(_factory, _grantorEmail, device, "stamp-before-takeover");
     }
 
     /// <summary>
