@@ -60,8 +60,7 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
         int? maxExtensionDurationSeconds = null;
         if (activeLease is not null)
         {
-            // Extendable once, while the rule the lease was granted under opts in, as RequestLeaseExtensionCommand
-            // enforces.
+            // Extendable once under the lease's own rule, as RequestLeaseExtensionCommand enforces.
             var originatingRequest = await _accessRequestRepository.GetByIdAsync(activeLease.AccessRequestId);
             var rule = originatingRequest?.RuleId is { } ruleId
                 ? await _resolver.ResolvePinnedAsync(ruleId, activeLease.CollectionId)

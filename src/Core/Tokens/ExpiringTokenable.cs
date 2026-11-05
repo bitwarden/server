@@ -14,7 +14,13 @@ public abstract class ExpiringTokenable : Tokenable
     /// </summary>
     public override bool Valid => !IsExpired && TokenIsValid();
 
-    public bool IsExpired => ExpirationDate < DateTime.UtcNow;
+    /// <summary>
+    /// Clock used for the expiration check. Can be overwritten for tests.
+    /// </summary>
+    [JsonIgnore]
+    internal TimeProvider TimeProvider { get; set; } = TimeProvider.System;
+
+    public bool IsExpired => ExpirationDate < TimeProvider.GetUtcNow().UtcDateTime;
 
     /// <summary>
     /// Validates that the token data properties are correct.

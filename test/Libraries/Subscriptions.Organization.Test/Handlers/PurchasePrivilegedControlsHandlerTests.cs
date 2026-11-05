@@ -5,7 +5,6 @@ using Bit.Core.Repositories;
 using Bit.Subscriptions.Organization.Commands;
 using Bit.Subscriptions.Organization.Handlers;
 using Bit.Subscriptions.Organization.Models.Requests;
-using Bit.Subscriptions.Organization.Queries;
 using NSubstitute;
 using Xunit;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
@@ -73,7 +72,7 @@ public class PurchasePrivilegedControlsHandlerTests
         var organization = Arrange(CreateOrganization());
         var thrown = new ConflictException(
             "Your organization's subscription is in an invalid state. Please contact support for assistance.");
-        _trialQuery.ExceptionToThrow = thrown;
+        _trialQuery.Exception = thrown;
 
         var exception = await Assert.ThrowsAsync<ConflictException>(() => _sut.HandleAsync(organization.Id, Request()));
 
@@ -161,19 +160,6 @@ public class PurchasePrivilegedControlsHandlerTests
                     StripeSeatPlanId = "privileged-controls-enterprise-seat-annually"
                 };
             }
-        }
-    }
-
-    private sealed class FakeIsOnPrivilegedControlsSalesInitiatedTrialQuery : IIsOnPrivilegedControlsSalesInitiatedTrialQuery
-    {
-        public bool Result { get; set; }
-        public Exception? ExceptionToThrow { get; set; }
-        public OrganizationEntity? ReceivedOrganization { get; private set; }
-
-        public Task<bool> Run(OrganizationEntity organization)
-        {
-            ReceivedOrganization = organization;
-            return ExceptionToThrow is null ? Task.FromResult(Result) : Task.FromException<bool>(ExceptionToThrow);
         }
     }
 

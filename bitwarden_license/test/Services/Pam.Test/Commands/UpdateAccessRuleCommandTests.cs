@@ -16,8 +16,8 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Commands;
 
 /// <summary>
-/// The validation these commands share lives in <see cref="AccessRuleWriteValidator"/> and is covered by
-/// AccessRuleWriteValidatorTests; these tests cover persistence, timestamps, and collection association wiring.
+/// Validation lives in <see cref="AccessRuleWriteValidator"/> and its tests; these cover persistence, timestamps and
+/// collection links.
 /// </summary>
 [SutProviderCustomize]
 public class UpdateAccessRuleCommandTests
@@ -121,7 +121,6 @@ public class UpdateAccessRuleCommandTests
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.UpdateAsync(Guid.NewGuid(), Guid.NewGuid(), update, []));
-        // A rule the caller cannot see is a 404 before anything about the payload is judged.
         await sutProvider.GetDependency<IAccessRuleWriteValidator>().DidNotReceiveWithAnyArgs()
             .ValidateAsync(default, default!, default!, default);
     }
@@ -160,7 +159,6 @@ public class UpdateAccessRuleCommandTests
             .SetAccessRuleAssociationsAsync(default, default, default!, default!);
     }
 
-    // RuleName is the name after the edit.
     [Theory, BitAutoData]
     public async Task UpdateAsync_EmitsAttemptThenOutcome_WithTheNewNameAndEditorAsActor(
         AccessRuleDetails existing, AccessRule update, Guid editorId)
@@ -186,7 +184,6 @@ public class UpdateAccessRuleCommandTests
             && e.AccessRuleId == existing.Id && e.RuleName == "after"));
     }
 
-    // A rule from another organization is rejected before anything is recorded.
     [Theory, BitAutoData]
     public async Task UpdateAsync_WrongOrg_EmitsNothing(AccessRuleDetails existing, AccessRule update)
     {

@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -1639,7 +1640,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
 
         // As token contains now milliseconds for when it was created, create 1k year timespan for expiration
         // to ensure token is valid for a good long while.
-        localFactory.UpdateConfiguration("globalSettings:OrganizationInviteExpirationHours", "8760000");
+        localFactory.UpdateConfiguration("globalSettings:ProviderInviteExpirationHours", "8760000");
 
         var registerFinishReqModel = new RegisterFinishRequestModel
         {

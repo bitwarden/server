@@ -8,6 +8,7 @@ using Bit.Core.Services;
 using Bit.Subscriptions.Organization.Commands;
 using Bitwarden.Server.Sdk.Environment;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Stripe;
 using Xunit;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
@@ -24,16 +25,18 @@ public class RemovePrivilegedControlsCommandTests
         Substitute.For<IUpdateOrganizationSubscriptionCommand>();
     private readonly IOrganizationService _organizationService = Substitute.For<IOrganizationService>();
     private readonly IBitwardenEnvironment _environment = Substitute.For<IBitwardenEnvironment>();
+    private readonly RecordingLogger<RemovePrivilegedControlsCommand> _logger = new();
     private readonly RemovePrivilegedControlsCommand _sut;
 
     public RemovePrivilegedControlsCommandTests()
     {
-        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(new TestPlan());
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(new TestPlan(supportsPrivilegedControls: true));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TestPlan(supportsPrivilegedControls: false));
         _updateOrganizationSubscriptionCommand
             .Run(Arg.Any<OrganizationEntity>(), Arg.Any<OrganizationSubscriptionChangeSet>(), Arg.Any<Subscription?>())
             .Returns(new Subscription());
         _sut = new RemovePrivilegedControlsCommand(
-            _pricingClient, _updateOrganizationSubscriptionCommand, _organizationService, _environment);
+            _pricingClient, _updateOrganizationSubscriptionCommand, _organizationService, _environment, _logger);
     }
 
     [Fact]
@@ -78,6 +81,22 @@ public class RemovePrivilegedControlsCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization));
 
         Assert.Equal("No subscription found.", exception.Message);
+        await AssertNothingChangedOrSaved();
+    }
+
+    [Fact]
+    public async Task Run_PlanWithoutPrivilegedControls_LogsOrganizationAndThrowsConflict()
+    {
+        var organization = CreateOrganization(planType: PlanType.TeamsAnnually);
+
+        var exception = await Assert.ThrowsAsync<ConflictException>(() => _sut.Run(organization));
+
+        Assert.Equal(
+            "Your organization's subscription is in an invalid state. Please contact support for assistance.",
+            exception.Message);
+        var error = Assert.Single(_logger.Errors);
+        Assert.Contains(organization.Id.ToString(), error);
+        Assert.Contains("TeamsAnnually", error);
         await AssertNothingChangedOrSaved();
     }
 
@@ -157,6 +176,23 @@ public class RemovePrivilegedControlsCommandTests
             .ReplaceAndUpdateCacheAsync(Arg.Any<OrganizationEntity>(), Arg.Any<Bit.Core.Enums.EventType?>());
     }
 
+    [Fact]
+    public async Task Run_SaveFailsAfterStripeUpdate_LogsBothIdsAndRethrows()
+    {
+        var organization = CreateOrganization();
+        var thrown = new InvalidOperationException("database unavailable");
+        _organizationService
+            .ReplaceAndUpdateCacheAsync(organization, Arg.Any<Bit.Core.Enums.EventType?>())
+            .ThrowsAsync(thrown);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.Run(organization));
+
+        Assert.Same(thrown, exception);
+        var error = Assert.Single(_logger.Errors);
+        Assert.Contains("sub_123", error);
+        Assert.Contains(organization.Id.ToString(), error);
+    }
+
     private async Task AssertNothingChangedOrSaved()
     {
         await _updateOrganizationSubscriptionCommand.DidNotReceive()
@@ -169,10 +205,11 @@ public class RemovePrivilegedControlsCommandTests
         bool usePam = true,
         int? pamSeats = 12,
         int? maxAutoscalePamSeats = null,
-        string? gatewaySubscriptionId = "sub_123") => new()
+        string? gatewaySubscriptionId = "sub_123",
+        PlanType planType = PlanType.EnterpriseAnnually) => new()
         {
             Id = Guid.NewGuid(),
-            PlanType = PlanType.EnterpriseAnnually,
+            PlanType = planType,
             UsePam = usePam,
             PamSeats = pamSeats,
             MaxAutoscalePamSeats = maxAutoscalePamSeats,
@@ -182,10 +219,15 @@ public class RemovePrivilegedControlsCommandTests
 
     private sealed record TestPlan : PlanFeatures
     {
-        public TestPlan() =>
-            PrivilegedControls = new PrivilegedControlsPlanFeatures
+        public TestPlan(bool supportsPrivilegedControls)
+        {
+            if (supportsPrivilegedControls)
             {
-                StripeSeatPlanId = _seatPriceId,
-            };
+                PrivilegedControls = new PrivilegedControlsPlanFeatures
+                {
+                    StripeSeatPlanId = _seatPriceId,
+                };
+            }
+        }
     }
 }

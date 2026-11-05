@@ -215,7 +215,7 @@ public class CollectControllerTests
                 tuples => tuples.Count() == 1 &&
                          tuples.First().Item1 == cipherDetails &&
                          tuples.First().Item2 == EventType.Cipher_ClientHttpAuthReleased &&
-                         tuples.First().Item3 == eventDate
+                         tuples.First().Item3 == null
             )
         );
     }

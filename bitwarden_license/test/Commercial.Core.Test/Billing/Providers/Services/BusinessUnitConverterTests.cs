@@ -209,6 +209,43 @@ public class BusinessUnitConverterTests
     }
 
     [Theory, BitAutoData]
+    public async Task FinalizeConversion_TokenExpiredForProviderLifetime_ThrowsBillingException(
+        Organization organization,
+        Guid userId,
+        string providerKey,
+        string organizationKey)
+    {
+        organization.PlanType = PlanType.EnterpriseAnnually2020;
+        organization.UseSecretsManager = false;
+
+        _globalSettings.ProviderInviteExpirationHours = 1;
+        _globalSettings.OrganizationInviteExpirationHours = 168;
+
+        _subscriberService.GetSubscription(organization).Returns(new Subscription
+        {
+            Status = StripeConstants.SubscriptionStatus.Active
+        });
+
+        var user = new User { Id = Guid.NewGuid(), Email = "provider-admin@example.com" };
+        _userRepository.GetByIdAsync(userId).Returns(user);
+
+        var dataProtector = new MockDataProtector(organization, user.Email)
+        {
+            Token = $"BusinessUnitConversionInvite {organization.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow.AddHours(-2))}"
+        };
+        _dataProtectionProvider.CreateProtector($"{nameof(BusinessUnitConverter)}DataProtector").Returns(dataProtector);
+        var token = dataProtector.Protect(dataProtector.Token);
+
+        var businessUnitConverter = BuildConverter();
+
+        await Assert.ThrowsAsync<BillingException>(() =>
+            businessUnitConverter.FinalizeConversion(organization, userId, token, providerKey, organizationKey));
+
+        await _organizationUserRepository.DidNotReceiveWithAnyArgs()
+            .GetByOrganizationAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
     public async Task FinalizeConversion_OrganizationUsesSecretsManager_ThrowsBillingException(
         Organization organization,
         Guid userId,
