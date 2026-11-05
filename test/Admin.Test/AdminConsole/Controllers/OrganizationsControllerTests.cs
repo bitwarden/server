@@ -2939,13 +2939,19 @@ public class OrganizationsControllerTests
         SutProvider<OrganizationsController> sutProvider)
     {
         StubPrivilegedControlsGet(sutProvider, organization);
+        sutProvider.Sut.TempData = new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
         sutProvider.GetDependency<IStripeAdapter>()
             .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .ThrowsAsync(new StripeException());
 
         var model = await GetEditModelAsync(sutProvider, organization);
 
+        Assert.Equal(organization.Id, model.Organization.Id);
         Assert.Null(model.PrivilegedControlsStripeSeats);
+        Assert.Equal(
+            "The Privileged Access Management Stripe check could not be loaded, so mismatch warnings are not shown. " +
+            "Reload the page or check Stripe directly.",
+            sutProvider.Sut.TempData["Warning"]);
     }
 
     [BitAutoData]

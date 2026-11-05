@@ -420,6 +420,13 @@ public class OrganizationsController : Controller
             _logger.LogError(ex,
                 "Failed to load the Privileged Controls seats for organization {OrganizationId}.",
                 organization.Id);
+            // Don't replace the billing load's warning; it is shown in the same slot.
+            if (!TempData.ContainsKey("Warning"))
+            {
+                TempData["Warning"] =
+                    "The Privileged Access Management Stripe check could not be loaded, so mismatch warnings are not shown. " +
+                    "Reload the page or check Stripe directly.";
+            }
             return null;
         }
     }
