@@ -12,13 +12,14 @@ When a user completes 2FA, they can optionally select the "Don't ask again on th
 
 A 2FA remember token is only honored while the `Stamp` it carries still matches its corresponding `TwoFactorRememberToken` row. `IRevokeTwoFactorRememberTokensCommand.RevokeAllForUserAsync` writes a new `Stamp` to every row for a user, which stops every 2FA remember token issued against these rows from being honored at once. The rows are kept, so `CreationDate` still records when each device was first issued a 2FA remember token and `RevisionDate` records when it was cut off.
 
-Three flows revoke, all of them teardowns that leave the account with no effective second factor:
+Four flows revoke, all of them teardowns that leave the account with no effective second factor:
 
-| Flow                                                   | Where                                       |
-| ------------------------------------------------------ | ------------------------------------------- |
-| An administrator resets a member's 2FA                 | `ResetUserTwoFactorCommand.ResetAsync`      |
-| A user disables 2FA with a recovery code               | `UserService.RecoverTwoFactorAsync`         |
-| A user removes a provider and 2FA is no longer enabled | `UserService.DisableTwoFactorProviderAsync` |
+| Flow                                                     | Where                                                                                 |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| An administrator resets a member's 2FA                   | `ResetUserTwoFactorCommand.ResetAsync`                                                |
+| A user disables 2FA with a recovery code                 | `UserService.RecoverTwoFactorAsync`                                                   |
+| A user removes a provider and 2FA is no longer enabled   | `UserService.DisableTwoFactorProviderAsync`                                           |
+| A grantee takes over an account through emergency access | `EmergencyAccessService.FinishRecoveryTakeoverAsync` and the obsolete `PasswordAsync` |
 
 Removing a provider does **not** revoke if the user still has working 2FA, so their 2FA remember tokens stay valid. A provider that requires premium does not count when the user has no premium access, so removing the only non-premium provider revokes even though a premium-only provider remains.
 

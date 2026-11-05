@@ -8,6 +8,7 @@ using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
@@ -21,6 +22,7 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using OneOf;
 using Xunit;
 
@@ -1687,6 +1689,41 @@ public class EmergencyAccessServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task PasswordAsync_RevokesGrantorTwoFactorRememberTokens(
+        SutProvider<EmergencyAccessService> sutProvider, User requestingUser, User grantor)
+    {
+        EnableEmailTwoFactor(grantor);
+        ArrangeTakeover(sutProvider, requestingUser, grantor);
+
+        await sutProvider.Sut.PasswordAsync(Guid.NewGuid(), requestingUser, "new-master-password-hash", "new-user-key");
+
+        await sutProvider.GetDependency<IRevokeTwoFactorRememberTokensCommand>()
+            .Received(1)
+            .RevokeAllForUserAsync(grantor.Id);
+        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(grantor);
+    }
+
+    /// <summary>
+    /// The revoke runs before the grantor is saved. If it fails, nothing is persisted, so the grantor's 2FA is
+    /// left intact and the takeover can be retried.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task PasswordAsync_RevokingTwoFactorRememberTokensFails_DoesNotSaveGrantor(
+        SutProvider<EmergencyAccessService> sutProvider, User requestingUser, User grantor)
+    {
+        EnableEmailTwoFactor(grantor);
+        ArrangeTakeover(sutProvider, requestingUser, grantor);
+        sutProvider.GetDependency<IRevokeTwoFactorRememberTokensCommand>()
+            .RevokeAllForUserAsync(grantor.Id)
+            .ThrowsAsync(new InvalidOperationException("revoke failed"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => sutProvider.Sut.PasswordAsync(Guid.NewGuid(), requestingUser, "new-master-password-hash", "new-user-key"));
+
+        await sutProvider.GetDependency<IUserRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+    }
+
+    [Theory, BitAutoData]
     public async Task ViewAsync_EmergencyAccessTypeNotView_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
         Core.Auth.Entities.EmergencyAccess emergencyAccess,
@@ -2003,5 +2040,78 @@ public class EmergencyAccessServiceTests
         Assert.Empty(grantor.GetTwoFactorProviders());
         Assert.False(grantor.VerifyDevices);
         await sutProvider.GetDependency<IUserRepository>().Received().ReplaceAsync(grantor);
+    }
+
+    [Theory, BitAutoData]
+    public async Task FinishRecoveryTakeoverAsync_RevokesGrantorTwoFactorRememberTokens(
+        SutProvider<EmergencyAccessService> sutProvider, User granteeUser, User grantor)
+    {
+        EnableEmailTwoFactor(grantor);
+        ArrangeFinishRecoveryTakeover(sutProvider, granteeUser, grantor);
+
+        await sutProvider.Sut.FinishRecoveryTakeoverAsync(Guid.NewGuid(), granteeUser, BuildUnlockData(), BuildAuthData());
+
+        await sutProvider.GetDependency<IRevokeTwoFactorRememberTokensCommand>()
+            .Received(1)
+            .RevokeAllForUserAsync(grantor.Id);
+        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(grantor);
+    }
+
+    /// <summary>
+    /// The revoke runs before the grantor is saved. If it fails, nothing is persisted, so the grantor's 2FA is
+    /// left intact and the takeover can be retried.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task FinishRecoveryTakeoverAsync_RevokingTwoFactorRememberTokensFails_DoesNotSaveGrantor(
+        SutProvider<EmergencyAccessService> sutProvider, User granteeUser, User grantor)
+    {
+        EnableEmailTwoFactor(grantor);
+        ArrangeFinishRecoveryTakeover(sutProvider, granteeUser, grantor);
+        sutProvider.GetDependency<IRevokeTwoFactorRememberTokensCommand>()
+            .RevokeAllForUserAsync(grantor.Id)
+            .ThrowsAsync(new InvalidOperationException("revoke failed"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => sutProvider.Sut.FinishRecoveryTakeoverAsync(
+                Guid.NewGuid(), granteeUser, BuildUnlockData(), BuildAuthData()));
+
+        await sutProvider.GetDependency<IUserRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+    }
+
+    private static void EnableEmailTwoFactor(User user) =>
+        user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+        {
+            [TwoFactorProviderType.Email] = new TwoFactorProvider
+            {
+                MetaData = new Dictionary<string, object> { ["Email"] = user.Email },
+                Enabled = true
+            }
+        });
+
+    private static void ArrangeTakeover(
+        SutProvider<EmergencyAccessService> sutProvider, User granteeUser, User grantor)
+    {
+        var emergencyAccess = new Core.Auth.Entities.EmergencyAccess
+        {
+            GrantorId = grantor.Id,
+            GranteeId = granteeUser.Id,
+            Status = EmergencyAccessStatusType.RecoveryApproved,
+            Type = EmergencyAccessType.Takeover,
+        };
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(emergencyAccess);
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(grantor.Id)
+            .Returns(grantor);
+    }
+
+    private static void ArrangeFinishRecoveryTakeover(
+        SutProvider<EmergencyAccessService> sutProvider, User granteeUser, User grantor)
+    {
+        ArrangeTakeover(sutProvider, granteeUser, grantor);
+        sutProvider.GetDependency<IMasterPasswordService>()
+            .PrepareSetInitialOrUpdateExistingMasterPasswordAsync(grantor, Arg.Any<SetInitialOrUpdateExistingPasswordData>())
+            .Returns(OneOf<User, IdentityError[]>.FromT0(grantor));
     }
 }
