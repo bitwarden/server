@@ -305,6 +305,12 @@ public static partial class FeatureFlagKeys
     public const string PamAccessConnector = "pm-42354-rotation-daemon";
 
     /// <summary>
+    /// Sends leasing-gated ciphers to browser extensions in the partial shape. Target it on the client-version
+    /// context attribute, so only extension versions that render the shape receive it.
+    /// </summary>
+    public const string PamBrowserPartialCiphers = "pam-121-browser-partial-ciphers";
+
+    /// <summary>
     /// Kill switch for the PAM SQL audit trail. Turning it on stops the writes and withdraws the read endpoint.
     /// </summary>
     public const string PamDisableSqlAuditLogging = "pm-42480-disable-pam-sql-audit-logging";
