@@ -1896,6 +1896,9 @@ public class EmergencyAccessServiceTests
         await sutProvider.GetDependency<IUserRepository>().DidNotReceive().ReplaceAsync(Arg.Any<User>());
         await sutProvider.GetDependency<IRemoveOrganizationUserCommand>().DidNotReceiveWithAnyArgs()
             .RemoveUserAsync(default, default(Guid));
+        // A takeover that did not go through must not cut off the grantor's 2FA remember tokens.
+        await sutProvider.GetDependency<IRevokeTwoFactorRememberTokensCommand>().DidNotReceiveWithAnyArgs()
+            .RevokeAllForUserAsync(default);
     }
 
     [Theory, BitAutoData]

@@ -163,6 +163,20 @@ internal static class TwoFactorIntegrationTestHelpers
         Assert.NotEqual(originalStamp, row.Stamp);
     }
 
+    /// <summary>
+    /// Asserts that the device's <see cref="TwoFactorRememberToken"/> row still carries the stamp it was seeded
+    /// with, so its 2FA remember token is still honored.
+    /// </summary>
+    public static async Task AssertTwoFactorRememberTokenUnchangedAsync(
+        ApiApplicationFactory factory, string userEmail, Device device, string originalStamp)
+    {
+        var user = (await factory.GetService<IUserRepository>().GetByEmailAsync(userEmail))!;
+        var row = await factory.GetService<ITwoFactorRememberTokenRepository>()
+            .GetByUserIdDeviceIdAsync(user.Id, device.Id);
+        Assert.NotNull(row);
+        Assert.Equal(originalStamp, row.Stamp);
+    }
+
     // ---------------------------------------------------------------------
     // Emailed two-factor codes
     // ---------------------------------------------------------------------
