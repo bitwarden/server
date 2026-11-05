@@ -76,12 +76,14 @@ public class TwoFactorControllerDuoTests : IClassFixture<ApiApplicationFactory>,
 
     /// <summary>
     /// Removing the only provider leaves 2FA no longer enabled, so the user's 2FA remember tokens are
-    /// revoked. The user has no premium, so the premium-only provider does not count either way.
+    /// revoked. Duo needs premium, so the user is granted it first: 2FA is enabled before the delete
+    /// and no longer enabled after it.
     /// </summary>
     [Fact]
     public async Task DeleteDuo_TwoFactorAuthNoLongerEnabled_RevokesTwoFactorRememberTokens()
     {
         await EnrollUserInDuo();
+        await GrantPremium();
         var device = await SeedTwoFactorRememberTokenAsync(_factory, _userEmail, "stamp-before-teardown");
 
         var getResponse = await _client.PostAsJsonAsync("/two-factor/get-duo",
