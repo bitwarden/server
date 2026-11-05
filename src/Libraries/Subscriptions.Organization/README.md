@@ -43,15 +43,13 @@ card into a 400 carrying Stripe's message; it sits inside the basic exception ha
 handle Stripe errors and would answer a declined card with a 500, so every charging endpoint added to
 the group gets the mapping), and a `Cache-Control: no-store` filter (the responses are per-organization
 billing data, never cached). The group carries no feature gate, so a flag for one kind of endpoint never
-gates another: each endpoint declares its own. The preview endpoints require
-`PM36631_PreviewDrivenCart`, and the Privileged Controls purchase endpoint requires
-`PM39883_Pam_Billing_Support` alone.
+gates another: each endpoint declares its own. The Privileged Controls purchase endpoint requires
+`PM39883_Pam_Billing_Support`.
 
 `MapOrganizationSubscriptionPurchaseEndpoints()` attaches a second group, which the host mounts at
 `/organizations/billing/subscription`. Its chain applies the `OrganizationSubscriptions` tag, the
-`internal` group name, the `Application` policy, basic exception handling, the
-`PM36631_PreviewDrivenCart` feature gate, and an endpoint filter that sends `Cache-Control: no-store`.
-It has no `OrganizationBillingRequirement` and no organization id in its route, because the caller
+`internal` group name, the `Application` policy, basic exception handling, and an endpoint filter that
+sends `Cache-Control: no-store`. It has no `OrganizationBillingRequirement` and no organization id in its route, because the caller
 is buying an organization and doesn't have one yet. It lives here rather than in
 `Subscriptions.User` because libraries group endpoints by what they operate on, not by who calls
 them.
@@ -152,16 +150,21 @@ The address is passed to Stripe via `CustomerDetails` so tax can be estimated wi
 a Free org has none until it adds a payment method. The tax id sent in the request, or the customer's
 on-file tax id when the request omits one, is forwarded so a VAT-registered business is quoted the tax it
 will actually be charged. Its Stripe tax-id type is derived from the value with `ITaxService`, falling
-back to the submitted code when it can't be derived. A trialing subscription's change prorates to $0 mid-trial, so the preview ends
-the trial in the hypothetical (`trial_end = now`) and returns what the subscriber pays once it converts.
-It returns the resulting `InvoicePreview` cart.
+back to the submitted code when it can't be derived. A trialing subscription is previewed as a purchase
+of the target plan against the organization's customer, with no `subscription` set, so the preview works
+whether or not a payment method is on file and returns what the subscriber pays once the trial converts.
+The subscription's own coupons are passed explicitly, or the customer's coupon when the subscription has
+none. Active and `past_due` subscriptions get the prorated plan-change preview. It returns the resulting
+`InvoicePreview` cart.
 
 A missing or unrecognized `tier`/`cadence` fails JSON binding with a 400 before the command runs. The
 command validates the rest itself. Caller-fixable problems are **400s**: the `premium` tier, Families on
-a monthly cadence, a move to the same tier (including a cadence-only change), a downgrade, a plan without Secrets Manager
-support for an SM-enabled org, an invalid billing address, or a tax location or tax id Stripe rejects.
-Data or Stripe state the caller
-cannot influence is logged with the organization id and surfaced as a **409**: a paid org with no
+a monthly cadence, a move to the same tier (including a cadence-only change) unless the subscription is
+`trialing`, in which case it is allowed ([the trialing behavior above](#organization-plan-change-preview)), a downgrade, a plan without
+Secrets Manager support for an SM-enabled org, an invalid billing address, or a tax location or tax id
+Stripe rejects. The same-tier check runs after the subscription lookup and status check, so a same-tier
+request on a subscription that can't be previewed gets the 409 below, not a 400. Data or Stripe state the
+caller cannot influence is logged with the organization id and surfaced as a **409**: a paid org with no
 subscription, a subscription Stripe no longer has, a subscription in a status other than `trialing`,
 `active`, or `past_due`, a subscription whose line items don't match the current plan, or a missing
 seat count. A missing organization is a **404**. These map from the `BadRequestException`,

@@ -1,7 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Core.Auth.Identity;
 using Bit.ExceptionHandling;
-using Bit.Invoicing;
 using Bit.Subscriptions.Organization.Handlers;
 using Bit.Subscriptions.Organization.Models.Requests;
 using Microsoft.AspNetCore.Builder;
@@ -25,7 +24,6 @@ public static class OrganizationSubscriptionPurchaseEndpointsExtensions
         group.WithGroupName("internal");
         group.RequireAuthorization(Policies.Application);
         group.WithBasicExceptionHandling();
-        group.RequireFeature(InvoicingFeatureFlags.PM36631_PreviewDrivenCart);
 
         group.AddEndpointFilter(async (context, next) =>
         {
