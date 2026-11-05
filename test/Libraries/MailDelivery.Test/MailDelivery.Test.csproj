@@ -10,8 +10,10 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="MartinCostello.Logging.XUnit" Version="[0.7.0]" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="[10.8.0]" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(MicrosoftNetTestSdkVersion)" />
     <PackageReference Include="NSubstitute" Version="$(NSubstituteVersion)" />
+    <PackageReference Include="RichardSzalay.MockHttp" Version="[7.0.0]" />
     <PackageReference Include="Rnwood.SmtpServer" Version="[3.1.0-ci0868]" />
     <PackageReference Include="xunit" Version="$(XUnitVersion)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(XUnitRunnerVisualStudioVersion)">
