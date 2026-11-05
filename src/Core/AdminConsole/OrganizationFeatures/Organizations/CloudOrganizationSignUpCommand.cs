@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
@@ -72,7 +73,9 @@ public class CloudOrganizationSignUpCommand(
             ValidateSecretsManagerPlan(plan, signup);
         }
 
-        if (signup.UsePrivilegedControls && featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support))
+        // A request for Privileged Controls that isn't allowed is ignored, so the org is created without it.
+        var usePrivilegedControls = signup.UsePrivilegedControls && CanSignUpWithPrivilegedControls(signup);
+        if (usePrivilegedControls)
         {
             ValidatePrivilegedControlsSeats(plan, signup);
         }
@@ -106,8 +109,6 @@ public class CloudOrganizationSignUpCommand(
 
             // PAM purchase provision through the new subscription command (flagged);
             // every other paid signup stays on the legacy Finalize until that path is migrated.
-            var usePrivilegedControls = signup.UsePrivilegedControls &&
-                                        featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support);
             if (usePrivilegedControls)
             {
                 var purchase = BuildPrivilegedControlsPurchase(sale, signup);
@@ -252,6 +253,17 @@ public class CloudOrganizationSignUpCommand(
                 throw new BadRequestException(new PlanMaxAdditionalUsersExceededError(plan.SecretsManager.MaxAdditionalSeats.GetValueOrDefault(0)).Message);
         }
     }
+
+    /// <summary>
+    /// A sign-up from a sales invitation can always include Privileged Controls, because sales sells it at GA.
+    /// Any other sign-up is self-serve and needs <see cref="FeatureFlagKeys.PM39883_Pam_Billing_Support"/> on.
+    /// </summary>
+    /// <remarks>
+    /// The initiation path is supplied by the client and is not verified against the sales invitation.
+    /// </remarks>
+    private bool CanSignUpWithPrivilegedControls(OrganizationSignup signup) =>
+        signup.InitiationPath == TrialInitiationConstants.SalesAssistedTrialInitiationPath ||
+        featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support);
 
     private OrganizationSubscriptionCreation BuildPrivilegedControlsPurchase(
         OrganizationSale sale, OrganizationSignup signup)

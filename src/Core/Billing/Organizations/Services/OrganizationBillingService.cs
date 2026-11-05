@@ -20,6 +20,7 @@ using static Bit.Core.Billing.Utilities;
 using Customer = Stripe.Customer;
 using StripeConstants = Bit.Core.Billing.Constants.StripeConstants;
 using Subscription = Stripe.Subscription;
+using TrialInitiationConstants = Bit.Core.Billing.Constants.TrialInitiationConstants;
 
 
 namespace Bit.Core.Billing.Organizations.Services;
@@ -37,9 +38,6 @@ public class OrganizationBillingService(
     ISubscriptionDiscountService subscriptionDiscountService,
     ITaxService taxService) : IOrganizationBillingService
 {
-    // Must match `InitiationPath.SalesAssistedTrialFromAdminPortal` in the clients repo.
-    private const string _salesAssistedTrialInitiationPath = "Sales assisted trial from admin portal";
-
     // Matched as a substring of the client's `InitiationPath` marketing-trial values.
     private const string _marketingTrialInitiationPathSegment = "trial from marketing website";
 
@@ -466,7 +464,7 @@ public class OrganizationBillingService(
                 {
                     var path when !string.IsNullOrEmpty(path) && path.Contains(_marketingTrialInitiationPathSegment)
                         => StripeConstants.TrialInitiationPaths.MarketingInitiated,
-                    _salesAssistedTrialInitiationPath
+                    TrialInitiationConstants.SalesAssistedTrialInitiationPath
                         => StripeConstants.TrialInitiationPaths.SalesAssisted,
                     _ => StripeConstants.TrialInitiationPaths.ProductInitiated
                 }

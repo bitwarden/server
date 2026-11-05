@@ -18,6 +18,7 @@ using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
 using Plan = Bit.Core.Models.StaticStore.Plan;
 using StripeConstants = Bit.Core.Billing.Constants.StripeConstants;
 using Subscription = Stripe.Subscription;
+using TrialInitiationConstants = Bit.Core.Billing.Constants.TrialInitiationConstants;
 
 namespace Bit.Subscriptions.Organization.Commands;
 
@@ -30,9 +31,6 @@ internal sealed class CreateOrganizationSubscriptionCommand(
     ISubscriptionDiscountService subscriptionDiscountService,
     ITaxService taxService) : ICreateOrganizationSubscriptionCommand
 {
-    // Must match `InitiationPath.SalesAssistedTrialFromAdminPortal` in the clients repo.
-    private const string _salesAssistedTrialInitiationPath = "Sales assisted trial from admin portal";
-
     // Matched as a substring of the client's `InitiationPath` marketing-trial values.
     private const string _marketingTrialInitiationPathSegment = "trial from marketing website";
 
@@ -388,7 +386,7 @@ internal sealed class CreateOrganizationSubscriptionCommand(
                 {
                     var path when !string.IsNullOrEmpty(path) && path.Contains(_marketingTrialInitiationPathSegment)
                         => StripeConstants.TrialInitiationPaths.MarketingInitiated,
-                    _salesAssistedTrialInitiationPath
+                    TrialInitiationConstants.SalesAssistedTrialInitiationPath
                         => StripeConstants.TrialInitiationPaths.SalesAssisted,
                     _ => StripeConstants.TrialInitiationPaths.ProductInitiated
                 }

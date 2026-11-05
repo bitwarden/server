@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
@@ -769,10 +770,51 @@ public class CloudOrganizationSignUpCommandTests
             .CancelAndRecoverChargesAsync(Arg.Any<Organization>());
     }
 
+    [Theory]
+    [BitAutoData(false, TrialInitiationConstants.SalesAssistedTrialInitiationPath)]
+    [BitAutoData(true, TrialInitiationConstants.SalesAssistedTrialInitiationPath)]
+    [BitAutoData(true, "Password Manager trial from marketing website")]
+    [BitAutoData(true, null)]
+    public async Task SignUpAsync_PrivilegedControls_SalesAssistedOrFlagOn_Provisions(
+        bool pamBillingSupport, string initiationPath,
+        OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        ArrangePrivilegedControlsSignup(signup, sutProvider, pamSeats: 6, pamBillingSupport: pamBillingSupport);
+        signup.InitiationPath = initiationPath;
+
+        await sutProvider.Sut.SignUpOrganizationAsync(signup);
+
+        await sutProvider.GetDependency<ICreateOrganizationSubscriptionCommand>().Received(1).Run(
+            Arg.Any<Organization>(),
+            Arg.Is<OrganizationSubscriptionCreation>(c => c.PrivilegedControls != null && c.PrivilegedControls.Seats == 6));
+        await sutProvider.GetDependency<IOrganizationBillingService>().DidNotReceive().Finalize(Arg.Any<OrganizationSale>());
+    }
+
+    [Theory]
+    [BitAutoData("Password Manager trial from marketing website")]
+    [BitAutoData((string?)null)]
+    public async Task SignUpAsync_PrivilegedControls_SelfServeWithFlagOff_IgnoresPrivilegedControls(
+        string initiationPath,
+        OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        // Seats above the Password Manager seats would fail validation if the request were honored.
+        ArrangePrivilegedControlsSignup(signup, sutProvider, pamSeats: 11, pamBillingSupport: false);
+        signup.InitiationPath = initiationPath;
+
+        await sutProvider.Sut.SignUpOrganizationAsync(signup);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).CreateAsync(
+            Arg.Is<Organization>(o => o.PamSeats == null && !o.UsePam));
+        await sutProvider.GetDependency<IOrganizationBillingService>().Received(1).Finalize(Arg.Any<OrganizationSale>());
+        await sutProvider.GetDependency<ICreateOrganizationSubscriptionCommand>().DidNotReceiveWithAnyArgs()
+            .Run(default!, default!);
+    }
+
     private static void ArrangePrivilegedControlsSignup(
         OrganizationSignup signup,
         SutProvider<CloudOrganizationSignUpCommand> sutProvider,
-        int? pamSeats)
+        int? pamSeats,
+        bool pamBillingSupport = true)
     {
         signup.Plan = PlanType.EnterpriseAnnually;
         signup.AdditionalSeats = 10;
@@ -785,7 +827,7 @@ public class CloudOrganizationSignUpCommandTests
         signup.PamSeats = pamSeats;
 
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(true);
+            .IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(pamBillingSupport);
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(signup.Owner.Id)
