@@ -1,4 +1,5 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.Context;
+using Bit.Core.Exceptions;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Pam.Entities;
@@ -183,6 +184,64 @@ public class GetCipherAccessStateQueryTests
         Assert.Null(result.ApprovedRequest);
     }
 
+    [Theory]
+    [BitAutoData("10.1.2.3", true)]
+    [BitAutoData("192.168.1.1", false)]
+    public async Task GetStateAsync_AutomaticRuleWithIpAllowlist_CanRequestOnlyFromInsideIt(
+        string ipAddress, bool expected, Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
+            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: false,
+                [new IpAllowlistCondition { Cidrs = ["10.0.0.0/8"] }]));
+
+        var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
+
+        Assert.Equal(expected, result.CanRequest);
+    }
+
+    // Submit accepts a human-approval request from anywhere; activation checks the network.
+    [Theory, BitAutoData]
+    public async Task GetStateAsync_HumanRuleOutsideIpAllowlist_CanRequest(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns("192.168.1.1");
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
+            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: true,
+                [new HumanApprovalCondition(), new IpAllowlistCondition { Cidrs = ["10.0.0.0/8"] }]));
+
+        var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
+
+        Assert.True(result.CanRequest);
+    }
+
+    // The pending request is what the banner shows, so the rule is not re-evaluated.
+    [Theory, BitAutoData]
+    public async Task GetStateAsync_PendingRequestOutsideIpAllowlist_CanRequest(
+        Guid userId, Guid cipherId, AccessRequest pending)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns("192.168.1.1");
+        pending.Action = AccessRequestAction.None;
+        pending.NotAfter = _now.AddHours(1);
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .GetActivePendingByRequesterIdCipherIdAsync(userId, cipherId, _now)
+            .Returns(pending);
+
+        var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
+
+        Assert.True(result.CanRequest);
+        await sutProvider.GetDependency<IGoverningRuleResolver>().DidNotReceiveWithAnyArgs()
+            .ResolveAsync(default, default, default!);
+    }
+
     [Theory, BitAutoData]
     public async Task GetStateAsync_ActiveLease_NotYetExtended_AllowedWithMaxLength(
         Guid userId, Guid cipherId, Guid orgId, Guid collectionId,
@@ -317,7 +376,11 @@ public class GetCipherAccessStateQueryTests
 
     private static SutProvider<GetCipherAccessStateQuery> Setup()
     {
-        var sutProvider = new SutProvider<GetCipherAccessStateQuery>().WithFakeTimeProvider().Create();
+        var sutProvider = new SutProvider<GetCipherAccessStateQuery>()
+            .WithFakeTimeProvider()
+            // Real engine, so these tests exercise actual IP allowlist evaluation.
+            .SetDependency<IAccessRuleEngine>(new AccessRuleEngine())
+            .Create();
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
         return sutProvider;
     }
