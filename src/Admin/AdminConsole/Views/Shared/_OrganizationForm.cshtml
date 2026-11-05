@@ -23,7 +23,7 @@
     var canManagePlanMigrationCohorts = AccessControlService.UserHasPermission(Permission.Tools_ManagePlanMigrationCohorts);
     var businessPlanPriceMigrationEnabled = FeatureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration);
     var canViewMigrationCohortAssignment = businessPlanPriceMigrationEnabled && canManagePlanMigrationCohorts;
-    // Provider-managed organizations don't get the PAM section; the controller preserves their stored PAM values on save.
+    // Provider-managed organizations don't get the PAM section; the controller turns PAM off for them on save.
     var showPam = Model.Provider == null;
 }
 

@@ -2056,7 +2056,7 @@ public class OrganizationsControllerTests
     [BitAutoData]
     [SutProviderCustomize]
     [Theory]
-    public async Task Edit_PrivilegedControls_ProviderManaged_KeepsStoredValues(
+    public async Task Edit_PrivilegedControls_ProviderManaged_TurnsPamOffWithWarning(
         Organization organization,
         Provider provider,
         SutProvider<OrganizationsController> sutProvider)
@@ -2075,8 +2075,11 @@ public class OrganizationsControllerTests
         await sutProvider.Sut.Edit(organization.Id, update);
 
         Assert.Null(sutProvider.Sut.TempData["Error"]);
+        Assert.Equal(
+            "Privileged Access Management was turned off because organizations managed by a provider can't use it.",
+            sutProvider.Sut.TempData["Warning"]);
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(
-            Arg.Is<Organization>(o => o.UsePam && o.PamSeats == 5 && o.MaxAutoscalePamSeats == 8));
+            Arg.Is<Organization>(o => !o.UsePam && o.PamSeats == null && o.MaxAutoscalePamSeats == null));
     }
 
     [BitAutoData]
@@ -2100,6 +2103,7 @@ public class OrganizationsControllerTests
 
         await sutProvider.Sut.Edit(organization.Id, update);
 
+        Assert.Null(sutProvider.Sut.TempData["Warning"]);
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(
             Arg.Is<Organization>(o => !o.UsePam && o.PamSeats == null && o.MaxAutoscalePamSeats == null));
     }

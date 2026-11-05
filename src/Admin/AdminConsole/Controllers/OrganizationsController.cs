@@ -527,6 +527,12 @@ public class OrganizationsController : Controller
             existingOrganizationData,
             model);
 
+        if (isProviderManaged && existingOrganizationData.UsePam)
+        {
+            TempData["Warning"] =
+                "Privileged Access Management was turned off because organizations managed by a provider can't use it.";
+        }
+
         await _organizationRepository.ReplaceAsync(organization);
 
         if (cohortResolution.ShouldWrite)
@@ -970,13 +976,10 @@ public class OrganizationsController : Controller
             organization.SmServiceAccounts = model.SmServiceAccounts;
             organization.MaxAutoscaleSmServiceAccounts = model.MaxAutoscaleSmServiceAccounts;
 
-            // The form omits the PAM section for provider-managed organizations, so keep their stored values.
-            if (!isProviderManaged)
-            {
-                organization.UsePam = model.UsePam;
-                organization.PamSeats = model.UsePam ? model.PamSeats : null;
-                organization.MaxAutoscalePamSeats = model.UsePam ? model.MaxAutoscalePamSeats : null;
-            }
+            // Organizations managed by a provider can't use Privileged Access Management, so a save turns it off.
+            organization.UsePam = !isProviderManaged && model.UsePam;
+            organization.PamSeats = organization.UsePam ? model.PamSeats : null;
+            organization.MaxAutoscalePamSeats = organization.UsePam ? model.MaxAutoscalePamSeats : null;
         }
 
         if (_accessControlService.UserHasPermission(Permission.Org_Licensing_Edit))
