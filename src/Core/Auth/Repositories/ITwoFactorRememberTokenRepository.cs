@@ -21,7 +21,7 @@ public interface ITwoFactorRememberTokenRepository
     Task<TwoFactorRememberToken> UpsertAsync(TwoFactorRememberToken token);
 
     /// <summary>
-    /// Rotates the <c>Stamp</c> on every row for this user, invalidating all of their remember
+    /// Rotates the <c>Stamp</c> on every row for this user, invalidating all of their 2FA remember
     /// tokens at once. Rows are kept.
     /// </summary>
     /// <remarks>
