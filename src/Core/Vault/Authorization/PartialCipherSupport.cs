@@ -16,14 +16,15 @@ namespace Bit.Core.Vault.Authorization;
 public static class PartialCipherSupport
 {
     /// <summary>
-    /// Whether the calling client can be sent partial ciphers. Only the web vault can today.
+    /// Whether the calling client can be sent partial ciphers: the web vault and browser extensions.
     /// </summary>
     /// <remarks>
     /// Fails safe: an absent or unrecognized device type maps to <see cref="ClientType.All"/>, which is
-    /// not <see cref="ClientType.Web"/>, so an unknown caller is treated as unable to handle the shape.
+    /// not supported, so an unknown caller is treated as unable to handle the shape.
     /// The web vault is served from the same deployment as the server, so there is no version skew to
-    /// account for; other clients will need a minimum-version check when they gain support.
+    /// account for. Browser extensions have no minimum-version check yet, so an older extension also
+    /// receives the shape.
     /// </remarks>
     public static bool IsSupportedBy(DeviceType? deviceType) =>
-        DeviceTypes.ToClientType(deviceType) == ClientType.Web;
+        DeviceTypes.ToClientType(deviceType) is ClientType.Web or ClientType.Browser;
 }

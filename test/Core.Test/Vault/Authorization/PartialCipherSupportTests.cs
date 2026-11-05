@@ -18,10 +18,19 @@ public class PartialCipherSupportTests
     }
 
     [Theory]
-    // Browser extensions are a distinct client from the web vault and do not understand the shape.
     [InlineData(DeviceType.ChromeExtension)]
     [InlineData(DeviceType.FirefoxExtension)]
+    [InlineData(DeviceType.OperaExtension)]
+    [InlineData(DeviceType.EdgeExtension)]
+    [InlineData(DeviceType.VivaldiExtension)]
     [InlineData(DeviceType.SafariExtension)]
+    [InlineData(DeviceType.DuckDuckGoExtension)]
+    public void IsSupportedBy_BrowserExtension_IsSupported(DeviceType deviceType)
+    {
+        Assert.True(PartialCipherSupport.IsSupportedBy(deviceType));
+    }
+
+    [Theory]
     // Desktop
     [InlineData(DeviceType.WindowsDesktop)]
     [InlineData(DeviceType.MacOsDesktop)]
