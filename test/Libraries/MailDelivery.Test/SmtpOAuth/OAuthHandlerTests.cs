@@ -143,6 +143,7 @@ public class OAuthHandlerTests
 
         Assert.Contains("invalid_client", exception.Message);
         Assert.DoesNotContain("not a recognizable error payload", exception.Message);
+        Assert.DoesNotContain("with description", exception.Message);
     }
 
     [Fact]
@@ -158,6 +159,8 @@ public class OAuthHandlerTests
 
         Assert.Contains("invalid_scope", exception.Message);
         Assert.Contains("bad scope", exception.Message);
+        Assert.Equal("example.com", exception.TokenEndpointHost);
+        Assert.DoesNotContain("https://example.com/token", exception.Message);
     }
 
     [Fact]
