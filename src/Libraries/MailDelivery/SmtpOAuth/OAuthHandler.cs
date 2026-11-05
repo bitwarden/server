@@ -111,11 +111,11 @@ internal abstract class OAuthHandler
                 error?.Error ?? "(non-JSON response)",
                 error?.ErrorDescription ?? "(no description)");
 
-            throw new TokenException(_tokenEndpoint, response.StatusCode, error);
+            throw new TokenException(SafeHost(_tokenEndpoint), response.StatusCode, error);
         }
 
         var token = await TryReadJsonAsync<TokenSuccessResponse>(response, cancellationToken);
-        return token ?? throw new TokenException(_tokenEndpoint, response.StatusCode, tokenErrorResponse: null);
+        return token ?? throw new TokenException(SafeHost(_tokenEndpoint), response.StatusCode, tokenErrorResponse: null);
     }
 
     private static async Task<T?> TryReadJsonAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken)
@@ -169,18 +169,21 @@ internal sealed record TokenErrorResponse
 
 internal sealed class TokenException : Exception
 {
-    public TokenException(string tokenEndpoint, HttpStatusCode statusCode, TokenErrorResponse? tokenErrorResponse)
-        : base(BuildMessage(tokenEndpoint, statusCode, tokenErrorResponse))
+    public TokenException(string tokenEndpointHost, HttpStatusCode statusCode, TokenErrorResponse? tokenErrorResponse)
+        : base(BuildMessage(tokenEndpointHost, statusCode, tokenErrorResponse))
     {
-        TokenEndpoint = tokenEndpoint;
+        TokenEndpointHost = tokenEndpointHost;
         StatusCode = statusCode;
     }
 
-    public string TokenEndpoint { get; }
+    public string TokenEndpointHost { get; }
     public HttpStatusCode StatusCode { get; }
 
-    private static string BuildMessage(string tokenEndpoint, HttpStatusCode statusCode, TokenErrorResponse? tokenErrorResponse)
-        => tokenErrorResponse is null
-            ? $"Error during request to {tokenEndpoint} ({statusCode}). The response body was not a recognizable error payload."
-            : $"Error during request to {tokenEndpoint} ({statusCode}). Encountered error {tokenErrorResponse.Error} with description '{tokenErrorResponse.ErrorDescription}'";
+    private static string BuildMessage(string tokenEndpointHost, HttpStatusCode statusCode, TokenErrorResponse? tokenErrorResponse)
+        => tokenErrorResponse switch
+        {
+            null => $"Error during request to {tokenEndpointHost} ({statusCode}). The response body was not a recognizable error payload.",
+            { ErrorDescription: null } => $"Error during request to {tokenEndpointHost} ({statusCode}). Encountered error {tokenErrorResponse.Error}.",
+            _ => $"Error during request to {tokenEndpointHost} ({statusCode}). Encountered error {tokenErrorResponse.Error} with description '{tokenErrorResponse.ErrorDescription}'",
+        };
 }
