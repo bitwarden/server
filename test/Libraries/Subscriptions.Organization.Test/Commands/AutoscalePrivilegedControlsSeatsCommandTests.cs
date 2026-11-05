@@ -324,7 +324,7 @@ public class AutoscalePrivilegedControlsSeatsCommandTests
         Assert.True(result.Success);
         await _mailer.Received(1).SendEmail(Arg.Is<PrivilegedControlsSeatLimitReachedMail>(mail =>
             mail.ToEmails.Single() == _ownerEmail &&
-            mail.Subject == "Acme.Corp Privileged Controls seat limit reached" &&
+            mail.Subject == "Acme.Corp has reached its Privileged Controls seat limit" &&
             mail.View.OrganizationId == organization.Id &&
             mail.View.OrganizationName == CoreHelpers.PreventEmailAutoLinking("Acme.Corp") &&
             mail.View.MaxSeatCount == 15));

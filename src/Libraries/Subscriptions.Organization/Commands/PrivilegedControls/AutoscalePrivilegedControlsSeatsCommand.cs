@@ -89,7 +89,7 @@ internal sealed class AutoscalePrivilegedControlsSeatsCommand(
             await mailer.SendEmail(new PrivilegedControlsSeatLimitReachedMail
             {
                 ToEmails = ownerEmails,
-                Subject = $"{organization.DisplayName()} Privileged Controls seat limit reached",
+                Subject = $"{organization.DisplayName()} has reached its Privileged Controls seat limit",
                 View = new PrivilegedControlsSeatLimitReachedView(globalSettings)
                 {
                     OrganizationId = organization.Id,
