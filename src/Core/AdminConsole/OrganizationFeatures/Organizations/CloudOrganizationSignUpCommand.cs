@@ -76,8 +76,7 @@ public class CloudOrganizationSignUpCommand(
             ValidateSecretsManagerPlan(plan, signup);
         }
 
-        // A self-serve request for Privileged Controls with the flag off is ignored, so the org is created without it;
-        // a sales-assisted request with a missing or invalid token is rejected.
+        // See CanSignUpWithPrivilegedControls: a disallowed self-serve request is ignored, a bad sales token throws.
         var usePrivilegedControls = signup.UsePrivilegedControls && CanSignUpWithPrivilegedControls(signup);
         if (usePrivilegedControls)
         {

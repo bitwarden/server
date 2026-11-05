@@ -2934,6 +2934,29 @@ public class OrganizationsControllerTests
     [BitAutoData]
     [SutProviderCustomize]
     [Theory]
+    public async Task Edit_Get_PrivilegedControls_StripeFails_BillingErrorAlreadyShown_AddsNoSecondToast(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsGet(sutProvider, organization);
+        sutProvider.Sut.TempData = new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+        // The billing load in the same action already reported the outage.
+        sutProvider.GetDependency<IStripePaymentService>().GetBillingAsync(organization).ThrowsAsync(new StripeException());
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .ThrowsAsync(new StripeException());
+
+        var model = await GetEditModelAsync(sutProvider, organization);
+
+        Assert.Equal(organization.Id, model.Organization.Id);
+        Assert.Null(model.PrivilegedControlsStripeSeats);
+        Assert.True(sutProvider.Sut.TempData.ContainsKey("Error"));
+        Assert.False(sutProvider.Sut.TempData.ContainsKey("Warning"));
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
     public async Task Edit_Get_PrivilegedControls_PamBillingSupportFlagOff_StillLoadsSeats(
         Organization organization,
         SutProvider<OrganizationsController> sutProvider)
