@@ -7,14 +7,15 @@ namespace Bit.Core.Test.Vault.Authorization;
 public class PartialCipherSupportTests
 {
     [Theory]
-    [InlineData(DeviceType.ChromeBrowser)]
-    [InlineData(DeviceType.FirefoxBrowser)]
-    [InlineData(DeviceType.SafariBrowser)]
-    [InlineData(DeviceType.EdgeBrowser)]
-    [InlineData(DeviceType.UnknownBrowser)]
-    public void IsSupportedBy_WebVault_IsSupported(DeviceType deviceType)
+    [InlineData(DeviceType.ChromeBrowser, false)]
+    [InlineData(DeviceType.FirefoxBrowser, false)]
+    [InlineData(DeviceType.SafariBrowser, false)]
+    [InlineData(DeviceType.EdgeBrowser, false)]
+    [InlineData(DeviceType.UnknownBrowser, false)]
+    [InlineData(DeviceType.ChromeBrowser, true)]
+    public void IsSupportedBy_WebVault_IsSupported(DeviceType deviceType, bool browserExtensionsEnabled)
     {
-        Assert.True(PartialCipherSupport.IsSupportedBy(deviceType));
+        Assert.True(PartialCipherSupport.IsSupportedBy(deviceType, browserExtensionsEnabled));
     }
 
     [Theory]
@@ -25,9 +26,18 @@ public class PartialCipherSupportTests
     [InlineData(DeviceType.VivaldiExtension)]
     [InlineData(DeviceType.SafariExtension)]
     [InlineData(DeviceType.DuckDuckGoExtension)]
-    public void IsSupportedBy_BrowserExtension_IsSupported(DeviceType deviceType)
+    public void IsSupportedBy_BrowserExtension_FlagOn_IsSupported(DeviceType deviceType)
     {
-        Assert.True(PartialCipherSupport.IsSupportedBy(deviceType));
+        Assert.True(PartialCipherSupport.IsSupportedBy(deviceType, browserExtensionsEnabled: true));
+    }
+
+    [Theory]
+    [InlineData(DeviceType.ChromeExtension)]
+    [InlineData(DeviceType.FirefoxExtension)]
+    [InlineData(DeviceType.SafariExtension)]
+    public void IsSupportedBy_BrowserExtension_FlagOff_IsNotSupported(DeviceType deviceType)
+    {
+        Assert.False(PartialCipherSupport.IsSupportedBy(deviceType, browserExtensionsEnabled: false));
     }
 
     [Theory]
@@ -44,19 +54,20 @@ public class PartialCipherSupportTests
     [InlineData(DeviceType.LinuxCLI)]
     public void IsSupportedBy_OtherClients_IsNotSupported(DeviceType deviceType)
     {
-        Assert.False(PartialCipherSupport.IsSupportedBy(deviceType));
+        // The flag is for browser extensions only.
+        Assert.False(PartialCipherSupport.IsSupportedBy(deviceType, browserExtensionsEnabled: true));
     }
 
     [Fact]
     public void IsSupportedBy_NoDeviceType_IsNotSupported()
     {
         // Fails safe: an unidentified caller must not be sent a shape it may not understand.
-        Assert.False(PartialCipherSupport.IsSupportedBy(null));
+        Assert.False(PartialCipherSupport.IsSupportedBy(null, browserExtensionsEnabled: true));
     }
 
     [Fact]
     public void IsSupportedBy_UnrecognizedDeviceType_IsNotSupported()
     {
-        Assert.False(PartialCipherSupport.IsSupportedBy((DeviceType)byte.MaxValue));
+        Assert.False(PartialCipherSupport.IsSupportedBy((DeviceType)byte.MaxValue, browserExtensionsEnabled: true));
     }
 }
