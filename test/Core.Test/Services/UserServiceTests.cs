@@ -11,15 +11,18 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
+using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Billing.Services;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -33,6 +36,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 using NSubstitute;
+using NSubstitute.ReturnsExtensions;
 using Xunit;
 
 namespace Bit.Core.Test.Services;
@@ -196,13 +200,20 @@ public class UserServiceTests
             .VerifyHashedPassword(user, "hashed_test_password", "test_password")
             .Returns(PasswordVerificationResult.Success);
 
+        sutProvider.GetDependency<IUserVerificationOtpStore>()
+            .ValidateAndConsumeAsync(user, "otp_token")
+            .Returns(true);
+
         var actualIsVerified = await sutProvider.Sut.VerifySecretAsync(user, secret);
 
         Assert.Equal(expectedIsVerified, actualIsVerified);
 
-        await sutProvider.GetDependency<IUserTwoFactorTokenProvider<User>>()
+        await sutProvider.GetDependency<IUserVerificationOtpStore>()
             .Received(shouldCheck.HasFlag(ShouldCheck.OTP) ? 1 : 0)
-            .ValidateAsync(Arg.Any<string>(), secret, Arg.Any<UserManager<User>>(), user);
+            .ValidateAndConsumeAsync(user, secret);
+        await sutProvider.GetDependency<IUserVerificationOtpStore>()
+            .DidNotReceiveWithAnyArgs()
+            .ValidateAndConsumeWithFailureLimitAsync(default!, default);
 
         sutProvider.GetDependency<IPasswordHasher<User>>()
             .Received(shouldCheck.HasFlag(ShouldCheck.Password) ? 1 : 0)
@@ -365,28 +376,6 @@ public class UserServiceTests
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceiveWithAnyArgs()
             .SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(default, default);
-    }
-
-    [Theory]
-    [BitAutoData("")]
-    [BitAutoData("null")]
-    public async Task SendOTPAsync_UserEmailNull_ThrowsBadRequest(
-        string email,
-        SutProvider<UserService> sutProvider, User user)
-    {
-        user.Email = email == "null" ? null : "";
-        var expectedMessage = "No user email.";
-        try
-        {
-            await sutProvider.Sut.SendOTPAsync(user);
-        }
-        catch (BadRequestException ex)
-        {
-            Assert.Equal(ex.Message, expectedMessage);
-            await sutProvider.GetDependency<IMailService>()
-                .DidNotReceive()
-                .SendOTPEmailAsync(Arg.Any<string>(), Arg.Any<string>());
-        }
     }
 
     [Theory, BitAutoData]
@@ -695,6 +684,152 @@ public class UserServiceTests
 
         Assert.True(result.Succeeded);
         await sutProvider.GetDependency<IUserRepository>().Received(1).DeleteAsync(user);
+    }
+
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task SetKeyConnectorKeyAsync_Success_SetsKeyAndAppliesAcceptFlag(
+        bool acceptOrganizationInvite,
+        SutProvider<UserService> sutProvider, User user, string key, Organization org, OrganizationUser orgUser)
+    {
+        // Arrange
+        user.UsesKeyConnector = false;
+        sutProvider.GetDependency<ICurrentContext>().Organizations.Returns([]);
+        SetupKeyConnectorOrganizationUser(sutProvider, user, org, orgUser);
+
+        // Act
+#pragma warning disable CS0618 // intentionally exercising the obsolete V1 path
+        var result = await sutProvider.Sut.SetKeyConnectorKeyAsync(user, key, org.Identifier!,
+            acceptOrganizationInvite);
+#pragma warning restore CS0618
+
+        // Assert
+        Assert.True(result.Succeeded);
+        await sutProvider.GetDependency<IUserRepository>().Received(1)
+            .ReplaceAsync(Arg.Is<User>(u =>
+                u.Id == user.Id &&
+                u.Key == key &&
+                u.UsesKeyConnector &&
+                u.RevisionDate == u.AccountRevisionDate));
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
+
+        var acceptOrgUserCommand = sutProvider.GetDependency<IAcceptOrgUserCommand>();
+        await acceptOrgUserCommand.Received(acceptOrganizationInvite ? 1 : 0)
+            .AcceptOrgUserAsync(orgUser, user, sutProvider.Sut);
+        await acceptOrgUserCommand.DidNotReceiveWithAnyArgs()
+            .AcceptOrgUserByOrgSsoIdAsync(default!, default!, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SetKeyConnectorKeyAsync_DefaultAcceptOrganizationInvite_AcceptsOrgUser(
+        SutProvider<UserService> sutProvider, User user, string key, Organization org, OrganizationUser orgUser)
+    {
+        // Arrange
+        user.UsesKeyConnector = false;
+        sutProvider.GetDependency<ICurrentContext>().Organizations.Returns([]);
+        SetupKeyConnectorOrganizationUser(sutProvider, user, org, orgUser);
+
+        // Act
+#pragma warning disable CS0618 // intentionally exercising the obsolete V1 path
+        var result = await sutProvider.Sut.SetKeyConnectorKeyAsync(user, key, org.Identifier!);
+#pragma warning restore CS0618
+
+        // Assert
+        Assert.True(result.Succeeded);
+        await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(1)
+            .AcceptOrgUserAsync(orgUser, user, sutProvider.Sut);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SetKeyConnectorKeyAsync_AlreadyUsesKeyConnector_ReturnsFailedAndDoesNotWrite(
+        SutProvider<UserService> sutProvider, User user, string key, string orgIdentifier)
+    {
+        // Arrange
+        user.UsesKeyConnector = true;
+
+        // Act
+#pragma warning disable CS0618 // intentionally exercising the obsolete V1 path
+        var result = await sutProvider.Sut.SetKeyConnectorKeyAsync(user, key, orgIdentifier);
+#pragma warning restore CS0618
+
+        // Assert
+        Assert.False(result.Succeeded);
+        await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceiveWithAnyArgs()
+            .GetByIdentifierAsync(default!);
+        await AssertNoKeyConnectorWritesAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task SetKeyConnectorKeyAsync_OrganizationNotFound_ThrowsAndDoesNotWrite(
+        bool acceptOrganizationInvite,
+        SutProvider<UserService> sutProvider, User user, string key, string orgIdentifier)
+    {
+        // Arrange
+        user.UsesKeyConnector = false;
+        sutProvider.GetDependency<ICurrentContext>().Organizations.Returns([]);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdentifierAsync(orgIdentifier)
+            .ReturnsNull();
+
+        // Act & Assert
+#pragma warning disable CS0618 // intentionally exercising the obsolete V1 path
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SetKeyConnectorKeyAsync(user, key, orgIdentifier, acceptOrganizationInvite));
+#pragma warning restore CS0618
+        Assert.Equal("Organization invalid.", exception.Message);
+
+        await AssertNoKeyConnectorWritesAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task SetKeyConnectorKeyAsync_UserNotFoundInOrganization_ThrowsAndDoesNotWrite(
+        bool acceptOrganizationInvite,
+        SutProvider<UserService> sutProvider, User user, string key, Organization org)
+    {
+        // Arrange
+        user.UsesKeyConnector = false;
+        sutProvider.GetDependency<ICurrentContext>().Organizations.Returns([]);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdentifierAsync(org.Identifier!)
+            .Returns(org);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(org.Id, user.Id)
+            .ReturnsNull();
+
+        // Act & Assert
+#pragma warning disable CS0618 // intentionally exercising the obsolete V1 path
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SetKeyConnectorKeyAsync(user, key, org.Identifier!, acceptOrganizationInvite));
+#pragma warning restore CS0618
+        Assert.Equal("User not found within organization.", exception.Message);
+
+        await AssertNoKeyConnectorWritesAsync(sutProvider);
+    }
+
+    private static void SetupKeyConnectorOrganizationUser(SutProvider<UserService> sutProvider, User user,
+        Organization org, OrganizationUser orgUser)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdentifierAsync(org.Identifier!)
+            .Returns(org);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(org.Id, user.Id)
+            .Returns(orgUser);
+    }
+
+    private static async Task AssertNoKeyConnectorWritesAsync(SutProvider<UserService> sutProvider)
+    {
+        await sutProvider.GetDependency<IUserRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
+            .LogUserEventAsync(default, default);
+        await sutProvider.GetDependency<IAcceptOrgUserCommand>().DidNotReceiveWithAnyArgs()
+            .AcceptOrgUserAsync(default!, default!, default!);
     }
 
     // PM-37165: locks in the legacy path's non-write of LastApiKeyRotationDate. Once the

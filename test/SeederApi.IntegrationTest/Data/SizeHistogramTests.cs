@@ -78,6 +78,15 @@ public class SizeHistogramTests
     }
 
     [Fact]
+    public void Quantiles_PinsMidQuantilesPerBucket()
+    {
+        // Two draws per bucket at u = 0.25 and 0.75 on (int)exp(ln(min+1) + u·(ln(max+2) − ln(min+1))) − 1
+        var histogram = new SizeHistogram([(1, 3, 1.0), (4, 20, 1.0), (7, 7, 1.0)]);
+
+        Assert.Equal(new[] { 1, 2, 6, 14, 7, 7 }, histogram.Quantiles(6));
+    }
+
+    [Fact]
     public void ScaleTo_SmallRoundingDrift_SumsExactlyToTarget()
     {
         // 1 × 10/3 rounds to 3 each (sum 9); the drift step adds the missing 1

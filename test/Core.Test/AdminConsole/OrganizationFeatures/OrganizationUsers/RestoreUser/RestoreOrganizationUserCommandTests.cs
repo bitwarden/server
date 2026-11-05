@@ -23,6 +23,7 @@ using Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
@@ -54,6 +55,88 @@ public class RestoreOrganizationUserCommandTests
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
             .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncOrgKeys && n.TargetId == organizationUser.UserId!.Value));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_WhenRestoredToInvited_StartsReminderSequenceDueNow(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser)
+    {
+        var now = new DateTimeOffset(2026, 10, 27, 12, 0, 0, TimeSpan.Zero);
+        var sutProvider = new SutProvider<RestoreOrganizationUserCommand>().WithFakeTimeProvider().Create();
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+        organizationUser.StatusNew = OrganizationUserStatusTypeNew.Invited;
+        organizationUser.UserId = null;
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(now);
+
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
+            .StartInviteReminderSequencesAsync(
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == 1 && ids.Contains(organizationUser.Id)),
+                now.UtcDateTime);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_WhenRestoredToNonInvitedStatus_DoesNotStartReminders(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        organizationUser.Email = null;
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>());
+
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceive()
+            .StartInviteReminderSequencesAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<DateTime>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUsers_StartsReminderSequenceForInvitedUsers(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser firstInvited,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser secondInvited)
+    {
+        var now = new DateTimeOffset(2026, 10, 27, 12, 0, 0, TimeSpan.Zero);
+        var sutProvider = new SutProvider<RestoreOrganizationUserCommand>().WithFakeTimeProvider().Create();
+        RestoreUser_Setup(organization, owner, firstInvited, sutProvider);
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var userService = Substitute.For<IUserService>();
+
+        foreach (var invited in new[] { firstInvited, secondInvited })
+        {
+            invited.StatusNew = OrganizationUserStatusTypeNew.Invited;
+            invited.UserId = null;
+            invited.OrganizationId = organization.Id;
+        }
+
+        organizationUserRepository
+            .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(firstInvited.Id) && ids.Contains(secondInvited.Id)))
+            .Returns([firstInvited, secondInvited]);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 1 });
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(now);
+
+        await sutProvider.Sut.RestoreUsersAsync(
+            organization.Id, new[] { firstInvited.Id, secondInvited.Id }, owner.Id, userService, null);
+
+        await organizationUserRepository.Received(1)
+            .StartInviteReminderSequencesAsync(
+                Arg.Is<IEnumerable<Guid>>(ids =>
+                    ids.Count() == 2 && ids.Contains(firstInvited.Id) && ids.Contains(secondInvited.Id)),
+                now.UtcDateTime);
     }
 
     [Theory, BitAutoData]

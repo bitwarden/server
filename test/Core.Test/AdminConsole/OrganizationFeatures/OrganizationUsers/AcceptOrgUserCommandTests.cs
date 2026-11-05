@@ -77,6 +77,32 @@ public class AcceptOrgUserCommandTests
 
     [Theory]
     [BitAutoData]
+    public async Task AcceptOrgUser_ClearsInviteReminders(
+        SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+    {
+        // Arrange
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+        orgUser.InviteReminderDueDate = DateTime.UtcNow;
+        orgUser.InviteRemindersSentCount = 2;
+
+        sutProvider.GetDependency<IAcceptOrganizationMembershipValidator>()
+            .ValidateAsync(Arg.Any<AcceptOrganizationMembershipValidationRequest>())
+            .Returns(Task.FromResult(Valid(new AcceptOrganizationMembershipValidationResult())));
+
+        // Act
+        await sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService);
+
+        // Assert - the saved row has no reminder schedule
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
+            Arg.Is<OrganizationUser>(ou =>
+                ou.Id == orgUser.Id &&
+                ou.InviteReminderDueDate == null &&
+                ou.InviteRemindersSentCount == null));
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task AcceptOrgUser_OrgUserStatusIsRevoked_ReturnsBadRequest(
         SutProvider<AcceptOrgUserCommand> sutProvider,
         User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)

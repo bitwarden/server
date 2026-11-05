@@ -151,7 +151,6 @@ public static partial class FeatureFlagKeys
     public const string DesktopMigrationSettings = "desktop-ui-settings-dialog";
 
     /* Auth Team */
-    public const string Otp6Digits = "pm-18612-otp-6-digits";
     public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
     public const string SafariAccountSwitching = "pm-5594-safari-account-switching";
     public const string PM27086_UpdateAuthenticationApisForInputPassword = "pm-27086-update-authentication-apis-for-input-password";
@@ -274,6 +273,7 @@ public static partial class FeatureFlagKeys
     public const string PM29968_FillAfterSave = "pm-29968-fill-after-save";
     public const string PM32380_BtnTextAddCreate = "pm-32380-btn-text-add-create";
     public const string PM40201_DeriveSSHKeys = "pm-40201-derive-ssh-keys";
+    public const string PM45335_ExtensionWelcomePage = "pm-45335-extension-welcome-page";
 
     /* Secrets Manager Team */
     public const string SecretsVersioning = "sm-1587-secrets-versioning";
@@ -290,6 +290,7 @@ public static partial class FeatureFlagKeys
     public const string EventManagementForHuntress = "event-management-for-huntress";
     public const string EventManagementForSplunk = "event-management-for-splunk";
     public const string EventManagementForTeams = "event-management-for-teams";
+    public const string EventManagementForSlack = "event-management-for-slack";
     public const string Milestone11AppPageImprovements = "pm-30538-dirt-milestone-11-app-page-improvements";
     public const string AccessIntelligenceNewArchitecture = "pm-31936-access-intelligence-new-architecture";
     public const string PasskeyDirectoryReport = "inno-passkey-directory-report";
