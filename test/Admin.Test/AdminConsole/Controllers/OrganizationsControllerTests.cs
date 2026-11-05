@@ -2056,12 +2056,41 @@ public class OrganizationsControllerTests
     [BitAutoData]
     [SutProviderCustomize]
     [Theory]
-    public async Task Edit_PrivilegedControls_ProviderManaged_Rejects(
+    public async Task Edit_PrivilegedControls_ProviderManaged_KeepsStoredValues(
         Organization organization,
         Provider provider,
         SutProvider<OrganizationsController> sutProvider)
     {
         StubPrivilegedControlsEdit(sutProvider, organization, provider: provider);
+        organization.UsePam = true;
+        organization.PamSeats = 5;
+        organization.MaxAutoscalePamSeats = 8;
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            Seats = 10,
+            UsePam = false
+        };
+
+        await sutProvider.Sut.Edit(organization.Id, update);
+
+        Assert.Null(sutProvider.Sut.TempData["Error"]);
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(
+            Arg.Is<Organization>(o => o.UsePam && o.PamSeats == 5 && o.MaxAutoscalePamSeats == 8));
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_PrivilegedControls_ProviderManaged_PostedPamIgnored(
+        Organization organization,
+        Provider provider,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsEdit(sutProvider, organization, provider: provider);
+        organization.UsePam = false;
+        organization.PamSeats = null;
+        organization.MaxAutoscalePamSeats = null;
         var update = new OrganizationEditModel
         {
             PlanType = PlanType.EnterpriseAnnually,
@@ -2069,9 +2098,10 @@ public class OrganizationsControllerTests
             PamSeats = 25
         };
 
-        var result = await sutProvider.Sut.Edit(organization.Id, update);
+        await sutProvider.Sut.Edit(organization.Id, update);
 
-        await AssertPrivilegedControlsRejectedAsync(result, organization, sutProvider);
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(
+            Arg.Is<Organization>(o => !o.UsePam && o.PamSeats == null && o.MaxAutoscalePamSeats == null));
     }
 
     [BitAutoData]

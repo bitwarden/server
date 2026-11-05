@@ -482,7 +482,8 @@ public class OrganizationsController : Controller
             }
         }
 
-        UpdateOrganization(organization, model);
+        var isProviderManaged = await _providerRepository.GetByOrganizationIdAsync(organization.Id) != null;
+        UpdateOrganization(organization, model, isProviderManaged);
         var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
         if (organization.UseSecretsManager && !plan.SupportsSecretsManager)
         {
@@ -491,7 +492,8 @@ public class OrganizationsController : Controller
         }
 
         if (_accessControlService.UserHasPermission(Permission.Org_Plan_Edit)
-            && await ValidatePrivilegedControlsAsync(
+            && !isProviderManaged
+            && ValidatePrivilegedControls(
                 organization,
                 plan,
                 IsLegacyPrivilegedControlsWithoutSeats(existingOrganizationData, model)) is { } privilegedControlsError)
@@ -869,7 +871,7 @@ public class OrganizationsController : Controller
         OrganizationEditModel model) =>
         existingOrganization is { UsePam: true, PamSeats: null } && model.PamSeats is null;
 
-    private async Task<string> ValidatePrivilegedControlsAsync(
+    private static string ValidatePrivilegedControls(
         Organization organization,
         Bit.Core.Models.StaticStore.Plan plan,
         bool allowUnsetSeats)
@@ -877,11 +879,6 @@ public class OrganizationsController : Controller
         if (!organization.UsePam)
         {
             return null;
-        }
-
-        if (await _providerRepository.GetByOrganizationIdAsync(organization.Id) != null)
-        {
-            return "Organizations managed by a provider can't use Privileged Access Management";
         }
 
         if (!plan.SupportsPrivilegedControls)
@@ -914,7 +911,7 @@ public class OrganizationsController : Controller
         return null;
     }
 
-    private void UpdateOrganization(Organization organization, OrganizationEditModel model)
+    private void UpdateOrganization(Organization organization, OrganizationEditModel model, bool isProviderManaged)
     {
         if (_accessControlService.UserHasPermission(Permission.Org_Name_Edit))
         {
@@ -959,7 +956,6 @@ public class OrganizationsController : Controller
             organization.UsePhishingBlocker = model.UsePhishingBlocker;
             organization.UseMyItems = model.UseMyItems;
             organization.UseInviteLinks = model.UseInviteLinks;
-            organization.UsePam = model.UsePam;
 
             //secrets
             organization.SmSeats = model.SmSeats;
@@ -967,8 +963,13 @@ public class OrganizationsController : Controller
             organization.SmServiceAccounts = model.SmServiceAccounts;
             organization.MaxAutoscaleSmServiceAccounts = model.MaxAutoscaleSmServiceAccounts;
 
-            organization.PamSeats = model.UsePam ? model.PamSeats : null;
-            organization.MaxAutoscalePamSeats = model.UsePam ? model.MaxAutoscalePamSeats : null;
+            // The form omits the PAM section for provider-managed organizations, so keep their stored values.
+            if (!isProviderManaged)
+            {
+                organization.UsePam = model.UsePam;
+                organization.PamSeats = model.UsePam ? model.PamSeats : null;
+                organization.MaxAutoscalePamSeats = model.UsePam ? model.MaxAutoscalePamSeats : null;
+            }
         }
 
         if (_accessControlService.UserHasPermission(Permission.Org_Licensing_Edit))
