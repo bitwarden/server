@@ -358,7 +358,7 @@ public class OrganizationsController : Controller
             Trial = await GetTrialAsync(organization),
         };
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support) && provider == null)
+        if (provider == null)
         {
             model.PrivilegedControlsStripeSeats = await GetPrivilegedControlsStripeSeatsAsync(organization);
             model.OccupiedPamSeatsCount =
@@ -488,8 +488,7 @@ public class OrganizationsController : Controller
             return RedirectToAction("Edit", new { id });
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support)
-            && _accessControlService.UserHasPermission(Permission.Org_Plan_Edit)
+        if (_accessControlService.UserHasPermission(Permission.Org_Plan_Edit)
             && await ValidatePrivilegedControlsAsync(organization, plan) is { } privilegedControlsError)
         {
             TempData["Error"] = privilegedControlsError;
@@ -951,11 +950,8 @@ public class OrganizationsController : Controller
             organization.SmServiceAccounts = model.SmServiceAccounts;
             organization.MaxAutoscaleSmServiceAccounts = model.MaxAutoscaleSmServiceAccounts;
 
-            if (_featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support))
-            {
-                organization.PamSeats = model.UsePam ? model.PamSeats : null;
-                organization.MaxAutoscalePamSeats = model.UsePam ? model.MaxAutoscalePamSeats : null;
-            }
+            organization.PamSeats = model.UsePam ? model.PamSeats : null;
+            organization.MaxAutoscalePamSeats = model.UsePam ? model.MaxAutoscalePamSeats : null;
         }
 
         if (_accessControlService.UserHasPermission(Permission.Org_Licensing_Edit))

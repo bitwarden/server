@@ -1625,7 +1625,6 @@ public class OrganizationsControllerTests
         Organization organization,
         bool supportsPrivilegedControls = true,
         bool canEditPlan = true,
-        bool flagEnabled = true,
         Provider provider = null)
     {
         organization.PlanType = PlanType.EnterpriseAnnually;
@@ -1634,9 +1633,6 @@ public class OrganizationsControllerTests
             .Returns(new EnterprisePlanStub(supportsPrivilegedControls));
         sutProvider.GetDependency<IAccessControlService>().UserHasPermission(Permission.Org_Plan_Edit)
             .Returns(canEditPlan);
-        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
-            .IsEnabled(Bit.Core.FeatureFlagKeys.PM39883_Pam_Billing_Support)
-            .Returns(flagEnabled);
         sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).Returns(provider);
         sutProvider.Sut.TempData = new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
     }
@@ -2000,25 +1996,49 @@ public class OrganizationsControllerTests
     [BitAutoData]
     [SutProviderCustomize]
     [Theory]
-    public async Task Edit_PrivilegedControls_FlagOff_LeavesSeatsUnchanged(
+    public async Task Edit_PrivilegedControls_PamBillingSupportFlagOff_StillSavesSeatsAndLimit(
         Organization organization,
         SutProvider<OrganizationsController> sutProvider)
     {
-        StubPrivilegedControlsEdit(sutProvider, organization, flagEnabled: false);
-        organization.PamSeats = 10;
-        organization.MaxAutoscalePamSeats = 20;
+        StubPrivilegedControlsEdit(sutProvider, organization);
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(Bit.Core.FeatureFlagKeys.PM39883_Pam_Billing_Support)
+            .Returns(false);
         var update = new OrganizationEditModel
         {
             PlanType = PlanType.EnterpriseAnnually,
             UsePam = true,
-            PamSeats = null,
-            MaxAutoscalePamSeats = null
+            PamSeats = 25,
+            MaxAutoscalePamSeats = 40
         };
 
         await sutProvider.Sut.Edit(organization.Id, update);
 
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(
-            Arg.Is<Organization>(o => o.PamSeats == 10 && o.MaxAutoscalePamSeats == 20));
+            Arg.Is<Organization>(o => o.UsePam && o.PamSeats == 25 && o.MaxAutoscalePamSeats == 40));
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_PrivilegedControls_PamBillingSupportFlagOff_StillValidates(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsEdit(sutProvider, organization, supportsPrivilegedControls: false);
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(Bit.Core.FeatureFlagKeys.PM39883_Pam_Billing_Support)
+            .Returns(false);
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            UsePam = true,
+            PamSeats = 25
+        };
+
+        var result = await sutProvider.Sut.Edit(organization.Id, update);
+
+        await AssertPrivilegedControlsRejectedAsync(result, organization, sutProvider);
     }
 
     [BitAutoData]
@@ -2723,13 +2743,9 @@ public class OrganizationsControllerTests
     private static void StubPrivilegedControlsGet(
         SutProvider<OrganizationsController> sutProvider,
         Organization organization,
-        bool flagEnabled = true,
         Provider provider = null)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
-            .IsEnabled(Bit.Core.FeatureFlagKeys.PM39883_Pam_Billing_Support)
-            .Returns(flagEnabled);
         sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).Returns(provider);
     }
 
@@ -2824,19 +2840,25 @@ public class OrganizationsControllerTests
     [BitAutoData]
     [SutProviderCustomize]
     [Theory]
-    public async Task Edit_Get_PrivilegedControls_FlagOff_DoesNotCallStripe(
+    public async Task Edit_Get_PrivilegedControls_PamBillingSupportFlagOff_StillLoadsSeats(
         Organization organization,
         SutProvider<OrganizationsController> sutProvider)
     {
-        StubPrivilegedControlsGet(sutProvider, organization, flagEnabled: false);
+        StubPrivilegedControlsGet(sutProvider, organization);
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(Bit.Core.FeatureFlagKeys.PM39883_Pam_Billing_Support)
+            .Returns(false);
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(PrivilegedControlsSubscription());
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(7);
 
         var model = await GetEditModelAsync(sutProvider, organization);
 
-        Assert.Null(model.PrivilegedControlsStripeSeats);
-        await sutProvider.GetDependency<IStripeAdapter>().DidNotReceiveWithAnyArgs()
-            .GetSubscriptionAsync(default, default);
-        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
-            .GetOccupiedPamSeatCountByOrganizationIdAsync(default);
+        Assert.Equal(20, model.PrivilegedControlsStripeSeats);
+        Assert.Equal(7, model.OccupiedPamSeatsCount);
     }
 
     [BitAutoData]
