@@ -1,10 +1,10 @@
-﻿using Bit.Core.Billing.Commands;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Exceptions;
-using Bit.Core.Services;
 using Bit.Subscriptions.Organization.Commands.PrivilegedControls;
 using Bitwarden.Server.Sdk.Environment;
 using NSubstitute;
@@ -21,13 +21,14 @@ public class AddPrivilegedControlsToExistingSubscriptionCommandTests
         Substitute.For<IPrivilegedControlsSeatChangeSetFactory>();
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand =
         Substitute.For<IUpdateOrganizationSubscriptionCommand>();
-    private readonly IOrganizationService _organizationService = Substitute.For<IOrganizationService>();
+    private readonly IReplaceOrganizationAndUpdateCacheCommand _replaceOrganizationAndUpdateCacheCommand =
+        Substitute.For<IReplaceOrganizationAndUpdateCacheCommand>();
     private readonly IBitwardenEnvironment _environment = Substitute.For<IBitwardenEnvironment>();
     private readonly AddPrivilegedControlsToExistingSubscriptionCommand _sut;
 
     public AddPrivilegedControlsToExistingSubscriptionCommandTests() =>
         _sut = new AddPrivilegedControlsToExistingSubscriptionCommand(
-            _seatChangeSetFactory, _updateOrganizationSubscriptionCommand, _organizationService, _environment);
+            _seatChangeSetFactory, _updateOrganizationSubscriptionCommand, _replaceOrganizationAndUpdateCacheCommand, _environment);
 
     [Fact]
     public async Task Run_SelfHosted_ThrowsBadRequest()
@@ -76,7 +77,7 @@ public class AddPrivilegedControlsToExistingSubscriptionCommandTests
         Assert.Equal(15, organization.PamSeats);
         Assert.Equal(20, organization.MaxAutoscalePamSeats);
         Assert.True(organization.UsePam);
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(organization);
+        await _replaceOrganizationAndUpdateCacheCommand.Received(1).RunAsync(organization);
     }
 
     [Fact]
@@ -153,8 +154,8 @@ public class AddPrivilegedControlsToExistingSubscriptionCommandTests
 
         await _updateOrganizationSubscriptionCommand.DidNotReceive()
             .Run(Arg.Any<OrganizationEntity>(), Arg.Any<OrganizationSubscriptionChangeSet>(), Arg.Any<Subscription?>());
-        await _organizationService.DidNotReceive()
-            .ReplaceAndUpdateCacheAsync(Arg.Any<OrganizationEntity>(), Arg.Any<Bit.Core.Enums.EventType?>());
+        await _replaceOrganizationAndUpdateCacheCommand.DidNotReceive()
+            .RunAsync(Arg.Any<OrganizationEntity>(), Arg.Any<Bit.Core.Enums.EventType?>());
     }
 
     [Fact]
@@ -183,8 +184,8 @@ public class AddPrivilegedControlsToExistingSubscriptionCommandTests
         Assert.Null(organization.PamSeats);
         Assert.Null(organization.MaxAutoscalePamSeats);
         Assert.False(organization.UsePam);
-        await _organizationService.DidNotReceive()
-            .ReplaceAndUpdateCacheAsync(Arg.Any<OrganizationEntity>(), Arg.Any<Bit.Core.Enums.EventType?>());
+        await _replaceOrganizationAndUpdateCacheCommand.DidNotReceive()
+            .RunAsync(Arg.Any<OrganizationEntity>(), Arg.Any<Bit.Core.Enums.EventType?>());
     }
 
     [Fact]

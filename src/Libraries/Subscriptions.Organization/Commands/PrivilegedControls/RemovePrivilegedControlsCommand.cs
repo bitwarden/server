@@ -1,8 +1,8 @@
-﻿using Bit.Core.Billing.Organizations.Commands;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Exceptions;
-using Bit.Core.Services;
 using Bitwarden.Server.Sdk.Environment;
 using Microsoft.Extensions.Logging;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
@@ -25,7 +25,7 @@ internal interface IRemovePrivilegedControlsCommand
 internal sealed class RemovePrivilegedControlsCommand(
     IPricingClient pricingClient,
     IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
-    IOrganizationService organizationService,
+    IReplaceOrganizationAndUpdateCacheCommand replaceOrganizationAndUpdateCacheCommand,
     IBitwardenEnvironment environment,
     ILogger<RemovePrivilegedControlsCommand> logger) : IRemovePrivilegedControlsCommand
 {
@@ -70,7 +70,7 @@ internal sealed class RemovePrivilegedControlsCommand(
 
         try
         {
-            await organizationService.ReplaceAndUpdateCacheAsync(organization);
+            await replaceOrganizationAndUpdateCacheCommand.RunAsync(organization);
         }
         catch (Exception exception)
         {

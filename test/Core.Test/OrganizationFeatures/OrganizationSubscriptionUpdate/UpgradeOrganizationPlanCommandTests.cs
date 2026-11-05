@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Commands;
@@ -18,7 +19,6 @@ using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Test.Billing.Mocks;
@@ -104,7 +104,7 @@ public class UpgradeOrganizationPlanCommandTests
             "Your organization currently has 6 collections. Your new plan allows for a maximum of (5) collections. Remove some collections.",
             exception.Message);
 
-        await sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(default);
+        await sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>().DidNotReceiveWithAnyArgs().RunAsync(default);
     }
 
     [Theory, FreeOrganizationUpgradeCustomize, BitAutoData]
@@ -139,7 +139,7 @@ public class UpgradeOrganizationPlanCommandTests
             "Your organization currently has 6 shared folders. Your new plan allows for a maximum of (5) shared folders. Remove some shared folders.",
             exception.Message);
 
-        await sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(default);
+        await sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>().DidNotReceiveWithAnyArgs().RunAsync(default);
     }
 
     [Theory, BitAutoData]
@@ -213,7 +213,7 @@ public class UpgradeOrganizationPlanCommandTests
                 Users = 1
             });
         await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
-        await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(organization);
+        await sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>().Received(1).RunAsync(organization);
     }
 
     [Theory]
@@ -261,7 +261,7 @@ public class UpgradeOrganizationPlanCommandTests
             organizationUpgrade.AdditionalSmSeats,
             5,
             3);
-        await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(organization);
+        await sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>().Received(1).RunAsync(organization);
     }
 
     [Theory, FreeOrganizationUpgradeCustomize]
@@ -299,7 +299,7 @@ public class UpgradeOrganizationPlanCommandTests
             });
         var result = await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
 
-        await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(
+        await sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>().Received(1).RunAsync(
             Arg.Is<Organization>(o =>
                 o.Seats == plan.PasswordManager.BaseSeats + upgrade.AdditionalSeats
                 && o.SmSeats == plan.SecretsManager.BaseSeats + upgrade.AdditionalSmSeats
@@ -345,7 +345,7 @@ public class UpgradeOrganizationPlanCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
         Assert.Contains("Your organization currently has 2 Secrets Manager seats filled. Your new plan only has", exception.Message);
 
-        await sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(default);
+        await sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>().DidNotReceiveWithAnyArgs().RunAsync(default);
     }
 
     [Theory, FreeOrganizationUpgradeCustomize]
@@ -388,7 +388,7 @@ public class UpgradeOrganizationPlanCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
         Assert.Contains($"Your organization currently has {currentServiceAccounts} machine accounts. Your new plan only allows", exception.Message);
 
-        await sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(default);
+        await sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>().DidNotReceiveWithAnyArgs().RunAsync(default);
     }
 
     [Theory]
@@ -434,9 +434,9 @@ public class UpgradeOrganizationPlanCommandTests
         // Assert
         Assert.Equal(newPublicKey, organization.PublicKey);
         Assert.Equal(newPrivateKey, organization.PrivateKey);
-        await sutProvider.GetDependency<IOrganizationService>()
+        await sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>()
             .Received(1)
-            .ReplaceAndUpdateCacheAsync(organization);
+            .RunAsync(organization);
     }
 
     [Theory]
@@ -482,9 +482,9 @@ public class UpgradeOrganizationPlanCommandTests
         // Assert
         Assert.Equal(existingPublicKey, organization.PublicKey);
         Assert.Equal(existingPrivateKey, organization.PrivateKey);
-        await sutProvider.GetDependency<IOrganizationService>()
+        await sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>()
             .Received(1)
-            .ReplaceAndUpdateCacheAsync(organization);
+            .RunAsync(organization);
     }
 
     [Theory, BitAutoData]
@@ -607,8 +607,8 @@ public class UpgradeOrganizationPlanCommandTests
         // Assert
         Assert.Equal(existingPublicKey, organization.PublicKey);
         Assert.Equal(existingPrivateKey, organization.PrivateKey);
-        await sutProvider.GetDependency<IOrganizationService>()
+        await sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>()
             .Received(1)
-            .ReplaceAndUpdateCacheAsync(organization);
+            .RunAsync(organization);
     }
 }

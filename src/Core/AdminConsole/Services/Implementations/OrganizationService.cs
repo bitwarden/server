@@ -143,7 +143,7 @@ public class OrganizationService : IOrganizationService
             plan.PasswordManager.StripeStoragePlanId,
             plan.PasswordManager.BaseStorageGb,
             plan);
-        await ReplaceAndUpdateCacheAsync(organization);
+        await _replaceOrganizationAndUpdateCacheCommand.RunAsync(organization);
         return secret;
     }
 
@@ -211,7 +211,7 @@ public class OrganizationService : IOrganizationService
 
         organization.MaxAutoscaleSeats = maxAutoscaleSeats;
 
-        await ReplaceAndUpdateCacheAsync(organization);
+        await _replaceOrganizationAndUpdateCacheCommand.RunAsync(organization);
     }
 
     public async Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment)
@@ -325,7 +325,7 @@ public class OrganizationService : IOrganizationService
 
         _logger.LogInformation("{Method}: Invoking _organizationRepository.ReplaceAsync with {Seats} seats for Organization ({OrganizationID})", nameof(AdjustSeatsAsync), organization.Seats, organization.Id); ;
 
-        await ReplaceAndUpdateCacheAsync(organization);
+        await _replaceOrganizationAndUpdateCacheCommand.RunAsync(organization);
 
         if (organization.Seats.HasValue && organization.MaxAutoscaleSeats.HasValue &&
             organization.Seats == organization.MaxAutoscaleSeats)
@@ -357,7 +357,7 @@ public class OrganizationService : IOrganizationService
         {
             org.ExpirationDate = expirationDate;
             org.RevisionDate = DateTime.UtcNow;
-            await ReplaceAndUpdateCacheAsync(org);
+            await _replaceOrganizationAndUpdateCacheCommand.RunAsync(org);
         }
     }
 
@@ -377,7 +377,7 @@ public class OrganizationService : IOrganizationService
             }
         }
 
-        await ReplaceAndUpdateCacheAsync(organization, EventType.Organization_Updated);
+        await _replaceOrganizationAndUpdateCacheCommand.RunAsync(organization, EventType.Organization_Updated);
 
         if (updateBilling && !string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
         {
@@ -1034,10 +1034,6 @@ public class OrganizationService : IOrganizationService
             }
         }
     }
-
-
-    public Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null) =>
-        _replaceOrganizationAndUpdateCacheCommand.RunAsync(org, orgEvent);
 
     private async Task<Organization> GetOrgById(Guid id)
     {

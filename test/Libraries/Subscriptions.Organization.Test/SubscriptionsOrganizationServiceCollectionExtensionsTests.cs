@@ -51,7 +51,7 @@ public class SubscriptionsOrganizationServiceCollectionExtensionsTests
         services.AddSingleton(Substitute.For<IOrganizationRepository>());
         services.AddSingleton(Substitute.For<IOrganizationUserRepository>());
         services.AddSingleton(Substitute.For<IUpdateOrganizationSubscriptionCommand>());
-        services.AddSingleton(Substitute.For<IOrganizationService>());
+        services.AddSingleton(Substitute.For<IReplaceOrganizationAndUpdateCacheCommand>());
         services.AddSingleton(Substitute.For<IBitwardenEnvironment>());
         services.AddLogging();
 
@@ -88,7 +88,7 @@ public class SubscriptionsOrganizationServiceCollectionExtensionsTests
         services.AddSingleton(Substitute.For<IBitwardenEnvironment>());
         services.AddSingleton(Substitute.For<IOrganizationRepository>());
         services.AddSingleton(Substitute.For<IOrganizationUserRepository>());
-        services.AddSingleton(Substitute.For<IOrganizationService>());
+        services.AddSingleton(Substitute.For<IReplaceOrganizationAndUpdateCacheCommand>());
         services.AddSingleton(Substitute.For<IUpdateOrganizationSubscriptionCommand>());
         services.AddLogging();
 
@@ -106,7 +106,7 @@ public class SubscriptionsOrganizationServiceCollectionExtensionsTests
         services.AddSingleton(Substitute.For<IStripeAdapter>());
         services.AddSingleton(Substitute.For<IOrganizationRepository>());
         services.AddSingleton(Substitute.For<IUpdateOrganizationSubscriptionCommand>());
-        services.AddSingleton(Substitute.For<IOrganizationService>());
+        services.AddSingleton(Substitute.For<IReplaceOrganizationAndUpdateCacheCommand>());
         services.AddSingleton(Substitute.For<IBitwardenEnvironment>());
         services.AddLogging();
 
