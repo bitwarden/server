@@ -37,7 +37,7 @@ internal sealed class SendPrivilegedControlsSeatNeededEmailCommand(
             await mailer.SendEmail(new PrivilegedControlsSeatNeededMail
             {
                 ToEmails = ownerEmails,
-                Subject = $"{organizationName} needs more Privileged Controls seats",
+                Subject = $"{organizationName} has reached its Privileged Controls seat limit",
                 View = new PrivilegedControlsSeatNeededView(globalSettings)
                 {
                     OrganizationId = organization.Id,
