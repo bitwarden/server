@@ -1,4 +1,6 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PreAccess;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
@@ -18,8 +20,11 @@ public class GetOrganizationInviteValidator(
     public async Task<ValidationResult<OrganizationInviteLinkValidationRequest>> ValidateAsync(
         OrganizationInviteLinkValidationRequest request)
     {
-        var eligibilityError = InviteLinkRules.ValidateEligibility(
-            request.ExistingInviteLink, request.Code, request.Organization, request.User);
+        var eligibilityError = inviteLinkValidationService.ValidateEligibility(
+            request.ExistingInviteLink,
+            request.Code,
+            request.Organization,
+            request.User);
         if (eligibilityError is not null)
         {
             return Invalid(request, eligibilityError);
@@ -50,17 +55,31 @@ public class GetOrganizationInviteValidator(
 
         if (joinRequirementsResult.IsError)
         {
-            return Invalid(request, joinRequirementsResult.Error!);
+            return Invalid(request, ToGetInviteValidationError(joinRequirementsResult.Error!));
         }
 
         return Valid(request);
     }
 
     /// <summary>
+    /// Keeps the invite link error messages for shared errors that have an invite link equivalent, matching the
+    /// accept endpoint.
+    /// </summary>
+    // TODO: This only exists in order to satisfy fragile client-side error parsing.
+    // TODO: Remove this with PM-40926 once we are returning stable error codes.
+    private static Error ToGetInviteValidationError(Error error) =>
+        error switch
+        {
+            CannotBeAdminOfMultipleFreeOrganizations => new OnlyOneFreeOrganizationAdminAllowed(),
+            ProviderUsersCannotJoin => new ProviderUsersCannotAcceptInviteLink(),
+            _ => error
+        };
+
+    /// <summary>
     /// The existing membership must allow the step the link leads to: confirming, or accepting.
     /// </summary>
     /// <remarks>
-    /// Must run after <see cref="InviteLinkRules.ValidateEligibility"/>, which guarantees the invite link and
+    /// Must run after <see cref="IInviteLinkValidationService.ValidateEligibility"/>, which guarantees the invite link and
     /// organization exist.
     /// </remarks>
     private static Error? ValidateMembershipStatus(OrganizationInviteLinkValidationRequest request) =>

@@ -2,6 +2,8 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PreAccess;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Entities;
@@ -26,7 +28,13 @@ public class GetOrganizationInviteValidatorTests
         // Revoked would also fail the membership status check, so this proves eligibility is checked first.
         existingOrganizationUser.Status = OrganizationUserStatusType.Revoked;
         var request = BuildRequest(organization, inviteLink, user, existingOrganizationUser);
-        inviteLink.AllowedDomains = "[\"allowed.com\"]";
+        sutProvider.GetDependency<IInviteLinkValidationService>()
+            .ValidateEligibility(
+                inviteLink,
+                request.Code,
+                organization,
+                user)
+            .Returns(new EmailDomainNotAllowed(organization.Name));
 
         // Act
         var result = await sutProvider.Sut.ValidateAsync(request);
@@ -113,8 +121,18 @@ public class GetOrganizationInviteValidatorTests
                 Arg.Any<IPreAccessPolicyEnforcer>());
     }
 
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_WhenJoinRequirementsFail_ReturnsJoinRequirementsError(
+    public static IEnumerable<object[]> JoinRequirementsErrors() =>
+    [
+        [new CannotBeAdminOfMultipleFreeOrganizations(), typeof(OnlyOneFreeOrganizationAdminAllowed)],
+        [new ProviderUsersCannotJoin(), typeof(ProviderUsersCannotAcceptInviteLink)],
+        [new TwoFactorRequiredForMembership(), typeof(TwoFactorRequiredForMembership)],
+    ];
+
+    [Theory]
+    [BitMemberAutoData(nameof(JoinRequirementsErrors))]
+    public async Task ValidateAsync_WhenJoinRequirementsFail_ReturnsInviteLinkError(
+        Error joinRequirementsError,
+        Type expectedErrorType,
         Organization organization, OrganizationInviteLink inviteLink, User user,
         SutProvider<GetOrganizationInviteValidator> sutProvider)
     {
@@ -131,14 +149,14 @@ public class GetOrganizationInviteValidatorTests
                 user,
                 OrganizationUserType.User,
                 policyEnforcer)
-            .Returns(new JoinRequirementsValidationResult(new TwoFactorRequiredForMembership(), AutoConfirmPolicyEnabled: false));
+            .Returns(new JoinRequirementsValidationResult(joinRequirementsError, AutoConfirmPolicyEnabled: false));
 
         // Act
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<TwoFactorRequiredForMembership>(result.AsError);
+        Assert.IsType(expectedErrorType, result.AsError);
     }
 
     private static void SetupSeatsAvailable(SutProvider<GetOrganizationInviteValidator> sutProvider) =>

@@ -5,6 +5,31 @@ namespace Bit.Core.Test.Settings;
 
 public class GlobalSettingsTests
 {
+    [Fact]
+    public void SsoSettings_Rsa15DeprecationDate_DefaultsToJanuary192027()
+    {
+        Assert.Equal("January 19, 2027", new GlobalSettings().Sso.Rsa15DeprecationDate);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public void SsoSettings_Rsa15DeprecationDate_EmptyOrWhitespace_ReturnsDefault(string? value)
+    {
+        var settings = new GlobalSettings.SsoSettings { Rsa15DeprecationDate = value };
+
+        Assert.Equal("January 19, 2027", settings.Rsa15DeprecationDate);
+    }
+
+    [Fact]
+    public void SsoSettings_Rsa15DeprecationDate_ConfiguredValue_ReturnsValue()
+    {
+        var settings = new GlobalSettings.SsoSettings { Rsa15DeprecationDate = "March 3, 2030" };
+
+        Assert.Equal("March 3, 2030", settings.Rsa15DeprecationDate);
+    }
+
     public class SqlSettingsTests
     {
         private const string _testingConnectionString =
