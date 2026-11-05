@@ -800,6 +800,8 @@ public class OrganizationServiceTests
     {
         organization.Seats = currentSeats;
         organization.MaxAutoscaleSeats = currentMaxAutoscaleSeats;
+        // These cases cover the Password Manager rules; the Privileged Controls guardrails have their own tests.
+        organization.UsePam = false;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
@@ -1489,14 +1491,22 @@ public class OrganizationServiceTests
     }
 
     [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually), BitAutoData]
-    public async Task AdjustSeatsAsync_FlagOff_DecreaseBelowPamSeats_Succeeds(
+    public async Task AdjustSeatsAsync_FlagOff_DecreaseBelowPamSeats_ThrowsWithContactSalesMessage(
         Organization organization, SutProvider<OrganizationService> sutProvider)
     {
         SetUpPrivilegedControlsOrganization(organization, sutProvider, pamBillingSupport: false);
 
-        await sutProvider.Sut.AdjustSeatsAsync(organization.Id, -11);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AdjustSeatsAsync(organization.Id, -11));
 
-        Assert.Equal((short)19, organization.Seats);
+        Assert.Equal(
+            "You cannot have more Privileged Controls seats than Password Manager seats. Contact sales to change your Privileged Controls seats.",
+            exception.Message);
+        Assert.Equal((short)30, organization.Seats);
+        await sutProvider.GetDependency<IStripePaymentService>().DidNotReceiveWithAnyArgs()
+            .AdjustSeatsAsync(default, default, default);
+        await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().DidNotReceiveWithAnyArgs()
+            .Run(default, default);
     }
 
     [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually), BitAutoData]
@@ -1567,15 +1577,19 @@ public class OrganizationServiceTests
     }
 
     [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually), BitAutoData]
-    public async Task UpdateSubscription_FlagOff_PmLimitBelowPamLimit_Succeeds(
+    public async Task UpdateSubscription_FlagOff_PmLimitBelowPamLimit_ThrowsWithContactSalesMessage(
         Organization organization, SutProvider<OrganizationService> sutProvider)
     {
         SetUpPrivilegedControlsOrganization(organization, sutProvider, pamBillingSupport: false);
         organization.MaxAutoscalePamSeats = 40;
 
-        await sutProvider.Sut.UpdateSubscription(organization.Id, 0, 35);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateSubscription(organization.Id, 0, 35));
 
-        Assert.Equal(35, organization.MaxAutoscaleSeats);
+        Assert.Equal(
+            "You cannot set a Password Manager autoscale limit lower than the Privileged Controls autoscale limit. Contact sales to change your Privileged Controls autoscale limit.",
+            exception.Message);
+        Assert.Null(organization.MaxAutoscaleSeats);
     }
 
     private static void SetUpPrivilegedControlsOrganization(

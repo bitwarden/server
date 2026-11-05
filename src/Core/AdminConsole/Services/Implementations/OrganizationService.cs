@@ -150,12 +150,14 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Cannot set max seat autoscaling below seat count.");
         }
 
+        // Runs whatever the flag: sales provisions Privileged Controls while self-serve is off.
         if (organization.UsePam &&
-            _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support) &&
             !BillingExtensions.PrivilegedControlsAutoscaleLimitFits(organization.MaxAutoscalePamSeats, maxAutoscaleSeats))
         {
-            throw new BadRequestException(
-                "You cannot set a Password Manager autoscale limit lower than the Privileged Controls autoscale limit.");
+            // With self-serve off, Owners cannot change the Privileged Controls autoscale limit themselves.
+            throw new BadRequestException(_featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support)
+                ? "You cannot set a Password Manager autoscale limit lower than the Privileged Controls autoscale limit."
+                : "You cannot set a Password Manager autoscale limit lower than the Privileged Controls autoscale limit. Contact sales to change your Privileged Controls autoscale limit.");
         }
 
         if (seatAdjustment != 0)
@@ -283,13 +285,17 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
         }
 
-        // Only decreases are checked; adding seats is never blocked by this rule.
+        // Only decreases are checked; adding seats is never blocked by this rule. Runs whatever the flag:
+        // sales provisions Privileged Controls while self-serve is off.
         if (organization.UsePam &&
             seatAdjustment < 0 &&
-            newSeatTotal < organization.PamSeats &&
-            _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support))
+            newSeatTotal < organization.PamSeats)
         {
-            throw new BadRequestException(new PrivilegedControlsSeatsMustNotExceedPasswordManagerSeatsError().Message);
+            // With self-serve off, Owners cannot change their Privileged Controls seats themselves.
+            var message = new PrivilegedControlsSeatsMustNotExceedPasswordManagerSeatsError().Message;
+            throw new BadRequestException(_featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support)
+                ? message
+                : $"{message} Contact sales to change your Privileged Controls seats.");
         }
 
         _logger.LogInformation("{Method}: Invoking _paymentService.AdjustSeatsAsync with {AdditionalSeats} additional seats for Organization ({OrganizationID})",
