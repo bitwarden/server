@@ -458,6 +458,19 @@ instead.
 </details>
 
 <details>
+<summary>Seeding PAM Access Connector State</summary>
+
+The `OrganizationAccessConnectorScene`, `PamTargetSystemScene`, `PamTargetSystemSealScene`,
+`PamAccessConnectorTargetAssignmentScene`, `PamRotationConfigScene`, `PamRotationConfigUpdateScene`, and
+`PamRotationJobScene` scenes (and the `PamRotationJobStateQuery`, `PamAccessConnectorStateQuery`, and
+`OrganizationCipherQuery` queries) seed and inspect PAM rotation state. The seeded organization needs `usePam`
+(set it through `overrides`). Seeding does not need the Api, but an access connector under test talks to the Api's
+access connector routes, which only exist when the Api runs with feature flag `pm-42354-rotation-daemon` on.
+Destroying the play also deletes the access connectors' `ApiKey` rows.
+
+</details>
+
+<details>
 <summary>Cloud-only and Self-hosted-only Scenes</summary>
 
 Scenes refuse to seed data that cannot exist on the instance type the Seeder API runs as
