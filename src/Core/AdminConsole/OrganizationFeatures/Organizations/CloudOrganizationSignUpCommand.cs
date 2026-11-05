@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Commands;
@@ -23,6 +24,7 @@ using Bit.Core.Models.StaticStore;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bitwarden.Server.Sdk.Features;
 using OrganizationPlan = Bit.Core.Models.StaticStore.Plan;
@@ -53,7 +55,8 @@ public class CloudOrganizationSignUpCommand(
     IPolicyRequirementQuery policyRequirementQuery,
     ICreateOrganizationSubscriptionCommand createOrganizationSubscriptionCommand,
     IGlobalSettings globalSettings,
-    IFeatureService featureService
+    IFeatureService featureService,
+    IDataProtectorTokenFactory<SalesAssistedRegistrationTokenable> salesAssistedRegistrationTokenDataFactory
 ) : ICloudOrganizationSignUpCommand
 {
     public async Task<SignUpOrganizationResponse> SignUpOrganizationAsync(OrganizationSignup signup)
@@ -255,15 +258,21 @@ public class CloudOrganizationSignUpCommand(
     }
 
     /// <summary>
-    /// A sign-up from a sales invitation can always include Privileged Controls, because sales sells it at GA.
-    /// Any other sign-up is self-serve and needs <see cref="FeatureFlagKeys.PM39883_Pam_Billing_Support"/> on.
+    /// A verified sign-up from a sales invitation can always include Privileged Controls, because sales sells it at
+    /// GA. Any other sign-up is self-serve and needs <see cref="FeatureFlagKeys.PM39883_Pam_Billing_Support"/> on.
     /// </summary>
-    /// <remarks>
-    /// The initiation path is supplied by the client and is not verified against the sales invitation.
-    /// </remarks>
     private bool CanSignUpWithPrivilegedControls(OrganizationSignup signup) =>
-        signup.InitiationPath == TrialInitiationConstants.SalesAssistedTrialInitiationPath ||
+        IsVerifiedSalesAssistedSignUp(signup) ||
         featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support);
+
+    /// <summary>
+    /// A sales-assisted sign-up must present the sales invitation token issued to the owner's email, still unexpired.
+    /// </summary>
+    private bool IsVerifiedSalesAssistedSignUp(OrganizationSignup signup) =>
+        signup.InitiationPath == TrialInitiationConstants.SalesAssistedTrialInitiationPath &&
+        !string.IsNullOrWhiteSpace(signup.SalesAssistedToken) &&
+        SalesAssistedRegistrationTokenable.ValidateSalesAssistedRegistrationToken(
+            salesAssistedRegistrationTokenDataFactory, signup.SalesAssistedToken, signup.Owner.Email) == null;
 
     private OrganizationSubscriptionCreation BuildPrivilegedControlsPurchase(
         OrganizationSale sale, OrganizationSignup signup)

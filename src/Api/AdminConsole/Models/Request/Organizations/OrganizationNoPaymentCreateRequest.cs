@@ -84,6 +84,12 @@ public class OrganizationNoPaymentCreateRequest
 
     public string InitiationPath { get; set; }
 
+    /// <summary>
+    /// The sales invitation token from a sales-assisted trial link. Required for a sales-assisted sign-up to include
+    /// Privileged Controls while self-serve Privileged Controls is off.
+    /// </summary>
+    public string SalesAssistedToken { get; set; }
+
     [Range(0, 30)]
     public int? TrialLength { get; set; }
 
@@ -121,6 +127,7 @@ public class OrganizationNoPaymentCreateRequest
                 BillingAddressCountry = BillingAddressCountry,
             },
             InitiationPath = InitiationPath,
+            SalesAssistedToken = SalesAssistedToken,
             TrialLength = TrialLength,
             Keys = Keys.ToPublicKeyEncryptionKeyPairData()
         };

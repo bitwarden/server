@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Commands;
@@ -20,6 +21,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Core.Test.Billing.Mocks;
+using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bitwarden.Server.Sdk.Features;
@@ -771,23 +773,111 @@ public class CloudOrganizationSignUpCommandTests
     }
 
     [Theory]
-    [BitAutoData(false, TrialInitiationConstants.SalesAssistedTrialInitiationPath)]
-    [BitAutoData(true, TrialInitiationConstants.SalesAssistedTrialInitiationPath)]
-    [BitAutoData(true, "Password Manager trial from marketing website")]
-    [BitAutoData(true, null)]
-    public async Task SignUpAsync_PrivilegedControls_SalesAssistedOrFlagOn_Provisions(
-        bool pamBillingSupport, string initiationPath,
+    [BitAutoData(TrialInitiationConstants.SalesAssistedTrialInitiationPath)]
+    [BitAutoData("Password Manager trial from marketing website")]
+    [BitAutoData((string?)null)]
+    public async Task SignUpAsync_PrivilegedControls_FlagOn_ProvisionsWithoutToken(
+        string initiationPath,
         OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
     {
-        ArrangePrivilegedControlsSignup(signup, sutProvider, pamSeats: 6, pamBillingSupport: pamBillingSupport);
+        ArrangePrivilegedControlsSignup(signup, sutProvider, pamSeats: 6, pamBillingSupport: true);
         signup.InitiationPath = initiationPath;
+        signup.SalesAssistedToken = null;
 
         await sutProvider.Sut.SignUpOrganizationAsync(signup);
 
-        await sutProvider.GetDependency<ICreateOrganizationSubscriptionCommand>().Received(1).Run(
-            Arg.Any<Organization>(),
-            Arg.Is<OrganizationSubscriptionCreation>(c => c.PrivilegedControls != null && c.PrivilegedControls.Seats == 6));
-        await sutProvider.GetDependency<IOrganizationBillingService>().DidNotReceive().Finalize(Arg.Any<OrganizationSale>());
+        await AssertPrivilegedControlsProvisionedAsync(sutProvider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SignUpAsync_PrivilegedControls_SalesAssistedWithValidToken_FlagOff_Provisions(
+        OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        ArrangePrivilegedControlsSignup(signup, sutProvider, pamSeats: 6, pamBillingSupport: false);
+        signup.InitiationPath = TrialInitiationConstants.SalesAssistedTrialInitiationPath;
+        signup.SalesAssistedToken = "sales-assisted-token";
+        // The token's email matches the authenticated owner whatever its case.
+        ArrangeSalesAssistedToken(sutProvider, signup.SalesAssistedToken,
+            SalesAssistedTokenable(signup.Owner.Email.ToUpperInvariant()));
+
+        await sutProvider.Sut.SignUpOrganizationAsync(signup);
+
+        await AssertPrivilegedControlsProvisionedAsync(sutProvider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SignUpAsync_PrivilegedControls_SalesAssistedWithoutToken_FlagOff_IgnoresPrivilegedControls(
+        OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        ArrangePrivilegedControlsSignup(signup, sutProvider, pamSeats: 11, pamBillingSupport: false);
+        signup.InitiationPath = TrialInitiationConstants.SalesAssistedTrialInitiationPath;
+        signup.SalesAssistedToken = null;
+
+        await sutProvider.Sut.SignUpOrganizationAsync(signup);
+
+        await AssertPrivilegedControlsIgnoredAsync(sutProvider);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<SalesAssistedRegistrationTokenable>>()
+            .DidNotReceiveWithAnyArgs().TryUnprotect(default!, out _);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SignUpAsync_PrivilegedControls_SalesAssistedTokenForAnotherEmail_FlagOff_IgnoresPrivilegedControls(
+        OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        ArrangePrivilegedControlsSignup(signup, sutProvider, pamSeats: 11, pamBillingSupport: false);
+        signup.InitiationPath = TrialInitiationConstants.SalesAssistedTrialInitiationPath;
+        signup.SalesAssistedToken = "sales-assisted-token";
+        ArrangeSalesAssistedToken(sutProvider, signup.SalesAssistedToken,
+            SalesAssistedTokenable("someone-else@example.com"));
+
+        await sutProvider.Sut.SignUpOrganizationAsync(signup);
+
+        await AssertPrivilegedControlsIgnoredAsync(sutProvider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SignUpAsync_PrivilegedControls_SalesAssistedExpiredToken_FlagOff_IgnoresPrivilegedControls(
+        OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        ArrangePrivilegedControlsSignup(signup, sutProvider, pamSeats: 11, pamBillingSupport: false);
+        signup.InitiationPath = TrialInitiationConstants.SalesAssistedTrialInitiationPath;
+        signup.SalesAssistedToken = "sales-assisted-token";
+        ArrangeSalesAssistedToken(sutProvider, signup.SalesAssistedToken,
+            SalesAssistedTokenable(signup.Owner.Email, expirationDate: DateTime.UtcNow.AddDays(-1)));
+
+        await sutProvider.Sut.SignUpOrganizationAsync(signup);
+
+        await AssertPrivilegedControlsIgnoredAsync(sutProvider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SignUpAsync_PrivilegedControls_SalesAssistedTokenUnreadable_FlagOff_IgnoresPrivilegedControls(
+        OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        ArrangePrivilegedControlsSignup(signup, sutProvider, pamSeats: 11, pamBillingSupport: false);
+        signup.InitiationPath = TrialInitiationConstants.SalesAssistedTrialInitiationPath;
+        signup.SalesAssistedToken = "tampered-token";
+        sutProvider.GetDependency<IDataProtectorTokenFactory<SalesAssistedRegistrationTokenable>>()
+            .TryUnprotect(signup.SalesAssistedToken, out Arg.Any<SalesAssistedRegistrationTokenable>())
+            .Returns(false);
+
+        await sutProvider.Sut.SignUpOrganizationAsync(signup);
+
+        await AssertPrivilegedControlsIgnoredAsync(sutProvider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SignUpAsync_PrivilegedControls_ValidTokenOnSelfServePath_FlagOff_IgnoresPrivilegedControls(
+        OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        ArrangePrivilegedControlsSignup(signup, sutProvider, pamSeats: 11, pamBillingSupport: false);
+        signup.InitiationPath = "Password Manager trial from marketing website";
+        signup.SalesAssistedToken = "sales-assisted-token";
+        ArrangeSalesAssistedToken(sutProvider, signup.SalesAssistedToken, SalesAssistedTokenable(signup.Owner.Email));
+
+        await sutProvider.Sut.SignUpOrganizationAsync(signup);
+
+        await AssertPrivilegedControlsIgnoredAsync(sutProvider);
     }
 
     [Theory]
@@ -800,15 +890,48 @@ public class CloudOrganizationSignUpCommandTests
         // Seats above the Password Manager seats would fail validation if the request were honored.
         ArrangePrivilegedControlsSignup(signup, sutProvider, pamSeats: 11, pamBillingSupport: false);
         signup.InitiationPath = initiationPath;
+        signup.SalesAssistedToken = null;
 
         await sutProvider.Sut.SignUpOrganizationAsync(signup);
 
+        await AssertPrivilegedControlsIgnoredAsync(sutProvider);
+    }
+
+    private static async Task AssertPrivilegedControlsProvisionedAsync(
+        SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        await sutProvider.GetDependency<ICreateOrganizationSubscriptionCommand>().Received(1).Run(
+            Arg.Any<Organization>(),
+            Arg.Is<OrganizationSubscriptionCreation>(c => c.PrivilegedControls != null && c.PrivilegedControls.Seats == 6));
+        await sutProvider.GetDependency<IOrganizationBillingService>().DidNotReceive().Finalize(Arg.Any<OrganizationSale>());
+    }
+
+    // Callers ask for 11 seats, above the Password Manager seats, which would fail validation if the request were honored.
+    private static async Task AssertPrivilegedControlsIgnoredAsync(
+        SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).CreateAsync(
             Arg.Is<Organization>(o => o.PamSeats == null && !o.UsePam));
         await sutProvider.GetDependency<IOrganizationBillingService>().Received(1).Finalize(Arg.Any<OrganizationSale>());
         await sutProvider.GetDependency<ICreateOrganizationSubscriptionCommand>().DidNotReceiveWithAnyArgs()
             .Run(default!, default!);
     }
+
+    private static SalesAssistedRegistrationTokenable SalesAssistedTokenable(
+        string email, DateTime? expirationDate = null) =>
+        new(email, name: null) { ExpirationDate = expirationDate ?? DateTime.UtcNow.AddDays(5) };
+
+    private static void ArrangeSalesAssistedToken(
+        SutProvider<CloudOrganizationSignUpCommand> sutProvider,
+        string token,
+        SalesAssistedRegistrationTokenable tokenable) =>
+        sutProvider.GetDependency<IDataProtectorTokenFactory<SalesAssistedRegistrationTokenable>>()
+            .TryUnprotect(token, out Arg.Any<SalesAssistedRegistrationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = tokenable;
+                return true;
+            });
 
     private static void ArrangePrivilegedControlsSignup(
         OrganizationSignup signup,

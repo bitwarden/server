@@ -207,6 +207,28 @@ public class OrganizationNoPaymentCreateRequestTests
     }
 
     [Fact]
+    public void ToOrganizationSignup_SalesAssistedToken_IsMapped()
+    {
+        var model = new OrganizationNoPaymentCreateRequest
+        {
+            Name = "Test Org",
+            BillingEmail = "test@example.com",
+            Key = "test-key",
+            UseSecretsManager = false,
+            Keys = new OrganizationKeysRequestModel
+            {
+                PublicKey = "test-public-key",
+                EncryptedPrivateKey = "test-encrypted-private-key"
+            },
+            SalesAssistedToken = "sales-assisted-token"
+        };
+
+        var signup = model.ToOrganizationSignup(new Bit.Core.Entities.User());
+
+        Assert.Equal("sales-assisted-token", signup.SalesAssistedToken);
+    }
+
+    [Fact]
     public void Validate_PamSeats_BelowRange_FailsValidation()
     {
         var model = new OrganizationNoPaymentCreateRequest
