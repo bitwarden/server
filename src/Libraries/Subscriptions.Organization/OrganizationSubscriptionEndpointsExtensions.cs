@@ -1,6 +1,5 @@
 ﻿using Bit.Core;
 using Bit.Core.Auth.Identity;
-using Bit.Invoicing;
 using Bit.OrganizationAuthorization;
 using Bit.Subscriptions.Organization.Filters;
 using Bit.Subscriptions.Organization.Handlers;
@@ -30,7 +29,6 @@ public static class OrganizationSubscriptionEndpointsExtensions
         group.MapGet("preview",
                 async ([FromRoute] Guid organizationId, [FromServices] GetOrganizationSubscriptionPreviewHandler handler) => await handler.HandleAsync(organizationId))
             .RequireAuthorization(new AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>())
-            .RequireFeature(InvoicingFeatureFlags.PM36631_PreviewDrivenCart)
             .WithName("GetOrganizationSubscriptionPreview")
             .WithDescription("Previews the organization's upcoming subscription renewal.");
 
@@ -38,14 +36,12 @@ public static class OrganizationSubscriptionEndpointsExtensions
                 async ([FromRoute] Guid organizationId, [FromBody] PreviewOrganizationPlanChangeRequest request,
                         [FromServices] PreviewOrganizationPlanChangeHandler handler) => await handler.HandleAsync(organizationId, request))
             .RequireAuthorization(new AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>())
-            .RequireFeature(InvoicingFeatureFlags.PM36631_PreviewDrivenCart)
             .WithName("PreviewOrganizationPlanChange")
             .WithDescription("Previews the cost of changing the organization's plan.");
 
         group.MapPost("restart/preview",
                 async ([FromRoute] Guid organizationId, [FromBody] PreviewOrganizationRestartRequest request,
                         [FromServices] PreviewOrganizationRestartHandler handler) => await handler.HandleAsync(organizationId, request))
-            .RequireFeature(InvoicingFeatureFlags.PM36631_PreviewDrivenCart)
             .WithName("PreviewOrganizationRestart")
             .WithDescription("Previews the cost of restarting the organization's canceled subscription.");
 
