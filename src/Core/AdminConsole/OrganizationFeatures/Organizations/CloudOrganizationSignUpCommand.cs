@@ -110,8 +110,8 @@ public class CloudOrganizationSignUpCommand(
         {
             var sale = OrganizationSale.From(organization, signup);
 
-            // PAM purchase provision through the new subscription command (flagged);
-            // every other paid signup stays on the legacy Finalize until that path is migrated.
+            // Privileged Controls purchases (allowed by a verified sales invitation or the flag) provision through
+            // the new subscription command; every other paid signup stays on the legacy Finalize until that path is migrated.
             if (usePrivilegedControls)
             {
                 var purchase = BuildPrivilegedControlsPurchase(sale, signup);

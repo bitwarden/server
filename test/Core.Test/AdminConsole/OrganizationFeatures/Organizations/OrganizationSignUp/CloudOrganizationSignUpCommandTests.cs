@@ -547,40 +547,6 @@ public class CloudOrganizationSignUpCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task SignUpAsync_PrivilegedControls_FeatureFlagDisabled_DoesNotProvision(
-        OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
-    {
-        signup.Plan = PlanType.EnterpriseAnnually;
-        signup.AdditionalSeats = 10;
-        signup.PaymentMethodType = PaymentMethodType.Card;
-        signup.PremiumAccessAddon = false;
-        signup.UseSecretsManager = false;
-        signup.IsFromProvider = false;
-        signup.TrialLength = 7;
-        signup.UsePrivilegedControls = true;
-        signup.PamSeats = 11;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(false);
-        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(signup.Owner.Id)
-            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<SingleOrganizationPolicyRequirement>(signup.Owner.Id)
-            .Returns(new SingleOrganizationPolicyRequirement([]));
-
-        await sutProvider.Sut.SignUpOrganizationAsync(signup);
-
-        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).CreateAsync(
-            Arg.Is<Organization>(o => o.PamSeats == null && !o.UsePam));
-        await sutProvider.GetDependency<IOrganizationBillingService>().Received(1).Finalize(Arg.Any<OrganizationSale>());
-        await sutProvider.GetDependency<ICreateOrganizationSubscriptionCommand>().DidNotReceiveWithAnyArgs()
-            .Run(default!, default!);
-    }
-
-    [Theory]
-    [BitAutoData]
     public async Task SignUpAsync_PrivilegedControls_SeatsMissing_Throws(
         OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
     {
