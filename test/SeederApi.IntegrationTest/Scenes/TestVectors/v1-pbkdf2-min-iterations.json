@@ -1,0 +1,147 @@
+{
+  "account": {
+    "accountCryptographicState": {
+      "V1": {
+        "private_key": "2.0ANhcyn2dgW3HeE8fpUaAA==|ok/xEVzDJm8rzlPek+CUMDwpe3QOXlsoU/qRK1tNwBthtQqg12JDMW1wcpoyj6iY5U2psjDrH8dFaG7kFY0mP7W7Ll0VPpch9f0qrcvJsImi4wtzbZiRX8hMNBrUMBgTEiV5Y74jfvrD4XgaA0CWstBipViuD9jHdx8fIQJa/MEJmMXhq5tUFBD6g6sPaaZT50hxEARW1KWW2J1qvkfibwJJoIgLTYi4vMpfB/aH3P+S1XNorg8NR7uTrRPePxEk0YoNXb+QrGXihhZmOTjwQWy3dyeUk2j8Ju2Y54PkY4IUQsKFtpj6EgDJ5sV3cUQin3ixShA/QCyQZ4y3p9onpqOsqWqVEPp41i+eGPhfX7h7QgZiLhH3ixqqySxXdn1ifyM82A8RuZrataZXeuiX0DsApWbFBR4km5X/aJ27OiZwg90vn4CPetVaqsAqthcz7PgBu0mRiuHaVY2KTliJTT6YWSKdPxrEhgxruDbdyxf/I46whXutOlGMUHtSiDzmkkFsR9ffNNzkJJiiE8n7fuGEchjnl1HqoQ+Hy/928vxGfnsDdwFsDZnKByvUgFTZRUItCLdM+7+j+4vFJnqT6QPSGYHbV6RF/ZXOex06alPscHPh7CU/l+d5jqrR0IYWU6s1t4Hf8DdBxr3EdbDMJRGOC0h8l14Ew48wZk4aIALsHLG1CXsMBr9y9k6v8KLVkLZCq95l2DzX8ZW+xSIOpFN/aPPKmTfHi/uvKhHc0uW5ghy2VfCIIl8raISbBLGNonc+IcbLIYdDbCCV8pEzkAgR3gAYV7lAv0NXAxqwzYWej7UKCbv1k2AdetUWxpmmLDK76o7KCchOVfj/knkexcZ+sUpcUzxtYubDMWybfmr50b9cy5X/J3TWRGT76zK36i7ywFS3J2oC98u5gaS7H4bOrueGm/K/4BTf/ND6vRpEYAO0lAvxuVfxVzbLFYmsfVScisKGgfV8VMik2y9xU3hz4rHBAD7HNRgDkejbBcfy3T1ip8JXNlZbL/1h5fR2ojVqoDy209z9DpzEfiO6an0GIaTI2zzCSqByjWJlECEFQ98MoxDfvLd8FaSl8vMkw3KzVBBO30Iwq6C925CJw0iAqcWnuHKqhDLhMpQ+eoxlmdW6cDIdFEI3EQlQnazCDswozCeRt6Dz50j7J4gLZ26YlDIW6ap2FnH2oGc75PXuuvUC8zsWQXrhc7dqKWg6gmvhaxrCxQG+a+GL0LT+XV+Ooo1ZcE0gEkikpayR6+CV4dGA3HAhmg05XSfWiRaItUcEcecHoEBe9bQKnnAI6D16iEfIB8AVzPw9k7tlU+0qdMI2P7tQ268qGnbH9c3aQzecFcszzLA+HtFug0n03ELyL28CsAuVESMFO8/l5T9+v6fDnMRXGvUbJaFnlhoCzkNGdLOzuYGNuRwbYz57vYqr+6IQvi+NRsDs1k5XlDompOwbwxYWI1dVnpkvyUOm0bTkDXlcc7nEObUv7JfeWFotHCUO3knD6iBrU5VgPTfMNiRbSGDrlcGzO6JdA763M2/8mEkeKahLnr5+Iy1tatx4GvQ06keJjSCu7wilQLLteVZoVvgHJC3du+yTiN0dhMTUT/GTA+ZXplSZNAbNRvczkFQkbaTjg3y0ttV7EUY=|1xOPDlk2Vjdf78N/UDfSr8LkYZWt93ZXmOHnuXXuWuI="
+      }
+    },
+    "email": "v1-pbkdf2-min-iterations@test.bitwarden.com",
+    "kdf": {
+      "pBKDF2": {
+        "iterations": 5000
+      }
+    },
+    "password": "password-v1-pbkdf2-min-iterations",
+    "userId": "bc010200-0000-4000-8000-000000000000"
+  },
+  "description": "V1 account at the minimum allowed PBKDF2 iteration count, guarding the KDF bounds check. Single keyless cipher.",
+  "name": "v1-pbkdf2-min-iterations",
+  "rawCryptographicState": {
+    "fingerprint": "spiritism-vending-stellar-marsupial-trouble",
+    "privateKey": "MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQDnmB8eCvfd12QNBnBaGY/KvZ+BZQmDRIBGHZrQkcOzcPmLdOl/EC50HfEZsaRg4OoYYG+GAaX5bPcdksYQvoZKwOAmp7qqtWDDiPHcvvZQ0QQ/DHDqUfvLnswP+LF3HpEuR7+vLvF+jShgfutjqTOLJe63WuMZbkUnncI4J2RD+qcCtQezT8u+Au5kavZdKb4dszMr3Tc4AHbkWqJVyDmNMgTKRkIxuv532PgxttHES1wRrq3NxyxOArxJ4codGv+R/lNaRG5HeiQ6tWTFnnlfgVU7qmywMRQZ59LQ/2UiPyGKguA7hBVc3YcHXixnsiVjSY4fy+GB5c3xaoYQjcqdAgMBAAECggEBAJ8YTIAZ7s6x8aRVAQeUOch/3TxJiXBotWn1Wm3fRL5XZMZdiS3lktPn4cHR2+dFeutGDDbVmQwww83ID1JfX+eoehNz8/LjaNbKk8QeVx2LiMw7IrKFoWDu9KYgJOF82SUe2tpgeDuEgvFPHys2iBcV9th0kj/dFZqycEKdJO7gygXLOBsBsafPDNp5ZqzqiD+khF1leZEXUDzQ0TOaSw3Z7ij0PFXXvPC5FGfBjAFokErb9iUk2tqEriRBIKsoa1W2EjG19g/uE4STtOIXs/tDQ7PSnNJ8GsWThlFuD7N3oKJuSKjdRUECLMMA+zy0lCNoRtyJsuptRIwRfW011u0CgYEA+cyIRMh/Wbv3gN/vtd8IACnn7owSz31JJG1rk/feCdnkcMVdZOqx6bl9CJQs+kKwQBHm/FyrZS6rrQnK+GNvRUJIScfUFJr7tBswIRSh3pDbFqo9o0WNLO9if8LJEQTgZpHlkDkvuQdzrm9thJvMaw4zdzowPPOzLcls4jS6C+cCgYEA7VfmBnONYkEW8ExFhZcMNoWyzktLSiQCQONAJzI932MfHDdvbW85saK09ApLLNh1vEZPiBXSWfqMDqXh8YEHm93UnlYogBRKJoc1MaT2c6heRh/kS+GIvnufM/3rQ4rCjTgonQi0RoIfNEQXoKaRe0K+7eZzuQxFnLJzTXJaBNsCgYEAnPu+v4tJDTmlZ2ZUHPXW71NmoHGC+MaBitUBAHKLJaG7gGtoMB2WRY3+V7/XLEdwwDL/+KS8SdA0r4AyADttGBd5mnRsga6MdDmJ26A9wcNDDFFcfxkciZq/Sg89kOaBp7QUkrh9l0hpmLwKFYZbxwObsFfvLL7yYdnuBZKhQQ0CgYEAyK7H6rCN3YRX1vtG1XwwcXF/DPuRP7FOznrYZcwPkPEI/xzIdOnVCKQhCTAi/FpSws1YtiJtaHN3NXOBpmiJfHuHKhKD0DhXslgk3EM1t/mnLPgOWzLqItX4eUe8Q7HyauIPRSh09iFULSdeKxJsdKKtOg7fzpnXynUBFX0ZLH0CgYAEjLaFGFY+GEjzuwUzyhQ1ZaFJshRrVdhKijZoxYtXmJYMvoZ5QuislG0POY3aYrozhuIH7WirYHwuD+5f3szm58CTnKhXAp1PVDpKxlVDNYgbgA7uhvV4esjyL6febGFez4DzuBvdUEh07ID3oE19tg71bPBpZYKf3OJ4Zh0BiQ==",
+    "publicKey": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA55gfHgr33ddkDQZwWhmPyr2fgWUJg0SARh2a0JHDs3D5i3TpfxAudB3xGbGkYODqGGBvhgGl+Wz3HZLGEL6GSsDgJqe6qrVgw4jx3L72UNEEPwxw6lH7y57MD/ixdx6RLke/ry7xfo0oYH7rY6kziyXut1rjGW5FJ53COCdkQ/qnArUHs0/LvgLuZGr2XSm+HbMzK903OAB25FqiVcg5jTIEykZCMbr+d9j4MbbRxEtcEa6tzccsTgK8SeHKHRr/kf5TWkRuR3okOrVkxZ55X4FVO6pssDEUGefS0P9lIj8hioLgO4QVXN2HB14sZ7IlY0mOH8vhgeXN8WqGEI3KnQIDAQAB",
+    "signingKey": null,
+    "signingKeyId": null,
+    "signingKeyThumbprint": null,
+    "userKey": "49LghK4AVIybWSZFikb4nAn/BofxxBIoXv83EJWOP4taVMbR5XCfrbF2m/eUmfZdeFW7VybPYSGT/bmv5eeMBg==",
+    "userKeyId": null,
+    "userKeyThumbprint": "159aacbf233a41eb576842974cbf0215c1056a707981f4509dee3327a94deb50",
+    "verifyingKey": null
+  },
+  "unlockMethods": [
+    {
+      "masterPasswordUnlock": {
+        "master_password_unlock": {
+          "kdf": {
+            "pBKDF2": {
+              "iterations": 5000
+            }
+          },
+          "masterKeyWrappedUserKey": "2.tl+DrZdn+fVyBVu+0c/Gvg==|9ivOLNtKbvirNaUnkGsEtysp9de53ibTSu88HLkDOGLig3t8nhvK5JIqxSY1/ukcr2Y/Ly9OJ12tXUGjIlJ/PtIEIdYj3gZDwhAflPUwtW8=|FD5WuIvviib3yWYcI3slmqBSqMf38Z0CMwttPG1w5DY=",
+          "salt": "v1-pbkdf2-min-iterations@test.bitwarden.com"
+        },
+        "password": "password-v1-pbkdf2-min-iterations"
+      }
+    }
+  ],
+  "masterPasswordAuthenticationHash": "4HcwTg4bQKEbuINCJGMqrij1yipl63Ugu/RazH2y7Qw=",
+  "vault": {
+    "ciphers": [
+      {
+        "blobEncrypted": false,
+        "decrypted": {
+          "archivedDate": null,
+          "attachmentDecryptionFailures": [],
+          "attachments": [],
+          "bankAccount": null,
+          "card": null,
+          "collectionIds": [],
+          "creationDate": "2024-01-08T00:00:00Z",
+          "deletedDate": null,
+          "driversLicense": null,
+          "edit": true,
+          "favorite": false,
+          "fields": null,
+          "folderId": null,
+          "id": "bc020200-0000-4000-8000-000000000000",
+          "identity": null,
+          "key": null,
+          "localData": null,
+          "login": {
+            "autofillOnPageLoad": null,
+            "fido2Credentials": null,
+            "password": "keyless-password",
+            "passwordRevisionDate": null,
+            "totp": null,
+            "uris": null,
+            "username": "keyless@example.com"
+          },
+          "name": "Keyless Login",
+          "notes": "Encrypted directly under the user key",
+          "organizationId": null,
+          "organizationUseTotp": false,
+          "partial": false,
+          "passport": null,
+          "passwordHistory": null,
+          "permissions": null,
+          "reprompt": 0,
+          "revisionDate": "2024-06-15T12:30:00Z",
+          "secureNote": null,
+          "sshKey": null,
+          "type": 1,
+          "viewPassword": true
+        },
+        "encrypted": {
+          "archivedDate": null,
+          "attachments": null,
+          "bankAccount": null,
+          "card": null,
+          "collectionIds": [],
+          "creationDate": "2024-01-08T00:00:00Z",
+          "data": null,
+          "deletedDate": null,
+          "driversLicense": null,
+          "edit": true,
+          "favorite": false,
+          "fields": null,
+          "folderId": null,
+          "id": "bc020200-0000-4000-8000-000000000000",
+          "identity": null,
+          "key": null,
+          "localData": null,
+          "login": {
+            "autofillOnPageLoad": null,
+            "fido2Credentials": null,
+            "password": "2.IFEcuiyU7YF5cKjHInZofQ==|ckG4/YAvWrD4UAlz7a6zknim1Pbz45a3q75RBZPPgPU=|v/FBD5NIDH9VNqoTB+gL/vKJ058JH0JQYHASCPPl8/w=",
+            "passwordRevisionDate": null,
+            "totp": null,
+            "uris": null,
+            "username": "2.N7tWl4oiypcYCgwnW3H/yQ==|XKhqk2dcoGi6Ig9yII1MpK2riOdLU+aXOEqrNxi1Z18=|lDtLkeRcbiri6IMQ8sQJ6tYmn0vIWuCDNU1anGpT87c="
+          },
+          "name": "2.MTL3lCwKtsx96jWfSXA6xg==|mNk9U7tXuvcGucSPLexoGw==|ARDxQW7rhVdD601OLz3E5quxkr384yNVnhq4S4pQGZM=",
+          "notes": "2.wK6f2/Cb/3yOVeVl3L3hiQ==|8qg0SI4DbyoJjMeppSR51I95/ULMB+RfVTBHZGYwAh+ojgRz9BqYUCo7WGgE0usU|UTvqywCB1adsvvYIO2bJLkAoRWHsWfU3i7OW7jk9OHw=",
+          "organizationId": null,
+          "organizationUseTotp": false,
+          "passport": null,
+          "passwordHistory": null,
+          "permissions": null,
+          "reprompt": 0,
+          "revisionDate": "2024-06-15T12:30:00Z",
+          "secureNote": null,
+          "sshKey": null,
+          "type": 1,
+          "viewPassword": true
+        },
+        "id": "bc020200-0000-4000-8000-000000000000",
+        "keys": {
+          "attachments": {},
+          "cipherKey": null,
+          "cipherKeyId": null
+        }
+      }
+    ],
+    "collections": [],
+    "folders": [],
+    "sends": []
+  }
+}
