@@ -44,7 +44,11 @@ public class ConfirmOrganizationInviteLinkValidator(
             ? null
             : await organizationRepository.GetByIdAsync(existingLink.OrganizationId);
 
-        var eligibilityError = InviteLinkRules.ValidateEligibility(existingLink, request.Code, existingOrganization, user);
+        var eligibilityError = inviteLinkValidationService.ValidateEligibility(
+            existingLink,
+            request.Code,
+            existingOrganization,
+            user);
         if (eligibilityError is not null)
         {
             return ToConfirmValidationError(eligibilityError);

@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+﻿using System.Globalization;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
@@ -18,12 +18,11 @@ using Bit.Core.Utilities;
 using Bit.Identity.IdentityServer;
 using Bit.Identity.IdentityServer.RequestValidators;
 using Bit.Identity.IntegrationTest.Grants;
+using Bit.IntegrationTestCommon;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.Constants;
 using Bit.Test.Common.Helpers;
-using Duende.IdentityModel;
-using Duende.IdentityServer.Models;
-using Duende.IdentityServer.Stores;
+using Duende.IdentityServer;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using Xunit;
@@ -301,7 +300,7 @@ public class IdentityServerSsoTests
     {
         // Arrange
         var challenge = new string('c', 50);
-        var factory = await CreateFactoryAsync(new SsoConfigurationData
+        var (factory, code) = await CreateFactoryAsync(new SsoConfigurationData
         {
             MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
         }, challenge);
@@ -333,7 +332,7 @@ public class IdentityServerSsoTests
         var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "scope", "api offline_access" },
-            { "client_id", "web" },
+            { "client_id", SsoAuthorizationCodeTestHelpers.ClientId },
             { "deviceType", "10" },
             { "deviceIdentifier", deviceIdentifier },
             { "deviceName", "firefox" },
@@ -341,9 +340,9 @@ public class IdentityServerSsoTests
             { "twoFactorProvider", "5" }, // RememberMe Provider
             { "twoFactorRemember", "0" },
             { "grant_type", "authorization_code" },
-            { "code", "test_code" },
+            { "code", code },
             { "code_verifier", challenge },
-            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+            { "redirect_uri", SsoAuthorizationCodeTestHelpers.RedirectUri }
         }));
 
         // Assert
@@ -393,7 +392,7 @@ public class IdentityServerSsoTests
         // create user permissions with the ManageResetPassword permission
         var permissionsWithManageResetPassword = new Permissions() { ManageResetPassword = true };
 
-        var factory = await CreateFactoryAsync(new SsoConfigurationData
+        var (factory, code) = await CreateFactoryAsync(new SsoConfigurationData
         {
             MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
         }, challenge, permissions: permissionsWithManageResetPassword);
@@ -402,7 +401,7 @@ public class IdentityServerSsoTests
         var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "scope", "api offline_access" },
-            { "client_id", "web" },
+            { "client_id", SsoAuthorizationCodeTestHelpers.ClientId },
             { "deviceType", "10" },
             { "deviceIdentifier", "test_id" },
             { "deviceName", "firefox" },
@@ -410,9 +409,9 @@ public class IdentityServerSsoTests
             { "twoFactorProvider", "5" }, // RememberMe Provider
             { "twoFactorRemember", "0" },
             { "grant_type", "authorization_code" },
-            { "code", "test_code" },
+            { "code", code },
             { "code_verifier", challenge },
-            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+            { "redirect_uri", SsoAuthorizationCodeTestHelpers.RedirectUri }
         }));
 
         // Assert
@@ -436,7 +435,7 @@ public class IdentityServerSsoTests
     {
         var challenge = new string('c', 50);
 
-        var factory = await CreateFactoryAsync(new SsoConfigurationData
+        var (factory, code) = await CreateFactoryAsync(new SsoConfigurationData
         {
             MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
         }, challenge);
@@ -475,7 +474,7 @@ public class IdentityServerSsoTests
         var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "scope", "api offline_access" },
-            { "client_id", "web" },
+            { "client_id", SsoAuthorizationCodeTestHelpers.ClientId },
             { "deviceType", "10" },
             { "deviceIdentifier", "test_id" },
             { "deviceName", "firefox" },
@@ -483,9 +482,9 @@ public class IdentityServerSsoTests
             { "twoFactorProvider", "5" }, // RememberMe Provider
             { "twoFactorRemember", "0" },
             { "grant_type", "authorization_code" },
-            { "code", "test_code" },
+            { "code", code },
             { "code_verifier", challenge },
-            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+            { "redirect_uri", SsoAuthorizationCodeTestHelpers.RedirectUri }
         }));
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
@@ -590,6 +589,61 @@ public class IdentityServerSsoTests
         Assert.Equal("invalid_grant", error);
     }
 
+    /// <summary>
+    /// The authorization code is persisted as a grant and read back by the token endpoint, as it is after a real
+    /// SSO login, and the exchange issues both an access token and a refresh token.
+    /// </summary>
+    [Fact]
+    public async Task SsoLogin_AuthorizationCodeFromGrantStore_ReturnsTokens()
+    {
+        // Arrange
+        var challenge = new string('c', 50);
+        var (factory, code) = await CreateFactoryAsync(new SsoConfigurationData
+        {
+            MemberDecryptionType = MemberDecryptionType.MasterPassword,
+        }, challenge);
+
+        var database = factory.GetDatabaseContext();
+        Assert.Single(await database.Grants
+            .Where(g => g.Type == IdentityServerConstants.PersistedGrantTypes.AuthorizationCode)
+            .ToListAsync());
+
+        // Act
+        var context = await PostAuthorizationCodeAsync(factory, code, challenge, includeDevice: true);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        AssertHelper.AssertJsonProperty(body.RootElement, "access_token", JsonValueKind.String);
+        AssertHelper.AssertJsonProperty(body.RootElement, "refresh_token", JsonValueKind.String);
+    }
+
+    /// <summary>
+    /// <see cref="AuthorizationCodeStore.RemoveAuthorizationCodeAsync"/> intentionally keeps a redeemed code until
+    /// it expires, so a client can redeem the same code again within its lifetime, for example after a two-factor
+    /// challenge.
+    /// </summary>
+    [Fact]
+    public async Task SsoLogin_SameAuthorizationCodeRedeemedTwice_BothSucceed()
+    {
+        // Arrange
+        var challenge = new string('c', 50);
+        var (factory, code) = await CreateFactoryAsync(new SsoConfigurationData
+        {
+            MemberDecryptionType = MemberDecryptionType.MasterPassword,
+        }, challenge);
+
+        // Act
+        var firstContext = await PostAuthorizationCodeAsync(factory, code, challenge, includeDevice: true);
+        var secondContext = await PostAuthorizationCodeAsync(factory, code, challenge, includeDevice: true);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status200OK, firstContext.Response.StatusCode);
+        Assert.Equal(StatusCodes.Status200OK, secondContext.Response.StatusCode);
+        using var secondBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(secondContext);
+        AssertHelper.AssertJsonProperty(secondBody.RootElement, "access_token", JsonValueKind.String);
+    }
+
     private static async Task<(IdentityApplicationFactory Factory, JsonElement LoginRoot)> SsoLoginAsync()
     {
         var (factory, loginContext) = await PostSsoLoginAsync(includeDevice: true);
@@ -602,33 +656,39 @@ public class IdentityServerSsoTests
         bool includeDevice)
     {
         var challenge = new string('c', 50);
-        var factory = await CreateFactoryAsync(new SsoConfigurationData
+        var (factory, code) = await CreateFactoryAsync(new SsoConfigurationData
         {
             MemberDecryptionType = MemberDecryptionType.MasterPassword,
         }, challenge);
 
+        var loginContext = await PostAuthorizationCodeAsync(factory, code, challenge, includeDevice);
+        return (factory, loginContext);
+    }
+
+    private static async Task<HttpContext> PostAuthorizationCodeAsync(IdentityApplicationFactory factory,
+        string code, string challenge, bool includeDevice)
+    {
         var form = new Dictionary<string, string>
         {
             { "scope", "api offline_access" },
-            { "client_id", "web" },
+            { "client_id", SsoAuthorizationCodeTestHelpers.ClientId },
             { "twoFactorToken", "TEST" },
             { "twoFactorProvider", "5" }, // RememberMe Provider
             { "twoFactorRemember", "0" },
             { "grant_type", "authorization_code" },
-            { "code", "test_code" },
+            { "code", code },
             { "code_verifier", challenge },
-            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+            { "redirect_uri", SsoAuthorizationCodeTestHelpers.RedirectUri }
         };
         if (includeDevice)
         {
-            form["deviceType"] = ((int)DeviceType.FirefoxBrowser).ToString();
+            form["deviceType"] = ((int)DeviceType.FirefoxBrowser).ToString(CultureInfo.InvariantCulture);
             form["deviceIdentifier"] = SsoDeviceIdentifier;
             form["deviceName"] = "firefox";
         }
 
         using var content = new FormUrlEncodedContent(form);
-        var loginContext = await factory.Server.PostAsync("/connect/token", content);
-        return (factory, loginContext);
+        return await factory.Server.PostAsync("/connect/token", content);
     }
 
     private static async Task<HttpContext> PostRefreshTokenAsync(IdentityApplicationFactory factory, string refreshToken)
@@ -653,7 +713,7 @@ public class IdentityServerSsoTests
         bool trustedDeviceEnabled = true)
     {
         var challenge = new string('c', 50);
-        var factory = await CreateFactoryAsync(new SsoConfigurationData
+        var (factory, code) = await CreateFactoryAsync(new SsoConfigurationData
         {
             MemberDecryptionType = memberDecryptionType,
             KeyConnectorUrl = keyConnectorUrl,
@@ -664,7 +724,7 @@ public class IdentityServerSsoTests
             new Dictionary<string, string>
             {
                 { "scope", "api offline_access" },
-                { "client_id", "web" },
+                { "client_id", SsoAuthorizationCodeTestHelpers.ClientId },
                 { "deviceType", "10" },
                 { "deviceIdentifier", "test_id" },
                 { "deviceName", "firefox" },
@@ -672,9 +732,9 @@ public class IdentityServerSsoTests
                 { "twoFactorProvider", "5" }, // RememberMe Provider
                 { "twoFactorRemember", "0" },
                 { "grant_type", "authorization_code" },
-                { "code", "test_code" },
+                { "code", code },
                 { "code_verifier", challenge },
-                { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+                { "redirect_uri", SsoAuthorizationCodeTestHelpers.RedirectUri }
             }));
 
         // If this fails, surface detailed error information to aid debugging
@@ -731,7 +791,11 @@ public class IdentityServerSsoTests
         return await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
     }
 
-    private static async Task<IdentityApplicationFactory> CreateFactoryAsync(
+    /// <summary>
+    /// Seeds an SSO user and organization, and stores an authorization code for them through the real code store.
+    /// </summary>
+    /// <returns>The factory, and the authorization code to redeem with <paramref name="challenge"/>.</returns>
+    private static async Task<(IdentityApplicationFactory Factory, string Code)> CreateFactoryAsync(
         SsoConfigurationData ssoConfigurationData,
         string challenge,
         bool trustedDeviceEnabled = true,
@@ -744,25 +808,6 @@ public class IdentityServerSsoTests
         {
             svc.Validate(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
                 .Returns(true);
-        });
-
-        var authorizationCode = new AuthorizationCode
-        {
-            ClientId = "web",
-            CreationTime = DateTime.UtcNow,
-            Lifetime = (int)TimeSpan.FromMinutes(5).TotalSeconds,
-            RedirectUri = "https://localhost:8080/sso-connector.html",
-            RequestedScopes = ["api", "offline_access"],
-            CodeChallenge = challenge.Sha256(),
-            CodeChallengeMethod = "plain",
-            Subject = null!, // Temporarily set it to null
-        };
-
-        factory.SubstituteService<IAuthorizationCodeStore>(service =>
-        {
-            // Return our pre-built authorization code regardless of handle representation
-            service.GetAuthorizationCodeAsync("test_code")
-                .Returns(authorizationCode);
         });
 
         var user = await factory.RegisterNewIdentityFactoryUserAsync(
@@ -811,20 +856,9 @@ public class IdentityServerSsoTests
             Data = JsonSerializer.Serialize(ssoConfigurationData, JsonHelpers.CamelCase),
         });
 
-        var subject = new ClaimsPrincipal(new ClaimsIdentity(new[]
-        {
-            new Claim(JwtClaimTypes.Subject, user.Id.ToString()), // Get real user id
-            new Claim(JwtClaimTypes.Name, TestEmail),
-            new Claim(JwtClaimTypes.IdentityProvider, "sso"),
-            new Claim("organizationId", organization.Id.ToString()),
-            new Claim(JwtClaimTypes.SessionId, "SOMETHING"),
-            new Claim(JwtClaimTypes.AuthenticationMethod, "external"),
-            new Claim(JwtClaimTypes.AuthenticationTime, new DateTimeOffset(DateTime.UtcNow.AddMinutes(-1)).ToUnixTimeSeconds().ToString())
-        }, "Duende.IdentityServer", JwtClaimTypes.Name, JwtClaimTypes.Role));
+        var code = await factory.StoreSsoAuthorizationCodeAsync(user.Id, TestEmail, organization.Id, challenge);
 
-        authorizationCode.Subject = subject;
-
-        return factory;
+        return (factory, code);
     }
 
     private static async Task UpdateUserAsync(IdentityApplicationFactory factory, Action<User> changeUser)

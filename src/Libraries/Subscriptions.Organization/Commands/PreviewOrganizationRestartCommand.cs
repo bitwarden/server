@@ -88,13 +88,21 @@ internal sealed class PreviewOrganizationRestartCommand(
             {
                 Address = address,
                 TaxIds = BillingAddressResolver.ResolveTaxIds(
-                    taxService, logger, request.BillingAddress.Country!, effectiveTaxId),
-                TaxExempt = previewWithoutCustomer ? customer!.TaxExempt : null
-            },
-            Discounts = previewWithoutCustomer && customer!.Discount?.Source?.CouponId is { } couponId
-                ? [new InvoiceDiscountOptions { Coupon = couponId }]
-                : null
+                    taxService, logger, request.BillingAddress.Country!, effectiveTaxId)
+            }
         };
+
+        // Stripe.net sends these as empty values when assigned null, which clears the customer's tax exempt status and coupon,
+        // so they are assigned only when the preview leaves the customer off.
+        if (previewWithoutCustomer)
+        {
+            options.CustomerDetails.TaxExempt = customer!.TaxExempt;
+
+            if (customer.Discount?.Source?.CouponId is { } couponId)
+            {
+                options.Discounts = [new InvoiceDiscountOptions { Coupon = couponId }];
+            }
+        }
 
         try
         {
