@@ -229,6 +229,16 @@ can then be billed again. An organization keeps that customer ID, so the scene r
 instead. An organization whose first charge failed (`card: "fails-on-charge"` with `skipTrial`) shows a blank
 billing page unless the `pm-36631-preview-driven-cart` flag is on.
 
+### Seeding PAM Access Connector State
+
+The `OrganizationAccessConnectorScene`, `PamTargetSystemScene`, `PamTargetSystemSealScene`,
+`PamAccessConnectorTargetAssignmentScene`, `PamRotationConfigScene`, `PamRotationConfigUpdateScene`, and
+`PamRotationJobScene` scenes (and the `PamRotationJobStateQuery`, `PamAccessConnectorStateQuery`, and
+`OrganizationCipherQuery` queries) seed and inspect PAM rotation state. The seeded organization needs `usePam`
+(set it through `overrides`). Seeding does not need the Api, but an access connector under test talks to the Api's
+access connector routes, which only exist when the Api runs with feature flag `pm-42354-rotation-daemon` on.
+Destroying the play also deletes the access connectors' `ApiKey` rows.
+
 ### Cloud-only and Self-hosted-only Scenes
 
 Scenes refuse to seed data that cannot exist on the instance type the Seeder API runs as

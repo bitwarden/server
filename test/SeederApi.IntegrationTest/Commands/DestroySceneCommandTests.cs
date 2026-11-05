@@ -1,9 +1,15 @@
 ﻿using AutoMapper;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
+using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Infrastructure.EntityFramework.Pam.Repositories;
 using Bit.Infrastructure.EntityFramework.Providers.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Infrastructure.EntityFramework.SecretsManager.Repositories;
+using Bit.Pam.Entities;
+using Bit.Pam.Enums;
 using Bit.SeederApi.Commands;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -124,6 +130,49 @@ public sealed class DestroySceneCommandTests : IDisposable
         }
     }
 
+    [Fact]
+    public async Task DestroyAsync_OrganizationWithAccessConnector_DeletesConnectorAndItsApiKey()
+    {
+        var playId = Guid.NewGuid().ToString();
+        var scopeFactory = _provider.GetRequiredService<IServiceScopeFactory>();
+        var mapper = _provider.GetRequiredService<IMapper>();
+
+        var organization = await new OrganizationRepository(scopeFactory, mapper,
+            _provider.GetRequiredService<ILogger<OrganizationRepository>>()).CreateAsync(new Organization
+            {
+                Name = "Destroy Org",
+                BillingEmail = "billing@bw.example",
+                Plan = "Enterprise (Annually)",
+            });
+        var playItem = PlayItem.Create(organization, playId);
+        playItem.SetNewId();
+        await new PlayItemRepository(scopeFactory, mapper).CreateAsync(playItem);
+
+        var apiKey = await new ApiKeyRepository(scopeFactory, mapper).CreateAsync(new ApiKey
+        {
+            ServiceAccountId = null,
+            Name = "PAM access connector",
+            Scope = "[\"api.pam.rotation\"]",
+            EncryptedPayload = "payload",
+            Key = "key",
+        });
+        var accessConnector = await new PamAccessConnectorRepository(scopeFactory, mapper).CreateAsync(
+            new PamAccessConnector
+            {
+                OrganizationId = organization.Id,
+                Name = "Connector",
+                ApiKeyId = apiKey.Id,
+                Status = PamAccessConnectorStatus.Enabled,
+            });
+
+        await BuildCommand(selfHosted: false).DestroyAsync(playId);
+
+        var db = _provider.GetRequiredService<DatabaseContext>();
+        Assert.False(db.Organizations.Any(o => o.Id == organization.Id));
+        Assert.False(db.PamAccessConnectors.Any(c => c.Id == accessConnector.Id));
+        Assert.False(db.ApiKeys.Any(k => k.Id == apiKey.Id));
+    }
+
     private DestroySceneCommand BuildCommand(bool selfHosted)
     {
         var scopeFactory = _provider.GetRequiredService<IServiceScopeFactory>();
@@ -142,6 +191,8 @@ public sealed class DestroySceneCommandTests : IDisposable
             new ProviderRepository(scopeFactory, mapper),
             new OrganizationRepository(scopeFactory, mapper,
                 _provider.GetRequiredService<ILogger<OrganizationRepository>>()),
+            new PamAccessConnectorRepository(scopeFactory, mapper),
+            new ApiKeyRepository(scopeFactory, mapper),
             globalSettings);
     }
 

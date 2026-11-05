@@ -85,4 +85,11 @@ internal static class SceneTestClientExtensions
         using var scope = factory.Services.CreateScope();
         return await query(scope.ServiceProvider.GetRequiredService<DatabaseContext>());
     }
+
+    public static async Task<TResult> ExecuteQueryAsync<TQuery, TResult>(
+        this WebApplicationFactoryBase<Startup> factory, Func<TQuery, Task<TResult>> execute) where TQuery : notnull
+    {
+        using var scope = factory.Services.CreateScope();
+        return await execute(scope.ServiceProvider.GetRequiredService<TQuery>());
+    }
 }
