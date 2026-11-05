@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
@@ -96,6 +97,7 @@ public class PolicyStatusResponseModelTests
         public bool Enabled { get; init; }
         public bool CanToggleState { get; init; }
 
+        [JsonPropertyOrder(-200)]
         public string Object => "policy";
     }
 }

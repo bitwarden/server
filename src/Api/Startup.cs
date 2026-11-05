@@ -1,4 +1,5 @@
-﻿using Bit.Api.Utilities;
+﻿using Bit.Api.AdminConsole.Endpoints;
+using Bit.Api.Utilities;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.Context;
@@ -229,6 +230,8 @@ public class Startup
         services.AddOpenApiEndpointDataSource(MapPamRotationAttemptCipherEndpoints);
 #endif
 
+        services.AddOpenApiEndpointDataSource(MapAdminConsoleEndpoints);
+
         // Billing subscriptions minimal API libraries
         services.AddUserSubscriptions();
         services.AddOrganizationSubscriptions();
@@ -312,6 +315,7 @@ public class Startup
         {
             endpoints.MapDefaultControllerRoute();
             endpoints.MapVersionEndpoint();
+            MapAdminConsoleEndpoints(endpoints);
 
 #if !OSS
             // PAM is a commercial feature; its Minimal API endpoints are only mapped in non-OSS builds.
@@ -437,6 +441,14 @@ public class Startup
             .MapRotationAttemptCipherEndpoints();
     }
 #endif
+
+    private static void MapAdminConsoleEndpoints(IEndpointRouteBuilder endpoints)
+    {
+        endpoints.MapGroup("/organizations/{orgId:guid}/invite-link")
+            .MapOrganizationInviteLinkEndpoints();
+        endpoints.MapGroup("/organizations/invite-link")
+            .MapAnonymousOrganizationInviteLinkEndpoints();
+    }
 
     private static void MapSubscriptionEndpoints(IEndpointRouteBuilder endpoints)
     {

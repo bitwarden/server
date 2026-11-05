@@ -7,10 +7,10 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Api;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Authorization;
 using Bit.Core.Vault.Models.Data;
+using Bit.HttpExtensions;
 
 namespace Bit.Api.Auth.Models.Response;
 

@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
@@ -117,6 +118,7 @@ public class PolicyResponseModelTests
         public bool Enabled { get; set; }
         public DateTime RevisionDate { get; set; }
 
+        [JsonPropertyOrder(-200)]
         public string Object => "policy";
     }
 }

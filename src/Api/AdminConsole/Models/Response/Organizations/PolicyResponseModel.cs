@@ -4,8 +4,8 @@
 using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.Models.Api;
 using Bit.Core.Utilities;
+using Bit.HttpExtensions;
 
 namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
