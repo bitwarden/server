@@ -260,6 +260,49 @@ public class EmergencyAccessControllerTest : IClassFixture<ApiApplicationFactory
     }
 
     /// <summary>
+    /// The legacy payload (<c>NewMasterPasswordHash</c> and <c>Key</c>, no V2 fields) finishes through the
+    /// obsolete <c>PasswordAsync</c>, which also removes the grantor's 2FA. Their 2FA remember tokens must
+    /// stop being honored there too. Remove this test together with the legacy path in PM-33141.
+    /// </summary>
+    [Fact]
+    public async Task PostPassword_Legacy_RevokesGrantorTwoFactorRememberTokens()
+    {
+        // Arrange: the grantor has 2FA and a device holding a 2FA remember token.
+        var grantor = await _userRepository.GetByEmailAsync(_grantorEmail);
+        Assert.NotNull(grantor);
+        grantor.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+        {
+            [TwoFactorProviderType.Email] = new() { Enabled = true },
+        });
+        await _userRepository.ReplaceAsync(grantor);
+        var device = await SeedTwoFactorRememberTokenAsync(_factory, _grantorEmail, "stamp-before-takeover");
+
+        await _loginHelper.LoginAsync(_granteeEmail);
+
+        // Only the legacy fields are set, so the controller dispatches to PasswordAsync.
+        var requestModel = new EmergencyAccessPasswordRequestModel
+        {
+            NewMasterPasswordHash = _newMasterPasswordHash,
+            Key = _masterKeyWrappedUserKey,
+        };
+
+        // Act
+        using var message = new HttpRequestMessage(
+            HttpMethod.Post, $"/emergency-access/{_emergencyAccessId}/password");
+        message.Content = JsonContent.Create(requestModel);
+        var response = await _client.SendAsync(message);
+
+        // Assert
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync();
+            Assert.Fail($"Expected success but got {response.StatusCode}. Error: {errorContent}");
+        }
+
+        await AssertTwoFactorRememberTokenRotatedAsync(_factory, _grantorEmail, device, "stamp-before-takeover");
+    }
+
+    /// <summary>
     /// Verifies the boundary validator's agreement checks fire on
     /// <c>POST /emergency-access/{id}/password</c>: a mismatched KDF or salt
     /// between <c>AuthenticationData</c> and <c>UnlockData</c> is rejected with
