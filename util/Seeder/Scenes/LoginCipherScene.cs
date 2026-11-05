@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
+using Bit.Seeder.Enums;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Services;
@@ -32,6 +33,8 @@ public abstract class LoginCipherScene<TRequest>(IManglerService manglerService)
         public bool Deleted { get; set; }
         public bool Archived { get; set; }
         public bool Favorite { get; set; }
+        /// <summary>Gives the cipher its own item key (<c>Cipher.Key</c>) and encrypts its fields under it.</summary>
+        public bool UseCipherKey { get; set; }
         public Guid? FolderId { get; set; }
         public IEnumerable<FieldRequest>? Fields { get; set; }
         public IEnumerable<PasskeyRequest>? Passkeys { get; set; }
@@ -75,6 +78,7 @@ public abstract class LoginCipherScene<TRequest>(IManglerService manglerService)
             Name = request.Name,
             Notes = request.Notes,
             EncryptionKey = owner.EncryptionKey,
+            CipherEncryption = request.UseCipherKey ? CipherEncryptionType.CipherKey : CipherEncryptionType.UserKey,
             OrganizationId = owner.OrganizationId,
             UserId = owner.UserId,
             Login = new LoginViewDto
