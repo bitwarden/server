@@ -452,7 +452,9 @@ public class OrganizationsController : Controller
             PlanType = organization.PlanType,
             Seats = organization.Seats,
             UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation,
-            Enabled = organization.Enabled
+            Enabled = organization.Enabled,
+            UsePam = organization.UsePam,
+            PamSeats = organization.PamSeats
         };
 
         if (model.PlanType.HasValue)
@@ -489,7 +491,10 @@ public class OrganizationsController : Controller
         }
 
         if (_accessControlService.UserHasPermission(Permission.Org_Plan_Edit)
-            && await ValidatePrivilegedControlsAsync(organization, plan) is { } privilegedControlsError)
+            && await ValidatePrivilegedControlsAsync(
+                organization,
+                plan,
+                IsLegacyPrivilegedControlsWithoutSeats(existingOrganizationData, model)) is { } privilegedControlsError)
         {
             TempData["Error"] = privilegedControlsError;
             return RedirectToAction("Edit", new { id });
@@ -855,7 +860,19 @@ public class OrganizationsController : Controller
         return new MigrationCohortAssignmentChange(assignmentToReplace, cohortToAssign, true, null);
     }
 
-    private async Task<string> ValidatePrivilegedControlsAsync(Organization organization, Bit.Core.Models.StaticStore.Plan plan)
+    /// <summary>
+    /// True when the organization was given Privileged Access Management before seats existed (stored without a seat
+    /// count) and the save doesn't supply one, so the save can keep the seat count unset.
+    /// </summary>
+    private static bool IsLegacyPrivilegedControlsWithoutSeats(
+        Organization existingOrganization,
+        OrganizationEditModel model) =>
+        existingOrganization is { UsePam: true, PamSeats: null } && model.PamSeats is null;
+
+    private async Task<string> ValidatePrivilegedControlsAsync(
+        Organization organization,
+        Bit.Core.Models.StaticStore.Plan plan,
+        bool allowUnsetSeats)
     {
         if (!organization.UsePam)
         {
@@ -872,7 +889,7 @@ public class OrganizationsController : Controller
             return "Plan does not support Privileged Access Management";
         }
 
-        if (organization.PamSeats is null or < 1)
+        if (organization.PamSeats is < 1 || (organization.PamSeats is null && !allowUnsetSeats))
         {
             return "Privileged Access Management seats must be at least 1";
         }

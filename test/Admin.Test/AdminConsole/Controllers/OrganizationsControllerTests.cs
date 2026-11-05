@@ -1723,6 +1723,8 @@ public class OrganizationsControllerTests
         SutProvider<OrganizationsController> sutProvider)
     {
         StubPrivilegedControlsEdit(sutProvider, organization);
+        organization.UsePam = false;
+        organization.PamSeats = null;
         var update = new OrganizationEditModel
         {
             PlanType = PlanType.EnterpriseAnnually,
@@ -1733,6 +1735,85 @@ public class OrganizationsControllerTests
         var result = await sutProvider.Sut.Edit(organization.Id, update);
 
         await AssertPrivilegedControlsRejectedAsync(result, organization, sutProvider);
+        Assert.Equal("Privileged Access Management seats must be at least 1", sutProvider.Sut.TempData["Error"]);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_PrivilegedControls_LegacyWithoutSeats_UnrelatedChange_SavesWithoutSeats(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsEdit(sutProvider, organization);
+        organization.UsePam = true;
+        organization.PamSeats = null;
+        organization.MaxAutoscalePamSeats = null;
+        var update = new OrganizationEditModel
+        {
+            Name = "Renamed organization",
+            PlanType = PlanType.EnterpriseAnnually,
+            Seats = 10,
+            UsePam = true,
+            PamSeats = null
+        };
+
+        var result = await sutProvider.Sut.Edit(organization.Id, update);
+
+        Assert.Null(sutProvider.Sut.TempData["Error"]);
+        Assert.IsType<RedirectToActionResult>(result);
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(
+            Arg.Is<Organization>(o => o.UsePam && o.PamSeats == null));
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_PrivilegedControls_LegacyWithoutSeats_SeatsPosted_Validates(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsEdit(sutProvider, organization);
+        organization.UsePam = true;
+        organization.PamSeats = null;
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            Seats = 10,
+            UsePam = true,
+            PamSeats = 11
+        };
+
+        var result = await sutProvider.Sut.Edit(organization.Id, update);
+
+        await AssertPrivilegedControlsRejectedAsync(result, organization, sutProvider);
+        Assert.Equal(
+            "You cannot have more Privileged Controls seats than Password Manager seats. " +
+            "This organization has 11 Privileged Controls seats and 10 Password Manager seats.",
+            sutProvider.Sut.TempData["Error"]);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_PrivilegedControls_LegacyWithoutSeats_SeatsBelowOnePosted_Rejects(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubPrivilegedControlsEdit(sutProvider, organization);
+        organization.UsePam = true;
+        organization.PamSeats = null;
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            UsePam = true,
+            PamSeats = 0
+        };
+
+        var result = await sutProvider.Sut.Edit(organization.Id, update);
+
+        await AssertPrivilegedControlsRejectedAsync(result, organization, sutProvider);
+        Assert.Equal("Privileged Access Management seats must be at least 1", sutProvider.Sut.TempData["Error"]);
     }
 
     [BitAutoData]
