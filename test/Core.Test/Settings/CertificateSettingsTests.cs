@@ -67,6 +67,44 @@ public class CertificateSettingsTests
     }
 
     [Fact]
+    public void ValidationCertificates_EntryWithEmptyValue_BindsEnabledEntryWithNoSource()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["globalSettings:identityServer:validationCertificates:0"] = "",
+            })
+            .Build();
+        var globalSettings = new GlobalSettings();
+
+        ConfigurationBinder.Bind(configuration.GetSection("GlobalSettings"), globalSettings);
+
+        var retired = Assert.Single(globalSettings.IdentityServer.ValidationCertificates);
+        Assert.NotNull(retired);
+        Assert.True(retired.Enabled);
+        Assert.Null(retired.CertificateLocation);
+        Assert.Null(retired.CertificateThumbprint);
+        Assert.Null(retired.CertificatePassword);
+        Assert.Null(retired.BlobName);
+    }
+
+    [Fact]
+    public void ValidationCertificates_ListWithEmptyValue_BindsEmptyList()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["globalSettings:identityServer:validationCertificates"] = "",
+            })
+            .Build();
+        var globalSettings = new GlobalSettings();
+
+        ConfigurationBinder.Bind(configuration.GetSection("GlobalSettings"), globalSettings);
+
+        Assert.Empty(globalSettings.IdentityServer.ValidationCertificates);
+    }
+
+    [Fact]
     public void SsoServer_CertificateFieldsDefaultToNull()
     {
         var ssoServer = new GlobalSettings().SsoServer;

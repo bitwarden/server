@@ -629,8 +629,72 @@ public static class CoreHelpers
 
     public static X509Certificate2? GetIdentityServerCertificate(GlobalSettings globalSettings)
     {
-        return LoadCertificate(globalSettings, globalSettings.IdentityServer);
+        var identityServer = globalSettings.IdentityServer;
+        return GetActiveCertificate(globalSettings, identityServer, identityServer.FutureCertificate,
+            "globalSettings:identityServer", required: false);
     }
+
+    public static bool HasActiveSource(ICertificateSettings root, GlobalSettings.FutureCertificateSettings future)
+    {
+        return SettingHasValue(root.CertificateLocation) ||
+            SettingHasValue(root.CertificateThumbprint) ||
+            SettingHasValue(root.BlobName) ||
+            (future.Enabled && future.Active);
+    }
+
+    public static X509Certificate2? GetActiveCertificate(GlobalSettings globalSettings, ICertificateSettings root,
+        GlobalSettings.FutureCertificateSettings future, string rootPath, bool required)
+    {
+        if (future.Enabled && future.Active)
+        {
+            return LoadRequiredCertificate(globalSettings, future, $"{rootPath}:futureCertificate");
+        }
+
+        return required
+            ? LoadRequiredCertificate(globalSettings, root, rootPath)
+            : LoadCertificate(globalSettings, root);
+    }
+
+    public static X509Certificate2? GetStagedCertificate(GlobalSettings globalSettings,
+        GlobalSettings.FutureCertificateSettings future, string futurePath)
+    {
+        if (!future.Enabled || future.Active)
+        {
+            return null;
+        }
+
+        return LoadRequiredCertificate(globalSettings, future, futurePath);
+    }
+
+    public static IReadOnlyList<X509Certificate2> GetRetiredCertificates(GlobalSettings globalSettings,
+        IEnumerable<GlobalSettings.RetiredCertificateSettings> retired, string listPath)
+    {
+        return retired
+            .Index()
+            .Where(entry => entry.Item.Enabled)
+            .Select(entry => LoadRequiredCertificate(globalSettings, entry.Item, $"{listPath}:{entry.Index}"))
+            .ToArray();
+    }
+
+    private static X509Certificate2 LoadRequiredCertificate(GlobalSettings globalSettings,
+        ICertificateSettings settings, string settingPath)
+    {
+        X509Certificate2? certificate;
+        try
+        {
+            certificate = LoadCertificate(globalSettings, settings);
+        }
+        catch (Exception ex)
+        {
+            throw CertificateNotLoaded(settingPath, ex);
+        }
+
+        return certificate ?? throw CertificateNotLoaded(settingPath, null);
+    }
+
+    private static InvalidOperationException CertificateNotLoaded(string settingPath, Exception? innerException) =>
+        new($"The certificate for {settingPath} did not load. " +
+            "Check that the file, thumbprint, or blob exists and that the password is correct.", innerException);
 
     private static X509Certificate2? LoadCertificate(GlobalSettings globalSettings, ICertificateSettings settings)
     {

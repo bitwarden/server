@@ -9,6 +9,9 @@ namespace Bit.Core.Test.Utilities;
 public class IdentityServerCertificateTests
 {
     private const string Password = "Test-Certificate-Password1";
+    private const string IdentityServerPath = "globalSettings:identityServer";
+    private const string IdentityServerFuturePath = "globalSettings:identityServer:futureCertificate";
+    private const string IdentityServerValidationPath = "globalSettings:identityServer:validationCertificates";
 
     [Fact]
     public void SelfHosted_WithPasswordAndExistingFile_LoadsTheFile()
@@ -170,5 +173,375 @@ public class IdentityServerCertificateTests
         Assert.NotNull(actual);
         Assert.Equal(fromFile.Thumbprint, actual.Thumbprint);
         Assert.NotEqual(other.Thumbprint, actual.Thumbprint);
+    }
+
+    [Fact]
+    public void FutureEnabledAndActive_IsTheActiveCertificate_RootIgnored()
+    {
+        using var root = TestCertificates.Create("CN=Bitwarden Test Root");
+        using var future = TestCertificates.Create("CN=Bitwarden Test Future");
+        var globalSettings = new GlobalSettings
+        {
+            SelfHosted = true,
+            IdentityServer =
+            {
+                CertificateLocation = TestCertificates.WritePfx(root, Password),
+                CertificatePassword = "Wrong-Certificate-Password1",
+                CertificateThumbprint = null,
+                FutureCertificate =
+                {
+                    CertificateLocation = TestCertificates.WritePfx(future, Password),
+                    CertificatePassword = Password,
+                    Enabled = true,
+                    Active = true,
+                },
+            },
+        };
+        var identityServer = globalSettings.IdentityServer;
+
+        using var actual = CoreHelpers.GetActiveCertificate(globalSettings, identityServer,
+            identityServer.FutureCertificate, IdentityServerPath, required: true);
+        using var staged = CoreHelpers.GetStagedCertificate(globalSettings, identityServer.FutureCertificate,
+            IdentityServerFuturePath);
+
+        Assert.NotNull(actual);
+        Assert.Equal(future.Thumbprint, actual.Thumbprint);
+        Assert.Null(staged);
+    }
+
+    [Fact]
+    public void FutureEnabledNotActive_IsStaged_RootStillActive()
+    {
+        using var root = TestCertificates.Create("CN=Bitwarden Test Root");
+        using var future = TestCertificates.Create("CN=Bitwarden Test Future");
+        var globalSettings = new GlobalSettings
+        {
+            SelfHosted = true,
+            IdentityServer =
+            {
+                CertificateLocation = TestCertificates.WritePfx(root, Password),
+                CertificatePassword = Password,
+                CertificateThumbprint = null,
+                FutureCertificate =
+                {
+                    CertificateLocation = TestCertificates.WritePfx(future, Password),
+                    CertificatePassword = Password,
+                    Enabled = true,
+                    Active = false,
+                },
+            },
+        };
+        var identityServer = globalSettings.IdentityServer;
+
+        using var actual = CoreHelpers.GetActiveCertificate(globalSettings, identityServer,
+            identityServer.FutureCertificate, IdentityServerPath, required: true);
+        using var staged = CoreHelpers.GetStagedCertificate(globalSettings, identityServer.FutureCertificate,
+            IdentityServerFuturePath);
+
+        Assert.NotNull(actual);
+        Assert.Equal(root.Thumbprint, actual.Thumbprint);
+        Assert.NotNull(staged);
+        Assert.Equal(future.Thumbprint, staged.Thumbprint);
+    }
+
+    [Fact]
+    public void FutureDisabled_IsNotRead_EvenWhenActiveIsTrue()
+    {
+        using var root = TestCertificates.Create("CN=Bitwarden Test Root");
+        using var future = TestCertificates.Create("CN=Bitwarden Test Future");
+        var globalSettings = new GlobalSettings
+        {
+            SelfHosted = true,
+            IdentityServer =
+            {
+                CertificateLocation = TestCertificates.WritePfx(root, Password),
+                CertificatePassword = Password,
+                CertificateThumbprint = null,
+                FutureCertificate =
+                {
+                    CertificateLocation = TestCertificates.WritePfx(future, Password),
+                    CertificatePassword = "Wrong-Certificate-Password1",
+                    Enabled = false,
+                    Active = true,
+                },
+            },
+        };
+        var identityServer = globalSettings.IdentityServer;
+
+        using var actual = CoreHelpers.GetActiveCertificate(globalSettings, identityServer,
+            identityServer.FutureCertificate, IdentityServerPath, required: true);
+        using var staged = CoreHelpers.GetStagedCertificate(globalSettings, identityServer.FutureCertificate,
+            IdentityServerFuturePath);
+
+        Assert.NotNull(actual);
+        Assert.Equal(root.Thumbprint, actual.Thumbprint);
+        Assert.Null(staged);
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    public void FutureEnabledButNotLoadable_Throws_MessageHasPathNotPassword(bool active, bool fileExists)
+    {
+        const string wrongPassword = "Wrong-Certificate-Password1";
+        using var root = TestCertificates.Create("CN=Bitwarden Test Root");
+        using var future = TestCertificates.Create("CN=Bitwarden Test Future");
+        var globalSettings = new GlobalSettings
+        {
+            SelfHosted = true,
+            IdentityServer =
+            {
+                CertificateLocation = TestCertificates.WritePfx(root, Password),
+                CertificatePassword = Password,
+                CertificateThumbprint = null,
+                FutureCertificate =
+                {
+                    CertificateLocation = fileExists
+                        ? TestCertificates.WritePfx(future, Password)
+                        : Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}-missing.pfx"),
+                    CertificatePassword = wrongPassword,
+                    Enabled = true,
+                    Active = active,
+                },
+            },
+        };
+        globalSettings.Storage.ConnectionString = null;
+        var identityServer = globalSettings.IdentityServer;
+
+        var exception = Assert.Throws<InvalidOperationException>(() => active
+            ? CoreHelpers.GetActiveCertificate(globalSettings, identityServer, identityServer.FutureCertificate,
+                IdentityServerPath, required: false)
+            : CoreHelpers.GetStagedCertificate(globalSettings, identityServer.FutureCertificate,
+                IdentityServerFuturePath));
+
+        Assert.Contains(IdentityServerFuturePath, exception.Message);
+        Assert.Equal(fileExists, exception.InnerException is CryptographicException);
+        Assert.DoesNotContain(wrongPassword, exception.ToString());
+        Assert.DoesNotContain(Password, exception.ToString());
+    }
+
+    [Fact]
+    public void RetiredList_ReturnsOnlyEnabledEntries_InOrder()
+    {
+        using var first = TestCertificates.Create("CN=Bitwarden Test First");
+        using var disabled = TestCertificates.Create("CN=Bitwarden Test Disabled");
+        using var last = TestCertificates.Create("CN=Bitwarden Test Last");
+        var globalSettings = new GlobalSettings { SelfHosted = true };
+        GlobalSettings.RetiredCertificateSettings[] retired =
+        [
+            new() { CertificateLocation = TestCertificates.WritePfx(first, Password), CertificatePassword = Password },
+            new()
+            {
+                CertificateLocation = TestCertificates.WritePfx(disabled, Password),
+                CertificatePassword = "Wrong-Certificate-Password1",
+                Enabled = false,
+            },
+            new() { CertificateLocation = TestCertificates.WritePfx(last, Password), CertificatePassword = Password },
+        ];
+
+        var actual = CoreHelpers.GetRetiredCertificates(globalSettings, retired, IdentityServerValidationPath);
+
+        Assert.Equal([first.Thumbprint, last.Thumbprint], actual.Select(c => c.Thumbprint));
+        foreach (var certificate in actual)
+        {
+            certificate.Dispose();
+        }
+    }
+
+    [Fact]
+    public void RetiredEnabledWithPasswordOnly_Throws()
+    {
+        using var loadable = TestCertificates.Create();
+        var globalSettings = new GlobalSettings { SelfHosted = true };
+        globalSettings.Storage.ConnectionString = null;
+        GlobalSettings.RetiredCertificateSettings[] retired =
+        [
+            new() { CertificateLocation = TestCertificates.WritePfx(loadable, Password), CertificatePassword = Password },
+            new() { CertificatePassword = Password },
+        ];
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            CoreHelpers.GetRetiredCertificates(globalSettings, retired, IdentityServerValidationPath));
+
+        Assert.Contains($"{IdentityServerValidationPath}:1", exception.Message);
+        Assert.DoesNotContain(Password, exception.ToString());
+    }
+
+    [Theory]
+    [InlineData("/etc/bitwarden/sso/signing.pfx", null, null, false, false, true)]
+    [InlineData(null, "SIGNING-THUMBPRINT", null, false, false, true)]
+    [InlineData(null, null, "sso-signing.pfx", false, false, true)]
+    [InlineData(null, null, null, true, true, true)]
+    [InlineData(null, null, null, false, false, false)]
+    [InlineData(null, null, null, false, true, false)]
+    [InlineData(null, null, null, true, false, false)]
+    [InlineData("replace", "secret", " ", false, false, false)]
+    public void HasActiveSource_RootFieldsOrActiveSlot(string? location, string? thumbprint, string? blobName,
+        bool futureEnabled, bool futureActive, bool expected)
+    {
+        var ssoServer = new GlobalSettings.SsoServerSettings
+        {
+            CertificateLocation = location,
+            CertificateThumbprint = thumbprint,
+            CertificatePassword = Password,
+            BlobName = blobName,
+            FutureCertificate =
+            {
+                CertificateLocation = "/etc/bitwarden/sso/signing-future.pfx",
+                CertificatePassword = Password,
+                Enabled = futureEnabled,
+                Active = futureActive,
+            },
+        };
+
+        Assert.Equal(expected, CoreHelpers.HasActiveSource(ssoServer, ssoServer.FutureCertificate));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RequiredRootNotLoadable_Throws(bool fileExists)
+    {
+        const string ssoServerPath = "globalSettings:ssoServer";
+        const string wrongPassword = "Wrong-Certificate-Password1";
+        using var root = TestCertificates.Create();
+        var globalSettings = new GlobalSettings
+        {
+            SelfHosted = true,
+            SsoServer =
+            {
+                CertificateLocation = fileExists
+                    ? TestCertificates.WritePfx(root, Password)
+                    : Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}-missing.pfx"),
+                CertificatePassword = wrongPassword,
+            },
+        };
+        globalSettings.Storage.ConnectionString = null;
+        var ssoServer = globalSettings.SsoServer;
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            CoreHelpers.GetActiveCertificate(globalSettings, ssoServer, ssoServer.FutureCertificate, ssoServerPath,
+                required: true));
+
+        Assert.Contains(ssoServerPath, exception.Message);
+        Assert.DoesNotContain($"{ssoServerPath}:futureCertificate", exception.Message);
+        Assert.Equal(fileExists, exception.InnerException is CryptographicException);
+        Assert.DoesNotContain(wrongPassword, exception.ToString());
+        Assert.DoesNotContain(Password, exception.ToString());
+    }
+
+    [Fact]
+    public void IdentityServer_FutureEnabledAndActive_ReturnsTheSlotCertificate()
+    {
+        using var root = TestCertificates.Create("CN=Bitwarden Test Root");
+        using var future = TestCertificates.Create("CN=Bitwarden Test Future");
+        var globalSettings = new GlobalSettings
+        {
+            SelfHosted = true,
+            IdentityServer =
+            {
+                CertificateLocation = TestCertificates.WritePfx(root, Password),
+                CertificatePassword = Password,
+                CertificateThumbprint = null,
+                FutureCertificate =
+                {
+                    CertificateLocation = TestCertificates.WritePfx(future, Password),
+                    CertificatePassword = Password,
+                    Enabled = true,
+                    Active = true,
+                },
+            },
+        };
+
+        using var actual = CoreHelpers.GetIdentityServerCertificate(globalSettings);
+
+        Assert.NotNull(actual);
+        Assert.Equal(future.Thumbprint, actual.Thumbprint);
+        Assert.NotEqual(root.Thumbprint, actual.Thumbprint);
+    }
+
+    [Fact]
+    public void IdentityServer_FutureEnabledAndActiveButNotLoadable_Throws_MessageHasPathNotPassword()
+    {
+        const string wrongPassword = "Wrong-Certificate-Password1";
+        using var root = TestCertificates.Create("CN=Bitwarden Test Root");
+        using var future = TestCertificates.Create("CN=Bitwarden Test Future");
+        var globalSettings = new GlobalSettings
+        {
+            SelfHosted = true,
+            IdentityServer =
+            {
+                CertificateLocation = TestCertificates.WritePfx(root, Password),
+                CertificatePassword = Password,
+                CertificateThumbprint = null,
+                FutureCertificate =
+                {
+                    CertificateLocation = TestCertificates.WritePfx(future, Password),
+                    CertificatePassword = wrongPassword,
+                    Enabled = true,
+                    Active = true,
+                },
+            },
+        };
+        globalSettings.Storage.ConnectionString = null;
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            CoreHelpers.GetIdentityServerCertificate(globalSettings));
+
+        Assert.Contains(IdentityServerFuturePath, exception.Message);
+        Assert.DoesNotContain(wrongPassword, exception.ToString());
+        Assert.DoesNotContain(Password, exception.ToString());
+    }
+
+    [Fact]
+    public void RetiredEnabledWithPasswordOnly_AfterDisabledEntry_MessageHasConfiguredIndex()
+    {
+        var globalSettings = new GlobalSettings { SelfHosted = true };
+        globalSettings.Storage.ConnectionString = null;
+        GlobalSettings.RetiredCertificateSettings[] retired =
+        [
+            new() { CertificatePassword = Password, Enabled = false },
+            new() { CertificatePassword = Password },
+        ];
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            CoreHelpers.GetRetiredCertificates(globalSettings, retired, IdentityServerValidationPath));
+
+        Assert.Contains($"{IdentityServerValidationPath}:1", exception.Message);
+        Assert.DoesNotContain($"{IdentityServerValidationPath}:0", exception.Message);
+    }
+
+    [Theory]
+    [InlineData(new byte[0])]
+    [InlineData(new byte[] { 0x6E, 0x6F, 0x74, 0x20, 0x61, 0x20, 0x63, 0x65, 0x72, 0x74 })]
+    public void FutureEnabledWithUnreadableFile_Throws_MessageHasPath(byte[] content)
+    {
+        var location = Path.Combine(TestCertificates.CreateSubdirectory(), "future.pfx");
+        File.WriteAllBytes(location, content);
+        var globalSettings = new GlobalSettings
+        {
+            SelfHosted = true,
+            IdentityServer =
+            {
+                FutureCertificate =
+                {
+                    CertificateLocation = location,
+                    CertificatePassword = Password,
+                    Enabled = true,
+                    Active = false,
+                },
+            },
+        };
+        globalSettings.Storage.ConnectionString = null;
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            CoreHelpers.GetStagedCertificate(globalSettings, globalSettings.IdentityServer.FutureCertificate,
+                IdentityServerFuturePath));
+
+        Assert.Contains(IdentityServerFuturePath, exception.Message);
+        Assert.NotNull(exception.InnerException);
+        Assert.DoesNotContain(Password, exception.ToString());
     }
 }
