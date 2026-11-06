@@ -60,6 +60,7 @@ public abstract class BaseProfileOrganizationResponseModel : ResponseModel
         MaxStorageGb = organizationDetails.MaxStorageGb;
         Key = organizationDetails.Key;
         HasPublicAndPrivateKeys = organizationDetails.PublicKey != null && organizationDetails.PrivateKey != null;
+        OrganizationKeyId = organizationDetails.OrganizationKeyId;
         SsoBound = !string.IsNullOrWhiteSpace(organizationDetails.SsoExternalId);
         ResetPasswordEnrolled = OrganizationUser.IsValidResetPasswordKey(organizationDetails.ResetPasswordKey);
         ProviderId = organizationDetails.ProviderId;
@@ -116,6 +117,11 @@ public abstract class BaseProfileOrganizationResponseModel : ResponseModel
     public short? MaxStorageGb { get; set; }
     public string? Key { get; set; }
     public bool HasPublicAndPrivateKeys { get; set; }
+    /// <summary>
+    /// Key id of the organization key, or null when it is not recorded yet. An Owner or Admin client reports it
+    /// through <c>POST organizations/{orgId}/keys/organization-key-id</c>.
+    /// </summary>
+    public string? OrganizationKeyId { get; set; }
     public bool SsoBound { get; set; }
     public bool ResetPasswordEnrolled { get; set; }
     public bool LimitCollectionCreation { get; set; }
