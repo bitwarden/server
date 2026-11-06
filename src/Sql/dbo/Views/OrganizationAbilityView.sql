@@ -25,6 +25,7 @@ SELECT
     [UsePhishingBlocker],
     [UseMyItems],
     [UseInviteLinks],
-    [UsePam]
+    [UsePam],
+    [UseSecretsManager]
 FROM
     [dbo].[Organization]

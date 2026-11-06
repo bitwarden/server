@@ -2,7 +2,6 @@
 using System.Security.Claims;
 using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
-using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.AccessPolicies.Interfaces;
@@ -35,7 +34,7 @@ public class AccessPoliciesControllerTests
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(false);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(id).Returns(false);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetPeoplePotentialGranteesAsync(id));
 
@@ -49,7 +48,7 @@ public class AccessPoliciesControllerTests
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(id).Returns(true);
         sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(Guid.NewGuid());
         sutProvider.GetDependency<IAccessPolicyRepository>().GetPeopleGranteesAsync(id, Arg.Any<Guid>())
             .ReturnsForAnyArgs(new PeopleGrantees
@@ -72,7 +71,7 @@ public class AccessPoliciesControllerTests
         Guid id,
         GroupGrantee groupGrantee)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(id).Returns(true);
         sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(Guid.NewGuid());
         sutProvider.GetDependency<IAccessPolicyRepository>().GetPeopleGranteesAsync(id, Arg.Any<Guid>())
             .ReturnsForAnyArgs(new PeopleGrantees
@@ -95,7 +94,7 @@ public class AccessPoliciesControllerTests
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(false);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(id).Returns(false);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetServiceAccountsPotentialGranteesAsync(id));
 
@@ -110,7 +109,7 @@ public class AccessPoliciesControllerTests
         Guid id,
         Guid userId)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(id).Returns(true);
         sutProvider.GetDependency<IAccessClientQuery>()
             .GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), id)
             .Returns((AccessClientType.User, userId));
@@ -131,7 +130,7 @@ public class AccessPoliciesControllerTests
         Guid userId,
         ServiceAccount serviceAccount)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(id).Returns(true);
         sutProvider.GetDependency<IAccessClientQuery>()
             .GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), id)
             .Returns((AccessClientType.User, userId));
@@ -153,7 +152,7 @@ public class AccessPoliciesControllerTests
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(false);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(id).Returns(false);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetProjectPotentialGranteesAsync(id));
 
@@ -168,7 +167,7 @@ public class AccessPoliciesControllerTests
         Guid id,
         Guid userId)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(id).Returns(true);
         sutProvider.GetDependency<IAccessClientQuery>()
             .GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), id)
             .Returns((AccessClientType.User, userId));
@@ -189,7 +188,7 @@ public class AccessPoliciesControllerTests
         Guid userId,
         Project project)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(id).Returns(true);
         sutProvider.GetDependency<IAccessClientQuery>()
             .GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), id)
             .Returns((AccessClientType.User, userId));
@@ -226,7 +225,7 @@ public class AccessPoliciesControllerTests
         Project data)
     {
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(data.Id).Returns(data);
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>())
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(Arg.Any<Guid>())
             .ReturnsForAnyArgs(false);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetProjectPeopleAccessPoliciesAsync(data.Id));
@@ -244,7 +243,7 @@ public class AccessPoliciesControllerTests
         Project data)
     {
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(data.Id).Returns(data);
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>())
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(Arg.Any<Guid>())
             .ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>())
@@ -413,7 +412,7 @@ public class AccessPoliciesControllerTests
         ServiceAccount data)
     {
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(data.Id).ReturnsForAnyArgs(data);
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(data.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(data.OrganizationId)
             .ReturnsForAnyArgs(false);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
@@ -432,7 +431,7 @@ public class AccessPoliciesControllerTests
         ServiceAccount data)
     {
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(data.Id).ReturnsForAnyArgs(data);
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(data.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(data.OrganizationId)
             .ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>())
@@ -452,7 +451,7 @@ public class AccessPoliciesControllerTests
         ServiceAccount data)
     {
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(data.Id).ReturnsForAnyArgs(data);
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(default)
             .ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>())
@@ -476,7 +475,7 @@ public class AccessPoliciesControllerTests
         UserServiceAccountAccessPolicy resultAccessPolicy)
     {
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(data.Id).ReturnsForAnyArgs(data);
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(default)
             .ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>())
@@ -785,7 +784,7 @@ public class AccessPoliciesControllerTests
         Project data)
     {
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(data.Id).Returns(data);
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(Arg.Any<Guid>()).ReturnsForAnyArgs(false);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.GetProjectServiceAccountsAccessPoliciesAsync(data.Id));
@@ -801,7 +800,7 @@ public class AccessPoliciesControllerTests
         Project data)
     {
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(data.Id).Returns(data);
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(default).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(default, default, default)
             .ReturnsForAnyArgs((false, false));
 
@@ -1058,7 +1057,7 @@ public class AccessPoliciesControllerTests
         AccessClientType accessClientType)
     {
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(default).ReturnsForAnyArgs(data);
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>())
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(Arg.Any<Guid>())
             .ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>())

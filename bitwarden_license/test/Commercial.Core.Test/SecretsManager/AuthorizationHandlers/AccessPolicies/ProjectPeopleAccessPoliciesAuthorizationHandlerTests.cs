@@ -1,7 +1,6 @@
 ﻿using System.Reflection;
 using System.Security.Claims;
 using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.AccessPolicies;
-using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Models.Data;
@@ -25,7 +24,7 @@ public class ProjectPeopleAccessPoliciesAuthorizationHandlerTests
         AccessClientType accessClientType, ProjectPeopleAccessPolicies resource, Guid userId = new(), bool read = true,
         bool write = true)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(resource.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(resource.OrganizationId)
             .Returns(true);
         sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, resource.OrganizationId)
             .ReturnsForAnyArgs(
@@ -62,7 +61,7 @@ public class ProjectPeopleAccessPoliciesAuthorizationHandlerTests
         ClaimsPrincipal claimsPrincipal)
     {
         var requirement = new ProjectPeopleAccessPoliciesOperationRequirement();
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(resource.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(resource.OrganizationId)
             .Returns(true);
         sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, resource.OrganizationId)
             .ReturnsForAnyArgs(
@@ -80,7 +79,7 @@ public class ProjectPeopleAccessPoliciesAuthorizationHandlerTests
         ClaimsPrincipal claimsPrincipal)
     {
         var requirement = new ProjectPeopleAccessPoliciesOperationRequirement();
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(resource.OrganizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(resource.OrganizationId)
             .Returns(false);
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, resource);
