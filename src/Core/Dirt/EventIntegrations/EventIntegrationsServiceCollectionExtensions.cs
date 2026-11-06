@@ -45,6 +45,9 @@ public static class EventIntegrationsServiceCollectionExtensions
         // Add Validator
         services.TryAddSingleton<IOrganizationIntegrationConfigurationValidator, OrganizationIntegrationConfigurationValidator>();
 
+        // Single-use nonces for the Slack and Teams OAuth flows
+        services.TryAddSingleton<IIntegrationOAuthNonceStore, IntegrationOAuthNonceStore>();
+
         // Configuration commands validate Teams channels
         services.AddTeamsService(globalSettings);
 

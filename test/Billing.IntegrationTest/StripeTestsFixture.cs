@@ -730,6 +730,41 @@ public class StripeTestsFixture : IAsyncLifetime
     }
 
     /// <summary>
+    /// Turns the organization's trialing subscription into the payment-optional shape the trial signup
+    /// creates when no payment method is supplied: no payment method on the customer or subscription, and
+    /// trial_settings.end_behavior.missing_payment_method = cancel. Asserts the subscription is trialing.
+    /// </summary>
+    public async Task MakeOrganizationTrialPaymentOptionalAsync(Guid organizationId)
+    {
+        var customerId = await GetOrganizationGatewayCustomerIdAsync(organizationId);
+        var subscriptionId = await GetOrganizationGatewaySubscriptionIdAsync(organizationId);
+        var stripeClient = CreateStripeClient();
+
+        var paymentMethods = await stripeClient.V1.PaymentMethods.ListAsync(
+            new PaymentMethodListOptions { Customer = customerId });
+        foreach (var paymentMethod in paymentMethods.Data)
+        {
+            await stripeClient.V1.PaymentMethods.DetachAsync(paymentMethod.Id);
+        }
+
+        var subscriptionOptions = new SubscriptionUpdateOptions
+        {
+            TrialSettings = new SubscriptionTrialSettingsOptions
+            {
+                EndBehavior = new SubscriptionTrialSettingsEndBehaviorOptions { MissingPaymentMethod = "cancel" }
+            }
+        };
+        subscriptionOptions.AddExtraParam("default_payment_method", "");
+        var subscription = await stripeClient.V1.Subscriptions.UpdateAsync(subscriptionId, subscriptionOptions);
+
+        Assert.Equal("trialing", subscription.Status);
+        Assert.Null(subscription.DefaultPaymentMethodId);
+        Assert.Equal("cancel", subscription.TrialSettings.EndBehavior.MissingPaymentMethod);
+        var customer = await stripeClient.V1.Customers.GetAsync(customerId);
+        Assert.Null(customer.InvoiceSettings.DefaultPaymentMethodId);
+    }
+
+    /// <summary>
     /// Creates a Stripe coupon (deletes any pre-existing one first), inserts a churn-only
     /// migration cohort that references it, and assigns the organization to that cohort.
     /// Drives the <see cref="GetChurnMitigationOfferQuery"/> and

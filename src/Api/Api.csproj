@@ -26,6 +26,7 @@
     <ProjectReference Include="..\HttpExtensions\HttpExtensions.csproj" />
     <ProjectReference Include="..\Libraries\CurrentUser\CurrentUser.csproj" />
     <ProjectReference Include="..\Libraries\OrganizationAuthorization\OrganizationAuthorization.csproj" />
+    <ProjectReference Include="..\Libraries\OrganizationKeys\OrganizationKeys.csproj" />
     <ProjectReference Include="..\Libraries\Subscriptions.User\Subscriptions.User.csproj" />
     <ProjectReference Include="..\Libraries\Subscriptions.Organization\Subscriptions.Organization.csproj" />
   </ItemGroup>

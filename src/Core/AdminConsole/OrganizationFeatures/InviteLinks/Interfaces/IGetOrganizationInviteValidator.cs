@@ -15,7 +15,8 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 ///     <see cref="InviteLinkRules.ValidateConfirmMembershipStatus"/> when the link supports confirmation,
 ///     otherwise <see cref="InviteLinkRules.ValidateAcceptMembershipStatus"/>.</item>
 ///     <item><see cref="IInviteLinkValidationService.ValidateSeatAvailabilityAsync"/>.</item>
-///     <item><see cref="IInviteLinkValidationService.ValidateJoinRequirementsAsync"/>.</item>
+///     <item><see cref="IInviteLinkValidationService.ValidateJoinRequirementsAsync"/>. Shared errors that have an invite
+///     link equivalent are returned as that equivalent, matching the accept endpoint.</item>
 /// </list>
 /// The caller supplies the invite link, organization, and existing membership. The reset password key is left to the
 /// accept and confirm endpoints.

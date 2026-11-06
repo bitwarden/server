@@ -197,7 +197,13 @@ public class OrganizationRepositoryTests
         IOrganizationRepository organizationRepository)
     {
         var organizationKeyId = KeyId.FromHexEncodedString("0123456789abcdef0123456789abcdef")!;
-        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org Without Key Id",
+            BillingEmail = "test@email.com",
+            Plan = "Test",
+            PrivateKey = "privatekey",
+        });
 
         var result = await organizationRepository.SetOrganizationKeyIdAsync(organization.Id, organizationKeyId);
 
@@ -212,10 +218,9 @@ public class OrganizationRepositoryTests
     public async Task SetOrganizationKeyIdAsync_WithOrganizationKeyId_DoesNotChangeOrganizationKeyId(
         IOrganizationRepository organizationRepository)
     {
-        var existingKeyId = KeyId.FromHexEncodedString("0123456789abcdef0123456789abcdef")!;
         var newKeyId = KeyId.FromHexEncodedString("fedcba9876543210fedcba9876543210")!;
         var organization = await organizationRepository.CreateTestOrganizationAsync();
-        await organizationRepository.SetOrganizationKeyIdAsync(organization.Id, existingKeyId);
+        var existingKeyId = organization.GetOrganizationKeyId()!;
 
         var result = await organizationRepository.SetOrganizationKeyIdAsync(organization.Id, newKeyId);
 
@@ -243,7 +248,13 @@ public class OrganizationRepositoryTests
         IServiceProvider serviceProvider)
     {
         var organizationKeyId = KeyId.FromHexEncodedString("0123456789abcdef0123456789abcdef")!;
-        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org Without Key Id",
+            BillingEmail = "test@email.com",
+            Plan = "Test",
+            PrivateKey = "privatekey",
+        });
 
         await DatabaseTransactionActionTestHelper.ExecuteAsync(database,
             organizationRepository.BuildSetOrganizationKeyIdAction(organization.Id, organizationKeyId),
@@ -261,10 +272,9 @@ public class OrganizationRepositoryTests
         Database database,
         IServiceProvider serviceProvider)
     {
-        var existingKeyId = KeyId.FromHexEncodedString("0123456789abcdef0123456789abcdef")!;
         var newKeyId = KeyId.FromHexEncodedString("fedcba9876543210fedcba9876543210")!;
         var organization = await organizationRepository.CreateTestOrganizationAsync();
-        await organizationRepository.SetOrganizationKeyIdAsync(organization.Id, existingKeyId);
+        var existingKeyId = organization.GetOrganizationKeyId()!;
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             DatabaseTransactionActionTestHelper.ExecuteAsync(database,
