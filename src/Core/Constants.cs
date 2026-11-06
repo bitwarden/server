@@ -283,7 +283,6 @@ public static partial class FeatureFlagKeys
     public const string WindowsNativeCredentialSync = "windows-native-credential-sync";
 
     /* DIRT Team */
-    public const string AccessIntelligenceVersion2 = "pm-31920-access-intelligence-azure-file-storage";
     public const string EventManagementForBlumira = "event-management-for-blumira";
     public const string EventManagementForDataDogAndCrowdStrike = "event-management-for-datadog-and-crowdstrike";
     public const string EventDiagnosticLogging = "pm-27666-siem-event-log-debugging";
