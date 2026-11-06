@@ -629,24 +629,29 @@ public static class CoreHelpers
 
     public static X509Certificate2? GetIdentityServerCertificate(GlobalSettings globalSettings)
     {
+        return LoadCertificate(globalSettings, globalSettings.IdentityServer);
+    }
+
+    private static X509Certificate2? LoadCertificate(GlobalSettings globalSettings, ICertificateSettings settings)
+    {
         if (globalSettings.SelfHosted &&
-            SettingHasValue(globalSettings.IdentityServer.CertificatePassword)
-            && File.Exists(globalSettings.IdentityServer.CertificateLocation))
+            SettingHasValue(settings.CertificatePassword)
+            && File.Exists(settings.CertificateLocation))
         {
-            return GetCertificate(globalSettings.IdentityServer.CertificateLocation,
-                globalSettings.IdentityServer.CertificatePassword);
+            return GetCertificate(settings.CertificateLocation,
+                settings.CertificatePassword);
         }
-        else if (SettingHasValue(globalSettings.IdentityServer.CertificateThumbprint))
+        else if (SettingHasValue(settings.CertificateThumbprint))
         {
             return GetCertificate(
-                globalSettings.IdentityServer.CertificateThumbprint);
+                settings.CertificateThumbprint);
         }
         else if (!globalSettings.SelfHosted &&
             SettingHasValue(globalSettings.Storage?.ConnectionString) &&
-            SettingHasValue(globalSettings.IdentityServer.CertificatePassword))
+            SettingHasValue(settings.CertificatePassword))
         {
             return GetBlobCertificateAsync(globalSettings.Storage.ConnectionString, "certificates",
-                "identity.pfx", globalSettings.IdentityServer.CertificatePassword).GetAwaiter().GetResult();
+                settings.BlobName, settings.CertificatePassword).GetAwaiter().GetResult();
         }
         return null;
     }

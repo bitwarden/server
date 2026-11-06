@@ -39,6 +39,33 @@ public class IdentityServerCertificateTests : IClassFixture<IdentityServerCertif
     }
 
     [Fact]
+    public async Task Cloud_WithCustomBlobName_LoadsThatBlob()
+    {
+        using var expected = TestCertificates.Create();
+        await _azurite.ResetAsync(expected, Password, blobName: "rotated.pfx");
+
+        var globalSettings = CloudSettings(Password, null);
+        globalSettings.IdentityServer.BlobName = "rotated.pfx";
+
+        using var actual = CoreHelpers.GetIdentityServerCertificate(globalSettings);
+
+        Assert.NotNull(actual);
+        Assert.Equal(expected.Thumbprint, actual.Thumbprint);
+    }
+
+    [Fact]
+    public async Task Cloud_WithCustomBlobNameNotInStorage_ReturnsNullWithoutUsingIdentityPfx()
+    {
+        using var certificate = TestCertificates.Create();
+        await _azurite.ResetAsync(certificate, Password);
+
+        var globalSettings = CloudSettings(Password, null);
+        globalSettings.IdentityServer.BlobName = "rotated.pfx";
+
+        Assert.Null(CoreHelpers.GetIdentityServerCertificate(globalSettings));
+    }
+
+    [Fact]
     public async Task SelfHosted_WithStorageAndPassword_IgnoresTheBlob()
     {
         using var certificate = TestCertificates.Create();
@@ -290,7 +317,8 @@ public class IdentityServerCertificateTests : IClassFixture<IdentityServerCertif
 
         public async Task DisposeAsync() => await _container.DisposeAsync();
 
-        public async Task ResetAsync(X509Certificate2 certificate, string password, bool createContainer = true)
+        public async Task ResetAsync(X509Certificate2 certificate, string password, bool createContainer = true,
+            string blobName = "identity.pfx")
         {
             var container = new BlobServiceClient(ConnectionString).GetBlobContainerClient("certificates");
             await container.DeleteIfExistsAsync();
@@ -302,7 +330,7 @@ public class IdentityServerCertificateTests : IClassFixture<IdentityServerCertif
             await container.CreateAsync();
             if (certificate != null)
             {
-                await container.UploadBlobAsync("identity.pfx",
+                await container.UploadBlobAsync(blobName,
                     new BinaryData(certificate.Export(X509ContentType.Pfx, password)));
             }
         }
