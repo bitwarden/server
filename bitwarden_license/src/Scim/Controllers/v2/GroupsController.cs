@@ -22,6 +22,7 @@ public class GroupsController : Controller
 {
     private readonly IGroupRepository _groupRepository;
     private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IGetGroupsListQuery _getGroupsListQuery;
     private readonly IDeleteGroupCommand _deleteGroupCommand;
     private readonly IPatchGroupCommand _patchGroupCommand;
@@ -31,6 +32,7 @@ public class GroupsController : Controller
     public GroupsController(
         IGroupRepository groupRepository,
         IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
         IGetGroupsListQuery getGroupsListQuery,
         IDeleteGroupCommand deleteGroupCommand,
         IPatchGroupCommand patchGroupCommand,
@@ -40,6 +42,7 @@ public class GroupsController : Controller
     {
         _groupRepository = groupRepository;
         _organizationRepository = organizationRepository;
+        _organizationUserRepository = organizationUserRepository;
         _getGroupsListQuery = getGroupsListQuery;
         _deleteGroupCommand = deleteGroupCommand;
         _patchGroupCommand = patchGroupCommand;
@@ -48,14 +51,41 @@ public class GroupsController : Controller
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> Get([FromRoute] Guid organizationId, Guid id)
+    public async Task<IActionResult> Get(
+        [FromRoute] Guid organizationId, 
+        Guid id,
+        [FromQuery] GetGroupsQueryParamModel model)
     {
         var group = await _groupRepository.GetByIdAsync(id);
         if (group == null || group.OrganizationId != organizationId)
         {
             throw new NotFoundException("Group not found.");
         }
-        return Ok(new ScimGroupResponseModel(group));
+
+        var groupResponse = new ScimGroupResponseModel(group);
+        
+        // Populate members with pagination
+        var memberUserIds = await _groupRepository.GetManyUserIdsByIdAsync(id);
+        if (memberUserIds.Any())
+        {
+            var paginatedMemberIds = memberUserIds
+                .OrderBy(id => id)
+                .Skip(model.MemberStartIndex - 1)
+                .Take(model.MemberCount)
+                .ToList();
+
+            var members = await _organizationUserRepository.GetManyAsync(paginatedMemberIds);
+            groupResponse.Members = members
+                .Select(m => new ScimGroupResponseModel.GroupMemberReference
+                {
+                    Value = m.Id.ToString(),
+                    Display = m.Email ?? string.Empty,
+                    Type = "User"
+                })
+                .ToList();
+        }
+
+        return Ok(groupResponse);
     }
 
     [HttpGet("")]
@@ -64,9 +94,40 @@ public class GroupsController : Controller
         [FromQuery] GetGroupsQueryParamModel model)
     {
         var groupsListQueryResult = await _getGroupsListQuery.GetGroupsListAsync(organizationId, model);
+        
+        // Populate members for each group with pagination
+        var groupResponseList = new List<ScimGroupResponseModel>();
+        foreach (var group in groupsListQueryResult.groupList)
+        {
+            var groupResponse = new ScimGroupResponseModel(group);
+            
+            // Fetch and paginate members for this group
+            var memberUserIds = await _groupRepository.GetManyUserIdsByIdAsync(group.Id);
+            if (memberUserIds.Any())
+            {
+                var paginatedMemberIds = memberUserIds
+                    .OrderBy(id => id)
+                    .Skip(model.MemberStartIndex - 1)
+                    .Take(model.MemberCount)
+                    .ToList();
+
+                var members = await _organizationUserRepository.GetManyAsync(paginatedMemberIds);
+                groupResponse.Members = members
+                    .Select(m => new ScimGroupResponseModel.GroupMemberReference
+                    {
+                        Value = m.Id.ToString(),
+                        Display = m.Email ?? string.Empty,
+                        Type = "User"
+                    })
+                    .ToList();
+            }
+
+            groupResponseList.Add(groupResponse);
+        }
+
         var scimListResponseModel = new ScimListResponseModel<ScimGroupResponseModel>
         {
-            Resources = groupsListQueryResult.groupList.Select(g => new ScimGroupResponseModel(g)).ToList(),
+            Resources = groupResponseList,
             ItemsPerPage = model.Count,
             TotalResults = groupsListQueryResult.totalResults,
             StartIndex = model.StartIndex,
@@ -113,3 +174,4 @@ public class GroupsController : Controller
         return new NoContentResult();
     }
 }
+
