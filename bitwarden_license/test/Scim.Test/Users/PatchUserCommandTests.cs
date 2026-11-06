@@ -29,7 +29,7 @@ public class PatchUserCommandTests
             .GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
 
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>
             {
@@ -58,7 +58,7 @@ public class PatchUserCommandTests
             .GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
 
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>
             {
@@ -86,7 +86,7 @@ public class PatchUserCommandTests
             .GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
 
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>
             {
@@ -115,7 +115,7 @@ public class PatchUserCommandTests
             .GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
 
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>
             {
@@ -141,7 +141,7 @@ public class PatchUserCommandTests
             .GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
 
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>(),
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
@@ -157,7 +157,7 @@ public class PatchUserCommandTests
     [BitAutoData]
     public async Task PatchUser_NotFound_Throws(SutProvider<PatchUserCommand> sutProvider, Guid organizationId, Guid organizationUserId)
     {
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>(),
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
@@ -170,7 +170,7 @@ public class PatchUserCommandTests
     [BitAutoData]
     public async Task PatchUser_MismatchingOrganizationId_Throws(SutProvider<PatchUserCommand> sutProvider, Guid organizationId, Guid organizationUserId)
     {
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>(),
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
@@ -202,7 +202,7 @@ public class PatchUserCommandTests
             .GetManyDetailsByOrganizationAsync(organizationUser.OrganizationId)
             .Returns(new List<OrganizationUserUserDetails>());
 
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>
             {
@@ -237,7 +237,7 @@ public class PatchUserCommandTests
             .GetManyDetailsByOrganizationAsync(organizationUser.OrganizationId)
             .Returns(new List<OrganizationUserUserDetails>());
 
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>
             {
@@ -273,7 +273,7 @@ public class PatchUserCommandTests
             .GetManyDetailsByOrganizationAsync(organizationUser.OrganizationId)
             .Returns(new List<OrganizationUserUserDetails> { existingUser });
 
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>
             {
@@ -301,7 +301,7 @@ public class PatchUserCommandTests
             .GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
 
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>
             {
@@ -333,7 +333,7 @@ public class PatchUserCommandTests
             .GetManyDetailsByOrganizationAsync(organizationUser.OrganizationId)
             .Returns(new List<OrganizationUserUserDetails>());
 
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>
             {
@@ -361,7 +361,7 @@ public class PatchUserCommandTests
             .GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
 
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>
             {
@@ -399,7 +399,7 @@ public class PatchUserCommandTests
             .GetManyDetailsByOrganizationAsync(organizationUser.OrganizationId)
             .Returns(new List<OrganizationUserUserDetails>());
 
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>
             {
@@ -445,7 +445,7 @@ public class PatchUserCommandTests
             .GetManyDetailsByOrganizationAsync(organizationUser.OrganizationId)
             .Returns(new List<OrganizationUserUserDetails>());
 
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>
             {
