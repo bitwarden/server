@@ -7,8 +7,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
-using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
@@ -24,7 +22,6 @@ using Bit.Core.Models.StaticStore;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
-using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bitwarden.Server.Sdk.Features;
 using OrganizationPlan = Bit.Core.Models.StaticStore.Plan;
@@ -55,8 +52,7 @@ public class CloudOrganizationSignUpCommand(
     IPolicyRequirementQuery policyRequirementQuery,
     ICreateOrganizationSubscriptionCommand createOrganizationSubscriptionCommand,
     IGlobalSettings globalSettings,
-    IFeatureService featureService,
-    IDataProtectorTokenFactory<SalesAssistedRegistrationTokenable> salesAssistedRegistrationTokenDataFactory
+    IFeatureService featureService
 ) : ICloudOrganizationSignUpCommand
 {
     public async Task<SignUpOrganizationResponse> SignUpOrganizationAsync(OrganizationSignup signup)
@@ -76,16 +72,9 @@ public class CloudOrganizationSignUpCommand(
             ValidateSecretsManagerPlan(plan, signup);
         }
 
-        // See CanSignUpWithPrivilegedControls: a disallowed self-serve request is ignored, a bad sales token throws.
-        var pamBillingSupportEnabled = featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support);
-        var usePrivilegedControls = signup.UsePrivilegedControls &&
-                                    CanSignUpWithPrivilegedControls(signup, pamBillingSupportEnabled);
-        // With the flag off, a sales invitation puts Privileged Controls on the organization only; the Stripe line is
-        // added by sales later, so Stripe is never touched for Privileged Controls while self-serve is off.
-        var provisionPrivilegedControlsInStripe = usePrivilegedControls && pamBillingSupportEnabled;
-        if (usePrivilegedControls)
+        if (signup.UsePrivilegedControls && featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support))
         {
-            ValidatePrivilegedControls(plan, signup);
+            ValidatePrivilegedControlsSeats(plan, signup);
         }
 
         if (!signup.IsFromProvider)
@@ -115,9 +104,11 @@ public class CloudOrganizationSignUpCommand(
         {
             var sale = OrganizationSale.From(organization, signup);
 
-            // Privileged Controls purchases provision through the new subscription command; every other paid signup
-            // stays on the legacy Finalize until that path is migrated.
-            if (provisionPrivilegedControlsInStripe)
+            // PAM purchase provision through the new subscription command (flagged);
+            // every other paid signup stays on the legacy Finalize until that path is migrated.
+            var usePrivilegedControls = signup.UsePrivilegedControls &&
+                                        featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support);
+            if (usePrivilegedControls)
             {
                 var purchase = BuildPrivilegedControlsPurchase(sale, signup);
                 await createOrganizationSubscriptionCommand.Run(organization, purchase);
@@ -126,15 +117,6 @@ public class CloudOrganizationSignUpCommand(
             {
                 await organizationBillingService.Finalize(sale);
             }
-        }
-
-        if (usePrivilegedControls && !provisionPrivilegedControlsInStripe)
-        {
-            // The same state the Admin Portal gives a sales-initiated trial: Privileged Controls on, seats on the
-            // organization, no limit, and no Privileged Controls line in Stripe.
-            organization.UsePam = true;
-            organization.PamSeats = signup.PamSeats;
-            organization.MaxAutoscalePamSeats = null;
         }
 
         var ownerId = signup.IsFromProvider ? default : signup.Owner.Id;
@@ -271,45 +253,6 @@ public class CloudOrganizationSignUpCommand(
         }
     }
 
-    /// <summary>
-    /// Whether the sign-up may include Privileged Controls. With <see cref="FeatureFlagKeys.PM39883_Pam_Billing_Support"/>
-    /// on, any sign-up may, and the Stripe subscription gets a Privileged Controls line. With it off, only a verified
-    /// sales-assisted sign-up may, and it gets Privileged Controls on the organization only; this gate is deleted with
-    /// the flag.
-    /// </summary>
-    /// <exception cref="BadRequestException">The flag is off and the sales-assisted token is missing or invalid.</exception>
-    private bool CanSignUpWithPrivilegedControls(OrganizationSignup signup, bool pamBillingSupportEnabled) =>
-        pamBillingSupportEnabled || IsVerifiedSalesAssistedSignUp(signup);
-
-    /// <summary>
-    /// True when the sign-up uses the sales-assisted initiation path, carries a sales invitation token, and that token
-    /// is valid for the owner's email (case-insensitively) and unexpired. The token proves a sales invitation to this
-    /// email, not which products sales offered. False for any other initiation path.
-    /// </summary>
-    /// <exception cref="BadRequestException">The sales-assisted token is missing or invalid.</exception>
-    private bool IsVerifiedSalesAssistedSignUp(OrganizationSignup signup)
-    {
-        if (signup.InitiationPath != TrialInitiationConstants.SalesAssistedTrialInitiationPath)
-        {
-            return false;
-        }
-
-        if (string.IsNullOrWhiteSpace(signup.SalesAssistedToken))
-        {
-            throw new BadRequestException("A sales invitation token is required to include Privileged Controls.");
-        }
-
-        var tokenValidationError = SalesAssistedRegistrationTokenable.ValidateSalesAssistedRegistrationToken(
-            salesAssistedRegistrationTokenDataFactory, signup.SalesAssistedToken, signup.Owner.Email);
-
-        if (tokenValidationError != null)
-        {
-            throw new BadRequestException(tokenValidationError.ErrorMessage);
-        }
-
-        return true;
-    }
-
     private OrganizationSubscriptionCreation BuildPrivilegedControlsPurchase(
         OrganizationSale sale, OrganizationSignup signup)
     {
@@ -348,23 +291,8 @@ public class CloudOrganizationSignUpCommand(
         };
     }
 
-    /// <summary>
-    /// The checks <see cref="ICreateOrganizationSubscriptionCommand"/> applies to a Privileged Controls purchase, run here
-    /// so the organization-only path gets them too.
-    /// </summary>
-    private static void ValidatePrivilegedControls(Plan plan, OrganizationSignup signup)
+    private static void ValidatePrivilegedControlsSeats(Plan plan, OrganizationSignup signup)
     {
-        if (signup.IsFromSecretsManagerTrial)
-        {
-            throw new BadRequestException(
-                "Privileged Controls cannot be combined with a Secrets Manager standalone trial.");
-        }
-
-        if (!plan.SupportsPrivilegedControls)
-        {
-            throw new BadRequestException("Invalid Privileged Controls plan selected.");
-        }
-
         if (signup.PamSeats is null)
         {
             throw new BadRequestException("Privileged Controls seats are required.");

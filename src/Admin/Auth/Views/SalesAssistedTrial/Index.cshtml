@@ -1,8 +1,11 @@
+@using Bit.Core
 @using Bit.Core.Billing.Enums
 @using Bit.SharedWeb.Utilities
+@inject Bitwarden.Server.Sdk.Features.IFeatureService FeatureService
 @model Bit.Admin.Auth.Models.SalesAssistedTrial.SalesAssistedTrialInviteModel
 @{
     ViewData["Title"] = "Send Sales-Assisted Trial Invitation";
+    var includePrivilegedControls = FeatureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support);
 }
 
 <div class="mx-auto" style="max-width: 768px;">
@@ -57,7 +60,7 @@
         <div class="mb-3">
             <label class="form-label">Products</label>
             <span asp-validation-for="Products" class="text-danger"></span>
-            @foreach (var product in Enum.GetValues<ProductType>())
+            @foreach (var product in Enum.GetValues<ProductType>().Where(p => includePrivilegedControls || p != ProductType.PrivilegedControls))
             {
                 <div class="form-check">
                     <input type="checkbox" name="Products" value="@product" id="product-@product" class="form-check-input"

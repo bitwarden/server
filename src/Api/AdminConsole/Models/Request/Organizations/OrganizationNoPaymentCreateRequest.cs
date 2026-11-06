@@ -84,14 +84,6 @@ public class OrganizationNoPaymentCreateRequest
 
     public string InitiationPath { get; set; }
 
-    /// <summary>
-    /// The sales invitation token from a sales-assisted trial link. Honoured only together with the sales-assisted
-    /// initiation path; with self-serve Privileged Controls off, a sales-assisted sign-up that includes Privileged
-    /// Controls with a missing or invalid token is rejected, and with a valid token Privileged Controls is set on the
-    /// organization only (no Stripe line).
-    /// </summary>
-    public string SalesAssistedToken { get; set; }
-
     [Range(0, 30)]
     public int? TrialLength { get; set; }
 
@@ -129,7 +121,6 @@ public class OrganizationNoPaymentCreateRequest
                 BillingAddressCountry = BillingAddressCountry,
             },
             InitiationPath = InitiationPath,
-            SalesAssistedToken = SalesAssistedToken,
             TrialLength = TrialLength,
             Keys = Keys.ToPublicKeyEncryptionKeyPairData()
         };
