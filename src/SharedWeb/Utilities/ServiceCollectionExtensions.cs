@@ -4,6 +4,7 @@
 using System.Net;
 using System.Reflection;
 using System.Security.Claims;
+using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
@@ -62,6 +63,7 @@ using Bit.Infrastructure.EntityFramework;
 using Bit.SharedWeb.Play;
 using DnsClient;
 using Duende.IdentityModel;
+using Duende.IdentityServer.Models;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -79,6 +81,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using StackExchange.Redis;
 using Swashbuckle.AspNetCore.SwaggerGen;
@@ -495,10 +498,11 @@ public static class ServiceCollectionExtensions
     public static IIdentityServerBuilder AddIdentityServerCertificate(
         this IIdentityServerBuilder identityServerBuilder, IWebHostEnvironment env, GlobalSettings globalSettings)
     {
-        var certificate = CoreHelpers.GetIdentityServerCertificate(globalSettings);
-        if (certificate != null)
+        var certificates = GetIdentitySigningCertificates(globalSettings);
+        if (certificates.Active != null)
         {
-            identityServerBuilder.AddSigningCredential(certificate);
+            AddSigningCertificates(identityServerBuilder, certificates.Active,
+                certificates.Staged.Concat(certificates.Validation));
         }
         else if (env.IsDevelopment() && !string.IsNullOrEmpty(globalSettings.DevelopmentDirectory))
         {
@@ -512,6 +516,38 @@ public static class ServiceCollectionExtensions
         else
         {
             throw new Exception("No identity certificate to use.");
+        }
+        return identityServerBuilder;
+    }
+
+    private static SigningCertificateSet GetIdentitySigningCertificates(GlobalSettings globalSettings)
+    {
+        var identityServer = globalSettings.IdentityServer;
+        var active = CoreHelpers.GetIdentityServerCertificate(globalSettings);
+        var staged = CoreHelpers.GetStagedCertificate(globalSettings, identityServer.FutureCertificate,
+            "globalSettings:identityServer:futureCertificate");
+        var validation = CoreHelpers.GetRetiredCertificates(globalSettings, identityServer.ValidationCertificates,
+            "globalSettings:identityServer:validationCertificates");
+        return new SigningCertificateSet(active, staged == null ? [] : [staged], validation, IsFallback: false);
+    }
+
+    private static IIdentityServerBuilder AddSigningCertificates(IIdentityServerBuilder identityServerBuilder,
+        X509Certificate2 active, IEnumerable<X509Certificate2> published)
+    {
+        identityServerBuilder.AddSigningCredential(active);
+
+        var validationKeys = published
+            .DistinctBy(certificate => certificate.Thumbprint)
+            .Where(certificate => certificate.Thumbprint != active.Thumbprint)
+            .Select(certificate => new SecurityKeyInfo
+            {
+                Key = new X509SecurityKey(certificate) { KeyId = certificate.Thumbprint + SecurityAlgorithms.RsaSha256 },
+                SigningAlgorithm = SecurityAlgorithms.RsaSha256,
+            })
+            .ToArray();
+        if (validationKeys.Length > 0)
+        {
+            identityServerBuilder.AddValidationKey(validationKeys);
         }
         return identityServerBuilder;
     }

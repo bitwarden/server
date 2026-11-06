@@ -247,6 +247,96 @@ public class IdentityServerCertificateTests : IClassFixture<IdentityServerCertif
         Assert.Equal("No identity certificate to use.", exception.Message);
     }
 
+    [Fact]
+    public async Task AddIdentityServerCertificate_StagedAndValidation_ArePublished_ActiveSigns()
+    {
+        using var active = TestCertificates.Create("CN=Bitwarden Test Active");
+        using var staged = TestCertificates.Create("CN=Bitwarden Test Staged");
+        using var retired = TestCertificates.Create("CN=Bitwarden Test Retired");
+        var globalSettings = SelfHostedSettings(active);
+        globalSettings.IdentityServer.FutureCertificate = FutureSlot(staged, active: false);
+        globalSettings.IdentityServer.ValidationCertificates = [RetiredEntry(retired)];
+
+        using var provider = BuildProvider("Production", globalSettings);
+
+        var credential = await provider.GetRequiredService<ISigningCredentialStore>().GetSigningCredentialsAsync();
+        Assert.Equal(KeyId(active), credential.Kid);
+        Assert.Equivalent(new[] { KeyId(active), KeyId(staged), KeyId(retired) },
+            await GetPublishedKeyIdsAsync(provider), strict: true);
+    }
+
+    [Fact]
+    public async Task AddIdentityServerCertificate_DuplicateThumbprints_PublishedOnce()
+    {
+        using var active = TestCertificates.Create("CN=Bitwarden Test Active");
+        using var staged = TestCertificates.Create("CN=Bitwarden Test Staged");
+        var globalSettings = SelfHostedSettings(active);
+        globalSettings.IdentityServer.FutureCertificate = FutureSlot(staged, active: false);
+        globalSettings.IdentityServer.ValidationCertificates = [RetiredEntry(active), RetiredEntry(staged)];
+
+        using var provider = BuildProvider("Production", globalSettings);
+
+        Assert.Equivalent(new[] { KeyId(active), KeyId(staged) }, await GetPublishedKeyIdsAsync(provider),
+            strict: true);
+    }
+
+    [Fact]
+    public async Task AddIdentityServerCertificate_StagedKeyId_EqualsKeyIdAfterPromotion()
+    {
+        using var current = TestCertificates.Create("CN=Bitwarden Test Current");
+        using var next = TestCertificates.Create("CN=Bitwarden Test Next");
+        var stagedSettings = SelfHostedSettings(current);
+        stagedSettings.IdentityServer.FutureCertificate = FutureSlot(next, active: false);
+        var promotedSettings = SelfHostedSettings(current);
+        promotedSettings.IdentityServer.FutureCertificate = FutureSlot(next, active: true);
+
+        using var stagedProvider = BuildProvider("Production", stagedSettings);
+        using var promotedProvider = BuildProvider("Production", promotedSettings);
+
+        var stagedKeyIds = await GetPublishedKeyIdsAsync(stagedProvider);
+        var promotedCredential =
+            await promotedProvider.GetRequiredService<ISigningCredentialStore>().GetSigningCredentialsAsync();
+        Assert.Contains(promotedCredential.Kid, stagedKeyIds);
+        Assert.NotEqual(KeyId(current), promotedCredential.Kid);
+    }
+
+    private static GlobalSettings SelfHostedSettings(X509Certificate2 active) => new()
+    {
+        SelfHosted = true,
+        IdentityServer =
+        {
+            CertificateLocation = TestCertificates.WritePfx(active, Password),
+            CertificatePassword = Password,
+            CertificateThumbprint = null,
+        },
+    };
+
+    private static GlobalSettings.FutureCertificateSettings FutureSlot(X509Certificate2 certificate, bool active) => new()
+    {
+        CertificateLocation = TestCertificates.WritePfx(certificate, Password),
+        CertificatePassword = Password,
+        Enabled = true,
+        Active = active,
+    };
+
+    private static GlobalSettings.RetiredCertificateSettings RetiredEntry(X509Certificate2 certificate) => new()
+    {
+        CertificateLocation = TestCertificates.WritePfx(certificate, Password),
+        CertificatePassword = Password,
+    };
+
+    private static string KeyId(X509Certificate2 certificate) => certificate.Thumbprint + "RS256";
+
+    private static async Task<List<string>> GetPublishedKeyIdsAsync(ServiceProvider provider)
+    {
+        var keyIds = new List<string>();
+        foreach (var store in provider.GetServices<IValidationKeysStore>())
+        {
+            keyIds.AddRange((await store.GetValidationKeysAsync()).Select(key => key.Key.KeyId));
+        }
+        return keyIds;
+    }
+
     private static GlobalSettings NoCertificateSettings()
     {
         var globalSettings = new GlobalSettings
