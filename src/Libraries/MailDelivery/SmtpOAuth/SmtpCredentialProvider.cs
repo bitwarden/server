@@ -22,16 +22,21 @@ internal sealed class SmtpCredentialProvider : ISmtpCredentialProvider
         _handler = smtp.AuthType switch
         {
             SmtpAuthType.Password => null,
+            SmtpAuthType.MicrosoftOAuth => new ClientCredentialsHandler(
+                httpClientFactory,
+                timeProvider,
+                loggerFactory.CreateLogger<ClientCredentialsHandler>(),
+                smtp.OAuth.TokenEndpoint!,
+                smtp.Username!,
+                smtp.OAuth.ClientId!,
+                smtp.OAuth.ClientSecret!,
+                smtp.OAuth.Scope!),
             // Thrown eagerly here, not lazily in GetCredentialsAsync, because this provider is
             // constructed once as a singleton and should fail fast rather than fail on the
             // first send attempt.
             _ => throw new NotSupportedException(
                 $"SmtpAuthType '{smtp.AuthType}' is not supported."),
         };
-
-        _ = httpClientFactory;
-        _ = timeProvider;
-        _ = loggerFactory;
     }
 
     public Task<SaslMechanism> GetCredentialsAsync(CancellationToken cancellationToken)

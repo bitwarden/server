@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Platform.Mail.Delivery;
+using MailKit.Security;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
@@ -45,11 +46,32 @@ public class SmtpCredentialProviderTests
     }
 
     [Fact]
-    public void Constructor_MicrosoftOAuth_ThrowsNotSupportedException()
+    public async Task InvalidateAsync_NonOAuth2Credentials_DoesNotThrow()
     {
         _options.Smtp.AuthType = SmtpAuthType.MicrosoftOAuth;
+        _options.Smtp.Username = "smtp-user@example.com";
+        _options.Smtp.OAuth.TokenEndpoint = "https://login.microsoftonline.com/tenant-id/oauth2/v2.0/token";
+        _options.Smtp.OAuth.ClientId = "client-id";
+        _options.Smtp.OAuth.ClientSecret = "client-secret";
+        _options.Smtp.OAuth.Scope = "https://outlook.office365.com/.default";
+        var sut = CreateSut();
 
-        Assert.Throws<NotSupportedException>(() => CreateSut());
+        await sut.InvalidateAsync(new SaslMechanismPlain("smtp-user@example.com", "password"), CancellationToken.None);
+    }
+
+    [Fact]
+    public void Constructor_MicrosoftOAuth_DoesNotThrow()
+    {
+        _options.Smtp.AuthType = SmtpAuthType.MicrosoftOAuth;
+        _options.Smtp.Username = "smtp-user@example.com";
+        _options.Smtp.OAuth.TokenEndpoint = "https://login.microsoftonline.com/tenant-id/oauth2/v2.0/token";
+        _options.Smtp.OAuth.ClientId = "client-id";
+        _options.Smtp.OAuth.ClientSecret = "client-secret";
+        _options.Smtp.OAuth.Scope = "https://outlook.office365.com/.default";
+
+        var sut = CreateSut();
+
+        Assert.NotNull(sut);
     }
 
     [Fact]
