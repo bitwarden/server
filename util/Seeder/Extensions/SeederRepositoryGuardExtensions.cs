@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -10,7 +11,7 @@ namespace Bit.Seeder.Extensions;
 
 internal static class SeederRepositoryGuardExtensions
 {
-    public static async Task<Organization> GetSecretsManagerOrganizationOrThrowAsync(
+    public static async Task<Organization> GetOrganizationOrThrowAsync(
         this IOrganizationRepository organizationRepository, Guid organizationId)
     {
         var organization = await organizationRepository.GetByIdAsync(organizationId);
@@ -19,10 +20,32 @@ internal static class SeederRepositoryGuardExtensions
             throw new InvalidOperationException($"Organization {organizationId} not found.");
         }
 
+        return organization;
+    }
+
+    public static async Task<Organization> GetSecretsManagerOrganizationOrThrowAsync(
+        this IOrganizationRepository organizationRepository, Guid organizationId)
+    {
+        var organization = await organizationRepository.GetOrganizationOrThrowAsync(organizationId);
         if (!organization.UseSecretsManager)
         {
             throw new InvalidOperationException(
                 $"Organization {organizationId} does not have Secrets Manager enabled.");
+        }
+
+        return organization;
+    }
+
+    public static async Task<Organization> GetOrganizationForSsoSeedOrThrowAsync(
+        this IOrganizationRepository organizationRepository,
+        ISsoConfigRepository ssoConfigRepository,
+        Guid organizationId)
+    {
+        var organization = await organizationRepository.GetOrganizationOrThrowAsync(organizationId);
+
+        if (await ssoConfigRepository.GetByOrganizationIdAsync(organizationId) is not null)
+        {
+            throw new InvalidOperationException($"Organization {organizationId} already has an SSO configuration.");
         }
 
         return organization;
