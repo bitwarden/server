@@ -6,6 +6,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Billing.Enums;
 using Bit.Seeder.Options;
 using Bit.Seeder.Scenes;
+using Duende.IdentityModel.Client;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
