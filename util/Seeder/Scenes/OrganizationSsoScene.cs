@@ -7,6 +7,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
+using Bit.Seeder.Extensions;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -24,6 +25,9 @@ public class OrganizationSsoScene(
     IPolicyRepository policyRepository,
     IManglerService manglerService) : IScene<OrganizationSsoScene.Request, OrganizationSsoSceneResult>
 {
+    private static readonly PolicyType[] _trustedDeviceEncryptionPolicyTypes =
+        [PolicyType.SingleOrg, PolicyType.ResetPassword, PolicyType.RequireSso];
+
     public class Request
     {
         [Required]
@@ -44,12 +48,16 @@ public class OrganizationSsoScene(
 
     public async Task<SceneResult<OrganizationSsoSceneResult>> SeedAsync(Request request)
     {
-        var organization = await organizationRepository.GetByIdAsync(request.OrganizationId)
-            ?? throw new InvalidOperationException($"Organization {request.OrganizationId} not found.");
+        var organization = await organizationRepository.GetOrganizationForSsoSeedOrThrowAsync(
+            ssoConfigRepository, request.OrganizationId);
 
-        if (await ssoConfigRepository.GetByOrganizationIdAsync(organization.Id) is not null)
+        var existingTdePolicies = new List<(PolicyType Type, Policy? Existing)>();
+        if (request.MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption)
         {
-            throw new InvalidOperationException($"Organization {organization.Id} already has an SSO configuration.");
+            foreach (var type in _trustedDeviceEncryptionPolicyTypes)
+            {
+                existingTdePolicies.Add((type, await policyRepository.GetByOrganizationIdTypeAsync(organization.Id, type)));
+            }
         }
 
         var identifier = manglerService.Mangle(request.Identifier);
@@ -68,9 +76,9 @@ public class OrganizationSsoScene(
             request.MemberDecryptionType);
         await ssoConfigRepository.CreateAsync(ssoConfig);
 
-        if (request.MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption)
+        foreach (var (type, existing) in existingTdePolicies)
         {
-            await CreateTrustedDeviceEncryptionPoliciesAsync(organization.Id);
+            await UpsertEnabledPolicyAsync(organization.Id, type, existing);
         }
 
         return new SceneResult<OrganizationSsoSceneResult>(
@@ -81,14 +89,27 @@ public class OrganizationSsoScene(
             mangleMap: manglerService.GetMangleMap());
     }
 
-    private async Task CreateTrustedDeviceEncryptionPoliciesAsync(Guid organizationId)
+    private async Task UpsertEnabledPolicyAsync(Guid organizationId, PolicyType type, Policy? existing)
     {
-        var resetPassword = NewEnabledPolicy(organizationId, PolicyType.ResetPassword);
-        resetPassword.SetDataModel(new ResetPasswordDataModel { AutoEnrollEnabled = true });
+        if (existing is null)
+        {
+            var policy = NewEnabledPolicy(organizationId, type);
+            SetTrustedDeviceEncryptionData(policy);
+            await policyRepository.CreateAsync(policy);
+            return;
+        }
 
-        await policyRepository.CreateAsync(NewEnabledPolicy(organizationId, PolicyType.SingleOrg));
-        await policyRepository.CreateAsync(resetPassword);
-        await policyRepository.CreateAsync(NewEnabledPolicy(organizationId, PolicyType.RequireSso));
+        existing.Enabled = true;
+        SetTrustedDeviceEncryptionData(existing);
+        await policyRepository.ReplaceAsync(existing);
+    }
+
+    private static void SetTrustedDeviceEncryptionData(Policy policy)
+    {
+        if (policy.Type == PolicyType.ResetPassword)
+        {
+            policy.SetDataModel(new ResetPasswordDataModel { AutoEnrollEnabled = true });
+        }
     }
 
     private static Policy NewEnabledPolicy(Guid organizationId, PolicyType type) => new()
