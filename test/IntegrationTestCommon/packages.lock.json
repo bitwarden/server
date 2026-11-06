@@ -4,9 +4,9 @@
     "net10.0": {
       "Fido2.Models": {
         "type": "Direct",
-        "requested": "[4.0.1, 4.0.1]",
-        "resolved": "4.0.1",
-        "contentHash": "SepPhuYlDEWFwObg39xea9e5Ck5a7qpUP0vjIWzkEOCXDWsKQaW9sdN+m+h9phiCzb0r3w1yauypnHN11CozIw==",
+        "requested": "[4.3.2, 4.3.2]",
+        "resolved": "4.3.2",
+        "contentHash": "N9kvnuAtRXhezfs3cOo+eqI6MeQDr///s75NQUHPizM1/RkPahY9HmHbEzmr8B9gVESo9uyVorjvtrAqVeUz/w==",
         "dependencies": {
           "Microsoft.Bcl.Memory": "9.0.14"
         }
