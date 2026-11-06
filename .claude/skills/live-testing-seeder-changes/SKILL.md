@@ -83,7 +83,7 @@ Then match the running loop with `pgrep -f "[s]eed.sh"` (the brackets keep the p
 ### 4. Variant matrix (validator, schema or shape changes)
 
 1. Write one-change variants of a reference preset to an untracked `util/Seeder/Seeds/fixtures/presets/e2etmp/`: drop each block, empty each array, push each value past its range, break each cross-field total. Give each a unique `.example` domain and an org name of at most 41 characters (`Organization.Name` is 50; the mangle prefix takes 9).
-2. Presets are embedded resources. Run `dotnet build util/SeederUtility` once, then seed each variant with the step 2 recipe, adding `--no-build` and using `--name e2etmp.<id>`.
+2. Presets are embedded resources. Run `dotnet build util/SeederUtility` once, then seed each variant with the step 2 recipe using `dotnet run --project util/SeederUtility --no-build -- preset --name e2etmp.<id> --mangle` (`--no-build` goes before the `--`).
 3. Record the exit code and first error line, and classify each outcome: A sensible default, B clear error, C error that hides the cause, D silent wrong output.
 4. For every failed variant, prove nothing committed: no org row with that name inside the run's time window.
 5. Delete the folder, rebuild, and confirm `preset --list` shows no `e2etmp` entry and `git status --porcelain` matches the preflight baseline.
