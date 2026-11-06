@@ -22,6 +22,10 @@
     <ProjectReference Include="..\..\util\SeederUtility\SeederUtility.csproj" />
     <ProjectReference Include="..\IntegrationTestCommon\IntegrationTestCommon.csproj" />
 
+    <Content Update="Scenes\TestVectors\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+
     <Content Include="..\..\util\SeederApi\appsettings.*.json">
       <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
