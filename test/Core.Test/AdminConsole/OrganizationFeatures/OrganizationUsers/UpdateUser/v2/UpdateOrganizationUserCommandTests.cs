@@ -5,7 +5,9 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Auth.UserFeatures.UserEmail;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Organizations.Queries;
+using Bit.Core.Billing.Organizations;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -15,7 +17,6 @@ using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -114,15 +115,14 @@ public class UpdateOrganizationUserCommandTests
     {
         organizationUser.AccessPam = false;
         var request = Setup(sutProvider, organization, organizationUser, targetAccessPam: true);
-        sutProvider.GetDependency<IGlobalSettings>().SelfHosted = true;
-        sutProvider.GetDependency<ICountNewPamSeatsRequiredQuery>()
-            .CountNewPamSeatsRequiredAsync(organization, 1)
-            .Returns(1);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(new PrivilegedControlsSeatReservationResult(new CannotAutoscalePrivilegedControlsSeatsOnSelfHostError()));
 
         var result = await sutProvider.Sut.UpdateUserAsync(request);
 
         Assert.True(result.IsError);
-        Assert.IsType<CannotAutoscalePamSeatsOnSelfHost>(result.AsError);
+        Assert.IsType<CannotAutoscalePrivilegedControlsSeatsOnSelfHostError>(result.AsError);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .ReplaceAsync(Arg.Any<OrganizationUser>(), Arg.Any<IEnumerable<CollectionAccessSelection>>());
@@ -137,10 +137,9 @@ public class UpdateOrganizationUserCommandTests
     {
         organizationUser.AccessPam = false;
         var request = Setup(sutProvider, organization, organizationUser, targetAccessPam: true);
-        sutProvider.GetDependency<IGlobalSettings>().SelfHosted = false;
-        sutProvider.GetDependency<ICountNewPamSeatsRequiredQuery>()
-            .CountNewPamSeatsRequiredAsync(organization, 1)
-            .Returns(1);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(new PrivilegedControlsSeatReservationResult());
 
         var result = await sutProvider.Sut.UpdateUserAsync(request);
 
@@ -160,10 +159,9 @@ public class UpdateOrganizationUserCommandTests
     {
         organizationUser.AccessPam = false;
         var request = Setup(sutProvider, organization, organizationUser, targetAccessPam: true);
-        sutProvider.GetDependency<IGlobalSettings>().SelfHosted = true;
-        sutProvider.GetDependency<ICountNewPamSeatsRequiredQuery>()
-            .CountNewPamSeatsRequiredAsync(organization, 1)
-            .Returns(0);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(new PrivilegedControlsSeatReservationResult());
 
         var result = await sutProvider.Sut.UpdateUserAsync(request);
 
@@ -172,6 +170,125 @@ public class UpdateOrganizationUserCommandTests
             .Received(1)
             .ReplaceAsync(Arg.Is<OrganizationUser>(ou => ou.AccessPam),
                 Arg.Any<IEnumerable<CollectionAccessSelection>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateUserAsync_EnablingPrivilegedControls_ConfirmedMember_ReservesOneSeat(
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
+    {
+        organizationUser.AccessPam = false;
+        var request = Setup(sutProvider, organization, organizationUser, targetAccessPam: true);
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .Received(1)
+            .RunAsync(organization, 1);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateUserAsync_EnablingPrivilegedControls_AtLimit_ReturnsSeatLimitReachedAndDoesNotSave(
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
+    {
+        organizationUser.AccessPam = false;
+        var request = Setup(sutProvider, organization, organizationUser, targetAccessPam: true);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(new PrivilegedControlsSeatReservationResult(new PrivilegedControlsSeatLimitReachedError()));
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<PrivilegedControlsSeatLimitReachedError>(result.AsError);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(Arg.Any<OrganizationUser>(), Arg.Any<IEnumerable<CollectionAccessSelection>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateUserAsync_EnablingPrivilegedControls_ReservationFails_ReturnsTheReservationErrorAndDoesNotSave(
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
+    {
+        organizationUser.AccessPam = false;
+        var request = Setup(sutProvider, organization, organizationUser, targetAccessPam: true);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(new PrivilegedControlsSeatReservationResult(
+                new PrivilegedControlsSeatExpansionFailedError("No subscription found."),
+                new BadRequestException("No subscription found.")));
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsError);
+        var error = Assert.IsType<PrivilegedControlsSeatExpansionFailedError>(result.AsError);
+        Assert.Equal("No subscription found.", error.Message);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(Arg.Any<OrganizationUser>(), Arg.Any<IEnumerable<CollectionAccessSelection>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateUserAsync_EnablingPrivilegedControls_RevokedMember_DoesNotReserve(
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Revoked, OrganizationUserType.User)] OrganizationUser organizationUser)
+    {
+        organizationUser.AccessPam = false;
+        var request = Setup(sutProvider, organization, organizationUser, targetAccessPam: true);
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default!, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateUserAsync_EnablingPrivilegedControls_StagedMember_DoesNotReserve(
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Staged, OrganizationUserType.User)] OrganizationUser organizationUser)
+    {
+        organizationUser.AccessPam = false;
+        var request = Setup(sutProvider, organization, organizationUser, targetAccessPam: true);
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default!, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateUserAsync_AlreadyHasPrivilegedControls_DoesNotReserve(
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
+    {
+        organizationUser.AccessPam = true;
+        var request = Setup(sutProvider, organization, organizationUser, targetAccessPam: true);
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default!, default);
     }
 
     [Theory]
@@ -550,6 +667,10 @@ public class UpdateOrganizationUserCommandTests
             .Returns(ci => valid
                 ? ValidationResultHelpers.Valid(ci.Arg<UpdateOrganizationUserRequest>())
                 : ValidationResultHelpers.Invalid(ci.Arg<UpdateOrganizationUserRequest>(), new MustHaveConfirmedOwner()));
+
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(Arg.Any<Organization>(), Arg.Any<int>())
+            .Returns(new PrivilegedControlsSeatReservationResult());
 
         return new UpdateOrganizationUserRequest(
             organizationUser,

@@ -1989,6 +1989,9 @@
           "xunit": "[2.6.6, )"
         }
       },
+      "currentuser": {
+        "type": "Project"
+      },
       "data": {
         "type": "Project"
       },
@@ -2022,7 +2025,8 @@
           "OpenTelemetry.Instrumentation.Runtime": "[1.15.1, )",
           "OpenTelemetry.Instrumentation.SqlClient": "[1.15.2, )",
           "Pam.Domain": "[2026.10.1, )",
-          "SharedWeb": "[2026.10.1, )"
+          "SharedWeb": "[2026.10.1, )",
+          "Subscriptions.Organization": "[0.0.1, )"
         }
       },
       "infrastructure.dapper": {
@@ -2057,6 +2061,15 @@
           "Microsoft.AspNetCore.Mvc.Testing": "[10.0.10, 10.0.10]",
           "Migrator": "[2026.10.1, )",
           "Seeder": "[2026.10.1, )"
+        }
+      },
+      "invoicing": {
+        "type": "Project",
+        "dependencies": {
+          "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
+          "Bitwarden.Server.Sdk.Features": "[1.5.0, )",
+          "Core": "[2026.10.1, )",
+          "Stripe.net": "[52.1.0, 52.1.0]"
         }
       },
       "maildelivery": {
@@ -2102,6 +2115,13 @@
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, 8.23.0]"
         }
       },
+      "organizationauthorization": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.10.1, )",
+          "CurrentUser": "[0.0.1, )"
+        }
+      },
       "pam.domain": {
         "type": "Project",
         "dependencies": {
@@ -2144,6 +2164,15 @@
       },
       "ssrfprotection": {
         "type": "Project"
+      },
+      "subscriptions.organization": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.10.1, )",
+          "ExceptionHandling": "[0.0.1, )",
+          "Invoicing": "[0.0.1, )",
+          "OrganizationAuthorization": "[0.0.1, )"
+        }
       }
     }
   }

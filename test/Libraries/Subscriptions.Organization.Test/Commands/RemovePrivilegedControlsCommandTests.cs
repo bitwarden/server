@@ -1,11 +1,11 @@
-﻿using Bit.Core.Billing.Commands;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Exceptions;
-using Bit.Core.Services;
-using Bit.Subscriptions.Organization.Commands;
+using Bit.Subscriptions.Organization.Commands.PrivilegedControls;
 using Bitwarden.Server.Sdk.Environment;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -23,7 +23,8 @@ public class RemovePrivilegedControlsCommandTests
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand =
         Substitute.For<IUpdateOrganizationSubscriptionCommand>();
-    private readonly IOrganizationService _organizationService = Substitute.For<IOrganizationService>();
+    private readonly IReplaceOrganizationAndUpdateCacheCommand _replaceOrganizationAndUpdateCacheCommand =
+        Substitute.For<IReplaceOrganizationAndUpdateCacheCommand>();
     private readonly IBitwardenEnvironment _environment = Substitute.For<IBitwardenEnvironment>();
     private readonly RecordingLogger<RemovePrivilegedControlsCommand> _logger = new();
     private readonly RemovePrivilegedControlsCommand _sut;
@@ -36,7 +37,7 @@ public class RemovePrivilegedControlsCommandTests
             .Run(Arg.Any<OrganizationEntity>(), Arg.Any<OrganizationSubscriptionChangeSet>(), Arg.Any<Subscription?>())
             .Returns(new Subscription());
         _sut = new RemovePrivilegedControlsCommand(
-            _pricingClient, _updateOrganizationSubscriptionCommand, _organizationService, _environment, _logger);
+            _pricingClient, _updateOrganizationSubscriptionCommand, _replaceOrganizationAndUpdateCacheCommand, _environment, _logger);
     }
 
     [Fact]
@@ -143,7 +144,7 @@ public class RemovePrivilegedControlsCommandTests
 
         await _sut.Run(organization);
 
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(organization);
+        await _replaceOrganizationAndUpdateCacheCommand.Received(1).RunAsync(organization);
     }
 
     [Fact]
@@ -172,8 +173,8 @@ public class RemovePrivilegedControlsCommandTests
         Assert.True(organization.UsePam);
         Assert.Equal(12, organization.PamSeats);
         Assert.Equal(30, organization.MaxAutoscalePamSeats);
-        await _organizationService.DidNotReceive()
-            .ReplaceAndUpdateCacheAsync(Arg.Any<OrganizationEntity>(), Arg.Any<Bit.Core.Enums.EventType?>());
+        await _replaceOrganizationAndUpdateCacheCommand.DidNotReceive()
+            .RunAsync(Arg.Any<OrganizationEntity>(), Arg.Any<Bit.Core.Enums.EventType?>());
     }
 
     [Fact]
@@ -181,8 +182,8 @@ public class RemovePrivilegedControlsCommandTests
     {
         var organization = CreateOrganization();
         var thrown = new InvalidOperationException("database unavailable");
-        _organizationService
-            .ReplaceAndUpdateCacheAsync(organization, Arg.Any<Bit.Core.Enums.EventType?>())
+        _replaceOrganizationAndUpdateCacheCommand
+            .RunAsync(organization, Arg.Any<Bit.Core.Enums.EventType?>())
             .ThrowsAsync(thrown);
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.Run(organization));
@@ -197,8 +198,8 @@ public class RemovePrivilegedControlsCommandTests
     {
         await _updateOrganizationSubscriptionCommand.DidNotReceive()
             .Run(Arg.Any<OrganizationEntity>(), Arg.Any<OrganizationSubscriptionChangeSet>(), Arg.Any<Subscription?>());
-        await _organizationService.DidNotReceive()
-            .ReplaceAndUpdateCacheAsync(Arg.Any<OrganizationEntity>(), Arg.Any<Bit.Core.Enums.EventType?>());
+        await _replaceOrganizationAndUpdateCacheCommand.DidNotReceive()
+            .RunAsync(Arg.Any<OrganizationEntity>(), Arg.Any<Bit.Core.Enums.EventType?>());
     }
 
     private static OrganizationEntity CreateOrganization(

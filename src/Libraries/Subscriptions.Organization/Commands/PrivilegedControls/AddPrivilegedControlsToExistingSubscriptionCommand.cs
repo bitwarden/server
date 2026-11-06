@@ -1,12 +1,12 @@
-﻿using Bit.Core.Billing.Extensions;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Exceptions;
-using Bit.Core.Services;
 using Bitwarden.Server.Sdk.Environment;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
 
-namespace Bit.Subscriptions.Organization.Commands;
+namespace Bit.Subscriptions.Organization.Commands.PrivilegedControls;
 
 internal interface IAddPrivilegedControlsToExistingSubscriptionCommand
 {
@@ -25,7 +25,7 @@ internal interface IAddPrivilegedControlsToExistingSubscriptionCommand
 internal sealed class AddPrivilegedControlsToExistingSubscriptionCommand(
     IPrivilegedControlsSeatChangeSetFactory seatChangeSetFactory,
     IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
-    IOrganizationService organizationService,
+    IReplaceOrganizationAndUpdateCacheCommand replaceOrganizationAndUpdateCacheCommand,
     IBitwardenEnvironment environment) : IAddPrivilegedControlsToExistingSubscriptionCommand
 {
     public async Task Run(OrganizationEntity organization, int seats, int? maxAutoscaleSeats)
@@ -57,6 +57,6 @@ internal sealed class AddPrivilegedControlsToExistingSubscriptionCommand(
         organization.PamSeats = seats;
         organization.MaxAutoscalePamSeats = maxAutoscaleSeats;
         organization.UsePam = true;
-        await organizationService.ReplaceAndUpdateCacheAsync(organization);
+        await replaceOrganizationAndUpdateCacheCommand.RunAsync(organization);
     }
 }

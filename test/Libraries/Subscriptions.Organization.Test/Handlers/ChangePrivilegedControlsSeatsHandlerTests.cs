@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Subscriptions.Organization.Commands;
+using Bit.Subscriptions.Organization.Commands.PrivilegedControls;
 using Bit.Subscriptions.Organization.Handlers;
 using Bit.Subscriptions.Organization.Models.Requests;
 using NSubstitute;
