@@ -87,7 +87,8 @@ public class OrganizationNoPaymentCreateRequest
     /// <summary>
     /// The sales invitation token from a sales-assisted trial link. Honoured only together with the sales-assisted
     /// initiation path; with self-serve Privileged Controls off, a sales-assisted sign-up that includes Privileged
-    /// Controls with a missing or invalid token is rejected.
+    /// Controls with a missing or invalid token is rejected, and with a valid token Privileged Controls is set on the
+    /// organization only (no Stripe line).
     /// </summary>
     public string SalesAssistedToken { get; set; }
 

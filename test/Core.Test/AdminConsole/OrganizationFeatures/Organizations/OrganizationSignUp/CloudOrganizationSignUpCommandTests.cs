@@ -773,7 +773,7 @@ public class CloudOrganizationSignUpCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SignUpAsync_PrivilegedControls_SalesAssistedWithValidToken_FlagOff_Provisions(
+    public async Task SignUpAsync_PrivilegedControls_SalesAssistedWithValidToken_FlagOff_ProvisionsOnOrganizationOnly(
         OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
     {
         ArrangePrivilegedControlsSignup(signup, sutProvider, pamSeats: 6, pamBillingSupport: false);
@@ -783,11 +783,11 @@ public class CloudOrganizationSignUpCommandTests
 
         await sutProvider.Sut.SignUpOrganizationAsync(signup);
 
-        await AssertPrivilegedControlsProvisionedAsync(sutProvider);
+        await AssertPrivilegedControlsProvisionedOnOrganizationOnlyAsync(sutProvider);
     }
 
     [Theory, BitAutoData]
-    public async Task SignUpAsync_PrivilegedControls_SalesAssistedTokenEmailInDifferentCase_FlagOff_Provisions(
+    public async Task SignUpAsync_PrivilegedControls_SalesAssistedTokenEmailInDifferentCase_FlagOff_ProvisionsOnOrganizationOnly(
         OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
     {
         ArrangePrivilegedControlsSignup(signup, sutProvider, pamSeats: 6, pamBillingSupport: false);
@@ -798,7 +798,42 @@ public class CloudOrganizationSignUpCommandTests
 
         await sutProvider.Sut.SignUpOrganizationAsync(signup);
 
-        await AssertPrivilegedControlsProvisionedAsync(sutProvider);
+        await AssertPrivilegedControlsProvisionedOnOrganizationOnlyAsync(sutProvider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SignUpAsync_PrivilegedControls_SalesAssisted_FlagOff_PlanWithoutPrivilegedControls_Throws(
+        OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        ArrangePrivilegedControlsSignup(signup, sutProvider, pamSeats: 6, pamBillingSupport: false);
+        signup.Plan = PlanType.TeamsAnnually;
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
+        signup.InitiationPath = TrialInitiationConstants.SalesAssistedTrialInitiationPath;
+        signup.SalesAssistedToken = "sales-assisted-token";
+        ArrangeSalesAssistedToken(sutProvider, signup.SalesAssistedToken, SalesAssistedTokenable(signup.Owner.Email));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SignUpOrganizationAsync(signup));
+
+        Assert.Equal("Invalid Privileged Controls plan selected.", exception.Message);
+        await AssertNothingProvisionedAsync(sutProvider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SignUpAsync_PrivilegedControls_SalesAssisted_FlagOff_SecretsManagerTrial_Throws(
+        OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        ArrangePrivilegedControlsSignup(signup, sutProvider, pamSeats: 6, pamBillingSupport: false);
+        signup.IsFromSecretsManagerTrial = true;
+        signup.InitiationPath = TrialInitiationConstants.SalesAssistedTrialInitiationPath;
+        signup.SalesAssistedToken = "sales-assisted-token";
+        ArrangeSalesAssistedToken(sutProvider, signup.SalesAssistedToken, SalesAssistedTokenable(signup.Owner.Email));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SignUpOrganizationAsync(signup));
+
+        Assert.Equal("Privileged Controls cannot be combined with a Secrets Manager standalone trial.", exception.Message);
+        await AssertNothingProvisionedAsync(sutProvider);
     }
 
     [Theory]
@@ -911,6 +946,18 @@ public class CloudOrganizationSignUpCommandTests
             Arg.Any<Organization>(),
             Arg.Is<OrganizationSubscriptionCreation>(c => c.PrivilegedControls != null && c.PrivilegedControls.Seats == 6));
         await sutProvider.GetDependency<IOrganizationBillingService>().DidNotReceive().Finalize(Arg.Any<OrganizationSale>());
+    }
+
+    // With the flag off a sales invitation sets Privileged Controls on the organization only; the Stripe trial
+    // subscription comes from the legacy Finalize path and carries no Privileged Controls line.
+    private static async Task AssertPrivilegedControlsProvisionedOnOrganizationOnlyAsync(
+        SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        await sutProvider.GetDependency<IOrganizationBillingService>().Received(1).Finalize(Arg.Any<OrganizationSale>());
+        await sutProvider.GetDependency<ICreateOrganizationSubscriptionCommand>().DidNotReceiveWithAnyArgs()
+            .Run(default!, default!);
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).CreateAsync(
+            Arg.Is<Organization>(o => o.UsePam && o.PamSeats == 6 && o.MaxAutoscalePamSeats == null));
     }
 
     private static async Task AssertNothingProvisionedAsync(
