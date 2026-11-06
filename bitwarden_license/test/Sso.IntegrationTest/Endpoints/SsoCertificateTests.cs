@@ -270,6 +270,295 @@ public class SsoCertificateTests
             tokens.RootElement.GetProperty("id_token").GetString()!, ssoCertificate);
     }
 
+    [Fact]
+    public async Task Metadata_SsoRolesSetToTheIdentityCertificate_OneKeyDescriptorWithNoUse()
+    {
+        // Arrange
+        using var certificate = TestCertificates.Create();
+        var configuration = CertificateTestConfiguration.SelfHosted(certificate)
+            .WithSsoSigningCertificate(certificate)
+            .WithSsoEncryptionCertificate(certificate);
+
+        // Act
+        var xml = await GetMetadataAsync(configuration);
+
+        // Assert
+        Assert.Equal([Key(null, certificate)], KeyDescriptors(xml));
+    }
+
+    [Fact]
+    public async Task Metadata_SplitCertificates_SigningAndEncryptionKeyDescriptors()
+    {
+        // Arrange
+        using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");
+        using var signing = TestCertificates.Create("CN=Bitwarden Test SSO Signing");
+        using var encryption = TestCertificates.Create("CN=Bitwarden Test SSO Encryption");
+        var configuration = CertificateTestConfiguration.SelfHosted(identity)
+            .WithSsoSigningCertificate(signing)
+            .WithSsoEncryptionCertificate(encryption);
+
+        // Act
+        var xml = await GetMetadataAsync(configuration);
+
+        // Assert
+        Assert.Equal([Key("signing", signing), Key("encryption", encryption)], KeyDescriptors(xml));
+    }
+
+    [Fact]
+    public async Task Metadata_StagedSigning_PublishedAsSecondSigningKey_MetadataSignedByActive()
+    {
+        // Arrange
+        using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");
+        using var signing = TestCertificates.Create("CN=Bitwarden Test SSO Signing");
+        using var stagedSigning = TestCertificates.Create("CN=Bitwarden Test SSO Staged Signing");
+        using var encryption = TestCertificates.Create("CN=Bitwarden Test SSO Encryption");
+        var configuration = CertificateTestConfiguration.SelfHosted(identity)
+            .WithSsoSigningCertificate(signing)
+            .WithSsoStagedSigningCertificate(stagedSigning)
+            .WithSsoEncryptionCertificate(encryption);
+
+        // Act
+        var xml = await GetMetadataAsync(configuration);
+
+        // Assert
+        Assert.Equal(
+            [Key("signing", signing), Key("encryption", encryption), Key("signing", stagedSigning)],
+            KeyDescriptors(xml));
+        var document = XmlHelpers.XmlDocumentFromString(xml).DocumentElement!;
+        Assert.True(IsSignedBy(document, signing));
+        Assert.False(IsSignedBy(document, stagedSigning));
+    }
+
+    [Fact]
+    public async Task Metadata_StagedEncryption_NotPublished()
+    {
+        // Arrange
+        using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");
+        using var signing = TestCertificates.Create("CN=Bitwarden Test SSO Signing");
+        using var encryption = TestCertificates.Create("CN=Bitwarden Test SSO Encryption");
+        using var stagedEncryption = TestCertificates.Create("CN=Bitwarden Test SSO Staged Encryption");
+        var configuration = CertificateTestConfiguration.SelfHosted(identity)
+            .WithSsoSigningCertificate(signing)
+            .WithSsoEncryptionCertificate(encryption)
+            .WithSsoEncryptionFutureCertificate(stagedEncryption, active: false);
+
+        // Act
+        var xml = await GetMetadataAsync(configuration);
+
+        // Assert
+        Assert.Equal([Key("signing", signing), Key("encryption", encryption)], KeyDescriptors(xml));
+    }
+
+    [Fact]
+    public async Task Metadata_FallbackWithIdentityAndSsoStaged_BothPublished_ActiveSigns()
+    {
+        // Arrange
+        using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");
+        using var identityStaged = TestCertificates.Create("CN=Bitwarden Test Identity Staged");
+        using var ssoStaged = TestCertificates.Create("CN=Bitwarden Test SSO Staged");
+        var configuration = CertificateTestConfiguration.SelfHosted(identity, identityStaged, futureActive: false)
+            .WithSsoStagedSigningCertificate(ssoStaged);
+
+        // Act
+        var xml = await GetMetadataAsync(configuration);
+
+        // Assert
+        Assert.Equal(
+            [Key(null, identity), Key("signing", identityStaged), Key("signing", ssoStaged)],
+            KeyDescriptors(xml));
+        var document = XmlHelpers.XmlDocumentFromString(xml).DocumentElement!;
+        Assert.True(IsSignedBy(document, identity));
+        Assert.False(IsSignedBy(document, identityStaged));
+        Assert.False(IsSignedBy(document, ssoStaged));
+    }
+
+    [Fact]
+    public async Task Acs_AssertionEncryptedToActiveSsoEncryptionCertificate_Decrypts()
+    {
+        // Arrange
+        using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");
+        using var signing = TestCertificates.Create("CN=Bitwarden Test SSO Signing");
+        using var encryption = TestCertificates.Create("CN=Bitwarden Test SSO Encryption");
+        var idpCertificate = Saml2AcsPostHarness.BuildIdpCertificate();
+        using var arrangement = await ArrangeAcsAsync(idpCertificate, CertificateTestConfiguration.SelfHosted(identity)
+            .WithSsoSigningCertificate(signing)
+            .WithSsoEncryptionCertificate(encryption));
+        var metadata = await GetMetadataAsync(arrangement);
+
+        // Act
+        using var response = await PostEncryptedAssertionAsync(arrangement, idpCertificate, encryption);
+
+        // Assert
+        Assert.Equal([Key("encryption", encryption)], KeyDescriptors(metadata).Where(key => key.Use != "signing"));
+        await Saml2SpInitiatedLogin.AssertSucceededAsync(response);
+    }
+
+    [Fact]
+    public async Task Acs_AssertionEncryptedToStagedEncryptionCertificate_Decrypts()
+    {
+        // Arrange
+        using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");
+        using var encryption = TestCertificates.Create("CN=Bitwarden Test SSO Encryption");
+        using var stagedEncryption = TestCertificates.Create("CN=Bitwarden Test SSO Staged Encryption");
+        var idpCertificate = Saml2AcsPostHarness.BuildIdpCertificate();
+        using var arrangement = await ArrangeAcsAsync(idpCertificate, CertificateTestConfiguration.SelfHosted(identity)
+            .WithSsoEncryptionCertificate(encryption)
+            .WithSsoEncryptionFutureCertificate(stagedEncryption, active: false));
+
+        // Act
+        using var response = await PostEncryptedAssertionAsync(arrangement, idpCertificate, stagedEncryption);
+
+        // Assert
+        await Saml2SpInitiatedLogin.AssertSucceededAsync(response);
+    }
+
+    [Fact]
+    public async Task Acs_FallbackAfterIdentityStage5Rollback_AssertionEncryptedToIdentityStagedCertificate_Decrypts()
+    {
+        // Arrange
+        using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");
+        using var identityNew = TestCertificates.Create("CN=Bitwarden Test Identity New");
+        var idpCertificate = Saml2AcsPostHarness.BuildIdpCertificate();
+        using var arrangement = await ArrangeAcsAsync(idpCertificate,
+            CertificateTestConfiguration.SelfHosted(identity, identityNew, futureActive: false));
+        var metadata = await GetMetadataAsync(arrangement);
+
+        // Act
+        using var response = await PostEncryptedAssertionAsync(arrangement, idpCertificate, identityNew);
+
+        // Assert
+        Assert.Equal([Key(null, identity)], KeyDescriptors(metadata).Where(key => key.Use != "signing"));
+        await Saml2SpInitiatedLogin.AssertSucceededAsync(response);
+    }
+
+    [Fact]
+    public async Task Acs_AssertionEncryptedToDecryptionCertificate_Decrypts()
+    {
+        // Arrange
+        using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");
+        using var encryption = TestCertificates.Create("CN=Bitwarden Test SSO Encryption");
+        using var decryption = TestCertificates.Create("CN=Bitwarden Test SSO Decryption");
+        var idpCertificate = Saml2AcsPostHarness.BuildIdpCertificate();
+        using var arrangement = await ArrangeAcsAsync(idpCertificate, CertificateTestConfiguration.SelfHosted(identity)
+            .WithSsoEncryptionCertificate(encryption)
+            .WithSsoDecryptionCertificates(decryption));
+
+        // Act
+        using var response = await PostEncryptedAssertionAsync(arrangement, idpCertificate, decryption);
+
+        // Assert
+        await Saml2SpInitiatedLogin.AssertSucceededAsync(response);
+    }
+
+    [Fact]
+    public async Task Acs_AfterReturnFromStage6_AssertionEncryptedToNewCertificate_Decrypts()
+    {
+        // Arrange
+        using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");
+        using var outgoing = TestCertificates.Create("CN=Bitwarden Test SSO Encryption Outgoing");
+        using var newCertificate = TestCertificates.Create("CN=Bitwarden Test SSO Encryption New");
+        var idpCertificate = Saml2AcsPostHarness.BuildIdpCertificate();
+        using var arrangement = await ArrangeAcsAsync(idpCertificate, CertificateTestConfiguration.SelfHosted(identity)
+            .WithSsoEncryptionCertificate(newCertificate)
+            .WithSsoEncryptionFutureCertificate(outgoing, active: true)
+            .WithSsoDecryptionCertificates(newCertificate));
+        var metadata = await GetMetadataAsync(arrangement);
+
+        // Act
+        using var response = await PostEncryptedAssertionAsync(arrangement, idpCertificate, newCertificate);
+
+        // Assert
+        Assert.Equal([Key("encryption", outgoing)], KeyDescriptors(metadata).Where(key => key.Use != "signing"));
+        await Saml2SpInitiatedLogin.AssertSucceededAsync(response);
+    }
+
+    [Fact]
+    public void Startup_ProductionWithNoSsoServerEncryption_Fails()
+    {
+        // Arrange
+        using var factory = new SsoApplicationFactory();
+        var configuration = CertificateTestConfiguration.NoCertificate();
+        configuration["globalSettings:ssoServer:blobName"] = "sso.pfx";
+        foreach (var (key, value) in configuration)
+        {
+            factory.UpdateConfiguration(key, value);
+        }
+
+        // Act & Assert
+        StartupTestHelpers.AssertStartupFails(factory, "Production",
+            "No SSO encryption certificate is configured. A cloud host must set globalSettings:ssoServer:encryption.");
+    }
+
+    [Fact]
+    public void Startup_EncryptionCertificateWithNoPrivateKey_Fails()
+    {
+        // Arrange
+        using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");
+        using var encryption = TestCertificates.Create("CN=Bitwarden Test SSO Encryption");
+        using var publicOnly = X509CertificateLoader.LoadCertificate(encryption.RawData);
+        using var factory = new SsoApplicationFactory();
+        foreach (var (key, value) in CertificateTestConfiguration.SelfHosted(identity)
+                     .WithSsoEncryptionCertificate(publicOnly))
+        {
+            factory.UpdateConfiguration(key, value);
+        }
+
+        // Act
+        var exception = StartupTestHelpers.AssertStartupFails(factory, "Development", "SSO encryption");
+
+        // Assert
+        Assert.Contains(encryption.Thumbprint, exception.Message);
+        Assert.Contains("does not contain a private key", exception.InnerException?.Message);
+    }
+
+    private static async Task<string> GetMetadataAsync(Dictionary<string, string?> configuration)
+    {
+        var builder = new SsoTestDataBuilder().WithSsoConfig(cfg => cfg!.SetData(BuildSamlConfiguration()));
+        foreach (var (key, value) in configuration)
+        {
+            builder.WithConfiguration(key, value);
+        }
+        var testData = await builder.AsSelfHosted().BuildAsync();
+        using var factory = testData.Factory;
+        using var client = factory.CreateClient();
+        return await GetMetadataAsync(client, testData.Organization!.Id);
+    }
+
+    private static Task<string> GetMetadataAsync(Saml2AcsArrangement arrangement) =>
+        GetMetadataAsync(arrangement.Client, arrangement.OrganizationId);
+
+    private static async Task<string> GetMetadataAsync(HttpClient client, Guid organizationId)
+    {
+        using var response = await client.GetAsync($"/saml2/{organizationId}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        return await response.Content.ReadAsStringAsync();
+    }
+
+    private static (string? Use, string Certificate) Key(string? use, X509Certificate2 certificate) =>
+        (use, Convert.ToBase64String(certificate.RawData));
+
+    private static IEnumerable<(string? Use, string Certificate)> KeyDescriptors(string metadataXml) =>
+        XDocument.Parse(metadataXml).Descendants(_md + "KeyDescriptor")
+            .Select(keyDescriptor => (keyDescriptor.Attribute("use")?.Value,
+                keyDescriptor.Descendants(_ds + "X509Certificate").Single().Value.Trim()))
+            .ToList();
+
+    private static Task<Saml2AcsArrangement> ArrangeAcsAsync(X509Certificate2 idpCertificate,
+        Dictionary<string, string?> configuration) =>
+        Saml2AcsPostHarness.ArrangeAsync(string.Empty, idpCertificate: idpCertificate, selfHosted: true,
+            configuration: configuration);
+
+    private static async Task<HttpResponseMessage> PostEncryptedAssertionAsync(Saml2AcsArrangement arrangement,
+        X509Certificate2 idpCertificate, X509Certificate2 encryptionCertificate)
+    {
+        var login = await Saml2SpInitiatedLogin.StartAsync(arrangement);
+        var assertion = Saml2AcsPostHarness.EncryptAssertion(
+            Saml2SpInitiatedLogin.BuildSignedAssertion(login, idpCertificate), encryptionCertificate);
+        var responseXml = Saml2AcsPostHarness.BuildResponseXml(
+            assertion, includeSuccessStatus: true, inResponseTo: login.RequestId);
+        return await Saml2SpInitiatedLogin.PostAcsAsync(arrangement, login, responseXml);
+    }
+
     private static async Task<string> StoreOidcIdentityAuthorizationCodeAsync(SsoApplicationFactory factory,
         string redirectUri, string codeVerifier)
     {

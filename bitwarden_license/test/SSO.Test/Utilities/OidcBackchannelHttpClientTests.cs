@@ -2,7 +2,9 @@
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Sso.Utilities;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
 
 namespace Bit.SSO.Test.Utilities;
 
@@ -16,7 +18,9 @@ public class OidcBackchannelHttpClientTests
     {
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddSsoServices(new GlobalSettings { SelfHosted = selfHosted });
+        var environment = Substitute.For<IWebHostEnvironment>();
+        environment.EnvironmentName.Returns("Development");
+        services.AddSsoServices(new GlobalSettings { SelfHosted = selfHosted }, environment);
 
         // Mirrors how the scheme provider consumes the registration: it takes the named handler
         // pipeline and lets the OpenID Connect framework build the HttpClient around it.

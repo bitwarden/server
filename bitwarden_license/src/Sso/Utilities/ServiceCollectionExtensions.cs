@@ -21,16 +21,16 @@ namespace Bit.Sso.Utilities;
 public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddSsoServices(this IServiceCollection services,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings, IWebHostEnvironment env)
     {
         // SAML SP Configuration
-        var samlEnvironment = new SamlEnvironment();
-        var certificate = CoreHelpers.GetIdentityServerCertificate(globalSettings);
-        if (certificate != null)
+        var encryptionCertificates = Saml2ServiceCertificates.GetEncryptionCertificates(env, globalSettings);
+        var signingCertificates = SharedWeb.Utilities.ServiceCollectionExtensions.GetSsoSigningCertificates(env,
+            globalSettings);
+        services.TryAddSingleton(new SamlEnvironment
         {
-            samlEnvironment.ServiceCertificates.Add(certificate);
-        }
-        services.TryAddSingleton(samlEnvironment);
+            ServiceCertificates = Saml2ServiceCertificates.Build(signingCertificates, encryptionCertificates),
+        });
 
         services.AddSingleton<Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider,
             DynamicAuthenticationSchemeProvider>();

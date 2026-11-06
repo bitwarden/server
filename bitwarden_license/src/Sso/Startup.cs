@@ -70,7 +70,7 @@ public class Startup
         services.AddDistributedIdentityServices();
         services.AddAuthentication()
             .AddCookie(AuthenticationSchemes.SsoExternalCookie);
-        services.AddSsoServices(globalSettings);
+        services.AddSsoServices(globalSettings, Environment);
 
         // IdentityServer
         services.AddSsoIdentityServerServices(Environment, globalSettings);
