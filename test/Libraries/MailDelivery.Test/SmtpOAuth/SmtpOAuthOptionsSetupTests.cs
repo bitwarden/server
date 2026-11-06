@@ -1,0 +1,169 @@
+﻿using Bit.Core.Platform.Mail.Delivery;
+
+namespace Bit.MailDelivery.Test.SmtpOAuth;
+
+public class SmtpOAuthOptionsSetupTests
+{
+    private readonly SmtpOAuthOptionsSetup _sut = new();
+
+    [Fact]
+    public void PostConfigure_NotMicrosoftOAuth_LeavesOptionsUnchanged()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.Password;
+
+        _sut.PostConfigure(name: null, options);
+
+        Assert.Null(options.Smtp.OAuth.TokenEndpoint);
+        Assert.Null(options.Smtp.OAuth.GrantType);
+        Assert.Null(options.Smtp.OAuth.Scope);
+        Assert.Null(options.Smtp.OAuth.ClientId);
+        Assert.Null(options.Smtp.OAuth.ClientSecret);
+    }
+
+    [Fact]
+    public void Validate_NotMicrosoftOAuth_ReturnsSuccess()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.Password;
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public void PostConfigure_MicrosoftOAuthWithTenantId_DerivesTokenEndpoint()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.MicrosoftOAuth;
+        options.Smtp.TenantId = "test-tenant";
+
+        _sut.PostConfigure(name: null, options);
+
+        Assert.Equal(
+            "https://login.microsoftonline.com/test-tenant/oauth2/v2.0/token",
+            options.Smtp.OAuth.TokenEndpoint);
+    }
+
+    [Fact]
+    public void PostConfigure_MicrosoftOAuthWithExplicitTokenEndpoint_KeepsExplicitValue()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.MicrosoftOAuth;
+        options.Smtp.TenantId = "test-tenant";
+        options.Smtp.OAuth.TokenEndpoint = "https://explicit.example.com/token";
+
+        _sut.PostConfigure(name: null, options);
+
+        Assert.Equal("https://explicit.example.com/token", options.Smtp.OAuth.TokenEndpoint);
+    }
+
+    [Fact]
+    public void PostConfigure_MicrosoftOAuth_DefaultsGrantTypeAndScope()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.MicrosoftOAuth;
+
+        _sut.PostConfigure(name: null, options);
+
+        Assert.Equal(ClientCredentialsHandler.GrantType, options.Smtp.OAuth.GrantType);
+        Assert.Equal("https://outlook.office365.com/.default", options.Smtp.OAuth.Scope);
+    }
+
+    [Fact]
+    public void PostConfigure_MicrosoftOAuthWithExplicitGrantTypeAndScope_KeepsExplicitValues()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.MicrosoftOAuth;
+        options.Smtp.OAuth.GrantType = "explicit_grant";
+        options.Smtp.OAuth.Scope = "explicit-scope";
+
+        _sut.PostConfigure(name: null, options);
+
+        Assert.Equal("explicit_grant", options.Smtp.OAuth.GrantType);
+        Assert.Equal("explicit-scope", options.Smtp.OAuth.Scope);
+    }
+
+    [Fact]
+    public void PostConfigure_MicrosoftOAuthWithShorthandClientIdAndSecret_FallsBackToShorthand()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.MicrosoftOAuth;
+        options.Smtp.ClientId = "shorthand-client-id";
+        options.Smtp.ClientSecret = "shorthand-client-secret";
+
+        _sut.PostConfigure(name: null, options);
+
+        Assert.Equal("shorthand-client-id", options.Smtp.OAuth.ClientId);
+        Assert.Equal("shorthand-client-secret", options.Smtp.OAuth.ClientSecret);
+    }
+
+    [Fact]
+    public void PostConfigure_MicrosoftOAuthWithExplicitOAuthClientIdAndSecret_KeepsExplicitValues()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.MicrosoftOAuth;
+        options.Smtp.ClientId = "shorthand-client-id";
+        options.Smtp.ClientSecret = "shorthand-client-secret";
+        options.Smtp.OAuth.ClientId = "explicit-client-id";
+        options.Smtp.OAuth.ClientSecret = "explicit-client-secret";
+
+        _sut.PostConfigure(name: null, options);
+
+        Assert.Equal("explicit-client-id", options.Smtp.OAuth.ClientId);
+        Assert.Equal("explicit-client-secret", options.Smtp.OAuth.ClientSecret);
+    }
+
+    [Fact]
+    public void PostConfigure_MicrosoftOAuthWithBlankOAuthClientIdAndSecretAndScope_FallsBackToShorthandAndDefaultScope()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.MicrosoftOAuth;
+        options.Smtp.TenantId = "test-tenant";
+        options.Smtp.ClientId = "shorthand-id";
+        options.Smtp.ClientSecret = "shorthand-secret";
+        options.Smtp.OAuth.ClientId = "";
+        options.Smtp.OAuth.ClientSecret = "  ";
+        options.Smtp.OAuth.Scope = "";
+        options.Smtp.Username = "sender@example.com";
+
+        _sut.PostConfigure(name: null, options);
+        var result = _sut.Validate(name: null, options);
+
+        Assert.Equal("shorthand-id", options.Smtp.OAuth.ClientId);
+        Assert.Equal("shorthand-secret", options.Smtp.OAuth.ClientSecret);
+        Assert.Equal("https://outlook.office365.com/.default", options.Smtp.OAuth.Scope);
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public void Validate_MicrosoftOAuthWithAllRequiredValues_ReturnsSuccess()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.MicrosoftOAuth;
+        options.Smtp.OAuth.TokenEndpoint = "https://login.microsoftonline.com/test-tenant/oauth2/v2.0/token";
+        options.Smtp.OAuth.ClientId = "client-id";
+        options.Smtp.OAuth.ClientSecret = "client-secret";
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public void Validate_MicrosoftOAuthMissingAllRequiredValues_FailsWithOneMessagePerField()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.MicrosoftOAuth;
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.False(result.Succeeded);
+        Assert.Collection(
+            result.Failures!,
+            failure => Assert.Contains("Smtp:TenantId or Smtp:OAuth:TokenEndpoint", failure),
+            failure => Assert.Contains("Smtp:ClientId or Smtp:OAuth:ClientId", failure),
+            failure => Assert.Contains("Smtp:ClientSecret or Smtp:OAuth:ClientSecret", failure));
+    }
+}

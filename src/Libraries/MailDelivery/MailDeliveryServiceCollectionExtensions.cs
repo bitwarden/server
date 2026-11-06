@@ -30,6 +30,10 @@ public static class MailDeliveryServiceCollectionExtensions
         services.TryAddSingleton(TimeProvider.System);
         services.AddHttpClient(OAuthHandler.HttpClientName);
         services.TryAddSingleton<ISmtpCredentialProvider, SmtpCredentialProvider>();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IPostConfigureOptions<MailDeliveryOptions>, SmtpOAuthOptionsSetup>());
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IValidateOptions<MailDeliveryOptions>, SmtpOAuthOptionsSetup>());
 
         return services;
     }
