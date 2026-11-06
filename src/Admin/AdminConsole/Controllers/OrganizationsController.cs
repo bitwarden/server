@@ -920,16 +920,16 @@ public class OrganizationsController : Controller
 
         organization.UsePam = model.UsePam;
 
-        // Turning it off keeps the seat count and limit, so they're still there if it's turned back on.
+        // Autoscaling is self-serve, so the Admin Portal never stores a limit.
+        organization.MaxAutoscalePamSeats = null;
+
+        // Turning it off keeps the seat count, so it's still there if it's turned back on.
         if (!model.UsePam)
         {
             return;
         }
 
         organization.PamSeats = model.PamSeats;
-
-        // Autoscaling is self-serve, so the Admin Portal doesn't set a limit.
-        organization.MaxAutoscalePamSeats = null;
     }
 
     private void UpdateOrganization(Organization organization, OrganizationEditModel model, bool isProviderManaged)

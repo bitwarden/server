@@ -1679,7 +1679,7 @@ public class OrganizationsControllerTests
     [BitAutoData]
     [SutProviderCustomize]
     [Theory]
-    public async Task Edit_PrivilegedControls_TurnedOff_KeepsSeatsAndLimit(
+    public async Task Edit_PrivilegedControls_TurnedOff_KeepsSeatsAndClearsLimit(
         Organization organization,
         SutProvider<OrganizationsController> sutProvider)
     {
@@ -1698,7 +1698,7 @@ public class OrganizationsControllerTests
         await sutProvider.Sut.Edit(organization.Id, update);
 
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(
-            Arg.Is<Organization>(o => !o.UsePam && o.PamSeats == 5 && o.MaxAutoscalePamSeats == 8));
+            Arg.Is<Organization>(o => !o.UsePam && o.PamSeats == 5 && o.MaxAutoscalePamSeats == null));
         await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
             .GetOccupiedPamSeatCountByOrganizationIdAsync(default);
         // Members keep their access; it does nothing while the organization has it off.
