@@ -97,12 +97,8 @@ public class OrganizationReportsController : Controller
 
         await AuthorizeAsync(organizationId);
 
-        // File storage only exists under the new architecture, so gate the file path on the (stable)
-        // AccessIntelligenceNewArchitecture flag. Within that, select the path from the request shape
-        // rather than the file-storage flag (AccessIntelligenceVersion2): the client chooses its shape
-        // from that flag via a config cache that can lag the server by up to an hour (pronounced in
-        // self-hosted), so branching on it here would 500 whenever the two disagree. Honoring the shape
-        // lets file-storage flag staleness degrade gracefully.
+        // File storage only exists under the new architecture, so gate the file path on the
+        // AccessIntelligenceNewArchitecture flag. Within that, select the path from the request shape.
         var isNewArchitecture = _featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceNewArchitecture);
         if (isNewArchitecture && request.FileSize.HasValue)
         {
