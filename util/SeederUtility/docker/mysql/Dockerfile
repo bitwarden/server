@@ -1,4 +1,4 @@
-FROM mysql:8.0
+FROM mysql:8.3
 
 ARG PRESET_NAME=unknown
 ARG GIT_SHA=unknown
