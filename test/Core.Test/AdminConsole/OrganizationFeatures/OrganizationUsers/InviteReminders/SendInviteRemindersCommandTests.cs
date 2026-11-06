@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.Mail;
 using Bit.Core.Repositories;
@@ -351,6 +352,58 @@ public class SendInviteRemindersCommandTests
         var result = await sutProvider.Sut.SendInviteRemindersAsync();
 
         Assert.Equal(1, result.Failed);
+        Assert.Equal([reminder.Id], result.SentMembers.Select(m => m.Id));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendInviteRemindersAsync_LogsOneReminderEventForEachSentMemberInOneCall(
+        Organization failingOrganization, Organization organization)
+    {
+        var sutProvider = GetSutProvider();
+        var first = Reminder(organization, 1);
+        var second = Reminder(organization, 2);
+        ArrangeClaim(sutProvider, [Reminder(failingOrganization, 1), first, second], failingOrganization, organization);
+        FailMailCallsFor(sutProvider, failingOrganization);
+        var now = sutProvider.GetDependency<FakeTimeProvider>().GetUtcNow().UtcDateTime;
+
+        await sutProvider.Sut.SendInviteRemindersAsync();
+
+        await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventsAsync(
+            Arg.Is<IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)>>(events =>
+                events.Select(e => e.Item1.Id).SequenceEqual(new[] { first.Id, second.Id }) &&
+                events.All(e =>
+                    e.Item1.OrganizationId == organization.Id &&
+                    e.Item2 == EventType.OrganizationUser_InviteReminderSent &&
+                    e.Item3 == EventSystemUser.ScheduledJob &&
+                    e.Item4 == now)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendInviteRemindersAsync_WhenNoMailCallWorks_LogsNoReminderEvents(Organization organization)
+    {
+        var sutProvider = GetSutProvider();
+        ArrangeClaim(sutProvider, [Reminder(organization, 1)], organization);
+        FailMailCallsFor(sutProvider, organization);
+
+        await sutProvider.Sut.SendInviteRemindersAsync();
+
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogOrganizationUserEventsAsync(
+            default(IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)>)!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendInviteRemindersAsync_WhenEventWriteFails_StillReturnsTheResult(Organization organization)
+    {
+        var sutProvider = GetSutProvider();
+        var reminder = Reminder(organization, 1);
+        ArrangeClaim(sutProvider, [reminder], organization);
+        sutProvider.GetDependency<IEventService>()
+            .LogOrganizationUserEventsAsync(
+                Arg.Any<IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)>>())
+            .ThrowsAsync(new InvalidOperationException("Event queue is down."));
+
+        var result = await sutProvider.Sut.SendInviteRemindersAsync();
+
         Assert.Equal([reminder.Id], result.SentMembers.Select(m => m.Id));
     }
 

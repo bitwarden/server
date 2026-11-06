@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
+﻿using Bit.Core.Enums;
+
+namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 
 public interface IResendOrganizationInviteCommand
 {
@@ -10,5 +12,7 @@ public interface IResendOrganizationInviteCommand
     /// <param name="organizationUserId">The ID of the organization user to resend the invite to.</param>
     /// <param name="initOrganization">Whether to initialize the organization. 
     /// This is should only be true when inviting the owner of a new organization.</param>
-    Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId, bool initOrganization = false);
+    /// <param name="systemUser">The system user to record as the actor on the resend event, when no user is acting.</param>
+    Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId,
+        bool initOrganization = false, EventSystemUser? systemUser = null);
 }

@@ -755,7 +755,8 @@ public class OrganizationsController : Controller
         var organizationUsers = await _organizationUserRepository.GetManyByOrganizationAsync(id, OrganizationUserType.Owner);
         foreach (var organizationUser in organizationUsers)
         {
-            await _resendOrganizationInviteCommand.ResendInviteAsync(id, null, organizationUser.Id, true);
+            await _resendOrganizationInviteCommand.ResendInviteAsync(id, null, organizationUser.Id, true,
+                EventSystemUser.BitwardenPortal);
         }
 
         return Json(null);
