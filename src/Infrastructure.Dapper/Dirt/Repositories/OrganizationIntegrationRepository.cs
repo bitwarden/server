@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
@@ -38,6 +39,19 @@ public class OrganizationIntegrationRepository : Repository<OrganizationIntegrat
             var result = await connection.QuerySingleOrDefaultAsync<OrganizationIntegration>(
                 "[dbo].[OrganizationIntegration_ReadByTeamsConfigurationTenantIdTeamId]",
                 new { TenantId = tenantId, TeamId = teamId },
+                commandType: CommandType.StoredProcedure);
+
+            return result;
+        }
+    }
+
+    public async Task<OrganizationIntegration?> GetByOrganizationIdTypeAsync(Guid organizationId, IntegrationType type)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var result = await connection.QuerySingleOrDefaultAsync<OrganizationIntegration>(
+                "[dbo].[OrganizationIntegration_ReadByOrganizationIdType]",
+                new { OrganizationId = organizationId, Type = type },
                 commandType: CommandType.StoredProcedure);
 
             return result;
