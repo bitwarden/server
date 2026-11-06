@@ -89,7 +89,11 @@ public abstract class LoginCipherScene<TRequest>(IManglerService manglerService)
                 Uris = string.IsNullOrEmpty(request.Uri) ? null : [new LoginUriViewDto { Uri = request.Uri }],
                 Fido2Credentials = request.Passkeys?
                     .Select(p => LoginCipherSeeder.CreateFido2Credential(
-                        p.RpId, p.RpName, p.UserName, p.CredentialId, p.KeyValue, p.UserHandle, p.UserDisplayName))
+                        p.RpId, p.RpName, p.UserName,
+                        credentialId: p.CredentialId,
+                        keyValue: p.KeyValue,
+                        userHandle: p.UserHandle,
+                        userDisplayName: p.UserDisplayName))
                     .ToList()
             },
             Fields = request.Fields?.Select(f => new FieldViewDto

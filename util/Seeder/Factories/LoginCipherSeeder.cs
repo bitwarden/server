@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography;
+﻿using System.Buffers.Text;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Bit.Core.Utilities;
@@ -79,7 +80,9 @@ internal static class LoginCipherSeeder
 
     private static bool IsClientParsableCredentialId(string credentialId) =>
         Guid.TryParseExact(credentialId, "D", out _) ||
-        (credentialId.StartsWith("b64.", StringComparison.Ordinal) && credentialId.Length > 4);
+        (credentialId.StartsWith("b64.", StringComparison.Ordinal) &&
+         credentialId.Length > 4 &&
+         Base64Url.IsValid(credentialId.AsSpan(4)));
 
     /// <summary>ECDSA P-256 private key in PKCS#8, base64url-encoded.</summary>
     private static string GeneratePrivateKey()
