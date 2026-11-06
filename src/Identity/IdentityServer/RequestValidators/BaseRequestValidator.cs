@@ -116,10 +116,10 @@ public abstract class BaseRequestValidator<T> where T : class
             return;
         }
 
-        // A remember token is issued either because the user asked for one, or because they
+        // A 2FA remember token is issued either because the user asked for one, or because they
         // presented one in the previous format and it is being replaced. The second condition is
         // set only on a successful previous-format validation — never merely because the request
-        // used the Remember provider, which would let an active user's remember-me renew forever.
+        // used the Remember provider, which would let an active user's 2FA remember token renew forever.
         await BuildSuccessResultAsync(validatorContext.User, context, validatorContext.Device,
             validatorContext.RememberMeRequested || validatorContext.RememberUpgradeRequired);
     }
@@ -367,13 +367,15 @@ public abstract class BaseRequestValidator<T> where T : class
             validatorContext.TwoFactorRecoveryRequested = true;
         }
 
-        // 3d. When the 2FA authentication is successful, we can check if the user wants a
-        // rememberMe token.
+        // 3d. When the 2FA authentication is successful, we can check if the user wants a TwoFactorRememberToken
         var twoFactorRemember = request.Raw["TwoFactorRemember"] == "1";
-        // Check if the user wants a rememberMe token.
-        if (twoFactorRemember
-            // if the 2FA auth was rememberMe do not send another token.
-            && twoFactorProviderType != TwoFactorProviderType.Remember)
+
+        // A `Remember` login must not renew itself, so don't mint a new token.
+        // A `RecoveryCode` login removes 2FA, so don't mint a new token.
+        var providerAllowsNewRememberToken =
+            twoFactorProviderType is not (TwoFactorProviderType.Remember or TwoFactorProviderType.RecoveryCode);
+
+        if (twoFactorRemember && providerAllowsNewRememberToken)
         {
             validatorContext.RememberMeRequested = true;
         }

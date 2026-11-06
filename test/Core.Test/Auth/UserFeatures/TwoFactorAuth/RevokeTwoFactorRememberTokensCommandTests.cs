@@ -35,8 +35,8 @@ public class RevokeTwoFactorRememberTokensCommandTests
     }
 
     /// <summary>
-    /// Revocation is scoped to remember-me. It must not delete rows, which would destroy the record
-    /// of when each device was first remembered.
+    /// Revocation is scoped to 2FA remember tokens. It must not delete rows, which would destroy the record
+    /// of when a 2FA remember token was first issued for each device.
     /// </summary>
     [Theory, BitAutoData]
     public async Task RevokeAllForUserAsync_DoesNotDeleteRows(Guid userId)

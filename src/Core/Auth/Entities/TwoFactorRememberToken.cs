@@ -5,7 +5,7 @@ using Bit.Core.Utilities;
 namespace Bit.Core.Auth.Entities;
 
 /// <summary>
-/// Server-side state backing a single remembered device's two-factor "remember me" token.
+/// Server-side state backing the 2FA remember token issued to a single device.
 /// One row per (<see cref="UserId"/>, <see cref="DeviceId"/>).
 /// </summary>
 /// <remarks>
@@ -19,12 +19,12 @@ public class TwoFactorRememberToken : ITableObject<Guid>
 
     /// <summary>
     /// The owning user. Derivable through <see cref="DeviceId"/>, but stored directly so that
-    /// revoking every remembered device for one user is an index seek.
+    /// revoking every 2FA remember token for one user is an index seek.
     /// </summary>
     public Guid UserId { get; set; }
 
     /// <summary>
-    /// The remembered device. Note this is <c>Device.Id</c>, not the client-supplied device identifier.
+    /// The device the 2FA remember token was issued to. Note this is <c>Device.Id</c>, not the client-supplied device identifier.
     /// </summary>
     public Guid DeviceId { get; set; }
 
@@ -35,7 +35,7 @@ public class TwoFactorRememberToken : ITableObject<Guid>
     public string Stamp { get; set; } = null!;
 
     /// <summary>
-    /// When this device was first remembered. Preserved when the row is re-issued.
+    /// When a 2FA remember token was first issued for this device. Preserved when the row is re-issued.
     /// </summary>
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
 

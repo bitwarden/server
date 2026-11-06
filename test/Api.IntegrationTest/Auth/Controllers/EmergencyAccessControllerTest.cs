@@ -15,6 +15,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Tokens;
 using Microsoft.AspNetCore.Identity;
 using Xunit;
+using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorIntegrationTestHelpers;
 
 namespace Bit.Api.IntegrationTest.Auth.Controllers;
 
@@ -214,6 +215,94 @@ public class EmergencyAccessControllerTest : IClassFixture<ApiApplicationFactory
     }
 
     /// <summary>
+    /// A takeover removes the grantor's 2FA, so the 2FA remember tokens they had issued stop being honored
+    /// too: the row's stamp is rotated. Uses the V2 payload, which finishes through
+    /// <c>FinishRecoveryTakeoverAsync</c>.
+    /// </summary>
+    [Fact]
+    public async Task PostPassword_V2_RevokesGrantorTwoFactorRememberTokens()
+    {
+        // Arrange: the grantor has 2FA and a device holding a 2FA remember token. The request must echo the
+        // grantor's stored KDF, so set it explicitly rather than relying on the factory default.
+        var grantor = await _userRepository.GetByEmailAsync(_grantorEmail);
+        Assert.NotNull(grantor);
+        grantor.Kdf = _defaultKdfRequest.KdfType;
+        grantor.KdfIterations = _defaultKdfRequest.Iterations;
+        grantor.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+        {
+            [TwoFactorProviderType.Email] = new() { Enabled = true },
+        });
+        await _userRepository.ReplaceAsync(grantor);
+        var device = await SeedTwoFactorRememberTokenAsync(_factory, _grantorEmail, "stamp-before-takeover");
+
+        await _loginHelper.LoginAsync(_granteeEmail);
+
+        var requestModel = new EmergencyAccessPasswordRequestModel
+        {
+            AuthenticationData = BuildAuthData(_defaultKdfRequest, _grantorEmail),
+            UnlockData = BuildUnlockData(_defaultKdfRequest, _grantorEmail),
+        };
+
+        // Act
+        using var message = new HttpRequestMessage(
+            HttpMethod.Post, $"/emergency-access/{_emergencyAccessId}/password");
+        message.Content = JsonContent.Create(requestModel);
+        var response = await _client.SendAsync(message);
+
+        // Assert
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync();
+            Assert.Fail($"Expected success but got {response.StatusCode}. Error: {errorContent}");
+        }
+
+        await AssertTwoFactorRememberTokenRotatedAsync(_factory, _grantorEmail, device, "stamp-before-takeover");
+    }
+
+    /// <summary>
+    /// The legacy payload (<c>NewMasterPasswordHash</c> and <c>Key</c>, no V2 fields) finishes through the
+    /// obsolete <c>PasswordAsync</c>, which also removes the grantor's 2FA. Their 2FA remember tokens must
+    /// stop being honored there too. Remove this test together with the legacy path in PM-33141.
+    /// </summary>
+    [Fact]
+    public async Task PostPassword_Legacy_RevokesGrantorTwoFactorRememberTokens()
+    {
+        // Arrange: the grantor has 2FA and a device holding a 2FA remember token.
+        var grantor = await _userRepository.GetByEmailAsync(_grantorEmail);
+        Assert.NotNull(grantor);
+        grantor.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+        {
+            [TwoFactorProviderType.Email] = new() { Enabled = true },
+        });
+        await _userRepository.ReplaceAsync(grantor);
+        var device = await SeedTwoFactorRememberTokenAsync(_factory, _grantorEmail, "stamp-before-takeover");
+
+        await _loginHelper.LoginAsync(_granteeEmail);
+
+        // Only the legacy fields are set, so the controller dispatches to PasswordAsync.
+        var requestModel = new EmergencyAccessPasswordRequestModel
+        {
+            NewMasterPasswordHash = _newMasterPasswordHash,
+            Key = _masterKeyWrappedUserKey,
+        };
+
+        // Act
+        using var message = new HttpRequestMessage(
+            HttpMethod.Post, $"/emergency-access/{_emergencyAccessId}/password");
+        message.Content = JsonContent.Create(requestModel);
+        var response = await _client.SendAsync(message);
+
+        // Assert
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync();
+            Assert.Fail($"Expected success but got {response.StatusCode}. Error: {errorContent}");
+        }
+
+        await AssertTwoFactorRememberTokenRotatedAsync(_factory, _grantorEmail, device, "stamp-before-takeover");
+    }
+
+    /// <summary>
     /// Verifies the boundary validator's agreement checks fire on
     /// <c>POST /emergency-access/{id}/password</c>: a mismatched KDF or salt
     /// between <c>AuthenticationData</c> and <c>UnlockData</c> is rejected with
@@ -228,6 +317,7 @@ public class EmergencyAccessControllerTest : IClassFixture<ApiApplicationFactory
     public async Task PostPassword_V2_MismatchedKdfOrSalt_BadRequest(
         string mismatchKind, string perturbedSide, string expectedError)
     {
+        var device = await SeedTwoFactorRememberTokenAsync(_factory, _grantorEmail, "stamp-before-rejected-takeover");
         await _loginHelper.LoginAsync(_granteeEmail);
 
         var (auth, unlock) = BuildMismatchedAuthAndUnlock(mismatchKind, perturbedSide);
@@ -245,6 +335,10 @@ public class EmergencyAccessControllerTest : IClassFixture<ApiApplicationFactory
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains(expectedError, content);
+
+        // A rejected takeover must not cut off the grantor's 2FA remember tokens.
+        await AssertTwoFactorRememberTokenUnchangedAsync(
+            _factory, _grantorEmail, device, "stamp-before-rejected-takeover");
     }
 
     /// <summary>
@@ -269,6 +363,7 @@ public class EmergencyAccessControllerTest : IClassFixture<ApiApplicationFactory
         Assert.NotNull(emergencyAccess);
         emergencyAccess.Status = invalidStatus;
         await _emergencyAccessRepository.ReplaceAsync(emergencyAccess);
+        var device = await SeedTwoFactorRememberTokenAsync(_factory, _grantorEmail, "stamp-before-rejected-takeover");
 
         await _loginHelper.LoginAsync(_granteeEmail);
 
@@ -286,6 +381,10 @@ public class EmergencyAccessControllerTest : IClassFixture<ApiApplicationFactory
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("Emergency Access not valid.", content);
+
+        // A rejected takeover must not cut off the grantor's 2FA remember tokens.
+        await AssertTwoFactorRememberTokenUnchangedAsync(
+            _factory, _grantorEmail, device, "stamp-before-rejected-takeover");
     }
 
     /// <summary>

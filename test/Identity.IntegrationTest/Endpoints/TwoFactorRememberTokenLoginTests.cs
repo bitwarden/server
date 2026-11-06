@@ -2,6 +2,7 @@
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -18,12 +19,12 @@ namespace Bit.Identity.IntegrationTest.Endpoints;
 /// End-to-end coverage for the "remember this device" flow: a token issued by one login is honored
 /// by the next, and is refused when it should not be.
 /// </summary>
-public class RememberedDeviceLoginTests
+public class TwoFactorRememberTokenLoginTests
 {
-    private const string _testEmail = "test+rememberdevice@email.com";
+    private const string _testEmail = "test+twofactorremembertoken@email.com";
     private const string _testPassword = "master_password_hash";
     private const string _userEmailTwoFactor =
-        """{"1": { "Enabled": true, "MetaData": { "Email": "test+rememberdevice@email.com"}}}""";
+        """{"1": { "Enabled": true, "MetaData": { "Email": "test+twofactorremembertoken@email.com"}}}""";
 
     /// <summary>
     /// The numeric value of <see cref="TwoFactorProviderType.Remember"/>.
@@ -31,6 +32,9 @@ public class RememberedDeviceLoginTests
     private const string _rememberProvider = "5";
 
     private const string _emailProvider = "1";
+
+    /// <summary>The numeric value of <see cref="TwoFactorProviderType.RecoveryCode"/>.</summary>
+    private const string _recoveryCodeProvider = "8";
 
     private static async Task<(IdentityApplicationFactory Factory, User User)> CreateFactoryWithTwoFactorUserAsync()
     {
@@ -73,7 +77,7 @@ public class RememberedDeviceLoginTests
     }
 
     /// <summary>
-    /// A two-factor login that asks to be remembered gets a token back.
+    /// A two-factor login that asks for a 2FA remember token gets one back.
     /// </summary>
     [Fact]
     public async Task RememberRequested_ResponseCarriesRememberToken()
@@ -119,8 +123,8 @@ public class RememberedDeviceLoginTests
     }
 
     /// <summary>
-    /// A login that presents a remember token must not be issued another one, or an active user's
-    /// remember-me would renew forever. Replayed with and without asking to be remembered again, since
+    /// A login that presents a 2FA remember token must not be issued another one, or an active user's
+    /// 2FA remember token would renew forever. Replayed with and without asking for another 2FA remember token, since
     /// a client can send <c>TwoFactorRemember=1</c> regardless.
     /// </summary>
     [Theory]
@@ -205,6 +209,128 @@ public class RememberedDeviceLoginTests
     }
 
     /// <summary>
+    /// Using a recovery code tears two-factor down, and the user's 2FA remember tokens
+    /// stop being honored with it.
+    /// </summary>
+    /// <remarks>
+    /// The replay happens <em>after</em> two-factor is re-enabled, deliberately. While the account
+    /// has no second factor, no challenge is issued at all and the replay would log in on the
+    /// password alone, so it would say nothing about whether the revocation worked.
+    /// <para>
+    /// The recovery login is sent with and without asking for a 2FA remember token. Either way it must not
+    /// come back with a new 2FA remember token, which would undo the revocation for that device.
+    /// </para>
+    /// </remarks>
+    [Theory]
+    [InlineData("0")]
+    [InlineData("1")]
+    public async Task RecoveryCodeTeardown_RevokesTwoFactorRememberTokens(string twoFactorRemember)
+    {
+        var (factory, user) = await CreateFactoryWithTwoFactorUserAsync();
+        var userRepository = factory.Services.GetRequiredService<IUserRepository>();
+
+        const string recoveryCode = "recoverycode123";
+        user.TwoFactorRecoveryCode = recoveryCode;
+        await userRepository.ReplaceAsync(user);
+
+        var emailCode = await EmailLoginCodeAsync(
+            factory, _testEmail, IdentityApplicationFactory.DefaultDeviceIdentifier);
+        var (_, rememberToken) = await factory.TokensFromPasswordWithTwoFactorAsync(
+            _testEmail, _testPassword, twoFactorProviderType: _emailProvider, twoFactorToken: emailCode);
+        Assert.False(string.IsNullOrEmpty(rememberToken));
+
+        // Tear down two-factor with the recovery code. The provider is sent as its numeric value because
+        // BaseRequestValidator.DetermineValidationOrder only recognises a recovery-code request via int.TryParse.
+        var teardown = await factory.ContextFromPasswordWithTwoFactorAsync(
+            _testEmail,
+            _testPassword,
+            twoFactorProviderType: _recoveryCodeProvider,
+            twoFactorToken: recoveryCode,
+            twoFactorRemember: twoFactorRemember);
+        using (var teardownBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(teardown))
+        {
+            AssertHelper.AssertJsonProperty(teardownBody.RootElement, "access_token", JsonValueKind.String);
+            Assert.False(teardownBody.RootElement.TryGetProperty("TwoFactorToken", out _));
+        }
+
+        // Put a second factor back, so the replay below is decided by the 2FA remember token state
+        // rather than by the account simply having no second factor.
+        var recoveredUser = await userRepository.GetByEmailAsync(_testEmail);
+        Assert.NotNull(recoveredUser);
+        recoveredUser.TwoFactorProviders = _userEmailTwoFactor;
+        await userRepository.ReplaceAsync(recoveredUser);
+
+        var replay = await factory.ContextFromPasswordWithTwoFactorAsync(
+            _testEmail,
+            _testPassword,
+            twoFactorProviderType: _rememberProvider,
+            twoFactorToken: rememberToken!,
+            twoFactorRemember: "0");
+
+        using var replayBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(replay);
+        var root = replayBody.RootElement;
+
+        Assert.False(root.TryGetProperty("access_token", out _));
+        var error = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
+        Assert.Equal("Two factor required.", error);
+    }
+
+    /// <summary>
+    /// A wrong recovery code must not tear anything down. Revocation only happens once the code is verified,
+    /// so a failed attempt leaves the user's 2FA remember tokens honored. Otherwise anyone who knows the
+    /// password could cut off every remembered device by guessing.
+    /// </summary>
+    [Fact]
+    public async Task WrongRecoveryCode_DoesNotRevokeTwoFactorRememberTokens()
+    {
+        var (factory, user) = await CreateFactoryWithTwoFactorUserAsync();
+        var userRepository = factory.Services.GetRequiredService<IUserRepository>();
+
+        user.TwoFactorRecoveryCode = "recoverycode123";
+        await userRepository.ReplaceAsync(user);
+
+        var emailCode = await EmailLoginCodeAsync(
+            factory, _testEmail, IdentityApplicationFactory.DefaultDeviceIdentifier);
+        var (_, rememberToken) = await factory.TokensFromPasswordWithTwoFactorAsync(
+            _testEmail, _testPassword, twoFactorProviderType: _emailProvider, twoFactorToken: emailCode);
+        Assert.False(string.IsNullOrEmpty(rememberToken));
+
+        var device = await factory.GetService<IDeviceRepository>()
+            .GetByIdentifierAsync(IdentityApplicationFactory.DefaultDeviceIdentifier, user.Id);
+        Assert.NotNull(device);
+        var rememberTokenRepository = factory.GetService<ITwoFactorRememberTokenRepository>();
+        var rowBefore = await rememberTokenRepository.GetByUserIdDeviceIdAsync(user.Id, device.Id);
+        Assert.NotNull(rowBefore);
+
+        // Attempt recovery with the wrong code. It must be refused.
+        var wrongCode = await factory.ContextFromPasswordWithTwoFactorAsync(
+            _testEmail,
+            _testPassword,
+            twoFactorProviderType: _recoveryCodeProvider,
+            twoFactorToken: "not-the-recovery-code",
+            twoFactorRemember: "0");
+        using (var wrongCodeBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(wrongCode))
+        {
+            Assert.False(wrongCodeBody.RootElement.TryGetProperty("access_token", out _));
+        }
+
+        // The row's stamp is untouched...
+        var rowAfter = await rememberTokenRepository.GetByUserIdDeviceIdAsync(user.Id, device.Id);
+        Assert.NotNull(rowAfter);
+        Assert.Equal(rowBefore.Stamp, rowAfter.Stamp);
+
+        // ...so the old 2FA remember token still skips the challenge.
+        var replay = await factory.ContextFromPasswordWithTwoFactorAsync(
+            _testEmail,
+            _testPassword,
+            twoFactorProviderType: _rememberProvider,
+            twoFactorToken: rememberToken!,
+            twoFactorRemember: "0");
+        using var replayBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(replay);
+        AssertHelper.AssertJsonProperty(replayBody.RootElement, "access_token", JsonValueKind.String);
+    }
+
+    /// <summary>
     /// The token is bound to the device it was issued to, so presenting it from another device
     /// falls back to a two-factor challenge.
     /// </summary>
@@ -230,8 +356,8 @@ public class RememberedDeviceLoginTests
         using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = body.RootElement;
 
-        // A refused remember token falls back to a challenge rather than a generic auth failure:
-        // the password was fine, the device just is not trusted.
+        // A refused 2FA remember token falls back to a challenge rather than a generic auth failure:
+        // the password was fine, the 2FA remember token is just no longer honored.
         Assert.False(root.TryGetProperty("access_token", out _));
         var error = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
         Assert.Equal("Two factor required.", error);

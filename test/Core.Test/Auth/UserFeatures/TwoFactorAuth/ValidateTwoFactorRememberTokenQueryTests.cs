@@ -16,14 +16,29 @@ namespace Bit.Core.Test.Auth.UserFeatures.TwoFactorAuth;
 /// One test per rejection path. Each is asserted in isolation — a test that broke two checks at once
 /// would still pass if one of them were dropped from the implementation.
 /// </summary>
+/// <remarks>
+/// Every time value here comes from one <see cref="FakeTimeProvider"/> frozen at <c>_now</c>. The real clock
+/// is never read, so the results do not depend on the day the tests run.
+/// </remarks>
 [SutProviderCustomize]
 public class ValidateTwoFactorRememberTokenQueryTests
 {
     private const string _deviceIdentifier = "device-identifier";
     private const string _token = "protected-token";
 
+    /// <summary>The instant the fake clock is frozen at.</summary>
     private static readonly DateTime _now = new(2026, 10, 2, 12, 0, 0, DateTimeKind.Utc);
 
+    /// <summary>
+    /// When a valid token and its row lapse. In production the row takes its expiry from the token,
+    /// so the two match.
+    /// </summary>
+    private static readonly DateTime _expiration = _now.AddDays(30);
+
+    /// <summary>
+    /// Builds the query with a fake clock frozen at <c>_now</c>. The fake clock moves only when a test
+    /// calls <c>SetUtcNow</c> or <c>Advance</c> on it.
+    /// </summary>
     private static SutProvider<ValidateTwoFactorRememberTokenQuery> GetSutProvider()
     {
         var sutProvider = new SutProvider<ValidateTwoFactorRememberTokenQuery>()
@@ -33,7 +48,7 @@ public class ValidateTwoFactorRememberTokenQueryTests
         return sutProvider;
     }
 
-    private static TwoFactorRememberTokenable Tokenable(User user, Guid deviceId, string stamp) =>
+    private static TwoFactorRememberTokenable Tokenable(User user, Guid deviceId, string stamp, TimeProvider clock) =>
         new()
         {
             UserId = user.Id,
@@ -41,8 +56,12 @@ public class ValidateTwoFactorRememberTokenQueryTests
             DeviceIdentifier = _deviceIdentifier,
             Stamp = stamp,
             SecurityStamp = user.SecurityStamp,
-            // Real clock: ExpiringTokenable reads DateTime.UtcNow directly.
-            ExpirationDate = DateTime.UtcNow.AddDays(30),
+            ExpirationDate = _expiration,
+            // A token judges its own expiry with its own clock, which defaults to the system clock. In
+            // production a presented token is deserialized and keeps that default. Here the data protector is
+            // mocked, so the fake clock is assigned directly to judge the token against the same frozen
+            // instant as the row.
+            TimeProvider = clock,
         };
 
     private static TwoFactorRememberToken Row(User user, Guid deviceId, string stamp) =>
@@ -52,7 +71,7 @@ public class ValidateTwoFactorRememberTokenQueryTests
             UserId = user.Id,
             DeviceId = deviceId,
             Stamp = stamp,
-            ExpirationDate = _now.AddDays(1),
+            ExpirationDate = _expiration,
         };
 
     /// <summary>
@@ -63,7 +82,7 @@ public class ValidateTwoFactorRememberTokenQueryTests
         SutProvider<ValidateTwoFactorRememberTokenQuery> sutProvider, User user, Guid deviceId)
     {
         const string stamp = "row-stamp";
-        var tokenable = Tokenable(user, deviceId, stamp);
+        var tokenable = Tokenable(user, deviceId, stamp, sutProvider.GetDependency<FakeTimeProvider>());
         var row = Row(user, deviceId, stamp);
 
         sutProvider.GetDependency<IDataProtectorTokenFactory<TwoFactorRememberTokenable>>()
@@ -100,7 +119,9 @@ public class ValidateTwoFactorRememberTokenQueryTests
         Assert.False(await sutProvider.Sut.ValidateAsync(user, _deviceIdentifier, _token));
     }
 
-    /// <summary>The account-wide check inherited from the previous design.</summary>
+    /// <summary>
+    /// The account-wide check: rotating the user's security stamp invalidates every 2FA remember token they hold.
+    /// </summary>
     [Theory, BitAutoData]
     public async Task ValidateAsync_UserSecurityStampRotated_ReturnsFalse(
         User user, Guid deviceId)
@@ -176,11 +197,11 @@ public class ValidateTwoFactorRememberTokenQueryTests
     }
 
     /// <summary>
-    /// Expiry is exclusive of the expiry instant, matching <c>ExpiringTokenable.IsExpired</c>: a row is
-    /// still honored at exactly its <c>ExpirationDate</c> and refused one tick later.
+    /// A row is honored through its <c>ExpirationDate</c> itself and refused from one tick later, the same
+    /// boundary <c>ExpiringTokenable.IsExpired</c> applies to the token.
     /// </summary>
     [Theory, BitAutoData]
-    public async Task ValidateAsync_RowExpiresExactlyNow_ReturnsTrue(User user, Guid deviceId)
+    public async Task ValidateAsync_RowExpirationEqualsExactlyNow_ReturnsTrue(User user, Guid deviceId)
     {
         var sutProvider = GetSutProvider();
         var (_, row) = ArrangeValid(sutProvider, user, deviceId);
@@ -211,16 +232,59 @@ public class ValidateTwoFactorRememberTokenQueryTests
         Assert.False(await sutProvider.Sut.ValidateAsync(user, _deviceIdentifier, _token));
     }
 
+    /// <summary>The token's own expiry, which is checked before the row is read.</summary>
     [Theory, BitAutoData]
     public async Task ValidateAsync_TokenItselfExpired_ReturnsFalse(
         User user, Guid deviceId)
     {
         var sutProvider = GetSutProvider();
         var (tokenable, _) = ArrangeValid(sutProvider, user, deviceId);
-        // Real clock on purpose: ExpiringTokenable.IsExpired reads DateTime.UtcNow directly, so the
-        // injected TimeProvider cannot reach it.
-        tokenable.ExpirationDate = DateTime.UtcNow.AddMinutes(-1);
+        tokenable.ExpirationDate = _now.AddMinutes(-1);
 
+        Assert.False(await sutProvider.Sut.ValidateAsync(user, _deviceIdentifier, _token));
+    }
+
+    /// <summary>
+    /// The token is honored through its <c>ExpirationDate</c> itself and refused from one tick later, which is
+    /// what <c>ExpiringTokenable.IsExpired</c> enforces and the same boundary the row check applies to the row.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_TokenExpirationEqualsExactlyNow_ReturnsTrue(User user, Guid deviceId)
+    {
+        var sutProvider = GetSutProvider();
+        var (tokenable, _) = ArrangeValid(sutProvider, user, deviceId);
+        tokenable.ExpirationDate = _now;
+
+        Assert.True(await sutProvider.Sut.ValidateAsync(user, _deviceIdentifier, _token));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_TokenExpiredOneTickAgo_ReturnsFalse(User user, Guid deviceId)
+    {
+        var sutProvider = GetSutProvider();
+        var (tokenable, _) = ArrangeValid(sutProvider, user, deviceId);
+        tokenable.ExpirationDate = _now.AddTicks(-1);
+
+        Assert.False(await sutProvider.Sut.ValidateAsync(user, _deviceIdentifier, _token));
+    }
+
+    /// <summary>
+    /// Moving the one shared clock forward is enough to expire both the token and its row: honored
+    /// right up to the expiry instant, refused one tick after it.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_ClockAdvancesPastExpiration_StopsHonoringToken(User user, Guid deviceId)
+    {
+        var sutProvider = GetSutProvider();
+        ArrangeValid(sutProvider, user, deviceId);
+        var clock = sutProvider.GetDependency<FakeTimeProvider>();
+
+        Assert.True(await sutProvider.Sut.ValidateAsync(user, _deviceIdentifier, _token));
+
+        clock.Advance(_expiration - _now);
+        Assert.True(await sutProvider.Sut.ValidateAsync(user, _deviceIdentifier, _token));
+
+        clock.Advance(TimeSpan.FromTicks(1));
         Assert.False(await sutProvider.Sut.ValidateAsync(user, _deviceIdentifier, _token));
     }
 
