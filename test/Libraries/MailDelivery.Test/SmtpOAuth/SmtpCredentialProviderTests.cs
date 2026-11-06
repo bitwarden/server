@@ -75,10 +75,17 @@ public class SmtpCredentialProviderTests
     }
 
     [Fact]
-    public void Constructor_CustomOAuth_ThrowsNotSupportedException()
+    public void Constructor_CustomOAuth_DoesNotThrow()
     {
         _options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+        _options.Smtp.Username = "smtp-user@example.com";
+        _options.Smtp.OAuth.TokenEndpoint = "https://auth.example.com/oauth2/token";
+        _options.Smtp.OAuth.ClientId = "client-id";
+        _options.Smtp.OAuth.ClientSecret = "client-secret";
+        _options.Smtp.OAuth.Scope = "smtp.send";
 
-        Assert.Throws<NotSupportedException>(() => CreateSut());
+        var sut = CreateSut();
+
+        Assert.NotNull(sut);
     }
 }
