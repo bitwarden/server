@@ -194,6 +194,72 @@ public class GroupMembershipIntegrationTests : IClassFixture<ScimApplicationFact
     }
 
     [Fact]
+    public async Task UserMembershipEndpoints_HandleMoreThanOneHundredGroups()
+    {
+        const int groupCount = 101;
+        var organizationId = ScimApplicationFactory.TestOrganizationId1;
+        var organizationUserId = ScimApplicationFactory.TestOrganizationUserId1;
+        var databaseContext = _factory.GetDatabaseContext();
+        var additionalGroups = Enumerable.Range(1, groupCount - 1)
+            .Select(index => new Bit.Infrastructure.EntityFramework.Models.Group
+            {
+                Id = Guid.NewGuid(),
+                OrganizationId = organizationId,
+                Name = $"Scale Group {index:D3}"
+            })
+            .ToArray();
+
+        databaseContext.Groups.AddRange(additionalGroups);
+        databaseContext.GroupUsers.AddRange(additionalGroups.Select(group =>
+            new Bit.Infrastructure.EntityFramework.Models.GroupUser
+            {
+                GroupId = group.Id,
+                OrganizationUserId = organizationUserId
+            }));
+        databaseContext.SaveChanges();
+
+        var expectedGroups = additionalGroups
+            .Select(group => (Id: group.Id, DisplayName: group.Name))
+            .Append((Id: ScimApplicationFactory.TestGroupId1, DisplayName: "Test Group 1"))
+            .OrderBy(group => group.Id)
+            .ToArray();
+
+        var detailStopwatch = Stopwatch.StartNew();
+        var detailResponse = await _factory.UsersGetAsync(
+            organizationId,
+            organizationUserId,
+            groupCount: groupCount);
+        detailStopwatch.Stop();
+
+        Assert.Equal(StatusCodes.Status200OK, detailResponse.Response.StatusCode);
+        var detailBody = await ReadResponseBodyAsync(detailResponse.Response.Body);
+        var user = JsonSerializer.Deserialize<ScimUserResponseModel>(detailBody, _jsonOptions);
+        Assert.NotNull(user);
+        AssertUserGroupReferences(user, expectedGroups, organizationId);
+
+        var listStopwatch = Stopwatch.StartNew();
+        var listResponse = await _factory.UsersGetListAsync(
+            organizationId,
+            "userName eq user1@example.com",
+            count: 10,
+            startIndex: 1,
+            groupCount: groupCount);
+        listStopwatch.Stop();
+
+        Assert.Equal(StatusCodes.Status200OK, listResponse.Response.StatusCode);
+        var listBody = await ReadResponseBodyAsync(listResponse.Response.Body);
+        var list = JsonSerializer.Deserialize<ScimListResponseModel<ScimUserResponseModel>>(listBody, _jsonOptions);
+        Assert.NotNull(list);
+        Assert.Equal(1, list.TotalResults);
+        AssertUserGroupReferences(Assert.Single(list.Resources), expectedGroups, organizationId);
+
+        _testOutputHelper.WriteLine(
+            $"User with {expectedGroups.Length} groups: GET /Users/{{id}} returned {detailBody.Length} bytes " +
+            $"in {detailStopwatch.ElapsedMilliseconds} ms; filtered GET /Users returned {listBody.Length} bytes " +
+            $"in {listStopwatch.ElapsedMilliseconds} ms.");
+    }
+
+    [Fact]
     public async Task GetUserAndUserList_ReturnPaginatedGroupReferences()
     {
         var databaseContext = _factory.GetDatabaseContext();
@@ -531,6 +597,23 @@ public class GroupMembershipIntegrationTests : IClassFixture<ScimApplicationFact
         Assert.Equal(
             $"http://localhost/v2/{ScimApplicationFactory.TestOrganizationId1}/Groups/{groupId}",
             group.Ref);
+    }
+
+    private static void AssertUserGroupReferences(
+        ScimUserResponseModel user,
+        IEnumerable<(Guid Id, string DisplayName)> expectedGroups,
+        Guid organizationId)
+    {
+        var expected = expectedGroups.OrderBy(group => group.Id).ToArray();
+        Assert.Equal(expected.Select(group => group.Id), user.Groups.Select(group => Guid.Parse(group.Value)));
+        for (var index = 0; index < expected.Length; index++)
+        {
+            Assert.Equal(expected[index].DisplayName, user.Groups[index].Display);
+            Assert.Equal("direct", user.Groups[index].Type);
+            Assert.Equal(
+                $"http://localhost/v2/{organizationId}/Groups/{expected[index].Id}",
+                user.Groups[index].Ref);
+        }
     }
 
     private static void AssertMemberReference(
