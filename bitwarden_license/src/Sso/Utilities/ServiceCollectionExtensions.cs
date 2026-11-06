@@ -24,11 +24,13 @@ public static class ServiceCollectionExtensions
         GlobalSettings globalSettings)
     {
         // SAML SP Configuration
-        var samlEnvironment = new SamlEnvironment
+        var samlEnvironment = new SamlEnvironment();
+        var certificate = CoreHelpers.GetIdentityServerCertificate(globalSettings);
+        if (certificate != null)
         {
-            SpSigningCertificate = CoreHelpers.GetIdentityServerCertificate(globalSettings),
-        };
-        services.AddSingleton(s => samlEnvironment);
+            samlEnvironment.ServiceCertificates.Add(certificate);
+        }
+        services.TryAddSingleton(samlEnvironment);
 
         services.AddSingleton<Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider,
             DynamicAuthenticationSchemeProvider>();

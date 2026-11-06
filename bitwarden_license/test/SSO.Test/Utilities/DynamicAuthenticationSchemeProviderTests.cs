@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
 using NSubstitute;
+using Sustainsys.Saml2;
 using Sustainsys.Saml2.AspNetCore2;
 using Sustainsys.Saml2.Metadata;
 
@@ -141,6 +142,68 @@ public class DynamicAuthenticationSchemeProviderTests
     }
 
     [Theory, BitAutoData]
+    public async Task GetSchemeAsync_Saml2Config_UsesTheServiceCertificatesFromSamlEnvironmentInOrder(
+        Guid organizationId,
+        SutProvider<DynamicAuthenticationSchemeProvider> sutProvider)
+    {
+        using var signingCertificate = CreateSelfSignedCertificate("CN=Test SP signing certificate");
+        using var encryptionCertificate = CreateSelfSignedCertificate("CN=Test SP encryption certificate");
+        using var stagedSigningCertificate = CreateSelfSignedCertificate("CN=Test SP staged signing certificate");
+        var samlEnvironment = new SamlEnvironment();
+        samlEnvironment.ServiceCertificates.Add(new ServiceCertificate
+        {
+            Certificate = signingCertificate,
+            Use = CertificateUse.Signing,
+            Status = CertificateStatus.Current,
+        });
+        samlEnvironment.ServiceCertificates.Add(new ServiceCertificate
+        {
+            Certificate = encryptionCertificate,
+            Use = CertificateUse.Encryption,
+            Status = CertificateStatus.Current,
+        });
+        samlEnvironment.ServiceCertificates.Add(new ServiceCertificate
+        {
+            Certificate = stagedSigningCertificate,
+            Use = CertificateUse.Signing,
+            Status = CertificateStatus.Future,
+        });
+
+        sutProvider.SetDependency<IOptions<AuthenticationOptions>>(
+            Options.Create(new AuthenticationOptions()));
+        sutProvider.SetDependency<IOptionsMonitorCache<Saml2Options>>(
+            Substitute.For<IExtendedOptionsMonitorCache<Saml2Options>>());
+        sutProvider.SetDependency<IOptionsMonitorCache<OpenIdConnectOptions>>(
+            Substitute.For<IExtendedOptionsMonitorCache<OpenIdConnectOptions>>());
+        sutProvider.SetDependency(samlEnvironment);
+        sutProvider.Create();
+
+        using var idpSigningCertificate = CreateSelfSignedCertificate("CN=Test IdP signing certificate");
+        var ssoConfig = new SsoConfig { OrganizationId = organizationId, Enabled = true };
+        ssoConfig.SetData(new SsoConfigurationData
+        {
+            ConfigType = SsoType.Saml2,
+            IdpEntityId = "https://idp.example.com",
+            IdpSingleSignOnServiceUrl = "https://idp.example.com/sso",
+            IdpX509PublicCert = CoreHelpers.Base64UrlEncode(idpSigningCertificate.RawData),
+        });
+        sutProvider.GetDependency<ISsoConfigRepository>()
+            .GetByOrganizationIdAsync(organizationId)
+            .Returns(ssoConfig);
+
+        var scheme = await sutProvider.Sut.GetSchemeAsync(organizationId.ToString());
+
+        var saml2Options = Assert.IsType<Saml2Options>(((DynamicAuthenticationScheme)scheme).Options);
+        Assert.Equal(
+            [
+                (signingCertificate.Thumbprint, CertificateUse.Signing, CertificateStatus.Current),
+                (encryptionCertificate.Thumbprint, CertificateUse.Encryption, CertificateStatus.Current),
+                (stagedSigningCertificate.Thumbprint, CertificateUse.Signing, CertificateStatus.Future),
+            ],
+            saml2Options.SPOptions.ServiceCertificates.Select(c => (c.Certificate.Thumbprint, c.Use, c.Status)));
+    }
+
+    [Theory, BitAutoData]
     public async Task GetSchemeAsync_OidcConfig_UsesTheSsrfProtectedBackchannel(
         Guid organizationId,
         SutProvider<DynamicAuthenticationSchemeProvider> sutProvider)
@@ -257,6 +320,14 @@ public class DynamicAuthenticationSchemeProviderTests
             .Returns(ssoConfig);
 
         return handler;
+    }
+
+    private static X509Certificate2 CreateSelfSignedCertificate(string subjectName)
+    {
+        using var key = RSA.Create(2048);
+        var now = DateTimeOffset.UtcNow;
+        return new CertificateRequest(subjectName, key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1)
+            .CreateSelfSigned(now, now.AddDays(365));
     }
 
     private static EntityDescriptor BuildEntityDescriptor(KeyDescriptor keyDescriptor)

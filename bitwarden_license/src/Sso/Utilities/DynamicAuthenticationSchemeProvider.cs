@@ -396,9 +396,9 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
         {
             spOptions.OutboundSigningAlgorithm = config.SpOutboundSigningAlgorithm;
         }
-        if (_samlEnvironment.SpSigningCertificate != null)
+        foreach (var entry in _samlEnvironment.ServiceCertificates)
         {
-            spOptions.ServiceCertificates.Add(_samlEnvironment.SpSigningCertificate);
+            spOptions.ServiceCertificates.Add(entry);
         }
 
         var idpEntityId = new Sustainsys.Saml2.Metadata.EntityId(config.IdpEntityId);
