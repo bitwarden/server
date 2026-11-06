@@ -58,7 +58,7 @@ public class UsersController : Controller
         [FromRoute] Guid organizationId,
         [FromRoute] Guid id,
         [FromQuery] int groupStartIndex = 1,
-        [FromQuery] int groupCount = 50)
+        [FromQuery] int groupCount = int.MaxValue)
     {
         var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(id);
         if (orgUser == null || orgUser.OrganizationId != organizationId)

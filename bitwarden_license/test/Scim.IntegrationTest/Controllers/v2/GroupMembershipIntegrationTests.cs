@@ -121,9 +121,8 @@ public class GroupMembershipIntegrationTests : IClassFixture<ScimApplicationFact
         var userListResponse = await _factory.UsersGetListAsync(
             ScimApplicationFactory.TestOrganizationId1,
             filter: null,
-            count: 50,
-            startIndex: 1,
-            groupCount: 50);
+            count: null,
+            startIndex: null);
         userListStopwatch.Stop();
 
         Assert.Equal(StatusCodes.Status200OK, userListResponse.Response.StatusCode);
@@ -133,6 +132,8 @@ public class GroupMembershipIntegrationTests : IClassFixture<ScimApplicationFact
             _jsonOptions);
         Assert.NotNull(userList);
         Assert.Equal(organizationUserCount, userList.TotalResults);
+        Assert.Equal(50, userList.ItemsPerPage);
+        Assert.Equal(1, userList.StartIndex);
         Assert.Equal(50, userList.Resources.Count);
         Assert.All(userList.Resources, user =>
         {
@@ -143,8 +144,7 @@ public class GroupMembershipIntegrationTests : IClassFixture<ScimApplicationFact
         var groupGetStopwatch = Stopwatch.StartNew();
         var groupResponse = await _factory.GroupsGetAsync(
             ScimApplicationFactory.TestOrganizationId1,
-            ScimApplicationFactory.TestGroupId1,
-            memberCount: activeUserCount);
+            ScimApplicationFactory.TestGroupId1);
         groupGetStopwatch.Stop();
 
         Assert.Equal(StatusCodes.Status200OK, groupResponse.Response.StatusCode);
@@ -165,9 +165,8 @@ public class GroupMembershipIntegrationTests : IClassFixture<ScimApplicationFact
         var groupListResponse = await _factory.GroupsGetListAsync(
             ScimApplicationFactory.TestOrganizationId1,
             filter: null,
-            count: 3,
-            startIndex: 1,
-            memberCount: activeUserCount);
+            count: null,
+            startIndex: null);
         groupListStopwatch.Stop();
 
         Assert.Equal(StatusCodes.Status200OK, groupListResponse.Response.StatusCode);
@@ -177,6 +176,8 @@ public class GroupMembershipIntegrationTests : IClassFixture<ScimApplicationFact
             _jsonOptions);
         Assert.NotNull(groupList);
         Assert.Equal(3, groupList.TotalResults);
+        Assert.Equal(50, groupList.ItemsPerPage);
+        Assert.Equal(1, groupList.StartIndex);
         Assert.Equal(3, groupList.Resources.Count);
         var groupWithLargeMembership = Assert.Single(
             groupList.Resources,
@@ -227,8 +228,7 @@ public class GroupMembershipIntegrationTests : IClassFixture<ScimApplicationFact
         var detailStopwatch = Stopwatch.StartNew();
         var detailResponse = await _factory.UsersGetAsync(
             organizationId,
-            organizationUserId,
-            groupCount: groupCount);
+            organizationUserId);
         detailStopwatch.Stop();
 
         Assert.Equal(StatusCodes.Status200OK, detailResponse.Response.StatusCode);
@@ -242,8 +242,7 @@ public class GroupMembershipIntegrationTests : IClassFixture<ScimApplicationFact
             organizationId,
             "userName eq user1@example.com",
             count: 10,
-            startIndex: 1,
-            groupCount: groupCount);
+            startIndex: 1);
         listStopwatch.Stop();
 
         Assert.Equal(StatusCodes.Status200OK, listResponse.Response.StatusCode);
@@ -252,6 +251,17 @@ public class GroupMembershipIntegrationTests : IClassFixture<ScimApplicationFact
         Assert.NotNull(list);
         Assert.Equal(1, list.TotalResults);
         AssertUserGroupReferences(Assert.Single(list.Resources), expectedGroups, organizationId);
+
+        var groupsResponse = await _factory.GroupsGetListAsync(
+            organizationId, filter: null, count: null, startIndex: null);
+        Assert.Equal(StatusCodes.Status200OK, groupsResponse.Response.StatusCode);
+        var groups = JsonSerializer.Deserialize<ScimListResponseModel<ScimGroupResponseModel>>(
+            await ReadResponseBodyAsync(groupsResponse.Response.Body), _jsonOptions);
+        Assert.NotNull(groups);
+        Assert.Equal(groupCount + 2, groups.TotalResults);
+        Assert.Equal(50, groups.ItemsPerPage);
+        Assert.Equal(1, groups.StartIndex);
+        Assert.Equal(50, groups.Resources.Count);
 
         _testOutputHelper.WriteLine(
             $"User with {expectedGroups.Length} groups: GET /Users/{{id}} returned {detailBody.Length} bytes " +

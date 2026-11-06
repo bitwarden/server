@@ -1,5 +1,5 @@
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Scim.Models;
-using System.ComponentModel.DataAnnotations;
 using Xunit;
 
 namespace Bit.Scim.Test.Models;
@@ -16,7 +16,7 @@ public class GetUsersQueryParamModelTests
         Assert.Equal(1, model.StartIndex);
         Assert.Equal(50, model.Count);
         Assert.Equal(1, model.GroupStartIndex);
-        Assert.Equal(50, model.GroupCount);
+        Assert.Equal(int.MaxValue, model.GroupCount);
         Assert.Empty(model.Filter);
     }
 
