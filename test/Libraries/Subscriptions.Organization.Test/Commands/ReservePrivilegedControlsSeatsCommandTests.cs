@@ -1,10 +1,12 @@
-﻿using Bit.Core.Billing.Organizations;
+﻿using Bit.Core;
+using Bit.Core.Billing.Organizations;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Exceptions;
 using Bit.Subscriptions.Organization.Commands.PrivilegedControls;
 using Bitwarden.Server.Sdk.Environment;
+using Bitwarden.Server.Sdk.Features;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
@@ -19,15 +21,47 @@ public class ReservePrivilegedControlsSeatsCommandTests
     private readonly IAutoscalePrivilegedControlsSeatsCommand _autoscalePrivilegedControlsSeatsCommand =
         Substitute.For<IAutoscalePrivilegedControlsSeatsCommand>();
     private readonly IBitwardenEnvironment _environment = Substitute.For<IBitwardenEnvironment>();
+    private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly RecordingLogger<ReservePrivilegedControlsSeatsCommand> _logger = new();
     private readonly ReservePrivilegedControlsSeatsCommand _sut;
 
-    public ReservePrivilegedControlsSeatsCommandTests() =>
+    public ReservePrivilegedControlsSeatsCommandTests()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(true);
         _sut = new ReservePrivilegedControlsSeatsCommand(
             _countNewPamSeatsRequiredQuery,
             _autoscalePrivilegedControlsSeatsCommand,
             _environment,
+            _featureService,
             _logger);
+    }
+
+    [Theory]
+    [InlineData(5)]
+    [InlineData(0)]
+    public async Task RunAsync_Cloud_FlagOff_SucceedsWithoutCallingAutoscale(int pamSeats)
+    {
+        var organization = CreateOrganization(pamSeats: pamSeats);
+        _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(false);
+
+        var result = await _sut.RunAsync(organization, 2);
+
+        Assert.True(result.Success);
+        await _autoscalePrivilegedControlsSeatsCommand.DidNotReceiveWithAnyArgs().RunAsync(default!, default);
+    }
+
+    [Fact]
+    public async Task RunAsync_SelfHosted_FlagOff_Shortfall_ReturnsSelfHostedShortfall()
+    {
+        var organization = CreateOrganization();
+        _environment.SelfHosted.Returns(true);
+        _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(false);
+        _countNewPamSeatsRequiredQuery.CountNewPamSeatsRequiredAsync(organization, 2).Returns(1);
+
+        var result = await _sut.RunAsync(organization, 2);
+
+        Assert.IsType<CannotAutoscalePrivilegedControlsSeatsOnSelfHostError>(result.Error);
+    }
 
     [Theory]
     [InlineData(0)]

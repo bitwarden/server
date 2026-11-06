@@ -19,7 +19,9 @@ public interface IReservePrivilegedControlsSeatsCommand
     /// </param>
     /// <remarks>
     /// Succeeds without checking seats when no seats are requested, the organization doesn't use Privileged
-    /// Controls, or it has no Privileged Controls seat count. Never throws: every failure is returned as an error.
+    /// Controls, or it has no Privileged Controls seat count. On cloud it also succeeds without checking seats when
+    /// <see cref="FeatureFlagKeys.PM39883_Pam_Billing_Support"/> is off. Never throws: every failure is returned as
+    /// an error.
     /// </remarks>
     Task<PrivilegedControlsSeatReservationResult> RunAsync(Organization organization, int seatsRequested);
 }

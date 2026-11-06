@@ -315,7 +315,7 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | From Core | Used for |
 | --- | --- |
 | `Policies.Application` (`Bit.Core.Auth.Identity`) | Requiring the standard user authorization policy on the group |
-| `FeatureFlagKeys` (`Bit.Core`) | Gating the Privileged Controls group and the Privileged Controls purchase endpoint on `PM39883_Pam_Billing_Support` |
+| `FeatureFlagKeys` (`Bit.Core`) | Gating the Privileged Controls group, the Privileged Controls purchase endpoint, and cloud Privileged Controls seat reservations on `PM39883_Pam_Billing_Support` |
 | `BillingExtensions.IsOnPrivilegedControlsSalesInitiatedTrial`, `PrivilegedControlsAutoscaleLimitFits`, `SubscriptionExtensions.HasPrivilegedControlsSeats` (`Bit.Core.Billing.Extensions`) | The trial definition shared with the Api subscription response, the autoscale-limit rule shared with `OrganizationService` and the Admin Portal, and detecting the Stripe Privileged Controls seat line |
 | `IOrganizationRepository` (`Bit.Core.Repositories`) | Resolving the organization the preview is for |
 | `Organization` (`Bit.Core.AdminConsole.Entities`) | The subscriber passed to the preview query; the entity the Privileged Controls command and factory read and update |

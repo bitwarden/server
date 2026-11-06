@@ -129,6 +129,7 @@ public class SubscriptionsOrganizationServiceCollectionExtensionsTests
         services.AddSingleton(Substitute.For<IMailer>());
         services.AddSingleton(Substitute.For<IGlobalSettings>());
         services.AddSingleton(Substitute.For<IBitwardenEnvironment>());
+        services.AddSingleton(Substitute.For<IFeatureService>());
         services.AddLogging();
 
         services.AddPrivilegedControlsSeatAutoscaling();

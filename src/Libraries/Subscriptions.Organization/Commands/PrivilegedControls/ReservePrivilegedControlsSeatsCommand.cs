@@ -1,9 +1,11 @@
-﻿using Bit.Core.Billing.Organizations;
+﻿using Bit.Core;
+using Bit.Core.Billing.Organizations;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Exceptions;
 using Bitwarden.Server.Sdk.Environment;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.Extensions.Logging;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
 
@@ -13,6 +15,7 @@ internal sealed class ReservePrivilegedControlsSeatsCommand(
     ICountNewPamSeatsRequiredQuery countNewPamSeatsRequiredQuery,
     IAutoscalePrivilegedControlsSeatsCommand autoscalePrivilegedControlsSeatsCommand,
     IBitwardenEnvironment environment,
+    IFeatureService featureService,
     ILogger<ReservePrivilegedControlsSeatsCommand> logger) : IReservePrivilegedControlsSeatsCommand
 {
     public async Task<PrivilegedControlsSeatReservationResult> RunAsync(OrganizationEntity organization, int seatsRequested)
@@ -53,6 +56,12 @@ internal sealed class ReservePrivilegedControlsSeatsCommand(
             return seatsRequired > 0
                 ? new PrivilegedControlsSeatReservationResult(new CannotAutoscalePrivilegedControlsSeatsOnSelfHostError())
                 : new PrivilegedControlsSeatReservationResult();
+        }
+
+        // With the flag off, cloud members get Privileged Controls access without any seat being reserved.
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support))
+        {
+            return new PrivilegedControlsSeatReservationResult();
         }
 
         // The autoscale command can't add seats to an organization that has none, so zero seats means none are free.
