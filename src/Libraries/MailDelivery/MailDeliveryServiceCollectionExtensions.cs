@@ -27,6 +27,10 @@ public static class MailDeliveryServiceCollectionExtensions
         services.TryAddSingleton<NoopMailDeliveryService>();
         services.TryAddSingleton<IMailDeliveryService>(ResolveMailDeliveryService);
 
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddHttpClient(OAuthHandler.HttpClientName);
+        services.TryAddSingleton<ISmtpCredentialProvider, SmtpCredentialProvider>();
+
         return services;
     }
 
