@@ -22,6 +22,13 @@ public static class TestCertificates
         return path;
     }
 
+    public static string CreateSubdirectory()
+    {
+        var path = Path.Combine(_directory.Value, $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path);
+        return path;
+    }
+
     private static string CreateDirectory()
     {
         var directory = Path.Combine(Path.GetTempPath(), $"bw-test-certificates-{Guid.NewGuid():N}");
