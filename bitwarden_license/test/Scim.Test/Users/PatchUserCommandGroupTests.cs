@@ -1,8 +1,5 @@
 ﻿using System.Text.Json;
-using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Scim.Models;
@@ -18,248 +15,38 @@ namespace Bit.Scim.Test.Users;
 [SutProviderCustomize]
 public class PatchUserCommandGroupTests
 {
+    // RFC 7643 section 4.1.2: User.groups is readOnly, so membership may only change via the Group resource.
     [Theory]
-    [BitAutoData]
-    public async Task PatchUser_AddGroupOperation_Success(
+    [BitAutoData("add")]
+    [BitAutoData("remove")]
+    [BitAutoData("replace")]
+    public async Task PatchUser_GroupsPath_IsRejectedAsReadOnly(
+        string op,
         SutProvider<PatchUserCommand> sutProvider,
         OrganizationUser organizationUser,
         Guid groupId)
     {
-        // Arrange
-        organizationUser.Status = OrganizationUserStatusType.Confirmed;
-
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
-
-        sutProvider.GetDependency<IGroupRepository>()
-            .GetByIdAsync(groupId)
-            .Returns(new Group { Id = groupId, OrganizationId = organizationUser.OrganizationId });
 
         var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>
             {
-                new ScimPatchModel.OperationModel
+                new()
                 {
-                    Op = "add",
+                    Op = op,
                     Path = "groups",
-                    Value = JsonDocument.Parse($"{{\"value\":\"{groupId}\"}}").RootElement
+                    Value = JsonDocument.Parse($"[{{\"value\":\"{groupId}\"}}]").RootElement
                 }
             },
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
         };
 
-        // Act
-        await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel));
 
-        // Assert
-        await sutProvider.GetDependency<IGroupRepository>().Received(1)
-            .AddGroupUsersByIdAsync(groupId, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(organizationUser.Id)), Arg.Any<DateTime>());
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task PatchUser_RemoveGroupOperation_Success(
-        SutProvider<PatchUserCommand> sutProvider,
-        OrganizationUser organizationUser,
-        Guid groupId)
-    {
-        // Arrange
-        organizationUser.Status = OrganizationUserStatusType.Confirmed;
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByIdAsync(organizationUser.Id)
-            .Returns(organizationUser);
-
-        sutProvider.GetDependency<IGroupRepository>()
-            .GetByIdAsync(groupId)
-            .Returns(new Group { Id = groupId, OrganizationId = organizationUser.OrganizationId });
-
-        var scimPatchModel = new ScimPatchModel
-        {
-            Operations = new List<ScimPatchModel.OperationModel>
-            {
-                new ScimPatchModel.OperationModel
-                {
-                    Op = "remove",
-                    Path = "groups",
-                    Value = JsonDocument.Parse($"{{\"value\":\"{groupId}\"}}").RootElement
-                }
-            },
-            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
-        };
-
-        // Act
-        await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel);
-
-        // Assert
-        await sutProvider.GetDependency<IGroupRepository>().Received(1)
-            .DeleteUserAsync(groupId, organizationUser.Id, Arg.Any<DateTime>());
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task PatchUser_ReplaceGroupsOperation_Success(
-        SutProvider<PatchUserCommand> sutProvider,
-        OrganizationUser organizationUser,
-        Guid groupId1,
-        Guid groupId2)
-    {
-        // Arrange
-        organizationUser.Status = OrganizationUserStatusType.Confirmed;
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByIdAsync(organizationUser.Id)
-            .Returns(organizationUser);
-
-        sutProvider.GetDependency<IGroupRepository>()
-            .GetByIdAsync(groupId1)
-            .Returns(new Group { Id = groupId1, OrganizationId = organizationUser.OrganizationId });
-
-        sutProvider.GetDependency<IGroupRepository>()
-            .GetByIdAsync(groupId2)
-            .Returns(new Group { Id = groupId2, OrganizationId = organizationUser.OrganizationId });
-
-        var staleGroupId = Guid.NewGuid();
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyGroupIdsByUserIdAsync(organizationUser.Id)
-            .Returns(new List<Guid> { groupId1, staleGroupId });
-
-        var scimPatchModel = new ScimPatchModel
-        {
-            Operations = new List<ScimPatchModel.OperationModel>
-            {
-                new ScimPatchModel.OperationModel
-                {
-                    Op = "replace",
-                    Path = "groups",
-                    Value = JsonDocument.Parse($"[{{\"value\":\"{groupId1}\"}},{{\"value\":\"{groupId2}\"}}]").RootElement
-                }
-            },
-            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
-        };
-
-        // Act
-        await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel);
-
-        // Assert
-        var groupRepo = sutProvider.GetDependency<IGroupRepository>();
-        await groupRepo.Received(1).DeleteUserAsync(staleGroupId, organizationUser.Id, Arg.Any<DateTime>());
-        await groupRepo.Received(1).AddGroupUsersByIdAsync(groupId2, Arg.Is<IEnumerable<Guid>>(u => u.Single() == organizationUser.Id), Arg.Any<DateTime>());
-        await groupRepo.DidNotReceive().AddGroupUsersByIdAsync(groupId1, Arg.Any<IEnumerable<Guid>>(), Arg.Any<DateTime>());
-        await groupRepo.DidNotReceive().UpdateUsersAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<DateTime>());
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task PatchUser_AddGroupInvalidGroupId_ThrowsNotFound(
-        SutProvider<PatchUserCommand> sutProvider,
-        OrganizationUser organizationUser,
-        Guid groupId)
-    {
-        // Arrange
-        organizationUser.Status = OrganizationUserStatusType.Confirmed;
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByIdAsync(organizationUser.Id)
-            .Returns(organizationUser);
-
-        sutProvider.GetDependency<IGroupRepository>()
-            .GetByIdAsync(groupId)
-            .Returns((Group)null);
-
-        var scimPatchModel = new ScimPatchModel
-        {
-            Operations = new List<ScimPatchModel.OperationModel>
-            {
-                new ScimPatchModel.OperationModel
-                {
-                    Op = "add",
-                    Path = "groups",
-                    Value = JsonDocument.Parse($"{{\"value\":\"{groupId}\"}}").RootElement
-                }
-            },
-            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
-        };
-
-        // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel));
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task PatchUser_AddGroupCrossOrganization_ThrowsBadRequest(
-        SutProvider<PatchUserCommand> sutProvider,
-        OrganizationUser organizationUser,
-        Guid groupId,
-        Guid differentOrgId)
-    {
-        // Arrange
-        organizationUser.Status = OrganizationUserStatusType.Confirmed;
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByIdAsync(organizationUser.Id)
-            .Returns(organizationUser);
-
-        sutProvider.GetDependency<IGroupRepository>()
-            .GetByIdAsync(groupId)
-            .Returns(new Group { Id = groupId, OrganizationId = differentOrgId });
-
-        var scimPatchModel = new ScimPatchModel
-        {
-            Operations = new List<ScimPatchModel.OperationModel>
-            {
-                new ScimPatchModel.OperationModel
-                {
-                    Op = "add",
-                    Path = "groups",
-                    Value = JsonDocument.Parse($"{{\"value\":\"{groupId}\"}}").RootElement
-                }
-            },
-            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
-        };
-
-        // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel));
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task PatchUser_RemoveGroupInvalidGroupId_ThrowsNotFound(
-        SutProvider<PatchUserCommand> sutProvider,
-        OrganizationUser organizationUser,
-        Guid groupId)
-    {
-        // Arrange
-        organizationUser.Status = OrganizationUserStatusType.Confirmed;
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByIdAsync(organizationUser.Id)
-            .Returns(organizationUser);
-
-        sutProvider.GetDependency<IGroupRepository>()
-            .GetByIdAsync(groupId)
-            .Returns((Group)null);
-
-        var scimPatchModel = new ScimPatchModel
-        {
-            Operations = new List<ScimPatchModel.OperationModel>
-            {
-                new ScimPatchModel.OperationModel
-                {
-                    Op = "remove",
-                    Path = "groups",
-                    Value = JsonDocument.Parse($"{{\"value\":\"{groupId}\"}}").RootElement
-                }
-            },
-            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
-        };
-
-        // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel));
+        Assert.Contains("read-only", exception.Message);
     }
 }
