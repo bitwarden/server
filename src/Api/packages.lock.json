@@ -1344,6 +1344,15 @@
           "CurrentUser": "[0.0.1, )"
         }
       },
+      "organizationkeys": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.10.1, )",
+          "CurrentUser": "[0.0.1, )",
+          "ExceptionHandling": "[0.0.1, )",
+          "OrganizationAuthorization": "[0.0.1, )"
+        }
+      },
       "pam": {
         "type": "Project",
         "dependencies": {

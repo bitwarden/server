@@ -401,6 +401,7 @@ public class ProviderUserRepositoryTests
         Assert.Equal(expectedOrganization.Identifier, actual.Identifier);
         Assert.Equal(expectedOrganization.PublicKey, actual.PublicKey);
         Assert.Equal(expectedOrganization.PrivateKey, actual.PrivateKey);
+        Assert.Equal(expectedOrganization.OrganizationKeyId, actual.OrganizationKeyId);
         Assert.Equal(expectedOrganization.Enabled, actual.Enabled);
         Assert.Equal(expectedOrganization.PlanType, actual.PlanType);
         Assert.Equal(expectedOrganization.LimitCollectionCreation, actual.LimitCollectionCreation);

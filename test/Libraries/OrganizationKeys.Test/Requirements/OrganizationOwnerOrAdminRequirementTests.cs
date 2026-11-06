@@ -1,10 +1,10 @@
-﻿using Bit.Api.KeyManagement.Models.Requirements;
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.OrganizationKeys.Requirements;
 using Xunit;
 
-namespace Bit.Api.Test.KeyManagement.Models.Requirements;
+namespace Bit.OrganizationKeys.Test.Requirements;
 
 public class OrganizationOwnerOrAdminRequirementTests
 {
