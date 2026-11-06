@@ -25,6 +25,9 @@ changelog:
         - t:ci
         - t:docs
         - t:misc
+    - title: "🚩 Flags removed"
+      labels:
+        - t:flagged-code-removal
     - title: "📦 Dependency Updates"
       labels:
         - major-updates
