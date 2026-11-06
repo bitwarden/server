@@ -119,7 +119,7 @@ public static class ServiceCollectionExtensions
                 new IdentityResources.OpenId(),
                 new IdentityResources.Profile()
             })
-            .AddIdentityServerCertificate(env, globalSettings);
+            .AddSsoSigningCertificate(env, globalSettings);
 
         // PM-23572
         // Register named FusionCache for SSO authorization code grants.

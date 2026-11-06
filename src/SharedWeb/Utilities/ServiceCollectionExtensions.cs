@@ -498,13 +498,73 @@ public static class ServiceCollectionExtensions
     public static IIdentityServerBuilder AddIdentityServerCertificate(
         this IIdentityServerBuilder identityServerBuilder, IWebHostEnvironment env, GlobalSettings globalSettings)
     {
-        var certificates = GetIdentitySigningCertificates(globalSettings);
+        return AddSigningCertificateSet(identityServerBuilder, env, globalSettings,
+            GetIdentitySigningCertificates(globalSettings));
+    }
+
+    public static IIdentityServerBuilder AddSsoSigningCertificate(
+        this IIdentityServerBuilder identityServerBuilder, IWebHostEnvironment env, GlobalSettings globalSettings)
+    {
+        return AddSigningCertificateSet(identityServerBuilder, env, globalSettings,
+            GetSsoSigningCertificates(env, globalSettings));
+    }
+
+    /// <summary>
+    /// Gets the SSO signing certificates. An SSO active source uses only the SSO slots. With no SSO active source,
+    /// a self-hosted or Development host uses the Identity signing certificates and the SSO slots. A cloud host that
+    /// is not a Development host must have an SSO active source.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">A cloud host has no SSO active source, or a configured
+    /// certificate did not load.</exception>
+    public static SigningCertificateSet GetSsoSigningCertificates(IWebHostEnvironment env,
+        GlobalSettings globalSettings)
+    {
+        const string ssoServerPath = "globalSettings:ssoServer";
+        var ssoServer = globalSettings.SsoServer;
+        var hasActiveSource = CoreHelpers.HasActiveSource(ssoServer, ssoServer.FutureCertificate);
+        if (!hasActiveSource && !globalSettings.SelfHosted && !env.IsDevelopment())
+        {
+            throw new InvalidOperationException(
+                $"No SSO signing certificate is configured. A cloud host must set {ssoServerPath}.");
+        }
+
+        var ssoStaged = CoreHelpers.GetStagedCertificate(globalSettings, ssoServer.FutureCertificate,
+            $"{ssoServerPath}:futureCertificate");
+        IReadOnlyList<X509Certificate2> ssoStagedList = ssoStaged == null ? [] : [ssoStaged];
+        var ssoValidation = CoreHelpers.GetRetiredCertificates(globalSettings, ssoServer.ValidationCertificates,
+            $"{ssoServerPath}:validationCertificates");
+
+        if (hasActiveSource)
+        {
+            var active = CoreHelpers.GetActiveCertificate(globalSettings, ssoServer, ssoServer.FutureCertificate,
+                ssoServerPath, required: true);
+            return new SigningCertificateSet(active, ssoStagedList, ssoValidation, IsFallback: false);
+        }
+
+        var identity = GetIdentitySigningCertificates(globalSettings);
+        return new SigningCertificateSet(identity.Active, [.. identity.Staged, .. ssoStagedList],
+            [.. identity.Validation, .. ssoValidation], IsFallback: true);
+    }
+
+    private static IIdentityServerBuilder AddSigningCertificateSet(IIdentityServerBuilder identityServerBuilder,
+        IWebHostEnvironment env, GlobalSettings globalSettings, SigningCertificateSet certificates)
+    {
         if (certificates.Active != null)
         {
             AddSigningCertificates(identityServerBuilder, certificates.Active,
                 certificates.Staged.Concat(certificates.Validation));
         }
-        else if (env.IsDevelopment() && !string.IsNullOrEmpty(globalSettings.DevelopmentDirectory))
+        else
+        {
+            AddDeveloperSigningCredential(identityServerBuilder, env, globalSettings);
+        }
+        return identityServerBuilder;
+    }
+
+    private static void AddDeveloperSigningCredential(IIdentityServerBuilder identityServerBuilder,
+        IWebHostEnvironment env, GlobalSettings globalSettings)
+    {
+        if (env.IsDevelopment() && !string.IsNullOrEmpty(globalSettings.DevelopmentDirectory))
         {
             var developerSigningKeyPath = Path.Combine(globalSettings.DevelopmentDirectory, "signingkey.jwk");
             identityServerBuilder.AddDeveloperSigningCredential(true, developerSigningKeyPath);
@@ -517,7 +577,6 @@ public static class ServiceCollectionExtensions
         {
             throw new Exception("No identity certificate to use.");
         }
-        return identityServerBuilder;
     }
 
     private static SigningCertificateSet GetIdentitySigningCertificates(GlobalSettings globalSettings)
