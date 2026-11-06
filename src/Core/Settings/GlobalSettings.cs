@@ -538,11 +538,28 @@ public class GlobalSettings : IGlobalSettings
         }
     }
 
-    public class IdentityServerSettings
+    public class IdentityServerSettings : ICertificateSettings
     {
         public string CertificateLocation { get; set; } = "identity.pfx";
         public string CertificateThumbprint { get; set; }
         public string CertificatePassword { get; set; }
+        /// <summary>
+        /// The name of the active Identity signing certificate blob. A cloud host loads this blob from the
+        /// "certificates" container when no thumbprint is set. The password and the storage connection string
+        /// must have values. A self-hosted host does not use this setting.
+        /// </summary>
+        public string BlobName { get; set; } = "identity.pfx";
+        /// <summary>
+        /// The staged Identity signing certificate. When <see cref="FutureCertificateSettings.Enabled"/> is true,
+        /// the host publishes the certificate key for token validation. When <see cref="FutureCertificateSettings.Active"/>
+        /// is also true, the host signs tokens with this certificate. A cloud host and a self-hosted host use this setting.
+        /// </summary>
+        public FutureCertificateSettings FutureCertificate { get; set; } = new();
+        /// <summary>
+        /// The retired Identity signing certificates. The host publishes the key of each enabled certificate
+        /// for token validation, but does not sign tokens with it. A cloud host and a self-hosted host use this setting.
+        /// </summary>
+        public RetiredCertificateSettings[] ValidationCertificates { get; set; } = [];
         public string RedisConnectionString { get; set; }
         public string CosmosConnectionString { get; set; }
         public string LicenseKey { get; set; } = "eyJhbGciOiJQUzI1NiIsImtpZCI6IklkZW50aXR5U2VydmVyTGljZW5zZUtleS83Y2VhZGJiNzgxMzA0NjllODgwNjg5MTAyNTQxNGYxNiIsInR5cCI6ImxpY2Vuc2Urand0In0.eyJpc3MiOiJodHRwczovL2R1ZW5kZXNvZnR3YXJlLmNvbSIsImF1ZCI6IklkZW50aXR5U2VydmVyIiwiaWF0IjoxNzY1MDY1NjAwLCJleHAiOjE3OTY1MTUyMDAsImNvbXBhbnlfbmFtZSI6IkJpdHdhcmRlbiBJbmMuIiwiY29udGFjdF9pbmZvIjoiY29udGFjdEBkdWVuZGVzb2Z0d2FyZS5jb20iLCJlZGl0aW9uIjoiU3RhcnRlciIsImlkIjoiOTUxNSIsImZlYXR1cmUiOlsiaXN2IiwidW5saW1pdGVkX2NsaWVudHMiXSwiY2xpZW50X2xpbWl0IjowfQ.rWUsq-XBKNwPG7BRKG-vShXHuyHLHJCh0sEWdWT4Rkz4ArIPOAepEp9wNya-hxFKkBTFlPaQ5IKk4wDTvkQkuq1qaI_v6kSCdaP9fvXp0rmh4KcFEffVLB-wAOK2S2Cld5DzdyCoskUUfwNQP7xuLsz2Ydxe_whSRIdv8bsMbvTC3Kl8PYZPZ4MxqW8rSZ_mEuCpSe5-Q40sB7aiu_7YmWLJaKrfBTIqYH-XuzQj36Aemoei0efcntej-gvxovy-5SiSEsGuRZj41rjEZYOuj5KgHihJViO1VDHK6CNtlu2Ks8bkv6G2hO-TkF16Y28ywEG_beLEf_s5dzhbDBDbvA";
@@ -583,6 +600,56 @@ public class GlobalSettings : IGlobalSettings
         /// each client keeps its built-in default. Must be greater than 0 if set.
         /// </summary>
         public int? AccessTokenLifetimeSeconds { get; set; }
+    }
+
+    /// <summary>
+    /// A staged certificate that replaces the active certificate of its role. A cloud host loads it from blob storage
+    /// or from the certificate store. A self-hosted host loads it from a file.
+    /// </summary>
+    public class FutureCertificateSettings : ICertificateSettings
+    {
+        /// <inheritdoc/>
+        public string CertificateLocation { get; set; }
+        /// <inheritdoc/>
+        public string CertificateThumbprint { get; set; }
+        /// <inheritdoc/>
+        public string CertificatePassword { get; set; }
+        /// <inheritdoc/>
+        public string BlobName { get; set; }
+        /// <summary>
+        /// When true, the host loads this certificate, and startup stops if the certificate does not load.
+        /// When false, the host ignores this slot. The default is false.
+        /// A cloud host and a self-hosted host use this setting.
+        /// </summary>
+        public bool Enabled { get; set; }
+        /// <summary>
+        /// When true, and <see cref="Enabled"/> is true, this certificate becomes the active certificate of its role.
+        /// The host then ignores the root certificate settings of the role. The default is false.
+        /// A cloud host and a self-hosted host use this setting.
+        /// </summary>
+        public bool Active { get; set; }
+    }
+
+    /// <summary>
+    /// A retired certificate that the host keeps for validation or decryption only. A cloud host loads it from blob storage
+    /// or from the certificate store. A self-hosted host loads it from a file.
+    /// </summary>
+    public class RetiredCertificateSettings : ICertificateSettings
+    {
+        /// <inheritdoc/>
+        public string CertificateLocation { get; set; }
+        /// <inheritdoc/>
+        public string CertificateThumbprint { get; set; }
+        /// <inheritdoc/>
+        public string CertificatePassword { get; set; }
+        /// <inheritdoc/>
+        public string BlobName { get; set; }
+        /// <summary>
+        /// When true, the host loads this certificate, and startup stops if the certificate does not load.
+        /// When false, the host ignores this entry. The default is true.
+        /// A cloud host and a self-hosted host use this setting.
+        /// </summary>
+        public bool Enabled { get; set; } = true;
     }
 
 #nullable enable
