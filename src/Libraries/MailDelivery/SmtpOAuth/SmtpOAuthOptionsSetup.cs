@@ -2,22 +2,42 @@
 
 namespace Bit.Core.Platform.Mail.Delivery;
 
-// Derives Microsoft defaults and validates required OAuth fields. Operates only on the
-// already-bound MailDeliveryOptions instance: no IConfiguration dependency, per LIBRARY.md's
-// "host owns binding" rule. PostConfigure derives defaults before validation runs; Validate fails
-// fast with an actionable message.
+// Derives per-provider defaults and validates required OAuth fields for MicrosoftOAuth and
+// CustomOAuth. Operates only on the already-bound MailDeliveryOptions instance: no IConfiguration
+// dependency, per LIBRARY.md's "host owns binding" rule. PostConfigure derives defaults before
+// validation runs; Validate fails fast with an actionable message.
+// PostConfigure and Validate dispatch through switch expressions, so a new SmtpAuthType fails
+// the build (CS8509) until it is handled here.
 internal sealed class SmtpOAuthOptionsSetup :
     IPostConfigureOptions<MailDeliveryOptions>,
     IValidateOptions<MailDeliveryOptions>
 {
     public void PostConfigure(string? name, MailDeliveryOptions options)
     {
-        var smtp = options.Smtp;
-        if (smtp.AuthType != SmtpAuthType.MicrosoftOAuth)
+        Action<MailDeliveryOptions.SmtpOptions> deriveDefaults = options.Smtp.AuthType switch
         {
-            return;
-        }
+            SmtpAuthType.Password => DeriveNoDefaults,
+            SmtpAuthType.MicrosoftOAuth => DeriveMicrosoftDefaults,
+            SmtpAuthType.CustomOAuth => DeriveCustomDefaults,
+        };
+        deriveDefaults(options.Smtp);
+    }
 
+    public ValidateOptionsResult Validate(string? name, MailDeliveryOptions options)
+    {
+        List<string> errors = options.Smtp.AuthType switch
+        {
+            SmtpAuthType.Password => [],
+            SmtpAuthType.MicrosoftOAuth => MicrosoftErrors(options.Smtp),
+            SmtpAuthType.CustomOAuth => CustomErrors(options.Smtp),
+        };
+        return errors.Count > 0 ? ValidateOptionsResult.Fail(errors) : ValidateOptionsResult.Success;
+    }
+
+    private static void DeriveNoDefaults(MailDeliveryOptions.SmtpOptions smtp) { }
+
+    private static void DeriveMicrosoftDefaults(MailDeliveryOptions.SmtpOptions smtp)
+    {
         // Token endpoint format: https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-client-creds-grant-flow#first-case-access-token-request-with-a-shared-secret
         if (string.IsNullOrWhiteSpace(smtp.OAuth.TokenEndpoint) && !string.IsNullOrWhiteSpace(smtp.TenantId))
         {
@@ -31,30 +51,50 @@ internal sealed class SmtpOAuthOptionsSetup :
         smtp.OAuth.ClientSecret = OrFallback(smtp.OAuth.ClientSecret, smtp.ClientSecret);
     }
 
-    public ValidateOptionsResult Validate(string? name, MailDeliveryOptions options)
+    private static void DeriveCustomDefaults(MailDeliveryOptions.SmtpOptions smtp)
     {
-        var smtp = options.Smtp;
-        if (smtp.AuthType != SmtpAuthType.MicrosoftOAuth)
-        {
-            return ValidateOptionsResult.Success;
-        }
+        smtp.OAuth.ClientId = OrFallback(smtp.OAuth.ClientId, smtp.ClientId);
+        smtp.OAuth.ClientSecret = OrFallback(smtp.OAuth.ClientSecret, smtp.ClientSecret);
+        smtp.OAuth.GrantType = OrFallback(smtp.OAuth.GrantType, ClientCredentialsHandler.GrantType);
+    }
 
+    private static List<string> MicrosoftErrors(MailDeliveryOptions.SmtpOptions smtp)
+    {
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(smtp.OAuth.TokenEndpoint))
         {
             errors.Add("Smtp:TenantId or Smtp:OAuth:TokenEndpoint is required when Smtp:AuthType is MicrosoftOAuth.");
         }
-        if (string.IsNullOrWhiteSpace(smtp.OAuth.ClientId))
-        {
-            errors.Add("Smtp:ClientId or Smtp:OAuth:ClientId is required when Smtp:AuthType is MicrosoftOAuth.");
-        }
-        if (string.IsNullOrWhiteSpace(smtp.OAuth.ClientSecret))
-        {
-            errors.Add("Smtp:ClientSecret or Smtp:OAuth:ClientSecret is required when Smtp:AuthType is MicrosoftOAuth.");
-        }
+        AddClientCredentialErrors(smtp, errors);
+        return errors;
+    }
 
-        return errors.Count > 0 ? ValidateOptionsResult.Fail(errors) : ValidateOptionsResult.Success;
+    private static List<string> CustomErrors(MailDeliveryOptions.SmtpOptions smtp)
+    {
+        var errors = new List<string>();
+        if (string.IsNullOrWhiteSpace(smtp.OAuth.TokenEndpoint))
+        {
+            errors.Add("Smtp:OAuth:TokenEndpoint is required when Smtp:AuthType is CustomOAuth.");
+        }
+        if (string.IsNullOrWhiteSpace(smtp.OAuth.Scope))
+        {
+            errors.Add("Smtp:OAuth:Scope is required when Smtp:AuthType is CustomOAuth.");
+        }
+        AddClientCredentialErrors(smtp, errors);
+        return errors;
     }
 
     private static string? OrFallback(string? value, string? fallback) => string.IsNullOrWhiteSpace(value) ? fallback : value;
+
+    private static void AddClientCredentialErrors(MailDeliveryOptions.SmtpOptions smtp, List<string> errors)
+    {
+        if (string.IsNullOrWhiteSpace(smtp.OAuth.ClientId))
+        {
+            errors.Add($"Smtp:ClientId or Smtp:OAuth:ClientId is required when Smtp:AuthType is {smtp.AuthType}.");
+        }
+        if (string.IsNullOrWhiteSpace(smtp.OAuth.ClientSecret))
+        {
+            errors.Add($"Smtp:ClientSecret or Smtp:OAuth:ClientSecret is required when Smtp:AuthType is {smtp.AuthType}.");
+        }
+    }
 }
