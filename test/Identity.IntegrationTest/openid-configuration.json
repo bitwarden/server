@@ -15,6 +15,16 @@
     "api.secrets",
     "api.pam.rotation",
     "api.send.access",
+    "api.organization.members.read",
+    "api.organization.members.write",
+    "api.organization.groups.read",
+    "api.organization.groups.write",
+    "api.organization.collections.read",
+    "api.organization.collections.write",
+    "api.organization.policies.read",
+    "api.organization.events.read",
+    "api.organization.subscription.read",
+    "api.organization.subscription.write",
     "offline_access"
   ],
   "claims_supported": [
