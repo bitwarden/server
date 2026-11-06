@@ -32,6 +32,8 @@ public class ScimGroupResponseModel : BaseScimGroupModel
     {
         public string Value { get; set; }
         public string Display { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("$ref")]
+        public string Ref { get; set; }
         public string Type { get; set; } = "User";
     }
 }

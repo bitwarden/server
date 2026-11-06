@@ -77,7 +77,7 @@ public class GroupsController : Controller
                 .Take(model.MemberCount)
                 .ToList();
 
-            groupResponse.Members = await BuildMembersAsync(paginatedMemberIds);
+            groupResponse.Members = await BuildMembersAsync(organizationId, paginatedMemberIds);
         }
 
         return Ok(groupResponse);
@@ -106,7 +106,7 @@ public class GroupsController : Controller
                     .Take(model.MemberCount)
                     .ToList();
 
-                groupResponse.Members = await BuildMembersAsync(paginatedMemberIds);
+                groupResponse.Members = await BuildMembersAsync(organizationId, paginatedMemberIds);
             }
 
             groupResponseList.Add(groupResponse);
@@ -161,19 +161,23 @@ public class GroupsController : Controller
         return new NoContentResult();
     }
 
-    private async Task<List<ScimGroupResponseModel.GroupMemberReference>> BuildMembersAsync(IEnumerable<Guid> orgUserIds)
+    private async Task<List<ScimGroupResponseModel.GroupMemberReference>> BuildMembersAsync(
+        Guid organizationId,
+        IEnumerable<Guid> orgUserIds)
     {
         var orgUsers = (await _organizationUserRepository.GetManyAsync(orgUserIds)).ToList();
         var userIds = orgUsers.Where(ou => ou.UserId.HasValue).Select(ou => ou.UserId!.Value).Distinct().ToList();
         var emails = userIds.Count == 0
             ? new Dictionary<Guid, string>()
             : (await _userRepository.GetManyAsync(userIds)).ToDictionary(u => u.Id, u => u.Email);
+        var usersUrl = $"{Request.Scheme}://{Request.Host}{Request.PathBase}/v2/{organizationId}/Users";
         return orgUsers
             .OrderBy(ou => ou.Id)
             .Select(ou => new ScimGroupResponseModel.GroupMemberReference
             {
                 Value = ou.Id.ToString(),
                 Display = ou.Email ?? (ou.UserId.HasValue && emails.TryGetValue(ou.UserId.Value, out var e) ? e : string.Empty),
+                Ref = $"{usersUrl}/{ou.Id}",
                 Type = "User"
             })
             .ToList();
