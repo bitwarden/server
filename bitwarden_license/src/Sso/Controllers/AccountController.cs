@@ -708,7 +708,7 @@ public class AccountController : Controller
         {
             await EnsureSeatAvailableAsync(organization);
 
-            if (willPromoteStagedOrgUser && possibleOrgUser!.AccessPam)
+            if (possibleOrgUser is { Status: OrganizationUserStatusType.Staged, AccessPam: true })
             {
                 privilegedControlsSeatReservation = await _reservePrivilegedControlsSeatsCommand.RunAsync(organization, 1);
                 if (!privilegedControlsSeatReservation.Success)
