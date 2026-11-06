@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="OrganizationKeys.Test" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\Core.csproj" />
+    <ProjectReference Include="..\CurrentUser\CurrentUser.csproj" />
+    <ProjectReference Include="..\ExceptionHandling\ExceptionHandling.csproj" />
+    <ProjectReference Include="..\OrganizationAuthorization\OrganizationAuthorization.csproj" />
+  </ItemGroup>
+
+</Project>
