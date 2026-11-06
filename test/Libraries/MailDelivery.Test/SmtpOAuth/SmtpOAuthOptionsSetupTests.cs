@@ -266,6 +266,51 @@ public class SmtpOAuthOptionsSetupTests
     }
 
     [Theory]
+    [InlineData(SmtpAuthType.MicrosoftOAuth, "urn:ietf:params:oauth:grant-type:jwt-bearer")]
+    [InlineData(SmtpAuthType.MicrosoftOAuth, "password")]
+    [InlineData(SmtpAuthType.CustomOAuth, "urn:ietf:params:oauth:grant-type:jwt-bearer")]
+    [InlineData(SmtpAuthType.CustomOAuth, "password")]
+    public void Validate_UnsupportedGrantType_FailsWithGrantTypeMessage(SmtpAuthType authType, string grantType)
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = authType;
+        options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
+        options.Smtp.OAuth.Scope = "custom-scope";
+        options.Smtp.OAuth.ClientId = "client-id";
+        options.Smtp.OAuth.ClientSecret = "client-secret";
+        options.Smtp.OAuth.GrantType = grantType;
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(
+            $"Grant type '{grantType}' is not supported for AuthType {authType}; only " +
+            $"'{ClientCredentialsHandler.GrantType}' is supported.",
+            result.Failures!);
+    }
+
+    [Theory]
+    [InlineData(SmtpAuthType.MicrosoftOAuth)]
+    [InlineData(SmtpAuthType.CustomOAuth)]
+    public void Validate_GrantTypeWrongCase_FailsWithGrantTypeMessage(SmtpAuthType authType)
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = authType;
+        options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
+        options.Smtp.OAuth.Scope = "custom-scope";
+        options.Smtp.OAuth.ClientId = "client-id";
+        options.Smtp.OAuth.ClientSecret = "client-secret";
+        options.Smtp.OAuth.GrantType = "Client_Credentials";
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(
+            "Grant type 'Client_Credentials' is not supported",
+            Assert.Single(result.Failures!));
+    }
+
+    [Theory]
     [InlineData(nameof(MailDeliveryOptions.SmtpOptions.OAuthOptions.TokenEndpoint))]
     [InlineData(nameof(MailDeliveryOptions.SmtpOptions.OAuthOptions.Scope))]
     [InlineData(nameof(MailDeliveryOptions.SmtpOptions.OAuthOptions.ClientId))]

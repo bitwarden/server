@@ -66,6 +66,7 @@ internal sealed class SmtpOAuthOptionsSetup :
             errors.Add("Smtp:TenantId or Smtp:OAuth:TokenEndpoint is required when Smtp:AuthType is MicrosoftOAuth.");
         }
         AddClientCredentialErrors(smtp, errors);
+        AddGrantTypeErrors(smtp, errors);
         return errors;
     }
 
@@ -81,6 +82,7 @@ internal sealed class SmtpOAuthOptionsSetup :
             errors.Add("Smtp:OAuth:Scope is required when Smtp:AuthType is CustomOAuth.");
         }
         AddClientCredentialErrors(smtp, errors);
+        AddGrantTypeErrors(smtp, errors);
         return errors;
     }
 
@@ -95,6 +97,20 @@ internal sealed class SmtpOAuthOptionsSetup :
         if (string.IsNullOrWhiteSpace(smtp.OAuth.ClientSecret))
         {
             errors.Add($"Smtp:ClientSecret or Smtp:OAuth:ClientSecret is required when Smtp:AuthType is {smtp.AuthType}.");
+        }
+    }
+
+    private static void AddGrantTypeErrors(MailDeliveryOptions.SmtpOptions smtp, List<string> errors)
+    {
+        if (string.IsNullOrWhiteSpace(smtp.OAuth.GrantType))
+        {
+            return;
+        }
+
+        if (smtp.OAuth.GrantType != ClientCredentialsHandler.GrantType)
+        {
+            errors.Add(
+                $"Grant type '{smtp.OAuth.GrantType}' is not supported for AuthType {smtp.AuthType}; only '{ClientCredentialsHandler.GrantType}' is supported.");
         }
     }
 }
