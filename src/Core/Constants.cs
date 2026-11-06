@@ -277,6 +277,7 @@ public static partial class FeatureFlagKeys
 
     /* Secrets Manager Team */
     public const string SecretsVersioning = "sm-1587-secrets-versioning";
+    public const string SmCli = "sm-2107-cli";
 
     /* Skunkworks Team */
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
