@@ -426,7 +426,7 @@ public class PreviewOrganizationPlanChangeCommandTests
     }
 
     [Fact]
-    public async Task Run_SameTierChange_ThrowsBadRequestWithoutCallingStripe()
+    public async Task Run_SameTierChangeOnActiveSubscription_ThrowsBadRequest()
     {
         var organization = new OrganizationEntity
         {
@@ -439,9 +439,155 @@ public class PreviewOrganizationPlanChangeCommandTests
 
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(TeamsPlan());
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(FullSubscription());
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _sut.Run(organization, Request(PlanTierType.Teams, PlanCadenceType.Annually)));
+        Assert.Equal("Your organization is already on this plan.", exception.Message);
+    }
+
+    [Fact]
+    public async Task Run_SameTierOnNonPreviewableSubscription_ThrowsConflict()
+    {
+        var organization = new OrganizationEntity
+        {
+            Id = Guid.NewGuid(),
+            GatewayCustomerId = "cus_1",
+            GatewaySubscriptionId = "sub_1",
+            PlanType = PlanType.TeamsAnnually,
+            Seats = 5
+        };
+
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(CanceledSubscription());
+
+        await Assert.ThrowsAsync<ConflictException>(() =>
+            _sut.Run(organization, Request(PlanTierType.Teams, PlanCadenceType.Annually)));
+    }
+
+    [Fact]
+    public async Task Run_SameTierOnPastDueSubscription_ThrowsBadRequest()
+    {
+        var organization = new OrganizationEntity
+        {
+            Id = Guid.NewGuid(),
+            GatewayCustomerId = "cus_1",
+            GatewaySubscriptionId = "sub_1",
+            PlanType = PlanType.TeamsAnnually,
+            Seats = 5
+        };
+
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(PastDueSubscription());
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _sut.Run(organization, Request(PlanTierType.Teams, PlanCadenceType.Annually)));
+        Assert.Equal("Your organization is already on this plan.", exception.Message);
+    }
+
+    [Fact]
+    public async Task Run_TrialingSameTierCadenceChange_PreviewsTargetCadenceAsPurchase()
+    {
+        var organization = TrialingTeamsAnnualOrganization();
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(TeamsMonthlyPlan());
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(TrialingTeamsSubscription());
+        InvoiceCreatePreviewOptions? options = null;
+        _invoicePreviewService
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+                Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .Returns(SampleInvoicePreview());
+
+        await _sut.Run(organization, Request(PlanTierType.Teams, PlanCadenceType.Monthly));
+
+        Assert.NotNull(options);
+        Assert.Null(options!.Subscription);
+        var item = Assert.Single(options.SubscriptionDetails.Items);
+        Assert.Equal("price_teams_monthly_seat", item.Price);
+        Assert.Equal(5, item.Quantity);
+        Assert.Null(item.Id);
+    }
+
+    [Fact]
+    public async Task Run_TrialingSameTierSameCadence_PreviewsCurrentPlanAsPurchase()
+    {
+        var organization = TrialingTeamsAnnualOrganization();
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(TrialingTeamsSubscription());
+        InvoiceCreatePreviewOptions? options = null;
+        _invoicePreviewService
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+                Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .Returns(SampleInvoicePreview());
+
+        await _sut.Run(organization, Request(PlanTierType.Teams, PlanCadenceType.Annually));
+
+        Assert.NotNull(options);
+        Assert.Null(options!.Subscription);
+        var item = Assert.Single(options.SubscriptionDetails.Items);
+        Assert.Equal("price_teams_seat", item.Price);
+        Assert.Equal(5, item.Quantity);
+        await _invoicePreviewService.Received(1).GetInvoicePreviewForBillingAddressAsync(
+            Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>());
+    }
+
+    [Fact]
+    public async Task Run_TrialingSameTierSameCadence_PreviewsFullTargetPlanItems()
+    {
+        var organization = TrialingTeamsAnnualOrganization();
+        organization.MaxStorageGb = 3;
+        organization.UseSecretsManager = true;
+        organization.SmSeats = 4;
+        organization.SmServiceAccounts = 2;
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(TrialingTeamsSubscription());
+        InvoiceCreatePreviewOptions? options = null;
+        _invoicePreviewService
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+                Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .Returns(SampleInvoicePreview());
+
+        await _sut.Run(organization, Request(PlanTierType.Teams, PlanCadenceType.Annually));
+
+        Assert.NotNull(options);
+        var items = options!.SubscriptionDetails.Items;
+        Assert.All(items, item => Assert.Null(item.Id));
+        Assert.Equal(
+            [("price_teams_seat", 5L), ("price_teams_storage", 2L), ("price_teams_sm_seat", 4L), ("price_teams_sm_sa", 2L)],
+            items.Select(item => (item.Price, item.Quantity!.Value)));
+    }
+
+    [Fact]
+    public async Task Run_TrialingSubscriptionDiscount_CopiesCouponToPreviewDiscounts()
+    {
+        var organization = TrialingTeamsAnnualOrganization();
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(EnterprisePlan());
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(TrialingSubscriptionWithDiscount());
+        InvoiceCreatePreviewOptions? options = null;
+        _invoicePreviewService
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+                Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .Returns(SampleInvoicePreview());
+
+        await _sut.Run(organization, Request(PlanTierType.Enterprise, PlanCadenceType.Annually));
+
+        Assert.NotNull(options);
+        var discount = Assert.Single(options!.Discounts);
+        Assert.Equal("sm-standalone", discount.Coupon);
+        await _stripeAdapter.Received(1).GetSubscriptionAsync("sub_1",
+            Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("discounts.source.coupon")));
+    }
+
+    [Fact]
+    public async Task Run_TrialingDowngrade_ThrowsBadRequest()
+    {
+        var organization = TrialingTeamsAnnualOrganization();
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(FamiliesPlan());
 
         await Assert.ThrowsAsync<BadRequestException>(() =>
-            _sut.Run(organization, Request(PlanTierType.Teams, PlanCadenceType.Annually)));
+            _sut.Run(organization, Request(PlanTierType.Families, PlanCadenceType.Annually)));
         await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
     }
 
@@ -595,7 +741,88 @@ public class PreviewOrganizationPlanChangeCommandTests
     }
 
     [Fact]
-    public async Task Run_TrialingOrganization_EndsTrialInPreviewSoAmountReflectsPostTrialCharge()
+    public async Task Run_TrialingCustomerAndSubscriptionDiscounts_SendsOnlySubscriptionCoupons()
+    {
+        var organization = TrialingTeamsAnnualOrganization();
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(EnterprisePlan());
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(Subscription.FromJson("""
+            {
+              "id": "sub_1", "status": "trialing",
+              "customer": { "id": "cus_1", "discount": { "id": "di_c", "source": { "type": "coupon", "coupon": "cust-coupon" } } },
+              "discounts": [ { "id": "di_1", "source": { "type": "coupon", "coupon": { "id": "sm-standalone" } } } ],
+              "items": { "data": [] }
+            }
+            """));
+        InvoiceCreatePreviewOptions? options = null;
+        _invoicePreviewService
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+                Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .Returns(SampleInvoicePreview());
+
+        await _sut.Run(organization, Request(PlanTierType.Enterprise, PlanCadenceType.Annually));
+
+        Assert.NotNull(options);
+        Assert.Equal(["sm-standalone"], options!.Discounts.Select(d => d.Coupon));
+    }
+
+    [Fact]
+    public async Task Run_TrialingCustomerDiscountOnly_SendsCustomerCoupon()
+    {
+        var organization = TrialingTeamsAnnualOrganization();
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(EnterprisePlan());
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(Subscription.FromJson("""
+            {
+              "id": "sub_1", "status": "trialing",
+              "customer": { "id": "cus_1", "discount": { "id": "di_c", "source": { "type": "coupon", "coupon": "cust-coupon" } } },
+              "items": { "data": [] }
+            }
+            """));
+        InvoiceCreatePreviewOptions? options = null;
+        _invoicePreviewService
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+                Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .Returns(SampleInvoicePreview());
+
+        await _sut.Run(organization, Request(PlanTierType.Enterprise, PlanCadenceType.Annually));
+
+        Assert.NotNull(options);
+        Assert.Equal(["cust-coupon"], options!.Discounts.Select(d => d.Coupon));
+    }
+
+    [Fact]
+    public async Task Run_TrialingTeams2019OrganizationToEnterprise_SendsSingleTargetSeatLine()
+    {
+        var organization = new OrganizationEntity
+        {
+            Id = Guid.NewGuid(),
+            GatewayCustomerId = "cus_1",
+            GatewaySubscriptionId = "sub_1",
+            PlanType = PlanType.TeamsAnnually2019,
+            Seats = 8
+        };
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually2019).Returns(Teams2019Plan());
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(EnterprisePlan());
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(
+            Subscription.FromJson("""{ "id": "sub_1", "status": "trialing", "items": { "data": [] } }"""));
+        InvoiceCreatePreviewOptions? options = null;
+        _invoicePreviewService
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+                Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .Returns(SampleInvoicePreview());
+
+        await _sut.Run(organization, Request(PlanTierType.Enterprise, PlanCadenceType.Annually));
+
+        Assert.NotNull(options);
+        var item = Assert.Single(options!.SubscriptionDetails.Items);
+        Assert.Equal("price_ent_seat", item.Price);
+        Assert.Equal(8, item.Quantity);
+        Assert.Null(item.Id);
+    }
+
+    [Fact]
+    public async Task Run_TrialingOrganization_PreviewsTargetPlanAtCurrentCountsAsPurchase()
     {
         var organization = new OrganizationEntity
         {
@@ -603,7 +830,11 @@ public class PreviewOrganizationPlanChangeCommandTests
             GatewayCustomerId = "cus_1",
             GatewaySubscriptionId = "sub_1",
             PlanType = PlanType.TeamsAnnually,
-            Seats = 5
+            Seats = 5,
+            MaxStorageGb = 3,
+            UseSecretsManager = true,
+            SmSeats = 4,
+            SmServiceAccounts = 2
         };
 
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
@@ -618,7 +849,49 @@ public class PreviewOrganizationPlanChangeCommandTests
         await _sut.Run(organization, Request(PlanTierType.Enterprise, PlanCadenceType.Annually));
 
         Assert.NotNull(options);
-        Assert.Equal("now", options!.SubscriptionDetails.TrialEnd?.ToString());
+        Assert.Equal("cus_1", options!.Customer);
+        Assert.Null(options.Subscription);
+        Assert.Equal("usd", options.Currency);
+        Assert.Equal(StripeConstants.BillingMode.Classic, options.SubscriptionDetails.BillingMode.Type);
+        Assert.Null(options.SubscriptionDetails.TrialEnd);
+        Assert.Null(options.SubscriptionDetails.ProrationBehavior);
+        var items = options.SubscriptionDetails.Items;
+        Assert.All(items, item => Assert.Null(item.Id));
+        Assert.Contains(items, item => item.Price == "price_ent_seat" && item.Quantity == 5);
+        Assert.Contains(items, item => item.Price == "price_ent_storage" && item.Quantity == 2);
+        Assert.Contains(items, item => item.Price == "price_ent_sm_seat" && item.Quantity == 4);
+        Assert.Contains(items, item => item.Price == "price_ent_sm_sa" && item.Quantity == 2);
+        Assert.Equal(4, items.Count);
+    }
+
+    [Fact]
+    public async Task Run_TrialingFamilies_UsesFlatPriceAtQuantityOne()
+    {
+        var organization = new OrganizationEntity
+        {
+            Id = Guid.NewGuid(),
+            GatewayCustomerId = "cus_1",
+            GatewaySubscriptionId = "sub_1",
+            PlanType = PlanType.FamiliesAnnually,
+            Seats = 6
+        };
+
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(FamiliesPlan());
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(
+            Subscription.FromJson("""{ "id": "sub_1", "status": "trialing", "items": { "data": [] } }"""));
+        InvoiceCreatePreviewOptions? options = null;
+        _invoicePreviewService
+            .GetInvoicePreviewForBillingAddressAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+                Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .Returns(SampleInvoicePreview());
+
+        await _sut.Run(organization, Request(PlanTierType.Teams, PlanCadenceType.Annually));
+
+        Assert.NotNull(options);
+        var item = Assert.Single(options!.SubscriptionDetails.Items);
+        Assert.Equal("price_teams_seat", item.Price);
+        Assert.Equal(6, item.Quantity);
     }
 
     [Fact]
@@ -797,6 +1070,13 @@ public class PreviewOrganizationPlanChangeCommandTests
         }
         """);
 
+    private static Subscription CanceledSubscription() => Subscription.FromJson("""
+        {
+          "id": "sub_1", "status": "canceled",
+          "items": { "data": [ { "id": "si_pm", "quantity": 5, "price": { "id": "price_teams_seat" } } ] }
+        }
+        """);
+
     private static Subscription Teams2019Subscription() => Subscription.FromJson("""
         {
           "id": "sub_1", "status": "active",
@@ -825,8 +1105,36 @@ public class PreviewOrganizationPlanChangeCommandTests
         }
         """);
 
+    private static Subscription TrialingSubscriptionWithDiscount() => Subscription.FromJson("""
+        {
+          "id": "sub_1", "status": "trialing",
+          "discounts": [ { "id": "di_1", "source": { "type": "coupon", "coupon": { "id": "sm-standalone" } } } ],
+          "items": { "data": [ { "id": "si_pm", "quantity": 5, "price": { "id": "price_teams_seat" } } ] }
+        }
+        """);
+
+    private static OrganizationEntity TrialingTeamsAnnualOrganization() => new()
+    {
+        Id = Guid.NewGuid(),
+        GatewayCustomerId = "cus_1",
+        GatewaySubscriptionId = "sub_1",
+        PlanType = PlanType.TeamsAnnually,
+        Seats = 5
+    };
+
+    private static Subscription TrialingTeamsSubscription() => Subscription.FromJson("""
+        {
+          "id": "sub_1", "status": "trialing",
+          "items": { "data": [ { "id": "si_pm", "quantity": 5, "price": { "id": "price_teams_seat" } } ] }
+        }
+        """);
+
     private static PlanFeatures TeamsPlan() => new TestPlan(ProductTierType.Teams, isAnnual: true,
         passwordManager: new PlanFeatures.PasswordManagerPlanFeatures { StripeSeatPlanId = "price_teams_seat", StripeStoragePlanId = "price_teams_storage", BaseStorageGb = 1 },
+        secretsManager: new PlanFeatures.SecretsManagerPlanFeatures { StripeSeatPlanId = "price_teams_sm_seat", StripeServiceAccountPlanId = "price_teams_sm_sa", BaseServiceAccount = 0 });
+
+    private static PlanFeatures TeamsMonthlyPlan() => new TestPlan(ProductTierType.Teams, isAnnual: false,
+        passwordManager: new PlanFeatures.PasswordManagerPlanFeatures { StripeSeatPlanId = "price_teams_monthly_seat", StripeStoragePlanId = "price_teams_storage", BaseStorageGb = 1 },
         secretsManager: new PlanFeatures.SecretsManagerPlanFeatures { StripeSeatPlanId = "price_teams_sm_seat", StripeServiceAccountPlanId = "price_teams_sm_sa", BaseServiceAccount = 0 });
 
     private static PlanFeatures EnterprisePlan() => new TestPlan(ProductTierType.Enterprise, isAnnual: true,
