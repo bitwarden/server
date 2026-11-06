@@ -11,6 +11,11 @@ public static class ScimConstants
     public const string Scim2SchemaResourceType = "urn:ietf:params:scim:schemas:core:2.0:ResourceType";
 }
 
+public static class ScimErrorTypes
+{
+    public const string InvalidFilter = "invalidFilter";
+}
+
 public static class PatchOps
 {
     public const string Replace = "replace";
