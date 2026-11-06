@@ -4,6 +4,7 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.IntegrationTest.Auth.Helpers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
@@ -12,6 +13,8 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bitwarden.Server.Sdk.Features;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
@@ -30,6 +33,8 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
     public OrganizationUsersControllerAcceptInviteLinkTests(ApiApplicationFactory factory)
     {
         _factory = factory;
+        _factory.SubstituteService<IFeatureService>(featureService =>
+            featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(true));
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
