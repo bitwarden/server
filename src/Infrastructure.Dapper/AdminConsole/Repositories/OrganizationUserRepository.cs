@@ -382,6 +382,23 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
+    public async Task<ICollection<Guid>> GetManyGroupIdsByUserIdAsync(Guid organizationUserId, bool useReadOnlyReplica = false)
+    {
+        var connectionString = useReadOnlyReplica
+            ? ReadOnlyConnectionString
+            : ConnectionString;
+
+        using (var connection = new SqlConnection(connectionString))
+        {
+            var results = await connection.QueryAsync<Guid>(
+                "[dbo].[GroupUser_ReadGroupIdsByOrganizationUserId]",
+                new { OrganizationUserId = organizationUserId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
     public async Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds, DateTime revisionDate)
     {
         using (var connection = new SqlConnection(ConnectionString))
