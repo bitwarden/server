@@ -194,7 +194,7 @@ public class OrganizationUsersControllerBulkEnablePamTests
     }
 
     [Fact]
-    public async Task BulkEnablePam_WhenCloudAndSeatsInsufficient_Grants()
+    public async Task BulkEnablePam_WhenCloudAndSeatsInsufficient_DoesNotGrant()
     {
         await SetPamSeatsAsync(1);
         await SetUsePamAsync(true);
@@ -209,8 +209,10 @@ public class OrganizationUsersControllerBulkEnablePamTests
         var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/enable-pam",
             new OrganizationUserBulkRequestModel { Ids = [member.Id] });
 
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-        await AssertAccessPamAsync(member, true);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Your organization has no Privileged Controls seats available. Contact sales for more seats.",
+            await response.Content.ReadAsStringAsync());
+        await AssertAccessPamAsync(member, false);
     }
 
     [Theory]
