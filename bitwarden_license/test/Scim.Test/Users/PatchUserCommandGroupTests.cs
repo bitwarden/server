@@ -1,12 +1,9 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Scim.Models;
 using Bit.Scim.Users;
@@ -24,13 +21,13 @@ public class PatchUserCommandGroupTests
     [Theory]
     [BitAutoData]
     public async Task PatchUser_AddGroupOperation_Success(
-        SutProvider<PatchUserCommand> sutProvider, 
+        SutProvider<PatchUserCommand> sutProvider,
         OrganizationUser organizationUser,
         Guid groupId)
     {
         // Arrange
         organizationUser.Status = OrganizationUserStatusType.Confirmed;
-        
+
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
@@ -64,13 +61,13 @@ public class PatchUserCommandGroupTests
     [Theory]
     [BitAutoData]
     public async Task PatchUser_RemoveGroupOperation_Success(
-        SutProvider<PatchUserCommand> sutProvider, 
+        SutProvider<PatchUserCommand> sutProvider,
         OrganizationUser organizationUser,
         Guid groupId)
     {
         // Arrange
         organizationUser.Status = OrganizationUserStatusType.Confirmed;
-        
+
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
@@ -104,14 +101,14 @@ public class PatchUserCommandGroupTests
     [Theory]
     [BitAutoData]
     public async Task PatchUser_ReplaceGroupsOperation_Success(
-        SutProvider<PatchUserCommand> sutProvider, 
+        SutProvider<PatchUserCommand> sutProvider,
         OrganizationUser organizationUser,
         Guid groupId1,
         Guid groupId2)
     {
         // Arrange
         organizationUser.Status = OrganizationUserStatusType.Confirmed;
-        
+
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
@@ -123,6 +120,11 @@ public class PatchUserCommandGroupTests
         sutProvider.GetDependency<IGroupRepository>()
             .GetByIdAsync(groupId2)
             .Returns(new Group { Id = groupId2, OrganizationId = organizationUser.OrganizationId });
+
+        var staleGroupId = Guid.NewGuid();
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyGroupIdsByUserIdAsync(organizationUser.Id)
+            .Returns(new List<Guid> { groupId1, staleGroupId });
 
         var scimPatchModel = new ScimPatchModel
         {
@@ -142,22 +144,23 @@ public class PatchUserCommandGroupTests
         await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel);
 
         // Assert
-        await sutProvider.GetDependency<IGroupRepository>().Received(1)
-            .UpdateUsersAsync(groupId1, Arg.Any<IEnumerable<Guid>>(), Arg.Any<DateTime>());
-        await sutProvider.GetDependency<IGroupRepository>().Received(1)
-            .UpdateUsersAsync(groupId2, Arg.Any<IEnumerable<Guid>>(), Arg.Any<DateTime>());
+        var groupRepo = sutProvider.GetDependency<IGroupRepository>();
+        await groupRepo.Received(1).DeleteUserAsync(staleGroupId, organizationUser.Id, Arg.Any<DateTime>());
+        await groupRepo.Received(1).AddGroupUsersByIdAsync(groupId2, Arg.Is<IEnumerable<Guid>>(u => u.Single() == organizationUser.Id), Arg.Any<DateTime>());
+        await groupRepo.DidNotReceive().AddGroupUsersByIdAsync(groupId1, Arg.Any<IEnumerable<Guid>>(), Arg.Any<DateTime>());
+        await groupRepo.DidNotReceive().UpdateUsersAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<DateTime>());
     }
 
     [Theory]
     [BitAutoData]
     public async Task PatchUser_AddGroupInvalidGroupId_ThrowsNotFound(
-        SutProvider<PatchUserCommand> sutProvider, 
+        SutProvider<PatchUserCommand> sutProvider,
         OrganizationUser organizationUser,
         Guid groupId)
     {
         // Arrange
         organizationUser.Status = OrganizationUserStatusType.Confirmed;
-        
+
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
@@ -188,14 +191,14 @@ public class PatchUserCommandGroupTests
     [Theory]
     [BitAutoData]
     public async Task PatchUser_AddGroupCrossOrganization_ThrowsBadRequest(
-        SutProvider<PatchUserCommand> sutProvider, 
+        SutProvider<PatchUserCommand> sutProvider,
         OrganizationUser organizationUser,
         Guid groupId,
         Guid differentOrgId)
     {
         // Arrange
         organizationUser.Status = OrganizationUserStatusType.Confirmed;
-        
+
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
@@ -226,13 +229,13 @@ public class PatchUserCommandGroupTests
     [Theory]
     [BitAutoData]
     public async Task PatchUser_RemoveGroupInvalidGroupId_ThrowsNotFound(
-        SutProvider<PatchUserCommand> sutProvider, 
+        SutProvider<PatchUserCommand> sutProvider,
         OrganizationUser organizationUser,
         Guid groupId)
     {
         // Arrange
         organizationUser.Status = OrganizationUserStatusType.Confirmed;
-        
+
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);

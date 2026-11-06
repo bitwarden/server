@@ -23,6 +23,7 @@ public class GroupsController : Controller
     private readonly IGroupRepository _groupRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IUserRepository _userRepository;
     private readonly IGetGroupsListQuery _getGroupsListQuery;
     private readonly IDeleteGroupCommand _deleteGroupCommand;
     private readonly IPatchGroupCommand _patchGroupCommand;
@@ -33,6 +34,7 @@ public class GroupsController : Controller
         IGroupRepository groupRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
+        IUserRepository userRepository,
         IGetGroupsListQuery getGroupsListQuery,
         IDeleteGroupCommand deleteGroupCommand,
         IPatchGroupCommand patchGroupCommand,
@@ -42,6 +44,7 @@ public class GroupsController : Controller
     {
         _groupRepository = groupRepository;
         _organizationRepository = organizationRepository;
+        _userRepository = userRepository;
         _organizationUserRepository = organizationUserRepository;
         _getGroupsListQuery = getGroupsListQuery;
         _deleteGroupCommand = deleteGroupCommand;
@@ -52,7 +55,7 @@ public class GroupsController : Controller
 
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(
-        [FromRoute] Guid organizationId, 
+        [FromRoute] Guid organizationId,
         Guid id,
         [FromQuery] GetGroupsQueryParamModel model)
     {
@@ -63,7 +66,7 @@ public class GroupsController : Controller
         }
 
         var groupResponse = new ScimGroupResponseModel(group);
-        
+
         // Populate members with pagination
         var memberUserIds = await _groupRepository.GetManyUserIdsByIdAsync(id);
         if (memberUserIds.Any())
@@ -74,15 +77,7 @@ public class GroupsController : Controller
                 .Take(model.MemberCount)
                 .ToList();
 
-            var members = await _organizationUserRepository.GetManyAsync(paginatedMemberIds);
-            groupResponse.Members = members
-                .Select(m => new ScimGroupResponseModel.GroupMemberReference
-                {
-                    Value = m.Id.ToString(),
-                    Display = m.Email ?? string.Empty,
-                    Type = "User"
-                })
-                .ToList();
+            groupResponse.Members = await BuildMembersAsync(paginatedMemberIds);
         }
 
         return Ok(groupResponse);
@@ -94,13 +89,13 @@ public class GroupsController : Controller
         [FromQuery] GetGroupsQueryParamModel model)
     {
         var groupsListQueryResult = await _getGroupsListQuery.GetGroupsListAsync(organizationId, model);
-        
+
         // Populate members for each group with pagination
         var groupResponseList = new List<ScimGroupResponseModel>();
         foreach (var group in groupsListQueryResult.groupList)
         {
             var groupResponse = new ScimGroupResponseModel(group);
-            
+
             // Fetch and paginate members for this group
             var memberUserIds = await _groupRepository.GetManyUserIdsByIdAsync(group.Id);
             if (memberUserIds.Any())
@@ -111,15 +106,7 @@ public class GroupsController : Controller
                     .Take(model.MemberCount)
                     .ToList();
 
-                var members = await _organizationUserRepository.GetManyAsync(paginatedMemberIds);
-                groupResponse.Members = members
-                    .Select(m => new ScimGroupResponseModel.GroupMemberReference
-                    {
-                        Value = m.Id.ToString(),
-                        Display = m.Email ?? string.Empty,
-                        Type = "User"
-                    })
-                    .ToList();
+                groupResponse.Members = await BuildMembersAsync(paginatedMemberIds);
             }
 
             groupResponseList.Add(groupResponse);
@@ -173,5 +160,22 @@ public class GroupsController : Controller
         await _deleteGroupCommand.DeleteGroupAsync(organizationId, id, EventSystemUser.SCIM);
         return new NoContentResult();
     }
-}
 
+    private async Task<List<ScimGroupResponseModel.GroupMemberReference>> BuildMembersAsync(IEnumerable<Guid> orgUserIds)
+    {
+        var orgUsers = (await _organizationUserRepository.GetManyAsync(orgUserIds)).ToList();
+        var userIds = orgUsers.Where(ou => ou.UserId.HasValue).Select(ou => ou.UserId!.Value).Distinct().ToList();
+        var emails = userIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : (await _userRepository.GetManyAsync(userIds)).ToDictionary(u => u.Id, u => u.Email);
+        return orgUsers
+            .OrderBy(ou => ou.Id)
+            .Select(ou => new ScimGroupResponseModel.GroupMemberReference
+            {
+                Value = ou.Id.ToString(),
+                Display = ou.Email ?? (ou.UserId.HasValue && emails.TryGetValue(ou.UserId.Value, out var e) ? e : string.Empty),
+                Type = "User"
+            })
+            .ToList();
+    }
+}

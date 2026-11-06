@@ -166,111 +166,78 @@ public class PatchUserCommand : IPatchUserCommand
 
     private async Task HandleAddGroupOperationAsync(Core.Entities.OrganizationUser orgUser, JsonElement value)
     {
-        var groupId = ExtractGroupIdFromValue(value);
-        var group = await _groupRepository.GetByIdAsync(groupId);
-
-        if (group == null)
+        var groupIds = ExtractGroupIds(value);
+        await ValidateGroupsAsync(orgUser, groupIds, "Cannot add user to a group from a different organization.");
+        var current = (await _organizationUserRepository.GetManyGroupIdsByUserIdAsync(orgUser.Id)).ToHashSet();
+        foreach (var groupId in groupIds.Where(g => !current.Contains(g)))
         {
-            throw new NotFoundException($"Group with id {groupId} not found.");
+            await _groupRepository.AddGroupUsersByIdAsync(groupId, new[] { orgUser.Id }, DateTime.UtcNow);
         }
-
-        if (group.OrganizationId != orgUser.OrganizationId)
-        {
-            throw new BadRequestException("Cannot add user to a group from a different organization.");
-        }
-
-        await _groupRepository.AddGroupUsersByIdAsync(groupId, new[] { orgUser.Id }, DateTime.UtcNow);
     }
 
     private async Task HandleRemoveGroupOperationAsync(Core.Entities.OrganizationUser orgUser, JsonElement value)
     {
-        var groupId = ExtractGroupIdFromValue(value);
-        var group = await _groupRepository.GetByIdAsync(groupId);
-
-        if (group == null)
+        var groupIds = ExtractGroupIds(value);
+        await ValidateGroupsAsync(orgUser, groupIds, "Cannot remove user from a group in a different organization.");
+        foreach (var groupId in groupIds)
         {
-            throw new NotFoundException($"Group with id {groupId} not found.");
+            await _groupRepository.DeleteUserAsync(groupId, orgUser.Id, DateTime.UtcNow);
         }
-
-        if (group.OrganizationId != orgUser.OrganizationId)
-        {
-            throw new BadRequestException("Cannot remove user from a group in a different organization.");
-        }
-
-        await _groupRepository.DeleteUserAsync(groupId, orgUser.Id, DateTime.UtcNow);
     }
 
     private async Task HandleReplaceGroupsOperationAsync(Core.Entities.OrganizationUser orgUser, JsonElement value)
     {
-        var groupIds = ExtractGroupIdsFromArray(value);
-        
-        // Validate all groups exist and belong to the same organization
-        var groupLookupTasks = groupIds.Select(gid => _groupRepository.GetByIdAsync(gid));
-        var groups = (await Task.WhenAll(groupLookupTasks)).ToList();
+        var desired = ExtractGroupIds(value).ToHashSet();
+        await ValidateGroupsAsync(orgUser, desired, "Cannot modify user's membership in a group from a different organization.");
 
+        var current = (await _organizationUserRepository.GetManyGroupIdsByUserIdAsync(orgUser.Id)).ToHashSet();
+        var revisionDate = DateTime.UtcNow;
+        foreach (var groupId in current.Except(desired))
+        {
+            await _groupRepository.DeleteUserAsync(groupId, orgUser.Id, revisionDate);
+        }
+        foreach (var groupId in desired.Except(current))
+        {
+            await _groupRepository.AddGroupUsersByIdAsync(groupId, new[] { orgUser.Id }, revisionDate);
+        }
+    }
+
+    private async Task ValidateGroupsAsync(Core.Entities.OrganizationUser orgUser, IEnumerable<Guid> groupIds, string wrongOrgMessage)
+    {
         foreach (var groupId in groupIds)
         {
-            var group = groups.FirstOrDefault(g => g?.Id == groupId);
+            var group = await _groupRepository.GetByIdAsync(groupId);
             if (group == null)
             {
                 throw new NotFoundException($"Group with id {groupId} not found.");
             }
-
             if (group.OrganizationId != orgUser.OrganizationId)
             {
-                throw new BadRequestException("Cannot modify user's membership in a group from a different organization.");
+                throw new BadRequestException(wrongOrgMessage);
             }
-        }
-
-        // Replace all group memberships for each group atomically
-        var revisionDate = DateTime.UtcNow;
-        foreach (var groupId in groupIds)
-        {
-            await _groupRepository.UpdateUsersAsync(groupId, new[] { orgUser.Id }, revisionDate);
         }
     }
 
-    private Guid ExtractGroupIdFromValue(JsonElement value)
+    private static List<Guid> ExtractGroupIds(JsonElement value)
     {
-        if (value.ValueKind == JsonValueKind.Object)
+        var items = value.ValueKind == JsonValueKind.Array ? value.EnumerateArray().ToList() : new List<JsonElement> { value };
+        var ids = new List<Guid>();
+        foreach (var item in items)
         {
-            if (value.TryGetProperty("value", out var valueProperty))
+            if (item.ValueKind == JsonValueKind.Object && item.TryGetProperty("value", out var v)
+                && Guid.TryParse(v.GetString(), out var id))
             {
-                var groupIdStr = valueProperty.GetString();
-                if (Guid.TryParse(groupIdStr, out var groupId))
-                {
-                    return groupId;
-                }
+                ids.Add(id);
+            }
+            else
+            {
+                throw new BadRequestException("Invalid group reference format. Expected {\"value\": \"<groupId>\"} or an array of them.");
             }
         }
-
-        throw new BadRequestException("Invalid group reference format. Expected {\"value\": \"<groupId>\"}");
-    }
-
-    private IEnumerable<Guid> ExtractGroupIdsFromArray(JsonElement value)
-    {
-        var groupIds = new List<Guid>();
-
-        if (value.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var item in value.EnumerateArray())
-            {
-                if (item.ValueKind == JsonValueKind.Object && item.TryGetProperty("value", out var valueProperty))
-                {
-                    var groupIdStr = valueProperty.GetString();
-                    if (Guid.TryParse(groupIdStr, out var groupId))
-                    {
-                        groupIds.Add(groupId);
-                    }
-                }
-            }
-        }
-
-        if (!groupIds.Any())
+        if (ids.Count == 0)
         {
             throw new BadRequestException("Invalid groups array format. Expected [{\"value\": \"<groupId>\"}, ...]");
         }
-
-        return groupIds;
+        return ids;
     }
 }
