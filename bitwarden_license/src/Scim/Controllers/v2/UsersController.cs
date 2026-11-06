@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -24,6 +25,7 @@ namespace Bit.Scim.Controllers.v2;
 public class UsersController : Controller
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IGroupRepository _groupRepository;
     private readonly IGetUsersListQuery _getUsersListQuery;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IPatchUserCommand _patchUserCommand;
@@ -32,6 +34,7 @@ public class UsersController : Controller
     private readonly IRevokeOrganizationUserCommandV2 _revokeOrganizationUserCommandV2;
 
     public UsersController(IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository,
         IGetUsersListQuery getUsersListQuery,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         IPatchUserCommand patchUserCommand,
@@ -40,6 +43,7 @@ public class UsersController : Controller
         IRevokeOrganizationUserCommandV2 revokeOrganizationUserCommandV2)
     {
         _organizationUserRepository = organizationUserRepository;
+        _groupRepository = groupRepository;
         _getUsersListQuery = getUsersListQuery;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _patchUserCommand = patchUserCommand;
@@ -56,7 +60,18 @@ public class UsersController : Controller
         {
             throw new NotFoundException("User not found.");
         }
-        return Ok(new ScimUserResponseModel(orgUser));
+        
+        var userResponse = new ScimUserResponseModel(orgUser);
+        
+        // Populate groups for this user
+        var groupIds = await _organizationUserRepository.GetManyGroupIdsByUserIdAsync(orgUser.Id);
+        if (groupIds.Any())
+        {
+            var groups = await _groupRepository.GetManyByManyIds(groupIds);
+            userResponse.Groups = groups.Select(g => g.Id.ToString()).ToList();
+        }
+        
+        return Ok(userResponse);
     }
 
     [HttpGet("")]
@@ -65,9 +80,42 @@ public class UsersController : Controller
         [FromQuery] GetUsersQueryParamModel model)
     {
         var usersListQueryResult = await _getUsersListQuery.GetUsersListAsync(organizationId, model);
+        
+        // Populate groups for each user
+        var userResponses = new List<ScimUserResponseModel>();
+        foreach (var user in usersListQueryResult.userList)
+        {
+            var userResponse = new ScimUserResponseModel(user);
+            
+            // Fetch group IDs for this user
+            var groupIds = await _organizationUserRepository.GetManyGroupIdsByUserIdAsync(user.Id);
+            
+            if (groupIds.Any())
+            {
+                // Fetch group details
+                var groups = await _groupRepository.GetManyByManyIds(groupIds);
+                
+                // Apply pagination to groups
+                var paginatedGroupIds = groupIds
+                    .OrderBy(id => id) // Ensure deterministic ordering
+                    .Skip(model.GroupStartIndex - 1)
+                    .Take(model.GroupCount)
+                    .ToList();
+                
+                var paginatedGroups = groups.Where(g => paginatedGroupIds.Contains(g.Id));
+                
+                // Add groups to response in RFC 7643 format
+                userResponse.Groups = paginatedGroups
+                    .Select(g => g.Id.ToString())
+                    .ToList();
+            }
+            
+            userResponses.Add(userResponse);
+        }
+        
         var scimListResponseModel = new ScimListResponseModel<ScimUserResponseModel>
         {
-            Resources = usersListQueryResult.userList.Select(u => new ScimUserResponseModel(u)).ToList(),
+            Resources = userResponses,
             ItemsPerPage = model.Count,
             TotalResults = usersListQueryResult.totalResults,
             StartIndex = model.StartIndex,
