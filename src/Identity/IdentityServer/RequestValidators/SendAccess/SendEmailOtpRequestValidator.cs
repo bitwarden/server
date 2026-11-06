@@ -1,7 +1,11 @@
 ﻿using System.Globalization;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Identity.TokenProviders;
+using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Core.Tools.Models.Data;
 using Bit.Identity.IdentityServer.Enums;
@@ -17,7 +21,8 @@ namespace Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 public class SendEmailOtpRequestValidator(
     ILogger<SendEmailOtpRequestValidator> logger,
     IOtpTokenProvider<DefaultOtpTokenProviderOptions> otpTokenProvider,
-    IMailService mailService) : ISendAuthenticationMethodValidator<EmailOtp>
+    IMailService mailService,
+    ICurrentContext currentContext) : ISendAuthenticationMethodValidator<EmailOtp>
 {
 
     /// <summary>
@@ -26,11 +31,26 @@ public class SendEmailOtpRequestValidator(
     private static readonly Dictionary<string, string> _sendEmailOtpValidatorErrorDescriptions = new()
     {
         { SendAccessConstants.EmailOtpValidatorResults.EmailRequired, $"{SendAccessConstants.TokenRequest.Email} is required." },
-        { SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired, $"{SendAccessConstants.TokenRequest.Email} and {SendAccessConstants.TokenRequest.Otp} are required." }
+        { SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired, $"{SendAccessConstants.TokenRequest.Email} and {SendAccessConstants.TokenRequest.Otp} are required." },
+        { SendAccessConstants.EmailOtpValidatorResults.DeviceIdentifierRequired, $"{RequestHeaderNames.DeviceIdentifier} header is required." },
+        { SendAccessConstants.EmailOtpValidatorResults.DeviceIdentifierInvalid, $"{RequestHeaderNames.DeviceIdentifier} header is invalid." }
     };
 
     public async Task<GrantValidationResult> ValidateRequestAsync(ExtensionGrantValidationContext context, EmailOtp authMethod, Guid sendId)
     {
+        // Checked before anything about the Send or the email, so the outcome depends only on the request's
+        // own device identifier.
+        var deviceIdentifier = currentContext.DeviceIdentifier;
+        if (string.IsNullOrWhiteSpace(deviceIdentifier))
+        {
+            return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.DeviceIdentifierRequired);
+        }
+
+        if (deviceIdentifier.Length > Device.MaxIdentifierLength)
+        {
+            return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.DeviceIdentifierInvalid);
+        }
+
         var request = context.Request.Raw;
         // get email
         var email = request.Get(SendAccessConstants.TokenRequest.Email);
@@ -54,7 +74,14 @@ public class SendEmailOtpRequestValidator(
 
         // get otp from request
         var requestOtp = request.Get(SendAccessConstants.TokenRequest.Otp);
-        var uniqueIdentifierForTokenCache = string.Format(CultureInfo.InvariantCulture, SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email);
+        // Each device has its own pending OTP, so a request from one device never replaces or redeems another
+        // device's OTP.
+        var uniqueIdentifierForTokenCache = string.Format(
+            CultureInfo.InvariantCulture,
+            SendAccessConstants.OtpToken.TokenUniqueIdentifier,
+            sendId,
+            email,
+            HashDeviceIdentifier(deviceIdentifier));
         if (string.IsNullOrEmpty(requestOtp))
         {
             // Since the request doesn't have an OTP, generate one
@@ -95,6 +122,17 @@ public class SendEmailOtpRequestValidator(
     }
 
     /// <summary>
+    /// The identifier is client-supplied and lands in a cache key. Hex SHA-256 is always fixed-length (64 characters)
+    /// alphanumeric ASCII, so the key is valid for any cache backend, whatever the client sends. For example, Cosmos
+    /// DB item ids disallow '/' and '\'.
+    /// See <see href="https://learn.microsoft.com/en-us/azure/cosmos-db/concepts-limits#per-item-limits">Cosmos DB per-item limits</see>.
+    /// </summary>
+    private static string HashDeviceIdentifier(string deviceIdentifier)
+    {
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(deviceIdentifier)));
+    }
+
+    /// <summary>
     /// Build the error response for the SendEmailOtpRequestValidator.
     /// </summary>
     /// <param name="error">The error code to use for the validation result. This is defaulted to EmailAndOtpRequired if not specified because it is the most common response.</param>
@@ -105,6 +143,8 @@ public class SendEmailOtpRequestValidator(
         {
             case SendAccessConstants.EmailOtpValidatorResults.EmailRequired:
             case SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired:
+            case SendAccessConstants.EmailOtpValidatorResults.DeviceIdentifierRequired:
+            case SendAccessConstants.EmailOtpValidatorResults.DeviceIdentifierInvalid:
                 return new GrantValidationResult(TokenRequestErrors.InvalidRequest,
                     errorDescription: _sendEmailOtpValidatorErrorDescriptions[error],
                     new Dictionary<string, object>

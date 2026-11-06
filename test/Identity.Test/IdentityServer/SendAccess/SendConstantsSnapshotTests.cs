@@ -50,6 +50,8 @@ public class SendConstantsSnapshotTests
         // Assert
         Assert.Equal("email_required", SendAccessConstants.EmailOtpValidatorResults.EmailRequired);
         Assert.Equal("email_and_otp_required", SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired);
+        Assert.Equal("device_identifier_required", SendAccessConstants.EmailOtpValidatorResults.DeviceIdentifierRequired);
+        Assert.Equal("device_identifier_invalid", SendAccessConstants.EmailOtpValidatorResults.DeviceIdentifierInvalid);
     }
 
     [Fact]
@@ -58,7 +60,7 @@ public class SendConstantsSnapshotTests
         // Assert
         Assert.Equal("send_access", SendAccessConstants.OtpToken.TokenProviderName);
         Assert.Equal("email_otp", SendAccessConstants.OtpToken.Purpose);
-        Assert.Equal("{0}_{1}", SendAccessConstants.OtpToken.TokenUniqueIdentifier);
+        Assert.Equal("{0}_{1}_{2}", SendAccessConstants.OtpToken.TokenUniqueIdentifier);
     }
 
     [Fact]
