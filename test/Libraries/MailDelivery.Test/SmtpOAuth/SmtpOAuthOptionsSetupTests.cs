@@ -7,7 +7,7 @@ public class SmtpOAuthOptionsSetupTests
     private readonly SmtpOAuthOptionsSetup _sut = new();
 
     [Fact]
-    public void PostConfigure_NotMicrosoftOAuth_LeavesOptionsUnchanged()
+    public void PostConfigure_PasswordAuth_LeavesOptionsUnchanged()
     {
         var options = new MailDeliveryOptions();
         options.Smtp.AuthType = SmtpAuthType.Password;
@@ -22,7 +22,7 @@ public class SmtpOAuthOptionsSetupTests
     }
 
     [Fact]
-    public void Validate_NotMicrosoftOAuth_ReturnsSuccess()
+    public void Validate_PasswordAuth_ReturnsSuccess()
     {
         var options = new MailDeliveryOptions();
         options.Smtp.AuthType = SmtpAuthType.Password;
@@ -165,5 +165,140 @@ public class SmtpOAuthOptionsSetupTests
             failure => Assert.Contains("Smtp:TenantId or Smtp:OAuth:TokenEndpoint", failure),
             failure => Assert.Contains("Smtp:ClientId or Smtp:OAuth:ClientId", failure),
             failure => Assert.Contains("Smtp:ClientSecret or Smtp:OAuth:ClientSecret", failure));
+    }
+
+    [Fact]
+    public void PostConfigure_CustomOAuthWithShorthandClientIdAndSecret_FallsBackToShorthandAndDefaultsGrantType()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+        options.Smtp.ClientId = "shorthand-client-id";
+        options.Smtp.ClientSecret = "shorthand-client-secret";
+
+        _sut.PostConfigure(name: null, options);
+
+        Assert.Equal("shorthand-client-id", options.Smtp.OAuth.ClientId);
+        Assert.Equal("shorthand-client-secret", options.Smtp.OAuth.ClientSecret);
+        Assert.Equal(ClientCredentialsHandler.GrantType, options.Smtp.OAuth.GrantType);
+    }
+
+    [Fact]
+    public void PostConfigure_CustomOAuthWithBlankOAuthClientId_FallsBackToShorthand()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+        options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
+        options.Smtp.OAuth.Scope = "custom-scope";
+        options.Smtp.Username = "sender@example.com";
+        options.Smtp.ClientId = "shorthand-client-id";
+        options.Smtp.ClientSecret = "shorthand-client-secret";
+        options.Smtp.OAuth.ClientId = "";
+
+        _sut.PostConfigure(name: null, options);
+        var result = _sut.Validate(name: null, options);
+
+        Assert.Equal("shorthand-client-id", options.Smtp.OAuth.ClientId);
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public void PostConfigure_CustomOAuthWithExplicitValues_KeepsExplicitValues()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+        options.Smtp.ClientId = "shorthand-client-id";
+        options.Smtp.ClientSecret = "shorthand-client-secret";
+        options.Smtp.OAuth.ClientId = "explicit-client-id";
+        options.Smtp.OAuth.ClientSecret = "explicit-client-secret";
+        options.Smtp.OAuth.GrantType = "explicit_grant";
+
+        _sut.PostConfigure(name: null, options);
+
+        Assert.Equal("explicit-client-id", options.Smtp.OAuth.ClientId);
+        Assert.Equal("explicit-client-secret", options.Smtp.OAuth.ClientSecret);
+        Assert.Equal("explicit_grant", options.Smtp.OAuth.GrantType);
+    }
+
+    [Fact]
+    public void PostConfigure_CustomOAuthWithTenantIdSet_DoesNotDeriveTokenEndpointOrScope()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+        options.Smtp.TenantId = "test-tenant";
+
+        _sut.PostConfigure(name: null, options);
+
+        Assert.Null(options.Smtp.OAuth.TokenEndpoint);
+        Assert.Null(options.Smtp.OAuth.Scope);
+    }
+
+    [Fact]
+    public void Validate_CustomOAuthWithAllRequiredValues_ReturnsSuccess()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+        options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
+        options.Smtp.OAuth.Scope = "custom-scope";
+        options.Smtp.OAuth.ClientId = "client-id";
+        options.Smtp.OAuth.ClientSecret = "client-secret";
+        options.Smtp.OAuth.GrantType = ClientCredentialsHandler.GrantType;
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public void Validate_CustomOAuthMissingAllRequiredValues_FailsWithOneMessagePerField()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.False(result.Succeeded);
+        Assert.Collection(
+            result.Failures!,
+            failure => Assert.Contains("Smtp:OAuth:TokenEndpoint", failure),
+            failure => Assert.Contains("Smtp:OAuth:Scope", failure),
+            failure => Assert.Contains("Smtp:ClientId or Smtp:OAuth:ClientId", failure),
+            failure => Assert.Contains("Smtp:ClientSecret or Smtp:OAuth:ClientSecret", failure));
+    }
+
+    [Theory]
+    [InlineData(nameof(MailDeliveryOptions.SmtpOptions.OAuthOptions.TokenEndpoint))]
+    [InlineData(nameof(MailDeliveryOptions.SmtpOptions.OAuthOptions.Scope))]
+    [InlineData(nameof(MailDeliveryOptions.SmtpOptions.OAuthOptions.ClientId))]
+    [InlineData(nameof(MailDeliveryOptions.SmtpOptions.OAuthOptions.ClientSecret))]
+    public void Validate_CustomOAuthMissingSingleRequiredField_FailsNamingThatField(string missingField)
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+        options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
+        options.Smtp.OAuth.Scope = "custom-scope";
+        options.Smtp.OAuth.ClientId = "client-id";
+        options.Smtp.OAuth.ClientSecret = "client-secret";
+
+        switch (missingField)
+        {
+            case nameof(MailDeliveryOptions.SmtpOptions.OAuthOptions.TokenEndpoint):
+                options.Smtp.OAuth.TokenEndpoint = null;
+                break;
+            case nameof(MailDeliveryOptions.SmtpOptions.OAuthOptions.Scope):
+                options.Smtp.OAuth.Scope = null;
+                break;
+            case nameof(MailDeliveryOptions.SmtpOptions.OAuthOptions.ClientId):
+                options.Smtp.OAuth.ClientId = null;
+                break;
+            case nameof(MailDeliveryOptions.SmtpOptions.OAuthOptions.ClientSecret):
+                options.Smtp.OAuth.ClientSecret = null;
+                break;
+        }
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.False(result.Succeeded);
+        var failure = Assert.Single(result.Failures!);
+        Assert.Contains(missingField, failure);
     }
 }
