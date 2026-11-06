@@ -11,4 +11,11 @@ public class GetUsersQueryParamModel
 
     [Range(1, int.MaxValue)]
     public int StartIndex { get; init; } = 1;
+
+    [Range(1, int.MaxValue)]
+    public int GroupCount { get; init; } = 50;
+
+    [Range(1, int.MaxValue)]
+    public int GroupStartIndex { get; init; } = 1;
 }
+
