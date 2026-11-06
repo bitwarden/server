@@ -88,6 +88,13 @@ public class GlobalSettings : IGlobalSettings
     public virtual FileStorageSettings Send { get; set; }
     public virtual FileStorageSettings OrganizationReport { get; set; }
     public virtual IdentityServerSettings IdentityServer { get; set; } = new IdentityServerSettings();
+    /// <summary>
+    /// The certificates of the SSO host. This section is not <see cref="Sso"/>.
+    /// Only the SSO host reads these settings.
+    /// In cloud, the SSO host must set the signing role and the encryption role, unless it is a Development host.
+    /// A self-hosted or Development SSO host may leave a role not set. That role then uses the Identity certificates.
+    /// </summary>
+    public virtual SsoServerSettings SsoServer { get; set; } = new SsoServerSettings();
     public virtual DataProtectionSettings DataProtection { get; set; }
     public virtual NotificationHubPoolSettings NotificationHubPool { get; set; } = new();
     public virtual YubicoSettings Yubico { get; set; } = new YubicoSettings();
@@ -650,6 +657,77 @@ public class GlobalSettings : IGlobalSettings
         /// A cloud host and a self-hosted host use this setting.
         /// </summary>
         public bool Enabled { get; set; } = true;
+    }
+
+    /// <summary>
+    /// The SSO signing certificates. The root fields identify the active SSO signing certificate,
+    /// unless an enabled <see cref="FutureCertificate"/> is active. The active certificate signs the SSO host OIDC tokens,
+    /// the SAML requests, and the SAML metadata.
+    /// In cloud, the SSO host must set this role, or startup fails, unless it is a Development host.
+    /// A self-hosted or Development SSO host may leave this role not set. The role then uses the Identity active,
+    /// staged, and validation certificates, in addition to its own staged and retired certificates.
+    /// The root fields have no default value.
+    /// </summary>
+    public class SsoServerSettings : ICertificateSettings
+    {
+        /// <inheritdoc/>
+        public string CertificateLocation { get; set; }
+        /// <inheritdoc/>
+        public string CertificateThumbprint { get; set; }
+        /// <inheritdoc/>
+        public string CertificatePassword { get; set; }
+        /// <inheritdoc/>
+        public string BlobName { get; set; }
+        /// <summary>
+        /// The staged SSO signing certificate. When <see cref="FutureCertificateSettings.Enabled"/> is true,
+        /// the host publishes the certificate key for OIDC token validation. The SAML metadata then lists the certificate
+        /// as a future signing certificate. When <see cref="FutureCertificateSettings.Active"/> is also true,
+        /// the host signs with this certificate. A cloud host and a self-hosted host may use this setting.
+        /// </summary>
+        public FutureCertificateSettings FutureCertificate { get; set; } = new();
+        /// <summary>
+        /// The retired SSO signing certificates. The host publishes the key of each enabled certificate
+        /// for OIDC token validation, but does not sign with it. A cloud host and a self-hosted host may use this setting.
+        /// </summary>
+        public RetiredCertificateSettings[] ValidationCertificates { get; set; } = [];
+        /// <summary>
+        /// The SSO encryption certificates. The host decrypts SAML assertions with them.
+        /// A cloud host and a self-hosted host may use this setting.
+        /// </summary>
+        public SsoServerEncryptionSettings Encryption { get; set; } = new();
+    }
+
+    /// <summary>
+    /// The SSO encryption certificates. The root fields identify the active SSO encryption certificate,
+    /// unless an enabled <see cref="FutureCertificate"/> is active. The host decrypts SAML assertions with
+    /// the active certificate. The SAML metadata publishes it.
+    /// In cloud, the SSO host must set this role, or startup fails, unless it is a Development host.
+    /// A self-hosted or Development SSO host may leave this role not set. The role then uses the Identity active
+    /// and staged certificates, in addition to its own staged and retired certificates.
+    /// The root fields have no default value.
+    /// </summary>
+    public class SsoServerEncryptionSettings : ICertificateSettings
+    {
+        /// <inheritdoc/>
+        public string CertificateLocation { get; set; }
+        /// <inheritdoc/>
+        public string CertificateThumbprint { get; set; }
+        /// <inheritdoc/>
+        public string CertificatePassword { get; set; }
+        /// <inheritdoc/>
+        public string BlobName { get; set; }
+        /// <summary>
+        /// The staged SSO encryption certificate. When <see cref="FutureCertificateSettings.Enabled"/> is true,
+        /// the host decrypts SAML assertions with this certificate. The SAML metadata does not publish it.
+        /// When <see cref="FutureCertificateSettings.Active"/> is also true, this certificate becomes the active
+        /// encryption certificate. A cloud host and a self-hosted host may use this setting.
+        /// </summary>
+        public FutureCertificateSettings FutureCertificate { get; set; } = new();
+        /// <summary>
+        /// The retired SSO encryption certificates. The host decrypts SAML assertions with each enabled certificate.
+        /// The SAML metadata does not publish them. A cloud host and a self-hosted host may use this setting.
+        /// </summary>
+        public RetiredCertificateSettings[] DecryptionCertificates { get; set; } = [];
     }
 
 #nullable enable
