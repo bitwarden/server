@@ -154,8 +154,8 @@ public class BulkEnablePamCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task BulkEnablePamAsync_WhenCloudAndSeatsRequired_Grants(Organization organization,
-        List<Guid> organizationUserIds, List<OrganizationUser> organizationUsers,
+    public async Task BulkEnablePamAsync_WhenNotEnoughSeats_ReturnsNotEnoughSeatsAndSavesNothing(
+        Organization organization, List<Guid> organizationUserIds, List<OrganizationUser> organizationUsers,
         SutProvider<BulkEnablePamCommand> sutProvider)
     {
         organization.UsePam = true;
@@ -169,14 +169,18 @@ public class BulkEnablePamCommandTests
             .Returns(organizationUsers);
         sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
             .RunAsync(organization, Arg.Any<int>())
-            .Returns(new PrivilegedControlsSeatReservationResult());
+            .Returns(new PrivilegedControlsSeatReservationResult(new NotEnoughPrivilegedControlsSeatsError()));
 
         var result = await sutProvider.Sut.BulkEnablePamAsync(organization, organizationUserIds);
 
-        Assert.True(result.IsSuccess);
+        Assert.True(result.IsError);
+        var error = Assert.IsType<NotEnoughPrivilegedControlsSeatsError>(result.AsError);
+        Assert.Equal(
+            "Your organization has no Privileged Controls seats available. Contact sales for more seats.",
+            error.Message);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .Received(1)
-            .ReplaceManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.All(u => u.AccessPam)));
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceManyAsync(default!);
     }
 
     [Theory]

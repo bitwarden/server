@@ -56,6 +56,9 @@ public class OrganizationUsersControllerBulkEnablePamTests
     {
         _globalSettings = _factory.GetService<GlobalSettings>();
         _globalSettings.SelfHosted = false;
+        // The feature service substitute is shared across this class's tests, so a test that turns the flag off
+        // would otherwise leave it off for the next one.
+        _factory.GetService<IFeatureService>().IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(true);
 
         _ownerEmail = $"bulk-enable-pam-{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(_ownerEmail);
@@ -222,7 +225,7 @@ public class OrganizationUsersControllerBulkEnablePamTests
     }
 
     [Fact]
-    public async Task BulkEnablePam_WhenCloudAndSeatsInsufficient_Grants()
+    public async Task BulkEnablePam_WhenCloudAndSeatsInsufficient_AutoscalesAndGrants()
     {
         await SetPamSeatsAsync(1);
         await SetUsePamAsync(true);
@@ -244,6 +247,30 @@ public class OrganizationUsersControllerBulkEnablePamTests
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(_subscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options => options.Items.Any(item =>
                 item.Id == _privilegedControlsSeatItemId && item.Quantity == 2)));
+    }
+
+    [Fact]
+    public async Task BulkEnablePam_WhenCloudFlagOffAndSeatsInsufficient_DoesNotGrant()
+    {
+        await SetPamSeatsAsync(1);
+        await SetUsePamAsync(true);
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var seatHolder = await CreateMemberAsync();
+        await GrantPamAsync(seatHolder);
+        var member = await CreateMemberAsync();
+
+        _globalSettings.SelfHosted = false;
+        _factory.GetService<IFeatureService>().IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(false);
+
+        var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/enable-pam",
+            new OrganizationUserBulkRequestModel { Ids = [member.Id] });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Your organization has no Privileged Controls seats available. Contact sales for more seats.",
+            await response.Content.ReadAsStringAsync());
+        await AssertAccessPamAsync(member, false);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().UpdateSubscriptionAsync(default!, default!);
     }
 
     [Theory]

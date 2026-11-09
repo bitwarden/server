@@ -58,10 +58,16 @@ internal sealed class ReservePrivilegedControlsSeatsCommand(
                 : new PrivilegedControlsSeatReservationResult();
         }
 
-        // With the flag off, cloud members get Privileged Controls access without any seat being reserved.
+        // With the flag off, Privileged Controls is sales-assisted: seats are a hard limit and owners contact sales for
+        // more, so nothing autoscales.
         if (!featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support))
         {
-            return new PrivilegedControlsSeatReservationResult();
+            var seatsRequired = await countNewPamSeatsRequiredQuery
+                .CountNewPamSeatsRequiredAsync(organization, seatsRequested);
+
+            return seatsRequired > 0
+                ? new PrivilegedControlsSeatReservationResult(new NotEnoughPrivilegedControlsSeatsError())
+                : new PrivilegedControlsSeatReservationResult();
         }
 
         // The autoscale command can't add seats to an organization that has none, so zero seats means none are free.

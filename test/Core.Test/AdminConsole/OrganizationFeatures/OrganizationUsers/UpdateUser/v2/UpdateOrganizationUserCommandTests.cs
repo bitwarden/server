@@ -130,7 +130,7 @@ public class UpdateOrganizationUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task UpdateUserAsync_WhenGrantingPamOnCloudWithoutSeats_PersistsAccessPam(
+    public async Task UpdateUserAsync_WhenGrantingPamWithoutSeats_ReturnsNotEnoughSeatsAndDoesNotPersist(
         SutProvider<UpdateOrganizationUserCommand> sutProvider,
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
@@ -139,15 +139,18 @@ public class UpdateOrganizationUserCommandTests
         var request = Setup(sutProvider, organization, organizationUser, targetAccessPam: true);
         sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
             .RunAsync(organization, 1)
-            .Returns(new PrivilegedControlsSeatReservationResult());
+            .Returns(new PrivilegedControlsSeatReservationResult(new NotEnoughPrivilegedControlsSeatsError()));
 
         var result = await sutProvider.Sut.UpdateUserAsync(request);
 
-        Assert.True(result.IsSuccess);
+        Assert.True(result.IsError);
+        var error = Assert.IsType<NotEnoughPrivilegedControlsSeatsError>(result.AsError);
+        Assert.Equal(
+            "Your organization has no Privileged Controls seats available. Contact sales for more seats.",
+            error.Message);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .Received(1)
-            .ReplaceAsync(Arg.Is<OrganizationUser>(ou => ou.AccessPam),
-                Arg.Any<IEnumerable<CollectionAccessSelection>>());
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(Arg.Any<OrganizationUser>(), Arg.Any<IEnumerable<CollectionAccessSelection>>());
     }
 
     [Theory]

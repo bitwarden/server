@@ -39,10 +39,24 @@ public class ReservePrivilegedControlsSeatsCommandTests
     [Theory]
     [InlineData(5)]
     [InlineData(0)]
-    public async Task RunAsync_Cloud_FlagOff_SucceedsWithoutCallingAutoscale(int pamSeats)
+    public async Task RunAsync_Cloud_FlagOff_Shortfall_ReturnsNotEnoughSeatsWithoutCallingAutoscale(int pamSeats)
     {
         var organization = CreateOrganization(pamSeats: pamSeats);
         _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(false);
+        _countNewPamSeatsRequiredQuery.CountNewPamSeatsRequiredAsync(organization, 2).Returns(1);
+
+        var result = await _sut.RunAsync(organization, 2);
+
+        Assert.IsType<NotEnoughPrivilegedControlsSeatsError>(result.Error);
+        await _autoscalePrivilegedControlsSeatsCommand.DidNotReceiveWithAnyArgs().RunAsync(default!, default);
+    }
+
+    [Fact]
+    public async Task RunAsync_Cloud_FlagOff_NoShortfall_SucceedsWithoutCallingAutoscale()
+    {
+        var organization = CreateOrganization();
+        _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(false);
+        _countNewPamSeatsRequiredQuery.CountNewPamSeatsRequiredAsync(organization, 2).Returns(0);
 
         var result = await _sut.RunAsync(organization, 2);
 
