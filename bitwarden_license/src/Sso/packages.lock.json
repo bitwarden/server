@@ -1294,7 +1294,7 @@
         "dependencies": {
           "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
           "Bitwarden.Server.Sdk.Features": "[1.5.0, )",
-          "Core": "[2026.10.1, )",
+          "Core": "[2026.11.0, )",
           "Stripe.net": "[52.1.0, 52.1.0]"
         }
       },
@@ -1309,7 +1309,7 @@
       "organizationauthorization": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.10.1, )",
+          "Core": "[2026.11.0, )",
           "CurrentUser": "[0.0.1, )"
         }
       },
@@ -1346,7 +1346,7 @@
       "subscriptions.organization": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.10.1, )",
+          "Core": "[2026.11.0, )",
           "ExceptionHandling": "[0.0.1, )",
           "Invoicing": "[0.0.1, )",
           "OrganizationAuthorization": "[0.0.1, )"
