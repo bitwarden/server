@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
@@ -29,10 +30,15 @@ namespace Bit.Sso.IntegrationTest.Controllers;
 /// Each test does the SSO callback for one of two sign-ins against a Staged member: a person with no Bitwarden
 /// account, whom SSO provisions just in time, or a person with an existing Bitwarden account, who gets an invite
 /// email. Password Manager seats are unlimited unless a test sets them, so the Password Manager seat check passes.
-/// Plans come from a substituted pricing client, so no test calls the pricing service.
+/// Plans come from a substituted pricing client, so no test calls the pricing service. Each test turns on
+/// <see cref="FeatureFlagKeys.PM39883_Pam_Billing_Support"/>, because seat reservations on cloud do nothing while it
+/// is off.
 /// </remarks>
 public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
 {
+    private const string _billingSupportFlagSetting =
+        $"globalSettings:launchDarkly:flagValues:{FeatureFlagKeys.PM39883_Pam_Billing_Support}";
+
     /*
     * SUCCESS PATH: A just-in-time provisioned user claims a Staged member with Privileged Controls access, and
     * the organization has a free Privileged Controls seat. The member keeps access, no seat is bought, and the
@@ -45,6 +51,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         var testData = await new SsoTestDataBuilder()
             .WithSsoConfig()
             .WithMockedPricingClient()
+            .WithConfiguration(_billingSupportFlagSetting, "true")
             .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: 1))
             .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
             .WithMockedMailer()
@@ -81,6 +88,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         var testData = await new SsoTestDataBuilder()
             .WithSsoConfig()
             .WithMockedPricingClient()
+            .WithConfiguration(_billingSupportFlagSetting, "true")
             .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: null))
             .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
             .WithMockedMailer()
@@ -114,6 +122,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         var testData = await new SsoTestDataBuilder()
             .WithSsoConfig()
             .WithMockedPricingClient()
+            .WithConfiguration(_billingSupportFlagSetting, "true")
             .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: 1))
             .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
             .WithMockedMailer()
@@ -148,6 +157,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         var testData = await new SsoTestDataBuilder()
             .WithSsoConfig()
             .WithMockedPricingClient()
+            .WithConfiguration(_billingSupportFlagSetting, "true")
             .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 0, maxAutoscalePamSeats: null))
             .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
             .WithMockedMailer()
@@ -181,6 +191,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         var testData = await new SsoTestDataBuilder()
             .WithSsoConfig()
             .WithMockedPricingClient()
+            .WithConfiguration(_billingSupportFlagSetting, "true")
             .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: null))
             .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
             .AsSelfHosted()
@@ -216,6 +227,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         var testData = await new SsoTestDataBuilder()
             .WithSsoConfig()
             .WithMockedPricingClient()
+            .WithConfiguration(_billingSupportFlagSetting, "true")
             .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: 1))
             .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = false)
             .WithMockedMailer()
@@ -251,6 +263,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         var testData = await new SsoTestDataBuilder()
             .WithSsoConfig()
             .WithMockedPricingClient()
+            .WithConfiguration(_billingSupportFlagSetting, "true")
             .WithOrganization(org =>
             {
                 org.Seats = 5;
@@ -289,6 +302,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         var testData = await new SsoTestDataBuilder()
             .WithSsoConfig()
             .WithMockedPricingClient()
+            .WithConfiguration(_billingSupportFlagSetting, "true")
             .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: 1))
             .WithUser()
             .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
@@ -330,6 +344,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         var testData = await new SsoTestDataBuilder()
             .WithSsoConfig()
             .WithMockedPricingClient()
+            .WithConfiguration(_billingSupportFlagSetting, "true")
             .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: 1))
             .WithUser()
             .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
@@ -372,6 +387,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         var testData = await new SsoTestDataBuilder()
             .WithSsoConfig()
             .WithMockedPricingClient()
+            .WithConfiguration(_billingSupportFlagSetting, "true")
             .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: 1))
             .WithUser()
             .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
@@ -415,6 +431,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         var testData = await new SsoTestDataBuilder()
             .WithSsoConfig()
             .WithMockedPricingClient()
+            .WithConfiguration(_billingSupportFlagSetting, "true")
             .WithOrganization(org =>
             {
                 WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: null);
@@ -454,6 +471,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         var testData = await new SsoTestDataBuilder()
             .WithSsoConfig()
             .WithMockedPricingClient()
+            .WithConfiguration(_billingSupportFlagSetting, "true")
             .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: 1))
             .WithUser()
             .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = false)
@@ -491,6 +509,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         var testData = await new SsoTestDataBuilder()
             .WithSsoConfig()
             .WithMockedPricingClient()
+            .WithConfiguration(_billingSupportFlagSetting, "true")
             .WithOrganization(org =>
             {
                 org.Seats = 5;
@@ -535,6 +554,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         var testData = await new SsoTestDataBuilder()
             .WithSsoConfig()
             .WithMockedPricingClient()
+            .WithConfiguration(_billingSupportFlagSetting, "true")
             .WithOrganization(org =>
             {
                 WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: null);
