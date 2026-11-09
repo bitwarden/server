@@ -117,6 +117,57 @@ public class IdentityServerCertificateTests
     }
 
     [Fact]
+    public void SelfHosted_RootFileWithWrongPassword_ThrowsCryptographicException_NoPasswordInExceptionChain()
+    {
+        const string correctPassword = "Correct-Root-Pfx-Password-7Q3Z";
+        const string configuredPassword = "Configured-Root-Pfx-Password-9K4X";
+        using var certificate = TestCertificates.Create();
+        var globalSettings = new GlobalSettings
+        {
+            SelfHosted = true,
+            IdentityServer =
+            {
+                CertificateLocation = TestCertificates.WritePfx(certificate, correctPassword),
+                CertificatePassword = configuredPassword,
+                CertificateThumbprint = null,
+            },
+        };
+        globalSettings.Storage.ConnectionString = null;
+
+        var exception = Assert.Throws<CryptographicException>(() =>
+            CoreHelpers.GetIdentityServerCertificate(globalSettings));
+
+        Assert.DoesNotContain(configuredPassword, exception.ToString());
+        Assert.DoesNotContain(correctPassword, exception.ToString());
+    }
+
+    [Fact]
+    public void RetiredEntryFileWithWrongPassword_ThrowsWithPath_NoPasswordInExceptionChain()
+    {
+        const string correctPassword = "Correct-Retired-Pfx-Password-5M8W";
+        const string configuredPassword = "Configured-Retired-Pfx-Password-2H6R";
+        using var certificate = TestCertificates.Create();
+        var globalSettings = new GlobalSettings { SelfHosted = true };
+        globalSettings.Storage.ConnectionString = null;
+        GlobalSettings.RetiredCertificateSettings[] retired =
+        [
+            new()
+            {
+                CertificateLocation = TestCertificates.WritePfx(certificate, correctPassword),
+                CertificatePassword = configuredPassword,
+            },
+        ];
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            CoreHelpers.GetRetiredCertificates(globalSettings, retired, IdentityServerValidationPath));
+
+        Assert.Contains($"{IdentityServerValidationPath}:0", exception.Message);
+        Assert.IsAssignableFrom<CryptographicException>(exception.InnerException);
+        Assert.DoesNotContain(configuredPassword, exception.ToString());
+        Assert.DoesNotContain(correctPassword, exception.ToString());
+    }
+
+    [Fact]
     public void NoCertificateSettings_ReturnsNull()
     {
         var globalSettings = new GlobalSettings
