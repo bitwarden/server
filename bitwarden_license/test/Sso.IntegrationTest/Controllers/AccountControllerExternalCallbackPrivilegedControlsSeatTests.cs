@@ -42,12 +42,13 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     /*
     * SUCCESS PATH: A just-in-time provisioned user claims a Staged member with Privileged Controls access, and
     * the organization has a free Privileged Controls seat. The member keeps access, no seat is bought, and the
-    * Owners get no email.
+    * Owners get no seat-needed email. The member brings the seats in use to exactly the autoscale limit, so the
+    * Owners get the limit-reached email.
     */
     [Fact]
     public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_WithFreeSeat_KeepsPrivilegedControls()
     {
-        // Arrange — one Privileged Controls seat, none taken.
+        // Arrange — one Privileged Controls seat, none taken, autoscale limit of one.
         var testData = await new SsoTestDataBuilder()
             .WithSsoConfig()
             .WithMockedPricingClient()
@@ -56,7 +57,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
             .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
             .WithMockedMailer()
             .BuildAsync();
-        await SeedOwnerAsync(testData);
+        var ownerEmail = await SeedOwnerAsync(testData);
 
         // Act
         var response = await CreateNonRedirectingClient(testData).GetAsync("/Account/ExternalCallback");
@@ -71,6 +72,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
 
         Assert.Equal(1, (await GetOrganizationAsync(testData)).PamSeats);
         await AssertSeatNeededEmailNotSentAsync(testData);
+        await AssertSeatLimitReachedEmailSentAsync(testData, ownerEmail, maxSeatCount: 1);
     }
 
     /*
@@ -293,12 +295,13 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     /*
     * SUCCESS PATH: A person with an existing Bitwarden account signs in with SSO against a Staged member with
     * Privileged Controls access, and the organization has a free Privileged Controls seat. The member moves to
-    * Invited with access, gets an invite email, and the Owners get no seat-needed email.
+    * Invited with access, gets an invite email, and the Owners get no seat-needed email. The member brings the
+    * seats in use to exactly the autoscale limit, so the Owners get the limit-reached email.
     */
     [Fact]
     public async Task ExternalCallback_ExistingUserAgainstStagedOrgUserWithPrivilegedControls_WithFreeSeat_InvitesWithPrivilegedControls()
     {
-        // Arrange — one Privileged Controls seat, none taken.
+        // Arrange — one Privileged Controls seat, none taken, autoscale limit of one.
         var testData = await new SsoTestDataBuilder()
             .WithSsoConfig()
             .WithMockedPricingClient()
@@ -309,7 +312,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
             .WithMockedSendOrganizationInvitesCommand()
             .WithMockedMailer()
             .BuildAsync();
-        await SeedOwnerAsync(testData);
+        var ownerEmail = await SeedOwnerAsync(testData);
 
         // Act
         var response = await CreateNonRedirectingClient(testData).GetAsync("/Account/ExternalCallback");
@@ -330,6 +333,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
 
         Assert.Equal(1, (await GetOrganizationAsync(testData)).PamSeats);
         await AssertSeatNeededEmailNotSentAsync(testData);
+        await AssertSeatLimitReachedEmailSentAsync(testData, ownerEmail, maxSeatCount: 1);
     }
 
     /*
@@ -683,6 +687,16 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     {
         var mailer = testData.Factory.Services.GetRequiredService<IMailer>();
         await mailer.DidNotReceive().SendEmail(Arg.Any<PrivilegedControlsSeatNeededMail>());
+    }
+
+    private static async Task AssertSeatLimitReachedEmailSentAsync(SsoTestData testData, string ownerEmail,
+        int maxSeatCount)
+    {
+        var mailer = testData.Factory.Services.GetRequiredService<IMailer>();
+        await mailer.Received(1).SendEmail(Arg.Is<PrivilegedControlsSeatLimitReachedMail>(mail =>
+            mail.ToEmails.Contains(ownerEmail) &&
+            mail.View.OrganizationId == testData.Organization!.Id &&
+            mail.View.MaxSeatCount == maxSeatCount));
     }
 
     /// <summary>
