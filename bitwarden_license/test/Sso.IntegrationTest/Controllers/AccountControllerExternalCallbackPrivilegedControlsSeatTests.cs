@@ -27,16 +27,16 @@ namespace Bit.Sso.IntegrationTest.Controllers;
 /// <summary>
 /// When an SSO sign-in moves a Staged member that has Privileged Controls access to Invited, the member starts
 /// to use a Privileged Controls seat. The SSO callback must reserve that seat first. When no seat can be reserved,
-/// the member still moves to Invited, but without Privileged Controls access, and on cloud the organization's
-/// Owners get an email that the member needs a seat.
+/// the member still moves to Invited, but without Privileged Controls access. When the reservation fails because
+/// autoscale reached its limit, the organization's Owners also get an email that the member needs a seat.
 /// </summary>
 /// <remarks>
 /// Each test does the SSO callback for one of two sign-ins against a Staged member: a person with no Bitwarden
 /// account, whom SSO provisions just in time, or a person with an existing Bitwarden account, who gets an invite
 /// email. Password Manager seats are unlimited unless a test sets them, so the Password Manager seat check passes.
 /// Plans come from a substituted pricing client, so no test calls the pricing service. Each test sets
-/// <see cref="FeatureFlagKeys.PM39883_Pam_Billing_Support"/>. Most turn it on, because seat reservations on cloud do
-/// nothing while it is off.
+/// <see cref="FeatureFlagKeys.PM39883_Pam_Billing_Support"/>. On cloud with the flag on, a reservation can autoscale
+/// seats. With the flag off, the seat count is a hard limit and nothing autoscales.
 /// </remarks>
 public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
 {
@@ -286,19 +286,55 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
 
     /*
     * SUCCESS PATH: On cloud with the billing support flag off, a just-in-time provisioned user claims a Staged
-    * member with Privileged Controls access, and the organization is at its Privileged Controls autoscale limit.
-    * With the flag off, the reservation does not check seats, so the member keeps access, no seat is bought, and
-    * the Owners get no email.
+    * member with Privileged Controls access, and the organization has a free Privileged Controls seat. The member
+    * keeps access and no seat is added. The member brings the seats in use to exactly the autoscale limit, but the
+    * Owners get no limit-reached email, because autoscale does not run while the flag is off.
     */
     [Fact]
-    public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_AtSeatLimitWithBillingSupportFlagOff_KeepsPrivilegedControlsWithoutReservingSeat()
+    public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_WithFreeSeatAndBillingSupportFlagOff_KeepsPrivilegedControlsAndDoesNotEmail()
     {
-        // Arrange — one Privileged Controls seat, already taken, autoscale limit of one, billing support flag off.
+        // Arrange — one Privileged Controls seat, none taken, autoscale limit of one, billing support flag off.
         var testData = await new SsoTestDataBuilder()
             .WithSsoConfig()
             .WithMockedPricingClient()
             .WithConfiguration(_billingSupportFlagSetting, "false")
             .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: 1))
+            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
+            .WithMockedMailer()
+            .BuildAsync();
+        await SeedOwnerAsync(testData);
+
+        // Act
+        var response = await CreateNonRedirectingClient(testData).GetAsync("/Account/ExternalCallback");
+
+        // Assert
+        AssertSsoSucceeded(response);
+
+        var orgUser = await GetOrgUserAsync(testData);
+        Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
+        Assert.NotNull(orgUser.UserId);
+        Assert.True(orgUser.AccessPam);
+
+        Assert.Equal(1, (await GetOrganizationAsync(testData)).PamSeats);
+        await AssertNoPrivilegedControlsEmailSentAsync(testData);
+    }
+
+    /*
+    * DEGRADED PATH: On cloud with the billing support flag off, a just-in-time provisioned user claims a Staged
+    * member with Privileged Controls access, and no Privileged Controls seat is free. With the flag off, the seat
+    * count is a hard limit. The SSO callback does not add a seat, even though the organization has no autoscale
+    * limit. The member moves to Invited without Privileged Controls access. The Owners get no Privileged Controls
+    * email, because they must contact sales for more seats.
+    */
+    [Fact]
+    public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_WithNoFreeSeatAndBillingSupportFlagOff_MovesToInvitedWithoutPrivilegedControlsAndDoesNotEmail()
+    {
+        // Arrange — one Privileged Controls seat, already taken, no autoscale limit, billing support flag off.
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithMockedPricingClient()
+            .WithConfiguration(_billingSupportFlagSetting, "false")
+            .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: null))
             .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
             .WithMockedMailer()
             .BuildAsync();
@@ -314,7 +350,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         var orgUser = await GetOrgUserAsync(testData);
         Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
         Assert.NotNull(orgUser.UserId);
-        Assert.True(orgUser.AccessPam);
+        Assert.False(orgUser.AccessPam);
 
         Assert.Equal(1, (await GetOrganizationAsync(testData)).PamSeats);
         await AssertNoPrivilegedControlsEmailSentAsync(testData);
@@ -549,6 +585,93 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
 
         Assert.Equal(1, (await GetOrganizationAsync(testData)).PamSeats);
         await AssertSeatNeededEmailSentAsync(testData, ownerEmail, testData.OrganizationUser!.Email!);
+    }
+
+    /*
+    * SUCCESS PATH: On cloud with the billing support flag off, a person with an existing Bitwarden account signs in
+    * with SSO against a Staged member with Privileged Controls access, and the organization has a free Privileged
+    * Controls seat. The member moves to Invited with access and gets an invite email, and no seat is added. The
+    * member brings the seats in use to exactly the autoscale limit, but the Owners get no limit-reached email,
+    * because autoscale does not run while the flag is off.
+    */
+    [Fact]
+    public async Task ExternalCallback_ExistingUserAgainstStagedOrgUserWithPrivilegedControls_WithFreeSeatAndBillingSupportFlagOff_InvitesWithPrivilegedControlsAndDoesNotEmail()
+    {
+        // Arrange — one Privileged Controls seat, none taken, autoscale limit of one, billing support flag off.
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithMockedPricingClient()
+            .WithConfiguration(_billingSupportFlagSetting, "false")
+            .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: 1))
+            .WithUser()
+            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
+            .WithMockedSendOrganizationInvitesCommand()
+            .WithMockedMailer()
+            .BuildAsync();
+        await SeedOwnerAsync(testData);
+
+        // Act
+        var response = await CreateNonRedirectingClient(testData).GetAsync("/Account/ExternalCallback");
+
+        // Assert
+        AssertStagedInviteAcceptanceRequiredRedirect(response);
+
+        var orgUser = await GetOrgUserAsync(testData);
+        Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
+        Assert.True(orgUser.AccessPam);
+
+        var inviteCommand = testData.Factory.Services.GetRequiredService<ISendOrganizationInvitesCommand>();
+        await inviteCommand.Received(1).SendInvitesAsync(Arg.Is<SendInvitesRequest>(r =>
+            r.Users.Length == 1 &&
+            r.Users[0].Id == testData.OrganizationUser!.Id &&
+            r.Users[0].AccessPam));
+
+        Assert.Equal(1, (await GetOrganizationAsync(testData)).PamSeats);
+        await AssertNoPrivilegedControlsEmailSentAsync(testData);
+    }
+
+    /*
+    * DEGRADED PATH: On cloud with the billing support flag off, a person with an existing Bitwarden account signs
+    * in with SSO against a Staged member with Privileged Controls access, and no Privileged Controls seat is free.
+    * With the flag off, the seat count is a hard limit. The SSO callback does not add a seat, even though the
+    * organization has no autoscale limit. The member moves to Invited without Privileged Controls access and gets
+    * an invite email. The Owners get no Privileged Controls email, because they must contact sales for more seats.
+    */
+    [Fact]
+    public async Task ExternalCallback_ExistingUserAgainstStagedOrgUserWithPrivilegedControls_WithNoFreeSeatAndBillingSupportFlagOff_InvitesWithoutPrivilegedControlsAndDoesNotEmail()
+    {
+        // Arrange — one Privileged Controls seat, already taken, no autoscale limit, billing support flag off.
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithMockedPricingClient()
+            .WithConfiguration(_billingSupportFlagSetting, "false")
+            .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: null))
+            .WithUser()
+            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
+            .WithMockedSendOrganizationInvitesCommand()
+            .WithMockedMailer()
+            .BuildAsync();
+        await SeedOwnerAsync(testData);
+        await SeedPrivilegedControlsSeatHolderAsync(testData);
+
+        // Act
+        var response = await CreateNonRedirectingClient(testData).GetAsync("/Account/ExternalCallback");
+
+        // Assert
+        AssertStagedInviteAcceptanceRequiredRedirect(response);
+
+        var orgUser = await GetOrgUserAsync(testData);
+        Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
+        Assert.False(orgUser.AccessPam);
+
+        var inviteCommand = testData.Factory.Services.GetRequiredService<ISendOrganizationInvitesCommand>();
+        await inviteCommand.Received(1).SendInvitesAsync(Arg.Is<SendInvitesRequest>(r =>
+            r.Users.Length == 1 &&
+            r.Users[0].Id == testData.OrganizationUser!.Id &&
+            !r.Users[0].AccessPam));
+
+        Assert.Equal(1, (await GetOrganizationAsync(testData)).PamSeats);
+        await AssertNoPrivilegedControlsEmailSentAsync(testData);
     }
 
     /*
