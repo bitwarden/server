@@ -254,8 +254,8 @@
       },
       "CsvHelper": {
         "type": "Transitive",
-        "resolved": "33.1.0",
-        "contentHash": "kqfTOZGrn7NarNeXgjh86JcpTHUoeQDMB8t9NVa/ZtlSYiV1rxfRnQ49WaJsob4AiGrbK0XDzpyKkBwai4F8eg=="
+        "resolved": "34.0.0",
+        "contentHash": "yiFG6lPSgNFhraURmM/e4ROhbnNzMOZI1HxMvjNzn5lkc9dx3aN/sm/N4UM+rV6CPpZBQfrJfwEKUxkndeRKUQ=="
       },
       "DnsClient": {
         "type": "Transitive",
@@ -1069,7 +1069,7 @@
           "Bitwarden.Server.Sdk.Features": "[1.5.0, )",
           "Braintree": "[5.36.0, 5.36.0]",
           "Clients": "[0.0.1, )",
-          "CsvHelper": "[33.1.0, 33.1.0]",
+          "CsvHelper": "[34.0.0, 34.0.0]",
           "Data": "[0.0.1, )",
           "DnsClient": "[1.8.0, 1.8.0]",
           "Duende.IdentityServer": "[7.4.6, 7.4.6]",
