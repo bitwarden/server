@@ -206,10 +206,11 @@ public class UpdateOrganizationUserCommand(
     {
         var additionalPamSeatsRequired =
             await countNewPamSeatsRequiredQuery.CountNewPamSeatsRequiredAsync(request.Organization, 1);
-        // Only self-hosted instances are limited here: they cannot change their subscription. Cloud grants are not seat-limited by this command.
-        if (additionalPamSeatsRequired > 0 && globalSettings.SelfHosted)
+        if (additionalPamSeatsRequired > 0)
         {
-            return new CannotAutoscalePamSeatsOnSelfHost();
+            return globalSettings.SelfHosted
+                ? new CannotAutoscalePamSeatsOnSelfHost()
+                : new NotEnoughPrivilegedControlsSeats();
         }
 
         return null;

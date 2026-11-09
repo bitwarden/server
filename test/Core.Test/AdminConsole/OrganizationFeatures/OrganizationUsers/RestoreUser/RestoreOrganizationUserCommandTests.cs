@@ -10,6 +10,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Err
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -19,6 +20,7 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
@@ -1230,6 +1232,157 @@ public class RestoreOrganizationUserCommandTests
         await organizationUserRepository
             .Received(1)
             .RestoreAsync(orgUser1.Id, Arg.Is<OrganizationUserStatusType>(x => x != OrganizationUserStatusType.Revoked));
+    }
+
+    private const string _notEnoughPrivilegedControlsSeatsMessage =
+        "Your organization has no Privileged Controls seats available. Contact sales for more seats.";
+    private const string _cannotAutoscalePamSeatsOnSelfHostMessage =
+        "Cannot autoscale Privileged Controls seats on a self-hosted instance.";
+
+    [Theory]
+    [BitAutoData(false, _notEnoughPrivilegedControlsSeatsMessage)]
+    [BitAutoData(true, _cannotAutoscalePamSeatsOnSelfHostMessage)]
+    public async Task RestoreUser_WithPamAccess_NoPamSeatsAvailable_Fails(
+        bool selfHosted,
+        string expectedMessage,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+        organization.UsePam = true;
+        organizationUser.AccessPam = true;
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted = selfHosted;
+        sutProvider.GetDependency<ICountNewPamSeatsRequiredQuery>()
+            .CountNewPamSeatsRequiredAsync(organization, 1)
+            .Returns(1);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null));
+
+        Assert.Equal(expectedMessage, exception.Message);
+        await sutProvider.GetDependency<IOrganizationService>()
+            .DidNotReceiveWithAnyArgs()
+            .AutoAddSeatsAsync(default, default);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .RestoreAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_WithPamAccess_PamSeatAvailable_Restores(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+        organization.UsePam = true;
+        organizationUser.AccessPam = true;
+        sutProvider.GetDependency<ICountNewPamSeatsRequiredQuery>()
+            .CountNewPamSeatsRequiredAsync(organization, 1)
+            .Returns(0);
+
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .RestoreAsync(organizationUser.Id, Arg.Any<OrganizationUserStatusType>());
+    }
+
+    [Theory]
+    [BitAutoData(true, false)]
+    [BitAutoData(false, true)]
+    public async Task RestoreUser_WithoutPamAccessOrPam_DoesNotCheckPamSeats(
+        bool usePam,
+        bool accessPam,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+        organization.UsePam = usePam;
+        organizationUser.AccessPam = accessPam;
+        sutProvider.GetDependency<ICountNewPamSeatsRequiredQuery>()
+            .CountNewPamSeatsRequiredAsync(Arg.Any<Organization>(), Arg.Any<int>())
+            .Returns(1);
+
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .RestoreAsync(organizationUser.Id, Arg.Any<OrganizationUserStatusType>());
+    }
+
+    [Theory]
+    [BitAutoData(false, _notEnoughPrivilegedControlsSeatsMessage)]
+    [BitAutoData(true, _cannotAutoscalePamSeatsOnSelfHostMessage)]
+    public async Task RestoreUsers_WithPamAccess_NoPamSeatsAvailable_ReturnsErrorForMembersWithAccess(
+        bool selfHosted,
+        string expectedMessage,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser memberWithAccess,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser memberWithoutAccess,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        RestoreUser_Setup(organization, owner, memberWithAccess, sutProvider);
+        memberWithoutAccess.OrganizationId = organization.Id;
+        organization.UsePam = true;
+        memberWithAccess.AccessPam = true;
+        memberWithoutAccess.AccessPam = false;
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([memberWithAccess, memberWithoutAccess]);
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted = selfHosted;
+        sutProvider.GetDependency<ICountNewPamSeatsRequiredQuery>()
+            .CountNewPamSeatsRequiredAsync(organization, 1)
+            .Returns(1);
+
+        var result = await sutProvider.Sut.RestoreUsersAsync(organization.Id,
+            [memberWithAccess.Id, memberWithoutAccess.Id], owner.Id, Substitute.For<IUserService>(), null);
+
+        Assert.Equal(expectedMessage, result.Single(r => r.Item1.Id == memberWithAccess.Id).Item2);
+        Assert.Empty(result.Single(r => r.Item1.Id == memberWithoutAccess.Id).Item2);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceive()
+            .RestoreAsync(memberWithAccess.Id, Arg.Any<OrganizationUserStatusType>());
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .RestoreAsync(memberWithoutAccess.Id, Arg.Any<OrganizationUserStatusType>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUsers_WithPamAccess_PamSeatsAvailable_RestoresAll(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser orgUser1,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser orgUser2,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        RestoreUser_Setup(organization, owner, orgUser1, sutProvider);
+        orgUser2.OrganizationId = organization.Id;
+        organization.UsePam = true;
+        orgUser1.AccessPam = orgUser2.AccessPam = true;
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([orgUser1, orgUser2]);
+        sutProvider.GetDependency<ICountNewPamSeatsRequiredQuery>()
+            .CountNewPamSeatsRequiredAsync(organization, 2)
+            .Returns(0);
+
+        var result = await sutProvider.Sut.RestoreUsersAsync(organization.Id,
+            [orgUser1.Id, orgUser2.Id], owner.Id, Substitute.For<IUserService>(), null);
+
+        Assert.All(result, r => Assert.Empty(r.Item2));
+        await sutProvider.GetDependency<ICountNewPamSeatsRequiredQuery>()
+            .Received(1)
+            .CountNewPamSeatsRequiredAsync(organization, 2);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(2)
+            .RestoreAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType>());
     }
 
     private static void RestoreUser_Setup(

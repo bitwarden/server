@@ -3,13 +3,16 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -17,6 +20,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 
@@ -33,7 +37,9 @@ public class RestoreOrganizationUserCommand(
     ICollectionRepository collectionRepository,
     IAutomaticUserConfirmationPolicyEnforcementHandler automaticUserConfirmationPolicyEnforcementHandler,
     IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand,
-    TimeProvider timeProvider) : IRestoreOrganizationUserCommand
+    TimeProvider timeProvider,
+    ICountNewPamSeatsRequiredQuery countNewPamSeatsRequiredQuery,
+    IGlobalSettings globalSettings) : IRestoreOrganizationUserCommand
 {
     public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, string defaultCollectionName)
     {
@@ -83,6 +89,13 @@ public class RestoreOrganizationUserCommand(
         }
 
         var organization = await organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
+
+        if (organizationUser.AccessPam &&
+            await GetPrivilegedControlsSeatLimitErrorAsync(organization, 1) is { } privilegedControlsSeatLimitError)
+        {
+            throw new BadRequestException(privilegedControlsSeatLimitError.Message);
+        }
+
         var seatCounts = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
         var availableSeats = organization.Seats.GetValueOrDefault(0) - seatCounts.Total;
 
@@ -128,6 +141,31 @@ public class RestoreOrganizationUserCommand(
                 [organizationUser.Id],
                 defaultCollectionName);
         }
+    }
+
+    /// <summary>
+    /// The error to fail with when restoring <paramref name="membersWithAccess"/> members who have Privileged Controls
+    /// access would go over the organization's Privileged Controls seats, otherwise null.
+    /// </summary>
+    private async Task<BadRequestError> GetPrivilegedControlsSeatLimitErrorAsync(
+        Organization organization,
+        int membersWithAccess)
+    {
+        if (!organization.UsePam || membersWithAccess == 0)
+        {
+            return null;
+        }
+
+        var additionalPamSeatsRequired =
+            await countNewPamSeatsRequiredQuery.CountNewPamSeatsRequiredAsync(organization, membersWithAccess);
+        if (additionalPamSeatsRequired == 0)
+        {
+            return null;
+        }
+
+        return globalSettings.SelfHosted
+            ? new CannotAutoscalePamSeatsOnSelfHost()
+            : new NotEnoughPrivilegedControlsSeats();
     }
 
     private async Task CheckUserForOtherFreeOrganizationOwnershipAsync(OrganizationUser organizationUser)
@@ -197,6 +235,12 @@ public class RestoreOrganizationUserCommand(
         var newSeatsRequired = organizationUserIds.Count() - availableSeats;
         await organizationService.AutoAddSeatsAsync(organization, newSeatsRequired);
 
+        // Privileged Controls seats are a hard limit, so if the batch would go over them, none of its members with
+        // access are restored.
+        var privilegedControlsSeatLimitError = await GetPrivilegedControlsSeatLimitErrorAsync(
+            organization,
+            filteredUsers.Count(ou => ou.Status == OrganizationUserStatusType.Revoked && ou.AccessPam));
+
         var restoringUserIsOwner = false;
         var restoringUserIsAdminOrHigher = false;
         if (restoringUserId.HasValue)
@@ -244,6 +288,11 @@ public class RestoreOrganizationUserCommand(
                                          && organizationUsersTwoFactorEnabled
                                              .FirstOrDefault(ou => ou.userId == organizationUser.UserId.Value)
                                              .twoFactorIsEnabled;
+
+                if (organizationUser.AccessPam && privilegedControlsSeatLimitError is not null)
+                {
+                    throw new BadRequestException(privilegedControlsSeatLimitError.Message);
+                }
 
                 await CheckPoliciesBeforeRestoreAsync(organizationUser, twoFactorIsEnabled);
 
