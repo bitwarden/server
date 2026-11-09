@@ -791,9 +791,9 @@ public class AccountController : Controller
 
             if (possibleOrgUser.Status == OrganizationUserStatusType.Staged)
             {
-                // The member seat and the Privileged Controls seat were both reserved up-front before user
-                // creation, so it is safe to consume them here. AccessPam may have been cleared on this instance
-                // when no Privileged Controls seat was available, which the ReplaceAsync below saves.
+                // The Password Manager member seat was checked up front, before user creation, so it is safe to
+                // consume it here. If the Privileged Controls seat reservation failed, AccessPam was set to false on
+                // possibleOrgUser in memory, and the ReplaceAsync below saves that change.
                 possibleOrgUser.Status = OrganizationUserStatusType.Invited;
             }
 
