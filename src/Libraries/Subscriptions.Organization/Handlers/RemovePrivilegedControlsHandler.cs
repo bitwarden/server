@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Subscriptions.Organization.Commands;
+using Bit.Subscriptions.Organization.Commands.PrivilegedControls;
 using Bit.Subscriptions.Organization.Queries;
 
 namespace Bit.Subscriptions.Organization.Handlers;

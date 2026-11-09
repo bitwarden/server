@@ -1251,6 +1251,9 @@
           "ZiggyCreatures.FusionCache.Serialization.SystemTextJson": "[2.0.2, 2.0.2]"
         }
       },
+      "currentuser": {
+        "type": "Project"
+      },
       "data": {
         "type": "Project"
       },
@@ -1286,12 +1289,28 @@
           "linq2db.EntityFrameworkCore": "[8.8.0, 8.8.0]"
         }
       },
+      "invoicing": {
+        "type": "Project",
+        "dependencies": {
+          "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
+          "Bitwarden.Server.Sdk.Features": "[1.5.0, )",
+          "Core": "[2026.11.0, )",
+          "Stripe.net": "[52.1.0, 52.1.0]"
+        }
+      },
       "maildelivery": {
         "type": "Project",
         "dependencies": {
           "AWSSDK.SimpleEmail": "[4.0.2.5, 4.0.2.5]",
           "MailKit": "[4.18.2, 4.18.2]",
           "SendGrid": "[9.29.3, 9.29.3]"
+        }
+      },
+      "organizationauthorization": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.11.0, )",
+          "CurrentUser": "[0.0.1, )"
         }
       },
       "pam.domain": {
@@ -1323,6 +1342,15 @@
       },
       "ssrfprotection": {
         "type": "Project"
+      },
+      "subscriptions.organization": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2026.11.0, )",
+          "ExceptionHandling": "[0.0.1, )",
+          "Invoicing": "[0.0.1, )",
+          "OrganizationAuthorization": "[0.0.1, )"
+        }
       }
     }
   }

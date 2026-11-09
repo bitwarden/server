@@ -12,6 +12,7 @@
     <ProjectReference Include="..\..\bitwarden_license\src\Commercial.Core\Commercial.Core.csproj" />
     <ProjectReference Include="..\SharedWeb\SharedWeb.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />
+    <ProjectReference Include="..\Libraries\Subscriptions.Organization\Subscriptions.Organization.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="MarkDig" Version="[1.3.2]" />

@@ -8,6 +8,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Bit.Sso.Utilities;
+using Bit.Subscriptions.Organization;
 using Duende.IdentityServer.Services;
 using Stripe;
 
@@ -83,6 +84,7 @@ public class Startup
         services.AddDefaultServices(globalSettings);
         services.AddCoreLocalizationServices();
         services.AddBillingOperations();
+        services.AddPrivilegedControlsSeatAutoscaling();
 
         // TODO: Remove when OrganizationUser methods are moved out of OrganizationService, this noop dependency should
         // TODO: no longer be required - see PM-1880

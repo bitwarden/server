@@ -1,11 +1,11 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Update;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -27,7 +27,7 @@ public class OrganizationUpdateCommandTests
     {
         // Arrange
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var organizationService = sutProvider.GetDependency<IOrganizationService>();
+        var replaceOrganizationAndUpdateCacheCommand = sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>();
         var organizationBillingService = sutProvider.GetDependency<IOrganizationBillingService>();
 
         organization.Id = organizationId;
@@ -56,9 +56,9 @@ public class OrganizationUpdateCommandTests
         await organizationRepository
             .Received(1)
             .GetByIdAsync(Arg.Is<Guid>(id => id == organizationId));
-        await organizationService
+        await replaceOrganizationAndUpdateCacheCommand
             .Received(1)
-            .ReplaceAndUpdateCacheAsync(
+            .RunAsync(
                 result,
                 EventType.Organization_Updated);
         await organizationBillingService
@@ -102,7 +102,7 @@ public class OrganizationUpdateCommandTests
     {
         // Arrange
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var organizationService = sutProvider.GetDependency<IOrganizationService>();
+        var replaceOrganizationAndUpdateCacheCommand = sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>();
         var organizationBillingService = sutProvider.GetDependency<IOrganizationBillingService>();
 
         organization.Id = organizationId;
@@ -128,9 +128,9 @@ public class OrganizationUpdateCommandTests
         Assert.Equal(organizationId, result.Id);
         Assert.Equal("New Name", result.Name);
 
-        await organizationService
+        await replaceOrganizationAndUpdateCacheCommand
             .Received(1)
-            .ReplaceAndUpdateCacheAsync(
+            .RunAsync(
                 result,
                 EventType.Organization_Updated);
         await organizationBillingService
@@ -148,7 +148,7 @@ public class OrganizationUpdateCommandTests
     {
         // Arrange
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var organizationService = sutProvider.GetDependency<IOrganizationService>();
+        var replaceOrganizationAndUpdateCacheCommand = sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>();
 
         organization.Id = organizationId;
         organization.PublicKey = null;
@@ -177,9 +177,9 @@ public class OrganizationUpdateCommandTests
         Assert.Equal(publicKey, result.PublicKey);
         Assert.Equal(encryptedPrivateKey, result.PrivateKey);
 
-        await organizationService
+        await replaceOrganizationAndUpdateCacheCommand
             .Received(1)
-            .ReplaceAndUpdateCacheAsync(
+            .RunAsync(
                 result,
                 EventType.Organization_Updated);
     }
@@ -194,7 +194,7 @@ public class OrganizationUpdateCommandTests
     {
         // Arrange
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var organizationService = sutProvider.GetDependency<IOrganizationService>();
+        var replaceOrganizationAndUpdateCacheCommand = sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>();
 
         organization.Id = organizationId;
         var existingPublicKey = organization.PublicKey;
@@ -223,9 +223,9 @@ public class OrganizationUpdateCommandTests
         Assert.Equal(existingPublicKey, result.PublicKey);
         Assert.Equal(existingPrivateKey, result.PrivateKey);
 
-        await organizationService
+        await replaceOrganizationAndUpdateCacheCommand
             .Received(1)
-            .ReplaceAndUpdateCacheAsync(
+            .RunAsync(
                 result,
                 EventType.Organization_Updated);
     }
@@ -239,7 +239,7 @@ public class OrganizationUpdateCommandTests
     {
         // Arrange
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var organizationService = sutProvider.GetDependency<IOrganizationService>();
+        var replaceOrganizationAndUpdateCacheCommand = sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>();
         var organizationBillingService = sutProvider.GetDependency<IOrganizationBillingService>();
 
         organization.Id = organizationId;
@@ -266,9 +266,9 @@ public class OrganizationUpdateCommandTests
         Assert.Equal(newName, result.Name);
         Assert.Equal(originalBillingEmail, result.BillingEmail);
 
-        await organizationService
+        await replaceOrganizationAndUpdateCacheCommand
             .Received(1)
-            .ReplaceAndUpdateCacheAsync(
+            .RunAsync(
                 result,
                 EventType.Organization_Updated);
         await organizationBillingService
@@ -285,7 +285,7 @@ public class OrganizationUpdateCommandTests
     {
         // Arrange
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var organizationService = sutProvider.GetDependency<IOrganizationService>();
+        var replaceOrganizationAndUpdateCacheCommand = sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>();
         var organizationBillingService = sutProvider.GetDependency<IOrganizationBillingService>();
 
         organization.Id = organizationId;
@@ -312,9 +312,9 @@ public class OrganizationUpdateCommandTests
         Assert.Equal(originalName, result.Name);
         Assert.Equal(newBillingEmail.ToLowerInvariant().Trim(), result.BillingEmail);
 
-        await organizationService
+        await replaceOrganizationAndUpdateCacheCommand
             .Received(1)
-            .ReplaceAndUpdateCacheAsync(
+            .RunAsync(
                 result,
                 EventType.Organization_Updated);
         await organizationBillingService
@@ -330,7 +330,7 @@ public class OrganizationUpdateCommandTests
     {
         // Arrange
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var organizationService = sutProvider.GetDependency<IOrganizationService>();
+        var replaceOrganizationAndUpdateCacheCommand = sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>();
         var organizationBillingService = sutProvider.GetDependency<IOrganizationBillingService>();
 
         organization.Id = organizationId;
@@ -357,9 +357,9 @@ public class OrganizationUpdateCommandTests
         Assert.Equal(originalName, result.Name);
         Assert.Equal(originalBillingEmail, result.BillingEmail);
 
-        await organizationService
+        await replaceOrganizationAndUpdateCacheCommand
             .Received(1)
-            .ReplaceAndUpdateCacheAsync(
+            .RunAsync(
                 result,
                 EventType.Organization_Updated);
         await organizationBillingService
