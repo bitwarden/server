@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using Microsoft.AspNetCore.StaticFiles;
 
 namespace Bit.Server;
@@ -61,8 +62,12 @@ public class Startup
                 });
             }
 
-            // TODO: This should be removed when asp.net natively support avif
-            var provider = new FileExtensionContentTypeProvider { Mappings = { [".avif"] = "image/avif" } };
+            var provider = new WebVaultContentTypeProvider(
+                new FileExtensionContentTypeProvider
+                {
+                    // TODO: This should be removed when asp.net natively support avif
+                    Mappings = { [".avif"] = "image/avif" },
+                });
 
             var options = new DefaultFilesOptions();
             options.DefaultFileNames.Clear();
@@ -101,6 +106,24 @@ public class Startup
                 endpoints.MapGet("/alive",
                     async context => await context.Response.WriteAsync(System.DateTime.UtcNow.ToString()));
             });
+        }
+    }
+
+    /// <summary>
+    /// Adds content types for web vault files that have no extension to look up.
+    /// </summary>
+    private class WebVaultContentTypeProvider(IContentTypeProvider inner) : IContentTypeProvider
+    {
+        public bool TryGetContentType(string subpath, [MaybeNullWhen(false)] out string contentType)
+        {
+            // Apple requires this file to be served as JSON, but it has no file extension.
+            if (string.Equals(subpath, "/.well-known/apple-app-site-association", StringComparison.Ordinal))
+            {
+                contentType = "application/json";
+                return true;
+            }
+
+            return inner.TryGetContentType(subpath, out contentType);
         }
     }
 }

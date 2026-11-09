@@ -39,6 +39,7 @@ public class ServerTests
         await tempDir.WriteAsync(Path.Join("scripts", "file.js"), "ScriptsStuff");
         await tempDir.WriteAsync(Path.Join("images", "file.avif"), "ImagesStuff");
         await tempDir.WriteAsync(Path.Join("test", "file.json"), "{}");
+        await tempDir.WriteAsync(Path.Join(".well-known", "apple-app-site-association"), "{\"webcredentials\":{}}");
 
         using var server = new Server
         {
@@ -69,6 +70,11 @@ public class ServerTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
 
+        response = await client.GetAsync(".well-known/apple-app-site-association", TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("{\"webcredentials\":{}}", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+
         async Task ExpectMaxAgeAsync(string path, TimeSpan maxAge)
         {
             response = await client.GetAsync(path);
@@ -76,6 +82,27 @@ public class ServerTests
             Assert.NotNull(response.Headers.CacheControl);
             Assert.Equal(maxAge, response.Headers.CacheControl.MaxAge);
         }
+    }
+
+    [Fact]
+    public async Task WebVaultStyleUse_MissingAppleAppSiteAssociation_ReturnsNotFound()
+    {
+        using var tempDir = new TempDir();
+
+        await tempDir.WriteAsync("index.html", "<html></html>");
+
+        using var server = new Server
+        {
+            ContentRoot = tempDir.Info.FullName,
+            WebRoot = ".",
+            ServeUnknown = false,
+            WebVault = true,
+        };
+
+        var client = server.CreateClient();
+
+        var response = await client.GetAsync(".well-known/apple-app-site-association", TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     private class TempDir([CallerMemberName] string test = null!) : IDisposable
