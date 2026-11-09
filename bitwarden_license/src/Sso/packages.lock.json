@@ -829,8 +829,8 @@
       },
       "Microsoft.OpenApi": {
         "type": "Transitive",
-        "resolved": "2.4.1",
-        "contentHash": "u7QhXCISMQuab3flasb1hoaiERmUqyWsW7tmQODyILoQ7mJV5IRGM+2KKZYo0QUfC13evEOcHAb6TPWgqEQtrw=="
+        "resolved": "2.7.5",
+        "contentHash": "0FA67RSnRM4tcBKqiqVu/HPdZ9+QOKbmeRjxRUGTCjPU4C0bmUhd97Dso7Yild5P7nOV6GxJ2xrK0Kv/O9xp0w=="
       },
       "Microsoft.Rest.ClientRuntime": {
         "type": "Transitive",
@@ -1095,18 +1095,18 @@
       },
       "Swashbuckle.AspNetCore.Swagger": {
         "type": "Transitive",
-        "resolved": "10.1.7",
-        "contentHash": "EjLibt/d/QuRv170GoihTbcPUpgzSFm2WKHhnGJFZQ03JYzfuitsM79azaAR8NBwRunU7yScSX6HRE5JUlrEMQ==",
+        "resolved": "10.3.1",
+        "contentHash": "ZBsi9PZbuy25lUIs+4/V8pmuMqospRAX9zVmxzCm1ZRyKiXjsUL9YCyqdi7ezfDwxKuef6P0fUgVan9sLRcDJA==",
         "dependencies": {
-          "Microsoft.OpenApi": "2.4.1"
+          "Microsoft.OpenApi": "2.7.5"
         }
       },
       "Swashbuckle.AspNetCore.SwaggerGen": {
         "type": "Transitive",
-        "resolved": "10.1.7",
-        "contentHash": "PuubO9BjvNn6U3D9kLpuWKY1JtziWw7SsGBq0age1E50uQjQ8Fzl8s0EwzrLfANqYJNgDnJi9l7N1QxcGVB2Zw==",
+        "resolved": "10.3.1",
+        "contentHash": "DMamYj+m40rOgnGdAp+4iQ+NXIMup2oYVs/zIOZtal0Dar6CXjCF9/SkepEn42TKNO29wAx0xyLfOXj1VjEIXg==",
         "dependencies": {
-          "Swashbuckle.AspNetCore.Swagger": "10.1.7"
+          "Swashbuckle.AspNetCore.Swagger": "10.3.1"
         }
       },
       "System.ClientModel": {
@@ -1257,7 +1257,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.10.1, )"
+          "HttpExtensions": "[2026.11.0, )"
         }
       },
       "httpextensions": {
@@ -1266,21 +1266,21 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.10.1, )",
+          "Core": "[2026.11.0, )",
           "Dapper": "[2.1.66, 2.1.66]",
-          "Pam.Domain": "[2026.10.1, )"
+          "Pam.Domain": "[2026.11.0, )"
         }
       },
       "infrastructure.entityframework": {
         "type": "Project",
         "dependencies": {
           "AutoMapper": "[14.0.0, 14.0.0]",
-          "Core": "[2026.10.1, )",
+          "Core": "[2026.11.0, )",
           "Microsoft.EntityFrameworkCore.Relational": "[8.0.11, 8.0.11]",
           "Microsoft.EntityFrameworkCore.SqlServer": "[8.0.11, 8.0.11]",
           "Microsoft.EntityFrameworkCore.Sqlite": "[8.0.11, 8.0.11]",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[8.0.11, 8.0.11]",
-          "Pam.Domain": "[2026.10.1, )",
+          "Pam.Domain": "[2026.11.0, )",
           "Pomelo.EntityFrameworkCore.MySql": "[8.0.2, 8.0.2]",
           "linq2db": "[6.5.0, 6.5.0]",
           "linq2db.EntityFrameworkCore": "[8.8.0, 8.8.0]"
@@ -1314,11 +1314,11 @@
         "dependencies": {
           "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
           "Bitwarden.Server.Sdk.Features": "[1.5.0, )",
-          "Core": "[2026.10.1, )",
-          "Infrastructure.Dapper": "[2026.10.1, )",
-          "Infrastructure.EntityFramework": "[2026.10.1, )",
+          "Core": "[2026.11.0, )",
+          "Infrastructure.Dapper": "[2026.11.0, )",
+          "Infrastructure.EntityFramework": "[2026.11.0, )",
           "Microsoft.Bot.Builder.Integration.AspNet.Core": "[4.23.0, 4.23.0]",
-          "Swashbuckle.AspNetCore.SwaggerGen": "[10.1.7, 10.1.7]"
+          "Swashbuckle.AspNetCore.SwaggerGen": "[10.3.1, 10.3.1]"
         }
       },
       "ssrfprotection": {
