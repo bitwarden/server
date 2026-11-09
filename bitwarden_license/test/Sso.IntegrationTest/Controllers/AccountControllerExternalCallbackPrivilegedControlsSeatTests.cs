@@ -468,6 +468,50 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     }
 
     /*
+    * FAILURE PATH: A person with an existing Bitwarden account signs in with SSO against a Staged member with
+    * Privileged Controls access. All Privileged Controls seats are taken, so autoscale buys one, and then the
+    * invite email fails. The SSO callback rolls the member back to Staged with Privileged Controls access. The
+    * seat that autoscale bought stays bought.
+    */
+    [Fact]
+    public async Task ExternalCallback_ExistingUserAgainstStagedOrgUserWithPrivilegedControls_WhenInviteSendFailsAfterSeatBought_KeepsSeatAndRestoresStaged()
+    {
+        // Arrange — one Privileged Controls seat, already taken, no autoscale limit.
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithMockedPricingClient()
+            .WithConfiguration(_billingSupportFlagSetting, "true")
+            .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: null))
+            .WithUser()
+            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
+            .WithMockedSendOrganizationInvitesCommand()
+            .WithMockedMailer()
+            .BuildAsync();
+        await SeedOwnerAsync(testData);
+        await SeedPrivilegedControlsSeatHolderAsync(testData);
+
+        var inviteCommand = testData.Factory.Services.GetRequiredService<ISendOrganizationInvitesCommand>();
+        inviteCommand
+            .When(x => x.SendInvitesAsync(Arg.Any<SendInvitesRequest>()))
+            .Do(_ => throw new Exception("simulated invite send failure"));
+
+        // Act
+        var response = await testData.Factory.CreateClient().GetAsync("/Account/ExternalCallback");
+
+        // Assert — the untyped exception surfaces as a 500, after the invite step was reached.
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        await inviteCommand.Received(1).SendInvitesAsync(Arg.Any<SendInvitesRequest>());
+
+        var orgUser = await GetOrgUserAsync(testData);
+        Assert.Equal(OrganizationUserStatusType.Staged, orgUser.Status);
+        Assert.Null(orgUser.UserId);
+        Assert.True(orgUser.AccessPam);
+
+        Assert.Equal(2, (await GetOrganizationAsync(testData)).PamSeats);
+        await AssertSeatNeededEmailNotSentAsync(testData);
+    }
+
+    /*
     * DEGRADED PATH: On cloud, a just-in-time provisioned user claims a Staged member with Privileged Controls
     * access, and the seat reservation fails for a reason other than the seat limit. The member joins without
     * Privileged Controls access. The Owners get no seat-needed email, because more seats would not fix the
