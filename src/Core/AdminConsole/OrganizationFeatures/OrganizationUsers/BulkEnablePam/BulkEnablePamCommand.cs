@@ -33,9 +33,11 @@ public class BulkEnablePamCommand(
 
         var additionalPamSeatsRequired =
             await countNewPamSeatsRequiredQuery.CountNewPamSeatsRequiredAsync(organization, organizationUsers.Count);
-        if (additionalPamSeatsRequired > 0 && globalSettings.SelfHosted)
+        if (additionalPamSeatsRequired > 0)
         {
-            return new CannotAutoscalePamSeatsOnSelfHost();
+            return globalSettings.SelfHosted
+                ? new CannotAutoscalePamSeatsOnSelfHost()
+                : new NotEnoughPrivilegedControlsSeats();
         }
 
         foreach (var organizationUser in organizationUsers)
