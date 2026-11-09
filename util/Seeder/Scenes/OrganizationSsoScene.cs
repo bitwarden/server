@@ -44,6 +44,7 @@ public class OrganizationSsoScene(
         public OpenIdConnectRedirectBehavior RedirectBehavior { get; set; } = OpenIdConnectRedirectBehavior.RedirectGet;
         public bool GetClaimsFromUserInfoEndpoint { get; set; } = true;
         public MemberDecryptionType MemberDecryptionType { get; set; } = MemberDecryptionType.MasterPassword;
+        public bool RequireSsoLoginPolicy { get; set; }
     }
 
     public async Task<SceneResult<OrganizationSsoSceneResult>> SeedAsync(Request request)
@@ -51,13 +52,12 @@ public class OrganizationSsoScene(
         var organization = await organizationRepository.GetOrganizationForSsoSeedOrThrowAsync(
             ssoConfigRepository, request.OrganizationId);
 
-        var existingTdePolicies = new List<(PolicyType Type, Policy? Existing)>();
-        if (request.MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption)
+        var policyTypes = PolicyTypesFor(request);
+
+        var existingPolicies = new List<(PolicyType Type, Policy? Existing)>();
+        foreach (var type in policyTypes)
         {
-            foreach (var type in _trustedDeviceEncryptionPolicyTypes)
-            {
-                existingTdePolicies.Add((type, await policyRepository.GetByOrganizationIdTypeAsync(organization.Id, type)));
-            }
+            existingPolicies.Add((type, await policyRepository.GetByOrganizationIdTypeAsync(organization.Id, type)));
         }
 
         var identifier = manglerService.Mangle(request.Identifier);
@@ -76,7 +76,7 @@ public class OrganizationSsoScene(
             request.MemberDecryptionType);
         await ssoConfigRepository.CreateAsync(ssoConfig);
 
-        foreach (var (type, existing) in existingTdePolicies)
+        foreach (var (type, existing) in existingPolicies)
         {
             await UpsertEnabledPolicyAsync(organization.Id, type, existing);
         }
@@ -87,6 +87,17 @@ public class OrganizationSsoScene(
                 Identifier = identifier
             },
             mangleMap: manglerService.GetMangleMap());
+    }
+
+    private static PolicyType[] PolicyTypesFor(Request request)
+    {
+        if (request.MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption)
+        {
+            return _trustedDeviceEncryptionPolicyTypes;
+        }
+
+        // SingleOrg must be enabled before RequireSso
+        return request.RequireSsoLoginPolicy ? [PolicyType.SingleOrg, PolicyType.RequireSso] : [];
     }
 
     private async Task UpsertEnabledPolicyAsync(Guid organizationId, PolicyType type, Policy? existing)

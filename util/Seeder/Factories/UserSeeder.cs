@@ -33,7 +33,7 @@ internal static class UserSeeder
             MasterPassword = null,
             MasterPasswordHint = seed.MasterPasswordHint,
             SecurityStamp = Guid.NewGuid().ToString(),
-            Key = keys.EncryptedUserKey,
+            Key = seed.NoMasterPassword ? null : keys.EncryptedUserKey,
             PublicKey = keys.PublicKey,
             PrivateKey = keys.PrivateKey,
             Premium = seed.Premium,
@@ -66,7 +66,10 @@ internal static class UserSeeder
             user.SetTwoFactorProviders(seed.TwoFactorProviders);
         }
 
-        user.MasterPassword = passwordHasher.HashPassword(user, keys.MasterPasswordHash);
+        if (!seed.NoMasterPassword)
+        {
+            user.MasterPassword = passwordHasher.HashPassword(user, keys.MasterPasswordHash);
+        }
 
         return (user, keys);
     }

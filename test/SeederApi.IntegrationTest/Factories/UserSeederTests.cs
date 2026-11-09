@@ -128,6 +128,18 @@ public class UserSeederTests
     }
 
     [Fact]
+    public void Create_WithNoMasterPassword_OmitsPasswordHashAndUserKey()
+    {
+        var (user, _) = UserSeeder.Create(
+            new UserSeed { Email = _email, NoMasterPassword = true },
+            _passwordHasher,
+            new NoOpManglerService());
+
+        Assert.Null(user.MasterPassword);
+        Assert.Null(user.Key);
+    }
+
+    [Fact]
     public void Create_NullName_DefaultsToEmailLocalPart()
     {
         var (user, _) = UserSeeder.Create(new UserSeed { Email = _email }, _passwordHasher, new NoOpManglerService());
