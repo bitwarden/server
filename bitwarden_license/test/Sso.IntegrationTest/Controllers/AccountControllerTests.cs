@@ -1190,11 +1190,8 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         var response = await client.GetAsync("/Account/ExternalCallback");
 
         // Assert — 302 to /login with the StagedOrgUserInviteAcceptanceRequired error code and context.
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.NotNull(response.Headers.Location);
+        ExternalCallbackAssertions.AssertStagedInviteAcceptanceRequiredRedirect(response);
         var location = response.Headers.Location!.ToString();
-        Assert.Contains("/login?", location);
-        Assert.Contains("error=ssoStagedOrgUserInviteAcceptanceRequired", location);
         Assert.Contains($"email={Uri.EscapeDataString(testData.User!.Email)}", location);
         Assert.Contains($"organizationId={testData.Organization!.Id}", location);
 

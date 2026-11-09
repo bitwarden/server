@@ -435,7 +435,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         var response = await CreateNonRedirectingClient(testData).GetAsync("/Account/ExternalCallback");
 
         // Assert
-        AssertStagedInviteAcceptanceRequiredRedirect(response);
+        ExternalCallbackAssertions.AssertStagedInviteAcceptanceRequiredRedirect(response);
 
         var orgUser = await GetOrgUserAsync(testData);
         Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
@@ -467,7 +467,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         var response = await CreateNonRedirectingClient(testData).GetAsync("/Account/ExternalCallback");
 
         // Assert
-        AssertStagedInviteAcceptanceRequiredRedirect(response);
+        ExternalCallbackAssertions.AssertStagedInviteAcceptanceRequiredRedirect(response);
 
         var orgUser = await GetOrgUserAsync(testData);
         Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
@@ -498,7 +498,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         var response = await CreateNonRedirectingClient(testData).GetAsync("/Account/ExternalCallback");
 
         // Assert
-        AssertStagedInviteAcceptanceRequiredRedirect(response);
+        ExternalCallbackAssertions.AssertStagedInviteAcceptanceRequiredRedirect(response);
 
         var orgUser = await GetOrgUserAsync(testData);
         Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
@@ -530,7 +530,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         var response = await CreateNonRedirectingClient(testData).GetAsync("/Account/ExternalCallback");
 
         // Assert
-        AssertStagedInviteAcceptanceRequiredRedirect(response);
+        ExternalCallbackAssertions.AssertStagedInviteAcceptanceRequiredRedirect(response);
 
         var orgUser = await GetOrgUserAsync(testData);
         Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
@@ -659,7 +659,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         var response = await CreateNonRedirectingClient(testData).GetAsync("/Account/ExternalCallback");
 
         // Assert
-        AssertStagedInviteAcceptanceRequiredRedirect(response);
+        ExternalCallbackAssertions.AssertStagedInviteAcceptanceRequiredRedirect(response);
 
         var orgUser = await GetOrgUserAsync(testData);
         Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
@@ -728,7 +728,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         var response = await CreateNonRedirectingClient(testData).GetAsync("/Account/ExternalCallback");
 
         // Assert
-        AssertStagedInviteAcceptanceRequiredRedirect(response);
+        ExternalCallbackAssertions.AssertStagedInviteAcceptanceRequiredRedirect(response);
         await AssertSubscriptionLookupAttemptedAsync(testData);
 
         var orgUser = await GetOrgUserAsync(testData);
@@ -1028,14 +1028,5 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         var location = response.Headers.Location.ToString();
         Assert.DoesNotContain("/login?", location);
         Assert.DoesNotContain("/sso-login-failed?", location);
-    }
-
-    private static void AssertStagedInviteAcceptanceRequiredRedirect(HttpResponseMessage response)
-    {
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.NotNull(response.Headers.Location);
-        var location = response.Headers.Location.ToString();
-        Assert.Contains("/login?", location);
-        Assert.Contains("error=ssoStagedOrgUserInviteAcceptanceRequired", location);
     }
 }
