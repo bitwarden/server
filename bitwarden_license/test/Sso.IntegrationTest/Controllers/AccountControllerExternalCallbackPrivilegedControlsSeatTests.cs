@@ -240,6 +240,51 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     }
 
     /*
+    * FAILURE PATH: A just-in-time provisioned user claims a Staged member with Privileged Controls access, and
+    * the organization is at its Privileged Controls autoscale limit, so no seat can be reserved. Creating the user
+    * then fails, because another organization claims the email domain and blocks account creation. The SSO
+    * callback fails before it saves the member, so the member stays Staged with Privileged Controls access. The
+    * Owners get no Privileged Controls email, because the member did not move to Invited.
+    */
+    [Fact]
+    public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_AtSeatLimit_WhenRegistrationFails_StaysStagedAndDoesNotEmail()
+    {
+        // Arrange — one Privileged Controls seat, already taken, autoscale limit of one. Another organization
+        // claims the member's email domain and blocks account creation for it.
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithMockedPricingClient()
+            .WithConfiguration(_billingSupportFlagSetting, "true")
+            .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: 1))
+            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
+            .WithMockedMailer()
+            .BuildAsync();
+        await SeedOwnerAsync(testData);
+        await SeedPrivilegedControlsSeatHolderAsync(testData);
+        var claimedEmail = testData.OrganizationUser!.Email!;
+        await SeedOtherOrganizationBlockingDomainAsync(testData, claimedEmail.Split('@')[1]);
+
+        // Act
+        var response = await CreateNonRedirectingClient(testData).GetAsync("/Account/ExternalCallback");
+
+        // Assert — the domain claim blocks registration, and the error surfaces as a 500.
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Contains("This email address is claimed by an organization using Bitwarden.",
+            await response.Content.ReadAsStringAsync());
+
+        var userRepository = testData.Factory.Services.GetRequiredService<IUserRepository>();
+        Assert.Null(await userRepository.GetByEmailAsync(claimedEmail));
+
+        var orgUser = await GetOrgUserAsync(testData);
+        Assert.Equal(OrganizationUserStatusType.Staged, orgUser.Status);
+        Assert.Null(orgUser.UserId);
+        Assert.True(orgUser.AccessPam);
+
+        Assert.Equal(1, (await GetOrganizationAsync(testData)).PamSeats);
+        await AssertNoPrivilegedControlsEmailSentAsync(testData);
+    }
+
+    /*
     * SUCCESS PATH: On cloud with the billing support flag off, a just-in-time provisioned user claims a Staged
     * member with Privileged Controls access, and the organization is at its Privileged Controls autoscale limit.
     * With the flag off, the reservation does not check seats, so the member keeps access, no seat is bought, and
