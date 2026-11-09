@@ -8,6 +8,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bitwarden.Server.Sdk.Features;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -46,6 +47,7 @@ public class ReconcilePremiumJobTests
             _userService,
             _pushNotificationAdapter,
             _featureService,
+            GlobalSettingsInRegion("US"),
             Substitute.For<ILogger<ReconcilePremiumJob>>());
     }
 
@@ -66,7 +68,8 @@ public class ReconcilePremiumJobTests
         var periodEnd = DateTime.UtcNow.AddMonths(11);
         var user = UserWith(premium: false, gatewaySubscriptionId: "sub_current");
         LiveSubscriptions(Subscription("sub_current", user.Id, periodEnd));
-        _userRepository.GetByIdAsync(user.Id).Returns(user, UserWith(premium: true, gatewaySubscriptionId: "sub_current", id: user.Id));
+        Users(user);
+        _userRepository.GetByIdAsync(user.Id).Returns(UserWith(premium: true, gatewaySubscriptionId: "sub_current", id: user.Id));
 
         await _sut.Execute(CreateContext());
 
@@ -80,7 +83,7 @@ public class ReconcilePremiumJobTests
         var periodEnd = DateTime.UtcNow.AddMonths(11);
         var user = UserWith(premium: false, gatewaySubscriptionId: "sub_canceled");
         LiveSubscriptions(Subscription("sub_unlinked", user.Id, periodEnd));
-        _userRepository.GetByIdAsync(user.Id).Returns(user);
+        Users(user);
 
         await _sut.Execute(CreateContext());
 
@@ -96,8 +99,7 @@ public class ReconcilePremiumJobTests
         LiveSubscriptions(
             Subscription("sub_a", off.Id, DateTime.UtcNow.AddMonths(11)),
             Subscription("sub_b", lagging.Id, DateTime.UtcNow.AddMonths(11)));
-        _userRepository.GetByIdAsync(off.Id).Returns(off);
-        _userRepository.GetByIdAsync(lagging.Id).Returns(lagging);
+        Users(off, lagging);
 
         await _sut.Execute(CreateContext());
 
@@ -112,7 +114,7 @@ public class ReconcilePremiumJobTests
         var periodEnd = DateTime.UtcNow.AddMonths(11);
         var user = UserWith(premium: true, gatewaySubscriptionId: "sub_current", premiumExpirationDate: DateTime.UtcNow.AddDays(-3));
         LiveSubscriptions(Subscription("sub_current", user.Id, periodEnd));
-        _userRepository.GetByIdAsync(user.Id).Returns(user);
+        Users(user);
 
         await _sut.Execute(CreateContext());
 
@@ -128,7 +130,7 @@ public class ReconcilePremiumJobTests
         LiveSubscriptions(
             Subscription("sub_old", user.Id, DateTime.UtcNow.AddMonths(2)),
             Subscription("sub_new", user.Id, periodEnd));
-        _userRepository.GetByIdAsync(user.Id).Returns(user);
+        Users(user);
 
         await _sut.Execute(CreateContext());
 
@@ -148,8 +150,7 @@ public class ReconcilePremiumJobTests
         _stripeAdapter.ListSubscriptionsAsync(Arg.Is<SubscriptionListOptions>(options =>
                 options.Status == StripeConstants.SubscriptionStatus.Active && options.StartingAfter == "sub_1"))
             .Returns(new StripeList<Subscription> { Data = [Subscription("sub_2", second.Id, DateTime.UtcNow.AddMonths(6))], HasMore = false });
-        _userRepository.GetByIdAsync(first.Id).Returns(first);
-        _userRepository.GetByIdAsync(second.Id).Returns(second);
+        Users(first, second);
 
         await _sut.Execute(CreateContext());
 
@@ -165,12 +166,41 @@ public class ReconcilePremiumJobTests
         LiveSubscriptions(
             Subscription("sub_fail", failing.Id, DateTime.UtcNow.AddMonths(6)),
             Subscription("sub_ok", healthy.Id, DateTime.UtcNow.AddMonths(6)));
-        _userRepository.GetByIdAsync(failing.Id).ThrowsAsync(new Exception("database unavailable"));
-        _userRepository.GetByIdAsync(healthy.Id).Returns(healthy);
+        Users(failing, healthy);
+        _userService.EnablePremiumAsync(failing.Id, Arg.Any<DateTime?>()).ThrowsAsync(new Exception("database unavailable"));
 
         await _sut.Execute(CreateContext());
 
         await _userService.Received(1).EnablePremiumAsync(healthy.Id, Arg.Any<DateTime?>());
+    }
+
+    [Fact]
+    public async Task Execute_UserBatchReadFails_ContinuesWithNextBatch()
+    {
+        var users = Enumerable.Range(0, 1001).Select(index => UserWith(premium: false, gatewaySubscriptionId: $"sub_{index}")).ToList();
+        LiveSubscriptions([.. users.Select(user => Subscription(user.GatewaySubscriptionId!, user.Id, DateTime.UtcNow.AddMonths(6)))]);
+        _userRepository.GetManyAsync(Arg.Any<IEnumerable<Guid>>()).Returns(
+            _ => throw new Exception("database unavailable"),
+            callInfo => users.Where(user => callInfo.Arg<IEnumerable<Guid>>().Contains(user.Id)));
+
+        await _sut.Execute(CreateContext());
+
+        await _userRepository.Received(2).GetManyAsync(Arg.Any<IEnumerable<Guid>>());
+        await _userService.Received(1).EnablePremiumAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>());
+        await _userService.Received(1).EnablePremiumAsync(users[^1].Id, Arg.Any<DateTime?>());
+    }
+
+    [Fact]
+    public async Task Execute_SubscriptionInAnotherRegion_IsIgnored()
+    {
+        var user = UserWith(premium: false, gatewaySubscriptionId: "sub_eu");
+        LiveSubscriptions(Subscription("sub_eu", user.Id, DateTime.UtcNow.AddMonths(6), region: "EU"));
+        Users(user);
+
+        await _sut.Execute(CreateContext());
+
+        await _userRepository.DidNotReceiveWithAnyArgs().GetManyAsync(default!);
+        await _userService.DidNotReceiveWithAnyArgs().EnablePremiumAsync(default, default);
     }
 
     [Fact]
@@ -179,23 +209,29 @@ public class ReconcilePremiumJobTests
         LiveSubscriptions(new Subscription
         {
             Id = "sub_org",
+            Customer = CustomerInRegion("US"),
             Metadata = new Dictionary<string, string> { ["organizationId"] = Guid.NewGuid().ToString() },
             Items = new StripeList<SubscriptionItem> { Data = [new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddMonths(6) }] }
         });
 
         await _sut.Execute(CreateContext());
 
-        await _userRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(default);
+        await _userRepository.DidNotReceiveWithAnyArgs().GetManyAsync(default!);
     }
+
+    private void Users(params User[] users) =>
+        _userRepository.GetManyAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(callInfo => users.Where(user => callInfo.Arg<IEnumerable<Guid>>().Contains(user.Id)));
 
     private void LiveSubscriptions(params Subscription[] subscriptions) =>
         _stripeAdapter.ListSubscriptionsAsync(Arg.Is<SubscriptionListOptions>(options =>
                 options.Price == PremiumPriceId && options.Status == StripeConstants.SubscriptionStatus.Active))
             .Returns(new StripeList<Subscription> { Data = [.. subscriptions], HasMore = false });
 
-    private static Subscription Subscription(string id, Guid userId, DateTime currentPeriodEnd) => new()
+    private static Subscription Subscription(string id, Guid userId, DateTime currentPeriodEnd, string region = "US") => new()
     {
         Id = id,
+        Customer = CustomerInRegion(region),
         Status = StripeConstants.SubscriptionStatus.Active,
         Metadata = new Dictionary<string, string> { [StripeConstants.MetadataKeys.UserId] = userId.ToString() },
         Items = new StripeList<SubscriptionItem> { Data = [new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd }] }
@@ -208,6 +244,16 @@ public class ReconcilePremiumJobTests
         GatewaySubscriptionId = gatewaySubscriptionId,
         PremiumExpirationDate = premiumExpirationDate
     };
+
+    private static Customer CustomerInRegion(string region) =>
+        new() { Metadata = new Dictionary<string, string> { [StripeConstants.MetadataKeys.Region] = region } };
+
+    private static GlobalSettings GlobalSettingsInRegion(string region)
+    {
+        var globalSettings = new GlobalSettings();
+        globalSettings.BaseServiceUri = new GlobalSettings.BaseServiceUriSettings(globalSettings) { CloudRegion = region };
+        return globalSettings;
+    }
 
     private static IJobExecutionContext CreateContext()
     {
