@@ -452,11 +452,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         Assert.Null(orgUser.UserId);
         Assert.True(orgUser.AccessPam);
 
-        var inviteCommand = testData.Factory.Services.GetRequiredService<ISendOrganizationInvitesCommand>();
-        await inviteCommand.Received(1).SendInvitesAsync(Arg.Is<SendInvitesRequest>(r =>
-            r.Users.Length == 1 &&
-            r.Users[0].Id == testData.OrganizationUser!.Id &&
-            r.Users[0].AccessPam));
+        await AssertInviteSentAsync(testData, expectedAccessPam: true);
 
         Assert.Equal(1, (await GetOrganizationAsync(testData)).PamSeats);
         await AssertSeatNeededEmailNotSentAsync(testData);
@@ -487,11 +483,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
         Assert.False(orgUser.AccessPam);
 
-        var inviteCommand = testData.Factory.Services.GetRequiredService<ISendOrganizationInvitesCommand>();
-        await inviteCommand.Received(1).SendInvitesAsync(Arg.Is<SendInvitesRequest>(r =>
-            r.Users.Length == 1 &&
-            r.Users[0].Id == testData.OrganizationUser!.Id &&
-            !r.Users[0].AccessPam));
+        await AssertInviteSentAsync(testData, expectedAccessPam: false);
 
         Assert.Equal(1, (await GetOrganizationAsync(testData)).PamSeats);
         await AssertSeatNeededEmailSentAsync(testData, ownerEmail, testData.OrganizationUser!.Email!);
@@ -522,11 +514,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
         Assert.True(orgUser.AccessPam);
 
-        var inviteCommand = testData.Factory.Services.GetRequiredService<ISendOrganizationInvitesCommand>();
-        await inviteCommand.Received(1).SendInvitesAsync(Arg.Is<SendInvitesRequest>(r =>
-            r.Users.Length == 1 &&
-            r.Users[0].Id == testData.OrganizationUser!.Id &&
-            r.Users[0].AccessPam));
+        await AssertInviteSentAsync(testData, expectedAccessPam: true);
 
         Assert.Equal(1, (await GetOrganizationAsync(testData)).PamSeats);
         await AssertNoPrivilegedControlsEmailSentAsync(testData);
@@ -558,11 +546,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
         Assert.False(orgUser.AccessPam);
 
-        var inviteCommand = testData.Factory.Services.GetRequiredService<ISendOrganizationInvitesCommand>();
-        await inviteCommand.Received(1).SendInvitesAsync(Arg.Is<SendInvitesRequest>(r =>
-            r.Users.Length == 1 &&
-            r.Users[0].Id == testData.OrganizationUser!.Id &&
-            !r.Users[0].AccessPam));
+        await AssertInviteSentAsync(testData, expectedAccessPam: false);
 
         Assert.Equal(1, (await GetOrganizationAsync(testData)).PamSeats);
         await AssertNoPrivilegedControlsEmailSentAsync(testData);
@@ -583,10 +567,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
 
-        var inviteCommand = testData.Factory.Services.GetRequiredService<ISendOrganizationInvitesCommand>();
-        inviteCommand
-            .When(x => x.SendInvitesAsync(Arg.Any<SendInvitesRequest>()))
-            .Do(_ => throw new Exception("simulated invite send failure"));
+        var inviteCommand = FailInviteSend(testData);
 
         // Act
         var response = await testData.Factory.CreateClient().GetAsync("/Account/ExternalCallback");
@@ -618,10 +599,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
 
-        var inviteCommand = testData.Factory.Services.GetRequiredService<ISendOrganizationInvitesCommand>();
-        inviteCommand
-            .When(x => x.SendInvitesAsync(Arg.Any<SendInvitesRequest>()))
-            .Do(_ => throw new Exception("simulated invite send failure"));
+        var inviteCommand = FailInviteSend(testData);
 
         // Act
         var response = await testData.Factory.CreateClient().GetAsync("/Account/ExternalCallback");
@@ -769,6 +747,32 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
 
         Assert.Equal(1, (await GetOrganizationAsync(testData)).PamSeats);
         await AssertNoPrivilegedControlsEmailSentAsync(testData);
+    }
+
+    /// <summary>
+    /// Asserts the SSO callback sent one invite, for the Staged member only, with the given Privileged Controls
+    /// access.
+    /// </summary>
+    private static async Task AssertInviteSentAsync(SsoTestData testData, bool expectedAccessPam)
+    {
+        var inviteCommand = testData.Factory.Services.GetRequiredService<ISendOrganizationInvitesCommand>();
+        await inviteCommand.Received(1).SendInvitesAsync(Arg.Is<SendInvitesRequest>(r =>
+            r.Users.Length == 1 &&
+            r.Users[0].Id == testData.OrganizationUser!.Id &&
+            r.Users[0].AccessPam == expectedAccessPam));
+    }
+
+    /// <summary>
+    /// Makes the substituted invite command throw, so the invite email fails.
+    /// </summary>
+    /// <returns>The substituted invite command, so a test can check that the invite step was reached.</returns>
+    private static ISendOrganizationInvitesCommand FailInviteSend(SsoTestData testData)
+    {
+        var inviteCommand = testData.Factory.Services.GetRequiredService<ISendOrganizationInvitesCommand>();
+        inviteCommand
+            .When(x => x.SendInvitesAsync(Arg.Any<SendInvitesRequest>()))
+            .Do(_ => throw new Exception("simulated invite send failure"));
+        return inviteCommand;
     }
 
     private const string _subscriptionId = "sub_integration_test";
