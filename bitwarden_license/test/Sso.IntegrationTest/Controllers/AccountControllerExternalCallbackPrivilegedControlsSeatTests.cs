@@ -111,7 +111,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         Assert.True(orgUser.AccessPam);
 
         Assert.Equal(2, (await GetOrganizationAsync(testData)).PamSeats);
-        await AssertSeatNeededEmailNotSentAsync(testData);
+        await AssertNoPrivilegedControlsEmailSentAsync(testData);
     }
 
     /*
@@ -155,7 +155,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         await stripeAdapter.Received(1).UpdateSubscriptionAsync(_subscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options => options.Items.Any(item =>
                 item.Id == _privilegedControlsSeatItemId && item.Quantity == 2)));
-        await AssertSeatNeededEmailNotSentAsync(testData);
+        await AssertNoPrivilegedControlsEmailSentAsync(testData);
     }
 
     /*
@@ -260,7 +260,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         Assert.False(orgUser.AccessPam);
 
         Assert.Equal(1, (await GetOrganizationAsync(testData)).PamSeats);
-        await AssertSeatNeededEmailNotSentAsync(testData);
+        await AssertNoPrivilegedControlsEmailSentAsync(testData);
     }
 
     /*
@@ -294,7 +294,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         Assert.False(orgUser.AccessPam);
 
         Assert.Equal(1, (await GetOrganizationAsync(testData)).PamSeats);
-        await AssertSeatNeededEmailNotSentAsync(testData);
+        await AssertNoPrivilegedControlsEmailSentAsync(testData);
     }
 
     /*
@@ -335,7 +335,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         Assert.True(orgUser.AccessPam);
 
         Assert.Equal(1, (await GetOrganizationAsync(testData)).PamSeats);
-        await AssertSeatNeededEmailNotSentAsync(testData);
+        await AssertNoPrivilegedControlsEmailSentAsync(testData);
     }
 
     /*
@@ -464,7 +464,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         Assert.Null(orgUser.UserId);
         Assert.True(orgUser.AccessPam);
 
-        await AssertSeatNeededEmailNotSentAsync(testData);
+        await AssertNoPrivilegedControlsEmailSentAsync(testData);
     }
 
     /*
@@ -508,7 +508,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         Assert.True(orgUser.AccessPam);
 
         Assert.Equal(2, (await GetOrganizationAsync(testData)).PamSeats);
-        await AssertSeatNeededEmailNotSentAsync(testData);
+        await AssertNoPrivilegedControlsEmailSentAsync(testData);
     }
 
     /*
@@ -550,7 +550,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         Assert.False(orgUser.AccessPam);
 
         Assert.Equal(1, (await GetOrganizationAsync(testData)).PamSeats);
-        await AssertSeatNeededEmailNotSentAsync(testData);
+        await AssertNoPrivilegedControlsEmailSentAsync(testData);
     }
 
     /*
@@ -586,7 +586,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         Assert.False(orgUser.AccessPam);
 
         Assert.Equal(1, (await GetOrganizationAsync(testData)).PamSeats);
-        await AssertSeatNeededEmailNotSentAsync(testData);
+        await AssertNoPrivilegedControlsEmailSentAsync(testData);
     }
 
     /*
@@ -631,7 +631,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         Assert.True(orgUser.AccessPam);
 
         Assert.Equal(1, (await GetOrganizationAsync(testData)).PamSeats);
-        await AssertSeatNeededEmailNotSentAsync(testData);
+        await AssertNoPrivilegedControlsEmailSentAsync(testData);
     }
 
     /*
@@ -675,7 +675,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         Assert.False(orgUser.AccessPam);
 
         Assert.Equal(1, (await GetOrganizationAsync(testData)).PamSeats);
-        await AssertSeatNeededEmailNotSentAsync(testData);
+        await AssertNoPrivilegedControlsEmailSentAsync(testData);
     }
 
     private const string _subscriptionId = "sub_integration_test";
@@ -817,6 +817,17 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     {
         var mailer = testData.Factory.Services.GetRequiredService<IMailer>();
         await mailer.DidNotReceive().SendEmail(Arg.Any<PrivilegedControlsSeatNeededMail>());
+    }
+
+    /// <summary>
+    /// Asserts the Owners got neither Privileged Controls seat email: not the seat-needed email and not the
+    /// limit-reached email.
+    /// </summary>
+    private static async Task AssertNoPrivilegedControlsEmailSentAsync(SsoTestData testData)
+    {
+        var mailer = testData.Factory.Services.GetRequiredService<IMailer>();
+        await mailer.DidNotReceive().SendEmail(Arg.Any<PrivilegedControlsSeatNeededMail>());
+        await mailer.DidNotReceive().SendEmail(Arg.Any<PrivilegedControlsSeatLimitReachedMail>());
     }
 
     private static async Task AssertSeatLimitReachedEmailSentAsync(SsoTestData testData, string ownerEmail,
