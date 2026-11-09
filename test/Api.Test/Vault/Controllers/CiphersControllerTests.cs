@@ -8,6 +8,7 @@ using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models;
 using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.Context;
@@ -2533,6 +2534,44 @@ public class CiphersControllerTests
             .AuthorizeReadAsync(userId, Arg.Any<Cipher>())
             .Returns((FullCipherAccess)null);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
+
+        var result = await sutProvider.Sut.Get(cipherId);
+
+        Assert.Null(result.Data);
+        Assert.NotNull(result.PartialData);
+        Assert.DoesNotContain("2.password|encrypted", result.PartialData);
+    }
+
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task Get_LeasingGatedCipher_BrowserExtension_FollowsFlag(
+        bool flagOn, Guid cipherId, Guid userId, User user,
+        SutProvider<CiphersController> sutProvider)
+    {
+        user.Id = userId;
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        var cipherDetails = new CipherDetails
+        {
+            Id = cipherId,
+            UserId = userId,
+            Type = CipherType.Login,
+            Data = """{"Name":"2.name|encrypted","Password":"2.password|encrypted"}""",
+        };
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId, userId)
+            .Returns(Task.FromResult(cipherDetails));
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .AuthorizeReadAsync(userId, Arg.Any<Cipher>())
+            .Returns((FullCipherAccess)null);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeExtension);
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PamBrowserPartialCiphers).Returns(flagOn);
+
+        if (!flagOn)
+        {
+            await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Get(cipherId));
+            return;
+        }
 
         var result = await sutProvider.Sut.Get(cipherId);
 
