@@ -176,12 +176,12 @@ enum FailureSyncState { target_unchanged | target_updated | indeterminate }
 -- Entities
 
 -- A target system the access connector can rotate credentials in (Entra, a SQL Server, a custom
--- script, ...). Defined and owned server-side: the admin registers it with a name and a
--- rotation method, and the server holds NO connection details -- those live in the
--- access connector's local resolver, keyed by this id (see access-connector.allium). Status enables or
--- disables the whole target. Status literals (pending_seal|active|disabled) are deliberately
--- distinct from ConnectorRegistration's (enrolled|revoked) so untyped trigger-param inference
--- stays unambiguous.
+-- script, an on-premises Active Directory domain, ...). Defined and owned server-side: the admin
+-- registers it with a name and a rotation method, and the server holds NO connection details --
+-- those live in the access connector's local resolver, keyed by this id (see
+-- access-connector.allium). Status enables or disables the whole target. Status literals
+-- (pending_seal|active|disabled) are deliberately distinct from ConnectorRegistration's
+-- (enrolled|revoked) so untyped trigger-param inference stays unambiguous.
 --
 -- Registration is two-phase (RegisterTargetSystem then UpdateTargetSystem) because the sealed
 -- blob must bind the target's own server-assigned id (TargetSystemSealedV1.target_system_id,
@@ -297,8 +297,9 @@ entity RotationConfig {
     cipher: connector/Cipher
     target_system: TargetSystem
     -- Opaque: the sealed RotationConfigSealedV1 blob (the account's identifier in the
-    -- target system -- an Entra UPN/email, a SQL Server login, a custom-script argument --
-    -- and the terminate-sessions opt-in), encrypted client-side under the organization key.
+    -- target system -- an Entra UPN/email, a SQL Server login, a custom-script argument, an
+    -- Active Directory sAMAccountName or UPN -- and the terminate-sessions opt-in), encrypted
+    -- client-side under the organization key.
     -- Present from creation (configs are single-call, not two-phase: both ids the blob
     -- binds -- target_system_id, cipher_id -- already exist). The server stores and
     -- forwards it unopened and never parses it. See pam-rotation-sealed-config-plan.md.
