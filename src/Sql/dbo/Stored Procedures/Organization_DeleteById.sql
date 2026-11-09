@@ -194,11 +194,27 @@ BEGIN
             )
     END
 
+    DECLARE @AccessConnectorApiKeyIds TABLE ([Id] UNIQUEIDENTIFIER NOT NULL PRIMARY KEY)
+
+    INSERT INTO @AccessConnectorApiKeyIds
+    SELECT
+        [ApiKeyId]
+    FROM
+        [dbo].[PamAccessConnector]
+    WHERE
+        [OrganizationId] = @Id
+
     DELETE
     FROM
         [dbo].[Organization]
     WHERE
         [Id] = @Id
+
+    DELETE AK
+    FROM
+        [dbo].[ApiKey] AK
+    INNER JOIN
+        @AccessConnectorApiKeyIds I ON I.[Id] = AK.[Id]
 
     COMMIT TRANSACTION Organization_DeleteById
 END
