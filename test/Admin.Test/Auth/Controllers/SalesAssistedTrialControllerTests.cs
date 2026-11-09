@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Bit.Admin.Auth.Controllers;
 using Bit.Admin.Auth.Models.SalesAssistedTrial;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.TrialInitiation.Registration;
 using Bit.Core.Exceptions;
@@ -53,7 +54,7 @@ public class SalesAssistedTrialControllerTests
         var model = Assert.IsType<SalesAssistedTrialInviteModel>(viewResult.Model);
         Assert.Equal(ProductTierType.Enterprise, model.ProductTier);
         Assert.Equal([ProductType.PasswordManager], model.Products);
-        Assert.Equal(30, model.TrialLength);
+        Assert.Equal(TrialInitiationConstants.DefaultTrialLengthDays, model.TrialLength);
     }
 
     [Theory, BitAutoData]
