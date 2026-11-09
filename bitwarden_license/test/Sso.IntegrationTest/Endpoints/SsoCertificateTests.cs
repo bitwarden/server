@@ -6,6 +6,7 @@ using System.Security.Cryptography.Xml;
 using System.Text.Json;
 using System.Xml;
 using System.Xml.Linq;
+using Azure.Storage.Blobs;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Settings;
@@ -14,6 +15,7 @@ using Bit.IntegrationTestCommon;
 using Bit.SharedWeb.Utilities;
 using Bit.Sso.IntegrationTest.Utilities;
 using Bit.Test.Common.Helpers;
+using DotNet.Testcontainers.Builders;
 using Duende.IdentityModel;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Stores;
@@ -25,6 +27,8 @@ namespace Bit.Sso.IntegrationTest.Endpoints;
 public class SsoCertificateTests
 {
     private const string OidcIdentityClientKey = "test-oidc-identity-client-key";
+    private const string AzuriteImage =
+        "mcr.microsoft.com/azure-storage/azurite:3.37.0@sha256:830430c1da1a2d537e08f3e6764dd1f5ae00cf0346bcaf625b968ec3f0971fd5";
     private static readonly XNamespace _md = "urn:oasis:names:tc:SAML:2.0:metadata";
     private static readonly XNamespace _ds = "http://www.w3.org/2000/09/xmldsig#";
 
@@ -221,7 +225,7 @@ public class SsoCertificateTests
     }
 
     [Fact]
-    public void Startup_ProductionWithNoSsoServer_Fails()
+    public void Startup_ProductionWithNoSsoServer_FailsOnSsoEncryptionFirst()
     {
         // Arrange
         using var factory = new SsoApplicationFactory();
@@ -230,8 +234,54 @@ public class SsoCertificateTests
             factory.UpdateConfiguration(key, value);
         }
 
-        // Act & Assert
-        StartupTestHelpers.AssertStartupFails(factory, "Production", "globalSettings:ssoServer");
+        // Act
+        var exception = StartupTestHelpers.AssertStartupFails(factory, "Production",
+            "No SSO encryption certificate is configured.");
+
+        // Assert
+        Assert.Equal(
+            "No SSO encryption certificate is configured. A cloud host must set globalSettings:ssoServer:encryption.",
+            exception.Message);
+    }
+
+    [Fact]
+    public async Task Startup_ProductionWithSsoEncryptionBlobAndNoSsoSigningSource_FailsOnSsoSigning()
+    {
+        // Arrange
+        await using var azurite = new ContainerBuilder(AzuriteImage)
+            .WithPortBinding(10000, true)
+            .Build();
+        await azurite.StartAsync();
+        var connectionString =
+            "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;" +
+            "AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;" +
+            $"BlobEndpoint=http://{azurite.Hostname}:{azurite.GetMappedPublicPort(10000)}/devstoreaccount1;";
+
+        using var encryption = TestCertificates.Create("CN=Bitwarden Test SSO Encryption");
+        var certificates = (await new BlobServiceClient(connectionString)
+            .CreateBlobContainerAsync("certificates")).Value;
+        await certificates.UploadBlobAsync("sso-encryption.pfx", new BinaryData(
+            encryption.Export(X509ContentType.Pfx, CertificateTestConfiguration.CertificatePassword)));
+
+        using var factory = new SsoApplicationFactory();
+        var configuration = CertificateTestConfiguration.NoCertificate();
+        configuration["globalSettings:storage:connectionString"] = connectionString;
+        configuration["globalSettings:dataProtection:keyProtectionPolicy"] = "StorageManaged";
+        configuration["globalSettings:ssoServer:encryption:blobName"] = "sso-encryption.pfx";
+        configuration["globalSettings:ssoServer:encryption:certificatePassword"] =
+            CertificateTestConfiguration.CertificatePassword;
+        foreach (var (key, value) in configuration)
+        {
+            factory.UpdateConfiguration(key, value);
+        }
+
+        // Act
+        var exception = StartupTestHelpers.AssertStartupFails(factory, "Production",
+            "No SSO signing certificate is configured.");
+
+        // Assert
+        Assert.Equal("No SSO signing certificate is configured. A cloud host must set globalSettings:ssoServer.",
+            exception.Message);
     }
 
     [Fact]
