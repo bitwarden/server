@@ -28,6 +28,7 @@ public record AlreadyAcceptedError() : BadRequestError("Already accepted.");
 public record ConfirmUserNotValidError() : BadRequestError("User not valid.");
 public record PasswordResetEnrollmentNotAllowedError() : BadRequestError("Organization does not allow password reset enrollment.");
 public record PasswordResetPolicyNotEnabledError() : BadRequestError("Organization does not have the password reset policy enabled.");
+public record InvalidResetPasswordKeyError() : BadRequestError("Invalid account recovery key.");
 public record CannotDeleteOrganizationWithKeyConnectorError() : BadRequestError("You cannot delete an organization vault that is using Key Connector.");
 public record SecretsManagerMspUnsupportedError() : BadRequestError("Secrets Manager is unsupported because your organization has a Managed Service Provider.");
 public record NoPasswordManagerSeatsError() : BadRequestError("You do not have any Password Manager seats!");
@@ -41,6 +42,7 @@ public record InvalidSecretsManagerPlanError() : BadRequestError("Invalid Secret
 public record NoSecretsManagerSeatsError() : BadRequestError("You do not have any Secrets Manager seats!");
 public record PlanDoesNotAllowAdditionalMachineAccountsError() : BadRequestError("Plan does not allow additional Machine Accounts.");
 public record SecretsManagerSeatsMustNotExceedPasswordManagerSeatsError() : BadRequestError("You cannot have more Secrets Manager seats than Password Manager seats.");
+public record PrivilegedControlsSeatsMustNotExceedPasswordManagerSeatsError() : BadRequestError("You cannot have more Privileged Controls seats than Password Manager seats.");
 public record CannotSubtractMachineAccountsError() : BadRequestError("You can't subtract Machine Accounts!");
 public record PlanNullError(string ProductType) : BadRequestError($"{ProductType} Plan was null.");
 public record PlanNotFoundError(string ProductType) : BadRequestError($"{ProductType} Plan not found.");

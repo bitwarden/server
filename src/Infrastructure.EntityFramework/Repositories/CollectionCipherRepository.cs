@@ -71,6 +71,7 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
             var dbContext = GetDatabaseContext(scope);
             var data = await new CollectionCipherReadByUserIdQuery(userId)
                 .Run(dbContext)
+                .Distinct()
                 .ToArrayAsync();
             return data;
         }
@@ -179,7 +180,10 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
             }
 
             // Now we need to remove collection ciphers that are no longer requested
-            dbContext.CollectionCiphers.RemoveRange(collectionCiphers.Where(cc => !collectionIds.Contains(cc.CollectionId) && cc.CipherId == cipherId));
+            dbContext.CollectionCiphers.RemoveRange(collectionCiphers.Where(cc =>
+                !collectionIds.Contains(cc.CollectionId)
+                && cc.CipherId == cipherId
+                && availableCollections.Contains(cc.CollectionId)));
 
             if (organizationId.HasValue)
             {

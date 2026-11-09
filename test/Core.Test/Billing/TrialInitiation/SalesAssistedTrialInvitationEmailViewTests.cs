@@ -7,13 +7,15 @@ namespace Bit.Core.Test.Billing.TrialInitiation;
 
 public class SalesAssistedTrialInvitationEmailViewTests
 {
-    private static SalesAssistedTrialInvitationEmailView CreateView(ProductTierType productTier) =>
+    private static SalesAssistedTrialInvitationEmailView CreateView(
+        ProductTierType productTier,
+        IEnumerable<ProductType>? products = null) =>
         new(new GlobalSettings())
         {
             Token = "token",
             Email = "prospect@example.com",
             ProductTier = productTier,
-            Products = [ProductType.PasswordManager],
+            Products = products ?? [ProductType.PasswordManager],
             TrialLength = 7,
             SenderEmail = "sales@bitwarden.com",
             ExpiryDays = 5,
@@ -89,5 +91,37 @@ public class SalesAssistedTrialInvitationEmailViewTests
         var view = CreateView(productTier);
 
         Assert.Equal(expected, view.HeroTitle);
+    }
+
+    [Fact]
+    public void Url_PasswordManager_UsesTrialInitiationRoute()
+    {
+        var view = CreateView(ProductTierType.Enterprise, [ProductType.PasswordManager]);
+
+        Assert.Contains("/trial-initiation?", view.Url);
+    }
+
+    [Fact]
+    public void Url_SecretsManagerOnly_UsesSecretsManagerRoute()
+    {
+        var view = CreateView(ProductTierType.Enterprise, [ProductType.SecretsManager]);
+
+        Assert.Contains("/secrets-manager-trial-initiation?", view.Url);
+    }
+
+    [Fact]
+    public void Url_PasswordManagerAndPrivilegedControls_UsesPrivilegedControlsRoute()
+    {
+        var view = CreateView(ProductTierType.Enterprise, [ProductType.PasswordManager, ProductType.PrivilegedControls]);
+
+        Assert.Contains("/privileged-controls-trial-initiation?", view.Url);
+    }
+
+    [Fact]
+    public void Url_PasswordManagerAndPrivilegedControls_SerializesBothProductsAsInts()
+    {
+        var view = CreateView(ProductTierType.Enterprise, [ProductType.PasswordManager, ProductType.PrivilegedControls]);
+
+        Assert.Contains("&product=0,2", view.Url);
     }
 }

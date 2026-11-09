@@ -4,9 +4,11 @@
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -50,7 +52,7 @@ public class OrganizationService : IOrganizationService
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IProviderRepository _providerRepository;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
     private readonly IPricingClient _pricingClient;
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
@@ -74,7 +76,7 @@ public class OrganizationService : IOrganizationService
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IProviderRepository providerRepository,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IPricingClient pricingClient,
         ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
@@ -146,6 +148,14 @@ public class OrganizationService : IOrganizationService
         if (maxAutoscaleSeats.HasValue && newSeatCount > maxAutoscaleSeats.Value)
         {
             throw new BadRequestException("Cannot set max seat autoscaling below seat count.");
+        }
+
+        if (organization.UsePam &&
+            _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support) &&
+            !BillingExtensions.PrivilegedControlsAutoscaleLimitFits(organization.MaxAutoscalePamSeats, maxAutoscaleSeats))
+        {
+            throw new BadRequestException(
+                "You cannot set a Password Manager autoscale limit lower than the Privileged Controls autoscale limit.");
         }
 
         if (seatAdjustment != 0)
@@ -271,6 +281,15 @@ public class OrganizationService : IOrganizationService
         if (organization.UseSecretsManager && organization.Seats + seatAdjustment < organization.SmSeats)
         {
             throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
+        }
+
+        // Only decreases are checked; adding seats is never blocked by this rule.
+        if (organization.UsePam &&
+            seatAdjustment < 0 &&
+            newSeatTotal < organization.PamSeats &&
+            _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support))
+        {
+            throw new BadRequestException(new PrivilegedControlsSeatsMustNotExceedPasswordManagerSeatsError().Message);
         }
 
         _logger.LogInformation("{Method}: Invoking _paymentService.AdjustSeatsAsync with {AdditionalSeats} additional seats for Organization ({OrganizationID})",
@@ -530,7 +549,7 @@ public class OrganizationService : IOrganizationService
             var (canScale, failureReason) = await CanScaleAsync(organization, newSeatsRequired);
             if (!canScale)
             {
-                throw new BadRequestException(failureReason);
+                throw new BadRequestException(await ToInviteSeatLimitMessageAsync(organization, failureReason));
             }
         }
 
@@ -646,12 +665,17 @@ public class OrganizationService : IOrganizationService
 
         // Promote the staged rows set aside above. They keep their Id and ExternalId because SCIM and
         // Directory Connector key off both, and only the fields the invite specifies are overwritten.
+        // The reminder fields match what sending the invites stores, because the promotion is saved after the send.
+        var inviteReminderDueDate = _timeProvider.GetUtcNow().UtcDateTime
+            .AddDays(InviteReminderConstants.ReminderIntervalDays);
         foreach (var (orgUser, invite) in stagedInvitations.Values)
         {
             orgUser.Type = invite.Type.Value;
             orgUser.Status = OrganizationUserStatusType.Invited;
             orgUser.AccessSecretsManager = invite.AccessSecretsManager;
             orgUser.RevisionDate = DateTime.UtcNow;
+            orgUser.InviteReminderDueDate = inviteReminderDueDate;
+            orgUser.InviteRemindersSentCount = 0;
             // Custom permissions only apply to the Custom role, and a staged row may already carry some.
             orgUser.Permissions = null;
 
@@ -798,6 +822,7 @@ public class OrganizationService : IOrganizationService
             orgUser.Permissions = snapshot.Permissions;
             orgUser.AccessSecretsManager = snapshot.AccessSecretsManager;
             orgUser.RevisionDate = snapshot.RevisionDate;
+            orgUser.ClearInviteReminders();
         }
 
         await _organizationUserRepository.ReplaceManyAsync(promotedStagedUsers);
@@ -854,11 +879,44 @@ public class OrganizationService : IOrganizationService
             organization.MaxAutoscaleSeats.HasValue &&
             organization.MaxAutoscaleSeats.Value < organization.Seats.Value + seatsToAdd)
         {
-            return (false, $"Seat limit has been reached.");
+            return (false, SeatLimitHasBeenReachedMessage);
         }
 
         return (true, failureReason);
     }
+
+    /// <summary>
+    /// The flow-neutral seat limit message. <see cref="CanScaleAsync"/> also backs member restore, Families
+    /// sponsorship and SSO just-in-time provisioning, so it stays neutral for them. Only the invite flow swaps in
+    /// the seat-count wording, via <see cref="ToInviteSeatLimitMessageAsync"/>.
+    /// </summary>
+    public const string SeatLimitHasBeenReachedMessage = "Seat limit has been reached.";
+
+    /// <summary>
+    /// Design approved the seat-count wording for the invite flow only, so the substitution happens here rather
+    /// than inside <see cref="CanScaleAsync"/>. Any other failure reason is passed through untouched.
+    /// </summary>
+    private async Task<string> ToInviteSeatLimitMessageAsync(Organization organization, string failureReason)
+    {
+        if (failureReason != SeatLimitHasBeenReachedMessage)
+        {
+            return failureReason;
+        }
+
+        var seatLimitMessage = await CanManageBillingAsync(organization.Id)
+            ? PasswordManagerSeatLimitHasBeenReachedError.Code
+            : PasswordManagerSeatLimitHasBeenReachedNoBillingAccessError.Code;
+
+        return string.Format(seatLimitMessage, organization.MaxAutoscaleSeats!.Value);
+    }
+
+    /// <summary>
+    /// Seat scaling is also triggered by callers without an authenticated member (SCIM, the Public API, and
+    /// background work), where nobody could raise the seat limit in place. <see cref="ICurrentContext.EditSubscription"/>
+    /// requires a user, so short circuit those callers.
+    /// </summary>
+    private async Task<bool> CanManageBillingAsync(Guid organizationId) =>
+        _currentContext.UserId.HasValue && await _currentContext.EditSubscription(organizationId);
 
     public async Task AutoAddSeatsAsync(Organization organization, int seatsToAdd)
     {
@@ -1176,6 +1234,11 @@ public class OrganizationService : IOrganizationService
         }
 
         if (permissions.ManageAccessRules && !org.Permissions.ManageAccessRules)
+        {
+            return false;
+        }
+
+        if (permissions.ManageRotation && !org.Permissions.ManageRotation)
         {
             return false;
         }

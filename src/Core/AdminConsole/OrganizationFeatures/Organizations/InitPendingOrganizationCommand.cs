@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationConfirmation;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
@@ -17,6 +18,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
 {
     private readonly ICollectionRepository _collectionRepository;
     private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IEventService _eventService;
     private readonly IUserRepository _userRepository;
@@ -30,6 +32,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
     public InitPendingOrganizationCommand(
             ICollectionRepository collectionRepository,
             IOrganizationRepository organizationRepository,
+            IOrganizationAbilityCacheService organizationAbilityCacheService,
             IOrganizationUserRepository organizationUserRepository,
             IEventService eventService,
             IUserRepository userRepository,
@@ -42,6 +45,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
     {
         _collectionRepository = collectionRepository;
         _organizationRepository = organizationRepository;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _organizationUserRepository = organizationUserRepository;
         _eventService = eventService;
         _userRepository = userRepository;
@@ -91,6 +95,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
 
         var confirmOwnerAction = _organizationUserRepository.BuildConfirmOwnerAction(orgUser);
         await _organizationRepository.InitializeOrganizationAsync(org, confirmOwnerAction);
+        await _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(org);
 
         await VerifyUserEmailAsync(request.User);
         await CreateDefaultCollectionAsync(orgUser, request);

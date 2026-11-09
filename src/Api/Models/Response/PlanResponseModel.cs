@@ -11,7 +11,7 @@ namespace Bit.Api.Models.Response;
 
 public class PlanResponseModel : ResponseModel
 {
-    public PlanResponseModel(Plan plan, string obj = "plan")
+    public PlanResponseModel(Plan plan, string obj = "plan", bool includePrivilegedControls = false)
         : base(obj)
     {
         if (plan == null)
@@ -47,6 +47,12 @@ public class PlanResponseModel : ResponseModel
         if (plan.SecretsManager != null)
         {
             SecretsManager = new SecretsManagerPlanFeaturesResponseModel(plan.SecretsManager);
+        }
+
+        // Privileged Controls pricing ships with the PAM billing flag; callers opt in so the public plans list doesn't leak it first.
+        if (includePrivilegedControls && plan.PrivilegedControls != null)
+        {
+            PrivilegedControls = new PrivilegedControlsPlanFeaturesResponseModel(plan.PrivilegedControls);
         }
 
         PasswordManager = new PasswordManagerPlanFeaturesResponseModel(plan.PasswordManager);
@@ -89,6 +95,7 @@ public class PlanResponseModel : ResponseModel
     public bool Disabled { get; set; }
     public SecretsManagerPlanFeaturesResponseModel SecretsManager { get; protected init; }
     public PasswordManagerPlanFeaturesResponseModel PasswordManager { get; protected init; }
+    public PrivilegedControlsPlanFeaturesResponseModel PrivilegedControls { get; protected init; }
 
     public class SecretsManagerPlanFeaturesResponseModel
     {
@@ -131,6 +138,20 @@ public class PlanResponseModel : ResponseModel
 
         // Features
         public int MaxProjects { get; init; }
+    }
+
+    public class PrivilegedControlsPlanFeaturesResponseModel
+    {
+        public PrivilegedControlsPlanFeaturesResponseModel(Plan.PrivilegedControlsPlanFeatures plan)
+        {
+            StripeSeatPlanId = plan.StripeSeatPlanId;
+            SeatPrice = plan.SeatPrice;
+            BaseSeats = plan.BaseSeats;
+        }
+        // Seats
+        public string StripeSeatPlanId { get; init; }
+        public decimal SeatPrice { get; init; }
+        public int BaseSeats { get; init; }
     }
 
     public record PasswordManagerPlanFeaturesResponseModel

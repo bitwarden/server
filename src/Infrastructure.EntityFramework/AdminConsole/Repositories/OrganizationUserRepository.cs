@@ -22,6 +22,9 @@ namespace Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 
 public class OrganizationUserRepository : Repository<Core.Entities.OrganizationUser, OrganizationUser, Guid>, IOrganizationUserRepository
 {
+    private const int MaxConsecutiveInviteReminderClaimMisses = 3;
+    private const int MaxInviteReminders = 3;
+
     public OrganizationUserRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.OrganizationUsers)
     { }
@@ -875,6 +878,95 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(organizationUserIds);
     }
 
+    public async Task StartInviteReminderSequencesAsync(IEnumerable<Guid> organizationUserIds, DateTime dueDate)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+
+        var dbContext = GetDatabaseContext(scope);
+
+        // Do not change the account revision date. Clients do not sync the reminder columns.
+        await dbContext.OrganizationUsers
+            .Where(x => organizationUserIds.Contains(x.Id))
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(x => x.InviteRemindersSentCount, (byte?)0)
+                .SetProperty(x => x.InviteReminderDueDate,
+                    x => x.InviteReminderDueDate > dueDate ? x.InviteReminderDueDate : (DateTime?)dueDate));
+    }
+
+    public async Task<ICollection<OrganizationUserInviteReminder>> ClaimInviteReminderSequencesAsync(DateTime now,
+        DateTime oldestDueDate, DateTime nextDueDate, int batchSize)
+    {
+        // EF Core cannot use the WITH (UPDLOCK, READPAST) hints of the MSSQL procedure. Thus, claim 1 member at a time.
+        // The update changes the row only if the row did not change after the read.
+        // A member is claimed only when the update changes 1 row. Thus, 2 claims never get the same member.
+        using var scope = ServiceScopeFactory.CreateScope();
+
+        var dbContext = GetDatabaseContext(scope);
+
+        var claimed = new List<OrganizationUserInviteReminder>();
+        var consecutiveMisses = 0;
+        while (claimed.Count < batchSize && consecutiveMisses < MaxConsecutiveInviteReminderClaimMisses)
+        {
+            var candidate = await (
+                    from ou in dbContext.OrganizationUsers
+                    join o in dbContext.Organizations on ou.OrganizationId equals o.Id
+                    where ou.Status == OrganizationUserStatusType.Invited &&
+                          ou.Email != null &&
+                          ou.InviteReminderDueDate != null &&
+                          ou.InviteReminderDueDate <= now &&
+                          ou.InviteReminderDueDate >= oldestDueDate &&
+                          ou.InviteRemindersSentCount < MaxInviteReminders &&
+                          o.Enabled
+                    orderby ou.InviteReminderDueDate
+                    select new
+                    {
+                        ou.Id,
+                        ou.OrganizationId,
+                        ou.Email,
+                        ou.InviteReminderDueDate,
+                        ou.InviteRemindersSentCount
+                    })
+                .FirstOrDefaultAsync();
+
+            if (candidate is null)
+            {
+                break;
+            }
+
+            // The last reminder clears the due date. The member then leaves the reminder sequence.
+            var nextCount = (byte)(candidate.InviteRemindersSentCount!.Value + 1);
+            DateTime? candidateNextDueDate = nextCount >= MaxInviteReminders ? null : nextDueDate;
+
+            var updated = await dbContext.OrganizationUsers
+                .Where(ou => ou.Id == candidate.Id &&
+                             ou.Status == OrganizationUserStatusType.Invited &&
+                             ou.InviteReminderDueDate == candidate.InviteReminderDueDate &&
+                             ou.InviteRemindersSentCount == candidate.InviteRemindersSentCount)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(ou => ou.InviteRemindersSentCount, ou => (byte?)(ou.InviteRemindersSentCount + 1))
+                    .SetProperty(ou => ou.InviteReminderDueDate, candidateNextDueDate));
+
+            if (updated == 0)
+            {
+                // Another write changed the row first. The next read skips this member.
+                consecutiveMisses++;
+                continue;
+            }
+
+            consecutiveMisses = 0;
+
+            claimed.Add(new OrganizationUserInviteReminder
+            {
+                Id = candidate.Id,
+                OrganizationId = candidate.OrganizationId,
+                Email = candidate.Email,
+                InviteRemindersSentCount = nextCount
+            });
+        }
+
+        return claimed;
+    }
+
     public async Task<IEnumerable<OrganizationUserUserDetails>> GetManyDetailsByRoleAsync(Guid organizationId, OrganizationUserType role)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -898,7 +990,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
     public async Task CreateManyAsync(IEnumerable<CreateOrganizationUser> organizationUserCollection)
     {
-        if (!organizationUserCollection.Any())
+        var organizationUsersList = organizationUserCollection.ToList();
+        if (organizationUsersList.Count == 0)
         {
             return;
         }
@@ -907,40 +1000,49 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
         await using var dbContext = GetDatabaseContext(scope);
 
-        dbContext.OrganizationUsers.AddRange(Mapper.Map<List<OrganizationUser>>(organizationUserCollection.Select(x => x.OrganizationUser)));
-        dbContext.CollectionUsers.AddRange(organizationUserCollection.SelectMany(x => x.Collections, (user, collection) => new CollectionUser
-        {
-            CollectionId = collection.Id,
-            HidePasswords = collection.HidePasswords,
-            OrganizationUserId = user.OrganizationUser.Id,
-            Manage = collection.Manage,
-            ReadOnly = collection.ReadOnly
-        }));
-        dbContext.GroupUsers.AddRange(organizationUserCollection.SelectMany(x => x.Groups, (user, group) => new GroupUser
-        {
-            GroupId = group,
-            OrganizationUserId = user.OrganizationUser.Id
-        }));
+        var requestedCollectionIds = organizationUsersList.SelectMany(x => x.Collections).Select(c => c.Id).Distinct().ToList();
+        var requestedGroupIds = organizationUsersList.SelectMany(x => x.Groups).Distinct().ToList();
+        var requestedCollections = requestedCollectionIds.Count == 0
+            ? []
+            : await dbContext.Collections.Where(c => requestedCollectionIds.Contains(c.Id)).ToListAsync();
+        var collectionOrganizationIds = requestedCollections.ToDictionary(c => c.Id, c => c.OrganizationId);
+        var groupOrganizationIds = requestedGroupIds.Count == 0
+            ? []
+            : await dbContext.Groups
+                .Where(g => requestedGroupIds.Contains(g.Id))
+                .ToDictionaryAsync(g => g.Id, g => g.OrganizationId);
 
-        // Bump RevisionDate on all affected collections
-        var affectedCollectionIds = organizationUserCollection
-            .SelectMany(x => x.Collections)
-            .Select(c => c.Id)
-            .Distinct()
-            .ToList();
-        if (affectedCollectionIds.Count > 0)
-        {
-            var organizationId = organizationUserCollection.First().OrganizationUser.OrganizationId;
-            var affectedCollections = await dbContext.Collections
-                .Where(c => c.OrganizationId == organizationId
-                    && affectedCollectionIds.Contains(c.Id))
-                .ToListAsync();
-            // Use the same RevisionDate as the created OrganizationUsers
-            var revisionDate = organizationUserCollection.First().OrganizationUser.RevisionDate;
-            foreach (var c in affectedCollections)
+        dbContext.OrganizationUsers.AddRange(Mapper.Map<List<OrganizationUser>>(organizationUsersList.Select(x => x.OrganizationUser)));
+        var collectionUsers = organizationUsersList.SelectMany(
+            x => x.Collections.Where(c =>
+                collectionOrganizationIds.TryGetValue(c.Id, out var collectionOrganizationId) &&
+                collectionOrganizationId == x.OrganizationUser.OrganizationId),
+            (user, collection) => new CollectionUser
             {
-                c.RevisionDate = revisionDate;
-            }
+                CollectionId = collection.Id,
+                HidePasswords = collection.HidePasswords,
+                OrganizationUserId = user.OrganizationUser.Id,
+                Manage = collection.Manage,
+                ReadOnly = collection.ReadOnly
+            }).ToList();
+        dbContext.CollectionUsers.AddRange(collectionUsers);
+        dbContext.GroupUsers.AddRange(organizationUsersList.SelectMany(
+            x => x.Groups.Where(g =>
+                groupOrganizationIds.TryGetValue(g, out var groupOrganizationId) &&
+                groupOrganizationId == x.OrganizationUser.OrganizationId),
+            (user, group) => new GroupUser
+            {
+                GroupId = group,
+                OrganizationUserId = user.OrganizationUser.Id
+            }));
+
+        // Bump RevisionDate on the collections that were actually attached, using the same RevisionDate as the
+        // created OrganizationUsers
+        var attachedCollectionIds = collectionUsers.Select(cu => cu.CollectionId).ToHashSet();
+        var revisionDate = organizationUsersList[0].OrganizationUser.RevisionDate;
+        foreach (var c in requestedCollections.Where(c => attachedCollectionIds.Contains(c.Id)))
+        {
+            c.RevisionDate = revisionDate;
         }
 
         await dbContext.SaveChangesAsync();
@@ -1165,6 +1267,16 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         await dbContext.OrganizationSponsorships
             .Where(os => organizationUserIds.Contains(os.SponsoringOrganizationUserId))
             .ExecuteDeleteAsync();
+
+        var organizationUserGroups = organizationUsersToDelete.GroupBy(ou => ou.OrganizationId);
+        foreach (var organizationGroup in organizationUserGroups)
+        {
+            var organizationId = organizationGroup.Key;
+            var userIdsForOrg = organizationGroup.Select(ou => ou.UserId).ToList();
+            await dbContext.SsoUsers
+                .Where(su => su.OrganizationId == organizationId && userIdsForOrg.Contains(su.UserId))
+                .ExecuteDeleteAsync();
+        }
 
         await dbContext.OrganizationUsers
             .Where(ou => organizationUserIds.Contains(ou.Id))

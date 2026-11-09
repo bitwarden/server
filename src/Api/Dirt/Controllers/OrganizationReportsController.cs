@@ -11,7 +11,6 @@ using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.Services;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
-using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -31,7 +30,7 @@ public class OrganizationReportsController : Controller
     private readonly IGetOrganizationReportSummaryDataByDateRangeQuery _getOrganizationReportSummaryDataByDateRangeQuery;
     private readonly IGetOrganizationReportApplicationDataQuery _getOrganizationReportApplicationDataQuery;
     private readonly IUpdateOrganizationReportApplicationDataCommand _updateOrganizationReportApplicationDataCommand;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IOrganizationReportStorageService _storageService;
     private readonly ICreateOrganizationReportCommand _createReportCommand;
@@ -50,7 +49,7 @@ public class OrganizationReportsController : Controller
         IGetOrganizationReportSummaryDataByDateRangeQuery getOrganizationReportSummaryDataByDateRangeQuery,
         IGetOrganizationReportApplicationDataQuery getOrganizationReportApplicationDataQuery,
         IUpdateOrganizationReportApplicationDataCommand updateOrganizationReportApplicationDataCommand,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         IOrganizationAbilityCacheService organizationAbilityCacheService,
         IOrganizationReportStorageService storageService,
         ICreateOrganizationReportCommand createReportCommand,
@@ -98,12 +97,8 @@ public class OrganizationReportsController : Controller
 
         await AuthorizeAsync(organizationId);
 
-        // File storage only exists under the new architecture, so gate the file path on the (stable)
-        // AccessIntelligenceNewArchitecture flag. Within that, select the path from the request shape
-        // rather than the file-storage flag (AccessIntelligenceVersion2): the client chooses its shape
-        // from that flag via a config cache that can lag the server by up to an hour (pronounced in
-        // self-hosted), so branching on it here would 500 whenever the two disagree. Honoring the shape
-        // lets file-storage flag staleness degrade gracefully.
+        // File storage only exists under the new architecture, so gate the file path on the
+        // AccessIntelligenceNewArchitecture flag. Within that, select the path from the request shape.
         var isNewArchitecture = _featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceNewArchitecture);
         if (isNewArchitecture && request.FileSize.HasValue)
         {
@@ -207,7 +202,7 @@ public class OrganizationReportsController : Controller
     /// <param name="request">The request model containing updated report data.</param>
     /// <returns>An <see cref="OrganizationReportResponseModel"/> with the updated report.</returns>
     [HttpPatch("{organizationId}/{reportId}")]
-    [RequireFeature(FeatureFlagKeys.AccessIntelligenceNewArchitecture)]
+    [Bitwarden.Server.Sdk.Features.RequireFeature(FeatureFlagKeys.AccessIntelligenceNewArchitecture)]
     public async Task<IActionResult> UpdateOrganizationReportAsync(
         Guid organizationId,
         Guid reportId,
@@ -291,7 +286,7 @@ public class OrganizationReportsController : Controller
     /// <param name="reportId">The unique identifier of the report with the pending file upload.</param>
     /// <param name="reportFileId">The identifier of the report file entry to renew the upload URL for.</param>
     /// <returns>An <see cref="OrganizationReportFileResponseModel"/> with the renewed upload URL.</returns>
-    [RequireFeature(FeatureFlagKeys.AccessIntelligenceNewArchitecture)]
+    [Bitwarden.Server.Sdk.Features.RequireFeature(FeatureFlagKeys.AccessIntelligenceNewArchitecture)]
     [HttpGet("{organizationId}/{reportId}/file/renew")]
     public async Task<OrganizationReportFileResponseModel> RenewFileUploadUrlAsync(
         Guid organizationId, Guid reportId, [FromQuery] string reportFileId)
@@ -326,7 +321,7 @@ public class OrganizationReportsController : Controller
     /// </summary>
     /// <returns>An <see cref="ObjectResult"/> acknowledging the Event Grid event.</returns>
     [AllowAnonymous]
-    [RequireFeature(FeatureFlagKeys.AccessIntelligenceNewArchitecture)]
+    [Bitwarden.Server.Sdk.Features.RequireFeature(FeatureFlagKeys.AccessIntelligenceNewArchitecture)]
     [HttpPost("file/validate/azure")]
     public async Task<ObjectResult> AzureValidateFileAsync()
     {
@@ -377,7 +372,7 @@ public class OrganizationReportsController : Controller
     /// <param name="organizationId">The unique identifier of the organization.</param>
     /// <param name="reportId">The unique identifier of the report to attach the file to.</param>
     /// <param name="reportFileId">The identifier of the report file entry to upload against.</param>
-    [RequireFeature(FeatureFlagKeys.AccessIntelligenceNewArchitecture)]
+    [Bitwarden.Server.Sdk.Features.RequireFeature(FeatureFlagKeys.AccessIntelligenceNewArchitecture)]
     [HttpPost("{organizationId}/{reportId}/file")]
     [SelfHosted(SelfHostedOnly = true)]
     [RequestSizeLimit(Constants.FileSize501mb)]

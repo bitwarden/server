@@ -18,6 +18,7 @@ public class Permissions
     public bool ManageResetPassword { get; set; }
     public bool ManageScim { get; set; }
     public bool ManageAccessRules { get; set; }
+    public bool ManageRotation { get; set; }
 
     [JsonIgnore]
     public List<(bool Permission, string ClaimName)> ClaimsMap => new()
@@ -35,5 +36,21 @@ public class Permissions
         (ManageResetPassword, Claims.CustomPermissions.ManageResetPassword),
         (ManageScim, Claims.CustomPermissions.ManageScim),
         (ManageAccessRules, Claims.CustomPermissions.ManageAccessRules),
+        (ManageRotation, Claims.CustomPermissions.ManageCredentialRotation),
     };
+
+    /// <summary>
+    /// Returns true if this permission set holds every permission granted in <paramref name="other"/>.
+    /// A null <paramref name="other"/> grants nothing, so it is always included.
+    /// </summary>
+    public bool Includes(Permissions? other)
+    {
+        if (other is null)
+        {
+            return true;
+        }
+
+        var claims = ClaimsMap.ToDictionary(c => c.ClaimName, c => c.Permission);
+        return other.ClaimsMap.All(granted => !granted.Permission || claims[granted.ClaimName]);
+    }
 }

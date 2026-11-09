@@ -230,6 +230,34 @@ public class AnnualUpgradeLineMapperTests
     }
 
     [Fact]
+    public void MapOrNull_PersonalPriceIncreaseSchedule_ReturnsNullAndLogsWarning()
+    {
+        var schedule = Schedule(phaseMetadata: null);
+        schedule.Metadata = new Dictionary<string, string>
+        {
+            [StripeConstants.MetadataKeys.ManagingSystem] = StripeConstants.ManagingSystems.PersonalPriceIncrease
+        };
+
+        Assert.Null(Map(SubscriptionWith(schedule: schedule)));
+
+        AssertLogged(LogLevel.Warning, "pending personal price increase schedule");
+    }
+
+    [Fact]
+    public void MapOrNull_UnrecognizedManagingSystemSchedule_ReturnsNullAndLogsWarningWithTheValue()
+    {
+        var schedule = Schedule(phaseMetadata: null);
+        schedule.Metadata = new Dictionary<string, string>
+        {
+            [StripeConstants.MetadataKeys.ManagingSystem] = "some_future_system"
+        };
+
+        Assert.Null(Map(SubscriptionWith(schedule: schedule)));
+
+        AssertLogged(LogLevel.Warning, "unrecognized managing system (some_future_system)");
+    }
+
+    [Fact]
     public void MapOrNull_MigrationCohortSchedule_ProceedsToMapping()
     {
         var schedule = Schedule(new Dictionary<string, string>

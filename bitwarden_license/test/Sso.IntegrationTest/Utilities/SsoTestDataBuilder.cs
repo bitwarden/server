@@ -7,6 +7,8 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Platform.Mail.Delivery;
+using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -17,7 +19,7 @@ using Duende.IdentityServer.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NSubstitute;
-using AuthenticationSchemes = Bit.Core.AuthenticationSchemes;
+using AuthenticationSchemes = Bit.Core.Auth.IdentityServer.AuthenticationSchemes;
 
 namespace Bit.Sso.IntegrationTest.Utilities;
 
@@ -47,7 +49,7 @@ public class SsoTestDataBuilder
     private Action<OrganizationUser>? _stagedOrgUserConfig;
     private Action<SsoConfig>? _ssoConfigConfig;
     private Action<SsoUser>? _ssoUserConfig;
-    private Action<SsoApplicationFactory>? _featureFlagConfig;
+    private readonly Dictionary<string, string?> _configuration = new();
 
     private bool _includeUser = false;
     private bool _includeSsoUser = false;
@@ -64,6 +66,10 @@ public class SsoTestDataBuilder
     private bool _mockAutoscalePartialFailure = false;
     private bool _mockSendOrganizationInvitesCommand = false;
     private X509Certificate2? _samlSigningCertificate;
+    private bool? _wantAssertionsSignedFlagEnabled;
+    private int _rsa15DeprecationEmailCooldownInDays = 7;
+    private bool _mockMailer = false;
+    private IMailDeliveryService? _mailDeliveryService;
 
     public SsoTestDataBuilder WithOrganization(Action<Organization> configure)
     {
@@ -113,9 +119,15 @@ public class SsoTestDataBuilder
         return this;
     }
 
-    public SsoTestDataBuilder WithFeatureFlags(Action<SsoApplicationFactory> configure)
+    /// <summary>
+    /// Overrides a host configuration entry. The override is applied before the host starts, so it
+    /// also reaches values read while services are registered, which <see cref="AsSelfHosted"/>
+    /// does not.
+    /// </summary>
+    /// <param name="key">The fully qualified setting name, using <c>:</c> between sections.</param>
+    public SsoTestDataBuilder WithConfiguration(string key, string? value)
     {
-        _featureFlagConfig = configure;
+        _configuration[key] = value;
         return this;
     }
 
@@ -171,19 +183,46 @@ public class SsoTestDataBuilder
     }
 
     /// <summary>
-    /// Enables the <see cref="FeatureFlagKeys.PM34423StagedStatus"/> feature flag for the test.
-    /// SSO Staged-row promotion (Scenario 3 in AutoProvisionUserAsync) is gated behind this
-    /// flag, so tests exercising that branch must opt in.
+    /// Enables the <see cref="FeatureFlagKeys.PM42982_WantAssertionsSigned"/> feature flag for the test.
+    /// The multi-assertion signature verifier (<c>Saml2AssertionSignatureVerifier.EnsureAssertionsSigned</c>)
+    /// is gated behind this flag, so tests exercising that path must opt in.
     /// </summary>
-    public SsoTestDataBuilder WithPM34423StagedStatusFlag(bool enabled = true)
+    public SsoTestDataBuilder WithPM42982WantAssertionsSignedFlag(bool enabled = true)
     {
-        return WithFeatureFlags(factory =>
-        {
-            factory.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(svc =>
-            {
-                svc.IsEnabled(FeatureFlagKeys.PM34423StagedStatus).Returns(enabled);
-            });
-        });
+        _wantAssertionsSignedFlagEnabled = enabled;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the minimum number of days between RSA 1.5 deprecation emails to one organization.
+    /// A value of 0 or less turns the email off.
+    /// </summary>
+    public SsoTestDataBuilder WithRsa15DeprecationEmailCooldownInDays(int days)
+    {
+        _rsa15DeprecationEmailCooldownInDays = days;
+        return this;
+    }
+
+    /// <summary>
+    /// Substitutes <see cref="IMailer"/> so a test can observe the emails that the host sends,
+    /// and no email is rendered or delivered. Also substitutes <see cref="IMailDeliveryService"/>
+    /// with a service that is not <see cref="NoopMailDeliveryService"/>, unless the test sets
+    /// a delivery service with <see cref="WithMailDeliveryService"/>.
+    /// </summary>
+    public SsoTestDataBuilder WithMockedMailer()
+    {
+        _mockMailer = true;
+        return this;
+    }
+
+    /// <summary>
+    /// Replaces the host's <see cref="IMailDeliveryService"/> with the given service. The real
+    /// <see cref="IMailer"/> still renders each email.
+    /// </summary>
+    public SsoTestDataBuilder WithMailDeliveryService(IMailDeliveryService deliveryService)
+    {
+        _mailDeliveryService = deliveryService;
+        return this;
     }
 
     /// <summary>
@@ -254,7 +293,7 @@ public class SsoTestDataBuilder
             {
                 authService.AuthenticateAsync(
                         Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
+                        AuthenticationSchemes.SsoExternalCookie)
                     .Returns(MockSuccessfulAuthResult.Build(
                         authOrganizationId,
                         providerUserId,
@@ -267,21 +306,26 @@ public class SsoTestDataBuilder
             {
                 authService.AuthenticateAsync(
                         Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
+                        AuthenticationSchemes.SsoExternalCookie)
                     .Returns(AuthenticateResult.Fail("External authentication error"));
             }
         });
 
-        // 1.a Configure GlobalSettings for Self-Hosted and seat limit
+        // 1.a Configure GlobalSettings
         factory.SubstituteService<IGlobalSettings>(globalSettings =>
         {
             globalSettings.SelfHosted.Returns(_isSelfHosted);
+            globalSettings.Sso.Rsa15DeprecationEmailCooldownInDays = _rsa15DeprecationEmailCooldownInDays;
+            globalSettings.Sso.Rsa15DeprecationDate = new GlobalSettings.SsoSettings().Rsa15DeprecationDate;
         });
 
-        // 1.b configure setting feature flags
-        _featureFlagConfig?.Invoke(factory);
+        // 1.a.i Apply host configuration overrides requested by the test
+        foreach (var (key, value) in _configuration)
+        {
+            factory.UpdateConfiguration(key, value);
+        }
 
-        // 1.b.i Replace SamlEnvironment with a version that has a test SP signing certificate, if the test requests it
+        // 1.b Replace SamlEnvironment with a version that has a test SP signing certificate, if the test requests it
         if (_samlSigningCertificate != null)
         {
             var samlEnvironment = new SamlEnvironment { SpSigningCertificate = _samlSigningCertificate };
@@ -335,6 +379,35 @@ public class SsoTestDataBuilder
                         org.Seats = org.Seats!.Value + 1;
                         throw new Exception("simulated partial-autoscale failure");
                     });
+            });
+        }
+
+        // 1.f Configure IFeatureService to reflect the feature flag the test requests. An unset flag is off.
+        if (_wantAssertionsSignedFlagEnabled.HasValue)
+        {
+            factory.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(svc =>
+            {
+                svc.IsEnabled(FeatureFlagKeys.PM42982_WantAssertionsSigned)
+                    .Returns(_wantAssertionsSignedFlagEnabled ?? false);
+            });
+        }
+
+        // 1.g Configure IMailer or IMailDeliveryService, if the test requests it
+        if (_mockMailer)
+        {
+            factory.SubstituteService<IMailer>(_ => { });
+            if (_mailDeliveryService is null)
+            {
+                factory.SubstituteService<IMailDeliveryService>(_ => { });
+            }
+        }
+
+        if (_mailDeliveryService is { } mailDeliveryService)
+        {
+            factory.ConfigureServices(services =>
+            {
+                services.RemoveAll<IMailDeliveryService>();
+                services.AddSingleton(mailDeliveryService);
             });
         }
 

@@ -1,4 +1,5 @@
 ﻿using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
@@ -11,6 +12,7 @@ internal static class LoginCipherSeeder
 {
     internal static Cipher Create(CipherSeed options)
     {
+        AddUriChecksums(options.Login);
 
         var cipherView = new CipherViewDto
         {
@@ -25,6 +27,19 @@ internal static class LoginCipherSeeder
 
         var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!, options.CipherEncryption);
         return CipherEncryption.CreateEntity(encrypted, encrypted.ToLoginData(), CipherType.Login, options.OrganizationId, options.UserId);
+    }
+
+    /// <summary>
+    /// Writes base64(SHA-256(uri)) as the checksum of every login URI that has none, as clients do.
+    /// The SDK drops URIs whose checksum is missing or wrong on items with their own key, so without it
+    /// those logins lose their URIs in every client.
+    /// </summary>
+    private static void AddUriChecksums(LoginViewDto? login)
+    {
+        foreach (var uri in (login?.Uris ?? []).Where(u => u.Uri is not null && u.UriChecksum is null))
+        {
+            uri.UriChecksum = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(uri.Uri!)));
+        }
     }
 
     internal static Fido2CredentialViewDto CreateFido2Credential(string rpId, string rpName, string userName)

@@ -29,7 +29,6 @@ public class UpdateGroupCommandTests
         var sutProvider = SetupSutProvider();
         ArrangeGroup(sutProvider, group, oldGroup);
         ArrangeUsers(sutProvider, group);
-        ArrangeCollections(sutProvider, group);
 
         await sutProvider.Sut.UpdateGroupAsync(group, organization);
 
@@ -45,7 +44,6 @@ public class UpdateGroupCommandTests
         var sutProvider = SetupSutProvider();
         ArrangeGroup(sutProvider, group, oldGroup);
         ArrangeUsers(sutProvider, group);
-        ArrangeCollections(sutProvider, group);
 
         // Arrange list of collections to make sure Manage is mutually exclusive
         for (var i = 0; i < collections.Count; i++)
@@ -70,7 +68,6 @@ public class UpdateGroupCommandTests
         var sutProvider = SetupSutProvider();
         ArrangeGroup(sutProvider, group, oldGroup);
         ArrangeUsers(sutProvider, group);
-        ArrangeCollections(sutProvider, group);
 
         await sutProvider.Sut.UpdateGroupAsync(group, organization, eventSystemUser);
 
@@ -86,7 +83,6 @@ public class UpdateGroupCommandTests
         var sutProvider = SetupSutProvider();
         ArrangeGroup(sutProvider, group, oldGroup);
         ArrangeUsers(sutProvider, group);
-        ArrangeCollections(sutProvider, group);
 
         await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.UpdateGroupAsync(group, null, eventSystemUser));
 
@@ -101,7 +97,6 @@ public class UpdateGroupCommandTests
         var sutProvider = SetupSutProvider();
         ArrangeGroup(sutProvider, group, oldGroup);
         ArrangeUsers(sutProvider, group);
-        ArrangeCollections(sutProvider, group);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.UpdateGroupAsync(group, organization, eventSystemUser));
 
@@ -118,71 +113,65 @@ public class UpdateGroupCommandTests
         var sutProvider = SetupSutProvider();
         ArrangeGroup(sutProvider, group, oldGroup);
         ArrangeUsers(sutProvider, group);
-        ArrangeCollections(sutProvider, group);
 
         // Mismatching orgId
-        oldGroup.OrganizationId = CoreHelpers.GenerateComb();
+        oldGroup.OrganizationId = CombGuid.Generate();
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateGroupAsync(group, organization));
     }
 
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
-    public async Task UpdateGroup_CollectionsBelongsToDifferentOrganization_Throws(
+    public async Task UpdateGroup_WithCollections_ValidatesCollectionAccess(
         Group group, Group oldGroup, Organization organization, List<CollectionAccessSelection> collectionAccess)
     {
         var sutProvider = SetupSutProvider();
         ArrangeGroup(sutProvider, group, oldGroup);
         ArrangeUsers(sutProvider, group);
+        SetAccessToNonManage(collectionAccess);
 
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(callInfo => callInfo.Arg<IEnumerable<Guid>>()
-                .Select(guid => new Collection { Id = guid, OrganizationId = CoreHelpers.GenerateComb() }).ToList());
+        await sutProvider.Sut.UpdateGroupAsync(group, organization, collectionAccess);
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UpdateGroupAsync(group, organization, collectionAccess));
+        await sutProvider.GetDependency<IGroupCollectionAccessValidator>().Received(1)
+            .ValidateAsync(group.OrganizationId, collectionAccess);
     }
 
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
-    public async Task UpdateGroup_CollectionsDoNotExist_Throws(
+    public async Task UpdateGroup_WithInvalidCollectionAccess_Throws(
         Group group, Group oldGroup, Organization organization, List<CollectionAccessSelection> collectionAccess)
     {
         var sutProvider = SetupSutProvider();
         ArrangeGroup(sutProvider, group, oldGroup);
         ArrangeUsers(sutProvider, group);
 
-        // Return result is missing a collection
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(callInfo =>
-            {
-                var result = callInfo.Arg<IEnumerable<Guid>>()
-                    .Select(guid => new Collection { Id = guid, OrganizationId = group.OrganizationId }).ToList();
-                result.RemoveAt(0);
-                return result;
-            });
-
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UpdateGroupAsync(group, organization, collectionAccess));
-    }
-
-    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
-    public async Task UpdateGroup_WithDefaultUserCollectionType_Throws(
-        Group group, Group oldGroup, Organization organization, List<CollectionAccessSelection> collectionAccess)
-    {
-        var sutProvider = SetupSutProvider();
-        ArrangeGroup(sutProvider, group, oldGroup);
-        ArrangeUsers(sutProvider, group);
-
-        // Return collections with DefaultUserCollection type
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(callInfo => callInfo.Arg<IEnumerable<Guid>>()
-                .Select(guid => new Collection { Id = guid, OrganizationId = group.OrganizationId, Type = CollectionType.DefaultUserCollection }).ToList());
+        sutProvider.GetDependency<IGroupCollectionAccessValidator>()
+            .ValidateAsync(Arg.Any<Guid>(), Arg.Any<ICollection<CollectionAccessSelection>>())
+            .Returns(new CannotModifyDefaultUserCollection());
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateGroupAsync(group, organization, collectionAccess));
         Assert.Contains("You cannot modify group access for collections with the type as DefaultUserCollection.", exception.Message);
+
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default, default);
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
+    }
+
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
+    public async Task UpdateGroup_WithCollectionNotFound_Throws(
+        Group group, Group oldGroup, Organization organization, List<CollectionAccessSelection> collectionAccess)
+    {
+        var sutProvider = SetupSutProvider();
+        ArrangeGroup(sutProvider, group, oldGroup);
+        ArrangeUsers(sutProvider, group);
+
+        sutProvider.GetDependency<IGroupCollectionAccessValidator>()
+            .ValidateAsync(Arg.Any<Guid>(), Arg.Any<ICollection<CollectionAccessSelection>>())
+            .Returns(new CollectionNotFound());
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.UpdateGroupAsync(group, organization, collectionAccess));
+
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default, default);
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
     }
 
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
@@ -191,12 +180,11 @@ public class UpdateGroupCommandTests
     {
         var sutProvider = SetupSutProvider();
         ArrangeGroup(sutProvider, group, oldGroup);
-        ArrangeCollections(sutProvider, group);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(callInfo => callInfo.Arg<IEnumerable<Guid>>()
-                .Select(guid => new OrganizationUser { Id = guid, OrganizationId = CoreHelpers.GenerateComb() }).ToList());
+                .Select(guid => new OrganizationUser { Id = guid, OrganizationId = CombGuid.Generate() }).ToList());
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.UpdateGroupAsync(group, organization, null, userAccess));
@@ -208,7 +196,6 @@ public class UpdateGroupCommandTests
     {
         var sutProvider = SetupSutProvider();
         ArrangeGroup(sutProvider, group, oldGroup);
-        ArrangeCollections(sutProvider, group);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
@@ -241,12 +228,12 @@ public class UpdateGroupCommandTests
         sutProvider.GetDependency<IGroupRepository>().GetByIdAsync(group.Id).Returns(oldGroup);
     }
 
-    private void ArrangeCollections(SutProvider<UpdateGroupCommand> sutProvider, Group group)
+    private static void SetAccessToNonManage(IEnumerable<CollectionAccessSelection> collections)
     {
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(callInfo => callInfo.Arg<IEnumerable<Guid>>()
-                .Select(guid => new Collection() { Id = guid, OrganizationId = group.OrganizationId }).ToList());
+        foreach (var cas in collections)
+        {
+            cas.Manage = false;
+        }
     }
 
     private void ArrangeUsers(SutProvider<UpdateGroupCommand> sutProvider, Group group)

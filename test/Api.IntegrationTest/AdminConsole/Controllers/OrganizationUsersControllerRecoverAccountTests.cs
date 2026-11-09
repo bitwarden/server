@@ -15,6 +15,7 @@ using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.Models.Api;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Identity;
 using Xunit;
@@ -115,11 +116,13 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
         Assert.NotNull(userBefore);
 
         const string newMasterPasswordHash = "new-master-password-hash";
+        const string encryptedRecoveryKey =
+            "2.AAECAwQFBgcICQoLDA0ODw==|QmFzZTY0UGFydA==|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=";
         var resetPasswordRequest = new OrganizationUserResetPasswordRequestModel
         {
             ResetMasterPassword = true,
             NewMasterPasswordHash = newMasterPasswordHash,
-            Key = "encrypted-recovery-key"
+            Key = encryptedRecoveryKey
         };
 
         // Act
@@ -132,7 +135,7 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
 
         var userAfter = await userRepository.GetByEmailAsync(targetEmail);
         Assert.NotNull(userAfter);
-        Assert.Equal("encrypted-recovery-key", userAfter.Key);
+        Assert.Equal(encryptedRecoveryKey, userAfter.Key);
         Assert.True(userAfter.ForcePasswordReset);
         Assert.Equal(PasswordVerificationResult.Success,
             passwordHasher.VerifyHashedPassword(userAfter, userAfter.MasterPassword!, newMasterPasswordHash));
@@ -215,7 +218,7 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
         {
             ResetMasterPassword = true,
             NewMasterPasswordHash = "new-master-password-hash",
-            Key = "encrypted-recovery-key"
+            Key = "2.AAECAwQFBgcICQoLDA0ODw==|QmFzZTY0UGFydA==|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
         };
 
         // Act
@@ -272,7 +275,7 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
         {
             ResetMasterPassword = true,
             NewMasterPasswordHash = "new-master-password-hash",
-            Key = "encrypted-recovery-key"
+            Key = "2.AAECAwQFBgcICQoLDA0ODw==|QmFzZTY0UGFydA==|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
         };
 
         // Act
@@ -313,7 +316,7 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
         {
             ResetMasterPassword = true,
             NewMasterPasswordHash = "new-master-password-hash",
-            Key = "encrypted-recovery-key"
+            Key = "2.AAECAwQFBgcICQoLDA0ODw==|QmFzZTY0UGFydA==|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
         };
 
         // Act
@@ -342,6 +345,44 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
         // Act
         var response = await _client.GetAsync(
             $"organizations/{_organization.Id}/users/{targetOwnerOrgUser.Id}/reset-password-details");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task RecoverAccount_AsCustomWithFewerPermissions_CannotRecoverCustomWithMorePermissions()
+    {
+        // Arrange
+        var targetCustomOrgUser = await LoginAsAccountRecoveryManagerWithMorePermissionedTargetAsync();
+
+        var resetPasswordRequest = new OrganizationUserResetPasswordRequestModel
+        {
+            ResetMasterPassword = true,
+            NewMasterPasswordHash = "new-master-password-hash",
+            Key = "2.AAECAwQFBgcICQoLDA0ODw==|QmFzZTY0UGFydA==|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
+        };
+
+        // Act
+        var response = await _client.PutAsJsonAsync(
+            $"organizations/{_organization.Id}/users/{targetCustomOrgUser.Id}/recover-account",
+            resetPasswordRequest);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var model = await response.Content.ReadFromJsonAsync<ErrorResponseModel>();
+        Assert.Contains(RecoverAccountAuthorizationHandler.FailureReason, model.Message);
+    }
+
+    [Fact]
+    public async Task GetResetPasswordDetails_AsCustomWithFewerPermissions_DoesNotDiscloseKeyMaterial()
+    {
+        // Arrange
+        var targetCustomOrgUser = await LoginAsAccountRecoveryManagerWithMorePermissionedTargetAsync();
+
+        // Act
+        var response = await _client.GetAsync(
+            $"organizations/{_organization.Id}/users/{targetCustomOrgUser.Id}/reset-password-details");
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -470,5 +511,23 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
             .ReadFromJsonAsync<AccountRecoveryDetailsList>();
         var details = Assert.Single(result.Data);
         Assert.Equal(memberOrgUser.Id, details.OrganizationUserId);
+    }
+
+    /// <summary>
+    /// Logs in as a Custom user who can only manage account recovery, and returns an enrolled Custom user
+    /// who holds permissions the caller does not.
+    /// </summary>
+    private async Task<OrganizationUser> LoginAsAccountRecoveryManagerWithMorePermissionedTargetAsync()
+    {
+        var (customEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.Custom, new Permissions { ManageResetPassword = true });
+        await _loginHelper.LoginAsync(customEmail);
+
+        var (_, targetCustomOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.Custom,
+            new Permissions { EditAnyCollection = true, AccessImportExport = true });
+        await SetResetPasswordKeyAsync(targetCustomOrgUser);
+
+        return targetCustomOrgUser;
     }
 }

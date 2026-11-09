@@ -44,6 +44,11 @@ public class JobsHostedService : BaseJobsHostedService
             .StartNow()
             .WithCronSchedule("0 0 22 ? * FRI", x => x.InTimeZone(timeZone))
             .Build();
+        var everySaturdayAt430amTrigger = TriggerBuilder.Create()
+            .WithIdentity("EverySaturdayAt430amTrigger")
+            .StartNow()
+            .WithCronSchedule("0 30 4 ? * SAT", x => x.InTimeZone(timeZone))
+            .Build();
         var everySaturdayAtMidnightTrigger = TriggerBuilder.Create()
             .WithIdentity("EverySaturdayAtMidnightTrigger")
             .StartNow()
@@ -88,6 +93,7 @@ public class JobsHostedService : BaseJobsHostedService
         {
             new Tuple<Type, ITrigger>(typeof(DeleteSendsJob), everyFiveMinutesTrigger),
             new Tuple<Type, ITrigger>(typeof(DatabaseExpiredGrantsJob), everyFridayAt10pmTrigger),
+            new Tuple<Type, ITrigger>(typeof(DeleteExpiredTwoFactorRememberTokensJob), everySaturdayAt430amTrigger),
             new Tuple<Type, ITrigger>(typeof(DeleteCiphersJob), everyDayAtMidnightUtc),
             new Tuple<Type, ITrigger>(typeof(DatabaseExpiredSponsorshipsJob), everyMondayAtMidnightTrigger),
             new Tuple<Type, ITrigger>(typeof(DeleteAuthRequestsJob), everyFifteenMinutesTrigger),
@@ -122,6 +128,7 @@ public class JobsHostedService : BaseJobsHostedService
         services.AddTransient<DatabaseUpdateStatisticsJob>();
         services.AddTransient<DatabaseRebuildlIndexesJob>();
         services.AddTransient<DatabaseExpiredGrantsJob>();
+        services.AddTransient<DeleteExpiredTwoFactorRememberTokensJob>();
         services.AddTransient<DatabaseExpiredSponsorshipsJob>();
         services.AddTransient<DeleteSendsJob>();
         services.AddTransient<DeleteCiphersJob>();

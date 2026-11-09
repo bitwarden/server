@@ -2,27 +2,49 @@
 
 namespace Bit.Services.Pam.Test.Api.Models.Request;
 
-// PamValidationEndpointFilter treats any type in a Bit.Services.Pam.*.Api.Models.Request namespace as a request
-// model to walk into, so these fixtures reach the collection and cycle branches that no shipped PAM model does yet.
+// PamValidationEndpointFilter walks any type in a Bit.Services.Pam.*.Api.Models.Request namespace, so these fixtures
+// reach the collection and cycle branches that no shipped model does.
 
-/// <summary>Holds a collection of nested request models.</summary>
 public class ParentWithChildrenRequestModel
 {
     public List<ChildRequestModel> Children { get; set; } = [];
 }
 
-/// <summary>A nested element carrying a constraint the filter's element walk has to run.</summary>
 public class ChildRequestModel
 {
     [Range(1, 10)]
     public int Value { get; set; }
 }
 
-/// <summary>Reachable from itself, so the walk only terminates via the filter's cycle guard.</summary>
 public class CyclicRequestModel
 {
     [Range(1, 10)]
     public int Value { get; set; }
 
     public CyclicRequestModel? Other { get; set; }
+}
+
+public class ParentWithNestedRequestModel
+{
+    public string Name { get; set; } = null!;
+
+    public NestedRangeRequestModel? Nested { get; set; }
+}
+
+public class NestedRangeRequestModel : IValidatableObject
+{
+    [Range(1, 128)]
+    public int MinLength { get; set; }
+
+    [Range(1, 128)]
+    public int MaxLength { get; set; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (MinLength > MaxLength)
+        {
+            yield return new ValidationResult(
+                "MinLength must not be greater than MaxLength.", [nameof(MinLength), nameof(MaxLength)]);
+        }
+    }
 }

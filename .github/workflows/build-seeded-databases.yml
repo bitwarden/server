@@ -115,10 +115,10 @@ jobs:
           cache-dependency-path: "**/*.csproj"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3 # v4.1.0
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
 
       - name: Restore .NET local tools
         run: dotnet tool restore
@@ -201,3 +201,35 @@ jobs:
             echo "Log in with \`az acr login -n ${_AZ_REGISTRY_NAME}\`, then \`docker pull\` either tag."
             echo "Attachment blobs, when the preset has any, are in this run's artifacts."
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Log in to Azure for ACR cleanup
+        uses: bitwarden/gh-actions/azure-login@main
+        with:
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID_SEEDER }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID_SEEDER }}
+
+      # Retain the last 2 images
+      - name: Prune old seeded images
+        env:
+          MATRIX_PRESET: ${{ matrix.preset }}
+          MATRIX_DATABASE: ${{ matrix.database }}
+        run: |
+          TAG="${MATRIX_PRESET//./-}"
+          REPO="seeded-${MATRIX_DATABASE}"
+          az acr repository show-tags -n "${_AZ_REGISTRY_NAME}" --repository "${REPO}" --orderby time_desc -o tsv \
+            | { grep -E "^${TAG}-[0-9a-f]{7}$" || true; } \
+            | tail -n +3 \
+            | while read -r t; do
+                az acr repository delete -n "${_AZ_REGISTRY_NAME}" --image "${REPO}:${t}" --yes
+              done
+          # Clean up untagged references. Other matrix cells sweep the same repo,
+          # so a delete that fails because the manifest is already gone is fine.
+          az acr manifest list-metadata -r "${_AZ_REGISTRY_NAME}" -n "${REPO}" --query "[?tags[0]==null].digest" -o tsv \
+            | while read -r d; do
+                az acr repository delete -n "${_AZ_REGISTRY_NAME}" --image "${REPO}@${d}" --yes \
+                  || ! az acr manifest show-metadata -r "${_AZ_REGISTRY_NAME}" -n "${REPO}@${d}" >/dev/null 2>&1
+              done
+
+      - name: Log out from Azure
+        uses: bitwarden/gh-actions/azure-logout@main

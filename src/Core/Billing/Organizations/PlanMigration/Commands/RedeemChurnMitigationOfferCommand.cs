@@ -280,6 +280,7 @@ public class RedeemChurnMitigationOfferCommand(
         {
             StartDate = phase.StartDate,
             EndDate = phase.EndDate,
+            TrialEnd = phase.TrialEnd,
             Items = phase.Items
                 .Select(i => new SubscriptionSchedulePhaseItemOptions
                 {

@@ -131,7 +131,7 @@ public class EmergencyAccessController : Controller
     }
 
     [HttpPost("{id}/accept")]
-    public async Task Accept(Guid id, [FromBody] OrganizationUserAcceptRequestModel model)
+    public async Task Accept(Guid id, [FromBody] EmergencyAccessAcceptRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         await _emergencyAccessService.AcceptUserAsync(id, user, model.Token, _userService);

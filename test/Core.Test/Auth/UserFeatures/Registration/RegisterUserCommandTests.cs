@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
@@ -13,6 +14,7 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.Registration.Implementations;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -124,7 +126,7 @@ public class RegisterUserCommandTests
             .CreateUserAsync(user)
             .Returns(IdentityResult.Success);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
             .Returns(true);
 
@@ -190,7 +192,7 @@ public class RegisterUserCommandTests
             .CreateUserAsync(user)
             .Returns(IdentityResult.Success);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
             .Returns(true);
 
@@ -224,7 +226,7 @@ public class RegisterUserCommandTests
             .CreateUserAsync(user)
             .Returns(IdentityResult.Success);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
             .Returns(false);
 
@@ -294,6 +296,7 @@ public class RegisterUserCommandTests
 
         orgUser.Email = user.Email;
         orgUser.Id = orgUserId;
+        orgUser.Status = OrganizationUserStatusType.Invited;
 
         var orgInviteTokenable = new OrgUserInviteTokenable(orgUser);
 
@@ -491,6 +494,7 @@ public class RegisterUserCommandTests
         user.Email = "user@blocked-domain.com";
         orgUser.Email = user.Email;
         orgUser.Id = orgUserId;
+        orgUser.Status = OrganizationUserStatusType.Invited;
         var blockingOrganizationId = Guid.NewGuid(); // Different org that has the domain blocked
         orgUser.OrganizationId = Guid.NewGuid(); // The org they're trying to join
 
@@ -534,6 +538,7 @@ public class RegisterUserCommandTests
         user.ReferenceData = null;
         orgUser.Email = user.Email;
         orgUser.Id = orgUserId;
+        orgUser.Status = OrganizationUserStatusType.Invited;
         // The organization owns the domain and is trying to invite the user
         orgUser.OrganizationId = Guid.NewGuid();
 
@@ -619,6 +624,51 @@ public class RegisterUserCommandTests
             .CreateUserAsync(Arg.Any<User>(), Arg.Any<RegisterFinishData>());
     }
 
+    [Theory]
+    [BitAutoData(OrganizationUserStatusType.Revoked)]
+    [BitAutoData(OrganizationUserStatusType.Accepted)]
+    [BitAutoData(OrganizationUserStatusType.Confirmed)]
+    [BitAutoData(OrganizationUserStatusType.Staged)]
+    public async Task RegisterUserViaOrganizationInviteToken_OrgUserNotInvited_ThrowsBadRequestException(
+        OrganizationUserStatusType status,
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData, OrganizationUser orgUser,
+        string orgInviteToken, Guid orgUserId,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy)
+    {
+        // Arrange
+        user.Email = "user@example.com";
+        orgUser.Email = user.Email;
+        orgUser.Id = orgUserId;
+        orgUser.Status = status;
+
+        var orgInviteTokenable = new OrgUserInviteTokenable(orgUser);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>()
+            .TryUnprotect(orgInviteToken, out Arg.Any<OrgUserInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = orgInviteTokenable;
+                return true;
+            });
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUserId)
+            .Returns(orgUser);
+
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(orgUser.OrganizationId, PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, registerFinishData, orgInviteToken, orgUserId));
+        Assert.Equal("Invalid organization user invitation.", exception.Message);
+
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceive()
+            .CreateUserAsync(Arg.Any<User>(), Arg.Any<RegisterFinishData>());
+    }
+
     // -----------------------------------------------------------------------------------------------
     // RegisterUserViaEmailVerificationToken tests
     // -----------------------------------------------------------------------------------------------
@@ -638,7 +688,7 @@ public class RegisterUserCommandTests
             .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
             .Returns(callInfo =>
             {
-                callInfo[1] = new RegistrationEmailVerificationTokenable(user.Email, user.Name, receiveMarketingMaterials);
+                callInfo[1] = new RegistrationEmailVerificationTokenable(user.Email, user.Name, receiveMarketingMaterials, emailSent: true);
                 return true;
             });
 
@@ -659,6 +709,50 @@ public class RegisterUserCommandTests
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
             .SendWelcomeEmailAsync(user);
+    }
+
+    [Theory]
+    [BitAutoData(true, false, true)]
+    [BitAutoData(false, true, false)]
+    // TODO: PM-45479 - Delete the two null-EmailSent rows.
+    [BitAutoData(new object?[] { null, true, true })]
+    [BitAutoData(new object?[] { null, false, false })]
+    public async Task RegisterUserViaEmailVerificationToken_SetsEmailVerifiedFromTokenEmailSent(
+        bool? emailSent, bool enableEmailVerification, bool expectedEmailVerified,
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string emailVerificationToken)
+    {
+        // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IGlobalSettings>()
+            .EnableEmailVerification = enableEmailVerification;
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new RegistrationEmailVerificationTokenable(user.Email, user.Name) { EmailSent = emailSent };
+                return true;
+            });
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, registerFinishData)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaEmailVerificationToken(user, registerFinishData, emailVerificationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .CreateUserAsync(Arg.Is<User>(u => u.EmailVerified == expectedEmailVerified), registerFinishData);
     }
 
     [Theory]
@@ -753,6 +847,61 @@ public class RegisterUserCommandTests
         await sutProvider.GetDependency<IOrganizationDomainRepository>()
             .Received(1)
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), organizationId);
+    }
+
+    [Theory]
+    [BitAutoData(true, false, true)]
+    [BitAutoData(false, true, false)]
+    // TODO: PM-45479 - Delete the two null-EmailSent rows.
+    [BitAutoData(new object?[] { null, true, true })]
+    [BitAutoData(new object?[] { null, false, false })]
+    public async Task RegisterUserViaEmailVerificationTokenAndOpenOrgInvite_SetsEmailVerifiedFromTokenEmailSent(
+        bool? emailSent, bool enableEmailVerification, bool expectedEmailVerified,
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string emailVerificationToken, Guid organizationId, Guid code,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy)
+    {
+        // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+        var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organizationId, Code = code };
+
+        sutProvider.GetDependency<IGlobalSettings>()
+            .EnableEmailVerification = enableEmailVerification;
+
+        sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
+            .Returns(new CommandResult(new None()));
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new RegistrationEmailVerificationTokenable(user.Email, user.Name) { EmailSent = emailSent };
+                return true;
+            });
+
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organizationId, PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, registerFinishData)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(
+            user, registerFinishData, emailVerificationToken, openOrgInvite);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .CreateUserAsync(Arg.Is<User>(u => u.EmailVerified == expectedEmailVerified), registerFinishData);
     }
 
     [Theory]
@@ -1101,7 +1250,7 @@ public class RegisterUserCommandTests
             .GetByIdAsync(organization.Id)
             .Returns(organization);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
             .Returns(true);
 
@@ -1164,7 +1313,7 @@ public class RegisterUserCommandTests
             .GetByIdAsync(organization.Id)
             .Returns(organization);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
             .Returns(true);
 
@@ -1252,7 +1401,7 @@ public class RegisterUserCommandTests
             .GetByIdAsync(organization.Id)
             .Returns(organization);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
             .Returns(true);
 
@@ -1564,7 +1713,7 @@ public class RegisterUserCommandTests
             .Returns(mockDataProtector);
 
         sutProvider.GetDependency<IGlobalSettings>()
-            .OrganizationInviteExpirationHours.Returns(120); // 5 days
+            .ProviderInviteExpirationHours.Returns(120); // 5 days
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
@@ -1621,7 +1770,7 @@ public class RegisterUserCommandTests
             .Returns(mockDataProtector);
 
         sutProvider.GetDependency<IGlobalSettings>()
-            .OrganizationInviteExpirationHours.Returns(120); // 5 days
+            .ProviderInviteExpirationHours.Returns(120); // 5 days
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
@@ -1634,6 +1783,42 @@ public class RegisterUserCommandTests
         // Act & Assert
         var result = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.RegisterUserViaProviderInviteToken(user, registerFinishData, base64EncodedProviderInvToken, Guid.NewGuid()));
+        Assert.Equal("Invalid provider invite token.", result.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaProviderInviteToken_TokenExpiredForProviderLifetime_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider,
+        User user, RegisterFinishData registerFinishData, Guid providerUserId)
+    {
+        // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        // Token is 2 hours old: past the provider lifetime, but within the organization invite lifetime
+        var createdMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow.AddHours(-2));
+        var decryptedProviderInviteToken = $"ProviderUserInvite {providerUserId} {user.Email} {createdMillis}";
+        var decryptedProviderInviteTokenByteArray = Encoding.UTF8.GetBytes(decryptedProviderInviteToken);
+        var base64EncodedProviderInvToken = WebEncoders.Base64UrlEncode(decryptedProviderInviteTokenByteArray);
+
+        var mockDataProtector = Substitute.For<IDataProtector>();
+        mockDataProtector.Unprotect(Arg.Any<byte[]>()).Returns(decryptedProviderInviteTokenByteArray);
+
+        sutProvider.GetDependency<IDataProtectionProvider>()
+            .CreateProtector("ProviderServiceDataProtector")
+            .Returns(mockDataProtector);
+
+        sutProvider.GetDependency<IGlobalSettings>().ProviderInviteExpirationHours.Returns(1);
+        sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteExpirationHours.Returns(168);
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
+        sutProvider.Create();
+
+        // Act & Assert
+        var result = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaProviderInviteToken(user, registerFinishData, base64EncodedProviderInvToken, providerUserId));
         Assert.Equal("Invalid provider invite token.", result.Message);
     }
 
@@ -1987,7 +2172,7 @@ public class RegisterUserCommandTests
             .CreateUserAsync(user)
             .Returns(IdentityResult.Success);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
             .Returns(true);
 
@@ -2111,7 +2296,7 @@ public class RegisterUserCommandTests
             .Returns(mockDataProtector);
 
         sutProvider.GetDependency<IGlobalSettings>()
-            .OrganizationInviteExpirationHours.Returns(120); // 5 days
+            .ProviderInviteExpirationHours.Returns(120); // 5 days
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com")
@@ -2182,6 +2367,7 @@ public class RegisterUserCommandTests
         user.Email = $"test+{Guid.NewGuid()}@example.com";
         user.ReferenceData = null;
         orgUser.Email = user.Email;
+        orgUser.Status = OrganizationUserStatusType.Invited;
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
@@ -2203,7 +2389,7 @@ public class RegisterUserCommandTests
             .GetByIdAsync(orgUser.OrganizationId)
             .Returns((Organization)null);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
             .Returns(true);
 
@@ -2247,7 +2433,7 @@ public class RegisterUserCommandTests
             .CreateUserAsync(user)
             .Returns(IdentityResult.Success);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
             .Returns(true);
 
@@ -2279,6 +2465,7 @@ public class RegisterUserCommandTests
         user.Email = $"test+{Guid.NewGuid()}@example.com";
         user.ReferenceData = null;
         orgUser.Email = user.Email;
+        orgUser.Status = OrganizationUserStatusType.Invited;
         organization.PlanType = PlanType.EnterpriseAnnually;
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
@@ -2301,7 +2488,7 @@ public class RegisterUserCommandTests
             .GetByIdAsync(orgUser.OrganizationId)
             .Returns(organization);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
             .Returns(true);
 

@@ -2,10 +2,10 @@
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Models;
 using Bit.Core.Billing.Organizations.Helpers;
-using Bit.Core.Billing.Organizations.Schedules;
-using Bit.Core.Billing.Organizations.Schedules.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Schedules;
+using Bit.Core.Billing.Subscriptions.Schedules.Enums;
 using Bit.Core.Models.Business;
 using Microsoft.Extensions.Logging;
 
@@ -41,13 +41,14 @@ public class GetPendingAnnualUpgradeQuery(
         {
             var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
                 stripeAdapter, logger, organization, ["test_clock", "schedule.phases.items.price"]);
-            if (subscription is null || subscription.Status != SubscriptionStatus.Active)
+            if (subscription is null ||
+                subscription.Status is not (SubscriptionStatus.Active or SubscriptionStatus.Trialing))
             {
                 return null;
             }
 
             var ownership = SubscriptionScheduleOwnershipMapper.Map(subscription);
-            if (ownership == OrganizationSubscriptionScheduleOwnership.Unexpanded)
+            if (ownership == SubscriptionScheduleOwnership.Unexpanded)
             {
                 logger.LogError(
                     "{Caller}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) reports schedule ({ScheduleId}) but it was not expanded; returning no pending upgrade",
@@ -55,7 +56,7 @@ public class GetPendingAnnualUpgradeQuery(
                 return null;
             }
 
-            if (ownership != OrganizationSubscriptionScheduleOwnership.AnnualUpgrade)
+            if (ownership != SubscriptionScheduleOwnership.AnnualUpgrade)
             {
                 return null;
             }

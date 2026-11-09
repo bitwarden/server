@@ -112,7 +112,11 @@ public class SyncController : Controller
 
         var folders = await _folderRepository.GetManyByUserIdAsync(user.Id);
         var allCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, withOrganizations: hasEnabledOrgs);
-        var sends = await _sendRepository.GetManyByUserIdAsync(user.Id);
+        var sends = (await _sendRepository.GetManyByUserIdAsync(user.Id)).AsEnumerable();
+        if (!_featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing))
+        {
+            sends = sends.Where(s => s.Type != Core.Tools.Enums.SendType.Item);
+        }
 
         IEnumerable<CollectionDetails> collections = null;
         IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict = null;

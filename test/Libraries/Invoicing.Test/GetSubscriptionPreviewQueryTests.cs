@@ -312,7 +312,7 @@ public class GetSubscriptionPreviewQueryTests
     {
         PasswordManager = new PasswordManagerInvoiceItems
         {
-            Seats = new InvoicePreviewItem { Reference = "pm-seat", Quantity = 5, Cost = 100m }
+            Seats = new InvoicePreviewItem { Reference = "pm-seat", Quantity = 5, Cost = 100m },
         },
         Cadence = PlanCadenceType.Annually,
         PlanTier = PlanTierType.Teams,

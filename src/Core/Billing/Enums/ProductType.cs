@@ -8,4 +8,6 @@ public enum ProductType
     PasswordManager = 0,
     [Display(Name = "Secrets Manager")]
     SecretsManager = 1,
+    [Display(Name = "Privileged Controls")]
+    PrivilegedControls = 2,
 }

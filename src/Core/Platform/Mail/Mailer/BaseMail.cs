@@ -17,6 +17,11 @@ public abstract class BaseMail<TView> where TView : BaseMailView
     public required IEnumerable<string> ToEmails { get; set; }
 
     /// <summary>
+    /// Reply-To header; omitted when null.
+    /// </summary>
+    public string? ReplyToAddress { get; set; }
+
+    /// <summary>
     /// The subject of the email.
     /// </summary>
     public abstract string Subject { get; set; }

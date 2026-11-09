@@ -11,7 +11,6 @@ using Bit.Api.Auth.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Response.Organizations;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
-using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
@@ -472,7 +471,6 @@ public class OrganizationsController : Controller
     }
 
     [HttpGet("{orgId}/private-key")]
-    [RequireFeature(FeatureFlagKeys.GenerateInviteLink)]
     [Authorize<ManageUsersRequirement>]
     public async Task<OrganizationPrivateKeyResponseModel> GetPrivateKey([FromRoute] Guid orgId)
     {

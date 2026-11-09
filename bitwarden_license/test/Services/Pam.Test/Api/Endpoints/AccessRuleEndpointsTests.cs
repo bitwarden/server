@@ -19,23 +19,19 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Api.Endpoints;
 
 /// <summary>
-/// Locks the access-rule wire contract that the generated OpenAPI spec — and the client bindings built from it —
-/// depend on. The endpoint bodies are scaffold stubs; the contract (routes, names, methods, return types) is the
-/// thing under test. Endpoints are materialized by mapping them onto a minimal host and reading its
-/// <see cref="EndpointDataSource"/> — the same metadata the offline OpenAPI generator inspects.
+/// Locks the access-rule wire contract (routes, names, methods, return types) the OpenAPI spec depends on.
 /// </summary>
 public class AccessRuleEndpointsTests
 {
     private static List<RouteEndpoint> MaterializeEndpoints()
     {
         var builder = WebApplication.CreateSlimBuilder();
-        // The handlers must be known services so Minimal API binding treats the handler parameter as injected
-        // (not an inferred request body) — the same registration AddPamServices performs in the app.
-        // MapPamEndpoints maps every PAM group, so each group's handler has to be resolvable here.
+        // Unregistered handlers would bind as a request body.
         builder.Services.AddScoped<LeaseEndpointsHandler>();
         builder.Services.AddScoped<AccessRequestEndpointsHandler>();
         builder.Services.AddScoped<AccessRuleEndpointsHandler>();
         builder.Services.AddScoped<CipherLeaseEndpointsHandler>();
+        builder.Services.AddScoped<AuditEndpointsHandler>();
         builder.Services.AddScoped<AccessConnectorEndpointsHandler>();
         builder.Services.AddScoped<TargetSystemEndpointsHandler>();
         builder.Services.AddScoped<RotationConfigEndpointsHandler>();
@@ -45,8 +41,7 @@ public class AccessRuleEndpointsTests
         var app = builder.Build();
         app.MapPamEndpoints();
 
-        // Enumerating the data sources builds the endpoints — applying the route group's prefix, metadata, and
-        // conventions — without starting the request pipeline, the same set the OpenAPI generator discovers.
+        // Builds the endpoints without starting the request pipeline.
         return ((IEndpointRouteBuilder)app).DataSources
             .SelectMany(dataSource => dataSource.Endpoints)
             .OfType<RouteEndpoint>()
@@ -54,13 +49,13 @@ public class AccessRuleEndpointsTests
     }
 
     [Fact]
-    public void MapPamEndpoints_RegistersTheFiveAccessRuleRoutes_InTheInternalDoc()
+    public void MapPamEndpoints_RegistersTheSixAccessRuleRoutes_InTheInternalDoc()
     {
         var endpoints = MaterializeEndpoints()
             .Where(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("AccessRules"))
             .ToList();
 
-        Assert.Equal(5, endpoints.Count);
+        Assert.Equal(6, endpoints.Count);
         Assert.All(endpoints, endpoint =>
             Assert.Equal("internal", endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>()?.EndpointGroupName));
     }
@@ -71,6 +66,7 @@ public class AccessRuleEndpointsTests
     [InlineData("Pam_AccessRules_Post", "POST", "organizations/{orgId:guid}/access-rules")]
     [InlineData("Pam_AccessRules_Put", "PUT", "organizations/{orgId:guid}/access-rules/{id:guid}")]
     [InlineData("Pam_AccessRules_Delete", "DELETE", "organizations/{orgId:guid}/access-rules/{id:guid}")]
+    [InlineData("Pam_AccessRules_GetBypassableCiphers", "GET", "organizations/{orgId:guid}/access-rules/{id:guid}/bypassable-ciphers")]
     public void MapPamEndpoints_RegistersExpectedRoute(string name, string method, string route)
     {
         var endpoints = MaterializeEndpoints();
@@ -78,8 +74,7 @@ public class AccessRuleEndpointsTests
         var endpoint = Assert.Single(
             endpoints,
             e => e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == name);
-        // Trim slashes: the raw pattern carries routing's leading/trailing slashes (e.g. "/.../access-rules/")
-        // that the generated spec path does not.
+        // The raw pattern carries leading and trailing slashes.
         Assert.Equal(route, endpoint.RoutePattern.RawText?.Trim('/'));
         Assert.Contains(method, endpoint.Metadata.GetMetadata<HttpMethodMetadata>()!.HttpMethods);
     }
@@ -95,12 +90,7 @@ public class AccessRuleEndpointsTests
         Assert.Contains(produces, p => p.StatusCode == StatusCodes.Status404NotFound && p.Type == typeof(ErrorResponseModel));
     }
 
-    /// <summary>
-    /// Collects the authorization requirements an endpoint carries. They arrive as two shapes of metadata:
-    /// <c>AuthorizeAttribute&lt;T&gt;</c> contributes <see cref="IAuthorizationRequirementData"/>, while a policy
-    /// built inline contributes an <see cref="AuthorizationPolicy"/>. AuthorizationMiddleware combines both, so a
-    /// test asking "what must this endpoint satisfy" has to read both.
-    /// </summary>
+    /// <summary>AuthorizationMiddleware combines both metadata shapes, so both are read.</summary>
     private static List<IAuthorizationRequirement> RequirementsFor(Endpoint endpoint) =>
     [
         .. endpoint.Metadata.GetOrderedMetadata<AuthorizationPolicy>().SelectMany(policy => policy.Requirements),
@@ -113,10 +103,10 @@ public class AccessRuleEndpointsTests
     [InlineData("Pam_AccessRules_Post", typeof(ManageAccessRulesRequirement))]
     [InlineData("Pam_AccessRules_Put", typeof(ManageAccessRulesRequirement))]
     [InlineData("Pam_AccessRules_Delete", typeof(ManageAccessRulesRequirement))]
+    // Restricted to rule managers, since it names credentials a rule fails to protect.
+    [InlineData("Pam_AccessRules_GetBypassableCiphers", typeof(ManageAccessRulesRequirement))]
     public void MapPamEndpoints_AuthorizesRouteWithRequirement(string name, Type requirementType)
     {
-        // Reads require membership; writes require authority over rule authorship. The requirements are carried as
-        // endpoint metadata, which AuthorizationMiddleware combines with the group's Policies.Application.
         var endpoint = Assert.Single(
             MaterializeEndpoints(),
             e => e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == name);
@@ -131,10 +121,7 @@ public class AccessRuleEndpointsTests
     [Fact]
     public void MapPamEndpoints_AccessRuleWritesRequireMembershipBesidesThePermission()
     {
-        // A write must satisfy the group's MemberRequirement *in addition to* the permission: the endpoint policy
-        // adds to the group policy rather than replacing it, so a write is never reachable on weaker terms than a
-        // read. ManageAccessRulesRequirement independently excludes providers — see
-        // ManageAccessRulesRequirementTests.
+        // The endpoint policy adds to the group's, so a write is never reachable on weaker terms than a read.
         var writeRoutes = new[] { "Pam_AccessRules_Post", "Pam_AccessRules_Put", "Pam_AccessRules_Delete" };
 
         var endpoints = MaterializeEndpoints()
@@ -153,13 +140,12 @@ public class AccessRuleEndpointsTests
     [Fact]
     public void MapPamEndpoints_AccessRulesNeverAuthorizeProvidersByMembership()
     {
-        // Access rules gate who can lease credentials out of an organization, which is not a provider's to read or
-        // change. MemberOrProviderRequirement would let them in, so no access-rule route may carry it.
+        // Access rules gate who can lease credentials, which is not a provider's to read or change.
         var endpoints = MaterializeEndpoints()
             .Where(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("AccessRules"))
             .ToList();
 
-        Assert.Equal(5, endpoints.Count);
+        Assert.Equal(6, endpoints.Count);
         Assert.All(endpoints, endpoint =>
         {
             var requirements = RequirementsFor(endpoint);
@@ -174,6 +160,7 @@ public class AccessRuleEndpointsTests
     [InlineData(nameof(AccessRuleEndpointsHandler.Post), typeof(Task<AccessRuleResponseModel>))]
     [InlineData(nameof(AccessRuleEndpointsHandler.Put), typeof(Task<AccessRuleResponseModel>))]
     [InlineData(nameof(AccessRuleEndpointsHandler.Delete), typeof(Task))]
+    [InlineData(nameof(AccessRuleEndpointsHandler.GetBypassableCiphers), typeof(Task<RuleBypassableCiphersResponseModel>))]
     public void Handler_HasExpectedReturnType(string methodName, Type expectedReturnType)
     {
         var method = typeof(AccessRuleEndpointsHandler).GetMethod(methodName);

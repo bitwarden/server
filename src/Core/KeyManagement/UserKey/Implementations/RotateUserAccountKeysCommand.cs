@@ -115,6 +115,9 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
             return IdentityResult.Failed(errors);
         }
 
+        // Equal timestamps mark a rotation done together with a password change (e.g. for Admin diagnostics).
+        user.LastKeyRotationDate = user.LastPasswordChangeDate = DateTime.UtcNow;
+
         await _userRepository.UpdateUserKeyAndEncryptedDataV2Async(user, saveEncryptedDataActions);
 
         await HandlePushNotificationAsync(shouldPersistV2UpgradeToken: false, user);
@@ -263,7 +266,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         {
             throw new InvalidOperationException("Signature key pair data is required for V2 encryption.");
         }
-        if (EncryptionParsing.GetEncryptionType(model.AccountKeys.SignatureKeyPairData.WrappedSigningKey) != EncryptionType.XChaCha20Poly1305_B64)
+        if (EncryptionParsing.GetEncryptionType(model.AccountKeys.SignatureKeyPairData.WrappedSigningKey) != EncryptionType.CoseEncrypt0B64)
         {
             throw new InvalidOperationException("The provided signing key data is not wrapped with XChaCha20-Poly1305.");
         }
@@ -272,7 +275,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
             throw new InvalidOperationException("The provided signature key pair data does not contain a valid verifying key.");
         }
 
-        if (EncryptionParsing.GetEncryptionType(model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey) != EncryptionType.XChaCha20Poly1305_B64)
+        if (EncryptionParsing.GetEncryptionType(model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey) != EncryptionType.CoseEncrypt0B64)
         {
             throw new InvalidOperationException("The provided private key encryption key is not wrapped with XChaCha20-Poly1305.");
         }
@@ -312,6 +315,8 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
     private async Task<bool> BaseRotateUserAccountKeysAsync(BaseRotateUserAccountKeysData baseModel, User user,
         List<DatabaseTransactionAction> saveEncryptedDataActions)
     {
+        baseModel.ValidateOldUserKeyIdForUser(user);
+
         var now = DateTime.UtcNow;
         user.RevisionDate = user.AccountRevisionDate = now;
         user.LastKeyRotationDate = now;

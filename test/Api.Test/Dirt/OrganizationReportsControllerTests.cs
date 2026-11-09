@@ -13,10 +13,10 @@ using Bit.Core.Dirt.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
-using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -250,7 +250,7 @@ public class OrganizationReportControllerTests
     }
 
     // CreateOrganizationReportAsync - the file path is gated on the new architecture, then selected by
-    // request shape (FileSize); it is never selected by the file-storage flag.
+    // request shape (FileSize).
 
     [Theory, BitAutoData]
     public async Task CreateOrganizationReportAsync_NewArchOn_WithoutFileSize_TakesInlinePath(
@@ -356,85 +356,6 @@ public class OrganizationReportControllerTests
         await sutProvider.GetDependency<ICreateOrganizationReportCommand>()
             .DidNotReceive()
             .CreateAsync(Arg.Any<AddOrganizationReportRequest>());
-    }
-
-    // Under the new architecture, path selection must be independent of the file-storage flag: the
-    // client chooses its request shape from that flag via a config cache that can lag the server, so
-    // branching on it here would fail whenever the client and server disagree.
-
-    [Theory, BitAutoData]
-    public async Task CreateOrganizationReportAsync_NewArchOn_WithFileSize_FileStorageFlagOff_StillTakesFileCreatePath(
-        SutProvider<OrganizationReportsController> sutProvider,
-        Guid orgId,
-        AddOrganizationReportRequestModel request,
-        OrganizationReport expectedReport,
-        string uploadUrl)
-    {
-        // Arrange - client sent a file-shaped body while the server's file-storage flag is off.
-        request.FileSize = 1024;
-
-        var reportFile = new ReportFile { Id = "file-id", FileName = "report.json", Size = 1024, Validated = false };
-        expectedReport.SetReportFile(reportFile);
-
-        SetupAuthorization(sutProvider, orgId);
-        SetupNewArchitecture(sutProvider, enabled: true);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
-            .Returns(false);
-
-        sutProvider.GetDependency<ICreateOrganizationReportCommand>()
-            .CreateAsync(Arg.Any<AddOrganizationReportRequest>())
-            .Returns(expectedReport);
-
-        sutProvider.GetDependency<IOrganizationReportStorageService>()
-            .GetReportFileUploadUrlAsync(expectedReport, Arg.Any<ReportFile>())
-            .Returns(uploadUrl);
-
-        // Act
-        var result = await sutProvider.Sut.CreateOrganizationReportAsync(orgId, request);
-
-        // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.IsType<OrganizationReportFileResponseModel>(okResult.Value);
-
-        await sutProvider.GetDependency<ICreateOrganizationReportCommand>()
-            .Received(1)
-            .CreateAsync(Arg.Any<AddOrganizationReportRequest>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task CreateOrganizationReportAsync_NewArchOn_WithoutFileSize_FileStorageFlagOn_StillTakesInlinePath(
-        SutProvider<OrganizationReportsController> sutProvider,
-        Guid orgId,
-        AddOrganizationReportRequestModel request,
-        OrganizationReport expectedReport)
-    {
-        // Arrange - client sent an inline body while the server's file-storage flag is on.
-        request.FileSize = null;
-        expectedReport.ReportFile = null;
-
-        SetupAuthorization(sutProvider, orgId);
-        SetupNewArchitecture(sutProvider, enabled: true);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
-            .Returns(true);
-
-        sutProvider.GetDependency<IAddOrganizationReportCommand>()
-            .AddOrganizationReportAsync(Arg.Any<AddOrganizationReportRequest>())
-            .Returns(expectedReport);
-
-        // Act
-        var result = await sutProvider.Sut.CreateOrganizationReportAsync(orgId, request);
-
-        // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.IsType<OrganizationReportResponseModel>(okResult.Value);
-
-        await sutProvider.GetDependency<IAddOrganizationReportCommand>()
-            .Received(1)
-            .AddOrganizationReportAsync(Arg.Any<AddOrganizationReportRequest>());
     }
 
     [Theory, BitAutoData]

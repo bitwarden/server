@@ -46,7 +46,7 @@ public class UpcomingInvoiceHandlerTests
     private readonly IUserRepository _userRepository;
     private readonly IValidateSponsorshipCommand _validateSponsorshipCommand;
     private readonly IMailer _mailer;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IBusinessPlanMigrationCoordinator _businessPlanMigrationCoordinator;
 
     private readonly UpcomingInvoiceHandler _sut;
@@ -71,7 +71,7 @@ public class UpcomingInvoiceHandlerTests
         _userRepository = Substitute.For<IUserRepository>();
         _validateSponsorshipCommand = Substitute.For<IValidateSponsorshipCommand>();
         _mailer = Substitute.For<IMailer>();
-        _featureService = Substitute.For<IFeatureService>();
+        _featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
         _businessPlanMigrationCoordinator = Substitute.For<IBusinessPlanMigrationCoordinator>();
 
         _sut = new UpcomingInvoiceHandler(
@@ -1533,6 +1533,87 @@ public class UpcomingInvoiceHandlerTests
                 o.Phases[1].Metadata[MetadataKeys.MigrationCohortId] == "cohort_123" &&
                 o.Phases[1].Metadata[MetadataKeys.MigrationCohortName] == "Teams 2020 Annual" &&
                 o.Phases[1].Metadata["unrelated_key"] == "unrelated_value"));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenOrganizationTaxNotEnabled_TrialingSchedulePresent_CarriesTrialEndOnlyOnTrialingPhase()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var invoice = new Invoice { CustomerId = "cus_123", Lines = new StripeList<InvoiceLineItem> { Data = [] } };
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            CustomerId = "cus_123",
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = false },
+            Items = new StripeList<SubscriptionItem> { Data = [] },
+            Metadata = new Dictionary<string, string> { { "organizationId", _organizationId.ToString() } },
+            Customer = new Customer { Id = "cus_123" }
+        };
+        var customer = new Customer
+        {
+            Id = "cus_123",
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
+            Address = new Address { Country = "US" }
+        };
+        var organization = new Organization { Id = _organizationId, PlanType = PlanType.TeamsMonthly, BillingEmail = "test@test.com" };
+
+        var trialStart = DateTime.UtcNow.AddDays(-2);
+        var trialEnd = DateTime.UtcNow.AddDays(5);
+        var annualEnd = trialEnd.AddYears(1);
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new TeamsPlan(isAnnual: false));
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data =
+                [
+                    new SubscriptionSchedule
+                    {
+                        Id = "sub_sched_123",
+                        SubscriptionId = "sub_123",
+                        Status = SubscriptionScheduleStatus.Active,
+                        Phases = new List<SubscriptionSchedulePhase>
+                        {
+                            new()
+                            {
+                                StartDate = trialStart,
+                                EndDate = trialEnd,
+                                TrialEnd = trialEnd,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_monthly", Quantity = 5 }],
+                                Discounts = [],
+                                ProrationBehavior = "none"
+                            },
+                            new()
+                            {
+                                StartDate = trialEnd,
+                                EndDate = annualEnd,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_annual", Quantity = 5 }],
+                                Discounts = [],
+                                ProrationBehavior = "none"
+                            }
+                        }
+                    }
+                ]
+            });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            Arg.Is("sub_sched_123"),
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases.Count == 2 &&
+                (DateTime?)o.Phases[0].TrialEnd == trialEnd &&
+                o.Phases[1].TrialEnd == null));
     }
 
     [Fact]

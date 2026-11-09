@@ -1,4 +1,5 @@
 ﻿using Bit.Core;
+using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
 using Bit.Core.SecretsManager.Repositories;
@@ -8,7 +9,6 @@ using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Bit.Sso.Utilities;
 using Duende.IdentityServer.Services;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Stripe;
 
 namespace Bit.Sso;
@@ -46,9 +46,6 @@ public class Startup
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
 
-        // Metrics
-        services.TryAddSingleton<Saml2AssertionMetrics>();
-
         // Caching
         services.AddMemoryCache();
         services.AddDistributedCache(globalSettings);
@@ -72,7 +69,7 @@ public class Startup
         // Authentication
         services.AddDistributedIdentityServices();
         services.AddAuthentication()
-            .AddCookie(AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+            .AddCookie(AuthenticationSchemes.SsoExternalCookie);
         services.AddSsoServices(globalSettings);
 
         // IdentityServer

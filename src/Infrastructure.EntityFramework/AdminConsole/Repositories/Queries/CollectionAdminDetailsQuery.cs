@@ -14,12 +14,14 @@ public class CollectionAdminDetailsQuery : IQuery<CollectionAdminDetails>
     private readonly Guid? _userId;
     private readonly Guid? _organizationId;
     private readonly Guid? _collectionId;
+    private readonly bool _includeAllTypes;
 
-    private CollectionAdminDetailsQuery(Guid? userId, Guid? organizationId, Guid? collectionId)
+    private CollectionAdminDetailsQuery(Guid? userId, Guid? organizationId, Guid? collectionId, bool includeAllTypes = false)
     {
         _userId = userId;
         _organizationId = organizationId;
         _collectionId = collectionId;
+        _includeAllTypes = includeAllTypes;
     }
 
     public virtual IQueryable<CollectionAdminDetails> Run(DatabaseContext dbContext)
@@ -63,9 +65,13 @@ public class CollectionAdminDetailsQuery : IQuery<CollectionAdminDetails>
 
         if (_organizationId.HasValue)
         {
-            baseCollectionQuery = baseCollectionQuery.Where(x =>
-                x.c.OrganizationId == _organizationId &&
-                x.c.Type == CollectionType.SharedCollection);
+            baseCollectionQuery = _includeAllTypes
+                ? baseCollectionQuery.Where(x =>
+                    x.c.OrganizationId == _organizationId &&
+                    (x.c.Type == CollectionType.SharedCollection || x.c.Type == CollectionType.DefaultUserCollection))
+                : baseCollectionQuery.Where(x =>
+                    x.c.OrganizationId == _organizationId &&
+                    x.c.Type == CollectionType.SharedCollection);
         }
         else if (_collectionId.HasValue)
         {
@@ -84,7 +90,11 @@ public class CollectionAdminDetailsQuery : IQuery<CollectionAdminDetails>
             ExternalId = x.c.ExternalId,
             CreationDate = x.c.CreationDate,
             RevisionDate = x.c.RevisionDate,
+            Type = x.c.Type,
             DefaultUserCollectionEmail = x.c.DefaultUserCollectionEmail,
+            // A row for a group with no grant on this collection has Assigned = false and defaults ReadOnly and
+            // HidePasswords to false. Callers combining rows must ignore unassigned rows for those flags, otherwise
+            // an unrelated group membership overrides a real restriction.
             ReadOnly = (bool?)x.cu.ReadOnly ?? (bool?)x.cg.ReadOnly ?? false,
             HidePasswords = (bool?)x.cu.HidePasswords ?? (bool?)x.cg.HidePasswords ?? false,
             Manage = (bool?)x.cu.Manage ?? (bool?)x.cg.Manage ?? false,
@@ -103,6 +113,15 @@ public class CollectionAdminDetailsQuery : IQuery<CollectionAdminDetails>
     public static CollectionAdminDetailsQuery ByOrganizationId(Guid organizationId, Guid? userId)
     {
         return new CollectionAdminDetailsQuery(userId, organizationId, null);
+    }
+
+    /// <summary>
+    /// Returns all shared and default collections for the organization, always including access relationships.
+    /// Purpose-built for reporting surfaces that need complete member attribution.
+    /// </summary>
+    public static CollectionAdminDetailsQuery ByOrganizationIdAllTypes(Guid organizationId, Guid? userId)
+    {
+        return new CollectionAdminDetailsQuery(userId, organizationId, null, includeAllTypes: true);
     }
 
 }

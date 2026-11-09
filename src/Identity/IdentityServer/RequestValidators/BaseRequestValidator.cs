@@ -44,7 +44,7 @@ public abstract class BaseRequestValidator<T> where T : class
     protected readonly IUpdateDeviceLastActivityCommand _updateDeviceLastActivityCommand;
 
     protected ICurrentContext CurrentContext { get; }
-    protected IFeatureService _featureService { get; }
+    protected Bitwarden.Server.Sdk.Features.IFeatureService _featureService { get; }
     protected ISsoConfigRepository SsoConfigRepository { get; }
     protected IUserService _userService { get; }
     protected IUserDecryptionOptionsBuilder UserDecryptionOptionsBuilder { get; }
@@ -62,7 +62,7 @@ public abstract class BaseRequestValidator<T> where T : class
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
         IUserRepository userRepository,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IPolicyRequirementQuery policyRequirementQuery,
@@ -324,7 +324,7 @@ public abstract class BaseRequestValidator<T> where T : class
         var twoFactorTokenValid =
             await _twoFactorAuthenticationValidator
                 .VerifyTwoFactorAsync(validatorContext.User, twoFactorOrganization, twoFactorProviderType,
-                    twoFactorToken);
+                    twoFactorToken, request.Raw["DeviceIdentifier"]);
 
         // 3b. Response for 2FA required but request is not valid or remember token expired state.
         if (!twoFactorTokenValid)

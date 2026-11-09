@@ -4,6 +4,9 @@ namespace Bit.Core.Billing.Constants;
 
 public static class PlanConstants
 {
+    /// <summary>The most of any one purchasable item, such as seats or service accounts, that can be bought at once.</summary>
+    public const int MaxPurchasableQuantity = 100_000;
+
     public static List<PlanType> EnterprisePlanTypes =>
     [
         PlanType.EnterpriseAnnually2019,

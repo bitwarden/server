@@ -158,7 +158,7 @@ public class AccountBillingVNextController(
     }
 
     [HttpGet("discounts")]
-    [RequireFeature(FeatureFlagKeys.PM29108_EnablePersonalDiscounts)]
+    [Bitwarden.Server.Sdk.Features.RequireFeature(FeatureFlagKeys.PM29108_EnablePersonalDiscounts)]
     [InjectUser]
     public async Task<IResult> GetApplicableDiscountsAsync(
         [BindNever] User user)

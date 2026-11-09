@@ -1,5 +1,8 @@
 ﻿using System.Text.Json;
+using Bit.Api.Dirt.Models.Request;
 using Bit.Api.Dirt.Models.Response;
+using Bit.Api.Dirt.Utilities;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Enums;
@@ -7,6 +10,9 @@ using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Dirt.Services;
 using Bit.Core.Exceptions;
+using Bit.Core.Settings;
+using Bit.Core.Tokens;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,22 +24,21 @@ public class SlackIntegrationController(
     ICurrentContext currentContext,
     IOrganizationIntegrationRepository integrationRepository,
     ISlackService slackService,
+    IGlobalSettings globalSettings,
+    IDataProtectorTokenFactory<IntegrationOAuthStateTokenable> stateFactory,
+    IIntegrationOAuthNonceStore nonceStore,
     TimeProvider timeProvider) : Controller
 {
+    [RequireFeature(FeatureFlagKeys.EventManagementForSlack)]
     [HttpGet("{organizationId:guid}/integrations/slack/redirect")]
-    public async Task<IActionResult> RedirectAsync(Guid organizationId)
+    public async Task<OrganizationIntegrationOAuthRedirectResponseModel> RedirectAsync(Guid organizationId)
     {
         if (!await currentContext.OrganizationOwner(organizationId))
         {
             throw new NotFoundException();
         }
 
-        string? callbackUrl = Url.RouteUrl(
-            routeName: "SlackIntegration_Create",
-            values: null,
-            protocol: currentContext.HttpContext.Request.Scheme,
-            host: currentContext.HttpContext.Request.Host.ToUriComponent()
-        );
+        string? callbackUrl = BuildCallbackUrl();
         if (string.IsNullOrEmpty(callbackUrl))
         {
             throw new BadRequestException("Unable to build callback Url");
@@ -59,10 +64,12 @@ public class SlackIntegrationController(
 
         } // An Initiated slack integration exits, re-use it and kick off a new OAuth flow
 
-        var state = IntegrationOAuthState.FromIntegration(integration, timeProvider);
+        // Issuing a new nonce invalidates any state handed out by an earlier redirect
+        var nonce = await nonceStore.IssueAsync(integration.Id);
+        var state = stateFactory.Protect(new IntegrationOAuthStateTokenable(integration, nonce, timeProvider));
         var redirectUrl = slackService.GetRedirectUrl(
             callbackUrl: callbackUrl,
-            state: state.ToString()
+            state: state
         );
 
         if (string.IsNullOrEmpty(redirectUrl))
@@ -70,56 +77,129 @@ public class SlackIntegrationController(
             throw new NotFoundException();
         }
 
-        return Redirect(redirectUrl);
+        return new OrganizationIntegrationOAuthRedirectResponseModel(redirectUrl);
     }
 
+    /// <summary>
+    /// The OAuth callback Slack sends the browser to. It's a top-level navigation, so no bearer token is present and
+    /// the endpoint is anonymous. It only validates the state and hands the code to the web vault, which finishes
+    /// the setup through <see cref="CompleteAsync"/> as an authenticated Organization Owner.
+    /// </summary>
     [HttpGet("integrations/slack/create", Name = "SlackIntegration_Create")]
     [AllowAnonymous]
-    public async Task<IActionResult> CreateAsync([FromQuery] string code, [FromQuery] string state)
+    public async Task<IActionResult> CreateAsync(
+        [FromQuery] string? code,
+        [FromQuery] string? state,
+        [FromQuery] string? error)
     {
-        var oAuthState = IntegrationOAuthState.FromString(state: state, timeProvider: timeProvider);
-        if (oAuthState is null)
+        var (_, integration) = await GetIntegrationForStateAsync(state);
+
+        if (integration.Configuration is not null)
+        {
+            return RedirectToVault(integration, IntegrationOAuthCallbackRedirect.AlreadyConnected);
+        }
+
+        // Slack returns "error" instead of "code" when the user declines consent
+        if (!string.IsNullOrEmpty(error) || string.IsNullOrEmpty(code))
+        {
+            return RedirectToVault(integration, IntegrationOAuthCallbackRedirect.Canceled);
+        }
+
+        return Redirect(IntegrationOAuthCallbackRedirect.BuildAuthorizedUrl(
+            globalSettings, integration.OrganizationId, IntegrationType.Slack, code, state!));
+    }
+
+    [HttpPost("{organizationId:guid}/integrations/slack/complete")]
+    public async Task<OrganizationIntegrationOAuthCompleteResponseModel> CompleteAsync(
+        Guid organizationId,
+        [FromBody] OrganizationIntegrationOAuthCompleteRequestModel model)
+    {
+        // Binds completion to an owner of the org the state was issued for, so a state sent to someone else is useless
+        if (!await currentContext.OrganizationOwner(organizationId))
         {
             throw new NotFoundException();
         }
 
-        // Fetch existing Initiated record
-        var integration = await integrationRepository.GetByIdAsync(oAuthState.IntegrationId);
-        if (integration is null ||
-            integration.Type != IntegrationType.Slack ||
-            integration.Configuration is not null)
+        var (oAuthState, integration) = await GetIntegrationForStateAsync(model.State);
+        if (integration.OrganizationId != organizationId)
         {
             throw new NotFoundException();
         }
 
-        // Verify Organization matches hash
-        if (!oAuthState.ValidateOrg(integration.OrganizationId))
+        if (integration.Configuration is not null)
+        {
+            return new OrganizationIntegrationOAuthCompleteResponseModel(IntegrationOAuthCallbackRedirect.AlreadyConnected);
+        }
+
+        // Each state can be redeemed once, whatever the outcome, so a leaked state cannot be replayed
+        if (!await nonceStore.TryConsumeAsync(integration.Id, oAuthState.Nonce))
         {
             throw new NotFoundException();
         }
 
-        // Fetch token from Slack and store to DB
-        string? callbackUrl = Url.RouteUrl(
-            routeName: "SlackIntegration_Create",
-            values: null,
-            protocol: currentContext.HttpContext.Request.Scheme,
-            host: currentContext.HttpContext.Request.Host.ToUriComponent()
-        );
+        // Slack requires the same redirect URI the authorize request used
+        string? callbackUrl = BuildCallbackUrl();
         if (string.IsNullOrEmpty(callbackUrl))
         {
-            throw new BadRequestException("Unable to build callback Url");
+            return new OrganizationIntegrationOAuthCompleteResponseModel(IntegrationOAuthCallbackRedirect.Failed);
         }
-        var token = await slackService.ObtainTokenViaOAuth(code, callbackUrl);
 
+        var token = await slackService.ObtainTokenViaOAuth(model.Code, callbackUrl);
         if (string.IsNullOrEmpty(token))
         {
-            throw new BadRequestException("Invalid response from Slack.");
+            return new OrganizationIntegrationOAuthCompleteResponseModel(IntegrationOAuthCallbackRedirect.Failed);
         }
 
         integration.Configuration = JsonSerializer.Serialize(new SlackIntegration(token));
         await integrationRepository.UpsertAsync(integration);
 
-        var location = $"/organizations/{integration.OrganizationId}/integrations/{integration.Id}";
-        return Created(location, new OrganizationIntegrationResponseModel(integration));
+        return new OrganizationIntegrationOAuthCompleteResponseModel(IntegrationOAuthCallbackRedirect.Success);
+    }
+
+    /// <summary>
+    /// Unprotects the OAuth state and fetches the Initiated integration it was issued for.
+    /// </summary>
+    /// <exception cref="NotFoundException">The state is missing, invalid, expired, or doesn't match a Slack integration.</exception>
+    private async Task<(IntegrationOAuthStateTokenable OAuthState, OrganizationIntegration Integration)>
+        GetIntegrationForStateAsync(string? state)
+    {
+        // The state is protected server-side, so a valid one could only have come from RedirectAsync
+        if (string.IsNullOrEmpty(state) ||
+            !stateFactory.TryUnprotect(state, out var oAuthState) ||
+            !oAuthState.Valid ||
+            oAuthState.Type != IntegrationType.Slack)
+        {
+            throw new NotFoundException();
+        }
+
+        var integration = await integrationRepository.GetByIdAsync(oAuthState.IntegrationId);
+        if (integration is null || !oAuthState.IsValidFor(integration))
+        {
+            throw new NotFoundException();
+        }
+
+        return (oAuthState, integration);
+    }
+
+    private RedirectResult RedirectToVault(OrganizationIntegration integration, string result) =>
+        Redirect(IntegrationOAuthCallbackRedirect.BuildUrl(
+            globalSettings, integration.OrganizationId, IntegrationType.Slack, result));
+
+    /// <summary>
+    /// Builds the OAuth callback URL from the configured API base URL rather than the incoming request.
+    /// In cloud, TLS terminates before the request reaches the API, so the request scheme is "http" and
+    /// Slack rejects the redirect URI. Self-hosted instances also need the "/api" prefix that the
+    /// reverse proxy strips before the request reaches the API.
+    /// </summary>
+    private string? BuildCallbackUrl()
+    {
+        var apiBaseUrl = globalSettings.BaseServiceUri.Api;
+        var callbackPath = Url.RouteUrl(routeName: "SlackIntegration_Create", values: null);
+        if (string.IsNullOrEmpty(apiBaseUrl) || string.IsNullOrEmpty(callbackPath))
+        {
+            return null;
+        }
+
+        return $"{apiBaseUrl.TrimEnd('/')}{callbackPath}";
     }
 }

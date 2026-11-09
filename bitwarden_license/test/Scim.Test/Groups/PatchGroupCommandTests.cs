@@ -433,6 +433,152 @@ public class PatchGroupCommandTests
 
     [Theory]
     [BitAutoData]
+    public async Task PatchGroup_ReplaceListMembers_NonHyphenatedGuid_Success(
+        Organization organization, Group group, Guid userId)
+    {
+        var sutProvider = SetupSutProvider();
+        group.OrganizationId = organization.Id;
+
+        var scimPatchModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new()
+                {
+                    Op = "replace",
+                    Path = "members",
+                    Value = JsonDocument.Parse($"[{{\"value\":\"{userId:N}\"}}]").RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        await sutProvider.Sut.PatchGroupAsync(group, scimPatchModel);
+
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(
+            group.Id,
+            Arg.Is<IEnumerable<Guid>>(arg => arg.Single() == userId),
+            Arg.Is<DateTime>(d => d == _expectedRevisionDate));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchGroup_ReplaceListMembers_UnparseableValue_ThrowsBadRequest(
+        Organization organization, Group group)
+    {
+        var sutProvider = SetupSutProvider();
+        group.OrganizationId = organization.Id;
+
+        var scimPatchModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new()
+                {
+                    Op = "replace",
+                    Path = "members",
+                    Value = JsonDocument.Parse("[{\"value\":\"not-a-guid\"}]").RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PatchGroupAsync(group, scimPatchModel));
+
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().UpdateUsersAsync(default, default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchGroup_ReplaceListMembers_MissingValueProperty_ThrowsBadRequest(
+        Organization organization, Group group)
+    {
+        var sutProvider = SetupSutProvider();
+        group.OrganizationId = organization.Id;
+
+        var scimPatchModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new()
+                {
+                    Op = "replace",
+                    Path = "members",
+                    Value = JsonDocument.Parse("[{\"notvalue\":\"foo\"}]").RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PatchGroupAsync(group, scimPatchModel));
+
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().UpdateUsersAsync(default, default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchGroup_RemoveListMembers_UnparseableValue_ThrowsBadRequest(
+        Organization organization, Group group, ICollection<Guid> existingMembers)
+    {
+        var sutProvider = SetupSutProvider();
+        group.OrganizationId = organization.Id;
+
+        sutProvider.GetDependency<IGroupRepository>()
+            .GetManyUserIdsByIdAsync(group.Id)
+            .Returns(existingMembers);
+
+        var scimPatchModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new()
+                {
+                    Op = "remove",
+                    Path = "members",
+                    Value = JsonDocument.Parse("[{\"value\":\"not-a-guid\"}]").RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PatchGroupAsync(group, scimPatchModel));
+
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().UpdateUsersAsync(default, default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchGroup_AddListMembers_UnparseableValue_ThrowsBadRequest(
+        Organization organization, Group group, ICollection<Guid> existingMembers)
+    {
+        var sutProvider = SetupSutProvider();
+        group.OrganizationId = organization.Id;
+
+        sutProvider.GetDependency<IGroupRepository>()
+            .GetManyUserIdsByIdAsync(group.Id, true)
+            .Returns(existingMembers);
+
+        var scimPatchModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new()
+                {
+                    Op = "add",
+                    Path = "members",
+                    Value = JsonDocument.Parse("[{\"value\":\"not-a-guid\"}]").RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PatchGroupAsync(group, scimPatchModel));
+
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().AddGroupUsersByIdAsync(default, default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task PatchGroup_ReplaceExternalIdFromPath_Success(
         Organization organization, Group group, string newExternalId)
     {

@@ -16,6 +16,7 @@ public class OrganizationUserResetPasswordRequestModel : IValidatableObject
     [StringLength(300)]
     public string? NewMasterPasswordHash { get; set; }
     [Obsolete("To be removed in PM-33141")]
+    [EncryptedString]
     public string? Key { get; set; }
 
     // TODO: Keep optional, but update validation in PM-33141 when legacy properties are removed

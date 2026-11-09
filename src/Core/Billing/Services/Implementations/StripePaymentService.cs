@@ -10,9 +10,9 @@ using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
-using Bit.Core.Billing.Organizations.Schedules;
-using Bit.Core.Billing.Organizations.Schedules.Enums;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Subscriptions.Schedules;
+using Bit.Core.Billing.Subscriptions.Schedules.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -655,7 +655,7 @@ public class StripePaymentService : IStripePaymentService
             // An annual-upgrade phase 2 prices at a different interval, so its amounts don't belong
             // on a still-monthly line item.
             if (SubscriptionScheduleOwnershipMapper.MapSchedule(schedule) ==
-                OrganizationSubscriptionScheduleOwnership.AnnualUpgrade)
+                SubscriptionScheduleOwnership.AnnualUpgrade)
             {
                 return;
             }

@@ -48,6 +48,19 @@ public class PolicyRepository : Repository<Policy, Guid>, IPolicyRepository
         }
     }
 
+    public async Task<ICollection<Policy>> GetManyByOrganizationIdsTypeAsync(IEnumerable<Guid> organizationIds,
+        PolicyType type)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var results = await connection.QueryAsync<Policy>(
+            $"[{Schema}].[{Table}_ReadManyByOrganizationIdsType]",
+            new { OrganizationIds = organizationIds.ToGuidIdArrayTVP(), Type = (byte)type },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToList();
+    }
+
     public async Task<ICollection<Policy>> GetManyByUserIdAsync(Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))

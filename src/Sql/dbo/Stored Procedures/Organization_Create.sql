@@ -65,7 +65,11 @@ CREATE PROCEDURE [dbo].[Organization_Create]
     @UseMyItems BIT = 0,
     @ExemptFromBillingAutomation BIT = 0,
     @UseInviteLinks BIT = 0,
-    @UsePam BIT = 0
+    @UsePam BIT = 0,
+    @PamSeats INT = null,
+    @MaxAutoscalePamSeats INT = null,
+    @PamSeatMinimum INT = null,
+    @OrganizationKeyId VARCHAR(32) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -139,7 +143,11 @@ BEGIN
         [UseMyItems],
         [ExemptFromBillingAutomation],
         [UseInviteLinks],
-        [UsePam]
+        [UsePam],
+        [PamSeats],
+        [MaxAutoscalePamSeats],
+        [PamSeatMinimum],
+        [OrganizationKeyId]
     )
     VALUES
         (
@@ -210,6 +218,10 @@ BEGIN
             @UseMyItems,
             @ExemptFromBillingAutomation,
             @UseInviteLinks,
-            @UsePam
+            @UsePam,
+            @PamSeats,
+            @MaxAutoscalePamSeats,
+            @PamSeatMinimum,
+            @OrganizationKeyId
         );
 END

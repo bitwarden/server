@@ -63,11 +63,13 @@
                                         {
                                             @if(connection.Type.Equals(OrganizationConnectionType.CloudBillingSync))
                                             {
-                                                <a class="btn btn-outline-secondary btn-sm"
-                                                    data-id="@connection.Id" asp-controller="Organizations"
-                                                    asp-action="TriggerBillingSync" asp-route-id="@Model.Organization.Id">
-                                                    Manually Sync
-                                                </a>
+                                                <form asp-controller="Organizations" asp-action="TriggerBillingSync"
+                                                    asp-route-id="@Model.Organization.Id" method="post" class="d-inline">
+                                                    <button type="submit" class="btn btn-outline-secondary btn-sm"
+                                                        data-id="@connection.Id">
+                                                        Manually Sync
+                                                    </button>
+                                                </form>
                                             }
                                         }
                                     }

@@ -1,11 +1,14 @@
-﻿using System.Security.Claims;
+﻿using System.Reflection;
+using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Platform.Installations;
 using Bit.Core.Repositories;
@@ -28,7 +31,7 @@ namespace Bit.Identity.Test.IdentityServer;
 public class CustomTokenRequestValidatorTests
 {
     private readonly IUserService _userService;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IUpdateDeviceLastActivityCommand _updateDeviceLastActivityCommand;
     private readonly ICurrentContext _currentContext;
     private readonly FakeLogger<CustomTokenRequestValidator> _logger;
@@ -49,7 +52,7 @@ public class CustomTokenRequestValidatorTests
             Substitute.For<ILogger<UserManager<User>>>());
 
         _userService = Substitute.For<IUserService>();
-        _featureService = Substitute.For<IFeatureService>();
+        _featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
         _updateDeviceLastActivityCommand = Substitute.For<IUpdateDeviceLastActivityCommand>();
         _currentContext = Substitute.For<ICurrentContext>();
         _logger = new FakeLogger<CustomTokenRequestValidator>();
@@ -429,5 +432,133 @@ public class CustomTokenRequestValidatorTests
         await _updateDeviceLastActivityCommand
             .DidNotReceive()
             .UpdateByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<string>());
+    }
+
+    [Theory]
+    [InlineData("apikey", ApiScopes.ApiSecrets)]
+    [InlineData("access-connector", ApiScopes.ApiPamCredentialRotation)]
+    public async Task ValidateAsync_ClientCredentialsWithMachineScope_ReturnsEncryptedPayload(string clientIdPrefix,
+        string scope)
+    {
+        // Arrange
+        var validatedRequest = new ValidatedTokenRequest
+        {
+            GrantType = "client_credentials",
+            ClientId = $"{clientIdPrefix}.{Guid.NewGuid()}",
+            Client = new Client
+            {
+                AllowedScopes = new HashSet<string> { scope },
+                Properties = new Dictionary<string, string> { { "encryptedPayload", "encrypted-payload" } }
+            },
+            ClientClaims = []
+        };
+        var context = new CustomTokenRequestValidationContext
+        {
+            Result = new TokenRequestValidationResult(validatedRequest)
+        };
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert: user validation is skipped and the client's encrypted payload is returned
+        Assert.False(context.Result.IsError);
+        Assert.Equal("encrypted-payload", context.Result.CustomResponse["encrypted_payload"]);
+    }
+
+    [Fact]
+    public async Task SetSuccessResult_WithSubject_AddsClaimsToSubject()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var subject = new ClaimsPrincipal(new ClaimsIdentity(
+            [new Claim(JwtClaimTypes.Subject, userId.ToString())], "Duende.IdentityServer"));
+        var context = CreateTokenRequestContext("authorization_code", subject);
+        var claims = CreateSubjectClaims();
+
+        // Act
+        await InvokeSetSuccessResultAsync(context, new User { Id = userId, MasterPassword = "hash" }, claims);
+
+        // Assert
+        Assert.Equal("stamp", subject.FindFirstValue(Claims.SecurityStamp));
+        Assert.Equal("device-identifier", subject.FindFirstValue(Claims.Device));
+        Assert.Equal(DeviceType.ChromeBrowser.ToString(), subject.FindFirstValue(Claims.DeviceType));
+        Assert.Empty(context.Result!.ValidatedRequest.ClientClaims);
+        Assert.False(context.Result.ValidatedRequest.Client.AlwaysSendClientClaims);
+    }
+
+    [Fact]
+    public async Task SetSuccessResult_WithoutSubject_AddsClaimsAsClientClaims()
+    {
+        // Arrange
+        var context = CreateTokenRequestContext("client_credentials", subject: null);
+        var claims = CreateSubjectClaims();
+
+        // Act
+        await InvokeSetSuccessResultAsync(context, new User { Id = Guid.NewGuid(), MasterPassword = "hash" }, claims);
+
+        // Assert
+        var validatedRequest = context.Result!.ValidatedRequest;
+        Assert.Equal(claims, validatedRequest.ClientClaims);
+        Assert.True(validatedRequest.Client.AlwaysSendClientClaims);
+        Assert.Equal(string.Empty, validatedRequest.Client.ClientClaimsPrefix);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task SetSuccessResult_NoClaims_LeavesTokenClaimsUnchanged(bool claimsIsNull)
+    {
+        // Arrange
+        var context = CreateTokenRequestContext("client_credentials", subject: null);
+        var client = context.Result!.ValidatedRequest.Client;
+        var originalPrefix = client.ClientClaimsPrefix;
+        List<Claim>? claims = claimsIsNull ? null : [];
+
+        // Act
+        await InvokeSetSuccessResultAsync(context, new User { Id = Guid.NewGuid(), MasterPassword = "hash" }, claims);
+
+        // Assert
+        Assert.Empty(context.Result.ValidatedRequest.ClientClaims);
+        Assert.False(client.AlwaysSendClientClaims);
+        Assert.Equal(originalPrefix, client.ClientClaimsPrefix);
+    }
+
+    private static CustomTokenRequestValidationContext CreateTokenRequestContext(string grantType, ClaimsPrincipal? subject)
+    {
+        var validatedRequest = new ValidatedTokenRequest
+        {
+            GrantType = grantType,
+            Subject = subject,
+            ClientId = "web",
+            Client = new Client
+            {
+                AllowedScopes = new HashSet<string>(),
+                Properties = new Dictionary<string, string>()
+            },
+            ClientClaims = []
+        };
+        return new CustomTokenRequestValidationContext
+        {
+            Result = new TokenRequestValidationResult(validatedRequest)
+        };
+    }
+
+    private static List<Claim> CreateSubjectClaims() =>
+    [
+        new Claim(Claims.SecurityStamp, "stamp"),
+        new Claim(Claims.Device, "device-identifier"),
+        new Claim(Claims.DeviceType, DeviceType.ChromeBrowser.ToString()),
+    ];
+
+    private Task InvokeSetSuccessResultAsync(CustomTokenRequestValidationContext context, User user, List<Claim>? claims)
+    {
+        var methodInfo = typeof(CustomTokenRequestValidator).GetMethod(
+            "SetSuccessResult", BindingFlags.NonPublic | BindingFlags.Instance);
+        if (methodInfo == null)
+        {
+            throw new InvalidOperationException("Method 'SetSuccessResult' not found.");
+        }
+
+        return (Task)methodInfo.Invoke(_sut, [context, user, claims, new Dictionary<string, object>()])!;
     }
 }

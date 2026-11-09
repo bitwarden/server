@@ -3,10 +3,10 @@ using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Test.Auth.AutoFixture;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bitwarden.Server.Sdk.Features;
 using NSubstitute;
 using Xunit;
 

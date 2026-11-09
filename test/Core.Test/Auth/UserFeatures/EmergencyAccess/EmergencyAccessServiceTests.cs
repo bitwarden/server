@@ -83,12 +83,17 @@ public class EmergencyAccessServiceTests
     public async Task InviteAsync_ReturnsEmergencyAccessObject(
         EmergencyAccessType accessType, SutProvider<EmergencyAccessService> sutProvider, User invitingUser, string email, int waitTime)
     {
+        var globalSettings = sutProvider.GetDependency<Bit.Core.Settings.GlobalSettings>();
+        globalSettings.EmergencyAccessInviteExpirationHours = 1;
+        globalSettings.OrganizationInviteExpirationHours = 168;
         sutProvider.GetDependency<IUserService>().CanAccessPremium(invitingUser).Returns(true);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(invitingUser.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
+        var before = DateTime.UtcNow;
         var result = await sutProvider.Sut.InviteAsync(invitingUser, email, accessType, waitTime);
+        var after = DateTime.UtcNow;
 
         Assert.NotNull(result);
         Assert.Equal(accessType, result.Type);
@@ -100,7 +105,8 @@ public class EmergencyAccessServiceTests
                          .CreateAsync(Arg.Any<Core.Auth.Entities.EmergencyAccess>());
         sutProvider.GetDependency<IDataProtectorTokenFactory<EmergencyAccessInviteTokenable>>()
                    .Received(1)
-                   .Protect(Arg.Any<EmergencyAccessInviteTokenable>());
+                   .Protect(Arg.Is<EmergencyAccessInviteTokenable>(t =>
+                       t.ExpirationDate >= before.AddHours(1) && t.ExpirationDate <= after.AddHours(1)));
         await sutProvider.GetDependency<IMailService>()
                          .Received(1)
                          .SendEmergencyAccessInviteEmailAsync(Arg.Any<Core.Auth.Entities.EmergencyAccess>(), Arg.Any<string>(), Arg.Any<string>());

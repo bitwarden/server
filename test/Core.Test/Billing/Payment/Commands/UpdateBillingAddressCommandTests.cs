@@ -785,6 +785,96 @@ public class UpdateBillingAddressCommandTests
     }
 
     [Fact]
+    public async Task Run_BusinessOrganization_TrialingSchedulePresent_CarriesTrialEndOnlyOnTrialingPhase()
+    {
+        var organization = new Organization
+        {
+            PlanType = PlanType.TeamsMonthly,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        };
+
+        var input = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345",
+            Line1 = "123 Main St.",
+            City = "New York",
+            State = "NY"
+        };
+
+        var trialStart = DateTime.UtcNow.AddDays(-2);
+        var trialEnd = DateTime.UtcNow.AddDays(5);
+        var annualEnd = trialEnd.AddYears(1);
+
+        var customer = new Customer
+        {
+            Id = organization.GatewayCustomerId,
+            Address = new Address { Country = "US", PostalCode = "12345", Line1 = "123 Main St.", City = "New York", State = "NY" },
+            Subscriptions = new StripeList<Subscription>
+            {
+                Data =
+                [
+                    new Subscription
+                    {
+                        Id = organization.GatewaySubscriptionId,
+                        CustomerId = organization.GatewayCustomerId,
+                        AutomaticTax = new SubscriptionAutomaticTax { Enabled = false }
+                    }
+                ]
+            }
+        };
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Any<CustomerUpdateOptions>())
+            .Returns(customer);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data =
+                [
+                    new SubscriptionSchedule
+                    {
+                        Id = "sub_sched_123",
+                        SubscriptionId = organization.GatewaySubscriptionId,
+                        Status = SubscriptionScheduleStatus.Active,
+                        Phases = new List<SubscriptionSchedulePhase>
+                        {
+                            new()
+                            {
+                                StartDate = trialStart,
+                                EndDate = trialEnd,
+                                TrialEnd = trialEnd,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_monthly", Quantity = 5 }],
+                                Discounts = [],
+                                ProrationBehavior = "none"
+                            },
+                            new()
+                            {
+                                StartDate = trialEnd,
+                                EndDate = annualEnd,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_annual", Quantity = 5 }],
+                                Discounts = [],
+                                ProrationBehavior = "none"
+                            }
+                        }
+                    }
+                ]
+            });
+
+        var result = await _command.Run(organization, input);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            Arg.Is("sub_sched_123"),
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.Phases.Count == 2 &&
+                (DateTime?)o.Phases[0].TrialEnd == trialEnd &&
+                o.Phases[1].TrialEnd == null));
+    }
+
+    [Fact]
     public async Task Run_PersonalOrganization_SchedulePresent_OmitsCustomerDiscountFromActivePhase()
     {
         // The customer coupon is omitted from the active phase so it isn't stacked onto the current

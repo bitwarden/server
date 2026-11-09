@@ -10,12 +10,14 @@ public class AzureServiceBusService : IAzureServiceBusService
     private readonly ServiceBusClient _client;
     private readonly ServiceBusSender _eventSender;
     private readonly ServiceBusSender _integrationSender;
+    private readonly TimeSpan _integrationMessageTimeToLive;
 
     public AzureServiceBusService(GlobalSettings globalSettings)
     {
         _client = new ServiceBusClient(globalSettings.EventLogging.AzureServiceBus.ConnectionString);
         _eventSender = _client.CreateSender(globalSettings.EventLogging.AzureServiceBus.EventTopicName);
         _integrationSender = _client.CreateSender(globalSettings.EventLogging.AzureServiceBus.IntegrationTopicName);
+        _integrationMessageTimeToLive = globalSettings.EventLogging.AzureServiceBus.IntegrationMessageTimeToLive;
     }
 
     public ServiceBusProcessor CreateProcessor(string topicName, string subscriptionName, ServiceBusProcessorOptions options)
@@ -23,33 +25,52 @@ public class AzureServiceBusService : IAzureServiceBusService
         return _client.CreateProcessor(topicName, subscriptionName, options);
     }
 
+    public ServiceBusReceiver CreateDeadLetterReceiver(string topicName, string subscriptionName)
+    {
+        return _client.CreateReceiver(topicName, subscriptionName, new ServiceBusReceiverOptions
+        {
+            SubQueue = SubQueue.DeadLetter
+        });
+    }
+
     public async Task PublishAsync(IIntegrationMessage message)
     {
-        var json = message.ToJson();
-
-        var serviceBusMessage = new ServiceBusMessage(json)
-        {
-            Subject = message.IntegrationType.ToRoutingKey(),
-            MessageId = message.MessageId,
-            PartitionKey = message.OrganizationId
-        };
-
-        await _integrationSender.SendMessageAsync(serviceBusMessage);
+        await _integrationSender.SendMessageAsync(
+            BuildIntegrationMessage(message, _integrationMessageTimeToLive));
     }
 
     public async Task PublishToRetryAsync(IIntegrationMessage message)
     {
-        var json = message.ToJson();
+        await _integrationSender.SendMessageAsync(
+            BuildIntegrationMessage(
+                message,
+                _integrationMessageTimeToLive,
+                scheduledEnqueueTime: message.DelayUntilDate ?? DateTime.UtcNow));
+    }
 
-        var serviceBusMessage = new ServiceBusMessage(json)
+    internal static ServiceBusMessage BuildIntegrationMessage(
+        IIntegrationMessage message,
+        TimeSpan timeToLive,
+        DateTime? scheduledEnqueueTime = null)
+    {
+        var serviceBusMessage = new ServiceBusMessage(message.ToJson())
         {
             Subject = message.IntegrationType.ToRoutingKey(),
-            ScheduledEnqueueTime = message.DelayUntilDate ?? DateTime.UtcNow,
             MessageId = message.MessageId,
             PartitionKey = message.OrganizationId
         };
 
-        await _integrationSender.SendMessageAsync(serviceBusMessage);
+        if (timeToLive > TimeSpan.Zero)
+        {
+            serviceBusMessage.TimeToLive = timeToLive;
+        }
+
+        if (scheduledEnqueueTime.HasValue)
+        {
+            serviceBusMessage.ScheduledEnqueueTime = scheduledEnqueueTime.Value;
+        }
+
+        return serviceBusMessage;
     }
 
     public async Task PublishEventAsync(string body, string? organizationId)

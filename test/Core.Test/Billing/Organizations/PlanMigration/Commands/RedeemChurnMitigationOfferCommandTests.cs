@@ -195,6 +195,46 @@ public class RedeemChurnMitigationOfferCommandTests
     }
 
     [Fact]
+    public async Task Run_MigrationCohort_TrialingPhase1_CarriesTrialEndOnlyOnPhase1()
+    {
+        var organization = CreateOrganization();
+        SetupOfferEligible();
+        SetupMigrationCohortAssignment(organization);
+
+        var subscription = CreateSubscription();
+        SetupGetSubscription(organization, subscription);
+        var schedule = SetupActiveScheduleWithTwoPhases(subscription);
+        var trialEnd = schedule.Phases[0].EndDate;
+        schedule.Phases[0].TrialEnd = trialEnd;
+
+        await _command.Run(organization);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sub_sched_123",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                (DateTime?)opts.Phases[0].TrialEnd == trialEnd &&
+                opts.Phases[1].TrialEnd == null));
+    }
+
+    [Fact]
+    public async Task Run_MigrationCohort_NoTrial_LeavesPhase1TrialEndNull()
+    {
+        var organization = CreateOrganization();
+        SetupOfferEligible();
+        SetupMigrationCohortAssignment(organization);
+
+        var subscription = CreateSubscription();
+        SetupGetSubscription(organization, subscription);
+        SetupActiveScheduleWithTwoPhases(subscription);
+
+        await _command.Run(organization);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sub_sched_123",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts => opts.Phases[0].TrialEnd == null));
+    }
+
+    [Fact]
     public async Task Run_MigrationCohort_Phase1CouponConsumed_NotReMintedOntoPhase1()
     {
         var organization = CreateOrganization();
@@ -1042,7 +1082,7 @@ public class RedeemChurnMitigationOfferCommandTests
         return assignment;
     }
 
-    private void SetupActiveScheduleWithTwoPhases(Subscription subscription)
+    private SubscriptionSchedule SetupActiveScheduleWithTwoPhases(Subscription subscription)
     {
         var phase1End = DateTime.UtcNow.AddDays(180);
         var schedule = new SubscriptionSchedule
@@ -1066,5 +1106,6 @@ public class RedeemChurnMitigationOfferCommandTests
         };
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+        return schedule;
     }
 }

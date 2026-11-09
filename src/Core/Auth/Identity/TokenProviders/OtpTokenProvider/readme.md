@@ -27,10 +27,13 @@ The OTP Token Provider generates secure, time-limited tokens that can be used fo
 public interface IOtpTokenProvider<TOptions>
     where TOptions : DefaultOtpTokenProviderOptions
 {
-    Task<string?> GenerateTokenAsync(string tokenProviderName, string purpose, string uniqueIdentifier);
-    Task<bool> ValidateTokenAsync(string token, string tokenProviderName, string purpose, string uniqueIdentifier);
+    Task<string?> GenerateTokenAsync(string tokenProviderName, string purpose, string uniqueIdentifier, string? boundValue = null);
+    Task<bool> ValidateTokenAsync(string token, string tokenProviderName, string purpose, string uniqueIdentifier, string? boundValue = null);
+    Task<bool> ValidateTokenWithFailureLimitAsync(string token, string tokenProviderName, string purpose, string uniqueIdentifier, int maxFailedAttempts, string? boundValue = null);
 }
 ```
+
+`boundValue` lets a caller tie a generated token to some other piece of request context — for example, the device that requested it. A token only validates when the same `boundValue` is supplied to `ValidateTokenAsync` as was supplied to `GenerateTokenAsync`; omitting it on one side while supplying it on the other also fails validation.
 
 ### Implementation: `OtpTokenProvider`
 
@@ -38,6 +41,7 @@ The provider is initialized with:
 
 - **Distributed Cache**: Storage backend for tokens (using "persistent" keyed service)
 - **IOptions<TOptions>**: Configuration options for token generation and caching
+- **TimeProvider**: Clock used to record and check a token's expiry
 
 ## Usage
 
@@ -61,6 +65,29 @@ bool isValid = await otpProvider.ValidateTokenAsync("123456", "EmailToken", "ema
 // Returns: true if valid, false otherwise
 // Note: Valid tokens are automatically removed from cache
 ```
+
+Prefer `ValidateTokenWithFailureLimitAsync` for new callers. It validates the same way and also limits failed attempts (see [Limiting Failed Attempts](#limiting-failed-attempts)).
+
+### Binding a Token to Other Request Context
+
+```csharp
+// Bind the token to the device that requested it
+string token = await otpProvider.GenerateTokenAsync("NewDeviceVerification", "NewDeviceVerificationCode", uniqueIdentifier, deviceIdentifier);
+
+// Validation must supply the same bound value; a different or missing one fails even for a correct token
+bool isValid = await otpProvider.ValidateTokenAsync(token, "NewDeviceVerification", "NewDeviceVerificationCode", uniqueIdentifier, deviceIdentifier);
+```
+
+### Limiting Failed Attempts
+
+```csharp
+// Remove the token after 5 failed attempts; the user must then be issued a new token
+bool isValid = await otpProvider.ValidateTokenWithFailureLimitAsync(token, "UserVerification", "EmailOtp", uniqueIdentifier, 5, boundValue);
+```
+
+`ValidateTokenWithFailureLimitAsync` validates like `ValidateTokenAsync`, and also counts failed attempts in the cache entry. A bound value mismatch counts as a failed attempt. When the count reaches `maxFailedAttempts`, the entry is removed. Generating a new token resets the count. Rewriting the entry after a failed attempt keeps the expiry set at generation, so failed attempts do not extend a token's lifetime.
+
+Only calls to `ValidateTokenWithFailureLimitAsync` count. Calls to `ValidateTokenAsync` for the same token do not. The count is read and written back in separate cache operations, so parallel failed attempts can read the same count and get extra guesses. Burst rate limiting on the calling endpoint caps parallel requests, so this race adds very few guesses.
 
 ### Custom Configurations
 
@@ -151,14 +178,16 @@ These are passed into the OTP Token Provider which creates a cache record:
 
 ### Storage
 
+- Each cache entry is a JSON envelope containing the token, its optional bound value, its expiry, and its failed-attempt count, not the bare token
 - Tokens are stored in distributed cache. The cache depends on the specific deployment, for cloud it is CosmosDb.
 - Automatic expiration prevents indefinite token validity
 - One-time use prevents replay attacks
 
 ### Validation
 
-- Exact string matching for validation
+- Exact string matching for the token, plus an exact match on the bound value supplied at generation, if any
 - Automatic removal after successful validation
+- Optional removal after a caller-set number of failed attempts (`ValidateTokenWithFailureLimitAsync`)
 - Returns `false` for expired or non-existent tokens
 
 ## Dependency Injection

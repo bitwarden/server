@@ -2,11 +2,10 @@
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
-using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Queries;
 using Bit.Core.Entities;
-using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using Stripe;
@@ -23,8 +22,8 @@ public interface IRestartSubscriptionCommand
 
 public class RestartSubscriptionCommand(
     ILogger<RestartSubscriptionCommand> logger,
-    IOrganizationRepository organizationRepository,
-    IPricingClient pricingClient,
+    IGetOrganizationRestartQuery getOrganizationRestartQuery,
+    IOrganizationService organizationService,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService) : BaseBillingCommand<RestartSubscriptionCommand>(logger), IRestartSubscriptionCommand
 {
@@ -33,9 +32,9 @@ public class RestartSubscriptionCommand(
     {
         var existingSubscription = await subscriberService.GetSubscription(subscriber);
 
-        if (existingSubscription is not { Status: SubscriptionStatus.Canceled })
+        if (existingSubscription is not { Status: SubscriptionStatus.Canceled or SubscriptionStatus.IncompleteExpired })
         {
-            return new BadRequest("Cannot restart a subscription that is not canceled.");
+            return new BadRequest("Cannot restart a subscription that has not ended.");
         }
 
         await RestartSubscriptionAsync(subscriber, existingSubscription);
@@ -55,28 +54,10 @@ public class RestartSubscriptionCommand(
         Organization organization,
         Subscription canceledSubscription)
     {
-        var plans = await pricingClient.ListPlans();
+        var restart = await getOrganizationRestartQuery.Run(organization, canceledSubscription);
+        var newPlan = restart.Plan;
 
-        var oldPlan = plans.FirstOrDefault(plan => plan.Type == organization.PlanType);
-
-        if (oldPlan == null)
-        {
-            throw new ConflictException("Could not find plan for organization's plan type");
-        }
-
-        var newPlan = oldPlan.Disabled
-            ? plans.FirstOrDefault(plan =>
-                plan.ProductTier == oldPlan.ProductTier &&
-                plan.IsAnnual == oldPlan.IsAnnual &&
-                !plan.Disabled)
-            : oldPlan;
-
-        if (newPlan == null)
-        {
-            throw new ConflictException("Could not find the current, enabled plan for organization's tier and cadence");
-        }
-
-        if (newPlan.Type != oldPlan.Type)
+        if (newPlan.Type != organization.PlanType)
         {
             organization.PlanType = newPlan.Type;
             organization.Plan = newPlan.Name;
@@ -100,69 +81,9 @@ public class RestartSubscriptionCommand(
             organization.UseRiskInsights = newPlan.HasRiskInsights;
         }
 
-        var items = new List<SubscriptionItemOptions>();
-
-        // Password Manager
-        var passwordManagerItem = canceledSubscription.Items.FirstOrDefault(item =>
-            item.Price.Id == (oldPlan.HasNonSeatBasedPasswordManagerPlan()
-                ? oldPlan.PasswordManager.StripePlanId
-                : oldPlan.PasswordManager.StripeSeatPlanId));
-
-        if (passwordManagerItem == null)
-        {
-            throw new ConflictException("Organization's subscription does not have a Password Manager subscription item.");
-        }
-
-        items.Add(new SubscriptionItemOptions
-        {
-            Price = newPlan.HasNonSeatBasedPasswordManagerPlan() ? newPlan.PasswordManager.StripePlanId : newPlan.PasswordManager.StripeSeatPlanId,
-            Quantity = passwordManagerItem.Quantity
-        });
-
-        // Storage
-        var storageItem = canceledSubscription.Items.FirstOrDefault(
-            item => item.Price.Id == oldPlan.PasswordManager.StripeStoragePlanId);
-
-        if (storageItem != null)
-        {
-            items.Add(new SubscriptionItemOptions
-            {
-                Price = newPlan.PasswordManager.StripeStoragePlanId,
-                Quantity = storageItem.Quantity
-            });
-        }
-
-        // Secrets Manager & Service Accounts
-        var secretsManagerItem = oldPlan.SecretsManager != null
-            ? canceledSubscription.Items.FirstOrDefault(item =>
-                item.Price.Id == oldPlan.SecretsManager.StripeSeatPlanId)
-            : null;
-
-        var serviceAccountsItem = oldPlan.SecretsManager != null
-            ? canceledSubscription.Items.FirstOrDefault(item =>
-                item.Price.Id == oldPlan.SecretsManager.StripeServiceAccountPlanId)
-            : null;
-
-        if (newPlan.SecretsManager != null)
-        {
-            if (secretsManagerItem != null)
-            {
-                items.Add(new SubscriptionItemOptions
-                {
-                    Price = newPlan.SecretsManager.StripeSeatPlanId,
-                    Quantity = secretsManagerItem.Quantity
-                });
-            }
-
-            if (serviceAccountsItem != null)
-            {
-                items.Add(new SubscriptionItemOptions
-                {
-                    Price = newPlan.SecretsManager.StripeServiceAccountPlanId,
-                    Quantity = serviceAccountsItem.Quantity
-                });
-            }
-        }
+        var items = restart.Items
+            .Select(item => new SubscriptionItemOptions { Price = item.PriceId, Quantity = item.Quantity })
+            .ToList();
 
         var options = new SubscriptionCreateOptions
         {
@@ -183,6 +104,6 @@ public class RestartSubscriptionCommand(
         organization.ExpirationDate = subscription.GetCurrentPeriodEnd();
         organization.RevisionDate = DateTime.UtcNow;
 
-        await organizationRepository.ReplaceAsync(organization);
+        await organizationService.ReplaceAndUpdateCacheAsync(organization);
     }
 }

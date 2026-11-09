@@ -74,7 +74,6 @@ public class RecoverAccountAuthorizationHandlerTests
         [new CurrentContextOrganization { Type = OrganizationUserType.Admin }, OrganizationUserType.Admin],
         [new CurrentContextOrganization { Type = OrganizationUserType.Admin }, OrganizationUserType.Custom],
         [new CurrentContextOrganization { Type = OrganizationUserType.Admin }, OrganizationUserType.User],
-        [new CurrentContextOrganization { Type = OrganizationUserType.Custom, Permissions = new Permissions { ManageResetPassword = true}}, OrganizationUserType.Custom],
         [new CurrentContextOrganization { Type = OrganizationUserType.Custom, Permissions = new Permissions { ManageResetPassword = true}}, OrganizationUserType.User],
     };
 
@@ -135,6 +134,79 @@ public class RecoverAccountAuthorizationHandlerTests
     {
         // Arrange
         targetOrganizationUser.Type = targetOrganizationUserType;
+        currentContextOrganization.Id = targetOrganizationUser.OrganizationId;
+
+        var context = new AuthorizationHandlerContext(
+            [new RecoverAccountAuthorizationRequirement()],
+            claimsPrincipal,
+            targetOrganizationUser);
+
+        MockOrganizationClaims(sutProvider, claimsPrincipal, targetOrganizationUser, currentContextOrganization);
+
+        // Act
+        await sutProvider.Sut.HandleAsync(context);
+
+        // Assert
+        AssertFailed(context, RecoverAccountAuthorizationHandler.FailureReason);
+    }
+
+    // Read this as: a ___ can recover the account for a Custom user with ___ permissions
+    public static IEnumerable<object[]> AuthorizedPermissionCombinations => new object[][]
+    {
+        [new CurrentContextOrganization { Type = OrganizationUserType.Owner }, AllPermissions()],
+        [new CurrentContextOrganization { Type = OrganizationUserType.Admin }, AllPermissions()],
+        [new CurrentContextOrganization { Type = OrganizationUserType.Custom, Permissions = new Permissions { ManageResetPassword = true } }, new Permissions()],
+        [new CurrentContextOrganization { Type = OrganizationUserType.Custom, Permissions = new Permissions { ManageResetPassword = true } }, new Permissions { ManageResetPassword = true }],
+        [new CurrentContextOrganization { Type = OrganizationUserType.Custom, Permissions = new Permissions { ManageResetPassword = true, EditAnyCollection = true } }, new Permissions { EditAnyCollection = true }],
+    };
+
+    [Theory, BitMemberAutoData(nameof(AuthorizedPermissionCombinations))]
+    public async Task AuthorizeMemberAsync_RecoverEqualOrLesserPermissions_TargetUserNotProvider_Authorized(
+        CurrentContextOrganization currentContextOrganization,
+        Permissions targetPermissions,
+        SutProvider<RecoverAccountAuthorizationHandler> sutProvider,
+        [OrganizationUser] OrganizationUser targetOrganizationUser,
+        ClaimsPrincipal claimsPrincipal)
+    {
+        // Arrange
+        targetOrganizationUser.Type = OrganizationUserType.Custom;
+        targetOrganizationUser.SetPermissions(targetPermissions);
+        currentContextOrganization.Id = targetOrganizationUser.OrganizationId;
+
+        var context = new AuthorizationHandlerContext(
+            [new RecoverAccountAuthorizationRequirement()],
+            claimsPrincipal,
+            targetOrganizationUser);
+
+        MockOrganizationClaims(sutProvider, claimsPrincipal, targetOrganizationUser, currentContextOrganization);
+        MockTargetUserProviders(sutProvider, targetOrganizationUser, []);
+
+        // Act
+        await sutProvider.Sut.HandleAsync(context);
+
+        // Assert
+        Assert.True(context.HasSucceeded);
+    }
+
+    // Read this as: a ___ cannot recover the account for a Custom user with ___ permissions
+    public static IEnumerable<object[]> UnauthorizedPermissionCombinations => new object[][]
+    {
+        [new CurrentContextOrganization { Type = OrganizationUserType.Custom, Permissions = new Permissions { ManageResetPassword = true } }, new Permissions { EditAnyCollection = true, AccessImportExport = true }],
+        [new CurrentContextOrganization { Type = OrganizationUserType.Custom, Permissions = new Permissions { ManageResetPassword = true, EditAnyCollection = true } }, new Permissions { EditAnyCollection = true, ManageUsers = true }],
+        [new CurrentContextOrganization { Type = OrganizationUserType.Custom, Permissions = new Permissions { ManageResetPassword = true } }, AllPermissions()],
+    };
+
+    [Theory, BitMemberAutoData(nameof(UnauthorizedPermissionCombinations))]
+    public async Task AuthorizeMemberAsync_InvalidPermissions_TargetUserNotProvider_Unauthorized(
+        CurrentContextOrganization currentContextOrganization,
+        Permissions targetPermissions,
+        SutProvider<RecoverAccountAuthorizationHandler> sutProvider,
+        [OrganizationUser] OrganizationUser targetOrganizationUser,
+        ClaimsPrincipal claimsPrincipal)
+    {
+        // Arrange
+        targetOrganizationUser.Type = OrganizationUserType.Custom;
+        targetOrganizationUser.SetPermissions(targetPermissions);
         currentContextOrganization.Id = targetOrganizationUser.OrganizationId;
 
         var context = new AuthorizationHandlerContext(
@@ -390,6 +462,23 @@ public class RecoverAccountAuthorizationHandlerTests
             .GetOrganizationClaims(currentUser, targetOrganizationUser.OrganizationId)
             .Returns(currentContextOrganization);
     }
+
+    private static Permissions AllPermissions() => new()
+    {
+        AccessEventLogs = true,
+        AccessImportExport = true,
+        AccessReports = true,
+        CreateNewCollections = true,
+        EditAnyCollection = true,
+        DeleteAnyCollection = true,
+        ManageGroups = true,
+        ManagePolicies = true,
+        ManageSso = true,
+        ManageUsers = true,
+        ManageResetPassword = true,
+        ManageScim = true,
+        ManageAccessRules = true,
+    };
 
     private static void AssertFailed(AuthorizationHandlerContext context, string expectedMessage)
     {

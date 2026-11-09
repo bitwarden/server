@@ -2,14 +2,11 @@
 using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Models;
 
 namespace Bit.Services.Pam.Services;
 
-/// <summary>
-/// The shared validation for the AccessRule create and update paths. Create and update differ only in whether the
-/// rule already exists, which both the name-uniqueness and collection-conflict checks express by comparing against
-/// <c>existingRuleId</c> — null for a create, so nothing is excluded from either check.
-/// </summary>
+/// <summary>Validation shared by the access rule create and update paths.</summary>
 public class AccessRuleWriteValidator : IAccessRuleWriteValidator
 {
     private readonly IAccessRuleRepository _repository;
@@ -37,6 +34,33 @@ public class AccessRuleWriteValidator : IAccessRuleWriteValidator
         if (rule.AllowsExtensions && rule.MaxExtensionDurationSeconds is not > 0)
         {
             throw new BadRequestException("A maximum extension length is required when extensions are allowed.");
+        }
+
+        if (rule.DefaultLeaseDurationSeconds is <= 0)
+        {
+            throw new BadRequestException("The default lease duration must be a positive value.");
+        }
+
+        if (rule.MaxLeaseDurationSeconds is <= 0)
+        {
+            throw new BadRequestException("The maximum lease duration must be a positive value.");
+        }
+
+        // A default above the rule's own cap is unsatisfiable: every request pre-filled with it would be refused
+        // at submit.
+        if (rule.DefaultLeaseDurationSeconds > rule.MaxLeaseDurationSeconds)
+        {
+            throw new BadRequestException("The default lease duration cannot exceed the maximum lease duration.");
+        }
+
+        // Refused on write rather than clamped on read, or the admin console would echo a value EffectiveMax ignores.
+        // Bounds each value, not a lease's total length once extended.
+        if (rule.DefaultLeaseDurationSeconds is > LeaseDurationBounds.GlobalMaxSeconds
+            || rule.MaxLeaseDurationSeconds is > LeaseDurationBounds.GlobalMaxSeconds
+            || rule.MaxExtensionDurationSeconds is > LeaseDurationBounds.GlobalMaxSeconds)
+        {
+            throw new BadRequestException(
+                $"A lease duration cannot exceed {LeaseDurationBounds.GlobalMaxSeconds} seconds.");
         }
 
         var conditions = _conditionsValidator.Validate(rule.Conditions);
@@ -79,9 +103,8 @@ public class AccessRuleWriteValidator : IAccessRuleWriteValidator
             throw new BadRequestException("One or more collections do not belong to this organization.");
         }
 
-        // Deletes clear Collection.AccessRuleId and the FK forbids dangling links, so any set link points at an
-        // existing rule; only a link to a different rule is a conflict. A rule being created has no id, so for it
-        // any link at all conflicts.
+        // The FK guarantees a set link names an existing rule, so only a link to another rule conflicts; for a create,
+        // any link does.
         if (collections.Any(c => c.AccessRuleId.HasValue && c.AccessRuleId != existingRuleId))
         {
             throw new BadRequestException("One or more collections are already governed by another access rule.");

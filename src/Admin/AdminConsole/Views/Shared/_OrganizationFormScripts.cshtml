@@ -51,6 +51,21 @@
 
             clearSecretsManagerConfiguration();
         });
+        document.getElementById('@(nameof(Model.UsePam))')?.addEventListener('change', (event) => {
+            const pamConfiguration = document.getElementById('organization-pam-configuration');
+            if (!pamConfiguration) {
+                return;
+            }
+
+            pamConfiguration.hidden = !event.target.checked;
+
+            if (event.target.checked) {
+                setInitialPamConfiguration();
+                return;
+            }
+
+            clearPamConfiguration();
+        });
     })();
 
     function togglePlanFeatures(planType) {
@@ -140,6 +155,16 @@
         document.getElementById('@(nameof(Model.SmServiceAccounts))').value = '';
         document.getElementById('@(nameof(Model.MaxAutoscaleSmSeats))').value = '';
         document.getElementById('@(nameof(Model.MaxAutoscaleSmServiceAccounts))').value = '';
+    }
+
+    function setInitialPamConfiguration() {
+        document.getElementById('@(nameof(Model.PamSeats))').value = Math.max(@Model.OccupiedPamSeatsCount, 1);
+        document.getElementById('@(nameof(Model.MaxAutoscalePamSeats))').value = '';
+    }
+
+    function clearPamConfiguration() {
+        document.getElementById('@(nameof(Model.PamSeats))').value = '';
+        document.getElementById('@(nameof(Model.MaxAutoscalePamSeats))').value = '';
     }
 
     function getPlan(planType) {

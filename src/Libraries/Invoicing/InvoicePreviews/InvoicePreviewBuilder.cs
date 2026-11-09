@@ -40,7 +40,10 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
             };
             if (!lineItemsByReference.TryAdd(reference, item))
             {
-                throw new InvalidOperationException($"The preview resolved a duplicate purchasable reference '{reference}' on the invoice.");
+                // Preview invoices have no ID; the colliding price IDs are what locates the misconfiguration.
+                throw DuplicateReference("The preview invoice", reference, invoice.Lines!.Data
+                    .Where(invoiceLine => invoiceLine.Parent?.SubscriptionItemDetails?.Proration != true)
+                    .Select(invoiceLine => invoiceLine.Pricing?.PriceDetails?.Price));
             }
         }
 
@@ -52,6 +55,8 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
                 SummarizeProrations(prorationLines, ProductType.PasswordManager)),
             SecretsManager = BuildSecretsManagerItems(lineItemsByReference,
                 SummarizeProrations(prorationLines, ProductType.SecretsManager)),
+            PrivilegedControls = BuildPrivilegedControlsItems(lineItemsByReference,
+                SummarizeProrations(prorationLines, ProductType.PrivilegedControls)),
             Discounts = discounts.CartLevel.Length > 0 ? discounts.CartLevel : null,
             EstimatedTax = (invoice.TotalTaxes?.Sum(tax => tax.Amount) ?? 0) / 100m,
             Total = invoice.Total / 100m,
@@ -106,7 +111,8 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
             };
             if (!lineItemsByReference.TryAdd(reference, item))
             {
-                throw new InvalidOperationException($"The preview resolved a duplicate purchasable reference '{reference}' on the subscription.");
+                throw DuplicateReference($"Subscription {subscription.Id}", reference,
+                    subscription.Items!.Data.Select(existingItem => existingItem.Price));
             }
         }
 
@@ -123,6 +129,7 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
             Cadence = cadence,
             PasswordManager = BuildPasswordManagerItems(lineItemsByReference, null),
             SecretsManager = BuildSecretsManagerItems(lineItemsByReference, null),
+            PrivilegedControls = BuildPrivilegedControlsItems(lineItemsByReference, null),
             Discounts = null,
             EstimatedTax = 0m,
             Total = total,
@@ -146,6 +153,18 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
             return null;
         }
         return reference;
+    }
+
+    // Two prices sharing a reference is a Stripe misconfiguration the preview refuses to guess at. Only built when
+    // it's about to be thrown, so the hot path carries no bookkeeping for it.
+    private static InvalidOperationException DuplicateReference(string subject, string reference, IEnumerable<Price?> prices)
+    {
+        var priceIds = prices
+            .OfType<Price>()
+            .Where(price => price.Metadata?.GetValueOrDefault(StripeConstants.MetadataKeys.PurchasableReference) == reference)
+            .Select(price => price.Id);
+        return new InvalidOperationException(
+            $"{subject} resolved purchasable reference '{reference}' on more than one price: {string.Join(", ", priceIds)}.");
     }
 
     // One proration row per purchasable, so the client can tell which item each row offsets.
@@ -187,6 +206,21 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
         {
             Seats = seats,
             AdditionalServiceAccounts = serviceAccounts,
+            Prorations = prorations is { Length: > 0 } ? prorations : null,
+        };
+    }
+
+    private static PrivilegedControlsInvoiceItems? BuildPrivilegedControlsItems(
+        Dictionary<string, InvoicePreviewItem> lineItemsByReference, PurchasableProration[]? prorations)
+    {
+        var seats = lineItemsByReference.GetValueOrDefault(StripeConstants.PurchasableReferences.PrivilegedControlsSeat);
+        if (seats is null && prorations is not { Length: > 0 })
+        {
+            return null;
+        }
+        return new PrivilegedControlsInvoiceItems
+        {
+            Seats = seats,
             Prorations = prorations is { Length: > 0 } ? prorations : null,
         };
     }

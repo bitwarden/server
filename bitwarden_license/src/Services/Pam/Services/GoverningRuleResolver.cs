@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Repositories;
@@ -39,76 +38,119 @@ public class GoverningRuleResolver : IGoverningRuleResolver
         var collectionIds = collectionCiphers.Select(cc => cc.CollectionId).ToHashSet();
         var collections = await _collectionRepository.GetManyByManyIdsAsync(collectionIds);
 
-        var governedCollections = collections
-            .Where(c => collectionIds.Contains(c.Id) && c.AccessRuleId.HasValue);
+        var paths = collections.Where(c => collectionIds.Contains(c.Id)).ToList();
 
-        // Load every rule on the collections through which the caller reaches the cipher, keeping each paired with
-        // the collection it gates. A rule is dropped — so it stops governing — when it is disabled (Enabled is false;
-        // the admin has switched it off, and a disabled rule does not gate access) or no longer loads (deleted after
-        // the collection was read; deletes clear the link, so a missing rule is only a race). Dropping a disabled rule
-        // also stops it shadowing a newer active rule under the oldest-wins selection below.
-        var candidates = new List<(Collection Collection, AccessRule Rule)>();
-        foreach (var collection in governedCollections)
+        // Every path to the cipher must gate. A path with no rule, a disabled rule, or a deleted one is an escape,
+        // so nothing governs.
+        var candidates = new List<(AccessRule Rule, GoverningRule Governing)>();
+        foreach (var collection in paths)
         {
-            var accessRule = await _accessRuleRepository.GetByIdAsync(collection.AccessRuleId!.Value);
-            if (accessRule is { Enabled: true })
+            if (!collection.AccessRuleId.HasValue)
             {
-                candidates.Add((collection, accessRule));
+                return null;
             }
+
+            var accessRule = await _accessRuleRepository.GetByIdAsync(collection.AccessRuleId.Value);
+            if (accessRule is not { Enabled: true })
+            {
+                return null;
+            }
+
+            candidates.Add((accessRule, Build(collection.OrganizationId, collection.Id, accessRule)));
         }
 
+        // Only reachable when no mapped collection loaded: no path is left to gate.
         if (candidates.Count == 0)
         {
             return null;
         }
 
-        // Oldest wins: the rule with the earliest CreationDate governs, ties broken on rule id so the choice is total
-        // and stable. Selection is purely structural — it does NOT depend on how a rule's conditions evaluate for the
-        // current signals — so a newer path never pre-empts an older one, whichever is the more permissive. This is a
-        // deliberate trade of determinism over least-restriction: a member may be routed to an approver even though a
-        // newer path would have auto-granted, because the older rule governs. The chosen rule's conditions are then
-        // evaluated below only to decide whether it routes to a human or resolves automatically.
-        var (governingCollection, governingRule) = candidates
-            .OrderBy(c => c.Rule.CreationDate)
+        return candidates
+            .OrderBy(c => TierOf(c.Governing, signals))
+            .ThenBy(c => c.Rule.CreationDate)
             .ThenBy(c => c.Rule.Id)
-            .First();
+            .First()
+            .Governing;
+    }
 
-        var conditions = Parse(governingRule.Conditions);
-        var outcome = _ruleEngine.Evaluate(conditions, signals).Outcome;
+    public async Task<GoverningRule?> ResolvePinnedAsync(Guid ruleId, Guid collectionId)
+    {
+        var rule = await _accessRuleRepository.GetByIdAsync(ruleId);
+
+        // A disabled or deleted rule governs nothing, as in ResolveAsync.
+        return rule is { Enabled: true } ? Build(rule.OrganizationId, collectionId, rule) : null;
+    }
+
+    /// <summary>Where a governing candidate ranks; a lower tier governs.</summary>
+    private enum Tier
+    {
+        AutomaticAllows,
+        HumanApproval,
+        // Still governs, so Submit surfaces the denial.
+        AutomaticDenies,
+        // Its fail-safe approval cannot activate while the rule stays unreadable, so any readable rule goes first.
+        Unreadable,
+    }
+
+    // Predicts what Submit and Activate do with the chosen rule; change them together.
+    private Tier TierOf(GoverningRule rule, AccessSignals signals)
+    {
+        if (rule.ConditionsUnreadable)
+        {
+            return Tier.Unreadable;
+        }
+
+        if (rule.RequiresHumanApproval)
+        {
+            return Tier.HumanApproval;
+        }
+
+        return _ruleEngine.Evaluate(rule.Conditions, signals).Outcome == AccessEvaluationOutcome.Allow
+            ? Tier.AutomaticAllows
+            : Tier.AutomaticDenies;
+    }
+
+    private static GoverningRule Build(Guid organizationId, Guid collectionId, AccessRule rule)
+    {
+        var (conditions, unreadable) = Parse(rule.Conditions);
+
+        // Read from the conditions, not from evaluating them: Combine gives Deny precedence and would hide the gate.
+        var requiresHumanApproval = conditions.Any(c => c is HumanApprovalCondition);
 
         return new GoverningRule(
-            governingCollection.OrganizationId,
-            governingCollection.Id,
-            outcome == AccessEvaluationOutcome.RequiresApproval,
+            organizationId,
+            collectionId,
+            requiresHumanApproval,
             conditions)
         {
-            RuleId = governingRule.Id,
-            AllowsExtensions = governingRule.AllowsExtensions,
-            MaxExtensionDurationSeconds = governingRule.MaxExtensionDurationSeconds,
+            RuleId = rule.Id,
+            AllowsExtensions = rule.AllowsExtensions,
+            MaxExtensionDurationSeconds = rule.MaxExtensionDurationSeconds,
+            DefaultLeaseDurationSeconds = rule.DefaultLeaseDurationSeconds,
+            MaxLeaseDurationSeconds = rule.MaxLeaseDurationSeconds,
+            ConditionsUnreadable = unreadable,
         };
     }
 
     /// <summary>
-    /// Parses the stored conditions JSON into a flat list of <see cref="AccessCondition"/>. A malformed or
-    /// unparseable document fails safe to a single human-approval condition so access is never silently auto-approved
-    /// on conditions the server could not understand; the human-approval path then routes it to an approver rather
-    /// than issuing an automatic lease.
+    /// Parses the stored conditions JSON. A malformed document fails safe to a single human-approval condition,
+    /// flagged as unreadable.
     /// </summary>
-    private static IReadOnlyList<AccessCondition> Parse(string conditionsJson)
+    private static (IReadOnlyList<AccessCondition> Conditions, bool Unreadable) Parse(string conditionsJson)
     {
         try
         {
-            return JsonSerializer.Deserialize<List<AccessCondition>>(conditionsJson, AccessConditionJson.Options) ?? FailSafe();
+            var conditions = JsonSerializer.Deserialize<List<AccessCondition>>(conditionsJson, AccessConditionJson.Options);
+            return conditions is null ? FailSafe() : (conditions, false);
         }
-        // NotSupportedException alongside JsonException: the polymorphic reader reports a missing or unreadable
-        // "kind" that way, and it is not a JsonException. Left uncaught it would escape ResolveAsync entirely,
-        // breaking the fail-safe this method exists to provide — a stored document the server cannot interpret has
-        // to route to an approver, not surface as an unhandled exception.
+        // The polymorphic reader reports a missing or unknown "kind" as NotSupportedException. Caught too, so an
+        // uninterpretable document routes to an approver instead of throwing.
         catch (Exception ex) when (ex is JsonException or NotSupportedException)
         {
             return FailSafe();
         }
     }
 
-    private static IReadOnlyList<AccessCondition> FailSafe() => [new HumanApprovalCondition()];
+    private static (IReadOnlyList<AccessCondition> Conditions, bool Unreadable) FailSafe() =>
+        ([new HumanApprovalCondition()], true);
 }

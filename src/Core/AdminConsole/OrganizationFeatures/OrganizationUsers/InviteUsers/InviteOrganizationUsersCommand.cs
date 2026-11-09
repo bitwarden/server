@@ -37,7 +37,9 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderUserRepository providerUserRepository,
     IPricingClient pricingClient,
-    IGlobalSettings globalSettings
+    IGlobalSettings globalSettings,
+    ICollectionRepository collectionRepository,
+    IGroupRepository groupRepository
     ) : IInviteOrganizationUsersCommand
 {
 
@@ -133,6 +135,12 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
                 new InviteOrganizationUsersResponse(inviteOrganization.OrganizationId)));
         }
 
+        if (!await HasValidCollectionAndGroupAccessAsync(invitesToSend, inviteOrganization.OrganizationId))
+        {
+            return new Failure<InviteOrganizationUsersResponse>(new InvalidCollectionOrGroupAccessError(
+                new InviteOrganizationUsersResponse(inviteOrganization.OrganizationId)));
+        }
+
         var validationResult = await inviteUsersValidator.ValidateAsync(new InviteOrganizationUsersValidationRequest
         {
             Invites = invitesToSend.ToArray(),
@@ -199,6 +207,37 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         return request.Invites
             .Where(invite => !existingEmails.Contains(invite.Email))
             .ToArray();
+    }
+
+    /// <summary>
+    /// Caller-supplied collection and group ids must resolve to shared collections and groups of the inviting
+    /// organization. Missing, foreign and default-user-collection ids fail identically so the response cannot be
+    /// used to probe for ids belonging to other organizations.
+    /// </summary>
+    private async Task<bool> HasValidCollectionAndGroupAccessAsync(OrganizationUserInviteCommandModel[] invites, Guid organizationId)
+    {
+        var collectionIds = invites.SelectMany(i => i.AssignedCollections).Select(c => c.Id).Distinct().ToList();
+        if (collectionIds.Count > 0)
+        {
+            var collections = await collectionRepository.GetManyByManyIdsAsync(collectionIds);
+            if (collections.Count != collectionIds.Count ||
+                collections.Any(c => c.OrganizationId != organizationId || c.Type == CollectionType.DefaultUserCollection))
+            {
+                return false;
+            }
+        }
+
+        var groupIds = invites.SelectMany(i => i.Groups).Distinct().ToList();
+        if (groupIds.Count > 0)
+        {
+            var groups = await groupRepository.GetManyByManyIds(groupIds);
+            if (groups.Count != groupIds.Count || groups.Any(g => g.OrganizationId != organizationId))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private async Task RevertPasswordManagerChangesAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult, Organization organization)

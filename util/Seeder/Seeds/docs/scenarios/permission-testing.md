@@ -20,8 +20,9 @@ Engineers working on collection access, permission inheritance, or group-based a
 
 ## Variations
 
-| Scenario                                           | Command                                                                  |
-| -------------------------------------------------- | ------------------------------------------------------------------------ |
-| Full enterprise org with named folders + favorites | `dotnet run -- preset --name qa.zero-knowledge-labs-enterprise --mangle` |
-| Large org (58 users) with groups and collections   | `dotnet run -- preset --name qa.dunder-mifflin-enterprise-full --mangle` |
-| Scale with high permission density (2,500 users)   | `dotnet run -- preset --name scale.lg-highperm-tyrell-corp --mangle`     |
+| Scenario                                                                                               | Command                                                                        |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| Full enterprise org with named folders + favorites                                                     | `dotnet run -- preset --name qa.zero-knowledge-labs-enterprise --mangle`       |
+| Large org (58 users) with groups and collections                                                       | `dotnet run -- preset --name qa.dunder-mifflin-enterprise-full --mangle`       |
+| Scale with high permission density (2,500 users)                                                       | `dotnet run -- preset --name scale.lg-highperm-tyrell-corp --mangle`           |
+| Org after the Organization Data Ownership migration (default collections, policies, member status mix) | `dotnet run -- preset --name features.default-collections-enterprise --mangle` |

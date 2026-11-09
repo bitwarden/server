@@ -1,4 +1,7 @@
-﻿using Bit.Seeder.Pipeline;
+﻿using Bit.Seeder.Data.Enums;
+using Bit.Seeder.Options;
+using Bit.Seeder.Pipeline;
+using Bit.Seeder.Steps;
 using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest.Pipeline;
@@ -80,5 +83,30 @@ public class RecipeOrchestratorTests
             });
 
         Assert.Equal("specific@bw.example", capturedEmail);
+    }
+
+    [Fact]
+    public void RegisterRecipe_WithRegion_GeneratorUsesRegion()
+    {
+        var services = new ServiceCollection();
+        var options = new OrganizationVaultOptions
+        {
+            Name = "Region Org",
+            Domain = "region.example",
+            Users = 1,
+            Region = GeographicRegion.Europe
+        };
+
+        var recipeName = RecipeOrchestrator.RegisterRecipe(options, services);
+
+        using var provider = services.BuildServiceProvider();
+        var initGenerator = provider.GetKeyedServices<OrderedStep>(recipeName)
+            .Select(s => s.Inner)
+            .OfType<InitGeneratorStep>()
+            .Single();
+        var context = new SeederContext(provider);
+        initGenerator.Execute(context);
+
+        Assert.Equal("AB 10 11 12 C", context.RequireGenerator().Identity.GenerateByIndex(0).SSN);
     }
 }

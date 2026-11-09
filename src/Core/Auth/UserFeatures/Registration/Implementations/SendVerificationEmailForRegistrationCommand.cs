@@ -98,7 +98,7 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
             }
 
             // if user doesn't exist, return a EmailVerificationTokenable in the response body.
-            var token = GenerateToken(email, name, receiveMarketingEmails);
+            var token = GenerateToken(email, name, receiveMarketingEmails, emailSent: false);
 
             return token;
         }
@@ -107,7 +107,7 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
         {
             // If the user doesn't exist, create a new EmailVerificationTokenable and send the user
             // an email with a link to verify their email address
-            var token = GenerateToken(email, name, receiveMarketingEmails);
+            var token = GenerateToken(email, name, receiveMarketingEmails, emailSent: true);
             await _mailService.SendRegistrationVerificationEmailAsync(
                 email, token, fromMarketing, openOrgInvite?.SealedOpenOrgInviteData);
         }
@@ -116,9 +116,9 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
         return null;
     }
 
-    private string GenerateToken(string email, string? name, bool receiveMarketingEmails)
+    private string GenerateToken(string email, string? name, bool receiveMarketingEmails, bool emailSent)
     {
-        var registrationEmailVerificationTokenable = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
+        var registrationEmailVerificationTokenable = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails, emailSent);
         return _tokenDataFactory.Protect(registrationEmailVerificationTokenable);
     }
 }

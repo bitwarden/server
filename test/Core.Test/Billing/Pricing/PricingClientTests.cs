@@ -235,6 +235,46 @@ public class PricingClientTests
     }
 
     [Fact]
+    public async Task GetPlan_WithPrivilegedControls_ReturnsPrivilegedControlsSeatPlan()
+    {
+        // Arrange
+        var mockHttp = new MockHttpMessageHandler();
+        var planJson = CreatePlanJson("enterprise-annually", "Enterprise", "enterprise", 72M, "price_id",
+            privilegedControlsJson: """
+                {
+                    "seats": {
+                        "type": "scalable",
+                        "provided": 0,
+                        "price": 72,
+                        "stripePriceId": "privileged-controls-enterprise-seat-annually"
+                    },
+                    "defaultSeatMinimum": 10,
+                    "promotionalSeatMinimums": [4, 6, 8]
+                }
+                """);
+
+        mockHttp.When(HttpMethod.Get, "*/plans/organization/*")
+            .Respond("application/json", planJson);
+
+        var globalSettings = new GlobalSettings { SelfHosted = false };
+
+        var httpClient = new HttpClient(mockHttp)
+        {
+            BaseAddress = new Uri("https://test.com/")
+        };
+
+        var logger = Substitute.For<ILogger<PricingClient>>();
+        var pricingClient = new PricingClient(globalSettings, httpClient, logger);
+
+        // Act
+        var result = await pricingClient.GetPlan(PlanType.EnterpriseAnnually);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("privileged-controls-enterprise-seat-annually", result.PrivilegedControls.StripeSeatPlanId);
+    }
+
+    [Fact]
     public async Task GetPlan_WhenPricingServiceReturnsError_ThrowsBillingException()
     {
         // Arrange
@@ -478,8 +518,10 @@ public class PricingClientTests
         string tier,
         decimal seatsPrice,
         string seatsStripePriceId,
-        int seatsQuantity = 1)
+        int seatsQuantity = 1,
+        string? privilegedControlsJson = null)
     {
+        var privilegedControls = privilegedControlsJson ?? "null";
         return $@"{{
             ""lookupKey"": ""{lookupKey}"",
             ""name"": ""{name}"",
@@ -491,6 +533,7 @@ public class PricingClientTests
                 ""price"": {seatsPrice},
                 ""stripePriceId"": ""{seatsStripePriceId}""
             }},
+            ""privilegedControls"": {privilegedControls},
             ""canUpgradeTo"": [],
             ""additionalData"": {{
                 ""nameLocalizationKey"": ""{lookupKey}Name"",

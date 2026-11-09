@@ -95,18 +95,20 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var results = await connection.QueryAsync<CipherDetails>(
+            // Rows are streamed and any repeated cipher is reduced to its most privileged row.
+            var ciphers = new Dictionary<Guid, CipherDetails>();
+            await foreach (var cipher in connection.QueryUnbufferedAsync<CipherDetails>(
                 sprocName,
                 new { UserId = userId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure))
+            {
+                if (!ciphers.TryGetValue(cipher.Id, out var current) || HasMorePermissions(cipher, current))
+                {
+                    ciphers[cipher.Id] = cipher;
+                }
+            }
 
-            return results
-                .GroupBy(c => c.Id)
-                .Select(g =>
-                    g.OrderByDescending(og => og.Manage)
-                        .ThenByDescending(og => og.Edit)
-                        .ThenByDescending(og => og.ViewPassword).First())
-                .ToList();
+            return ciphers.Values.ToList();
         }
     }
 
@@ -688,6 +690,49 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         return dict.Values.ToList();
     }
 
+    public async Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
+        GetManyLoginCipherOrganizationDetailsAsync(Guid organizationId)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var dict = new Dictionary<Guid, CipherOrganizationDetailsWithCollections>();
+        var tempCollections = new Dictionary<Guid, List<Guid>>();
+
+        await connection.QueryAsync<
+            CipherOrganizationDetails,
+            CollectionCipher,
+            CipherOrganizationDetailsWithCollections
+        >(
+            $"[{Schema}].[CipherOrganizationDetails_ReadLoginsByOrganizationId]",
+            (cipher, cc) =>
+            {
+                if (!dict.TryGetValue(cipher.Id, out var details))
+                {
+                    details = new CipherOrganizationDetailsWithCollections(cipher, new Dictionary<Guid, IGrouping<Guid, CollectionCipher>>());
+                    dict.Add(cipher.Id, details);
+                    tempCollections[cipher.Id] = new List<Guid>();
+                }
+
+                if (cc?.CollectionId != null)
+                {
+                    tempCollections[cipher.Id].AddIfNotExists(cc.CollectionId);
+                }
+
+                return details;
+            },
+            new { OrganizationId = organizationId },
+            splitOn: "CollectionId",
+            commandType: CommandType.StoredProcedure
+        );
+
+        foreach (var kv in dict)
+        {
+            kv.Value.CollectionIds = tempCollections[kv.Key].ToArray();
+        }
+
+        return dict.Values.ToList();
+    }
+
 
     private DataTable BuildCiphersTable(SqlBulkCopy bulkCopy, IEnumerable<Cipher> ciphers)
     {
@@ -1013,6 +1058,21 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
 
         return sendsTable;
+    }
+
+    private static bool HasMorePermissions(CipherDetails candidate, CipherDetails current)
+    {
+        if (candidate.Manage != current.Manage)
+        {
+            return candidate.Manage;
+        }
+
+        if (candidate.Edit != current.Edit)
+        {
+            return candidate.Edit;
+        }
+
+        return candidate.ViewPassword && !current.ViewPassword;
     }
 
     public class CipherDetailsWithCollections : CipherDetails

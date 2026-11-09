@@ -33,7 +33,8 @@ public class PermissionsHelpersTests
             ManageUsers: true,
             ManageResetPassword: true,
             ManageScim: false,
-            ManageAccessRules: true
+            ManageAccessRules: true,
+            ManageRotation: true
         });
     }
 }

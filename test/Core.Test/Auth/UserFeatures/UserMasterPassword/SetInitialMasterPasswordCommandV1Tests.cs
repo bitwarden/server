@@ -191,4 +191,65 @@ public class SetInitialMasterPasswordCommandV1Tests
         await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(1).AcceptOrgUserAsync(orgUser, user, sutProvider.GetDependency<IUserService>());
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task SetInitialMasterPassword_InvitedOrgUser_AcceptOrganizationInviteTrue_CallsAcceptOrgUser(
+        SutProvider<SetInitialMasterPasswordCommandV1> sutProvider,
+        User user, string masterPassword, string key, string orgIdentifier, Organization org, OrganizationUser orgUser)
+    {
+        // Arrange
+        ArrangeInvitedOrgUser(sutProvider, user, orgIdentifier, org, orgUser);
+
+        // Act
+        var result = await sutProvider.Sut.SetInitialMasterPasswordAsync(user, masterPassword, key, orgIdentifier,
+            acceptOrganizationInvite: true);
+
+        // Assert
+        Assert.Equal(IdentityResult.Success, result);
+        await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(1)
+            .AcceptOrgUserAsync(orgUser, user, sutProvider.GetDependency<IUserService>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SetInitialMasterPassword_InvitedOrgUser_AcceptOrganizationInviteFalse_SetsPasswordAndDoesNotCallAcceptOrgUser(
+        SutProvider<SetInitialMasterPasswordCommandV1> sutProvider,
+        User user, string masterPassword, string key, string orgIdentifier, Organization org, OrganizationUser orgUser)
+    {
+        // Arrange
+        ArrangeInvitedOrgUser(sutProvider, user, orgIdentifier, org, orgUser);
+
+        // Act
+        var result = await sutProvider.Sut.SetInitialMasterPasswordAsync(user, masterPassword, key, orgIdentifier,
+            acceptOrganizationInvite: false);
+
+        // Assert
+        Assert.Equal(IdentityResult.Success, result);
+        Assert.Equal(key, user.Key);
+        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
+        await sutProvider.GetDependency<IAcceptOrgUserCommand>().DidNotReceiveWithAnyArgs()
+            .AcceptOrgUserAsync(default!, default!, default!);
+        Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
+    }
+
+    private static void ArrangeInvitedOrgUser(SutProvider<SetInitialMasterPasswordCommandV1> sutProvider,
+        User user, string orgIdentifier, Organization org, OrganizationUser orgUser)
+    {
+        user.MasterPassword = null;
+
+        sutProvider.GetDependency<IUserService>()
+            .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>(), true, false)
+            .Returns(IdentityResult.Success);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdentifierAsync(orgIdentifier)
+            .Returns(org);
+
+        orgUser.Status = OrganizationUserStatusType.Invited;
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(org.Id, user.Id)
+            .Returns(orgUser);
+    }
 }

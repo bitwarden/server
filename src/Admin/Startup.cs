@@ -6,6 +6,7 @@ using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Identity;
 using Stripe;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Admin.Controllers;
@@ -38,7 +39,9 @@ public class Startup
 
         // Settings
         var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
-        services.Configure<AdminSettings>(Configuration.GetSection("AdminSettings"));
+        var adminSettingsSection = Configuration.GetSection("AdminSettings");
+        var adminSettings = adminSettingsSection.Get<AdminSettings>() ?? new AdminSettings();
+        services.Configure<AdminSettings>(adminSettingsSection);
 
         // Data Protection
         services.AddCustomDataProtectionServices(Environment, globalSettings);
@@ -73,10 +76,13 @@ public class Startup
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
         // Identity
-        services.AddPasswordlessIdentityServices<ReadOnlyEnvIdentityUserStore>(globalSettings);
+        services.AddPasswordlessIdentityServices<ReadOnlyEnvIdentityUserStore>(globalSettings, adminSettings);
+        services.AddAdminUpstreamOidc(adminSettings);
         services.Configure<SecurityStampValidatorOptions>(options =>
         {
-            options.ValidationInterval = TimeSpan.FromMinutes(5);
+            // This interval defines the maximum delay in access changes 
+            // being reflected in the application.
+            options.ValidationInterval = TimeSpan.FromSeconds(30);
         });
         if (globalSettings.SelfHosted)
         {
@@ -103,9 +109,11 @@ public class Startup
 #endif
 
         // Mvc
+        services.AddAntiforgery(options => options.HeaderName = "X-XSRF-TOKEN");
         services.AddMvc(config =>
         {
             config.Filters.Add(new LoggingExceptionHandlerFilterAttribute());
+            config.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
         });
         services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
 
@@ -114,6 +122,7 @@ public class Startup
              o.ViewLocationFormats.Add("/Auth/Views/{1}/{0}.cshtml");
              o.ViewLocationFormats.Add("/AdminConsole/Views/{1}/{0}.cshtml");
              o.ViewLocationFormats.Add("/Billing/Views/{1}/{0}.cshtml");
+             o.ViewLocationFormats.Add("/Providers/Views/{0}.cshtml");
          });
 
         // Jobs service

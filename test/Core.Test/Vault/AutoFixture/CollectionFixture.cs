@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Test.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -30,14 +31,17 @@ public class CollectionCustomization : ICustomization
 
         fixture.Customize<Collection>(composer => composer
             .With(o => o.OrganizationId, orgId)
+            .With(o => o.Type, CollectionType.SharedCollection)
             .WithGuidFromSeed(c => c.Id, _collectionIdSeed));
 
         fixture.Customize<CollectionDetails>(composer => composer
             .With(o => o.OrganizationId, orgId)
+            .With(o => o.Type, CollectionType.SharedCollection)
             .WithGuidFromSeed(cd => cd.Id, _collectionIdSeed));
 
         fixture.Customize<CollectionAdminDetails>(composer => composer
             .With(o => o.OrganizationId, orgId)
+            .With(o => o.Type, CollectionType.SharedCollection)
             .WithGuidFromSeed(cd => cd.Id, _collectionIdSeed));
 
         fixture.Customize<CollectionUser>(c => c

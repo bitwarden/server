@@ -28,9 +28,8 @@ public sealed class AccessRuleValidator : IAccessRuleValidator
         {
             return AccessRuleValidationResult.Invalid($"Conditions JSON is malformed: {ex.Message}");
         }
-        // The polymorphic reader reports a condition it cannot map to a kind as NotSupportedException, which is not a
-        // JsonException and so escapes as an unhandled exception unless caught here — a 500 for a document the client
-        // could fix. Its message names internal types, so state the requirement instead of relaying it.
+        // An unmappable kind surfaces as NotSupportedException, not JsonException, and would otherwise be a 500. Its
+        // message names internal types, so it is not relayed.
         catch (NotSupportedException)
         {
             return AccessRuleValidationResult.Invalid("Each condition must specify a valid 'kind'.");
@@ -41,22 +40,19 @@ public sealed class AccessRuleValidator : IAccessRuleValidator
             return AccessRuleValidationResult.Invalid("Conditions must be an array.");
         }
 
-        // An empty list is allowed: it is vacuously satisfied, so the rule governs its collections — routing access
-        // through the PAM flow for audit logging — without imposing any gating condition. The engine evaluates it
-        // to Allow.
+        // An empty list is allowed: the engine evaluates it to Allow, and the rule still routes access to its
+        // collections through PAM for auditing.
         if (conditions.Count > MaxConditions)
         {
             return AccessRuleValidationResult.Invalid($"Conditions cannot contain more than {MaxConditions} conditions.");
         }
 
-        // Each condition validates itself; the validator only enforces the document-level shape (it is an array,
-        // within the size limit) and guards the one thing a condition cannot check for itself: a null entry.
         return conditions.Select(ValidateCondition).FirstOrDefault(result => !result.IsValid)
             ?? AccessRuleValidationResult.Valid;
     }
 
     private static AccessRuleValidationResult ValidateCondition(AccessCondition? condition) =>
-        // A JSON null in the array is not a condition and cannot validate itself, so it is rejected here.
+        // A JSON null entry is not a condition, so it cannot validate itself.
         condition is null
             ? AccessRuleValidationResult.Invalid("Conditions cannot contain a null entry.")
             : condition.Validate();
