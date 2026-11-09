@@ -12,6 +12,7 @@ public record CustomPermissionsNotEnabled() : BadRequestError("To enable custom 
 public record CannotAssignDefaultCollection() : BadRequestError("Default collections cannot be assigned to a member.");
 public record CannotAutoscaleSecretsManagerSeatsOnSelfHost() : BadRequestError("Cannot autoscale on a self-hosted instance.");
 public record CannotAutoscalePamSeatsOnSelfHost() : BadRequestError("Cannot autoscale Privileged Controls seats on a self-hosted instance.");
+public record NotEnoughPrivilegedControlsSeats() : BadRequestError("Your organization has no Privileged Controls seats available. Contact sales for more seats.");
 public record PamNotEnabled() : BadRequestError("To grant PAM access the organization must have PAM enabled.");
 public record CouldNotIncreaseSeatsOfSecretManager(string Message) : BadRequestError(Message);
 

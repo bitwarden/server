@@ -358,9 +358,13 @@ public class OrganizationsController : Controller
             Trial = await GetTrialAsync(organization),
         };
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support) && provider == null)
+        if (provider == null)
         {
-            model.PrivilegedControlsStripeSeats = await GetPrivilegedControlsStripeSeatsAsync(organization);
+            if (_featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support))
+            {
+                model.PrivilegedControlsStripeSeats = await GetPrivilegedControlsStripeSeatsAsync(organization);
+            }
+
             model.OccupiedPamSeatsCount =
                 await _organizationUserRepository.GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id);
         }
@@ -452,7 +456,8 @@ public class OrganizationsController : Controller
             PlanType = organization.PlanType,
             Seats = organization.Seats,
             UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation,
-            Enabled = organization.Enabled
+            Enabled = organization.Enabled,
+            UsePam = organization.UsePam
         };
 
         if (model.PlanType.HasValue)
@@ -480,7 +485,8 @@ public class OrganizationsController : Controller
             }
         }
 
-        UpdateOrganization(organization, model);
+        var isProviderManaged = await _providerRepository.GetByOrganizationIdAsync(organization.Id) != null;
+        UpdateOrganization(organization, model, isProviderManaged);
         var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
         if (organization.UseSecretsManager && !plan.SupportsSecretsManager)
         {
@@ -488,9 +494,14 @@ public class OrganizationsController : Controller
             return RedirectToAction("Edit", new { id });
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support)
-            && _accessControlService.UserHasPermission(Permission.Org_Plan_Edit)
-            && await ValidatePrivilegedControlsAsync(organization, plan) is { } privilegedControlsError)
+        if (_accessControlService.UserHasPermission(Permission.Org_Plan_Edit)
+            && !isProviderManaged
+            && ValidatePrivilegedControls(
+                organization,
+                plan,
+                organization.UsePam
+                    ? await _organizationUserRepository.GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id)
+                    : 0) is { } privilegedControlsError)
         {
             TempData["Error"] = privilegedControlsError;
             return RedirectToAction("Edit", new { id });
@@ -513,6 +524,12 @@ public class OrganizationsController : Controller
         await HandlePotentialProviderSeatScalingAsync(
             existingOrganizationData,
             model);
+
+        if (isProviderManaged && existingOrganizationData.UsePam)
+        {
+            TempData["Warning"] =
+                "Privileged Access Management was turned off because organizations managed by a provider can't use it.";
+        }
 
         await _organizationRepository.ReplaceAsync(organization);
 
@@ -856,16 +873,14 @@ public class OrganizationsController : Controller
         return new MigrationCohortAssignmentChange(assignmentToReplace, cohortToAssign, true, null);
     }
 
-    private async Task<string> ValidatePrivilegedControlsAsync(Organization organization, Bit.Core.Models.StaticStore.Plan plan)
+    private static string ValidatePrivilegedControls(
+        Organization organization,
+        Bit.Core.Models.StaticStore.Plan plan,
+        int occupiedPamSeats)
     {
         if (!organization.UsePam)
         {
             return null;
-        }
-
-        if (await _providerRepository.GetByOrganizationIdAsync(organization.Id) != null)
-        {
-            return "Organizations managed by a provider can't use Privileged Access Management";
         }
 
         if (!plan.SupportsPrivilegedControls)
@@ -878,9 +893,9 @@ public class OrganizationsController : Controller
             return "Privileged Access Management seats must be at least 1";
         }
 
-        if (organization.MaxAutoscalePamSeats < organization.PamSeats)
+        if (organization.PamSeats < occupiedPamSeats)
         {
-            return "Privileged Access Management max autoscale seats can't be lower than seats";
+            return $"Privileged Access Management seats can't be lower than the {occupiedPamSeats} members who have access";
         }
 
         if (organization.PamSeats > organization.Seats)
@@ -889,16 +904,35 @@ public class OrganizationsController : Controller
                    $"This organization has {organization.PamSeats} Privileged Controls seats and {organization.Seats} Password Manager seats.";
         }
 
-        if (!BillingExtensions.PrivilegedControlsAutoscaleLimitFits(organization.MaxAutoscalePamSeats, organization.MaxAutoscaleSeats))
-        {
-            return "You cannot set a Privileged Controls autoscale limit higher than the Password Manager autoscale limit. " +
-                   $"This organization has a Privileged Controls limit of {organization.MaxAutoscalePamSeats} and a Password Manager limit of {organization.MaxAutoscaleSeats}.";
-        }
-
         return null;
     }
 
-    private void UpdateOrganization(Organization organization, OrganizationEditModel model)
+    private void UpdatePrivilegedControls(Organization organization, OrganizationEditModel model, bool isProviderManaged)
+    {
+        // Organizations managed by a provider can't use Privileged Access Management, so a save turns it off.
+        if (isProviderManaged)
+        {
+            organization.UsePam = false;
+            organization.PamSeats = null;
+            organization.MaxAutoscalePamSeats = null;
+            return;
+        }
+
+        organization.UsePam = model.UsePam;
+
+        // Autoscaling is self-serve, so the Admin Portal never stores a limit.
+        organization.MaxAutoscalePamSeats = null;
+
+        // Turning it off keeps the seat count, so it's still there if it's turned back on.
+        if (!model.UsePam)
+        {
+            return;
+        }
+
+        organization.PamSeats = model.PamSeats;
+    }
+
+    private void UpdateOrganization(Organization organization, OrganizationEditModel model, bool isProviderManaged)
     {
         if (_accessControlService.UserHasPermission(Permission.Org_Name_Edit))
         {
@@ -943,7 +977,6 @@ public class OrganizationsController : Controller
             organization.UsePhishingBlocker = model.UsePhishingBlocker;
             organization.UseMyItems = model.UseMyItems;
             organization.UseInviteLinks = model.UseInviteLinks;
-            organization.UsePam = model.UsePam;
 
             //secrets
             organization.SmSeats = model.SmSeats;
@@ -951,11 +984,7 @@ public class OrganizationsController : Controller
             organization.SmServiceAccounts = model.SmServiceAccounts;
             organization.MaxAutoscaleSmServiceAccounts = model.MaxAutoscaleSmServiceAccounts;
 
-            if (_featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support))
-            {
-                organization.PamSeats = model.UsePam ? model.PamSeats : null;
-                organization.MaxAutoscalePamSeats = model.UsePam ? model.MaxAutoscalePamSeats : null;
-            }
+            UpdatePrivilegedControls(organization, model, isProviderManaged);
         }
 
         if (_accessControlService.UserHasPermission(Permission.Org_Licensing_Edit))
