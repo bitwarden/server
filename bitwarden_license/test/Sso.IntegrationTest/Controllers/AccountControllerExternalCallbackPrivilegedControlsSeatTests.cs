@@ -1,8 +1,10 @@
 ﻿using System.Net;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Mail.Mailer;
@@ -155,6 +157,50 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         await stripeAdapter.Received(1).UpdateSubscriptionAsync(_subscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options => options.Items.Any(item =>
                 item.Id == _privilegedControlsSeatItemId && item.Quantity == 2)));
+        await AssertNoPrivilegedControlsEmailSentAsync(testData);
+    }
+
+    /*
+    * FAILURE PATH: A just-in-time provisioned user claims a Staged member with Privileged Controls access. All
+    * Privileged Controls seats are taken, so autoscale buys one before the user is created. Creating the user then
+    * fails, because another organization claims the email domain and blocks account creation. The member stays
+    * Staged with Privileged Controls access, no user is created, and the seat that autoscale bought stays bought.
+    */
+    [Fact]
+    public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_WhenRegistrationFailsAfterSeatBought_KeepsSeatAndStaysStaged()
+    {
+        // Arrange — one Privileged Controls seat, already taken, no autoscale limit. Another organization claims
+        // the member's email domain and blocks account creation for it.
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithMockedPricingClient()
+            .WithConfiguration(_billingSupportFlagSetting, "true")
+            .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: null))
+            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
+            .WithMockedMailer()
+            .BuildAsync();
+        await SeedOwnerAsync(testData);
+        await SeedPrivilegedControlsSeatHolderAsync(testData);
+        var claimedEmail = testData.OrganizationUser!.Email!;
+        await SeedOtherOrganizationBlockingDomainAsync(testData, claimedEmail.Split('@')[1]);
+
+        // Act
+        var response = await CreateNonRedirectingClient(testData).GetAsync("/Account/ExternalCallback");
+
+        // Assert — the domain claim blocks registration, and the error surfaces as a 500.
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Contains("This email address is claimed by an organization using Bitwarden.",
+            await response.Content.ReadAsStringAsync());
+
+        var userRepository = testData.Factory.Services.GetRequiredService<IUserRepository>();
+        Assert.Null(await userRepository.GetByEmailAsync(claimedEmail));
+
+        var orgUser = await GetOrgUserAsync(testData);
+        Assert.Equal(OrganizationUserStatusType.Staged, orgUser.Status);
+        Assert.Null(orgUser.UserId);
+        Assert.True(orgUser.AccessPam);
+
+        Assert.Equal(2, (await GetOrganizationAsync(testData)).PamSeats);
         await AssertNoPrivilegedControlsEmailSentAsync(testData);
     }
 
@@ -790,6 +836,40 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     {
         var owner = await SeedConfirmedMemberAsync(testData, OrganizationUserType.Owner, accessPam: false);
         return owner.Email;
+    }
+
+    /// <summary>
+    /// Seeds a second organization that has verified <paramref name="domainName"/> and turned on the policy that
+    /// blocks account creation for its claimed domains. Registering a new user with an email in that domain fails.
+    /// </summary>
+    private static async Task SeedOtherOrganizationBlockingDomainAsync(SsoTestData testData, string domainName)
+    {
+        var organizationRepository = testData.Factory.Services.GetRequiredService<IOrganizationRepository>();
+        var otherOrganization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Domain Claiming Organization",
+            BillingEmail = "billing@claiming.test",
+            Plan = "Enterprise",
+            Enabled = true,
+            UsePolicies = true,
+            UseOrganizationDomains = true
+        });
+
+        var domain = new OrganizationDomain
+        {
+            OrganizationId = otherOrganization.Id,
+            DomainName = domainName,
+            Txt = "bw-test"
+        };
+        domain.SetVerifiedDate();
+        await testData.Factory.Services.GetRequiredService<IOrganizationDomainRepository>().CreateAsync(domain);
+
+        await testData.Factory.Services.GetRequiredService<IPolicyRepository>().CreateAsync(new Policy
+        {
+            OrganizationId = otherOrganization.Id,
+            Type = PolicyType.BlockClaimedDomainAccountCreation,
+            Enabled = true
+        });
     }
 
     /// <summary>
