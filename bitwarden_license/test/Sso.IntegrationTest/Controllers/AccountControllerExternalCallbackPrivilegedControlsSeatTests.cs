@@ -3,6 +3,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Mail.Mailer;
 using Bit.Core.Billing.Services;
@@ -10,6 +11,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Utilities;
 using Bit.Sso.IntegrationTest.Utilities;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -109,6 +111,50 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         Assert.True(orgUser.AccessPam);
 
         Assert.Equal(2, (await GetOrganizationAsync(testData)).PamSeats);
+        await AssertSeatNeededEmailNotSentAsync(testData);
+    }
+
+    /*
+    * SUCCESS PATH: A just-in-time provisioned user claims a Staged member with Privileged Controls access. All
+    * Privileged Controls seats are taken, the organization has no autoscale limit, and it pays for its seats
+    * through a Stripe subscription. The SSO callback buys one seat on the subscription and the member keeps
+    * access.
+    */
+    [Fact]
+    public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_WhenAutoscaleCanGrowOnPaidSubscription_BuysSeatAndKeepsPrivilegedControls()
+    {
+        // Arrange — one Privileged Controls seat, already taken, no autoscale limit, billed on a Stripe subscription.
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithMockedPricingClient()
+            .WithConfiguration(_billingSupportFlagSetting, "true")
+            .WithOrganization(org =>
+            {
+                WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: null);
+                org.GatewaySubscriptionId = _subscriptionId;
+            })
+            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
+            .WithMockedStripeAdapter(ReturnSubscriptionWithOnePrivilegedControlsSeat)
+            .WithMockedMailer()
+            .BuildAsync();
+        await SeedOwnerAsync(testData);
+        await SeedPrivilegedControlsSeatHolderAsync(testData);
+
+        // Act
+        var response = await CreateNonRedirectingClient(testData).GetAsync("/Account/ExternalCallback");
+
+        // Assert
+        AssertSsoSucceeded(response);
+
+        var orgUser = await GetOrgUserAsync(testData);
+        Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
+        Assert.True(orgUser.AccessPam);
+
+        Assert.Equal(2, (await GetOrganizationAsync(testData)).PamSeats);
+        var stripeAdapter = testData.Factory.Services.GetRequiredService<IStripeAdapter>();
+        await stripeAdapter.Received(1).UpdateSubscriptionAsync(_subscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(options => options.Items.Any(item =>
+                item.Id == _privilegedControlsSeatItemId && item.Quantity == 2)));
         await AssertSeatNeededEmailNotSentAsync(testData);
     }
 
@@ -589,6 +635,46 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     }
 
     private const string _subscriptionId = "sub_integration_test";
+    private const string _privilegedControlsSeatItemId = "si_privileged_controls_seats";
+
+    /// <summary>
+    /// Makes Stripe return an active, paid subscription that bills one Privileged Controls seat, both when the
+    /// subscription is read and when it is updated.
+    /// </summary>
+    private static void ReturnSubscriptionWithOnePrivilegedControlsSeat(IStripeAdapter stripeAdapter)
+    {
+        var plan = MockPlans.Get(PlanType.EnterpriseAnnually);
+        var subscription = new Subscription
+        {
+            Id = _subscriptionId,
+            Status = StripeConstants.SubscriptionStatus.Active,
+            CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
+            Customer = new Customer { Id = "cus_integration_test" },
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Id = _privilegedControlsSeatItemId,
+                        Quantity = 1,
+                        Price = new Price
+                        {
+                            Id = plan.PrivilegedControls.StripeSeatPlanId,
+                            Recurring = new PriceRecurring { Interval = StripeConstants.Intervals.Year },
+                            Metadata = new Dictionary<string, string>
+                            {
+                                [StripeConstants.MetadataKeys.PurchasableReference] =
+                                    StripeConstants.PurchasableReferences.PrivilegedControlsSeat
+                            }
+                        }
+                    }
+                ]
+            }
+        };
+        stripeAdapter.GetSubscriptionAsync(_subscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        stripeAdapter.UpdateSubscriptionAsync(_subscriptionId, Arg.Any<SubscriptionUpdateOptions>()).Returns(subscription);
+    }
 
     private static void FailSubscriptionLookup(IStripeAdapter stripeAdapter) =>
         stripeAdapter.GetSubscriptionAsync(_subscriptionId, Arg.Any<SubscriptionGetOptions>())
