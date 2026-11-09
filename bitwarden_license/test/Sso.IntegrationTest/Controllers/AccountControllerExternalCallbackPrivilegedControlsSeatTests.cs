@@ -115,7 +115,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     {
         // Arrange — one Privileged Controls seat, already taken, no autoscale limit, billed on a Stripe subscription.
         var testData = await JitSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null,
-                configureOrganization: BillOnStripeSubscription)
+                configureOrganization: org => org.GatewaySubscriptionId = _subscriptionId)
             .WithMockedStripeAdapter(ReturnSubscriptionWithOnePrivilegedControlsSeat)
             .BuildAsync();
         await SeedOwnerAsync(testData);
@@ -160,8 +160,13 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         // Act
         var response = await CreateNonRedirectingClient(testData).GetAsync("/Account/ExternalCallback");
 
-        // Assert
-        await AssertRegistrationBlockedByClaimedDomainAsync(response, testData, claimedEmail);
+        // Assert — the domain claim blocks registration, and the error surfaces as a 500.
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Contains("This email address is claimed by an organization using Bitwarden.",
+            await response.Content.ReadAsStringAsync());
+
+        var userRepository = testData.Factory.Services.GetRequiredService<IUserRepository>();
+        Assert.Null(await userRepository.GetByEmailAsync(claimedEmail));
 
         var orgUser = await GetOrgUserAsync(testData);
         Assert.Equal(OrganizationUserStatusType.Staged, orgUser.Status);
@@ -223,8 +228,13 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         // Act
         var response = await CreateNonRedirectingClient(testData).GetAsync("/Account/ExternalCallback");
 
-        // Assert
-        await AssertRegistrationBlockedByClaimedDomainAsync(response, testData, claimedEmail);
+        // Assert — the domain claim blocks registration, and the error surfaces as a 500.
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Contains("This email address is claimed by an organization using Bitwarden.",
+            await response.Content.ReadAsStringAsync());
+
+        var userRepository = testData.Factory.Services.GetRequiredService<IUserRepository>();
+        Assert.Null(await userRepository.GetByEmailAsync(claimedEmail));
 
         var orgUser = await GetOrgUserAsync(testData);
         Assert.Equal(OrganizationUserStatusType.Staged, orgUser.Status);
@@ -557,7 +567,10 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
 
-        var inviteCommand = FailInviteSend(testData);
+        var inviteCommand = testData.Factory.Services.GetRequiredService<ISendOrganizationInvitesCommand>();
+        inviteCommand
+            .When(x => x.SendInvitesAsync(Arg.Any<SendInvitesRequest>()))
+            .Do(_ => throw new Exception("simulated invite send failure"));
 
         // Act
         var response = await testData.Factory.CreateClient().GetAsync("/Account/ExternalCallback");
@@ -589,7 +602,10 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
 
-        var inviteCommand = FailInviteSend(testData);
+        var inviteCommand = testData.Factory.Services.GetRequiredService<ISendOrganizationInvitesCommand>();
+        inviteCommand
+            .When(x => x.SendInvitesAsync(Arg.Any<SendInvitesRequest>()))
+            .Do(_ => throw new Exception("simulated invite send failure"));
 
         // Act
         var response = await testData.Factory.CreateClient().GetAsync("/Account/ExternalCallback");
@@ -619,7 +635,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         // Arrange — one Privileged Controls seat, already taken, no autoscale limit. The autoscale must read the
         // Stripe subscription, and that read fails.
         var testData = await JitSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null,
-                configureOrganization: BillOnStripeSubscription)
+                configureOrganization: org => org.GatewaySubscriptionId = _subscriptionId)
             .WithMockedStripeAdapter(FailSubscriptionLookup)
             .BuildAsync();
         await SeedOwnerAsync(testData);
@@ -718,7 +734,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         // Arrange — one Privileged Controls seat, already taken, no autoscale limit. The autoscale must read the
         // Stripe subscription, and that read fails.
         var testData = await ExistingUserSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null,
-                configureOrganization: BillOnStripeSubscription)
+                configureOrganization: org => org.GatewaySubscriptionId = _subscriptionId)
             .WithMockedStripeAdapter(FailSubscriptionLookup)
             .BuildAsync();
         await SeedOwnerAsync(testData);
@@ -750,19 +766,6 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
             r.Users.Length == 1 &&
             r.Users[0].Id == testData.OrganizationUser!.Id &&
             r.Users[0].AccessPam == expectedAccessPam));
-    }
-
-    /// <summary>
-    /// Makes the substituted invite command throw, so the invite email fails.
-    /// </summary>
-    /// <returns>The substituted invite command, so a test can check that the invite step was reached.</returns>
-    private static ISendOrganizationInvitesCommand FailInviteSend(SsoTestData testData)
-    {
-        var inviteCommand = testData.Factory.Services.GetRequiredService<ISendOrganizationInvitesCommand>();
-        inviteCommand
-            .When(x => x.SendInvitesAsync(Arg.Any<SendInvitesRequest>()))
-            .Do(_ => throw new Exception("simulated invite send failure"));
-        return inviteCommand;
     }
 
     private const string _subscriptionId = "sub_integration_test";
@@ -806,9 +809,6 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         stripeAdapter.GetSubscriptionAsync(_subscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
         stripeAdapter.UpdateSubscriptionAsync(_subscriptionId, Arg.Any<SubscriptionUpdateOptions>()).Returns(subscription);
     }
-
-    private static void BillOnStripeSubscription(Organization organization) =>
-        organization.GatewaySubscriptionId = _subscriptionId;
 
     private static void FailSubscriptionLookup(IStripeAdapter stripeAdapter) =>
         stripeAdapter.GetSubscriptionAsync(_subscriptionId, Arg.Any<SubscriptionGetOptions>())
@@ -916,21 +916,6 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
             Type = PolicyType.BlockClaimedDomainAccountCreation,
             Enabled = true
         });
-    }
-
-    /// <summary>
-    /// Asserts the domain claim from <see cref="SeedOtherOrganizationBlockingDomainAsync"/> blocked account creation:
-    /// the error surfaces as a 500, and no user exists for <paramref name="claimedEmail"/>.
-    /// </summary>
-    private static async Task AssertRegistrationBlockedByClaimedDomainAsync(HttpResponseMessage response,
-        SsoTestData testData, string claimedEmail)
-    {
-        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
-        Assert.Contains("This email address is claimed by an organization using Bitwarden.",
-            await response.Content.ReadAsStringAsync());
-
-        var userRepository = testData.Factory.Services.GetRequiredService<IUserRepository>();
-        Assert.Null(await userRepository.GetByEmailAsync(claimedEmail));
     }
 
     /// <summary>
