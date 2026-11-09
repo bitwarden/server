@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteReminders;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
@@ -678,7 +679,7 @@ public class OrganizationService : IOrganizationService
         // Directory Connector key off both, and only the fields the invite specifies are overwritten.
         // The reminder fields match what sending the invites stores, because the promotion is saved after the send.
         var inviteReminderDueDate = _timeProvider.GetUtcNow().UtcDateTime
-            .AddDays(InviteReminderConstants.ReminderIntervalDays);
+            .AddHours(InviteReminderSchedule.GetIntervalHours(_globalSettings, _logger));
         foreach (var (orgUser, invite) in stagedInvitations.Values)
         {
             orgUser.Type = invite.Type.Value;
