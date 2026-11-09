@@ -27,8 +27,8 @@ namespace Bit.Sso.IntegrationTest.Controllers;
 /// <summary>
 /// When an SSO sign-in moves a Staged member that has Privileged Controls access to Invited, the member starts
 /// to use a Privileged Controls seat. The SSO callback must reserve that seat first. When no seat can be reserved,
-/// the member joins without Privileged Controls access, and on cloud the organization's Owners get an email that
-/// the member needs a seat.
+/// the member still moves to Invited, but without Privileged Controls access, and on cloud the organization's
+/// Owners get an email that the member needs a seat.
 /// </summary>
 /// <remarks>
 /// Each test does the SSO callback for one of two sign-ins against a Staged member: a person with no Bitwarden
@@ -206,11 +206,11 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
 
     /*
     * DEGRADED PATH: A just-in-time provisioned user claims a Staged member with Privileged Controls access, and
-    * the organization is at its Privileged Controls autoscale limit. The sign-in still succeeds. The member joins
-    * without Privileged Controls access, and the Owners get an email that names the member.
+    * the organization is at its Privileged Controls autoscale limit. The sign-in still succeeds. The member moves
+    * to Invited without Privileged Controls access, and the Owners get an email that names the member.
     */
     [Fact]
-    public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_AtSeatLimit_JoinsWithoutPrivilegedControlsAndEmailsOwners()
+    public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_AtSeatLimit_MovesToInvitedWithoutPrivilegedControlsAndEmailsOwners()
     {
         // Arrange — one Privileged Controls seat, already taken, autoscale limit of one.
         var testData = await new SsoTestDataBuilder()
@@ -323,10 +323,10 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     /*
     * DEGRADED PATH: A just-in-time provisioned user claims a Staged member with Privileged Controls access, and
     * the organization has zero Privileged Controls seats. Autoscale cannot add seats to an organization that has
-    * none, so the member joins without Privileged Controls access and the Owners get an email.
+    * none, so the member moves to Invited without Privileged Controls access and the Owners get an email.
     */
     [Fact]
-    public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_WithZeroSeats_JoinsWithoutPrivilegedControlsAndEmailsOwners()
+    public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_WithZeroSeats_MovesToInvitedWithoutPrivilegedControlsAndEmailsOwners()
     {
         // Arrange
         var testData = await new SsoTestDataBuilder()
@@ -356,11 +356,11 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     /*
     * DEGRADED PATH: On a self-hosted instance, a just-in-time provisioned user claims a Staged member with
     * Privileged Controls access, and no Privileged Controls seat is free. Self-hosted instances cannot autoscale,
-    * so the member joins without Privileged Controls access. Self-hosted instances send no Privileged Controls
-    * email.
+    * so the member moves to Invited without Privileged Controls access. Self-hosted instances send no Privileged
+    * Controls email.
     */
     [Fact]
-    public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_OnSelfHostedWithNoFreeSeat_JoinsWithoutPrivilegedControlsAndDoesNotEmail()
+    public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_OnSelfHostedWithNoFreeSeat_MovesToInvitedWithoutPrivilegedControlsAndDoesNotEmail()
     {
         // Arrange — one Privileged Controls seat, already taken.
         var testData = await new SsoTestDataBuilder()
@@ -428,7 +428,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     * FAILURE PATH: A just-in-time provisioned user claims a Staged member with Privileged Controls access, but
     * the organization has no Password Manager seat and cannot autoscale one. The Password Manager seat check runs
     * first and stops the sign-in, so the SSO callback must not buy a Privileged Controls seat for a member who
-    * never joins.
+    * stays Staged.
     */
     [Fact]
     public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_WhenNoPasswordManagerSeat_DoesNotReservePrivilegedControlsSeat()
@@ -555,7 +555,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     * FAILURE PATH: A person with an existing Bitwarden account signs in with SSO against a Staged member with
     * Privileged Controls access at the seat limit, and the invite email fails. The SSO callback rolls the member
     * back to Staged and gives back Privileged Controls access, so the next sign-in starts again from the same
-    * state. The Owners get no Privileged Controls email, because the member did not join.
+    * state. The Owners get no Privileged Controls email, because the member is Staged again.
     */
     [Fact]
     public async Task ExternalCallback_ExistingUserAgainstStagedOrgUserWithPrivilegedControls_AtSeatLimit_WhenInviteSendFails_RestoresPrivilegedControlsAndDoesNotEmail()
@@ -640,12 +640,12 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
 
     /*
     * DEGRADED PATH: On cloud, a just-in-time provisioned user claims a Staged member with Privileged Controls
-    * access, and the seat reservation fails for a reason other than the seat limit. The member joins without
-    * Privileged Controls access. The Owners get no Privileged Controls email, because more seats would not fix
-    * the failure.
+    * access, and the seat reservation fails for a reason other than the seat limit. The member moves to Invited
+    * without Privileged Controls access. The Owners get no Privileged Controls email, because more seats would not
+    * fix the failure.
     */
     [Fact]
-    public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_WhenReservationFailsUnexpectedly_JoinsWithoutPrivilegedControlsAndDoesNotEmail()
+    public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_WhenReservationFailsUnexpectedly_MovesToInvitedWithoutPrivilegedControlsAndDoesNotEmail()
     {
         // Arrange — one Privileged Controls seat, already taken, no autoscale limit. The autoscale must read the
         // Stripe subscription, and that read fails.
