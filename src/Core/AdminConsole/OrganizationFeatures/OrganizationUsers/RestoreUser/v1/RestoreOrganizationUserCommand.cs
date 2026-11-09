@@ -15,6 +15,7 @@ using Bit.Core.Billing.Organizations;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -22,6 +23,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
@@ -42,6 +44,8 @@ public class RestoreOrganizationUserCommand(
     TimeProvider timeProvider,
     IReservePrivilegedControlsSeatsCommand reservePrivilegedControlsSeatsCommand,
     ISendPrivilegedControlsSeatNeededEmailCommand sendPrivilegedControlsSeatNeededEmailCommand,
+    ICountNewPamSeatsRequiredQuery countNewPamSeatsRequiredQuery,
+    IGlobalSettings globalSettings,
     ILogger<RestoreOrganizationUserCommand> logger) : IRestoreOrganizationUserCommand
 {
     public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, string defaultCollectionName)
@@ -93,6 +97,19 @@ public class RestoreOrganizationUserCommand(
         }
 
         var organization = await organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
+        var status = organizationUser.GetPriorActiveOrganizationUserStatusType();
+        var restoresPrivilegedControlsAccess = organization.UsePam && organizationUser.AccessPam &&
+                                               PrivilegedControlsSeatOccupancy.OccupiesSeat(status);
+
+        // Public API restores never buy Privileged Controls seats; they fail at the limit before any seat is bought.
+        if (restoresPrivilegedControlsAccess && systemUser == EventSystemUser.PublicApi &&
+            await countNewPamSeatsRequiredQuery.CountNewPamSeatsRequiredAsync(organization, 1) > 0)
+        {
+            throw new BadRequestException(globalSettings.SelfHosted
+                ? new CannotAutoscalePrivilegedControlsSeatsOnSelfHostError().Message
+                : new NotEnoughPrivilegedControlsSeatsError().Message);
+        }
+
         var seatCounts = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
         var availableSeats = organization.Seats.GetValueOrDefault(0) - seatCounts.Total;
         var initialPasswordManagerSeats = organization.Seats;
@@ -119,10 +136,9 @@ public class RestoreOrganizationUserCommand(
 
         await CheckPoliciesBeforeRestoreAsync(organizationUser, userTwoFactorIsEnabled);
 
-        var status = organizationUser.GetPriorActiveOrganizationUserStatusType();
         PrivilegedControlsSeatReservationResult scimPrivilegedControlsSeatReservation = null;
 
-        if (organization.UsePam && organizationUser.AccessPam && PrivilegedControlsSeatOccupancy.OccupiesSeat(status))
+        if (restoresPrivilegedControlsAccess)
         {
             // No system user means an admin is restoring this one member, so one seat is reserved.
             if (systemUser is null)
@@ -130,7 +146,7 @@ public class RestoreOrganizationUserCommand(
                 await ReservePrivilegedControlsSeatsOrThrowAsync(organization, 1, initialPasswordManagerSeats);
             }
             // A SCIM restore with no free Privileged Controls seat must still go through: the member is restored
-            // without access and the Owners are emailed. Public API restores don't check seats.
+            // without access and the Owners are emailed.
             else if (systemUser == EventSystemUser.SCIM)
             {
                 scimPrivilegedControlsSeatReservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, 1);
