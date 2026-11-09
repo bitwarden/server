@@ -170,6 +170,7 @@ public static partial class FeatureFlagKeys
     /* Autofill Team */
     public const string NotificationRefresh = "notification-refresh";
     public const string FillAssistTargetingRules = "fill-assist-targeting-rules";
+    public const string FillAssistRuleFallback = "fill-assist-rule-fallback";
     public const string NotificationUndeterminedCipherScenarioLogic = "undetermined-cipher-scenario-logic";
     public const string EnableAutofillTriage = "enable-autofill-triage";
     public const string PM39071_DefaultPasswordManagerPrompt = "pm-39071-default-password-manager-prompt";
