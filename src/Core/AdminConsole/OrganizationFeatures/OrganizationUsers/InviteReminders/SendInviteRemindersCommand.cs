@@ -51,7 +51,7 @@ public class SendInviteRemindersCommand(
         var claimed = await organizationUserRepository.ClaimInviteReminderSequencesAsync(
             now,
             now.AddDays(-InviteReminderConstants.MaxLatenessDays),
-            now.AddDays(InviteReminderConstants.ReminderIntervalDays),
+            now.AddHours(InviteReminderSchedule.GetIntervalHours(globalSettings, logger)),
             batchSize);
         if (claimed.Count == 0)
         {
