@@ -53,13 +53,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_WithFreeSeat_KeepsPrivilegedControls()
     {
         // Arrange — one Privileged Controls seat, none taken, autoscale limit of one.
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithMockedPricingClient()
-            .WithConfiguration(_billingSupportFlagSetting, "true")
-            .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: 1))
-            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
-            .WithMockedMailer()
+        var testData = await JitSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: 1)
             .BuildAsync();
         var ownerEmail = await SeedOwnerAsync(testData);
 
@@ -91,13 +85,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_WhenAutoscaleCanGrow_AddsSeatAndKeepsPrivilegedControls()
     {
         // Arrange — one Privileged Controls seat, already taken, no autoscale limit.
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithMockedPricingClient()
-            .WithConfiguration(_billingSupportFlagSetting, "true")
-            .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: null))
-            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
-            .WithMockedMailer()
+        var testData = await JitSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null)
             .BuildAsync();
         await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
@@ -126,18 +114,9 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_WhenAutoscaleCanGrowOnPaidSubscription_BuysSeatAndKeepsPrivilegedControls()
     {
         // Arrange — one Privileged Controls seat, already taken, no autoscale limit, billed on a Stripe subscription.
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithMockedPricingClient()
-            .WithConfiguration(_billingSupportFlagSetting, "true")
-            .WithOrganization(org =>
-            {
-                WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: null);
-                org.GatewaySubscriptionId = _subscriptionId;
-            })
-            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
+        var testData = await JitSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null,
+                configureOrganization: org => org.GatewaySubscriptionId = _subscriptionId)
             .WithMockedStripeAdapter(ReturnSubscriptionWithOnePrivilegedControlsSeat)
-            .WithMockedMailer()
             .BuildAsync();
         await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
@@ -171,13 +150,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     {
         // Arrange — one Privileged Controls seat, already taken, no autoscale limit. Another organization claims
         // the member's email domain and blocks account creation for it.
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithMockedPricingClient()
-            .WithConfiguration(_billingSupportFlagSetting, "true")
-            .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: null))
-            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
-            .WithMockedMailer()
+        var testData = await JitSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null)
             .BuildAsync();
         await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
@@ -213,13 +186,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_AtSeatLimit_MovesToInvitedWithoutPrivilegedControlsAndEmailsOwners()
     {
         // Arrange — one Privileged Controls seat, already taken, autoscale limit of one.
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithMockedPricingClient()
-            .WithConfiguration(_billingSupportFlagSetting, "true")
-            .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: 1))
-            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
-            .WithMockedMailer()
+        var testData = await JitSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: 1)
             .BuildAsync();
         var ownerEmail = await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
@@ -251,13 +218,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     {
         // Arrange — one Privileged Controls seat, already taken, autoscale limit of one. Another organization
         // claims the member's email domain and blocks account creation for it.
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithMockedPricingClient()
-            .WithConfiguration(_billingSupportFlagSetting, "true")
-            .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: 1))
-            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
-            .WithMockedMailer()
+        var testData = await JitSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: 1)
             .BuildAsync();
         await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
@@ -294,13 +255,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_WithFreeSeatAndBillingSupportFlagOff_KeepsPrivilegedControlsAndDoesNotEmail()
     {
         // Arrange — one Privileged Controls seat, none taken, autoscale limit of one, billing support flag off.
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithMockedPricingClient()
-            .WithConfiguration(_billingSupportFlagSetting, "false")
-            .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: 1))
-            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
-            .WithMockedMailer()
+        var testData = await JitSignIn(billingSupportFlag: false, pamSeats: 1, maxAutoscalePamSeats: 1)
             .BuildAsync();
         await SeedOwnerAsync(testData);
 
@@ -330,13 +285,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_WithNoFreeSeatAndBillingSupportFlagOff_MovesToInvitedWithoutPrivilegedControlsAndDoesNotEmail()
     {
         // Arrange — one Privileged Controls seat, already taken, no autoscale limit, billing support flag off.
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithMockedPricingClient()
-            .WithConfiguration(_billingSupportFlagSetting, "false")
-            .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: null))
-            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
-            .WithMockedMailer()
+        var testData = await JitSignIn(billingSupportFlag: false, pamSeats: 1, maxAutoscalePamSeats: null)
             .BuildAsync();
         await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
@@ -365,13 +314,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_WithZeroSeats_MovesToInvitedWithoutPrivilegedControlsAndEmailsOwners()
     {
         // Arrange
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithMockedPricingClient()
-            .WithConfiguration(_billingSupportFlagSetting, "true")
-            .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 0, maxAutoscalePamSeats: null))
-            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
-            .WithMockedMailer()
+        var testData = await JitSignIn(billingSupportFlag: true, pamSeats: 0, maxAutoscalePamSeats: null)
             .BuildAsync();
         var ownerEmail = await SeedOwnerAsync(testData);
 
@@ -399,15 +342,9 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_OnSelfHostedWithNoFreeSeat_MovesToInvitedWithoutPrivilegedControlsAndDoesNotEmail()
     {
         // Arrange — one Privileged Controls seat, already taken.
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithMockedPricingClient()
-            .WithConfiguration(_billingSupportFlagSetting, "true")
-            .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: null))
-            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
+        var testData = await JitSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null)
             .AsSelfHosted()
             .WithSelfHostedEnvironment()
-            .WithMockedMailer()
             .BuildAsync();
         await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
@@ -435,13 +372,8 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_JitAgainstStagedOrgUserWithoutPrivilegedControls_AtSeatLimit_DoesNotReserveSeatOrEmail()
     {
         // Arrange — one Privileged Controls seat, already taken, autoscale limit of one.
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithMockedPricingClient()
-            .WithConfiguration(_billingSupportFlagSetting, "true")
-            .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: 1))
-            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = false)
-            .WithMockedMailer()
+        var testData = await JitSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: 1,
+                stagedMemberAccessPam: false)
             .BuildAsync();
         await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
@@ -471,18 +403,12 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     {
         // Arrange — Password Manager seats at cap and at the autoscale limit. Privileged Controls autoscale would
         // succeed (no limit), so a reservation would show as a raised PamSeats value.
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithMockedPricingClient()
-            .WithConfiguration(_billingSupportFlagSetting, "true")
-            .WithOrganization(org =>
-            {
-                org.Seats = 5;
-                org.MaxAutoscaleSeats = 5;
-                WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: null);
-            })
-            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
-            .WithMockedMailer()
+        var testData = await JitSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null,
+                configureOrganization: org =>
+                {
+                    org.Seats = 5;
+                    org.MaxAutoscaleSeats = 5;
+                })
             .BuildAsync();
         await SeedPrivilegedControlsSeatHolderAsync(testData);
 
@@ -511,15 +437,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_ExistingUserAgainstStagedOrgUserWithPrivilegedControls_WithFreeSeat_InvitesWithPrivilegedControls()
     {
         // Arrange — one Privileged Controls seat, none taken, autoscale limit of one.
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithMockedPricingClient()
-            .WithConfiguration(_billingSupportFlagSetting, "true")
-            .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: 1))
-            .WithUser()
-            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
-            .WithMockedSendOrganizationInvitesCommand()
-            .WithMockedMailer()
+        var testData = await ExistingUserSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: 1)
             .BuildAsync();
         var ownerEmail = await SeedOwnerAsync(testData);
 
@@ -554,15 +472,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_ExistingUserAgainstStagedOrgUserWithPrivilegedControls_AtSeatLimit_InvitesWithoutPrivilegedControlsAndEmailsOwners()
     {
         // Arrange — one Privileged Controls seat, already taken, autoscale limit of one.
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithMockedPricingClient()
-            .WithConfiguration(_billingSupportFlagSetting, "true")
-            .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: 1))
-            .WithUser()
-            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
-            .WithMockedSendOrganizationInvitesCommand()
-            .WithMockedMailer()
+        var testData = await ExistingUserSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: 1)
             .BuildAsync();
         var ownerEmail = await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
@@ -598,15 +508,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_ExistingUserAgainstStagedOrgUserWithPrivilegedControls_WithFreeSeatAndBillingSupportFlagOff_InvitesWithPrivilegedControlsAndDoesNotEmail()
     {
         // Arrange — one Privileged Controls seat, none taken, autoscale limit of one, billing support flag off.
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithMockedPricingClient()
-            .WithConfiguration(_billingSupportFlagSetting, "false")
-            .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: 1))
-            .WithUser()
-            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
-            .WithMockedSendOrganizationInvitesCommand()
-            .WithMockedMailer()
+        var testData = await ExistingUserSignIn(billingSupportFlag: false, pamSeats: 1, maxAutoscalePamSeats: 1)
             .BuildAsync();
         await SeedOwnerAsync(testData);
 
@@ -641,15 +543,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_ExistingUserAgainstStagedOrgUserWithPrivilegedControls_WithNoFreeSeatAndBillingSupportFlagOff_InvitesWithoutPrivilegedControlsAndDoesNotEmail()
     {
         // Arrange — one Privileged Controls seat, already taken, no autoscale limit, billing support flag off.
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithMockedPricingClient()
-            .WithConfiguration(_billingSupportFlagSetting, "false")
-            .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: null))
-            .WithUser()
-            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
-            .WithMockedSendOrganizationInvitesCommand()
-            .WithMockedMailer()
+        var testData = await ExistingUserSignIn(billingSupportFlag: false, pamSeats: 1, maxAutoscalePamSeats: null)
             .BuildAsync();
         await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
@@ -684,15 +578,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_ExistingUserAgainstStagedOrgUserWithPrivilegedControls_AtSeatLimit_WhenInviteSendFails_RestoresPrivilegedControlsAndDoesNotEmail()
     {
         // Arrange — one Privileged Controls seat, already taken, autoscale limit of one.
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithMockedPricingClient()
-            .WithConfiguration(_billingSupportFlagSetting, "true")
-            .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: 1))
-            .WithUser()
-            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
-            .WithMockedSendOrganizationInvitesCommand()
-            .WithMockedMailer()
+        var testData = await ExistingUserSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: 1)
             .BuildAsync();
         await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
@@ -727,15 +613,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_ExistingUserAgainstStagedOrgUserWithPrivilegedControls_WhenInviteSendFailsAfterSeatBought_KeepsSeatAndRestoresStaged()
     {
         // Arrange — one Privileged Controls seat, already taken, no autoscale limit.
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithMockedPricingClient()
-            .WithConfiguration(_billingSupportFlagSetting, "true")
-            .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: null))
-            .WithUser()
-            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
-            .WithMockedSendOrganizationInvitesCommand()
-            .WithMockedMailer()
+        var testData = await ExistingUserSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null)
             .BuildAsync();
         await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
@@ -772,18 +650,9 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     {
         // Arrange — one Privileged Controls seat, already taken, no autoscale limit. The autoscale must read the
         // Stripe subscription, and that read fails.
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithMockedPricingClient()
-            .WithConfiguration(_billingSupportFlagSetting, "true")
-            .WithOrganization(org =>
-            {
-                WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: null);
-                org.GatewaySubscriptionId = _subscriptionId;
-            })
-            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
+        var testData = await JitSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null,
+                configureOrganization: org => org.GatewaySubscriptionId = _subscriptionId)
             .WithMockedStripeAdapter(FailSubscriptionLookup)
-            .WithMockedMailer()
             .BuildAsync();
         await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
@@ -812,15 +681,8 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_ExistingUserAgainstStagedOrgUserWithoutPrivilegedControls_AtSeatLimit_DoesNotReserveSeatOrEmail()
     {
         // Arrange — one Privileged Controls seat, already taken, autoscale limit of one.
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithMockedPricingClient()
-            .WithConfiguration(_billingSupportFlagSetting, "true")
-            .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: 1))
-            .WithUser()
-            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = false)
-            .WithMockedSendOrganizationInvitesCommand()
-            .WithMockedMailer()
+        var testData = await ExistingUserSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: 1,
+                stagedMemberAccessPam: false)
             .BuildAsync();
         await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
@@ -850,20 +712,12 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     {
         // Arrange — Password Manager seats at cap and at the autoscale limit. Privileged Controls autoscale would
         // succeed (no limit), so a reservation would show as a raised PamSeats value.
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithMockedPricingClient()
-            .WithConfiguration(_billingSupportFlagSetting, "true")
-            .WithOrganization(org =>
-            {
-                org.Seats = 5;
-                org.MaxAutoscaleSeats = 5;
-                WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: null);
-            })
-            .WithUser()
-            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
-            .WithMockedSendOrganizationInvitesCommand()
-            .WithMockedMailer()
+        var testData = await ExistingUserSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null,
+                configureOrganization: org =>
+                {
+                    org.Seats = 5;
+                    org.MaxAutoscaleSeats = 5;
+                })
             .BuildAsync();
         await SeedPrivilegedControlsSeatHolderAsync(testData);
 
@@ -895,20 +749,9 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     {
         // Arrange — one Privileged Controls seat, already taken, no autoscale limit. The autoscale must read the
         // Stripe subscription, and that read fails.
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithMockedPricingClient()
-            .WithConfiguration(_billingSupportFlagSetting, "true")
-            .WithOrganization(org =>
-            {
-                WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: null);
-                org.GatewaySubscriptionId = _subscriptionId;
-            })
-            .WithUser()
-            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
-            .WithMockedSendOrganizationInvitesCommand()
+        var testData = await ExistingUserSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null,
+                configureOrganization: org => org.GatewaySubscriptionId = _subscriptionId)
             .WithMockedStripeAdapter(FailSubscriptionLookup)
-            .WithMockedMailer()
             .BuildAsync();
         await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
@@ -983,6 +826,44 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
         var stripeAdapter = testData.Factory.Services.GetRequiredService<IStripeAdapter>();
         await stripeAdapter.Received(1).GetSubscriptionAsync(_subscriptionId, Arg.Any<SubscriptionGetOptions>());
     }
+
+    /// <summary>
+    /// Starts the arrangement for a sign-in by a person with no Bitwarden account, whom SSO provisions just in time
+    /// against the Staged member. The organization uses Privileged Controls on an Enterprise plan, and the pricing
+    /// client and mailer are substitutes.
+    /// </summary>
+    /// <param name="billingSupportFlag">The value of <see cref="FeatureFlagKeys.PM39883_Pam_Billing_Support"/>.</param>
+    /// <param name="pamSeats">The organization's Privileged Controls seat count.</param>
+    /// <param name="maxAutoscalePamSeats">The Privileged Controls autoscale limit, or null for no limit.</param>
+    /// <param name="stagedMemberAccessPam">Whether the Staged member has Privileged Controls access.</param>
+    /// <param name="configureOrganization">
+    /// Sets more organization fields. Use this instead of <see cref="SsoTestDataBuilder.WithOrganization"/>, which
+    /// replaces the Privileged Controls seat setup.
+    /// </param>
+    private static SsoTestDataBuilder JitSignIn(bool billingSupportFlag, int pamSeats, int? maxAutoscalePamSeats,
+        bool stagedMemberAccessPam = true, Action<Organization>? configureOrganization = null) =>
+        new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithMockedPricingClient()
+            .WithConfiguration(_billingSupportFlagSetting, billingSupportFlag ? "true" : "false")
+            .WithOrganization(org =>
+            {
+                WithPrivilegedControlsSeats(org, pamSeats, maxAutoscalePamSeats);
+                configureOrganization?.Invoke(org);
+            })
+            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = stagedMemberAccessPam)
+            .WithMockedMailer();
+
+    /// <summary>
+    /// Starts the arrangement for a sign-in by a person with an existing Bitwarden account against the Staged
+    /// member. The setup is the same as <see cref="JitSignIn"/>, and the invite command is also a substitute.
+    /// </summary>
+    private static SsoTestDataBuilder ExistingUserSignIn(bool billingSupportFlag, int pamSeats,
+        int? maxAutoscalePamSeats, bool stagedMemberAccessPam = true,
+        Action<Organization>? configureOrganization = null) =>
+        JitSignIn(billingSupportFlag, pamSeats, maxAutoscalePamSeats, stagedMemberAccessPam, configureOrganization)
+            .WithUser()
+            .WithMockedSendOrganizationInvitesCommand();
 
     private static void WithPrivilegedControlsSeats(Organization organization,
         int pamSeats, int? maxAutoscalePamSeats)
