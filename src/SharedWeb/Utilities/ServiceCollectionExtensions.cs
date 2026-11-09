@@ -499,14 +499,14 @@ public static class ServiceCollectionExtensions
         this IIdentityServerBuilder identityServerBuilder, IWebHostEnvironment env, GlobalSettings globalSettings)
     {
         return AddSigningCertificateSet(identityServerBuilder, env, globalSettings,
-            GetIdentitySigningCertificates(globalSettings));
+            GetIdentitySigningCertificates(globalSettings), CertificateSourceReport.IdentitySigning);
     }
 
     public static IIdentityServerBuilder AddSsoSigningCertificate(
         this IIdentityServerBuilder identityServerBuilder, IWebHostEnvironment env, GlobalSettings globalSettings)
     {
         return AddSigningCertificateSet(identityServerBuilder, env, globalSettings,
-            GetSsoSigningCertificates(env, globalSettings));
+            GetSsoSigningCertificates(env, globalSettings), CertificateSourceReport.SsoSigning);
     }
 
     /// <summary>
@@ -546,9 +546,67 @@ public static class ServiceCollectionExtensions
             [.. identity.Validation, .. ssoValidation], IsFallback: true);
     }
 
-    private static IIdentityServerBuilder AddSigningCertificateSet(IIdentityServerBuilder identityServerBuilder,
-        IWebHostEnvironment env, GlobalSettings globalSettings, SigningCertificateSet certificates)
+    /// <summary>
+    /// Logs one entry for each certificate role: the role, the source, and the thumbprint of each active, staged,
+    /// and retired certificate. Logs one warning for each role whose root has a password but no location,
+    /// thumbprint, or blob name. Logs one warning for each role whose future slot is active but not enabled.
+    /// The log names only setting paths, roles, sources, and thumbprints.
+    /// </summary>
+    public static void LogCertificateSources(ILogger logger, IEnumerable<CertificateSourceReport> reports,
+        GlobalSettings globalSettings)
     {
+        foreach (var report in reports)
+        {
+            var (source, root, future, settingPath) = GetRoleSettings(report.Role, globalSettings);
+            logger.LogInformation(Constants.BypassFiltersEventId,
+                "{Role} certificate source: {Source}. Active thumbprint: {ActiveThumbprint}. " +
+                "Staged thumbprints: {StagedThumbprints}. " +
+                "Retired (validation or decryption) thumbprints: {RetiredThumbprints}.",
+                report.Role, report.IsFallback ? "Identity fallback" : source,
+                report.Active?.Thumbprint ?? "none", Thumbprints(report.Staged), Thumbprints(report.Retired));
+
+            if (CoreHelpers.SettingHasValue(root.CertificatePassword) &&
+                !CoreHelpers.SettingHasValue(root.CertificateLocation) &&
+                !CoreHelpers.SettingHasValue(root.CertificateThumbprint) &&
+                !CoreHelpers.SettingHasValue(root.BlobName))
+            {
+                logger.LogWarning(Constants.BypassFiltersEventId,
+                    "{SettingPath} has a certificate password, but no certificate location, thumbprint, or blob " +
+                    "name. The {Role} role does not load a certificate from this section.",
+                    settingPath, report.Role);
+            }
+
+            if (future.Active && !future.Enabled)
+            {
+                logger.LogWarning(Constants.BypassFiltersEventId,
+                    "{SettingPath}:futureCertificate has active set to true and enabled set to false. " +
+                    "The host ignores this slot. No promotion happened for the {Role} role.",
+                    settingPath, report.Role);
+            }
+        }
+    }
+
+    private static string Thumbprints(IReadOnlyList<X509Certificate2> certificates) =>
+        certificates.Count == 0 ? "none" : string.Join(", ", certificates.Select(certificate => certificate.Thumbprint));
+
+    private static (string Source, ICertificateSettings Root, GlobalSettings.FutureCertificateSettings Future,
+        string SettingPath) GetRoleSettings(string role, GlobalSettings globalSettings) => role switch
+        {
+            CertificateSourceReport.IdentitySigning => ("IdentityServer", globalSettings.IdentityServer,
+                globalSettings.IdentityServer.FutureCertificate, "globalSettings:identityServer"),
+            CertificateSourceReport.SsoSigning => ("SsoServer", globalSettings.SsoServer,
+                globalSettings.SsoServer.FutureCertificate, "globalSettings:ssoServer"),
+            CertificateSourceReport.SsoEncryption => ("SsoServer", globalSettings.SsoServer.Encryption,
+                globalSettings.SsoServer.Encryption.FutureCertificate, "globalSettings:ssoServer:encryption"),
+            _ => throw new ArgumentOutOfRangeException(nameof(role), role, "The certificate role is not known."),
+        };
+
+    private static IIdentityServerBuilder AddSigningCertificateSet(IIdentityServerBuilder identityServerBuilder,
+        IWebHostEnvironment env, GlobalSettings globalSettings, SigningCertificateSet certificates, string role)
+    {
+        identityServerBuilder.Services.AddSingleton(new CertificateSourceReport(role, certificates.Active,
+            certificates.Staged, certificates.Validation, certificates.IsFallback));
+
         if (certificates.Active != null)
         {
             AddSigningCertificates(identityServerBuilder, certificates.Active,

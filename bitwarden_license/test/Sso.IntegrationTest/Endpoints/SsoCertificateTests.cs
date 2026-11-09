@@ -11,6 +11,7 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.IntegrationTestCommon;
+using Bit.SharedWeb.Utilities;
 using Bit.Sso.IntegrationTest.Utilities;
 using Bit.Test.Common.Helpers;
 using Duende.IdentityModel;
@@ -509,6 +510,75 @@ public class SsoCertificateTests
         // Assert
         Assert.Contains(encryption.Thumbprint, exception.Message);
         Assert.Contains("does not contain a private key", exception.InnerException?.Message);
+    }
+
+    [Fact]
+    public void Startup_LogsCertificateSources()
+    {
+        // Arrange
+        using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");
+        using var signing = TestCertificates.Create("CN=Bitwarden Test SSO Signing");
+        using var encryption = TestCertificates.Create("CN=Bitwarden Test SSO Encryption");
+        var logs = new CollectingLoggerProvider();
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs));
+        using var factory = new SsoApplicationFactory();
+        foreach (var (key, value) in CertificateTestConfiguration.SelfHosted(identity)
+                     .WithSsoSigningCertificate(signing)
+                     .WithSsoEncryptionCertificate(encryption))
+        {
+            factory.UpdateConfiguration(key, value);
+        }
+        factory.ConfigureServices(services => services.AddSingleton<ILoggerFactory>(loggerFactory));
+
+        // Act
+        using var client = factory.CreateClient();
+
+        // Assert
+        Assert.Equal(
+            [
+                (CertificateSourceReport.SsoEncryption, "SsoServer", encryption.Thumbprint),
+                (CertificateSourceReport.SsoSigning, "SsoServer", signing.Thumbprint),
+            ],
+            StartupTestHelpers.GetCertificateSourceEntries(logs)
+                .Select(entry => (entry.Values["Role"], entry.Values["Source"], entry.Values["ActiveThumbprint"]))
+                .OrderBy(entry => entry.Item1));
+    }
+
+    [Fact]
+    public void Startup_FallbackWithStagedAndDecryptionCertificates_LogsEachCertificateInItsField()
+    {
+        // Arrange
+        using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");
+        using var signingStaged = TestCertificates.Create("CN=Bitwarden Test SSO Signing Staged");
+        using var encryptionStaged = TestCertificates.Create("CN=Bitwarden Test SSO Encryption Staged");
+        using var decryption = TestCertificates.Create("CN=Bitwarden Test SSO Decryption");
+        var logs = new CollectingLoggerProvider();
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs));
+        using var factory = new SsoApplicationFactory();
+        foreach (var (key, value) in CertificateTestConfiguration.SelfHosted(identity)
+                     .WithSsoStagedSigningCertificate(signingStaged)
+                     .WithSsoEncryptionFutureCertificate(encryptionStaged, active: false)
+                     .WithSsoDecryptionCertificates(decryption))
+        {
+            factory.UpdateConfiguration(key, value);
+        }
+        factory.ConfigureServices(services => services.AddSingleton<ILoggerFactory>(loggerFactory));
+
+        // Act
+        using var client = factory.CreateClient();
+
+        // Assert
+        Assert.Equal(
+            [
+                (CertificateSourceReport.SsoEncryption, "Identity fallback", identity.Thumbprint,
+                    encryptionStaged.Thumbprint, decryption.Thumbprint),
+                (CertificateSourceReport.SsoSigning, "Identity fallback", identity.Thumbprint,
+                    signingStaged.Thumbprint, "none"),
+            ],
+            StartupTestHelpers.GetCertificateSourceEntries(logs)
+                .Select(entry => (entry.Values["Role"], entry.Values["Source"], entry.Values["ActiveThumbprint"],
+                    entry.Values["StagedThumbprints"], entry.Values["RetiredThumbprints"]))
+                .OrderBy(entry => entry.Item1));
     }
 
     private static async Task<string> GetMetadataAsync(Dictionary<string, string?> configuration)

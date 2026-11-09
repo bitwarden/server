@@ -94,7 +94,8 @@ public class Startup
         IWebHostEnvironment environment,
         IHostApplicationLifetime appLifetime,
         GlobalSettings globalSettings,
-        ILogger<Startup> logger)
+        ILogger<Startup> logger,
+        IEnumerable<CertificateSourceReport> certificateSourceReports)
     {
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
@@ -158,6 +159,8 @@ public class Startup
         });
 
         // Log startup
+        SharedWeb.Utilities.ServiceCollectionExtensions.LogCertificateSources(logger, certificateSourceReports,
+            globalSettings);
         logger.LogInformation(Constants.BypassFiltersEventId, "{Project} started.", globalSettings.ProjectName);
     }
 }

@@ -31,6 +31,9 @@ public static class ServiceCollectionExtensions
         {
             ServiceCertificates = Saml2ServiceCertificates.Build(signingCertificates, encryptionCertificates),
         });
+        services.AddSingleton(new CertificateSourceReport(CertificateSourceReport.SsoEncryption,
+            encryptionCertificates.Active, encryptionCertificates.Staged, encryptionCertificates.Decryption,
+            encryptionCertificates.IsFallback));
 
         services.AddSingleton<Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider,
             DynamicAuthenticationSchemeProvider>();

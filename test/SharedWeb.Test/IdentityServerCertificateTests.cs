@@ -300,6 +300,36 @@ public class IdentityServerCertificateTests : IClassFixture<IdentityServerCertif
         Assert.NotEqual(KeyId(current), promotedCredential.Kid);
     }
 
+    [Fact]
+    public void AddIdentityServerCertificate_RegistersOneIdentitySigningReport()
+    {
+        using var active = TestCertificates.Create("CN=Bitwarden Test Active");
+        using var staged = TestCertificates.Create("CN=Bitwarden Test Staged");
+        using var retired = TestCertificates.Create("CN=Bitwarden Test Retired");
+        var globalSettings = SelfHostedSettings(active);
+        globalSettings.IdentityServer.FutureCertificate = FutureSlot(staged, active: false);
+        globalSettings.IdentityServer.ValidationCertificates = [RetiredEntry(retired)];
+
+        using var provider = BuildProvider("Production", globalSettings);
+
+        var report = Assert.Single(provider.GetServices<CertificateSourceReport>());
+        Assert.Equal(CertificateSourceReport.IdentitySigning, report.Role);
+        Assert.Equal(active.Thumbprint, report.Active?.Thumbprint);
+        Assert.Equal(staged.Thumbprint, Assert.Single(report.Staged).Thumbprint);
+        Assert.Equal(retired.Thumbprint, Assert.Single(report.Retired).Thumbprint);
+        Assert.False(report.IsFallback);
+    }
+
+    [Fact]
+    public void AddIdentityServerCertificate_DevelopmentWithNoCertificate_RegistersAReportWithNoActive()
+    {
+        using var provider = BuildProvider("Development", NoCertificateSettings());
+
+        var report = Assert.Single(provider.GetServices<CertificateSourceReport>());
+        Assert.Equal(CertificateSourceReport.IdentitySigning, report.Role);
+        Assert.Null(report.Active);
+    }
+
     private static GlobalSettings SelfHostedSettings(X509Certificate2 active) => new()
     {
         SelfHosted = true,

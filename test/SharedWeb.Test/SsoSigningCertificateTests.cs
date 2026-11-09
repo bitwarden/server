@@ -259,6 +259,33 @@ public class SsoSigningCertificateTests : IClassFixture<IdentityServerCertificat
         Assert.Equal("No identity certificate to use.", exception.Message);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AddSsoSigningCertificate_RegistersOneSsoSigningReport(bool fallback)
+    {
+        using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");
+        using var sso = TestCertificates.Create("CN=Bitwarden Test SSO");
+        using var ssoStaged = TestCertificates.Create("CN=Bitwarden Test SSO Staged");
+        using var ssoRetired = TestCertificates.Create("CN=Bitwarden Test SSO Retired");
+        var globalSettings = SelfHostedSettings(identity);
+        if (!fallback)
+        {
+            SetRoot(globalSettings.SsoServer, sso);
+        }
+        globalSettings.SsoServer.FutureCertificate = FutureSlot(ssoStaged, active: false);
+        globalSettings.SsoServer.ValidationCertificates = [RetiredEntry(ssoRetired)];
+
+        using var provider = BuildProvider("Production", globalSettings);
+
+        var report = Assert.Single(provider.GetServices<CertificateSourceReport>());
+        Assert.Equal(CertificateSourceReport.SsoSigning, report.Role);
+        Assert.Equal(fallback ? identity.Thumbprint : sso.Thumbprint, report.Active?.Thumbprint);
+        Assert.Equal(ssoStaged.Thumbprint, Assert.Single(report.Staged).Thumbprint);
+        Assert.Equal(ssoRetired.Thumbprint, Assert.Single(report.Retired).Thumbprint);
+        Assert.Equal(fallback, report.IsFallback);
+    }
+
     private static GlobalSettings NoCertificateSettings()
     {
         var globalSettings = new GlobalSettings

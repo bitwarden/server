@@ -2,6 +2,7 @@
 using Bit.Core.Test.Auth.AutoFixture;
 using Bit.IntegrationTestCommon;
 using Bit.IntegrationTestCommon.Factories;
+using Bit.SharedWeb.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Xunit;
@@ -113,6 +114,28 @@ public class IdentityJwksTests
         using var client = factory.CreateClient();
         await JwksTestHelpers.AssertSignedByOnePublishedKeyAsync(client, accessToken, outgoingCertificate);
         await JwksTestHelpers.AssertPublishesExactlyKeyIdsAsync(client, outgoingCertificate, newCertificate);
+    }
+
+    [Fact]
+    public void Startup_LogsCertificateSources()
+    {
+        // Arrange
+        using var active = TestCertificates.Create("CN=Bitwarden Test Active");
+        using var staged = TestCertificates.Create("CN=Bitwarden Test Staged");
+        var logs = new CollectingLoggerProvider();
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs));
+        using var factory = CreateFactory(CertificateTestConfiguration.SelfHosted(active, staged, futureActive: false));
+        factory.ConfigureServices(services => services.AddSingleton<ILoggerFactory>(loggerFactory));
+
+        // Act
+        using var client = factory.CreateClient();
+
+        // Assert
+        var entry = Assert.Single(StartupTestHelpers.GetCertificateSourceEntries(logs));
+        Assert.Equal(CertificateSourceReport.IdentitySigning, entry.Values["Role"]);
+        Assert.Equal("IdentityServer", entry.Values["Source"]);
+        Assert.Equal(active.Thumbprint, entry.Values["ActiveThumbprint"]);
+        Assert.Equal(staged.Thumbprint, entry.Values["StagedThumbprints"]);
     }
 
     private static IdentityApplicationFactory CreateFactory(Dictionary<string, string?> configuration)
