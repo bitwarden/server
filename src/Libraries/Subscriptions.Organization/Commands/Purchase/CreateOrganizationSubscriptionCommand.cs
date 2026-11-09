@@ -19,7 +19,7 @@ using Plan = Bit.Core.Models.StaticStore.Plan;
 using StripeConstants = Bit.Core.Billing.Constants.StripeConstants;
 using Subscription = Stripe.Subscription;
 
-namespace Bit.Subscriptions.Organization.Commands;
+namespace Bit.Subscriptions.Organization.Commands.Purchase;
 
 internal sealed class CreateOrganizationSubscriptionCommand(
     IBraintreeGateway braintreeGateway,

@@ -1,7 +1,9 @@
 ﻿using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.KeyManagement;
 using Bit.Core.Models.Api;
+using Bit.Core.Utilities;
 using Duende.IdentityServer.Validation;
 
 namespace Bit.Identity.IdentityServer.RequestValidators;
@@ -53,7 +55,7 @@ public class ClientVersionValidator(
 
         // Determine the minimum version client that a user needs. If no V2 encryption detected then
         // no validation needs to occur, which is why min version number can be null.
-        Version? minVersion = user.HasV2Encryption() ? Constants.MinimumClientVersionForV2Encryption : null;
+        Version? minVersion = user.HasV2Encryption() ? GetMinimumClientVersionForV2Encryption() : null;
 
         // If min version is null then we know that the user had an encryption
         // configuration that doesn't require a minimum version. Allowing through.
@@ -70,6 +72,11 @@ public class ClientVersionValidator(
 
         return true;
     }
+
+    private Version GetMinimumClientVersionForV2Encryption() =>
+        DeviceTypes.ToClientType(currentContext.DeviceType) == ClientType.Desktop
+            ? Constants.MinimumDesktopClientVersionForV2Encryption
+            : Constants.MinimumClientVersionForV2Encryption;
 
     private void FillRequestContextWithErrorData(
         CustomValidatorRequestContext requestContext,
