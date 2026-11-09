@@ -93,4 +93,22 @@ public class SubscriptionsOrganizationServiceCollectionExtensionsTests
 
         Assert.NotNull(scope.ServiceProvider.GetService<PurchasePrivilegedControlsHandler>());
     }
+
+    [Fact]
+    public void AddOrganizationSubscriptions_RegistersRemovePrivilegedControlsHandler()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(Substitute.For<IPricingClient>());
+        services.AddSingleton(Substitute.For<IStripeAdapter>());
+        services.AddSingleton(Substitute.For<IOrganizationRepository>());
+        services.AddSingleton(Substitute.For<IUpdateOrganizationSubscriptionCommand>());
+        services.AddSingleton(Substitute.For<IOrganizationService>());
+        services.AddSingleton(Substitute.For<IBitwardenEnvironment>());
+        services.AddLogging();
+
+        services.AddOrganizationSubscriptions();
+        using var scope = services.BuildServiceProvider().CreateScope();
+
+        Assert.NotNull(scope.ServiceProvider.GetService<RemovePrivilegedControlsHandler>());
+    }
 }

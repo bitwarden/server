@@ -28,6 +28,7 @@ using Bit.Core.Billing.Providers.Services.NoopImplementations;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Billing.TrialInitiation;
+using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Dirt.Reports.ReportFeatures;
 using Bit.Core.Dirt.Reports.Services;
 using Bit.Core.Entities;
@@ -241,6 +242,12 @@ public static class ServiceCollectionExtensions
                 DuoUserStateTokenable.DataProtectorPurpose,
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<DuoUserStateTokenable>>>()));
+        services.AddSingleton<IDataProtectorTokenFactory<IntegrationOAuthStateTokenable>>(serviceProvider =>
+            new DataProtectorTokenFactory<IntegrationOAuthStateTokenable>(
+                IntegrationOAuthStateTokenable.ClearTextPrefix,
+                IntegrationOAuthStateTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<IntegrationOAuthStateTokenable>>>()));
         services.AddSingleton<IDataProtectorTokenFactory<TwoFactorRememberTokenable>>(serviceProvider =>
             new DataProtectorTokenFactory<TwoFactorRememberTokenable>(
                 TwoFactorRememberTokenable.ClearTextPrefix,
@@ -310,6 +317,7 @@ public static class ServiceCollectionExtensions
         services.TryAddTransient(typeof(IOtpTokenProvider<>), typeof(OtpTokenProvider<>));
         services.AddScoped<ITwoFactorEmailService, TwoFactorEmailService>();
         services.AddScoped<INewDeviceVerificationOtpStore, NewDeviceVerificationOtpStore>();
+        services.AddScoped<IUserVerificationOtpStore, UserVerificationOtpStore>();
         // Legacy mailer service
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();
@@ -327,23 +335,8 @@ public static class ServiceCollectionExtensions
         services.AddOrganizationAbilityCache(globalSettings);
         services.AddProviderAbilityCache(globalSettings);
 
-        var awsConfigured = CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret);
-        if (awsConfigured && CoreHelpers.SettingHasValue(globalSettings.Mail?.SendGridApiKey))
-        {
-            services.AddSingleton<IMailDeliveryService, MultiServiceMailDeliveryService>();
-        }
-        else if (awsConfigured)
-        {
-            services.AddSingleton<IMailDeliveryService, AmazonSesMailDeliveryService>();
-        }
-        else if (CoreHelpers.SettingHasValue(globalSettings.Mail?.Smtp?.Host))
-        {
-            services.AddSingleton<IMailDeliveryService, MailKitSmtpMailDeliveryService>();
-        }
-        else
-        {
-            services.AddSingleton<IMailDeliveryService, NoopMailDeliveryService>();
-        }
+        services.ConfigureMailDeliveryOptionsFromGlobalSettings();
+        services.AddMailDelivery();
 
         services.AddPush(globalSettings);
         services.AddPushRegistration();

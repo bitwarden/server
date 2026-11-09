@@ -36,6 +36,7 @@ using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Enums;
 using Bit.HttpExtensions;
+using Bit.OrganizationKeys;
 using Bit.Subscriptions.Organization;
 using Bit.Subscriptions.User;
 using Bit.CurrentUser;
@@ -238,6 +239,10 @@ public class Startup
         // This command is only used in the Api, so it is registered here rather than in the shared library.
         services.AddScoped<ICloudOrganizationSignUpCommand, CloudOrganizationSignUpCommand>();
 
+        // Key Management minimal API libraries
+        services.AddOrganizationKeys();
+        services.AddOpenApiEndpointDataSource(MapOrganizationKeysEndpoints);
+
         if (!globalSettings.SelfHosted)
         {
             services.AddOpenApiEndpointDataSource(MapSubscriptionEndpoints);
@@ -312,6 +317,7 @@ public class Startup
         {
             endpoints.MapDefaultControllerRoute();
             endpoints.MapVersionEndpoint();
+            MapOrganizationKeysEndpoints(endpoints);
 
 #if !OSS
             // PAM is a commercial feature; its Minimal API endpoints are only mapped in non-OSS builds.
@@ -437,6 +443,12 @@ public class Startup
             .MapRotationAttemptCipherEndpoints();
     }
 #endif
+
+    private static void MapOrganizationKeysEndpoints(IEndpointRouteBuilder endpoints)
+    {
+        endpoints.MapGroup("/organizations/{orgId:guid}/keys")
+            .MapOrganizationKeysEndpoints();
+    }
 
     private static void MapSubscriptionEndpoints(IEndpointRouteBuilder endpoints)
     {

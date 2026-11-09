@@ -67,9 +67,12 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
 
         InvoiceSubscriptionDetailsOptions subscriptionDetails;
         TaxID? onFileTaxId = null;
+        List<InvoiceDiscountOptions>? discounts = null;
+        var previewAgainstSubscription = subscriptionId is not null;
         if (subscriptionId is not null)
         {
-            (subscriptionDetails, onFileTaxId) = await BuildPlanChangeDetailsAsync(organization, newPlan);
+            (subscriptionDetails, onFileTaxId, discounts, previewAgainstSubscription) =
+                await BuildPlanChangeDetailsAsync(organization, newPlan);
         }
         else if (organization.PlanType == PlanType.Free)
         {
@@ -85,7 +88,8 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
         var options = new InvoiceCreatePreviewOptions
         {
             Customer = organization.GatewayCustomerId,
-            Subscription = subscriptionId,
+            Subscription = previewAgainstSubscription ? subscriptionId : null,
+            Discounts = discounts,
             SubscriptionDetails = subscriptionDetails,
             AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = true },
             CustomerDetails = new InvoiceCustomerDetailsOptions
@@ -98,7 +102,7 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
 
         // Stripe sources currency and billing mode from the existing subscription on a plan change; a purchase
         // preview has none, so set them explicitly. billing_mode can't be sent alongside a subscription.
-        if (subscriptionId is null)
+        if (!previewAgainstSubscription)
         {
             options.Currency = "usd";
             options.SubscriptionDetails.BillingMode =
@@ -125,15 +129,11 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
         }
     }
 
-    private async Task<(InvoiceSubscriptionDetailsOptions SubscriptionDetails, TaxID? OnFileTaxId)>
+    private async Task<(InvoiceSubscriptionDetailsOptions SubscriptionDetails, TaxID? OnFileTaxId,
+            List<InvoiceDiscountOptions>? Discounts, bool PreviewAgainstSubscription)>
         BuildPlanChangeDetailsAsync(OrganizationEntity organization, Plan newPlan)
     {
         var currentPlan = await pricingClient.GetPlanOrThrow(organization.PlanType);
-
-        if (currentPlan.UpgradeSortOrder == newPlan.UpgradeSortOrder)
-        {
-            throw new BadRequestException("Your organization is already on this plan.");
-        }
 
         if (currentPlan.UpgradeSortOrder > newPlan.UpgradeSortOrder)
         {
@@ -150,6 +150,36 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
             throw new ConflictException(InvalidSubscriptionMessage);
         }
 
+        if (currentPlan.UpgradeSortOrder == newPlan.UpgradeSortOrder && subscription.Status != SubscriptionStatus.Trialing)
+        {
+            throw new BadRequestException("Your organization is already on this plan.");
+        }
+
+        var onFileTaxId = ExtractOnFileTaxId(subscription.Customer);
+
+        // Stripe can't preview a trial ending on a subscription that has no payment method (it would cancel at
+        // the end of the trial), so a trialing subscription is previewed as a new purchase of the target plan.
+        // A purchase preview doesn't pick up the customer's coupon on its own (verified against Stripe test
+        // mode), so coupons are passed explicitly. A subscription's own discounts take precedence over the
+        // customer's, which only applies when the subscription has none.
+        if (subscription.Status == SubscriptionStatus.Trialing)
+        {
+            var subscriptionCouponIds = (subscription.Discounts ?? [])
+                .Select(discount => discount.Source?.CouponId)
+                .Where(couponId => !string.IsNullOrEmpty(couponId))
+                .Distinct()
+                .ToList();
+            var couponIds = subscriptionCouponIds.Count > 0
+                ? subscriptionCouponIds
+                : new[] { subscription.Customer?.Discount?.Source?.CouponId }
+                    .Where(couponId => !string.IsNullOrEmpty(couponId))
+                    .ToList();
+            var discounts = couponIds.Count > 0
+                ? couponIds.Select(couponId => new InvoiceDiscountOptions { Coupon = couponId }).ToList()
+                : null;
+            return (BuildPurchaseDetails(organization, newPlan), onFileTaxId, discounts, false);
+        }
+
         var itemsByPriceId = subscription.Items.ToDictionary(item => item.Price.Id);
 
         var changeSet = BuildPlanChangeSet(organization, currentPlan, newPlan);
@@ -163,14 +193,7 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
             ProrationBehavior = ProrationBehavior.AlwaysInvoice
         };
 
-        // A trialing subscription isn't charged for the change now (the proration is $0). End the trial in the
-        // preview so the amount reflects what the subscriber pays when the trial converts.
-        if (subscription.Status == SubscriptionStatus.Trialing)
-        {
-            subscriptionDetails.TrialEnd = InvoiceSubscriptionDetailsTrialEnd.Now;
-        }
-
-        return (subscriptionDetails, ExtractOnFileTaxId(subscription.Customer));
+        return (subscriptionDetails, onFileTaxId, null, true);
     }
 
     private InvoiceSubscriptionDetailsOptions BuildPurchaseDetails(OrganizationEntity organization, Plan newPlan)
@@ -193,6 +216,15 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
             items.Add(new InvoiceSubscriptionDetailsItemOptions { Price = newPlan.PasswordManager.StripeSeatPlanId, Quantity = seats });
         }
 
+        if (organization.MaxStorageGb > newPlan.PasswordManager.BaseStorageGb)
+        {
+            items.Add(new InvoiceSubscriptionDetailsItemOptions
+            {
+                Price = newPlan.PasswordManager.StripeStoragePlanId,
+                Quantity = organization.MaxStorageGb - newPlan.PasswordManager.BaseStorageGb
+            });
+        }
+
         if (organization.UseSecretsManager && newPlan.SecretsManager != null)
         {
             if (organization.SmSeats is not { } smSeats)
@@ -203,9 +235,18 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
             }
 
             items.Add(new InvoiceSubscriptionDetailsItemOptions { Price = newPlan.SecretsManager.StripeSeatPlanId, Quantity = smSeats });
+
+            if (organization.SmServiceAccounts > newPlan.SecretsManager.BaseServiceAccount)
+            {
+                items.Add(new InvoiceSubscriptionDetailsItemOptions
+                {
+                    Price = newPlan.SecretsManager.StripeServiceAccountPlanId,
+                    Quantity = organization.SmServiceAccounts - newPlan.SecretsManager.BaseServiceAccount
+                });
+            }
         }
 
-        // No Subscription is set on this new-subscription preview, so there is nothing to prorate.
+        // No Subscription is set on a purchase preview, so there is nothing to prorate.
         return new InvoiceSubscriptionDetailsOptions { Items = items };
     }
 
@@ -297,7 +338,7 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
         try
         {
             return await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
-                new SubscriptionGetOptions { Expand = ["items.data.price", "customer.tax_ids"] });
+                new SubscriptionGetOptions { Expand = ["items.data.price", "customer.tax_ids", "discounts.source.coupon"] });
         }
         catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
         {

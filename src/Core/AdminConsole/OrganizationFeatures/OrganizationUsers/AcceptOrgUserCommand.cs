@@ -169,6 +169,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         orgUser.Status = OrganizationUserStatusType.Accepted;
         orgUser.UserId = user.Id;
         orgUser.Email = null;
+        orgUser.ClearInviteReminders();
 
         await _organizationUserRepository.ReplaceAsync(orgUser);
 

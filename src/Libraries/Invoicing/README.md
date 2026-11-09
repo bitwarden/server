@@ -7,8 +7,8 @@ See [LIBRARY.md](../LIBRARY.md) for the shape all libraries under `src/Libraries
 
 ## Public surface
 
-`AddInvoicing()` registers the projection service, the `IGetSubscriptionPreviewQuery`, and the
-feature flag keys the library owns (`InvoicingFeatureFlags`) as known flags. The public surface is
+`AddInvoicing()` registers the projection service, the `IGetSubscriptionPreviewQuery`, and any
+feature flag keys the library owns (`InvoicingFeatureFlags`, currently empty) as known flags. The public surface is
 `IInvoicePreviewService`, `IGetSubscriptionPreviewQuery`, and the `InvoicePreview` /
 `SubscriptionPreview` record family under `InvoicePreviews/Models/` (including `PlanTierType`). The
 service, builder, mappers, reference table, and Stripe client are internal.

@@ -16,8 +16,8 @@ namespace Bit.Billing.IntegrationTest;
 /// Previews Premium and organization purchases against Stripe test mode. Addresses use New York
 /// (12345) so Stripe computes a non-zero tax.
 /// </summary>
-public class PreviewingAccountPurchaseTests(PreviewDrivenCartFixture fixture)
-    : IClassFixture<PreviewDrivenCartFixture>
+public class PreviewingAccountPurchaseTests(StripeTestsFixture fixture)
+    : IClassFixture<StripeTestsFixture>
 {
     private const string PremiumRoute = "/account/billing/subscription/purchase/preview";
     private const string OrganizationRoute = "/organizations/billing/subscription/purchase/preview";

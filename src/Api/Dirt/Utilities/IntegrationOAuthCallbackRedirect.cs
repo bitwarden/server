@@ -11,6 +11,12 @@ public static class IntegrationOAuthCallbackRedirect
 {
     public const string Success = "success";
 
+    /// <summary>
+    /// The provider returned a code. The web vault must POST the code and state to the integration's
+    /// authenticated <c>complete</c> endpoint to finish the setup.
+    /// </summary>
+    public const string Authorized = "authorized";
+
     /// <summary>The user declined consent, or the provider returned an error instead of a code.</summary>
     public const string Canceled = "canceled";
 
@@ -33,4 +39,17 @@ public static class IntegrationOAuthCallbackRedirect
         return $"{globalSettings.BaseServiceUri.VaultWithHash}/organizations/{organizationId}" +
                $"/integrations/event-management?integration={integration}&result={result}";
     }
+
+    /// <summary>
+    /// Builds the <see cref="Authorized"/> URL. The code and state are carried in the URL fragment, so the browser
+    /// doesn't send them to the web vault server.
+    /// </summary>
+    public static string BuildAuthorizedUrl(
+        IGlobalSettings globalSettings,
+        Guid organizationId,
+        IntegrationType integrationType,
+        string code,
+        string state) =>
+        BuildUrl(globalSettings, organizationId, integrationType, Authorized) +
+        $"&code={Uri.EscapeDataString(code)}&state={Uri.EscapeDataString(state)}";
 }

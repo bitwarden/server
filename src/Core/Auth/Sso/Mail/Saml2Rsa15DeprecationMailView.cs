@@ -8,11 +8,11 @@ namespace Bit.Core.Auth.Sso.Mail;
 /// </summary>
 public class Saml2Rsa15DeprecationMailView : BaseMailView
 {
+    public required string DeprecationDate { get; init; }
+
     // ReSharper disable once MemberCanBeMadeStatic.Global
 #pragma warning disable CA1822
     // Handlebars needs it to be an instance variable to work properly.
-    public string DeprecationDate => "December 1, 2026";
-
     public string HelpPageUrl => "https://bitwarden.com/help/RSAES-PKCS1/";
 #pragma warning restore CA1822
 }
