@@ -32,9 +32,9 @@ namespace Bit.Sso.IntegrationTest.Controllers;
 /// Each test does the SSO callback for one of two sign-ins against a Staged member: a person with no Bitwarden
 /// account, whom SSO provisions just in time, or a person with an existing Bitwarden account, who gets an invite
 /// email. Password Manager seats are unlimited unless a test sets them, so the Password Manager seat check passes.
-/// Plans come from a substituted pricing client, so no test calls the pricing service. Each test turns on
-/// <see cref="FeatureFlagKeys.PM39883_Pam_Billing_Support"/>, because seat reservations on cloud do nothing while it
-/// is off.
+/// Plans come from a substituted pricing client, so no test calls the pricing service. Each test sets
+/// <see cref="FeatureFlagKeys.PM39883_Pam_Billing_Support"/>. Most turn it on, because seat reservations on cloud do
+/// nothing while it is off.
 /// </remarks>
 public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
 {
@@ -191,6 +191,42 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
 
         Assert.Equal(1, (await GetOrganizationAsync(testData)).PamSeats);
         await AssertSeatNeededEmailSentAsync(testData, ownerEmail, testData.OrganizationUser!.Email!);
+    }
+
+    /*
+    * SUCCESS PATH: On cloud with the billing support flag off, a just-in-time provisioned user claims a Staged
+    * member with Privileged Controls access, and the organization is at its Privileged Controls autoscale limit.
+    * With the flag off, the reservation does not check seats, so the member keeps access, no seat is bought, and
+    * the Owners get no email.
+    */
+    [Fact]
+    public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_AtSeatLimitWithBillingSupportFlagOff_KeepsPrivilegedControlsWithoutReservingSeat()
+    {
+        // Arrange — one Privileged Controls seat, already taken, autoscale limit of one, billing support flag off.
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithMockedPricingClient()
+            .WithConfiguration(_billingSupportFlagSetting, "false")
+            .WithOrganization(org => WithPrivilegedControlsSeats(org, pamSeats: 1, maxAutoscalePamSeats: 1))
+            .WithStagedOrganizationUser(orgUser => orgUser.AccessPam = true)
+            .WithMockedMailer()
+            .BuildAsync();
+        await SeedOwnerAsync(testData);
+        await SeedPrivilegedControlsSeatHolderAsync(testData);
+
+        // Act
+        var response = await CreateNonRedirectingClient(testData).GetAsync("/Account/ExternalCallback");
+
+        // Assert
+        AssertSsoSucceeded(response);
+
+        var orgUser = await GetOrgUserAsync(testData);
+        Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
+        Assert.NotNull(orgUser.UserId);
+        Assert.True(orgUser.AccessPam);
+
+        Assert.Equal(1, (await GetOrganizationAsync(testData)).PamSeats);
+        await AssertNoPrivilegedControlsEmailSentAsync(testData);
     }
 
     /*
