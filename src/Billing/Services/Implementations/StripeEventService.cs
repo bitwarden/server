@@ -1,4 +1,5 @@
 ﻿using Bit.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Services;
 using Bit.Core.Settings;
 using Stripe;
@@ -107,57 +108,53 @@ public class StripeEventService(
 
         var customerExpansion = new List<string> { "customer" };
 
-        var customerMetadata = stripeEvent.Type switch
+        var customer = stripeEvent.Type switch
         {
             HandledStripeWebhook.SubscriptionDeleted or HandledStripeWebhook.SubscriptionUpdated =>
-                (await GetSubscription(stripeEvent, true, customerExpansion)).Customer?.Metadata,
+                (await GetSubscription(stripeEvent, true, customerExpansion)).Customer,
 
             HandledStripeWebhook.ChargeSucceeded or HandledStripeWebhook.ChargeRefunded =>
-                (await GetCharge(stripeEvent, true, customerExpansion)).Customer?.Metadata,
+                (await GetCharge(stripeEvent, true, customerExpansion)).Customer,
 
             HandledStripeWebhook.UpcomingInvoice =>
-                await GetCustomerMetadataFromUpcomingInvoiceEvent(stripeEvent),
+                await GetCustomerFromUpcomingInvoiceEvent(stripeEvent),
 
             HandledStripeWebhook.PaymentSucceeded or HandledStripeWebhook.PaymentFailed
                 or HandledStripeWebhook.InvoiceCreated or HandledStripeWebhook.InvoiceFinalized =>
-                (await GetInvoice(stripeEvent, true, customerExpansion)).Customer?.Metadata,
+                (await GetInvoice(stripeEvent, true, customerExpansion)).Customer,
 
             HandledStripeWebhook.PaymentMethodAttached =>
-                (await GetPaymentMethod(stripeEvent, true, customerExpansion)).Customer?.Metadata,
+                (await GetPaymentMethod(stripeEvent, true, customerExpansion)).Customer,
 
             HandledStripeWebhook.CustomerUpdated =>
-                (await GetCustomer(stripeEvent, true)).Metadata,
+                await GetCustomer(stripeEvent, true),
 
             HandledStripeWebhook.SetupIntentSucceeded =>
-                (await GetSetupIntent(stripeEvent, true, customerExpansion)).Customer?.Metadata,
+                (await GetSetupIntent(stripeEvent, true, customerExpansion)).Customer,
 
             HandledStripeWebhook.CheckoutSessionCompleted =>
-                    (await GetCheckoutSession(stripeEvent, true, customerExpansion)).Customer?.Metadata,
+                    (await GetCheckoutSession(stripeEvent, true, customerExpansion)).Customer,
 
             _ => null
         };
 
-        if (customerMetadata == null)
+        if (customer?.Metadata == null)
         {
             return false;
         }
 
-        var customerRegion = GetCustomerRegion(customerMetadata);
-
-        return customerRegion == serverRegion;
+        return customer.GetRegion() == serverRegion;
 
         /* In Stripe, when we receive an invoice.upcoming event, the event does not include an Invoice ID because
            the invoice hasn't been created yet. Therefore, rather than retrieving the fresh Invoice with a 'customer'
            expansion, we need to use the Customer ID on the event to retrieve the metadata. */
-        async Task<Dictionary<string, string>?> GetCustomerMetadataFromUpcomingInvoiceEvent(Event localStripeEvent)
+        async Task<Customer?> GetCustomerFromUpcomingInvoiceEvent(Event localStripeEvent)
         {
             var invoice = await GetInvoice(localStripeEvent);
 
-            var customer = !string.IsNullOrEmpty(invoice.CustomerId)
+            return !string.IsNullOrEmpty(invoice.CustomerId)
                 ? await stripeFacade.GetCustomer(invoice.CustomerId)
                 : null;
-
-            return customer?.Metadata;
         }
     }
 
@@ -176,28 +173,4 @@ public class StripeEventService(
             ? throw new Exception(
                 $"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{typeof(T).Name}'")
             : type;
-
-    private static string GetCustomerRegion(IDictionary<string, string> customerMetadata)
-    {
-        const string defaultRegion = Core.Constants.CountryAbbreviations.UnitedStates;
-
-        if (customerMetadata.TryGetValue("region", out var value))
-        {
-            return value;
-        }
-
-        var incorrectlyCasedRegionKey = customerMetadata.Keys
-            .FirstOrDefault(key => key.Equals("region", StringComparison.OrdinalIgnoreCase));
-
-        if (incorrectlyCasedRegionKey is null)
-        {
-            return defaultRegion;
-        }
-
-        _ = customerMetadata.TryGetValue(incorrectlyCasedRegionKey, out var regionValue);
-
-        return !string.IsNullOrWhiteSpace(regionValue)
-            ? regionValue
-            : defaultRegion;
-    }
 }

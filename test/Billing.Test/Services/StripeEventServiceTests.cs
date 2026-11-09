@@ -709,6 +709,31 @@ public class StripeEventServiceTests
     }
 
     [Fact]
+    public async Task ValidateCloudRegion_CustomerInAnotherRegion_ReturnsFalse()
+    {
+        // Arrange
+        var mockSubscription = new Subscription { Id = "sub_test" };
+        var stripeEvent = CreateMockEvent("evt_test", "customer.subscription.updated", mockSubscription);
+
+        mockSubscription.Customer = new Customer
+        {
+            Id = "cus_test",
+            Metadata = new Dictionary<string, string> { { "region", "EU" } }
+        };
+
+        _stripeFacade.GetSubscription(
+                mockSubscription.Id,
+                Arg.Any<SubscriptionGetOptions>())
+            .Returns(mockSubscription);
+
+        // Act
+        var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
+
+        // Assert
+        Assert.False(cloudRegionValid);
+    }
+
+    [Fact]
     public async Task ValidateCloudRegion_SetupIntentSucceeded_WithCustomer_Success()
     {
         // Arrange
