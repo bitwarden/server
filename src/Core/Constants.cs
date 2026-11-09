@@ -37,6 +37,7 @@ public static class Constants
     // TODO: PM-34798 Update with actual version once the feature is implemented
     public const string PM32009NewItemTypeMinimumVersion = "2026.2.0";
     public const string DenyLegacyUserMinimumVersion = "2025.6.0";
+    public const string PamPartialCipherMinimumVersion = "2026.11.1";
 
     /// <summary>
     /// Domain suffixes for Bitwarden cloud-hosted environments.
@@ -305,8 +306,8 @@ public static partial class FeatureFlagKeys
     public const string PamAccessConnector = "pm-42354-rotation-daemon";
 
     /// <summary>
-    /// Sends leasing-gated ciphers to browser extensions in the partial shape. Target it on the client-version
-    /// context attribute, so only extension versions that render the shape receive it.
+    /// Sends leasing-gated ciphers to browser extensions in the partial shape. Clients older than
+    /// <see cref="Constants.PamPartialCipherMinimumVersion"/> never receive it, whatever the flag says.
     /// </summary>
     public const string PamBrowserPartialCiphers = "pam-121-browser-partial-ciphers";
 

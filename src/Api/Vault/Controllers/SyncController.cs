@@ -209,7 +209,9 @@ public class SyncController : Controller
         }
 
         var supportsPartial = PartialCipherSupport.IsSupportedBy(
-            _currentContext.DeviceType, _featureService.IsEnabled(FeatureFlagKeys.PamBrowserPartialCiphers));
+            _currentContext.DeviceType,
+            _currentContext.ClientVersion,
+            _featureService.IsEnabled(FeatureFlagKeys.PamBrowserPartialCiphers));
         if (unsupportedTypes.Count == 0 && supportsPartial)
         {
             return ciphers;
