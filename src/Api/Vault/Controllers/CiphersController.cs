@@ -102,7 +102,9 @@ public class CiphersController : Controller
     /// </summary>
     private bool ClientSupportsPartialCiphers =>
         PartialCipherSupport.IsSupportedBy(
-            _currentContext.DeviceType, _featureService.IsEnabled(FeatureFlagKeys.PamBrowserPartialCiphers));
+            _currentContext.DeviceType,
+            _currentContext.ClientVersion,
+            _featureService.IsEnabled(FeatureFlagKeys.PamBrowserPartialCiphers));
 
     /// <summary>
     /// Resolves single-cipher read access under credential leasing. Returns null when the caller gets the
