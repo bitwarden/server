@@ -37,6 +37,7 @@ public static class Constants
     // TODO: PM-34798 Update with actual version once the feature is implemented
     public const string PM32009NewItemTypeMinimumVersion = "2026.2.0";
     public const string DenyLegacyUserMinimumVersion = "2025.6.0";
+    public const string PamPartialCipherMinimumVersion = "2026.11.1";
 
     /// <summary>
     /// Domain suffixes for Bitwarden cloud-hosted environments.
@@ -169,6 +170,7 @@ public static partial class FeatureFlagKeys
     /* Autofill Team */
     public const string NotificationRefresh = "notification-refresh";
     public const string FillAssistTargetingRules = "fill-assist-targeting-rules";
+    public const string FillAssistRuleFallback = "fill-assist-rule-fallback";
     public const string NotificationUndeterminedCipherScenarioLogic = "undetermined-cipher-scenario-logic";
     public const string EnableAutofillTriage = "enable-autofill-triage";
     public const string PM39071_DefaultPasswordManagerPrompt = "pm-39071-default-password-manager-prompt";
@@ -283,7 +285,6 @@ public static partial class FeatureFlagKeys
     public const string WindowsNativeCredentialSync = "windows-native-credential-sync";
 
     /* DIRT Team */
-    public const string AccessIntelligenceVersion2 = "pm-31920-access-intelligence-azure-file-storage";
     public const string EventManagementForBlumira = "event-management-for-blumira";
     public const string EventManagementForDataDogAndCrowdStrike = "event-management-for-datadog-and-crowdstrike";
     public const string EventDiagnosticLogging = "pm-27666-siem-event-log-debugging";
@@ -304,6 +305,12 @@ public static partial class FeatureFlagKeys
     /* PAM */
     public const string Pam = "pm-37044-pam-v-0";
     public const string PamAccessConnector = "pm-42354-rotation-daemon";
+
+    /// <summary>
+    /// Sends leasing-gated ciphers to browser extensions in the partial shape. Clients older than
+    /// <see cref="Constants.PamPartialCipherMinimumVersion"/> never receive it, whatever the flag says.
+    /// </summary>
+    public const string PamBrowserPartialCiphers = "pam-121-browser-partial-ciphers";
 
     /// <summary>
     /// Kill switch for the PAM SQL audit trail. Turning it on stops the writes and withdraws the read endpoint.
