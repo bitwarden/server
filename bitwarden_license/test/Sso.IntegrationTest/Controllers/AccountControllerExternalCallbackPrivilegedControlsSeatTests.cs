@@ -311,7 +311,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     /*
     * DEGRADED PATH: On a self-hosted instance, a just-in-time provisioned user claims a Staged member with
     * Privileged Controls access, and no Privileged Controls seat is free. Self-hosted instances cannot autoscale,
-    * so the member joins without Privileged Controls access. Self-hosted instances do not send the seat-needed
+    * so the member joins without Privileged Controls access. Self-hosted instances send no Privileged Controls
     * email.
     */
     [Fact]
@@ -510,7 +510,7 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     * FAILURE PATH: A person with an existing Bitwarden account signs in with SSO against a Staged member with
     * Privileged Controls access at the seat limit, and the invite email fails. The SSO callback rolls the member
     * back to Staged and gives back Privileged Controls access, so the next sign-in starts again from the same
-    * state. The Owners get no seat-needed email, because the member did not join.
+    * state. The Owners get no Privileged Controls email, because the member did not join.
     */
     [Fact]
     public async Task ExternalCallback_ExistingUserAgainstStagedOrgUserWithPrivilegedControls_AtSeatLimit_WhenInviteSendFails_RestoresPrivilegedControlsAndDoesNotEmail()
@@ -596,8 +596,8 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     /*
     * DEGRADED PATH: On cloud, a just-in-time provisioned user claims a Staged member with Privileged Controls
     * access, and the seat reservation fails for a reason other than the seat limit. The member joins without
-    * Privileged Controls access. The Owners get no seat-needed email, because more seats would not fix the
-    * failure.
+    * Privileged Controls access. The Owners get no Privileged Controls email, because more seats would not fix
+    * the failure.
     */
     [Fact]
     public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_WhenReservationFailsUnexpectedly_JoinsWithoutPrivilegedControlsAndDoesNotEmail()
@@ -719,8 +719,8 @@ public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
     /*
     * DEGRADED PATH: On cloud, a person with an existing Bitwarden account signs in with SSO against a Staged
     * member with Privileged Controls access, and the seat reservation fails for a reason other than the seat
-    * limit. The member is invited without Privileged Controls access. The Owners get no seat-needed email,
-    * because more seats would not fix the failure.
+    * limit. The member is invited without Privileged Controls access. The Owners get no Privileged Controls
+    * email, because more seats would not fix the failure.
     */
     [Fact]
     public async Task ExternalCallback_ExistingUserAgainstStagedOrgUserWithPrivilegedControls_WhenReservationFailsUnexpectedly_InvitesWithoutPrivilegedControlsAndDoesNotEmail()
