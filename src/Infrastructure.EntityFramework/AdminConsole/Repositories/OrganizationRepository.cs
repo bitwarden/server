@@ -300,6 +300,11 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .ToListAsync();
             sponsoredOrgs.ForEach(os => os.SponsoredOrganizationId = null);
 
+            var accessConnectorApiKeyIds = await dbContext.PamAccessConnectors
+                .Where(c => c.OrganizationId == organization.Id)
+                .Select(c => c.ApiKeyId)
+                .ToListAsync();
+
             var orgEntity = await dbContext.FindAsync<Organization>(organization.Id);
             dbContext.Remove(orgEntity);
 
@@ -324,6 +329,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             await dbContext.OrganizationDeleteTasks.AddRangeAsync(deleteTasks);
 
             await dbContext.SaveChangesAsync();
+            await dbContext.ApiKeys.Where(ak => accessConnectorApiKeyIds.Contains(ak.Id))
+                .ExecuteDeleteAsync();
             await organizationDeleteTransaction.CommitAsync();
         }
     }

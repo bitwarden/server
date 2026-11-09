@@ -191,8 +191,6 @@ public sealed class DestroySceneCommandTests : IDisposable
             new ProviderRepository(scopeFactory, mapper),
             new OrganizationRepository(scopeFactory, mapper,
                 _provider.GetRequiredService<ILogger<OrganizationRepository>>()),
-            new PamAccessConnectorRepository(scopeFactory, mapper),
-            new ApiKeyRepository(scopeFactory, mapper),
             globalSettings);
     }
 
