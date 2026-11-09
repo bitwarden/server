@@ -24,6 +24,16 @@ public static class StartupTestHelpers
     }
 
     /// <summary>
+    /// Gets the startup error message for a certificate at <paramref name="settingPath"/> that does not have an RSA
+    /// key.
+    /// </summary>
+    public static string NoRsaKeyMessage(string settingPath, string thumbprint) =>
+        $"The certificate for {settingPath} with thumbprint {thumbprint} does not have an RSA key. " +
+        "Each Identity signing, SSO signing, and SSO encryption certificate must have an RSA key. " +
+        "The host signs tokens with RS256, signs SAML messages with RSA-SHA, " +
+        "and decrypts SAML assertions with RSA-OAEP.";
+
+    /// <summary>
     /// Gets the certificate source entries that the host wrote before its "{Project} started." entry. Each entry
     /// has the <see cref="Bit.Core.Constants.BypassFiltersEventId"/> event ID and a "Role" value.
     /// </summary>

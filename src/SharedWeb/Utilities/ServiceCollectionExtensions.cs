@@ -515,7 +515,7 @@ public static class ServiceCollectionExtensions
     /// is not a Development host must have an SSO active source.
     /// </summary>
     /// <exception cref="InvalidOperationException">A cloud host has no SSO active source, or a configured
-    /// certificate did not load.</exception>
+    /// certificate did not load, or a configured certificate does not have an RSA key.</exception>
     public static SigningCertificateSet GetSsoSigningCertificates(IWebHostEnvironment env,
         GlobalSettings globalSettings)
     {

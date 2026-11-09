@@ -631,6 +631,50 @@ public class SsoCertificateTests
                 .OrderBy(entry => entry.Item1));
     }
 
+    [Fact]
+    public void Startup_WithEcdsaSsoSigningCertificate_FailsNamingTheSsoRoot()
+    {
+        // Arrange
+        using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");
+        using var signing = TestCertificates.CreateEcdsa("CN=Bitwarden Test SSO Signing ECDSA");
+        using var encryption = TestCertificates.Create("CN=Bitwarden Test SSO Encryption");
+        using var factory = new SsoApplicationFactory();
+        foreach (var (key, value) in CertificateTestConfiguration.SelfHosted(identity)
+                     .WithSsoSigningCertificate(signing)
+                     .WithSsoEncryptionCertificate(encryption))
+        {
+            factory.UpdateConfiguration(key, value);
+        }
+
+        // Act
+        var exception = StartupTestHelpers.AssertStartupFails(factory, "Development", "does not have an RSA key");
+
+        // Assert
+        Assert.Equal(StartupTestHelpers.NoRsaKeyMessage("globalSettings:ssoServer", signing.Thumbprint),
+            exception.Message);
+    }
+
+    [Fact]
+    public void Startup_WithEcdsaSsoEncryptionCertificate_FailsNamingTheEncryptionRoot()
+    {
+        // Arrange
+        using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");
+        using var encryption = TestCertificates.CreateEcdsa("CN=Bitwarden Test SSO Encryption ECDSA");
+        using var factory = new SsoApplicationFactory();
+        foreach (var (key, value) in CertificateTestConfiguration.SelfHosted(identity)
+                     .WithSsoEncryptionCertificate(encryption))
+        {
+            factory.UpdateConfiguration(key, value);
+        }
+
+        // Act
+        var exception = StartupTestHelpers.AssertStartupFails(factory, "Development", "does not have an RSA key");
+
+        // Assert
+        Assert.Equal(StartupTestHelpers.NoRsaKeyMessage("globalSettings:ssoServer:encryption", encryption.Thumbprint),
+            exception.Message);
+    }
+
     private static async Task<string> GetMetadataAsync(Dictionary<string, string?> configuration)
     {
         var builder = new SsoTestDataBuilder().WithSsoConfig(cfg => cfg!.SetData(BuildSamlConfiguration()));

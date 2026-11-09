@@ -1,4 +1,5 @@
 ﻿using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Test.Common.Helpers;
@@ -12,6 +13,8 @@ public class IdentityServerCertificateTests
     private const string IdentityServerPath = "globalSettings:identityServer";
     private const string IdentityServerFuturePath = "globalSettings:identityServer:futureCertificate";
     private const string IdentityServerValidationPath = "globalSettings:identityServer:validationCertificates";
+    private const string SsoServerPath = "globalSettings:ssoServer";
+    private const string SsoDecryptionPath = "globalSettings:ssoServer:encryption:decryptionCertificates";
 
     [Fact]
     public void SelfHosted_WithPasswordAndExistingFile_LoadsTheFile()
@@ -594,5 +597,69 @@ public class IdentityServerCertificateTests
         Assert.Contains(IdentityServerFuturePath, exception.Message);
         Assert.NotNull(exception.InnerException);
         Assert.DoesNotContain(Password, exception.ToString());
+    }
+
+    [Theory]
+    [InlineData(IdentityServerPath)]
+    [InlineData(IdentityServerFuturePath)]
+    [InlineData($"{IdentityServerValidationPath}:1")]
+    [InlineData(SsoServerPath)]
+    [InlineData($"{SsoDecryptionPath}:0")]
+    public void EcdsaCertificate_InEachRolePosition_ThrowsNamingThePathAndThumbprint(string settingPath)
+    {
+        using var rsa = TestCertificates.Create("CN=Bitwarden Test RSA");
+        using var ecdsa = TestCertificates.CreateEcdsa();
+        var ecdsaLocation = TestCertificates.WritePfx(ecdsa, Password);
+        var globalSettings = new GlobalSettings { SelfHosted = true };
+        globalSettings.Storage.ConnectionString = null;
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            LoadFromRolePosition(globalSettings, settingPath, rsa, ecdsaLocation));
+
+        Assert.Equal(
+            $"The certificate for {settingPath} with thumbprint {ecdsa.Thumbprint} does not have an RSA key. " +
+            "Each Identity signing, SSO signing, and SSO encryption certificate must have an RSA key. " +
+            "The host signs tokens with RS256, signs SAML messages with RSA-SHA, " +
+            "and decrypts SAML assertions with RSA-OAEP.",
+            exception.Message);
+        Assert.DoesNotContain(Password, exception.ToString());
+        Assert.DoesNotContain(ecdsaLocation, exception.ToString());
+    }
+
+    private static object? LoadFromRolePosition(GlobalSettings globalSettings, string settingPath,
+        X509Certificate2 rsa, string ecdsaLocation)
+    {
+        switch (settingPath)
+        {
+            case IdentityServerPath:
+                globalSettings.IdentityServer.CertificateLocation = ecdsaLocation;
+                globalSettings.IdentityServer.CertificatePassword = Password;
+                globalSettings.IdentityServer.CertificateThumbprint = null;
+                return CoreHelpers.GetIdentityServerCertificate(globalSettings);
+            case IdentityServerFuturePath:
+                var future = globalSettings.IdentityServer.FutureCertificate;
+                future.CertificateLocation = ecdsaLocation;
+                future.CertificatePassword = Password;
+                future.Enabled = true;
+                future.Active = false;
+                return CoreHelpers.GetStagedCertificate(globalSettings, future, IdentityServerFuturePath);
+            case $"{IdentityServerValidationPath}:1":
+                return CoreHelpers.GetRetiredCertificates(globalSettings,
+                [
+                    new() { CertificateLocation = TestCertificates.WritePfx(rsa, Password), CertificatePassword = Password },
+                    new() { CertificateLocation = ecdsaLocation, CertificatePassword = Password },
+                ], IdentityServerValidationPath);
+            case SsoServerPath:
+                var ssoServer = globalSettings.SsoServer;
+                ssoServer.CertificateLocation = ecdsaLocation;
+                ssoServer.CertificatePassword = Password;
+                return CoreHelpers.GetActiveCertificate(globalSettings, ssoServer, ssoServer.FutureCertificate,
+                    SsoServerPath, required: true);
+            case $"{SsoDecryptionPath}:0":
+                return CoreHelpers.GetRetiredCertificates(globalSettings,
+                    [new() { CertificateLocation = ecdsaLocation, CertificatePassword = Password }], SsoDecryptionPath);
+            default:
+                throw new ArgumentOutOfRangeException(nameof(settingPath), settingPath, null);
+        }
     }
 }

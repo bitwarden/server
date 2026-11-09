@@ -15,6 +15,14 @@ public static class TestCertificates
             .CreateSelfSigned(now.AddDays(-1), now.AddDays(365));
     }
 
+    public static X509Certificate2 CreateEcdsa(string subject = "CN=Bitwarden Test ECDSA")
+    {
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var now = DateTimeOffset.UtcNow;
+        return new CertificateRequest(subject, key, HashAlgorithmName.SHA256)
+            .CreateSelfSigned(now.AddDays(-1), now.AddDays(365));
+    }
+
     public static string WritePfx(X509Certificate2 certificate, string password)
     {
         var path = Path.Combine(_directory.Value, $"{Guid.NewGuid():N}.pfx");

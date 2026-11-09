@@ -138,6 +138,59 @@ public class IdentityJwksTests
         Assert.Equal(staged.Thumbprint, entry.Values["StagedThumbprints"]);
     }
 
+    [Fact]
+    public void Startup_WithEcdsaIdentityCertificate_FailsNamingTheRoot()
+    {
+        // Arrange
+        using var certificate = TestCertificates.CreateEcdsa();
+        using var factory = CreateFactory(CertificateTestConfiguration.SelfHosted(certificate));
+
+        // Act
+        var exception = StartupTestHelpers.AssertStartupFails(factory, "Development", "does not have an RSA key");
+
+        // Assert
+        Assert.Equal(StartupTestHelpers.NoRsaKeyMessage("globalSettings:identityServer", certificate.Thumbprint),
+            exception.Message);
+    }
+
+    [Fact]
+    public void Startup_WithRsaActiveAndEcdsaStagedCertificate_FailsNamingTheFutureSlot()
+    {
+        // Arrange
+        using var active = TestCertificates.Create("CN=Bitwarden Test Active");
+        using var staged = TestCertificates.CreateEcdsa("CN=Bitwarden Test Staged ECDSA");
+        using var factory = CreateFactory(
+            CertificateTestConfiguration.SelfHosted(active, staged, futureActive: false));
+
+        // Act
+        var exception = StartupTestHelpers.AssertStartupFails(factory, "Development", "does not have an RSA key");
+
+        // Assert
+        Assert.Equal(
+            StartupTestHelpers.NoRsaKeyMessage("globalSettings:identityServer:futureCertificate", staged.Thumbprint),
+            exception.Message);
+    }
+
+    [Fact]
+    public void Startup_WithEcdsaValidationCertificate_FailsNamingTheListEntry()
+    {
+        // Arrange
+        using var active = TestCertificates.Create("CN=Bitwarden Test Active");
+        using var staged = TestCertificates.Create("CN=Bitwarden Test Staged");
+        using var validation = TestCertificates.CreateEcdsa("CN=Bitwarden Test Validation ECDSA");
+        using var factory = CreateFactory(
+            CertificateTestConfiguration.SelfHosted(active, staged, futureActive: false, validation));
+
+        // Act
+        var exception = StartupTestHelpers.AssertStartupFails(factory, "Development", "does not have an RSA key");
+
+        // Assert
+        Assert.Equal(
+            StartupTestHelpers.NoRsaKeyMessage("globalSettings:identityServer:validationCertificates:0",
+                validation.Thumbprint),
+            exception.Message);
+    }
+
     private static IdentityApplicationFactory CreateFactory(Dictionary<string, string?> configuration)
     {
         var factory = new IdentityApplicationFactory();

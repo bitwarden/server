@@ -627,6 +627,12 @@ public static class CoreHelpers
             (!globalSettings.SelfHosted && origin == "https://bitwarden.com");
     }
 
+    /// <summary>
+    /// Gets the Identity active certificate. An enabled and active future slot replaces the root. Returns null when
+    /// the root has no source that loads.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The future slot is enabled and active, and its certificate did
+    /// not load. Or the certificate does not have an RSA key.</exception>
     public static X509Certificate2? GetIdentityServerCertificate(GlobalSettings globalSettings)
     {
         var identityServer = globalSettings.IdentityServer;
@@ -642,6 +648,12 @@ public static class CoreHelpers
             (future.Enabled && future.Active);
     }
 
+    /// <summary>
+    /// Gets the active certificate of a role. An enabled and active future slot replaces the root. When
+    /// <paramref name="required"/> is false, returns null when the root has no source that loads.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">A required certificate did not load. Or the certificate does
+    /// not have an RSA key.</exception>
     public static X509Certificate2? GetActiveCertificate(GlobalSettings globalSettings, ICertificateSettings root,
         GlobalSettings.FutureCertificateSettings future, string rootPath, bool required)
     {
@@ -650,11 +662,20 @@ public static class CoreHelpers
             return LoadRequiredCertificate(globalSettings, future, $"{rootPath}:futureCertificate");
         }
 
-        return required
-            ? LoadRequiredCertificate(globalSettings, root, rootPath)
-            : LoadCertificate(globalSettings, root);
+        if (required)
+        {
+            return LoadRequiredCertificate(globalSettings, root, rootPath);
+        }
+
+        var certificate = LoadCertificate(globalSettings, root);
+        return certificate == null ? null : RequireRsaKey(certificate, rootPath);
     }
 
+    /// <summary>
+    /// Gets the staged certificate of a role. Returns null when the future slot is not enabled, or is active.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The staged certificate did not load. Or the certificate does
+    /// not have an RSA key.</exception>
     public static X509Certificate2? GetStagedCertificate(GlobalSettings globalSettings,
         GlobalSettings.FutureCertificateSettings future, string futurePath)
     {
@@ -666,6 +687,11 @@ public static class CoreHelpers
         return LoadRequiredCertificate(globalSettings, future, futurePath);
     }
 
+    /// <summary>
+    /// Gets the certificates of the enabled entries in a retired list, in the configured order.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The certificate of an enabled entry did not load. Or the
+    /// certificate does not have an RSA key. The message names the configured index of the entry.</exception>
     public static IReadOnlyList<X509Certificate2> GetRetiredCertificates(GlobalSettings globalSettings,
         IEnumerable<GlobalSettings.RetiredCertificateSettings> retired, string listPath)
     {
@@ -689,7 +715,26 @@ public static class CoreHelpers
             throw CertificateNotLoaded(settingPath, ex);
         }
 
-        return certificate ?? throw CertificateNotLoaded(settingPath, null);
+        return RequireRsaKey(certificate ?? throw CertificateNotLoaded(settingPath, null), settingPath);
+    }
+
+    private static X509Certificate2 RequireRsaKey(X509Certificate2 certificate, string settingPath)
+    {
+        using (var rsa = certificate.GetRSAPublicKey())
+        {
+            if (rsa != null)
+            {
+                return certificate;
+            }
+        }
+
+        var thumbprint = certificate.Thumbprint;
+        certificate.Dispose();
+        throw new InvalidOperationException(
+            $"The certificate for {settingPath} with thumbprint {thumbprint} does not have an RSA key. " +
+            "Each Identity signing, SSO signing, and SSO encryption certificate must have an RSA key. " +
+            "The host signs tokens with RS256, signs SAML messages with RSA-SHA, " +
+            "and decrypts SAML assertions with RSA-OAEP.");
     }
 
     private static InvalidOperationException CertificateNotLoaded(string settingPath, Exception? innerException) =>

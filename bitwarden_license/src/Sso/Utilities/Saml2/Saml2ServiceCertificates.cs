@@ -19,7 +19,7 @@ public static class Saml2ServiceCertificates
     /// encryption active source.
     /// </summary>
     /// <exception cref="InvalidOperationException">A cloud host has no SSO encryption active source, or a configured
-    /// certificate did not load.</exception>
+    /// certificate did not load, or a configured certificate does not have an RSA key.</exception>
     public static EncryptionCertificateSet GetEncryptionCertificates(IWebHostEnvironment env,
         GlobalSettings globalSettings)
     {
