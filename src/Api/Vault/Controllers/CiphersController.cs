@@ -102,7 +102,9 @@ public class CiphersController : Controller
     /// </summary>
     private bool ClientSupportsPartialCiphers =>
         PartialCipherSupport.IsSupportedBy(
-            _currentContext.DeviceType, _featureService.IsEnabled(FeatureFlagKeys.PamBrowserPartialCiphers));
+            _currentContext.DeviceType,
+            _currentContext.ClientVersion,
+            _featureService.IsEnabled(FeatureFlagKeys.PamBrowserPartialCiphers));
 
     /// <summary>
     /// Resolves single-cipher read access under credential leasing. Returns null when the caller gets the
@@ -324,9 +326,9 @@ public class CiphersController : Controller
         // The bulk witness authorizes only the ciphers that are not leasing-gated: lease state is
         // deliberately not consulted here, so a gated cipher yields the partial shape on a list read even
         // when the caller holds a valid lease. Secrets are only released through the single-cipher GET
-        // above. The self-loading overload is used deliberately so nothing extra is queried while the
-        // flag is off.
-        var fullAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(user.Id, ciphers);
+        // above. The mappings loaded above are reused; the gate loads the caller's collections only when
+        // one of these ciphers can be gated.
+        var fullAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(user.Id, ciphers, collectionCiphersGroupDict);
         var responses = VisibleToClient(ciphers, fullAccess)
             .Select(cipher => CipherDetailsResponseModel.From(
                 fullAccess, cipher, user, GetOrganizationAbility(cipher, organizationAbilities), _globalSettings,
@@ -1070,7 +1072,7 @@ public class CiphersController : Controller
 
         // This writes straight to the repository, so the service-level gate does not cover it. A caller who can
         // edit every cipher also reaches unassigned ones, so takes the "/admin" decision.
-        var ciphers = model.CipherIds.Select(id => new Cipher { Id = id });
+        var ciphers = model.CipherIds.Select(id => new Cipher { Id = id, OrganizationId = model.OrganizationId });
         if (await CanEditAllCiphersAsync(model.OrganizationId))
         {
             await _cipherLeaseGate.EnsureCanMutateManyAsAdminAsync(userId, model.OrganizationId, ciphers);
