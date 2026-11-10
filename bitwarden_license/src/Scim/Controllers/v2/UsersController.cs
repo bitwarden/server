@@ -53,7 +53,11 @@ public class UsersController : Controller
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> Get([FromRoute] Guid organizationId, Guid id)
+    public async Task<IActionResult> Get(
+        [FromRoute] Guid organizationId,
+        [FromRoute] Guid id,
+        [FromQuery] int groupStartIndex = 1,
+        [FromQuery] int groupCount = 50)
     {
         var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(id);
         if (orgUser == null || orgUser.OrganizationId != organizationId)
@@ -63,12 +67,21 @@ public class UsersController : Controller
         
         var userResponse = new ScimUserResponseModel(orgUser);
         
-        // Populate groups for this user
+        // Populate groups for this user with pagination
         var groupIds = await _organizationUserRepository.GetManyGroupIdsByUserIdAsync(orgUser.Id);
         if (groupIds.Any())
         {
             var groups = await _groupRepository.GetManyByManyIds(groupIds);
-            userResponse.Groups = groups.Select(g => g.Id.ToString()).ToList();
+            
+            // Apply pagination to groups
+            var paginatedGroupIds = groupIds
+                .OrderBy(guid => guid) // Ensure deterministic ordering
+                .Skip(groupStartIndex - 1)
+                .Take(groupCount)
+                .ToList();
+            
+            var paginatedGroups = groups.Where(g => paginatedGroupIds.Contains(g.Id));
+            userResponse.Groups = paginatedGroups.Select(g => g.Id.ToString()).ToList();
         }
         
         return Ok(userResponse);
