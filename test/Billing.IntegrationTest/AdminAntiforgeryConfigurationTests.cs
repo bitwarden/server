@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using Bit.IntegrationTestCommon;
+using Bit.IntegrationTestCommon.Factories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;

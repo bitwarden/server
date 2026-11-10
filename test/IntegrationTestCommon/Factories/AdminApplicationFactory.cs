@@ -2,23 +2,24 @@
 using System.Web;
 using Bit.Admin.Jobs;
 using Bit.Core.Services;
-using Bit.IntegrationTestCommon;
 using Bit.Test.Common.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using Xunit;
 
-namespace Bit.Billing.IntegrationTest;
+namespace Bit.IntegrationTestCommon.Factories;
 
 /// <summary>
 /// Application factory for the Admin host. Holds an inner
 /// <see cref="WebApplicationFactory{TEntryPoint}"/> privately and exposes intent
-/// methods for the side-effects (passwordless sign-in tokens, business-unit
-/// conversion invite tokens) that would otherwise leave the process as emails.
+/// methods for the side-effects (such as passwordless sign-in tokens) that would
+/// otherwise leave the process as emails.
 /// Tokens are recovered after each request by inspecting the substituted
 /// <see cref="IMailService"/>'s recorded calls — no captured state on the factory.
+/// The substituted <see cref="IMailService"/> is reachable through <see cref="Services"/>.
 /// </summary>
 public sealed class AdminApplicationFactory : IAsyncDisposable
 {
@@ -115,38 +116,6 @@ public sealed class AdminApplicationFactory : IAsyncDisposable
         await Assert.SuccessResponseAsync(confirmResponse);
 
         return client;
-    }
-
-    /// <summary>
-    /// Posts to the Admin business-unit conversion endpoint for the given
-    /// organization and returns the invitation token that would otherwise have
-    /// been emailed to the provider admin.
-    /// </summary>
-    public async Task<string> InitializeBusinessUnitConversionAsync(
-        HttpClient adminSession, Guid organizationId, string providerAdminEmail)
-    {
-        var mailService = _factory.Services.GetRequiredService<IMailService>();
-
-        var response = await adminSession.PostAsync(
-            $"/organizations/billing/{organizationId}/business-unit",
-            new FormUrlEncodedContent(new Dictionary<string, string?>
-            {
-                { "ProviderAdminEmail", providerAdminEmail },
-            }));
-        await Assert.SuccessResponseAsync(response);
-
-        var token = mailService.ReceivedCalls()
-            .Where(c => c.GetMethodInfo().Name == nameof(IMailService.SendBusinessUnitConversionInviteAsync))
-            .Where(c => (string?)c.GetArguments()[2] == providerAdminEmail)
-            .Select(c => (string?)c.GetArguments()[1])
-            .LastOrDefault();
-
-        if (string.IsNullOrEmpty(token))
-        {
-            Assert.Fail($"No business-unit conversion token captured for {providerAdminEmail}.");
-        }
-
-        return token;
     }
 
     /// <summary>
