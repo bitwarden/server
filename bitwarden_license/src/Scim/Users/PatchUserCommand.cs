@@ -1,7 +1,5 @@
-﻿using System.Text.Json;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -14,19 +12,16 @@ namespace Bit.Scim.Users;
 public class PatchUserCommand : IPatchUserCommand
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IGroupRepository _groupRepository;
     private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
     private readonly ILogger<PatchUserCommand> _logger;
     private readonly IRevokeOrganizationUserCommand _revokeOrganizationUserCommand;
 
     public PatchUserCommand(IOrganizationUserRepository organizationUserRepository,
-        IGroupRepository groupRepository,
         IRestoreOrganizationUserCommand restoreOrganizationUserCommand,
         ILogger<PatchUserCommand> logger,
         IRevokeOrganizationUserCommand revokeOrganizationUserCommand)
     {
         _organizationUserRepository = organizationUserRepository;
-        _groupRepository = groupRepository;
         _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
         _logger = logger;
         _revokeOrganizationUserCommand = revokeOrganizationUserCommand;
@@ -46,27 +41,14 @@ public class PatchUserCommand : IPatchUserCommand
             var opLower = operation.Op?.ToLowerInvariant();
             var pathLower = operation.Path?.ToLowerInvariant();
 
-            // Handle add/remove/replace operations on groups path
-            if (pathLower == "groups" && (opLower == PatchOps.Add || opLower == PatchOps.Remove || opLower == PatchOps.Replace))
+            // RFC 7643 section 4.1.2: User.groups is readOnly; membership is changed via the Group resource.
+            if (pathLower == "groups")
             {
-                if (opLower == PatchOps.Add)
-                {
-                    await HandleAddGroupOperationAsync(orgUser, operation.Value);
-                    operationHandled = true;
-                }
-                else if (opLower == PatchOps.Remove)
-                {
-                    await HandleRemoveGroupOperationAsync(orgUser, operation.Value);
-                    operationHandled = true;
-                }
-                else if (opLower == PatchOps.Replace)
-                {
-                    await HandleReplaceGroupsOperationAsync(orgUser, operation.Value);
-                    operationHandled = true;
-                }
+                throw new BadRequestException(
+                    "The 'groups' attribute is read-only (mutability). Modify membership through the Group resource.");
             }
-            // Replace operations (existing logic)
-            else if (opLower == PatchOps.Replace)
+
+            if (opLower == PatchOps.Replace)
             {
                 // Active from path
                 if (pathLower == "active")
@@ -162,82 +144,5 @@ public class PatchUserCommand : IPatchUserCommand
 
         orgUser.ExternalId = newExternalId;
         await _organizationUserRepository.ReplaceAsync(orgUser);
-    }
-
-    private async Task HandleAddGroupOperationAsync(Core.Entities.OrganizationUser orgUser, JsonElement value)
-    {
-        var groupIds = ExtractGroupIds(value);
-        await ValidateGroupsAsync(orgUser, groupIds, "Cannot add user to a group from a different organization.");
-        var current = (await _organizationUserRepository.GetManyGroupIdsByUserIdAsync(orgUser.Id)).ToHashSet();
-        foreach (var groupId in groupIds.Where(g => !current.Contains(g)))
-        {
-            await _groupRepository.AddGroupUsersByIdAsync(groupId, new[] { orgUser.Id }, DateTime.UtcNow);
-        }
-    }
-
-    private async Task HandleRemoveGroupOperationAsync(Core.Entities.OrganizationUser orgUser, JsonElement value)
-    {
-        var groupIds = ExtractGroupIds(value);
-        await ValidateGroupsAsync(orgUser, groupIds, "Cannot remove user from a group in a different organization.");
-        foreach (var groupId in groupIds)
-        {
-            await _groupRepository.DeleteUserAsync(groupId, orgUser.Id, DateTime.UtcNow);
-        }
-    }
-
-    private async Task HandleReplaceGroupsOperationAsync(Core.Entities.OrganizationUser orgUser, JsonElement value)
-    {
-        var desired = ExtractGroupIds(value).ToHashSet();
-        await ValidateGroupsAsync(orgUser, desired, "Cannot modify user's membership in a group from a different organization.");
-
-        var current = (await _organizationUserRepository.GetManyGroupIdsByUserIdAsync(orgUser.Id)).ToHashSet();
-        var revisionDate = DateTime.UtcNow;
-        foreach (var groupId in current.Except(desired))
-        {
-            await _groupRepository.DeleteUserAsync(groupId, orgUser.Id, revisionDate);
-        }
-        foreach (var groupId in desired.Except(current))
-        {
-            await _groupRepository.AddGroupUsersByIdAsync(groupId, new[] { orgUser.Id }, revisionDate);
-        }
-    }
-
-    private async Task ValidateGroupsAsync(Core.Entities.OrganizationUser orgUser, IEnumerable<Guid> groupIds, string wrongOrgMessage)
-    {
-        foreach (var groupId in groupIds)
-        {
-            var group = await _groupRepository.GetByIdAsync(groupId);
-            if (group == null)
-            {
-                throw new NotFoundException($"Group with id {groupId} not found.");
-            }
-            if (group.OrganizationId != orgUser.OrganizationId)
-            {
-                throw new BadRequestException(wrongOrgMessage);
-            }
-        }
-    }
-
-    private static List<Guid> ExtractGroupIds(JsonElement value)
-    {
-        var items = value.ValueKind == JsonValueKind.Array ? value.EnumerateArray().ToList() : new List<JsonElement> { value };
-        var ids = new List<Guid>();
-        foreach (var item in items)
-        {
-            if (item.ValueKind == JsonValueKind.Object && item.TryGetProperty("value", out var v)
-                && Guid.TryParse(v.GetString(), out var id))
-            {
-                ids.Add(id);
-            }
-            else
-            {
-                throw new BadRequestException("Invalid group reference format. Expected {\"value\": \"<groupId>\"} or an array of them.");
-            }
-        }
-        if (ids.Count == 0)
-        {
-            throw new BadRequestException("Invalid groups array format. Expected [{\"value\": \"<groupId>\"}, ...]");
-        }
-        return ids;
     }
 }

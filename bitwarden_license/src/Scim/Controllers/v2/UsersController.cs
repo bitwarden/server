@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
@@ -64,26 +65,26 @@ public class UsersController : Controller
         {
             throw new NotFoundException("User not found.");
         }
-        
+
         var userResponse = new ScimUserResponseModel(orgUser);
-        
+
         // Populate groups for this user with pagination
         var groupIds = await _organizationUserRepository.GetManyGroupIdsByUserIdAsync(orgUser.Id);
         if (groupIds.Any())
         {
             var groups = await _groupRepository.GetManyByManyIds(groupIds);
-            
+
             // Apply pagination to groups
             var paginatedGroupIds = groupIds
                 .OrderBy(guid => guid) // Ensure deterministic ordering
                 .Skip(groupStartIndex - 1)
                 .Take(groupCount)
                 .ToList();
-            
+
             var paginatedGroups = groups.Where(g => paginatedGroupIds.Contains(g.Id));
-            userResponse.Groups = paginatedGroups.Select(g => g.Id.ToString()).ToList();
+            userResponse.Groups = ToGroupReferences(organizationId, paginatedGroups);
         }
-        
+
         return Ok(userResponse);
     }
 
@@ -93,39 +94,36 @@ public class UsersController : Controller
         [FromQuery] GetUsersQueryParamModel model)
     {
         var usersListQueryResult = await _getUsersListQuery.GetUsersListAsync(organizationId, model);
-        
+
         // Populate groups for each user
         var userResponses = new List<ScimUserResponseModel>();
         foreach (var user in usersListQueryResult.userList)
         {
             var userResponse = new ScimUserResponseModel(user);
-            
+
             // Fetch group IDs for this user
             var groupIds = await _organizationUserRepository.GetManyGroupIdsByUserIdAsync(user.Id);
-            
+
             if (groupIds.Any())
             {
                 // Fetch group details
                 var groups = await _groupRepository.GetManyByManyIds(groupIds);
-                
+
                 // Apply pagination to groups
                 var paginatedGroupIds = groupIds
                     .OrderBy(id => id) // Ensure deterministic ordering
                     .Skip(model.GroupStartIndex - 1)
                     .Take(model.GroupCount)
                     .ToList();
-                
+
                 var paginatedGroups = groups.Where(g => paginatedGroupIds.Contains(g.Id));
-                
-                // Add groups to response in RFC 7643 format
-                userResponse.Groups = paginatedGroups
-                    .Select(g => g.Id.ToString())
-                    .ToList();
+
+                userResponse.Groups = ToGroupReferences(organizationId, paginatedGroups);
             }
-            
+
             userResponses.Add(userResponse);
         }
-        
+
         var scimListResponseModel = new ScimListResponseModel<ScimUserResponseModel>
         {
             Resources = userResponses,
@@ -203,5 +201,20 @@ public class UsersController : Controller
     {
         await _removeOrganizationUserCommand.RemoveUserAsync(organizationId, id, EventSystemUser.SCIM);
         return new NoContentResult();
+    }
+
+    private List<BaseScimUserModel.UserGroupReference> ToGroupReferences(Guid organizationId, IEnumerable<Group> groups)
+    {
+        var baseUrl = $"{Request.Scheme}://{Request.Host}{Request.PathBase}/v2/{organizationId}/Groups";
+        return groups
+            .OrderBy(g => g.Id)
+            .Select(g => new BaseScimUserModel.UserGroupReference
+            {
+                Value = g.Id.ToString(),
+                Display = g.Name,
+                Ref = $"{baseUrl}/{g.Id}",
+                Type = "direct"
+            })
+            .ToList();
     }
 }
