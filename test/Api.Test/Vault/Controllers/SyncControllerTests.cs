@@ -6,6 +6,7 @@ using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
@@ -577,6 +578,86 @@ public class SyncControllerTests
     /// Arranges a sync over two ciphers where only <c>visible</c> is authorized for full data, i.e.
     /// <c>gated</c> is leasing-gated. Returns (gated, visible).
     /// </summary>
+    private const string RestrictedTypesData = """{"restrictedTypes":[3,6]}""";
+
+    [Theory]
+    [BitAutoData(DeviceType.UnknownBrowser, null)]
+    [BitAutoData(DeviceType.ChromeBrowser, "2026.11.0")]
+    [BitAutoData(DeviceType.WindowsDesktop, null)]
+    public async Task Get_RestrictedItemTypesData_WithheldFromClientsThatCannotParseIt(
+        DeviceType? deviceType, string? version, User user, Guid orgId, SutProvider<SyncController> sutProvider)
+    {
+        var context = sutProvider.GetDependency<ICurrentContext>();
+        context.DeviceType.Returns(deviceType);
+        context.ClientVersion.Returns(version is null ? null : new Version(version));
+        var stored = SetupRestrictedItemTypesSync(user, orgId, sutProvider);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.Null(Assert.Single(result.Policies, p => p.Type == PolicyType.RestrictedItemTypesPolicy).Data);
+        Assert.Null(Assert.Single(result.PoliciesNew!, p => p.Type == PolicyType.RestrictedItemTypesPolicy).Data);
+        Assert.Equal(RestrictedTypesData, stored.Data);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_RestrictedItemTypesData_KeptForClientsThatCanParseIt(
+        User user, Guid orgId, SutProvider<SyncController> sutProvider)
+    {
+        var context = sutProvider.GetDependency<ICurrentContext>();
+        context.DeviceType.Returns(DeviceType.ChromeBrowser);
+        context.ClientVersion.Returns(new Version(Constants.PM35389RestrictedItemTypesDataMinimumVersion));
+        SetupRestrictedItemTypesSync(user, orgId, sutProvider);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.Equal(RestrictedTypesData,
+            Assert.Single(result.Policies, p => p.Type == PolicyType.RestrictedItemTypesPolicy).Data);
+        Assert.Equal(RestrictedTypesData,
+            Assert.Single(result.PoliciesNew!, p => p.Type == PolicyType.RestrictedItemTypesPolicy).Data);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_RestrictedItemTypesData_LeavesOtherPoliciesUntouchedForOldClients(
+        User user, Guid orgId, SutProvider<SyncController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ClientVersion.Returns(new Version("2024.1.0"));
+        SetupRestrictedItemTypesSync(user, orgId, sutProvider);
+
+        var result = await sutProvider.Sut.Get();
+
+        var other = Assert.Single(result.Policies, p => p.Type == PolicyType.MasterPassword);
+        Assert.Equal("""{"minLength":12}""", other.Data);
+    }
+
+    private static Policy SetupRestrictedItemTypesSync(
+        User user, Guid orgId, SutProvider<SyncController> sutProvider)
+    {
+        SetupLeasingSync(user, sutProvider);
+
+        var restricted = new Policy
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            Type = PolicyType.RestrictedItemTypesPolicy,
+            Enabled = true,
+            Data = RestrictedTypesData,
+        };
+        var other = new Policy
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            Type = PolicyType.MasterPassword,
+            Enabled = true,
+            Data = """{"minLength":12}""",
+        };
+        var policyRepository = sutProvider.GetDependency<IPolicyRepository>();
+        policyRepository.GetManyByUserIdAsync(user.Id).Returns(new List<Policy> { restricted, other });
+        policyRepository.GetManyConfirmedAcceptedByUserIdAsync(user.Id).Returns(new List<Policy> { restricted, other });
+        return restricted;
+    }
+
     private static (CipherDetails Gated, CipherDetails Visible) SetupLeasingSync(
         User user, SutProvider<SyncController> sutProvider)
     {
