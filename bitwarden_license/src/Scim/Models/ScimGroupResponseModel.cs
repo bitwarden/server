@@ -11,6 +11,7 @@ public class ScimGroupResponseModel : BaseScimGroupModel
         : base(true)
     {
         Meta = new ScimMetaModel("Group");
+        Members = new List<GroupMemberReference>();
     }
 
     public ScimGroupResponseModel(Group group)
@@ -25,4 +26,12 @@ public class ScimGroupResponseModel : BaseScimGroupModel
 
     public Guid Id { get; set; }
     public ScimMetaModel Meta { get; private set; }
+    public List<GroupMemberReference> Members { get; set; }
+
+    public class GroupMemberReference
+    {
+        public string Value { get; set; }
+        public string Display { get; set; }
+        public string Type { get; set; } = "User";
+    }
 }

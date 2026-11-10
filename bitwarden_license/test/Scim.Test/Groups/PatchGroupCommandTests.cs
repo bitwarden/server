@@ -373,7 +373,7 @@ public class PatchGroupCommandTests
     {
         group.OrganizationId = organization.Id;
 
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>
             {
@@ -404,7 +404,7 @@ public class PatchGroupCommandTests
             .GetManyUserIdsByIdAsync(group.Id)
             .Returns(existingMembers);
 
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>
             {
@@ -862,7 +862,7 @@ public class PatchGroupCommandTests
     {
         group.OrganizationId = organization.Id;
 
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = [new ScimPatchModel.OperationModel { Op = "invalid operation" }],
             Schemas = [ScimConstants.Scim2SchemaUser]
@@ -887,7 +887,7 @@ public class PatchGroupCommandTests
     {
         group.OrganizationId = organization.Id;
 
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>(),
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
