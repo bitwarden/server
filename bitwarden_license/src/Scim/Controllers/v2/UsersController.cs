@@ -99,32 +99,33 @@ public class UsersController : Controller
         var projection = new ScimAttributeProjection(Request);
         var usersListQueryResult = await _getUsersListQuery.GetUsersListAsync(organizationId, model);
 
-        // Populate groups for each user
+        var users = usersListQueryResult.userList.ToList();
+        var groupIdsByUser = new Dictionary<Guid, List<Guid>>();
+        var groupsById = new Dictionary<Guid, Group>();
+        if (projection.Includes("groups") && users.Count > 0)
+        {
+            var memberships = await _groupRepository.GetManyGroupUsersByOrganizationUserIdsAsync(
+                organizationId, users.Select(user => user.Id));
+            groupIdsByUser = memberships.GroupBy(membership => membership.OrganizationUserId)
+                .ToDictionary(user => user.Key, user => user.Select(membership => membership.GroupId)
+                    .OrderBy(id => id).Skip(model.GroupStartIndex - 1).Take(model.GroupCount).ToList());
+            var groupIds = groupIdsByUser.Values.SelectMany(ids => ids).Distinct().ToList();
+            if (groupIds.Count > 0)
+            {
+                groupsById = (await _groupRepository.GetManyByManyIds(groupIds))
+                    .Where(group => group.OrganizationId == organizationId).ToDictionary(group => group.Id);
+            }
+        }
+
         var userResponses = new List<ScimUserResponseModel>();
-        foreach (var user in usersListQueryResult.userList)
+        foreach (var user in users)
         {
             var userResponse = new ScimUserResponseModel(user);
 
-            // Fetch group IDs for this user
-            var groupIds = projection.Includes("groups")
-                ? await _organizationUserRepository.GetManyGroupIdsByUserIdAsync(user.Id)
-                : Array.Empty<Guid>();
-
-            if (groupIds.Any())
+            if (groupIdsByUser.TryGetValue(user.Id, out var groupIds))
             {
-                // Fetch group details
-                var groups = await _groupRepository.GetManyByManyIds(groupIds);
-
-                // Apply pagination to groups
-                var paginatedGroupIds = groupIds
-                    .OrderBy(id => id) // Ensure deterministic ordering
-                    .Skip(model.GroupStartIndex - 1)
-                    .Take(model.GroupCount)
-                    .ToList();
-
-                var paginatedGroups = groups.Where(g => paginatedGroupIds.Contains(g.Id));
-
-                userResponse.Groups = ToGroupReferences(organizationId, paginatedGroups);
+                userResponse.Groups = ToGroupReferences(organizationId,
+                    groupIds.Where(groupsById.ContainsKey).Select(id => groupsById[id]));
             }
 
             userResponses.Add(userResponse);

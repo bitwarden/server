@@ -94,25 +94,33 @@ public class GroupsController : Controller
         var projection = new ScimAttributeProjection(Request);
         var groupsListQueryResult = await _getGroupsListQuery.GetGroupsListAsync(organizationId, model);
 
-        // Populate members for each group with pagination
+        var groups = groupsListQueryResult.groupList.ToList();
+        var memberIdsByGroup = new Dictionary<Guid, List<Guid>>();
+        var membersById = new Dictionary<string, ScimGroupResponseModel.GroupMemberReference>();
+        if (projection.Includes("members") && groups.Count > 0)
+        {
+            var memberships = await _groupRepository.GetManyGroupUsersByGroupIdsAsync(
+                organizationId, groups.Select(group => group.Id));
+            memberIdsByGroup = memberships.GroupBy(membership => membership.GroupId)
+                .ToDictionary(group => group.Key, group => group.Select(membership => membership.OrganizationUserId)
+                    .OrderBy(id => id).Skip(model.MemberStartIndex - 1).Take(model.MemberCount).ToList());
+            var memberIds = memberIdsByGroup.Values.SelectMany(ids => ids).Distinct().ToList();
+            if (memberIds.Count > 0)
+            {
+                membersById = (await BuildMembersAsync(organizationId, memberIds, projection))
+                    .ToDictionary(member => member.Value);
+            }
+        }
+
         var groupResponseList = new List<ScimGroupResponseModel>();
-        foreach (var group in groupsListQueryResult.groupList)
+        foreach (var group in groups)
         {
             var groupResponse = new ScimGroupResponseModel(group);
 
-            // Fetch and paginate members for this group
-            var memberUserIds = projection.Includes("members")
-                ? await _groupRepository.GetManyUserIdsByIdAsync(group.Id)
-                : Array.Empty<Guid>();
-            if (memberUserIds.Any())
+            if (memberIdsByGroup.TryGetValue(group.Id, out var memberIds))
             {
-                var paginatedMemberIds = memberUserIds
-                    .OrderBy(id => id)
-                    .Skip(model.MemberStartIndex - 1)
-                    .Take(model.MemberCount)
-                    .ToList();
-
-                groupResponse.Members = await BuildMembersAsync(organizationId, paginatedMemberIds, projection);
+                groupResponse.Members = memberIds.Select(id => id.ToString())
+                    .Where(membersById.ContainsKey).Select(id => membersById[id]).ToList();
             }
 
             groupResponseList.Add(groupResponse);

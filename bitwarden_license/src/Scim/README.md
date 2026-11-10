@@ -28,6 +28,12 @@ Excluding memberships skips their repository lookups. Selecting Group members wi
 `display` also skips organization-user details and account-email lookups.
 Projection does not push collection filtering or pagination into the database.
 
+List membership lookups are batched for the returned resource page. Member and group
+details are fetched once for the distinct references selected by membership pagination,
+rather than separately for every resource. Both SQL Server and Entity Framework use
+page-scoped membership queries. SQL Server deployments must apply the accompanying
+membership batch-read database migration.
+
 Without either parameter, existing responses are unchanged: complete memberships
 are returned by default, while collections default to 50 resources per page.
 Explicit `groupStartIndex`/`groupCount` and `memberStartIndex`/`memberCount` continue

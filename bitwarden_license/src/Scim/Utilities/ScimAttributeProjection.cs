@@ -38,10 +38,20 @@ public sealed class ScimAttributeProjection
         }
 
         // Core schema-qualified names address the same attributes as their unqualified form.
-        _paths = _paths.Select(path => path.StartsWith(ScimConstants.Scim2SchemaUser + ":", StringComparison.OrdinalIgnoreCase)
-            ? path[(ScimConstants.Scim2SchemaUser.Length + 1)..]
-            : path.StartsWith(ScimConstants.Scim2SchemaGroup + ":", StringComparison.OrdinalIgnoreCase)
-                ? path[(ScimConstants.Scim2SchemaGroup.Length + 1)..] : path).ToArray();
+        _paths = _paths.Select(path =>
+        {
+            if (path.StartsWith(ScimConstants.Scim2SchemaUser + ":", StringComparison.OrdinalIgnoreCase))
+            {
+                return path[(ScimConstants.Scim2SchemaUser.Length + 1)..];
+            }
+
+            if (path.StartsWith(ScimConstants.Scim2SchemaGroup + ":", StringComparison.OrdinalIgnoreCase))
+            {
+                return path[(ScimConstants.Scim2SchemaGroup.Length + 1)..];
+            }
+
+            return path;
+        }).ToArray();
     }
 
     public bool IsActive { get; }

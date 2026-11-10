@@ -122,6 +122,7 @@ public class AttributeProjectionTests : IClassFixture<ScimApplicationFactory>
     [Theory]
     [InlineData("attributes=unknown,name,name.givenName,NAME")]
     [InlineData("attributes=urn:ietf:params:scim:schemas:core:2.0:User:name")]
+    [InlineData("attributes=URN:IETF:PARAMS:SCIM:SCHEMAS:CORE:2.0:USER:name")]
     public async Task ParentSelection_IncludesAllChildrenAndIgnoresUnknownAttributes(string query)
     {
         var response = await _factory.Server.GetAsync(
@@ -131,6 +132,21 @@ public class AttributeProjectionTests : IClassFixture<ScimApplicationFactory>
         using var document = await JsonDocument.ParseAsync(response.Response.Body);
         Assert.Equal(4, document.RootElement.GetProperty("name").EnumerateObject().Count());
         Assert.False(document.RootElement.TryGetProperty("unknown", out _));
+    }
+
+    [Theory]
+    [InlineData("attributes=urn:ietf:params:scim:schemas:core:2.0:Group:displayName", true)]
+    [InlineData("excludedAttributes=URN:IETF:PARAMS:SCIM:SCHEMAS:CORE:2.0:GROUP:displayName", false)]
+    public async Task GroupSchemaQualifiedSelection_PreservesPrefixHandling(string query, bool includesDisplay)
+    {
+        var response = await _factory.Server.GetAsync(
+            $"/v2/{ScimApplicationFactory.TestOrganizationId1}/Groups/{ScimApplicationFactory.TestGroupId1}",
+            context => context.Request.QueryString = new QueryString("?" + query));
+        Assert.Equal(200, response.Response.StatusCode);
+        using var document = await JsonDocument.ParseAsync(response.Response.Body);
+        Assert.Equal(includesDisplay, document.RootElement.TryGetProperty("displayName", out _));
+        Assert.True(document.RootElement.TryGetProperty("id", out _));
+        Assert.True(document.RootElement.TryGetProperty("schemas", out _));
     }
 
     [Fact]
@@ -189,6 +205,8 @@ public class AttributeProjectionTests : IClassFixture<ScimApplicationFactory>
         usersController.ControllerContext = controller.ControllerContext;
         await usersController.Get(ScimApplicationFactory.TestOrganizationId1, new GetUsersQueryParamModel());
         await organizationUsers.DidNotReceive().GetManyGroupIdsByUserIdAsync(Arg.Any<Guid>());
+        await groupRepository.DidNotReceive().GetManyGroupUsersByOrganizationUserIdsAsync(
+            Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>());
 
         var groupsQuery = Substitute.For<IGetGroupsListQuery>();
         groupsQuery.GetGroupsListAsync(group.OrganizationId, Arg.Any<GetGroupsQueryParamModel>())
@@ -199,6 +217,8 @@ public class AttributeProjectionTests : IClassFixture<ScimApplicationFactory>
         controller.Request.QueryString = new QueryString("?excludedAttributes=members");
         await controller.Get(group.OrganizationId, new GetGroupsQueryParamModel());
         await groupRepository.DidNotReceive().GetManyUserIdsByIdAsync(Arg.Any<Guid>());
+        await groupRepository.DidNotReceive().GetManyGroupUsersByGroupIdsAsync(
+            Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>());
     }
 
     [Theory]

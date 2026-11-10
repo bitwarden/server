@@ -139,6 +139,28 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
         }
     }
 
+    public async Task<ICollection<GroupUser>> GetManyGroupUsersByGroupIdsAsync(
+        Guid organizationId, IEnumerable<Guid> groupIds)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<GroupUser>(
+            $"[{Schema}].[GroupUser_ReadByOrganizationIdGroupIds]",
+            new { OrganizationId = organizationId, GroupIds = groupIds.ToGuidIdArrayTVP() },
+            commandType: CommandType.StoredProcedure);
+        return results.ToList();
+    }
+
+    public async Task<ICollection<GroupUser>> GetManyGroupUsersByOrganizationUserIdsAsync(
+        Guid organizationId, IEnumerable<Guid> organizationUserIds)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<GroupUser>(
+            $"[{Schema}].[GroupUser_ReadByOrganizationIdOrganizationUserIds]",
+            new { OrganizationId = organizationId, OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP() },
+            commandType: CommandType.StoredProcedure);
+        return results.ToList();
+    }
+
     public async Task CreateAsync(Group obj, IEnumerable<CollectionAccessSelection> collections)
     {
         obj.SetNewId();
