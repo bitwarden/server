@@ -87,6 +87,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICreatePremiumSelfHostedSubscriptionCommand, CreatePremiumSelfHostedSubscriptionCommand>();
         services.AddScoped<IUpdatePremiumStorageCommand, UpdatePremiumStorageCommand>();
         services.AddScoped<IUpgradePremiumToOrganizationCommand, UpgradePremiumToOrganizationCommand>();
+        services.AddScoped<IRestoreExistingPremiumSubscriptionCommand, RestoreExistingPremiumSubscriptionCommand>();
     }
 
     private static void AddPremiumQueries(this IServiceCollection services)
