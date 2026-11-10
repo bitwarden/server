@@ -55,14 +55,14 @@ public class AccountsControllerEmailChangeLegacyTests : IClassFixture<ApiApplica
     // ===== Email change: legacy path (PM30806_SelfServiceChangeEmailCommand flag OFF) =====
     // These tests pin the flag OFF to exercise the legacy UserService.ChangeEmailAsync path,
     // which rotates the master password and wrapped user key as part of the email change. They
-    // share the legacy-shaped PostEmailAsync helper at the end of this block.
+    // share the legacy-shaped PostEmailAsync helper at the end of this class.
     //
     // The class-scoped Bitwarden.Server.Sdk.Features.IFeatureService substitute leaks Returns(...) values across tests in this
     // class, so every test sets the flag explicitly rather than relying on a default.
     //
-    // TODO: PM-39120 - On flag cleanup, delete this entire block (all four _SelfServiceFlagOff_
-    // tests plus the PostEmailAsync helper). The _SelfServiceFlagOn_ tests further below become
-    // the canonical email-change tests; see the note there.
+    // TODO: PM-39120 - On flag cleanup, delete this file (all four _SelfServiceFlagOff_ tests plus
+    // the PostEmailAsync helper). The _SelfServiceFlagOn_ tests then become the canonical
+    // email-change tests; see the note on them.
     [Fact]
     public async Task PostEmail_SelfServiceFlagOff_UpdatesEmailAndPassword()
     {

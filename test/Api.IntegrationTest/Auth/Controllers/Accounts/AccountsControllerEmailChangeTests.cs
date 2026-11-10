@@ -70,7 +70,7 @@ public class AccountsControllerEmailChangeTests : IClassFixture<ApiApplicationFa
     // TODO: PM-39120 - On flag cleanup, these become the canonical email-change tests: drop the
     // "_SelfServiceFlagOn_" qualifier from each name and remove the per-test
     // _featureService.IsEnabled(...).Returns(true) setup. Delete the _SelfServiceFlagOff_ (legacy)
-    // block above wholesale.
+    // tests wholesale.
     [Fact]
     public async Task PostEmail_SelfServiceFlagOn_Success_UpdatesEmailWithoutTouchingPasswordOrKey()
     {
