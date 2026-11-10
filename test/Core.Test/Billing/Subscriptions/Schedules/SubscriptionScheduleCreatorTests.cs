@@ -59,7 +59,6 @@ public class SubscriptionScheduleCreatorTests
     private static SubscriptionSchedulePhaseOptions Phase2() => new()
     {
         StartDate = _phase1End,
-        EndDate = _phase1End.AddYears(1),
         Items = [new SubscriptionSchedulePhaseItemOptions { Price = "price_next", Quantity = 3 }],
         ProrationBehavior = ProrationBehavior.None
     };
@@ -204,6 +203,38 @@ public class SubscriptionScheduleCreatorTests
 
         Assert.Same(phase2, update.Phases[1]);
     }
+
+    [Fact]
+    public async Task CreateWithPhasesAsync_Phase2EndsOneHourAfterPhase1Ends()
+    {
+        var update = await CreateAndCaptureUpdateAsync(CreateSubscription(), CreatedSchedule(), Phase2(), ManagingSystems.AnnualUpgrade);
+
+        Assert.Equal(_phase1End.AddHours(1), (DateTime?)update.Phases[1].EndDate);
+    }
+
+    [Fact]
+    public async Task CreateWithPhasesAsync_CallerSetsPhase2EndDate_IsOverriddenToOneHourAfterRenewal()
+    {
+        var phase2 = Phase2();
+        phase2.EndDate = _phase1End.AddYears(1);
+
+        var update = await CreateAndCaptureUpdateAsync(CreateSubscription(), CreatedSchedule(), phase2, ManagingSystems.PersonalPriceIncrease);
+
+        Assert.Equal(_phase1End.AddHours(1), (DateTime?)update.Phases[1].EndDate);
+    }
+
+    [Fact]
+    public async Task CreateWithPhasesAsync_TrialingSubscription_Phase2EndsOneHourAfterPhase1Ends()
+    {
+        var update = await CreateAndCaptureUpdateAsync(
+            CreateSubscription(), CreatedSchedule(trialEnd: _phase1End), Phase2(), ManagingSystems.AnnualUpgrade);
+
+        Assert.Equal(_phase1End.AddHours(1), (DateTime?)update.Phases[1].EndDate);
+    }
+
+    [Fact]
+    public void Phase2Duration_IsOneHour() =>
+        Assert.Equal(TimeSpan.FromHours(1), SubscriptionScheduleCreator.Phase2Duration);
 
     [Fact]
     public async Task CreateWithPhasesAsync_PhaseMetadataGiven_AppliesToBothPhases()

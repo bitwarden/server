@@ -15,12 +15,14 @@ public interface ISubscriptionScheduleCreator
 {
     /// <summary>
     /// Creates a two-phase schedule from <paramref name="subscription"/>: phase 1 mirrors the subscription as
-    /// Stripe copied it, including any trial, phase 2 is <paramref name="phase2Options"/>, and the schedule releases after phase 2.
+    /// Stripe copied it, including any trial, and phase 2 is <paramref name="phase2Options"/>. Phase 2 starts at
+    /// renewal (when phase 1 ends) and ends <see cref="SubscriptionScheduleCreator.Phase2Duration"/> later,
+    /// overriding any end date the caller set, and the schedule then releases.
     /// Stripe rejects metadata, phases, and end behavior on a create that uses <c>from_subscription</c>, so they
     /// are applied by the update that follows. Releases the schedule and rethrows if that update fails.
     /// </summary>
     /// <param name="subscription">The subscription, loaded with <c>discounts</c> expanded.</param>
-    /// <param name="phase2Options">The phase that follows the subscription's current period.</param>
+    /// <param name="phase2Options">The phase that follows the subscription's current period. Its end date is set by the creator.</param>
     /// <param name="managingSystem">One of <see cref="ManagingSystems"/>.</param>
     /// <param name="phaseMetadata">Metadata for both phases, or null for none.</param>
     Task<SubscriptionSchedule> CreateWithPhasesAsync(
@@ -34,6 +36,11 @@ public class SubscriptionScheduleCreator(
     IStripeAdapter stripeAdapter,
     ILogger<SubscriptionScheduleCreator> logger) : ISubscriptionScheduleCreator
 {
+    /// <summary>
+    /// Phase 2 only carries the change across renewal, so the schedule releases this long after renewal.
+    /// </summary>
+    public static readonly TimeSpan Phase2Duration = TimeSpan.FromHours(1);
+
     public async Task<SubscriptionSchedule> CreateWithPhasesAsync(
         Subscription subscription,
         SubscriptionSchedulePhaseOptions phase2Options,
@@ -101,6 +108,8 @@ public class SubscriptionScheduleCreator(
             phase1Options.Metadata = phaseMetadata;
             phase2Options.Metadata = phaseMetadata;
         }
+
+        phase2Options.EndDate = phase1.EndDate + Phase2Duration;
 
         return new SubscriptionScheduleUpdateOptions
         {
