@@ -1,6 +1,5 @@
 ﻿using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Sustainsys.Saml2;
 using Sustainsys.Saml2.Configuration;
@@ -25,27 +24,15 @@ public static class Saml2ServiceCertificates
     {
         const string encryptionPath = "globalSettings:ssoServer:encryption";
         var encryption = globalSettings.SsoServer.Encryption;
-        var hasActiveSource = CoreHelpers.HasActiveSource(encryption, encryption.FutureCertificate);
-        if (!hasActiveSource && !globalSettings.SelfHosted && !env.IsDevelopment())
+        var sso = SsoCertificateSlots.Load(env, globalSettings, encryption, encryption.FutureCertificate,
+            encryption.DecryptionCertificates, encryptionPath, $"{encryptionPath}:decryptionCertificates",
+            "SSO encryption");
+        if (!sso.IsFallback)
         {
-            throw new InvalidOperationException(
-                $"No SSO encryption certificate is configured. A cloud host must set {encryptionPath}.");
+            return new EncryptionCertificateSet(sso.Active, sso.Staged, sso.Retired, IsFallback: false);
         }
 
-        var ssoStaged = CoreHelpers.GetStagedCertificate(globalSettings, encryption.FutureCertificate,
-            $"{encryptionPath}:futureCertificate");
-        IReadOnlyList<X509Certificate2> ssoStagedList = ssoStaged == null ? [] : [ssoStaged];
-        var decryption = CoreHelpers.GetRetiredCertificates(globalSettings, encryption.DecryptionCertificates,
-            $"{encryptionPath}:decryptionCertificates");
-
-        if (hasActiveSource)
-        {
-            var active = CoreHelpers.GetActiveCertificate(globalSettings, encryption, encryption.FutureCertificate,
-                encryptionPath, required: true);
-            return new EncryptionCertificateSet(active, ssoStagedList, decryption, IsFallback: false);
-        }
-
-        return new EncryptionCertificateSet(identity.Active, [.. identity.Staged, .. ssoStagedList], decryption,
+        return new EncryptionCertificateSet(identity.Active, [.. identity.Staged, .. sso.Staged], sso.Retired,
             IsFallback: true);
     }
 

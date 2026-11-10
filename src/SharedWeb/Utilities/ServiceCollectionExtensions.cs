@@ -536,28 +536,15 @@ public static class ServiceCollectionExtensions
     {
         const string ssoServerPath = "globalSettings:ssoServer";
         var ssoServer = globalSettings.SsoServer;
-        var hasActiveSource = CoreHelpers.HasActiveSource(ssoServer, ssoServer.FutureCertificate);
-        if (!hasActiveSource && !globalSettings.SelfHosted && !env.IsDevelopment())
+        var sso = SsoCertificateSlots.Load(env, globalSettings, ssoServer, ssoServer.FutureCertificate,
+            ssoServer.ValidationCertificates, ssoServerPath, $"{ssoServerPath}:validationCertificates", "SSO signing");
+        if (!sso.IsFallback)
         {
-            throw new InvalidOperationException(
-                $"No SSO signing certificate is configured. A cloud host must set {ssoServerPath}.");
+            return new SigningCertificateSet(sso.Active, sso.Staged, sso.Retired, IsFallback: false);
         }
 
-        var ssoStaged = CoreHelpers.GetStagedCertificate(globalSettings, ssoServer.FutureCertificate,
-            $"{ssoServerPath}:futureCertificate");
-        IReadOnlyList<X509Certificate2> ssoStagedList = ssoStaged == null ? [] : [ssoStaged];
-        var ssoValidation = CoreHelpers.GetRetiredCertificates(globalSettings, ssoServer.ValidationCertificates,
-            $"{ssoServerPath}:validationCertificates");
-
-        if (hasActiveSource)
-        {
-            var active = CoreHelpers.GetActiveCertificate(globalSettings, ssoServer, ssoServer.FutureCertificate,
-                ssoServerPath, required: true);
-            return new SigningCertificateSet(active, ssoStagedList, ssoValidation, IsFallback: false);
-        }
-
-        return new SigningCertificateSet(identity.Active, [.. identity.Staged, .. ssoStagedList],
-            [.. identity.Validation, .. ssoValidation], IsFallback: true);
+        return new SigningCertificateSet(identity.Active, [.. identity.Staged, .. sso.Staged],
+            [.. identity.Validation, .. sso.Retired], IsFallback: true);
     }
 
     /// <summary>
