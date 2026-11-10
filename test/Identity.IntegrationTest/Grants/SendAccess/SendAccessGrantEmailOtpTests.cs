@@ -1,0 +1,280 @@
+﻿using System.Globalization;
+using System.Net;
+using System.Text;
+using Bit.Core.Auth.Identity.TokenProviders;
+using Bit.Core.Services;
+using Bit.Core.Tools.Models.Data;
+using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
+using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
+using Bit.Identity.IntegrationTest.Helpers;
+using Bit.IntegrationTestCommon.Factories;
+using Duende.IdentityModel;
+using Microsoft.Extensions.Caching.Distributed;
+using NSubstitute;
+using Xunit;
+
+namespace Bit.Identity.IntegrationTest.Grants.SendAccess;
+
+public class SendAccessGrantEmailOtpTests(IdentityApplicationFactory _factory) : IClassFixture<IdentityApplicationFactory>
+{
+    [Fact]
+    public async Task SendAccess_EmailOtpProtectedSend_MissingEmail_ReturnsInvalidRequest()
+    {
+        // Arrange
+        var sendId = Guid.NewGuid();
+        var client = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                var featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
+                featureService.IsEnabled(Arg.Any<string>()).Returns(true);
+                services.AddSingleton(featureService);
+
+                var sendAuthQuery = Substitute.For<ISendAuthenticationQuery>();
+                sendAuthQuery.GetAuthenticationMethod(sendId)
+                    .Returns(new EmailOtp(["test@example.com"]));
+                services.AddSingleton(sendAuthQuery);
+            });
+        }).CreateClient();
+
+        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId); // No email
+
+        // Act
+        var response = await client.PostAsync("/connect/token", requestBody);
+
+        // Assert
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains(OidcConstants.TokenErrors.InvalidRequest, content);
+        Assert.Contains("email is required", content);
+    }
+
+    [Fact]
+    public async Task SendAccess_EmailOtpProtectedSend_EmailWithoutOtp_SendsOtpEmail()
+    {
+        // Arrange
+        var sendId = Guid.NewGuid();
+        var email = "test@example.com";
+        var generatedToken = "123456";
+
+        var client = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                var featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
+                featureService.IsEnabled(Arg.Any<string>()).Returns(true);
+                services.AddSingleton(featureService);
+
+                var sendAuthQuery = Substitute.For<ISendAuthenticationQuery>();
+                sendAuthQuery.GetAuthenticationMethod(sendId)
+                    .Returns(new EmailOtp([email]));
+                services.AddSingleton(sendAuthQuery);
+
+                // Mock OTP token provider
+                var otpProvider = Substitute.For<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>();
+                otpProvider.GenerateTokenAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+                    .Returns(generatedToken);
+                services.AddSingleton(otpProvider);
+
+                // Mock mail service
+                var mailService = Substitute.For<IMailService>();
+                services.AddSingleton(mailService);
+            });
+        }).CreateClient();
+
+
+        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId, email: email); // Email but no OTP
+
+        // Act
+        var response = await client.PostAsync("/connect/token", requestBody);
+
+        // Assert
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains(OidcConstants.TokenErrors.InvalidRequest, content);
+        Assert.Contains("email and otp are required", content);
+    }
+
+    [Fact]
+    public async Task SendAccess_EmailOtpProtectedSend_ValidOtp_ReturnsAccessToken()
+    {
+        // Arrange
+        var sendId = Guid.NewGuid();
+        var email = "test@example.com";
+        var otp = "123456";
+
+        var client = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                var featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
+                featureService.IsEnabled(Arg.Any<string>()).Returns(true);
+                services.AddSingleton(featureService);
+
+                var sendAuthQuery = Substitute.For<ISendAuthenticationQuery>();
+                sendAuthQuery.GetAuthenticationMethod(sendId)
+                    .Returns(new EmailOtp(new[] { email }));
+                services.AddSingleton(sendAuthQuery);
+
+                // Mock OTP token provider to validate successfully
+                var otpProvider = Substitute.For<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>();
+                otpProvider.ValidateTokenAsync(otp, Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+                    .Returns(true);
+                services.AddSingleton(otpProvider);
+
+                var mailService = Substitute.For<IMailService>();
+                services.AddSingleton(mailService);
+            });
+        }).CreateClient();
+
+        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId, email: email, emailOtp: otp);
+
+        // Act
+        var response = await client.PostAsync("/connect/token", requestBody);
+
+        // Assert
+        Assert.True(response.IsSuccessStatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains(OidcConstants.TokenResponse.AccessToken, content);
+        Assert.Contains(OidcConstants.TokenResponse.BearerTokenType, content);
+    }
+
+    [Fact]
+    public async Task SendAccess_EmailOtpProtectedSend_InvalidOtp_ReturnsInvalidRequest()
+    {
+        // Arrange
+        var sendId = Guid.NewGuid();
+        var email = "test@example.com";
+        var invalidOtp = "wrong123";
+
+        var client = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                var featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
+                featureService.IsEnabled(Arg.Any<string>()).Returns(true);
+                services.AddSingleton(featureService);
+
+                var sendAuthQuery = Substitute.For<ISendAuthenticationQuery>();
+                sendAuthQuery.GetAuthenticationMethod(sendId)
+                    .Returns(new EmailOtp(new[] { email }));
+                services.AddSingleton(sendAuthQuery);
+
+                // Mock OTP token provider to validate as false
+                var otpProvider = Substitute.For<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>();
+                otpProvider.ValidateTokenAsync(invalidOtp, Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+                    .Returns(false);
+                services.AddSingleton(otpProvider);
+
+                var mailService = Substitute.For<IMailService>();
+                services.AddSingleton(mailService);
+            });
+        }).CreateClient();
+
+        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId, email: email, emailOtp: invalidOtp);
+
+        // Act
+        var response = await client.PostAsync("/connect/token", requestBody);
+
+        // Assert
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains(OidcConstants.TokenErrors.InvalidRequest, content);
+        Assert.Contains($"{SendAccessConstants.TokenRequest.Email} and {SendAccessConstants.TokenRequest.Otp} are required.", content);
+    }
+
+    [Fact]
+    public async Task SendAccess_EmailOtpProtectedSend_OtpGenerationFails_ReturnsInvalidRequest()
+    {
+        // Arrange
+        var sendId = Guid.NewGuid();
+        var email = "test@example.com";
+
+        var client = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                var featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
+                featureService.IsEnabled(Arg.Any<string>()).Returns(true);
+                services.AddSingleton(featureService);
+
+                var sendAuthQuery = Substitute.For<ISendAuthenticationQuery>();
+                sendAuthQuery.GetAuthenticationMethod(sendId)
+                    .Returns(new EmailOtp(new[] { email }));
+                services.AddSingleton(sendAuthQuery);
+
+                // Mock OTP token provider to fail generation
+                var otpProvider = Substitute.For<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>();
+                otpProvider.GenerateTokenAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+                    .Returns((string)null);
+                services.AddSingleton(otpProvider);
+
+                var mailService = Substitute.For<IMailService>();
+                services.AddSingleton(mailService);
+            });
+        }).CreateClient();
+
+        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId, email: email); // Email but no OTP
+
+        // Act
+        var response = await client.PostAsync("/connect/token", requestBody);
+
+        // Assert
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains(OidcConstants.TokenErrors.InvalidRequest, content);
+    }
+
+    /// <summary>
+    /// Before <c>OtpTokenProvider</c> added a bound value, it cached a bare UTF-8 token rather than the
+    /// current JSON envelope. A rolling deploy leaves that older shape in the shared cache for a time, so
+    /// an upgraded instance reading it back must reject the OTP cleanly instead of erroring.
+    /// </summary>
+    [Fact]
+    public async Task SendAccess_EmailOtpProtectedSend_LegacyRawTokenCacheEntry_ReturnsInvalidRequest()
+    {
+        // Arrange
+        var sendId = Guid.NewGuid();
+        var email = "test@example.com";
+        var otp = "123456";
+
+        var factory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                var featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
+                featureService.IsEnabled(Arg.Any<string>()).Returns(true);
+                services.AddSingleton(featureService);
+
+                var sendAuthQuery = Substitute.For<ISendAuthenticationQuery>();
+                sendAuthQuery.GetAuthenticationMethod(sendId)
+                    .Returns(new EmailOtp([email]));
+                services.AddSingleton(sendAuthQuery);
+
+                var mailService = Substitute.For<IMailService>();
+                services.AddSingleton(mailService);
+
+                // Deliberately not mocking IOtpTokenProvider here: this test needs the real
+                // OtpTokenProvider reading from the real shared cache to exercise the legacy shape.
+            });
+        });
+
+        var client = factory.CreateClient();
+
+        var cacheKey = string.Format(
+            CultureInfo.InvariantCulture,
+            "{0}_{1}_{2}",
+            SendAccessConstants.OtpToken.TokenProviderName,
+            SendAccessConstants.OtpToken.Purpose,
+            string.Format(CultureInfo.InvariantCulture, SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email));
+
+        var persistentCache = factory.Services.GetRequiredKeyedService<IDistributedCache>("persistent");
+        await persistentCache.SetAsync(cacheKey, Encoding.UTF8.GetBytes(otp));
+
+        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId, email: email, emailOtp: otp);
+
+        // Act
+        var response = await client.PostAsync("/connect/token", requestBody);
+
+        // Assert
+        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains(OidcConstants.TokenErrors.InvalidRequest, content);
+    }
+}
