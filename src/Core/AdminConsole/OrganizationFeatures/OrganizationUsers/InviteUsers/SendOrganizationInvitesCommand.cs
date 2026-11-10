@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteReminders;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Utilities.DebuggingInstruments;
@@ -10,6 +11,7 @@ using Bit.Core.Entities;
 using Bit.Core.Models.Mail;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Microsoft.Extensions.Logging;
 
@@ -24,6 +26,7 @@ public class SendOrganizationInvitesCommand(
     IDataProtectorTokenFactory<OrgUserInviteTokenable> dataProtectorTokenFactory,
     IMailService mailService,
     TimeProvider timeProvider,
+    IGlobalSettings globalSettings,
     ILogger<SendOrganizationInvitesCommand> logger) : ISendOrganizationInvitesCommand
 {
     public async Task SendInvitesAsync(SendInvitesRequest request)
@@ -40,7 +43,7 @@ public class SendOrganizationInvitesCommand(
 
         if (!request.InitOrganization)
         {
-            var dueDate = timeProvider.GetUtcNow().UtcDateTime.AddDays(InviteReminderConstants.ReminderIntervalDays);
+            var dueDate = timeProvider.GetUtcNow().UtcDateTime.AddHours(InviteReminderSchedule.GetIntervalHours(globalSettings, logger));
             await organizationUserRepository.StartInviteReminderSequencesAsync(orgUsers.Select(ou => ou.Id), dueDate);
         }
     }

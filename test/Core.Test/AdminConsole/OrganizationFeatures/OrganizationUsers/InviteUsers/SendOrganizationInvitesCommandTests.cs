@@ -13,6 +13,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Mail;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Tokens;
@@ -567,24 +568,29 @@ public class SendOrganizationInvitesCommandTests
                 info.OrgUserTokenPairs.Count() == 2));
     }
 
-    [Theory, BitAutoData]
-    public async Task SendInvitesAsync_AfterSendingEmails_StartsReminderSequenceFiveDaysOut(
+    [Theory]
+    [BitAutoData(120)]
+    [BitAutoData(1)]
+    [BitAutoData(0)]
+    public async Task SendInvitesAsync_AfterSendingEmails_StartsReminderSequenceAtConfiguredInterval(
+        int intervalHours,
         Organization organization,
         OrganizationUser firstInvite,
         OrganizationUser secondInvite)
     {
         var now = DateTime.Parse("2026-10-27T12:00:00Z").ToUniversalTime();
         var sutProvider = SetupSutProviderWithNoExistingUsersAndFakeTime(now);
+        sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteReminderIntervalHours.Returns(intervalHours);
 
         // Act
         await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([firstInvite, secondInvite], organization));
 
-        // Assert - count resets and the first reminder is due 5 days after the invite
+        // Assert - count resets and the first reminder is due one interval out
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
             .StartInviteReminderSequencesAsync(
                 Arg.Is<IEnumerable<Guid>>(ids =>
                     ids.Count() == 2 && ids.Contains(firstInvite.Id) && ids.Contains(secondInvite.Id)),
-                now.AddDays(InviteReminderConstants.ReminderIntervalDays));
+                now.AddHours(intervalHours));
     }
 
     [Theory, BitAutoData]

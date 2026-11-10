@@ -76,6 +76,7 @@ public class SsoTestDataBuilder
     private Action<IStripeAdapter>? _stripeAdapterConfig;
     private X509Certificate2? _samlSigningCertificate;
     private bool? _wantAssertionsSignedFlagEnabled;
+    private bool? _rsa15DeprecationFlagEnabled;
     private int _rsa15DeprecationEmailCooldownInDays = 7;
     private bool _mockMailer = false;
     private IMailDeliveryService? _mailDeliveryService;
@@ -134,6 +135,7 @@ public class SsoTestDataBuilder
     /// does not.
     /// </summary>
     /// <param name="key">The fully qualified setting name, using <c>:</c> between sections.</param>
+    /// <param name="value">The value of the setting.</param>
     public SsoTestDataBuilder WithConfiguration(string key, string? value)
     {
         _configuration[key] = value;
@@ -210,6 +212,16 @@ public class SsoTestDataBuilder
     public SsoTestDataBuilder WithPM42982WantAssertionsSignedFlag(bool enabled = true)
     {
         _wantAssertionsSignedFlagEnabled = enabled;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the <see cref="FeatureFlagKeys.PM42283_Rsa15Deprecation"/> feature flag for the test.
+    /// An unset flag is off.
+    /// </summary>
+    public SsoTestDataBuilder WithPM42283Rsa15DeprecationFlag(bool enabled = true)
+    {
+        _rsa15DeprecationFlagEnabled = enabled;
         return this;
     }
 
@@ -452,12 +464,14 @@ public class SsoTestDataBuilder
         }
 
         // 1.f Configure IFeatureService to reflect the feature flag the test requests. An unset flag is off.
-        if (_wantAssertionsSignedFlagEnabled.HasValue)
+        if (_wantAssertionsSignedFlagEnabled.HasValue || _rsa15DeprecationFlagEnabled.HasValue)
         {
             factory.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(svc =>
             {
                 svc.IsEnabled(FeatureFlagKeys.PM42982_WantAssertionsSigned)
                     .Returns(_wantAssertionsSignedFlagEnabled ?? false);
+                svc.IsEnabled(FeatureFlagKeys.PM42283_Rsa15Deprecation)
+                    .Returns(_rsa15DeprecationFlagEnabled ?? false);
             });
         }
 

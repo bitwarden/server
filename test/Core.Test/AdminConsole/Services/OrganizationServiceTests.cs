@@ -1823,6 +1823,8 @@ public class OrganizationServiceTests
     {
         stagedUser.Status = OrganizationUserStatusType.Staged;
         InviteUser_ArrangeExistingOrgUser(organization, invite, stagedUser, sutProvider);
+        const int intervalHours = 7;
+        sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteReminderIntervalHours.Returns(intervalHours);
 
         var before = DateTime.UtcNow;
         await sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, systemUser: null, invite, externalId);
@@ -1835,8 +1837,8 @@ public class OrganizationServiceTests
                 Arg.Is<OrganizationUser>(ou =>
                     ou.Id == stagedUser.Id &&
                     ou.InviteRemindersSentCount == 0 &&
-                    ou.InviteReminderDueDate >= before.AddDays(InviteReminderConstants.ReminderIntervalDays) &&
-                    ou.InviteReminderDueDate <= after.AddDays(InviteReminderConstants.ReminderIntervalDays)),
+                    ou.InviteReminderDueDate >= before.AddHours(intervalHours) &&
+                    ou.InviteReminderDueDate <= after.AddHours(intervalHours)),
                 Arg.Any<IEnumerable<CollectionAccessSelection>>());
     }
 
