@@ -144,7 +144,7 @@ internal sealed record TokenSuccessResponse
     public required string AccessToken { get; init; }
 
     // RECOMMENDED, not required: https://www.rfc-editor.org/rfc/rfc6749#section-5.1
-    // Microsoft always returns it, but other providers might not:
+    // Microsoft's documented success response includes it, but other providers might not:
     // https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-client-creds-grant-flow
     [JsonPropertyName("expires_in")]
     public int? ExpiresIn { get; init; }
@@ -161,7 +161,7 @@ internal sealed record TokenErrorResponse
     public required string Error { get; init; }
 
     // OPTIONAL: https://www.rfc-editor.org/rfc/rfc6749#section-5.2
-    // Microsoft always returns it, but other providers might not:
+    // Microsoft's documented error response includes it, but other providers might not:
     // https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-client-creds-grant-flow
     [JsonPropertyName("error_description")]
     public string? ErrorDescription { get; init; }
