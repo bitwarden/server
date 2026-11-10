@@ -15,18 +15,14 @@ namespace Bit.Identity.IntegrationTest.TokenEndpoint.LegacyUser;
 public class LegacyUserLoginTests
 {
     [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
-    public async Task TokenEndpoint_GrantTypeClientCredentials_AsLegacyUser_Fails(
+    public async Task TokenEndpoint_GrantTypePassword_AsLegacyUser_Fails(
         RegisterFinishRequestModel model,
         string deviceId)
     {
         model.UserAsymmetricKeys.AccountKeys = null;
         var localFactory = new IdentityApplicationFactory();
-        var server = localFactory.WithWebHostBuilder(builder =>
-        {
-            builder.UseSetting("globalSettings:launchDarkly:flagValues:block-legacy-users", "true");
-        }).Server;
 
-        model.Email = "test+tokenclientcredentials@email.com";
+        model.Email = "test+legacyuserpassword@email.com";
         var user = await localFactory.RegisterNewIdentityFactoryUserAsync(model);
 
         // Modify user to be legacy user. We have to fetch the user again to put it in the ef-context
@@ -37,7 +33,7 @@ public class LegacyUserLoginTests
         user.Key = null;
         await database.SaveChangesAsync();
 
-        var context = await server.PostAsync("/connect/token", new FormUrlEncodedContent(
+        var context = await localFactory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(
             new Dictionary<string, string>
             {
                 { "scope", "api offline_access" },
