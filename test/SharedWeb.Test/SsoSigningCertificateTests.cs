@@ -259,6 +259,20 @@ public class SsoSigningCertificateTests : IClassFixture<IdentityServerCertificat
         Assert.Equal("No identity certificate to use.", exception.Message);
     }
 
+    [Fact]
+    public void AddSsoSigningCertificate_SigningCertificateWithNoPrivateKey_ThrowsBeforeTheServiceProviderIsBuilt()
+    {
+        using var sso = TestCertificates.Create("CN=Bitwarden Test SSO");
+        using var publicOnly = X509CertificateLoader.LoadCertificate(sso.RawData);
+        var builder = new ServiceCollection().AddIdentityServer();
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            builder.AddSsoSigningCertificate(Environment("Production"), NoCertificateSettings(),
+                new SigningCertificateSet(publicOnly, [], [], IsFallback: false)));
+
+        Assert.Equal("X509 certificate does not have a private key.", exception.Message);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
