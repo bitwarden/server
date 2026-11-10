@@ -2,8 +2,11 @@
 #nullable disable
 
 using Bit.Billing.Constants;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -15,6 +18,7 @@ using Customer = Stripe.Customer;
 using Subscription = Stripe.Subscription;
 using Transaction = Bit.Core.Entities.Transaction;
 using TransactionType = Bit.Core.Enums.TransactionType;
+using User = Bit.Core.Entities.User;
 
 namespace Bit.Billing.Services.Implementations;
 
@@ -24,6 +28,7 @@ public class StripeEventUtilityService : IStripeEventUtilityService
     private readonly ILogger<StripeEventUtilityService> _logger;
     private readonly ITransactionRepository _transactionRepository;
     private readonly IMailService _mailService;
+    private readonly IUserRepository _userRepository;
     private readonly BraintreeGateway _btGateway;
     private readonly GlobalSettings _globalSettings;
 
@@ -32,12 +37,14 @@ public class StripeEventUtilityService : IStripeEventUtilityService
         ILogger<StripeEventUtilityService> logger,
         ITransactionRepository transactionRepository,
         IMailService mailService,
+        IUserRepository userRepository,
         GlobalSettings globalSettings)
     {
         _stripeFacade = stripeFacade;
         _logger = logger;
         _transactionRepository = transactionRepository;
         _mailService = mailService;
+        _userRepository = userRepository;
         _btGateway = new BraintreeGateway
         {
             Environment = globalSettings.Braintree.Production ?
@@ -261,6 +268,75 @@ public class StripeEventUtilityService : IStripeEventUtilityService
             BillingReason: StripeConstants.BillingReasons.SubscriptionCycle or StripeConstants.BillingReasons.AutomaticPendingInvoiceItemInvoice,
             Parent.SubscriptionDetails: not null
         };
+
+    public async Task<Subscription> GetOtherLiveSubscriptionAsync(ISubscriber subscriber, Subscription subscription)
+    {
+        if (subscriber is Organization && subscription.Id == subscriber.GatewaySubscriptionId)
+        {
+            return null;
+        }
+
+        try
+        {
+            var subscriptions = await _stripeFacade.ListSubscriptions(new SubscriptionListOptions
+            {
+                Customer = subscription.CustomerId,
+                Limit = 100
+            });
+
+            var live = subscriptions.Data
+                .Where(other => other.Id != subscription.Id &&
+                                other.GrantsAccess() &&
+                                IsForSubscriber(other, subscriber))
+                .ToList();
+
+            var otherLive = live.FirstOrDefault(other => other.Id == subscriber.GatewaySubscriptionId) ??
+                            live.MaxBy(other => other.GetCurrentPeriodEnd());
+
+            if (otherLive != null)
+            {
+                _logger.LogInformation(
+                    "Subscriber ({SubscriberId}) has another live subscription ({OtherSubscriptionId}) besides subscription ({SubscriptionId})",
+                    subscriber.Id, otherLive.Id, subscription.Id);
+            }
+
+            return otherLive;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception,
+                "Could not list subscriptions for customer ({CustomerId}) of subscriber ({SubscriberId}); treating subscription ({SubscriptionId}) as the subscriber's only subscription",
+                subscription.CustomerId, subscriber.Id, subscription.Id);
+            return null;
+        }
+    }
+
+    public async Task LinkUserSubscriptionAsync(User user, Subscription subscription)
+    {
+        var currentPeriodEnd = subscription.GetCurrentPeriodEnd();
+
+        if (user.GatewaySubscriptionId == subscription.Id && user.PremiumExpirationDate == currentPeriodEnd)
+        {
+            return;
+        }
+
+        user.GatewaySubscriptionId = subscription.Id;
+        user.PremiumExpirationDate = currentPeriodEnd;
+        user.RevisionDate = DateTime.UtcNow;
+        await _userRepository.ReplaceAsync(user);
+    }
+
+    private bool IsForSubscriber(Subscription subscription, ISubscriber subscriber)
+    {
+        var (organizationId, userId, _) = GetIdsFromMetadata(subscription.Metadata);
+        return subscriber switch
+        {
+            User => userId == subscriber.Id,
+            // An organization's subscriptions can differ in plan and seats, so only its linked one keeps it enabled.
+            Organization => organizationId == subscriber.Id && subscription.Id == subscriber.GatewaySubscriptionId,
+            _ => false
+        };
+    }
 
     private async Task<bool> AttemptToPayInvoiceWithBraintreeAsync(Invoice invoice, Customer customer)
     {
