@@ -12,10 +12,12 @@ public class GetGroupsQueryParamModel
     [Range(1, int.MaxValue)]
     public int StartIndex { get; init; } = 1;
 
+    /// <summary>
+    /// Limits members only when explicitly supplied; all members are returned by default.
+    /// </summary>
     [Range(1, int.MaxValue)]
-    public int MemberCount { get; init; } = 50;
+    public int MemberCount { get; init; } = int.MaxValue;
 
     [Range(1, int.MaxValue)]
     public int MemberStartIndex { get; init; } = 1;
 }
-
