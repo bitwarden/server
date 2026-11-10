@@ -7,7 +7,7 @@ namespace Bit.AppHost.Configuration;
 /// <summary>
 /// Binds the AppHost configuration to <see cref="AppHostSettings"/> after checking that every required key is present.
 /// </summary>
-internal static class ConfigurationExtensions
+internal static class AppHostSettingsBinding
 {
     extension(IDistributedApplicationBuilder builder)
     {
