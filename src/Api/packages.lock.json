@@ -117,14 +117,14 @@
       },
       "Swashbuckle.AspNetCore": {
         "type": "Direct",
-        "requested": "[10.1.7, 10.1.7]",
-        "resolved": "10.1.7",
-        "contentHash": "vgef8DPT411JU5JjHiDbr0WOxsIVuAvegPGtqmm4Na4JRl/264dfBJcGkiPHsAr5P+Vda+qN1rZKRtBl1rF9aA==",
+        "requested": "[10.3.1, 10.3.1]",
+        "resolved": "10.3.1",
+        "contentHash": "aCaJQAUxU2SZhN0lXqTfa+6/hJ7RdofjtbWu4oXSmsQ+z7WFJQvAAPrvn5rQI/ly8M/Vu381wtlbA1FUYseHPg==",
         "dependencies": {
           "Microsoft.Extensions.ApiDescription.Server": "10.0.0",
-          "Swashbuckle.AspNetCore.Swagger": "10.1.7",
-          "Swashbuckle.AspNetCore.SwaggerGen": "10.1.7",
-          "Swashbuckle.AspNetCore.SwaggerUI": "10.1.7"
+          "Swashbuckle.AspNetCore.Swagger": "10.3.1",
+          "Swashbuckle.AspNetCore.SwaggerGen": "10.3.1",
+          "Swashbuckle.AspNetCore.SwaggerUI": "10.3.1"
         }
       },
       "AdaptiveCards": {
@@ -480,8 +480,8 @@
       },
       "Microsoft.AspNetCore.DataProtection": {
         "type": "Transitive",
-        "resolved": "10.0.10",
-        "contentHash": "5sfrNrBShTlJeXvWNxjPS7ilLY4H6MICZPMZr/2vjoDoBH5Z8sQYJwbhulqfXh4yIpxIto0TcmOQHOElvpq+iQ=="
+        "resolved": "10.0.14",
+        "contentHash": "gDUH0z2bK0lPaHGy2/pIQkEtbhG3dFGSIbioy+Qu76Y+HiB0xg2TFqlSLc+DjQ2Jb/3GODGMtTh4JuufVWG7Dw=="
       },
       "Microsoft.Azure.Amqp": {
         "type": "Transitive",
@@ -723,30 +723,30 @@
       },
       "Microsoft.Extensions.Caching.SqlServer": {
         "type": "Transitive",
-        "resolved": "10.0.10",
-        "contentHash": "c5dyhJoeDapja0D3qbt+7iMsG3BFITaM77HCWHW/Yef4zgQSuKkooPw4/SWwc2HfZocbMp0mDvh40U9/iO1p/Q==",
+        "resolved": "10.0.14",
+        "contentHash": "1pZ/FqmwEoXzoaocFJLCWfmRXtxBlFGterdulikTgxhdT8Y50uXwtQ4Zz8cQDrfmR/t4YLJbLhNF1ieqloCv2g==",
         "dependencies": {
-          "Azure.Identity": "1.11.4",
-          "Microsoft.Data.SqlClient": "5.2.2"
+          "Azure.Identity": "1.14.2",
+          "Microsoft.Data.SqlClient": "6.1.1"
         }
       },
       "Microsoft.Extensions.Caching.StackExchangeRedis": {
         "type": "Transitive",
-        "resolved": "10.0.10",
-        "contentHash": "E+3pfEY68WQh1ZVFTGDNK0JCoayzL3aIDgVHHM85HIbQO7MiABG14A7+ajHH2P/y3a4W2Rla5p2nzut3+mzoyQ==",
+        "resolved": "10.0.14",
+        "contentHash": "pd+40ZOZQ63O01wkPFLx2ODVILiPQ0AoQCz0YbQrH7y88z3ahaT1Vq3oOKnLrH7VeIYgH/C+X1R4MPkU3kpckQ==",
         "dependencies": {
           "StackExchange.Redis": "2.7.27"
         }
       },
       "Microsoft.Extensions.Configuration.EnvironmentVariables": {
         "type": "Transitive",
-        "resolved": "10.0.10",
-        "contentHash": "KRfFSSCV58vEdU7mPED/YMzeovIWF5P0g8s9K8n9HEfy0/WzMq37SrPdXdFN5/dFT/rPMHpF7AvpoXHckbcBFg=="
+        "resolved": "10.0.14",
+        "contentHash": "jB0UiYjpnneoBH1ZeXPlHYt4zUme6SZlnstL6gsH/0O/d5rOuN5lSIlOIfxXzapl8tAi7QmYOEogP09g/wcHzA=="
       },
       "Microsoft.Extensions.Configuration.UserSecrets": {
         "type": "Transitive",
-        "resolved": "10.0.10",
-        "contentHash": "1s1sKFTk/Foam64JY6+m/diH8drL3Wx6V3gtSd5v1IEZtszZYyc1pW8uRnMblzpNiR0l0t8gGk7tXj3xHzFgdg=="
+        "resolved": "10.0.14",
+        "contentHash": "z+dvl9uQnNzvq6Xco+UQyeujpP/BHs+ahHLPCBMxR5GW6M4JcsN1tupEgn5uWgR1fGCfmxS4QJEMt6eyizXGUA=="
       },
       "Microsoft.Extensions.DependencyModel": {
         "type": "Transitive",
@@ -851,8 +851,8 @@
       },
       "Microsoft.OpenApi": {
         "type": "Transitive",
-        "resolved": "2.4.1",
-        "contentHash": "u7QhXCISMQuab3flasb1hoaiERmUqyWsW7tmQODyILoQ7mJV5IRGM+2KKZYo0QUfC13evEOcHAb6TPWgqEQtrw=="
+        "resolved": "2.7.5",
+        "contentHash": "0FA67RSnRM4tcBKqiqVu/HPdZ9+QOKbmeRjxRUGTCjPU4C0bmUhd97Dso7Yild5P7nOV6GxJ2xrK0Kv/O9xp0w=="
       },
       "Microsoft.Rest.ClientRuntime": {
         "type": "Transitive",
@@ -1106,24 +1106,24 @@
       },
       "Swashbuckle.AspNetCore.Swagger": {
         "type": "Transitive",
-        "resolved": "10.1.7",
-        "contentHash": "EjLibt/d/QuRv170GoihTbcPUpgzSFm2WKHhnGJFZQ03JYzfuitsM79azaAR8NBwRunU7yScSX6HRE5JUlrEMQ==",
+        "resolved": "10.3.1",
+        "contentHash": "ZBsi9PZbuy25lUIs+4/V8pmuMqospRAX9zVmxzCm1ZRyKiXjsUL9YCyqdi7ezfDwxKuef6P0fUgVan9sLRcDJA==",
         "dependencies": {
-          "Microsoft.OpenApi": "2.4.1"
+          "Microsoft.OpenApi": "2.7.5"
         }
       },
       "Swashbuckle.AspNetCore.SwaggerGen": {
         "type": "Transitive",
-        "resolved": "10.1.7",
-        "contentHash": "PuubO9BjvNn6U3D9kLpuWKY1JtziWw7SsGBq0age1E50uQjQ8Fzl8s0EwzrLfANqYJNgDnJi9l7N1QxcGVB2Zw==",
+        "resolved": "10.3.1",
+        "contentHash": "DMamYj+m40rOgnGdAp+4iQ+NXIMup2oYVs/zIOZtal0Dar6CXjCF9/SkepEn42TKNO29wAx0xyLfOXj1VjEIXg==",
         "dependencies": {
-          "Swashbuckle.AspNetCore.Swagger": "10.1.7"
+          "Swashbuckle.AspNetCore.Swagger": "10.3.1"
         }
       },
       "Swashbuckle.AspNetCore.SwaggerUI": {
         "type": "Transitive",
-        "resolved": "10.1.7",
-        "contentHash": "iJo3ODyUb/M8Vm8AH1r9y9iAba0w95xsCn3zFVl96ISRHbTDWxi+l7oFVCZqUEdjd97B8VMDPnMliWAdomR8uw=="
+        "resolved": "10.3.1",
+        "contentHash": "kXuMIVJBDD6qMwG78VUrKy4x5Ke98HU0Q023Sf2iSBO/x45c5BuByYPAExIs9UeVsjdGGgvLWU5jK8l6MO2Z0Q=="
       },
       "System.ClientModel": {
         "type": "Transitive",
@@ -1211,7 +1211,7 @@
       "commercial.core": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.10.1, )",
+          "Core": "[2026.11.0, )",
           "CsvHelper": "[33.1.0, 33.1.0]"
         }
       },
@@ -1219,8 +1219,8 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper": "[14.0.0, 14.0.0]",
-          "Core": "[2026.10.1, )",
-          "Infrastructure.EntityFramework": "[2026.10.1, )"
+          "Core": "[2026.11.0, )",
+          "Infrastructure.EntityFramework": "[2026.11.0, )"
         }
       },
       "core": {
@@ -1251,7 +1251,7 @@
           "MailDelivery": "[0.0.1, )",
           "MailKit": "[4.18.2, 4.18.2]",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[10.0.8, 10.0.8]",
-          "Microsoft.AspNetCore.DataProtection": "[10.0.10, 10.0.10]",
+          "Microsoft.AspNetCore.DataProtection": "[10.0.14, 10.0.14]",
           "Microsoft.Azure.Cosmos": "[3.52.0, 3.52.0]",
           "Microsoft.Azure.NotificationHubs": "[4.2.0, 4.2.0]",
           "Microsoft.Bot.Builder": "[4.23.0, 4.23.0]",
@@ -1260,10 +1260,10 @@
           "Microsoft.Data.SqlClient": "[7.1.1, 7.1.1]",
           "Microsoft.Data.SqlClient.Extensions.Azure": "[7.0.2, 7.0.2]",
           "Microsoft.Extensions.Caching.Cosmos": "[1.8.0, 1.8.0]",
-          "Microsoft.Extensions.Caching.SqlServer": "[10.0.10, 10.0.10]",
-          "Microsoft.Extensions.Caching.StackExchangeRedis": "[10.0.10, 10.0.10]",
-          "Microsoft.Extensions.Configuration.EnvironmentVariables": "[10.0.10, 10.0.10]",
-          "Microsoft.Extensions.Configuration.UserSecrets": "[10.0.10, 10.0.10]",
+          "Microsoft.Extensions.Caching.SqlServer": "[10.0.14, 10.0.14]",
+          "Microsoft.Extensions.Caching.StackExchangeRedis": "[10.0.14, 10.0.14]",
+          "Microsoft.Extensions.Configuration.EnvironmentVariables": "[10.0.14, 10.0.14]",
+          "Microsoft.Extensions.Configuration.UserSecrets": "[10.0.14, 10.0.14]",
           "Microsoft.Extensions.Identity.Stores": "[10.0.8, 10.0.8]",
           "Newtonsoft.Json": "[13.0.3, 13.0.3]",
           "OneOf": "[3.0.271, 3.0.271]",
@@ -1291,7 +1291,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.10.1, )"
+          "HttpExtensions": "[2026.11.0, )"
         }
       },
       "httpextensions": {
@@ -1300,21 +1300,21 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.10.1, )",
+          "Core": "[2026.11.0, )",
           "Dapper": "[2.1.66, 2.1.66]",
-          "Pam.Domain": "[2026.10.1, )"
+          "Pam.Domain": "[2026.11.0, )"
         }
       },
       "infrastructure.entityframework": {
         "type": "Project",
         "dependencies": {
           "AutoMapper": "[14.0.0, 14.0.0]",
-          "Core": "[2026.10.1, )",
+          "Core": "[2026.11.0, )",
           "Microsoft.EntityFrameworkCore.Relational": "[8.0.11, 8.0.11]",
           "Microsoft.EntityFrameworkCore.SqlServer": "[8.0.11, 8.0.11]",
           "Microsoft.EntityFrameworkCore.Sqlite": "[8.0.11, 8.0.11]",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[8.0.11, 8.0.11]",
-          "Pam.Domain": "[2026.10.1, )",
+          "Pam.Domain": "[2026.11.0, )",
           "Pomelo.EntityFrameworkCore.MySql": "[8.0.2, 8.0.2]",
           "linq2db": "[6.5.0, 6.5.0]",
           "linq2db.EntityFrameworkCore": "[8.8.0, 8.8.0]"
@@ -1325,7 +1325,7 @@
         "dependencies": {
           "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
           "Bitwarden.Server.Sdk.Features": "[1.5.0, )",
-          "Core": "[2026.10.1, )",
+          "Core": "[2026.11.0, )",
           "Stripe.net": "[52.1.0, 52.1.0]"
         }
       },
@@ -1340,14 +1340,14 @@
       "organizationauthorization": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.10.1, )",
+          "Core": "[2026.11.0, )",
           "CurrentUser": "[0.0.1, )"
         }
       },
       "organizationkeys": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.10.1, )",
+          "Core": "[2026.11.0, )",
           "CurrentUser": "[0.0.1, )",
           "ExceptionHandling": "[0.0.1, )",
           "OrganizationAuthorization": "[0.0.1, )"
@@ -1356,10 +1356,10 @@
       "pam": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.10.1, )",
-          "HttpExtensions": "[2026.10.1, )",
+          "Core": "[2026.11.0, )",
+          "HttpExtensions": "[2026.11.0, )",
           "OrganizationAuthorization": "[0.0.1, )",
-          "Pam.Domain": "[2026.10.1, )"
+          "Pam.Domain": "[2026.11.0, )"
         }
       },
       "pam.domain": {
@@ -1382,11 +1382,11 @@
         "dependencies": {
           "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
           "Bitwarden.Server.Sdk.Features": "[1.5.0, )",
-          "Core": "[2026.10.1, )",
-          "Infrastructure.Dapper": "[2026.10.1, )",
-          "Infrastructure.EntityFramework": "[2026.10.1, )",
+          "Core": "[2026.11.0, )",
+          "Infrastructure.Dapper": "[2026.11.0, )",
+          "Infrastructure.EntityFramework": "[2026.11.0, )",
           "Microsoft.Bot.Builder.Integration.AspNet.Core": "[4.23.0, 4.23.0]",
-          "Swashbuckle.AspNetCore.SwaggerGen": "[10.1.7, 10.1.7]"
+          "Swashbuckle.AspNetCore.SwaggerGen": "[10.3.1, 10.3.1]"
         }
       },
       "ssrfprotection": {
@@ -1395,7 +1395,7 @@
       "subscriptions.organization": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.10.1, )",
+          "Core": "[2026.11.0, )",
           "ExceptionHandling": "[0.0.1, )",
           "Invoicing": "[0.0.1, )",
           "OrganizationAuthorization": "[0.0.1, )"
@@ -1404,7 +1404,7 @@
       "subscriptions.user": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.10.1, )",
+          "Core": "[2026.11.0, )",
           "ExceptionHandling": "[0.0.1, )",
           "Invoicing": "[0.0.1, )"
         }

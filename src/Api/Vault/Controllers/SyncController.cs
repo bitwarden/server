@@ -208,7 +208,10 @@ public class SyncController : Controller
             unsupportedTypes.Add(Core.Vault.Enums.CipherType.Passport);
         }
 
-        var supportsPartial = PartialCipherSupport.IsSupportedBy(_currentContext.DeviceType);
+        var supportsPartial = PartialCipherSupport.IsSupportedBy(
+            _currentContext.DeviceType,
+            _currentContext.ClientVersion,
+            _featureService.IsEnabled(FeatureFlagKeys.PamBrowserPartialCiphers));
         if (unsupportedTypes.Count == 0 && supportsPartial)
         {
             return ciphers;

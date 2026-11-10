@@ -6,6 +6,9 @@ using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
+using Bit.Core.Billing.Organizations;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -26,6 +29,8 @@ public class AcceptOrganizationInviteLinkCommand(
     IMailService mailService,
     IPushAutoConfirmNotificationCommand pushAutoConfirmNotificationCommand,
     IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand,
+    IReservePrivilegedControlsSeatsCommand reservePrivilegedControlsSeatsCommand,
+    ISendPrivilegedControlsSeatNeededEmailCommand sendPrivilegedControlsSeatNeededEmailCommand,
     ILogger<AcceptOrganizationInviteLinkCommand> logger,
     IEventService eventService)
     : IAcceptOrganizationInviteLinkCommand
@@ -70,6 +75,7 @@ public class AcceptOrganizationInviteLinkCommand(
     {
         var organization = validationResult.Organization;
 
+        PrivilegedControlsSeatReservationResult? privilegedControlsSeatReservation = null;
         if (existingOrganizationUser.Status == OrganizationUserStatusType.Staged)
         {
             var seatReservationError = await ReserveSeatAsync(organization);
@@ -77,8 +83,18 @@ public class AcceptOrganizationInviteLinkCommand(
             {
                 return seatReservationError;
             }
+
+            if (existingOrganizationUser.AccessPam)
+            {
+                privilegedControlsSeatReservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, 1);
+                if (!privilegedControlsSeatReservation.Success)
+                {
+                    existingOrganizationUser.AccessPam = false;
+                }
+            }
         }
 
+        var memberEmail = existingOrganizationUser.Email ?? user.Email;
         existingOrganizationUser.Status = OrganizationUserStatusType.Accepted;
         existingOrganizationUser.UserId = user.Id;
         existingOrganizationUser.Email = null;
@@ -90,6 +106,11 @@ public class AcceptOrganizationInviteLinkCommand(
         }
 
         await organizationUserRepository.ReplaceAsync(existingOrganizationUser);
+
+        if (privilegedControlsSeatReservation?.Error is PrivilegedControlsSeatLimitReachedError)
+        {
+            await sendPrivilegedControlsSeatNeededEmailCommand.RunAsync(organization, memberEmail);
+        }
 
         return existingOrganizationUser;
     }
