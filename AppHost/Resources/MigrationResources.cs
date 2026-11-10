@@ -5,18 +5,20 @@
 /// </summary>
 public static class MigrationResources
 {
-    /// <summary>
-    /// Configures the migrations executable resource.
-    /// </summary>
-    /// <param name="builder">The distributed application builder used to configure the migrations resource.</param>
-    /// <returns>>The configured resource builder for the migrations executable.</returns>
-    public static IResourceBuilder<ExecutableResource> ConfigureMigrations(this IDistributedApplicationBuilder builder)
+    extension(IDistributedApplicationBuilder builder)
     {
-        var migrationArgs = new List<string> { "-File", builder.Required("Scripts:DbMigration") };
-        if (builder.IsSelfHosted())
-            migrationArgs.Add("-selfhost");
+        /// <summary>
+        /// Configures the migrations executable resource.
+        /// </summary>
+        /// <returns>>The configured resource builder for the migrations executable.</returns>
+        public IResourceBuilder<ExecutableResource> ConfigureMigrations()
+        {
+            var migrationArgs = new List<string> { "-File", builder.Required("Scripts:DbMigration") };
+            if (builder.IsSelfHosted())
+                migrationArgs.Add("-selfhost");
 
-        return builder
-            .AddExecutable("run-db-migrations", "pwsh", builder.Required("WorkingDirectory"), [.. migrationArgs]);
+            return builder
+                .AddExecutable("run-db-migrations", "pwsh", builder.Required("WorkingDirectory"), migrationArgs.ToArray());
+        }
     }
 }

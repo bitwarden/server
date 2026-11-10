@@ -7,18 +7,20 @@ namespace Bit.AppHost.Resources;
 /// </summary>
 public static class NgrokResource
 {
-    public static void ConfigureNgrok(this IDistributedApplicationBuilder builder,
-        (IResourceBuilder<ProjectResource>, string) tunnelResource)
+    extension(IDistributedApplicationBuilder builder)
     {
-        var rawToken = builder.Configuration["NgrokAuthToken"];
-        if (string.IsNullOrWhiteSpace(rawToken))
-            return;
+        public void ConfigureNgrok((IResourceBuilder<ProjectResource>, string) tunnelResource)
+        {
+            var rawToken = builder.Configuration["NgrokAuthToken"];
+            if (string.IsNullOrWhiteSpace(rawToken))
+                return;
 
-        var authToken = builder.AddParameter("ngrok-auth-token", rawToken, secret: true);
-        builder.AddNgrok("billing-webhook-ngrok-endpoint", endpointPort: 59600)
-            .WithAuthToken(authToken)
-            .WithTunnelEndpoint(tunnelResource.Item1, tunnelResource.Item2)
-            .WithExplicitStart();
+            var authToken = builder.AddParameter("ngrok-auth-token", rawToken, secret: true);
+            builder.AddNgrok("billing-webhook-ngrok-endpoint", endpointPort: 59600)
+                .WithAuthToken(authToken)
+                .WithTunnelEndpoint(tunnelResource.Item1, tunnelResource.Item2)
+                .WithExplicitStart();
+        }
     }
 }
 #endif

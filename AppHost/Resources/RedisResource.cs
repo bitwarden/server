@@ -5,17 +5,20 @@
 /// </summary>
 public static class RedisResource
 {
-    public static IResourceBuilder<ContainerResource> ConfigureRedis(this IDistributedApplicationBuilder builder)
+    extension(IDistributedApplicationBuilder builder)
     {
-        var (imageName, imageTag) = builder.GetImageParts("Redis:Image");
+        public IResourceBuilder<ContainerResource> ConfigureRedis()
+        {
+            var (imageName, imageTag) = builder.GetImageParts("Redis:Image");
 
-        var port = builder.RequiredInt("Redis:Port");
+            var port = builder.RequiredInt("Redis:Port");
 
-        return builder
-            .AddContainer("redis", imageName, imageTag)
-            .WithLifetime(ContainerLifetime.Persistent)
-            .WithEndpoint(port: port, name: "tcp", targetPort: 6379)
-            .WithVolume("redis_data", "/data")
-            .WithArgs("redis-server", "--appendonly", "yes");
+            return builder
+                .AddContainer("redis", imageName, imageTag)
+                .WithLifetime(ContainerLifetime.Persistent)
+                .WithEndpoint(port: port, name: "tcp", targetPort: 6379)
+                .WithVolume("redis_data", "/data")
+                .WithArgs("redis-server", "--appendonly", "yes");
+        }
     }
 }

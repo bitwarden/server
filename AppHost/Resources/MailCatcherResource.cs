@@ -5,17 +5,20 @@
 /// </summary>
 public static class MailCatcherResource
 {
-    public static IResourceBuilder<ContainerResource> ConfigureMailCatcher(this IDistributedApplicationBuilder builder)
+    extension(IDistributedApplicationBuilder builder)
     {
-        var (imageName, imageTag) = builder.GetImageParts("MailCatcher:Image");
+        public IResourceBuilder<ContainerResource> ConfigureMailCatcher()
+        {
+            var (imageName, imageTag) = builder.GetImageParts("MailCatcher:Image");
 
-        var smtpPort = builder.RequiredInt("MailCatcher:SmtpPort");
-        var webPort = builder.RequiredInt("MailCatcher:WebPort");
+            var smtpPort = builder.RequiredInt("MailCatcher:SmtpPort");
+            var webPort = builder.RequiredInt("MailCatcher:WebPort");
 
-        return builder
-            .AddContainer("mailcatcher", imageName, imageTag)
-            .WithLifetime(ContainerLifetime.Persistent)
-            .WithEndpoint(port: smtpPort, name: "smtp", targetPort: 1025)
-            .WithHttpEndpoint(port: webPort, name: "web", targetPort: webPort);
+            return builder
+                .AddContainer("mailcatcher", imageName, imageTag)
+                .WithLifetime(ContainerLifetime.Persistent)
+                .WithEndpoint(port: smtpPort, name: "smtp", targetPort: 1025)
+                .WithHttpEndpoint(port: webPort, name: "web", targetPort: webPort);
+        }
     }
 }
