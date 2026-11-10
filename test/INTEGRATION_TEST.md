@@ -223,7 +223,7 @@ Rules:
 3. **For side-effect capture (e.g., extracting a token from a mocked `IMailService` send)**, do it inside the application factory as an intent method (`factory.NextSentLinkTokenAsync()` or similar). Don't expose `ConcurrentDictionary<…>` on the fixture for tests to poke.
 4. **`IClassFixture<TFixture>` binds the composition to the test class.** xUnit constructs the fixture once for the class, sharing both factories across every test.
 
-For an example of a working multi-app composition (in legacy shape — useful as a reference for the wiring, not the abstraction), see [Billing.IntegrationTest/StripeTestsFixture.cs](Billing.IntegrationTest/StripeTestsFixture.cs) and [AdminApplicationFactory.cs](Billing.IntegrationTest/AdminApplicationFactory.cs).
+For an example of a working multi-app composition (in legacy shape — useful as a reference for the wiring, not the abstraction), see [Billing.IntegrationTest/StripeTestsFixture.cs](Billing.IntegrationTest/StripeTestsFixture.cs) and [AdminApplicationFactory.cs](IntegrationTestCommon/Factories/AdminApplicationFactory.cs).
 
 ---
 
