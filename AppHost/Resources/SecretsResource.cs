@@ -16,9 +16,10 @@ internal static class SecretsResource
         /// <returns>>The configured resource builder for the secrets setup executable.</returns>
         internal IResourceBuilder<ExecutableResource> ConfigureSecrets()
         {
+            var settings = builder.Settings;
             return builder
-                .AddExecutable("setup-secrets", "pwsh", "../dev", "-File", builder.Settings.Scripts.SecretsSetup,
-                    "-clear")
+                .AddExecutable("setup-secrets", "pwsh", settings.WorkingDirectory, "-File",
+                    settings.Scripts.SecretsSetup, "-clear")
                 .ExcludeFromManifest();
         }
     }

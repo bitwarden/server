@@ -204,7 +204,7 @@ variables for every resource.
 
 ## Git Worktrees
 
-Path-based settings resolve relative to where you run `dotnet run`. If your worktree lives in
+Path-based settings resolve relative to the `AppHost` directory. If your worktree lives in
 a different location than the main checkout, those paths won't resolve correctly. Use absolute
 paths for any such setting.
 
