@@ -112,6 +112,13 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
         var currentPeriodEnd = subscription.GetCurrentPeriodEnd();
         var clearOrgBillingAutomationExemption = false;
+        var otherLiveSubscription = subscriber is User or Organization &&
+                                    (subscription.Id != subscriber.GatewaySubscriptionId ||
+                                     SubscriptionWentUnpaid(parsedEvent, subscription) ||
+                                     SubscriptionWentIncompleteExpired(parsedEvent, subscription))
+            ? await _stripeEventUtilityService.GetOtherLiveSubscriptionAsync(subscriber, subscription)
+            : null;
+        var linkedToOtherSubscription = false;
 
         if (SubscriptionWentUnpaid(parsedEvent, subscription))
         {
@@ -124,7 +131,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             }
             else
             {
-                await DisableSubscriberAsync(subscriber, currentPeriodEnd);
+                linkedToOtherSubscription = await DisableOrLinkSubscriberAsync(subscriber, otherLiveSubscription, currentPeriodEnd);
                 await SetSubscriptionToCancelAsync(subscription);
             }
         }
@@ -133,7 +140,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             // Subscription is already terminal in Stripe; any attempt to
             // schedule a cancel would be rejected and 500 the webhook,
             // causing Stripe to retry and re-run DisableSubscriberAsync.
-            await DisableSubscriberAsync(subscriber, currentPeriodEnd);
+            linkedToOtherSubscription = await DisableOrLinkSubscriberAsync(subscriber, otherLiveSubscription, currentPeriodEnd);
         }
         else if (SubscriptionBecameActive(parsedEvent, subscription))
         {
@@ -141,9 +148,12 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             await RemovePendingCancellationAsync(subscription);
         }
 
+        var eventSubscriptionSetsExpiration = !linkedToOtherSubscription &&
+                                              (otherLiveSubscription == null || otherLiveSubscription.Id != subscriber.GatewaySubscriptionId);
+
         switch (subscriber)
         {
-            case User user:
+            case User user when eventSubscriptionSetsExpiration:
                 await _userService.UpdatePremiumExpirationAsync(user.Id, currentPeriodEnd);
                 break;
             case Organization organization:
@@ -153,11 +163,14 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                     await HandleScheduleTriggeredBusinessMigrationAsync(parsedEvent, subscription, organization.Id);
                     await HandleScheduleTriggeredAnnualUpgradeOfferAsync(parsedEvent, subscription, organization.Id);
 
-                    await _organizationService.UpdateExpirationDateAsync(organization.Id, currentPeriodEnd);
-
-                    if (_stripeEventUtilityService.IsSponsoredSubscription(subscription) && currentPeriodEnd.HasValue)
+                    if (eventSubscriptionSetsExpiration)
                     {
-                        await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(organization.Id, currentPeriodEnd.Value);
+                        await _organizationService.UpdateExpirationDateAsync(organization.Id, currentPeriodEnd);
+
+                        if (_stripeEventUtilityService.IsSponsoredSubscription(subscription) && currentPeriodEnd.HasValue)
+                        {
+                            await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(organization.Id, currentPeriodEnd.Value);
+                        }
                     }
 
                     await RemovePasswordManagerCouponIfRemovingSecretsManagerTrialAsync(parsedEvent, subscription, organization.Id);
@@ -220,6 +233,25 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             async userId => await _userRepository.GetByIdAsync(userId.Value),
             async organizationId => await _organizationRepository.GetByIdAsync(organizationId.Value),
             async providerId => await _providerRepository.GetByIdAsync(providerId.Value));
+
+    private async Task<bool> DisableOrLinkSubscriberAsync(
+        ISubscriber subscriber,
+        Subscription? otherLiveSubscription,
+        DateTime? currentPeriodEnd)
+    {
+        if (otherLiveSubscription != null)
+        {
+            if (subscriber is User user)
+            {
+                await _stripeEventUtilityService.LinkUserSubscriptionAsync(user, otherLiveSubscription);
+            }
+
+            return true;
+        }
+
+        await DisableSubscriberAsync(subscriber, currentPeriodEnd);
+        return false;
+    }
 
     private Task DisableSubscriberAsync(ISubscriber subscriber, DateTime? currentPeriodEnd) =>
         subscriber switch
