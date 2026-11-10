@@ -21,7 +21,7 @@ using Xunit;
 
 namespace Bit.Identity.IntegrationTest.Controllers.Accounts;
 
-public class AccountsControllerRegisterFinishInviteTokenTests
+public class RegisterFinishInviteTokenTests
 {
     [Theory, BitAutoData]
     public async Task RegistrationWithEmailVerification_WithOrgInviteToken_Succeeds(

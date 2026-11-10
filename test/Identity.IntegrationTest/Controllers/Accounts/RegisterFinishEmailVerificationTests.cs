@@ -11,7 +11,7 @@ using static Bit.Identity.IntegrationTest.Helpers.AccountsTestHelpers;
 
 namespace Bit.Identity.IntegrationTest.Controllers.Accounts;
 
-public class AccountsControllerRegisterFinishEmailVerificationTests
+public class RegisterFinishEmailVerificationTests
 {
     [Theory, BitAutoData]
     // marketing emails can stay at top level

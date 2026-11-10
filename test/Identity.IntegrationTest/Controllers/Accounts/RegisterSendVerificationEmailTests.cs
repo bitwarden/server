@@ -6,11 +6,11 @@ using static Bit.Identity.IntegrationTest.Helpers.AccountsTestHelpers;
 
 namespace Bit.Identity.IntegrationTest.Controllers.Accounts;
 
-public class AccountsControllerRegisterSendVerificationEmailTests : IClassFixture<IdentityApplicationFactory>
+public class RegisterSendVerificationEmailTests : IClassFixture<IdentityApplicationFactory>
 {
     private readonly IdentityApplicationFactory _factory;
 
-    public AccountsControllerRegisterSendVerificationEmailTests(IdentityApplicationFactory factory)
+    public RegisterSendVerificationEmailTests(IdentityApplicationFactory factory)
     {
         _factory = factory;
     }
