@@ -37,7 +37,7 @@ public class SubscriptionScheduleCreator(
     ILogger<SubscriptionScheduleCreator> logger) : ISubscriptionScheduleCreator
 {
     /// <summary>
-    /// Phase 2 only carries the change across renewal, so the schedule releases this long after renewal.
+    /// Phase 2 only carries the change across renewal, so the schedule can be released as soon as Stripe allows, which is one hour.
     /// </summary>
     public static readonly TimeSpan Phase2Duration = TimeSpan.FromHours(1);
 
