@@ -49,9 +49,9 @@ public static class MailDeliveryServiceCollectionExtensions
     /// </para>
     /// <para>
     /// The placeholder values <c>SECRET</c> and <c>REPLACE</c> (case-insensitive) are treated as unset for the SMTP
-    /// host, username, and password, the SendGrid API key, and the Amazon access key secret. This runs as a
-    /// post-configure step, so it also applies to values set by any other configuration of
-    /// <see cref="MailDeliveryOptions"/>.
+    /// host, username, password, client secret, and OAuth client secret, the SendGrid API key, and the Amazon
+    /// access key secret. This runs as a post-configure step, so it also applies to values set by any other
+    /// configuration of <see cref="MailDeliveryOptions"/>.
     /// </para>
     /// </remarks>
     public static IServiceCollection ConfigureMailDeliveryOptionsFromGlobalSettings(this IServiceCollection services)
