@@ -1,8 +1,10 @@
-﻿using System.Text.Json;
+﻿using System.Diagnostics;
+using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Scim.IntegrationTest.Factories;
 using Bit.Scim.Models;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Bit.Scim.IntegrationTest.Controllers.v2;
 
@@ -14,10 +16,12 @@ public class GroupMembershipIntegrationTests : IClassFixture<ScimApplicationFact
     };
 
     private readonly ScimApplicationFactory _factory;
+    private readonly ITestOutputHelper _testOutputHelper;
 
-    public GroupMembershipIntegrationTests(ScimApplicationFactory factory)
+    public GroupMembershipIntegrationTests(ScimApplicationFactory factory, ITestOutputHelper testOutputHelper)
     {
         _factory = factory;
+        _testOutputHelper = testOutputHelper;
     }
 
     public Task InitializeAsync()
@@ -50,6 +54,143 @@ public class GroupMembershipIntegrationTests : IClassFixture<ScimApplicationFact
         Assert.Equal(
             $"http://localhost/v2/{ScimApplicationFactory.TestOrganizationId1}/Users/{ScimApplicationFactory.TestOrganizationUserId1}",
             member.GetProperty("$ref").GetString());
+    }
+
+    [Fact]
+    public async Task MembershipEndpoints_HandleOrganizationScale()
+    {
+        const int organizationUserCount = 8_000;
+        const int activeUserCount = 1_400;
+
+        var databaseContext = _factory.GetDatabaseContext();
+        var generatedUsers = Enumerable.Range(0, organizationUserCount - 4)
+            .Select(index =>
+            {
+                var userId = Guid.NewGuid();
+                var organizationUserId = Guid.NewGuid();
+                var isActive = index < activeUserCount - 3;
+                var email = $"{(isActive ? "a-active" : "z-revoked")}-{index:D4}@example.com";
+
+                return new
+                {
+                    User = new Bit.Infrastructure.EntityFramework.Models.User
+                    {
+                        Id = userId,
+                        Name = email,
+                        Email = email,
+                        ApiKey = string.Empty,
+                        SecurityStamp = string.Empty
+                    },
+                    OrganizationUser = new Bit.Infrastructure.EntityFramework.Models.OrganizationUser
+                    {
+                        Id = organizationUserId,
+                        OrganizationId = ScimApplicationFactory.TestOrganizationId1,
+                        UserId = userId,
+                        Email = email,
+                        Status = isActive ? OrganizationUserStatusType.Confirmed : OrganizationUserStatusType.Revoked
+                    },
+                    GroupUser = isActive
+                        ? new Bit.Infrastructure.EntityFramework.Models.GroupUser
+                        {
+                            GroupId = ScimApplicationFactory.TestGroupId1,
+                            OrganizationUserId = organizationUserId
+                        }
+                        : null
+                };
+            })
+            .ToArray();
+
+        databaseContext.Users.AddRange(generatedUsers.Select(item => item.User));
+        databaseContext.OrganizationUsers.AddRange(generatedUsers.Select(item => item.OrganizationUser));
+        databaseContext.GroupUsers.AddRange(
+            generatedUsers.Where(item => item.GroupUser != null).Select(item => item.GroupUser!));
+        databaseContext.GroupUsers.Add(new Bit.Infrastructure.EntityFramework.Models.GroupUser
+        {
+            GroupId = ScimApplicationFactory.TestGroupId1,
+            OrganizationUserId = ScimApplicationFactory.TestOrganizationUserId2
+        });
+        databaseContext.SaveChanges();
+        Assert.Equal(organizationUserCount, databaseContext.OrganizationUsers.Count(
+            organizationUser => organizationUser.OrganizationId == ScimApplicationFactory.TestOrganizationId1));
+        Assert.Equal(activeUserCount, databaseContext.OrganizationUsers.Count(
+            organizationUser =>
+                organizationUser.OrganizationId == ScimApplicationFactory.TestOrganizationId1 &&
+                organizationUser.Status == OrganizationUserStatusType.Confirmed));
+
+        var userListStopwatch = Stopwatch.StartNew();
+        var userListResponse = await _factory.UsersGetListAsync(
+            ScimApplicationFactory.TestOrganizationId1,
+            filter: null,
+            count: 50,
+            startIndex: 1,
+            groupCount: 50);
+        userListStopwatch.Stop();
+
+        Assert.Equal(StatusCodes.Status200OK, userListResponse.Response.StatusCode);
+        var userListResponseBody = await ReadResponseBodyAsync(userListResponse.Response.Body);
+        var userList = JsonSerializer.Deserialize<ScimListResponseModel<ScimUserResponseModel>>(
+            userListResponseBody,
+            _jsonOptions);
+        Assert.NotNull(userList);
+        Assert.Equal(organizationUserCount, userList.TotalResults);
+        Assert.Equal(50, userList.Resources.Count);
+        Assert.All(userList.Resources, user =>
+        {
+            Assert.True(user.Active);
+            AssertGroupReference(Assert.Single(user.Groups), ScimApplicationFactory.TestGroupId1, "Test Group 1");
+        });
+
+        var groupGetStopwatch = Stopwatch.StartNew();
+        var groupResponse = await _factory.GroupsGetAsync(
+            ScimApplicationFactory.TestOrganizationId1,
+            ScimApplicationFactory.TestGroupId1,
+            memberCount: activeUserCount);
+        groupGetStopwatch.Stop();
+
+        Assert.Equal(StatusCodes.Status200OK, groupResponse.Response.StatusCode);
+        var groupResponseBody = await ReadResponseBodyAsync(groupResponse.Response.Body);
+        var groupResponseBytes = groupResponseBody.Length;
+        var group = JsonSerializer.Deserialize<ScimGroupResponseModel>(groupResponseBody, _jsonOptions);
+        Assert.NotNull(group);
+        Assert.Equal(activeUserCount, group.Members.Count);
+        Assert.All(group.Members, member =>
+        {
+            Assert.Equal("User", member.Type);
+            Assert.StartsWith(
+                $"http://localhost/v2/{ScimApplicationFactory.TestOrganizationId1}/Users/",
+                member.Ref);
+        });
+
+        var groupListStopwatch = Stopwatch.StartNew();
+        var groupListResponse = await _factory.GroupsGetListAsync(
+            ScimApplicationFactory.TestOrganizationId1,
+            filter: null,
+            count: 3,
+            startIndex: 1,
+            memberCount: activeUserCount);
+        groupListStopwatch.Stop();
+
+        Assert.Equal(StatusCodes.Status200OK, groupListResponse.Response.StatusCode);
+        var groupListResponseBody = await ReadResponseBodyAsync(groupListResponse.Response.Body);
+        var groupList = JsonSerializer.Deserialize<ScimListResponseModel<ScimGroupResponseModel>>(
+            groupListResponseBody,
+            _jsonOptions);
+        Assert.NotNull(groupList);
+        Assert.Equal(3, groupList.TotalResults);
+        Assert.Equal(3, groupList.Resources.Count);
+        var groupWithLargeMembership = Assert.Single(
+            groupList.Resources,
+            resource => resource.Id == ScimApplicationFactory.TestGroupId1);
+        Assert.Equal(activeUserCount, groupWithLargeMembership.Members.Count);
+        var groupListResponseBytes = groupListResponseBody.Length;
+
+        _testOutputHelper.WriteLine(
+            $"8,000 organization users (1,400 active): GET /Users returned {userList.Resources.Count} records " +
+            $"({userListResponseBody.Length} bytes) " +
+            $"in {userListStopwatch.ElapsedMilliseconds} ms; GET /Groups/{{id}} returned " +
+            $"{group.Members.Count} members ({groupResponseBytes} bytes) in {groupGetStopwatch.ElapsedMilliseconds} ms; " +
+            $"GET /Groups returned {groupWithLargeMembership.Members.Count} members " +
+            $"({groupListResponseBytes} bytes) in {groupListStopwatch.ElapsedMilliseconds} ms.");
     }
 
     [Fact]
@@ -370,6 +511,13 @@ public class GroupMembershipIntegrationTests : IClassFixture<ScimApplicationFact
             ],
             Schemas = ["urn:ietf:params:scim:api:messages:2.0:PatchOp"]
         };
+    }
+
+    private static async Task<byte[]> ReadResponseBodyAsync(Stream responseBody)
+    {
+        using var buffer = new MemoryStream();
+        await responseBody.CopyToAsync(buffer);
+        return buffer.ToArray();
     }
 
     private static void AssertGroupReference(
