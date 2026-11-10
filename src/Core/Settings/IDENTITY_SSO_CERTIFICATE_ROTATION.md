@@ -122,11 +122,11 @@ A cloud `/sso` host must set both SSO roles. If a role is not set, `/sso` does n
 
 ## At startup
 
-The host stops at startup if a configured certificate cannot be used. The error names the setting path. Causes:
+The host stops at startup if a configured certificate cannot be used. Causes:
 
-- An enabled entry that does not load: a missing file, blob, or thumbprint, or a wrong password.
-- A certificate with no RSA key.
-- A certificate with no private key, if the host signs with it or SAML uses it.
+- An enabled entry that does not load: a missing file, blob, or thumbprint, or a wrong password. The error names the setting path.
+- A certificate with no RSA key. The error names the setting path.
+- A certificate with no private key, if the host signs with it or SAML uses it. For SAML, the error names the role and the thumbprint. For token signing, the error is the message of the token library.
 
 When the host starts, it logs one line at _information_ severity for each role:
 
