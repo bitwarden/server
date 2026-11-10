@@ -48,7 +48,19 @@ the services wait for the database and secrets setup to finish before launching.
 
 ## Configuration
 
-All configuration lives in `appsettings.Development.json`(see [Security](#security--do-not-commit-local-settings-or-tokens)).
+The AppHost reads configuration from these sources, in load order; a later source overrides the same
+key from an earlier one:
+
+1. `appsettings.json`
+2. `appsettings.Development.json` (checked in, holds the defaults)
+3. User secrets
+4. Environment variables
+5. Command-line arguments
+6. `AppHost/appsettings.local.json` (optional, gitignored)
+
+The local file loads last, so it overrides user secrets, environment variables and command-line
+arguments for any key it sets (see [Security](#security--do-not-commit-local-settings-or-tokens)
+and [Git Worktrees](#git-worktrees)).
 
 ### Service Ports
 
@@ -187,28 +199,41 @@ variables for every resource.
   store them with `dotnet user-secrets`, never in any `appsettings.*.json` file.
 - User secrets are stored outside the repo in your OS profile, keyed by the `UserSecretsId` in
   `AppHost.csproj`, and are never tracked by git.
-- If you create an `appsettings.local.json`, add it to `.gitignore` before writing any values
-  to it.
+- `AppHost/appsettings.local.json` is gitignored and loaded last. Use it for non-secret overrides
+  such as paths and ports; the bullet above still applies to it.
 
 ## Git Worktrees
 
 Path-based settings resolve relative to where you run `dotnet run`. If your worktree lives in
 a different location than the main checkout, those paths won't resolve correctly. Use absolute
-paths for any such setting:
+paths for any such setting.
+
+User secrets are shared by every checkout of this repository, because they are keyed by the
+`UserSecretsId` in `AppHost.csproj`. `AppHost/appsettings.local.json` belongs to one checkout: git
+does not copy ignored files into a new worktree, so each worktree starts without one. Put values
+that differ per worktree in that file:
 
 - **`ClientsPath`** defaults to `../../clients/apps` — override if your worktree is not
   alongside the `clients` repo:
 
-  ```bash
-  dotnet user-secrets set "ClientsPath" "<absolute/path/to/clients/apps>"
+  ```json
+  {
+    "ClientsPath": "<absolute/path/to/clients/apps>"
+  }
   ```
 
-- **`AdditionalProjects:<name>:Path`** — use an absolute path when adding projects via user
-  secrets in a worktree:
+- **`AdditionalProjects:<name>:Path`** — use an absolute path when adding projects in a
+  worktree:
 
-  ```bash
-  dotnet user-secrets set "AdditionalProjects:<name>:Path" "<absolute/path/to/Project.csproj>"
+  ```json
+  {
+    "AdditionalProjects": {
+      "<name>": { "Path": "<absolute/path/to/Project.csproj>" }
+    }
+  }
   ```
+
+A value that is the same for every checkout can stay in user secrets.
 
 ## Troubleshooting
 

@@ -1,7 +1,9 @@
 ﻿using Bit.AppHost.Configuration;
 using Bit.AppHost.Resources;
+using Microsoft.Extensions.Configuration;
 
 var builder = DistributedApplication.CreateBuilder(args);
+builder.Configuration.AddJsonFile(Path.Combine(builder.AppHostDirectory, "appsettings.local.json"), optional: true);
 var secretsSetup = builder.ConfigureSecrets();
 var db = builder.AddSqlServerDatabaseResource();
 builder.ConfigureDatabaseMigrations()
