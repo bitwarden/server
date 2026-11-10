@@ -5,7 +5,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.UserFeatures.UserEmail;
-using Bit.Core.Billing.Organizations.Queries;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -27,7 +28,7 @@ public class UpdateOrganizationUserCommand(
     IOrganizationUserRepository organizationUserRepository,
     IUpdateOrganizationUserValidator validator,
     ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
-    ICountNewPamSeatsRequiredQuery countNewPamSeatsRequiredQuery,
+    IReservePrivilegedControlsSeatsCommand reservePrivilegedControlsSeatsCommand,
     IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
     IPricingClient pricingClient,
     IEventService eventService,
@@ -204,16 +205,13 @@ public class UpdateOrganizationUserCommand(
 
     private async Task<CommandError?> TryEnablingPamAsync(UpdateOrganizationUserRequest request)
     {
-        var additionalPamSeatsRequired =
-            await countNewPamSeatsRequiredQuery.CountNewPamSeatsRequiredAsync(request.Organization, 1);
-        if (additionalPamSeatsRequired > 0)
+        if (!PrivilegedControlsSeatOccupancy.OccupiesSeat(request.OrganizationUserToUpdate.Status))
         {
-            return globalSettings.SelfHosted
-                ? new CannotAutoscalePamSeatsOnSelfHost()
-                : new NotEnoughPrivilegedControlsSeats();
+            return null;
         }
 
-        return null;
+        var reservation = await reservePrivilegedControlsSeatsCommand.RunAsync(request.Organization, 1);
+        return reservation.Error;
     }
 
     private async Task<UpdateOrganizationUserRequest> LoadUserToUpdateAsync(UpdateOrganizationUserRequest request)

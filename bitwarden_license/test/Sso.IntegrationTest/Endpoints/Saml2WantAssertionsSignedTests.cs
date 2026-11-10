@@ -15,13 +15,7 @@ using Sustainsys.Saml2;
 using Sustainsys.Saml2.AspNetCore2;
 using Sustainsys.Saml2.Exceptions;
 using Xunit;
-using CipherData = System.Security.Cryptography.Xml.CipherData;
-using EncryptedData = System.Security.Cryptography.Xml.EncryptedData;
-using EncryptedKey = System.Security.Cryptography.Xml.EncryptedKey;
 using EncryptedXml = System.Security.Cryptography.Xml.EncryptedXml;
-using EncryptionMethod = System.Security.Cryptography.Xml.EncryptionMethod;
-using KeyInfo = System.Security.Cryptography.Xml.KeyInfo;
-using KeyInfoEncryptedKey = System.Security.Cryptography.Xml.KeyInfoEncryptedKey;
 
 namespace Bit.Sso.IntegrationTest.Endpoints;
 
@@ -79,10 +73,27 @@ public class Saml2WantAssertionsSignedTests
         // Ensures that WantAssertionsSigned operates correctly on an EncryptedAssertion.
         var (idpCertificate, spCertificate) = BuildCertificates();
         var signedAssertion = BuildSignedAssertion(idpCertificate);
-        var encryptedAssertionXml = EncryptAssertion(signedAssertion.OuterXml, spCertificate);
+        var encryptedAssertionXml = Saml2AcsPostHarness.EncryptAssertion(signedAssertion.OuterXml, spCertificate);
 
         var arrangement = await ArrangeAsync(
             encryptedAssertionXml, idpCertificate, spCertificate, wantAssertionsSigned: true);
+
+        Assert.True(await arrangement.SamlOptions.CouldHandleAsync(arrangement.Scheme, arrangement.Context));
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_SignedOaepEncryptedAssertionWithPeerKeyAndRetrievalMethodAndRsa15DeprecationFlagOn_ReturnsTrue()
+    {
+        // Some identity providers place xenc:EncryptedKey beside xenc:EncryptedData and link the two
+        // with a ds:RetrievalMethod. Sustainsys.Saml2 must decrypt this layout.
+        var (idpCertificate, spCertificate) = BuildCertificates();
+        var signedAssertion = BuildSignedAssertion(idpCertificate);
+        var encryptedAssertionXml = Saml2AcsPostHarness.EncryptAssertion(
+            signedAssertion.OuterXml, spCertificate, keyBesideData: true);
+
+        var arrangement = await ArrangeAsync(
+            encryptedAssertionXml, idpCertificate, spCertificate, wantAssertionsSigned: true,
+            rsa15DeprecationFlag: true);
 
         Assert.True(await arrangement.SamlOptions.CouldHandleAsync(arrangement.Scheme, arrangement.Context));
     }
@@ -92,7 +103,7 @@ public class Saml2WantAssertionsSignedTests
     {
         var (idpCertificate, spCertificate) = BuildCertificates();
         var unsignedAssertion = BuildAssertionDocument().DocumentElement!.OuterXml;
-        var encryptedAssertionXml = EncryptAssertion(unsignedAssertion, spCertificate);
+        var encryptedAssertionXml = Saml2AcsPostHarness.EncryptAssertion(unsignedAssertion, spCertificate);
 
         var arrangement = await ArrangeAsync(
             encryptedAssertionXml, idpCertificate, spCertificate, wantAssertionsSigned: true);
@@ -109,7 +120,7 @@ public class Saml2WantAssertionsSignedTests
         var (idpCertificate, spCertificate) = BuildCertificates();
         var signedPlaintextAssertion = BuildSignedAssertion(idpCertificate);
         var unsignedEncryptedAssertionXml =
-            EncryptAssertion(BuildAssertionDocument().DocumentElement!.OuterXml, spCertificate);
+            Saml2AcsPostHarness.EncryptAssertion(BuildAssertionDocument().DocumentElement!.OuterXml, spCertificate);
 
         var arrangement = await ArrangeAsync(
             signedPlaintextAssertion.OuterXml + unsignedEncryptedAssertionXml,
@@ -136,7 +147,7 @@ public class Saml2WantAssertionsSignedTests
             BuildSignedAssertion(idpCertificate, "_signed").OuterXml;
 
         var arrangement = await ArrangeAsync(
-            EncryptAssertion(payload, spCertificate), idpCertificate, spCertificate,
+            Saml2AcsPostHarness.EncryptAssertion(payload, spCertificate), idpCertificate, spCertificate,
             wantAssertionsSigned: true);
 
         var exception = await Assert.ThrowsAsync<Exception>(
@@ -309,7 +320,7 @@ public class Saml2WantAssertionsSignedTests
         var foreignCertificate = CreateSelfSignedCertificate("CN=Other SP");
 
         var arrangement = await ArrangeAsync(
-            EncryptAssertion(BuildSignedAssertion(idpCertificate).OuterXml, foreignCertificate),
+            Saml2AcsPostHarness.EncryptAssertion(BuildSignedAssertion(idpCertificate).OuterXml, foreignCertificate),
             idpCertificate, spCertificate, wantAssertionsSigned: true);
 
         var exception = await Assert.ThrowsAsync<Exception>(
@@ -421,6 +432,197 @@ public class Saml2WantAssertionsSignedTests
         Assert.False(await samlOptions.CouldHandleAsync(organizationId, context));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CouldHandleAsync_SignedEncryptedAssertionWithRsa15KeyTransportAndWantAssertionsSigned_ReturnsTrueWithFlagOffAndThrowsWithFlagOn(
+        bool rsa15DeprecationFlag)
+    {
+        // The signature sits inside the encrypted assertion. With the flag off, a true result proves that
+        // CouldHandleAsync decrypted the rsa-1_5 key transport. With the flag on, the gate throws before
+        // the signature check decrypts anything.
+        var (idpCertificate, spCertificate) = BuildCertificates();
+        var encryptedAssertionXml = Saml2AcsPostHarness.EncryptAssertion(
+            BuildSignedAssertion(idpCertificate).OuterXml, spCertificate, EncryptedXml.XmlEncRSA15Url);
+
+        var (testData, samlOptions, organizationId) = await BuildSchemeAsync(
+            idpCertificate, spCertificate, wantAssertionsSigned: true, rsa15EmailCooldownInDays: 0,
+            rsa15DeprecationFlag: rsa15DeprecationFlag);
+        var context = BuildPostContext(testData,
+            SsoConfigurationData.BuildSaml2AcsUrl(null, organizationId),
+            "SAMLResponse", BuildResponseXml(encryptedAssertionXml));
+
+        await AssertReturnsTrueOrThrowsGateAsync(samlOptions, organizationId, context, rsa15DeprecationFlag);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CouldHandleAsync_UnsignedEncryptedAssertionWithRsa15KeyTransportAndWantAssertionsSignedFalse_ReturnsTrueWithFlagOffAndThrowsWithFlagOn(
+        bool rsa15DeprecationFlag)
+    {
+        var (idpCertificate, spCertificate) = BuildCertificates();
+        var encryptedAssertionXml = Saml2AcsPostHarness.EncryptAssertion(
+            BuildAssertionDocument().DocumentElement!.OuterXml, spCertificate, EncryptedXml.XmlEncRSA15Url);
+
+        var (testData, samlOptions, organizationId) = await BuildSchemeAsync(
+            idpCertificate, spCertificate, wantAssertionsSigned: false, rsa15EmailCooldownInDays: 0,
+            rsa15DeprecationFlag: rsa15DeprecationFlag);
+        var context = BuildPostContext(testData,
+            SsoConfigurationData.BuildSaml2AcsUrl(null, organizationId),
+            "SAMLResponse", BuildResponseXml(encryptedAssertionXml));
+
+        await AssertReturnsTrueOrThrowsGateAsync(samlOptions, organizationId, context, rsa15DeprecationFlag);
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_SignedEncryptedAssertionWithOaepKeyTransportAndWantAssertionsSignedAndRsa15DeprecationFlagOn_ReturnsTrue()
+    {
+        var (idpCertificate, spCertificate) = BuildCertificates();
+        var encryptedAssertionXml = Saml2AcsPostHarness.EncryptAssertion(
+            BuildSignedAssertion(idpCertificate).OuterXml, spCertificate, EncryptedXml.XmlEncRSAOAEPUrl);
+
+        var arrangement = await ArrangeAsync(
+            encryptedAssertionXml, idpCertificate, spCertificate, wantAssertionsSigned: true,
+            rsa15DeprecationFlag: true);
+
+        Assert.True(await arrangement.SamlOptions.CouldHandleAsync(arrangement.Scheme, arrangement.Context));
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_UnsignedEncryptedAssertionWithRsa15KeyTransportAndWantAssertionsSignedAndRsa15DeprecationFlagOn_ThrowsTheGateMessage()
+    {
+        // The gate must precede the signature check. A check that decrypted first would throw
+        // "Cannot verify SAML assertion signature." for this unsigned assertion.
+        var (idpCertificate, spCertificate) = BuildCertificates();
+        var encryptedAssertionXml = Saml2AcsPostHarness.EncryptAssertion(
+            BuildAssertionDocument().DocumentElement!.OuterXml, spCertificate, EncryptedXml.XmlEncRSA15Url);
+
+        var arrangement = await ArrangeAsync(
+            encryptedAssertionXml, idpCertificate, spCertificate, wantAssertionsSigned: true,
+            rsa15DeprecationFlag: true);
+
+        var exception = await Assert.ThrowsAsync<Exception>(
+            () => arrangement.SamlOptions.CouldHandleAsync(arrangement.Scheme, arrangement.Context));
+        Assert.Equal(Saml2EncryptedAssertionInspector.KeyTransportAlgorithmNotAcceptedMessage, exception.Message);
+    }
+
+    private static async Task AssertReturnsTrueOrThrowsGateAsync(
+        Saml2Options samlOptions, string organizationId, HttpContext context, bool rsa15DeprecationFlag)
+    {
+        if (rsa15DeprecationFlag)
+        {
+            var exception = await Assert.ThrowsAsync<Exception>(
+                () => samlOptions.CouldHandleAsync(organizationId, context));
+            Assert.Equal(Saml2EncryptedAssertionInspector.KeyTransportAlgorithmNotAcceptedMessage, exception.Message);
+        }
+        else
+        {
+            Assert.True(await samlOptions.CouldHandleAsync(organizationId, context));
+        }
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_SchemeQueryAndUnsignedEnvelopeAndWantAssertionsSigned_ReturnsTrue()
+    {
+        // With the flag off, the scheme shortcut returns true. Current behavior; PM-42283 changes this
+        // with the flag on.
+        var (idpCertificate, spCertificate) = BuildCertificates();
+        var arrangement = await ArrangeAsync(
+            BuildAssertionDocument().DocumentElement!.OuterXml, idpCertificate, spCertificate,
+            wantAssertionsSigned: true);
+        arrangement.Context.Request.QueryString = QueryString.Create("scheme", arrangement.Scheme);
+
+        Assert.True(await arrangement.SamlOptions.CouldHandleAsync(arrangement.Scheme, arrangement.Context));
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_SchemeQueryAndUnsignedEnvelopeAndWantAssertionsSignedAndRsa15DeprecationFlagOn_Throws()
+    {
+        var (idpCertificate, spCertificate) = BuildCertificates();
+        var arrangement = await ArrangeAsync(
+            BuildAssertionDocument().DocumentElement!.OuterXml, idpCertificate, spCertificate,
+            wantAssertionsSigned: true, rsa15DeprecationFlag: true);
+        arrangement.Context.Request.QueryString = QueryString.Create("scheme", arrangement.Scheme);
+
+        var exception = await Assert.ThrowsAsync<Exception>(
+            () => arrangement.SamlOptions.CouldHandleAsync(arrangement.Scheme, arrangement.Context));
+        Assert.Equal("Cannot verify SAML assertion signature.", exception.Message);
+    }
+
+    // Current behavior with the flag off; PM-42283 changes this with the flag on.
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public async Task CouldHandleAsync_SchemeQueryAndForeignIssuer_ReturnsWhetherTheShortcutApplies(
+        bool rsa15DeprecationFlag, bool expected)
+    {
+        var (idpCertificate, spCertificate) = BuildCertificates();
+        var (testData, samlOptions, organizationId) = await BuildSchemeAsync(
+            idpCertificate, spCertificate, wantAssertionsSigned: true, rsa15DeprecationFlag: rsa15DeprecationFlag);
+        var context = BuildPostContext(testData,
+            SsoConfigurationData.BuildSaml2AcsUrl(null, organizationId), "SAMLResponse",
+            BuildResponseXml(BuildAssertionDocument().DocumentElement!.OuterXml, "https://other-idp.example.com"));
+        context.Request.QueryString = QueryString.Create("scheme", organizationId);
+
+        Assert.Equal(expected, await samlOptions.CouldHandleAsync(organizationId, context));
+    }
+
+    [Theory]
+    [InlineData("GET", false)]
+    [InlineData("POST", false)]
+    [InlineData("GET", true)]
+    [InlineData("POST", true)]
+    public async Task CouldHandleAsync_SchemeQueryAndNoSamlMessage_ReturnsTrue(
+        string method, bool rsa15DeprecationFlag)
+    {
+        // Metadata and login-initiation requests carry no SAML message.
+        var (idpCertificate, spCertificate) = BuildCertificates();
+        var (testData, samlOptions, organizationId) = await BuildSchemeAsync(
+            idpCertificate, spCertificate, wantAssertionsSigned: true, rsa15DeprecationFlag: rsa15DeprecationFlag);
+        var context = BuildNoMessageContext(testData, organizationId, method);
+        context.Request.QueryString = QueryString.Create("scheme", organizationId);
+
+        Assert.True(await samlOptions.CouldHandleAsync(organizationId, context));
+    }
+
+    [Theory]
+    [InlineData("GET", false)]
+    [InlineData("POST", false)]
+    [InlineData("GET", true)]
+    [InlineData("POST", true)]
+    public async Task CouldHandleAsync_NoSchemeQueryAndNoSamlMessage_ReturnsFalse(
+        string method, bool rsa15DeprecationFlag)
+    {
+        var (idpCertificate, spCertificate) = BuildCertificates();
+        var (testData, samlOptions, organizationId) = await BuildSchemeAsync(
+            idpCertificate, spCertificate, wantAssertionsSigned: true, rsa15DeprecationFlag: rsa15DeprecationFlag);
+        var context = BuildNoMessageContext(testData, organizationId, method);
+
+        Assert.False(await samlOptions.CouldHandleAsync(organizationId, context));
+    }
+
+    private static HttpContext BuildNoMessageContext(SsoTestData testData, string organizationId, string method)
+    {
+        var context = new DefaultHttpContext
+        {
+            RequestServices = testData.Factory.Services.CreateScope().ServiceProvider,
+        };
+        context.Request.Scheme = "https";
+        context.Request.Host = new HostString("sso.example.com");
+        context.Request.Path = SsoConfigurationData.BuildSaml2AcsUrl(null, organizationId);
+        context.Request.Method = method;
+        if (method == HttpMethods.Post)
+        {
+            context.Request.ContentType = "application/x-www-form-urlencoded";
+            context.Request.Form = new FormCollection(new Dictionary<string, StringValues>
+            {
+                ["RelayState"] = "unrelated",
+            });
+        }
+        return context;
+    }
+
     private static (X509Certificate2 IdpCertificate, X509Certificate2 SpCertificate) BuildCertificates() =>
         (CreateSelfSignedCertificate("CN=Test IdP"), CreateSelfSignedCertificate("CN=Test SP"));
 
@@ -431,9 +633,10 @@ public class Saml2WantAssertionsSignedTests
     // featureFlagEnabled: false.
     private static async Task<(SsoTestData TestData, Saml2Options SamlOptions, string OrganizationId)>
         BuildSchemeAsync(X509Certificate2 idpCertificate, X509Certificate2 spCertificate,
-            bool wantAssertionsSigned, bool featureFlagEnabled = true)
+            bool wantAssertionsSigned, bool featureFlagEnabled = true, int? rsa15EmailCooldownInDays = null,
+            bool rsa15DeprecationFlag = false)
     {
-        var testData = await new SsoTestDataBuilder()
+        var builder = new SsoTestDataBuilder()
             .WithSsoConfig(cfg => cfg!.SetData(new SsoConfigurationData
             {
                 ConfigType = SsoType.Saml2,
@@ -445,7 +648,12 @@ public class Saml2WantAssertionsSignedTests
             }))
             .WithSamlSigningCertificate(spCertificate)
             .WithPM42982WantAssertionsSignedFlag(featureFlagEnabled)
-            .BuildAsync();
+            .WithPM42283Rsa15DeprecationFlag(rsa15DeprecationFlag);
+        if (rsa15EmailCooldownInDays.HasValue)
+        {
+            builder.WithRsa15DeprecationEmailCooldownInDays(rsa15EmailCooldownInDays.Value);
+        }
+        var testData = await builder.BuildAsync();
 
         var organizationId = testData.Organization!.Id.ToString();
         var scheme = await testData.Factory.Services.GetRequiredService<IAuthenticationSchemeProvider>()
@@ -458,10 +666,11 @@ public class Saml2WantAssertionsSignedTests
 
     private static async Task<Arrangement> ArrangeAsync(string assertionElement,
         X509Certificate2 idpCertificate, X509Certificate2 spCertificate, bool wantAssertionsSigned,
-        bool featureFlagEnabled = true)
+        bool featureFlagEnabled = true, bool rsa15DeprecationFlag = false)
     {
-        var (testData, samlOptions, organizationId) =
-            await BuildSchemeAsync(idpCertificate, spCertificate, wantAssertionsSigned, featureFlagEnabled);
+        var (testData, samlOptions, organizationId) = await BuildSchemeAsync(
+            idpCertificate, spCertificate, wantAssertionsSigned, featureFlagEnabled,
+            rsa15DeprecationFlag: rsa15DeprecationFlag);
 
         var context = BuildPostContext(testData,
             SsoConfigurationData.BuildSaml2AcsUrl(null, organizationId),
@@ -496,6 +705,8 @@ public class Saml2WantAssertionsSignedTests
         {
             RequestServices = testData.Factory.Services.CreateScope().ServiceProvider,
         };
+        context.Request.Scheme = "https";
+        context.Request.Host = new HostString("sso.example.com");
         context.Request.Path = path;
         context.Request.Method = HttpMethods.Post;
         context.Request.ContentType = "application/x-www-form-urlencoded";
@@ -522,6 +733,8 @@ public class Saml2WantAssertionsSignedTests
         {
             RequestServices = testData.Factory.Services.CreateScope().ServiceProvider,
         };
+        context.Request.Scheme = "https";
+        context.Request.Host = new HostString("sso.example.com");
         context.Request.Path = path;
         context.Request.Method = HttpMethods.Get;
         context.Request.QueryString = QueryString.Create(
@@ -566,41 +779,6 @@ public class Saml2WantAssertionsSignedTests
         var document = BuildAssertionDocument(assertionId);
         document.DocumentElement!.Sign(signingCertificate, includeKeyInfo: false);
         return document.DocumentElement!;
-    }
-
-    // Encrypts XML into an <EncryptedAssertion> with the same method as a real identity provider.
-    // An AES content key encrypts the payload, and the service provider certificate encrypts that key.
-    // This is real XML encryption, not a fixed fixture. It tests the decryption path that
-    // Sustainsys.Saml2 uses in production. The payload does not have to be one assertion.
-    // Decryption moves every top-level node of the payload into the <EncryptedAssertion>.
-    // A payload with more than one node, or with a nested assertion, tests those shapes.
-    private static string EncryptAssertion(string payloadXml, X509Certificate2 encryptionCertificate)
-    {
-        var document = XmlHelpers.XmlDocumentFromString(
-            "<saml:EncryptedAssertion xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\" />");
-
-        using var contentKey = Aes.Create();
-        contentKey.KeySize = 256;
-        var cipherValue = new EncryptedXml().EncryptData(Encoding.UTF8.GetBytes(payloadXml), contentKey);
-
-        var encryptedData = new EncryptedData
-        {
-            Type = EncryptedXml.XmlEncElementUrl,
-            EncryptionMethod = new EncryptionMethod(EncryptedXml.XmlEncAES256Url),
-        };
-        encryptedData.CipherData.CipherValue = cipherValue;
-        encryptedData.KeyInfo = new KeyInfo();
-        var encryptedKey = new EncryptedKey
-        {
-            EncryptionMethod = new EncryptionMethod(EncryptedXml.XmlEncRSAOAEPUrl),
-            CipherData = new CipherData(
-                EncryptedXml.EncryptKey(contentKey.Key, encryptionCertificate.GetRSAPublicKey()!, useOAEP: true)),
-        };
-        encryptedData.KeyInfo.AddClause(new KeyInfoEncryptedKey(encryptedKey));
-
-        document.DocumentElement!.AppendChild(document.ImportNode(encryptedData.GetXml(), deep: true));
-
-        return document.DocumentElement!.OuterXml;
     }
 
     // SAML Core 3.2.2.2 nests the second-level status code inside the top-level one, so this

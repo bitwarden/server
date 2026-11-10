@@ -8,6 +8,7 @@ using Bit.Core.Utilities;
 using Bit.Scim.Context;
 using Bit.Scim.Utilities;
 using Bit.SharedWeb.Utilities;
+using Bit.Subscriptions.Organization;
 using Duende.IdentityModel;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Stripe;
@@ -72,6 +73,7 @@ public class Startup
         services.AddDefaultServices(globalSettings);
         services.AddDistributedCache(globalSettings);
         services.AddBillingOperations();
+        services.AddPrivilegedControlsSeatAutoscaling();
 
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 

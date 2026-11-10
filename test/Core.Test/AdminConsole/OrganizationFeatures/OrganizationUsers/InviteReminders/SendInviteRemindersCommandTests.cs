@@ -84,10 +84,13 @@ public class SendInviteRemindersCommandTests
             Arg.Any<Func<object, Exception?, string>>());
     }
 
-    [Fact]
-    public async Task SendInviteRemindersAsync_WhenFlagIsOn_ClaimsWithScheduleFromConstants()
+    [Theory]
+    [BitAutoData(120)]
+    [BitAutoData(1)]
+    [BitAutoData(0)]
+    public async Task SendInviteRemindersAsync_WhenFlagIsOn_ClaimsWithConfiguredInterval(int intervalHours)
     {
-        var sutProvider = GetSutProvider();
+        var sutProvider = GetSutProvider(intervalHours: intervalHours);
         var now = new DateTimeOffset(2026, 10, 22, 14, 0, 0, TimeSpan.Zero);
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(now);
         ArrangeClaim(sutProvider, []);
@@ -98,7 +101,7 @@ public class SendInviteRemindersCommandTests
             .ClaimInviteReminderSequencesAsync(
                 now.UtcDateTime,
                 now.UtcDateTime.AddDays(-InviteReminderConstants.MaxLatenessDays),
-                now.UtcDateTime.AddDays(InviteReminderConstants.ReminderIntervalDays),
+                now.UtcDateTime.AddHours(intervalHours),
                 _batchSize);
     }
 
@@ -352,7 +355,7 @@ public class SendInviteRemindersCommandTests
     }
 
     private static SutProvider<SendInviteRemindersCommand> GetSutProvider(bool flagEnabled = true,
-        int batchSize = _batchSize)
+        int batchSize = _batchSize, int intervalHours = Core.Settings.GlobalSettings.DefaultOrganizationInviteReminderIntervalHours)
     {
         var sutProvider = new SutProvider<SendInviteRemindersCommand>()
             .WithFakeTimeProvider()
@@ -360,6 +363,7 @@ public class SendInviteRemindersCommandTests
 
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.AutoReinviteUsers).Returns(flagEnabled);
         sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteReminderBatchSize.Returns(batchSize);
+        sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteReminderIntervalHours.Returns(intervalHours);
         sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
             .CreateToken(Arg.Any<OrganizationUser>())
             .Returns(info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())

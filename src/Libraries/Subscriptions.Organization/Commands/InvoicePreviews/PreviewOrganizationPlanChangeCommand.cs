@@ -13,7 +13,7 @@ using Bit.Subscriptions.Organization.Models.Requests;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
-namespace Bit.Subscriptions.Organization.Commands;
+namespace Bit.Subscriptions.Organization.Commands.InvoicePreviews;
 
 using static StripeConstants;
 using OrganizationEntity = Core.AdminConsole.Entities.Organization;
