@@ -2,5 +2,5 @@
 
 public static class TrialInitiationConstants
 {
-    public const int DefaultTrialLengthDays = 7;
+    public const int DefaultTrialLengthDays = 14;
 }

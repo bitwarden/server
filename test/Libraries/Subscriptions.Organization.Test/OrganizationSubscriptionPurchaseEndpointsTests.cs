@@ -1,7 +1,6 @@
 ﻿using Bit.Core.Auth.Identity;
 using Bit.OrganizationAuthorization;
 using Bit.Subscriptions.Organization.Requirements;
-using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -14,7 +13,7 @@ namespace Bit.Subscriptions.Organization.Test;
 public class OrganizationSubscriptionPurchaseEndpointsTests
 {
     [Fact]
-    public void MapOrganizationSubscriptionPurchaseEndpoints_AppliesTheApplicationPolicyFeatureGateAndTags()
+    public void MapOrganizationSubscriptionPurchaseEndpoints_AppliesTheApplicationPolicyAndTags()
     {
         var app = WebApplication.CreateBuilder().Build();
 
@@ -26,7 +25,6 @@ public class OrganizationSubscriptionPurchaseEndpointsTests
         var authorizeAttributes = endpoint.Metadata.GetOrderedMetadata<AuthorizeAttribute>();
         var authorize = Assert.Single(authorizeAttributes);
         Assert.Equal(Policies.Application, authorize.Policy);
-        Assert.NotNull(endpoint.Metadata.GetMetadata<IFeatureMetadata>());
         Assert.Contains("OrganizationSubscriptions", endpoint.Metadata.GetMetadata<ITagsMetadata>()!.Tags);
         Assert.Equal("internal", endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>()!.EndpointGroupName);
     }
@@ -47,7 +45,6 @@ public class OrganizationSubscriptionPurchaseEndpointsTests
         var authorizeAttributes = endpoint.Metadata.GetOrderedMetadata<AuthorizeAttribute>();
         Assert.Contains(authorizeAttributes, attribute => attribute.Policy == Policies.Application);
         Assert.DoesNotContain(authorizeAttributes, attribute => attribute is AuthorizeAttribute<OrganizationBillingRequirement>);
-        Assert.NotNull(endpoint.Metadata.GetMetadata<IFeatureMetadata>());
     }
 
     private static RouteEndpoint FindEndpoint(WebApplication app, Func<RouteEndpoint, bool> predicate) =>

@@ -47,6 +47,8 @@ src/Core/Enums/GlobalEquivalentDomainsType.cs @bitwarden/team-autofill-dev
 
 # Key Management team
 **/KeyManagement @bitwarden/team-key-management-dev
+src/Libraries/OrganizationKeys @bitwarden/team-key-management-dev
+test/Libraries/OrganizationKeys.Test @bitwarden/team-key-management-dev
 
 # Tools team
 **/Tools @bitwarden/team-tools-dev

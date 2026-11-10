@@ -25,8 +25,13 @@ It also registers the implementation of `IPrivilegedControlsSeatChangeSetFactory
 `Core` so Admin Console operations, which `Core` cannot reference this library to reach, can inject it; the
 implementation stays internal here. `IAutoscalePrivilegedControlsSeatsCommand` and its
 `AutoscalePrivilegedControlsSeatsResult` follow the same split: they live in `Core` so hosts and Admin Console
-operations can resolve the command, and this library implements it. A host that resolves it must call
-`AddOrganizationSubscriptions()`.
+operations can resolve the command, and this library implements it.
+`IRevertPrivilegedControlsSeatsCommand`, `IReservePrivilegedControlsSeatsCommand`, and
+`ISendPrivilegedControlsSeatNeededEmailCommand` follow the same split: their contracts live in `Core` and this
+library implements them. A host that resolves any of these commands without mapping the endpoints calls
+`AddPrivilegedControlsSeatAutoscaling()`, which registers the reserve, autoscale, revert, and seat-needed email
+commands, the trial query, and the seat change set factory. `AddOrganizationSubscriptions()` calls it, so the Api host
+needs only that one.
 
 `MapOrganizationSubscriptionEndpoints()` attaches the group's cross-cutting chain and maps its
 endpoints to an empty group; the host owns the route prefix and mounts it at
@@ -38,15 +43,13 @@ card into a 400 carrying Stripe's message; it sits inside the basic exception ha
 handle Stripe errors and would answer a declined card with a 500, so every charging endpoint added to
 the group gets the mapping), and a `Cache-Control: no-store` filter (the responses are per-organization
 billing data, never cached). The group carries no feature gate, so a flag for one kind of endpoint never
-gates another: each endpoint declares its own. The preview endpoints require
-`PM36631_PreviewDrivenCart`, and the Privileged Controls purchase endpoint requires
-`PM39883_Pam_Billing_Support` alone.
+gates another: each endpoint declares its own. The Privileged Controls purchase endpoint requires
+`PM39883_Pam_Billing_Support`.
 
 `MapOrganizationSubscriptionPurchaseEndpoints()` attaches a second group, which the host mounts at
 `/organizations/billing/subscription`. Its chain applies the `OrganizationSubscriptions` tag, the
-`internal` group name, the `Application` policy, basic exception handling, the
-`PM36631_PreviewDrivenCart` feature gate, and an endpoint filter that sends `Cache-Control: no-store`.
-It has no `OrganizationBillingRequirement` and no organization id in its route, because the caller
+`internal` group name, the `Application` policy, basic exception handling, and an endpoint filter that
+sends `Cache-Control: no-store`. It has no `OrganizationBillingRequirement` and no organization id in its route, because the caller
 is buying an organization and doesn't have one yet. It lives here rather than in
 `Subscriptions.User` because libraries group endpoints by what they operate on, not by who calls
 them.
@@ -147,16 +150,21 @@ The address is passed to Stripe via `CustomerDetails` so tax can be estimated wi
 a Free org has none until it adds a payment method. The tax id sent in the request, or the customer's
 on-file tax id when the request omits one, is forwarded so a VAT-registered business is quoted the tax it
 will actually be charged. Its Stripe tax-id type is derived from the value with `ITaxService`, falling
-back to the submitted code when it can't be derived. A trialing subscription's change prorates to $0 mid-trial, so the preview ends
-the trial in the hypothetical (`trial_end = now`) and returns what the subscriber pays once it converts.
-It returns the resulting `InvoicePreview` cart.
+back to the submitted code when it can't be derived. A trialing subscription is previewed as a purchase
+of the target plan against the organization's customer, with no `subscription` set, so the preview works
+whether or not a payment method is on file and returns what the subscriber pays once the trial converts.
+The subscription's own coupons are passed explicitly, or the customer's coupon when the subscription has
+none. Active and `past_due` subscriptions get the prorated plan-change preview. It returns the resulting
+`InvoicePreview` cart.
 
 A missing or unrecognized `tier`/`cadence` fails JSON binding with a 400 before the command runs. The
 command validates the rest itself. Caller-fixable problems are **400s**: the `premium` tier, Families on
-a monthly cadence, a move to the same tier (including a cadence-only change), a downgrade, a plan without Secrets Manager
-support for an SM-enabled org, an invalid billing address, or a tax location or tax id Stripe rejects.
-Data or Stripe state the caller
-cannot influence is logged with the organization id and surfaced as a **409**: a paid org with no
+a monthly cadence, a move to the same tier (including a cadence-only change) unless the subscription is
+`trialing`, in which case it is allowed ([the trialing behavior above](#organization-plan-change-preview)), a downgrade, a plan without
+Secrets Manager support for an SM-enabled org, an invalid billing address, or a tax location or tax id
+Stripe rejects. The same-tier check runs after the subscription lookup and status check, so a same-tier
+request on a subscription that can't be previewed gets the 409 below, not a 400. Data or Stripe state the
+caller cannot influence is logged with the organization id and surfaced as a **409**: a paid org with no
 subscription, a subscription Stripe no longer has, a subscription in a status other than `trialing`,
 `active`, or `past_due`, a subscription whose line items don't match the current plan, or a missing
 seat count. A missing organization is a **404**. These map from the `BadRequestException`,
@@ -307,7 +315,7 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | From Core | Used for |
 | --- | --- |
 | `Policies.Application` (`Bit.Core.Auth.Identity`) | Requiring the standard user authorization policy on the group |
-| `FeatureFlagKeys` (`Bit.Core`) | Gating the Privileged Controls group and the Privileged Controls purchase endpoint on `PM39883_Pam_Billing_Support` |
+| `FeatureFlagKeys` (`Bit.Core`) | Gating the Privileged Controls group, the Privileged Controls purchase endpoint, and cloud Privileged Controls seat reservations on `PM39883_Pam_Billing_Support` |
 | `BillingExtensions.IsOnPrivilegedControlsSalesInitiatedTrial`, `PrivilegedControlsAutoscaleLimitFits`, `SubscriptionExtensions.HasPrivilegedControlsSeats` (`Bit.Core.Billing.Extensions`) | The trial definition shared with the Api subscription response, the autoscale-limit rule shared with `OrganizationService` and the Admin Portal, and detecting the Stripe Privileged Controls seat line |
 | `IOrganizationRepository` (`Bit.Core.Repositories`) | Resolving the organization the preview is for |
 | `Organization` (`Bit.Core.AdminConsole.Entities`) | The subscriber passed to the preview query; the entity the Privileged Controls command and factory read and update |
@@ -323,9 +331,14 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | `IUpdateOrganizationSubscriptionCommand` (`Bit.Core.Billing.Organizations.Commands`), `BillingCommandResult` (`Bit.Core.Billing.Commands`) | Applying each Privileged Controls change (first purchase, seat change, autoscale, removal) to the subscription, and surfacing a failed update's message to the client through `GetValueOrThrowHttpException` |
 | `IPrivilegedControlsSeatChangeSetFactory` (`Bit.Core.Billing.Organizations.Helpers`) | The factory contract Core owns so Admin Console can inject it; this library implements it |
 | `IAutoscalePrivilegedControlsSeatsCommand` (`Bit.Core.Billing.Organizations.Commands`), `AutoscalePrivilegedControlsSeatsResult` (`Bit.Core.Billing.Organizations.Models`) | The autoscale command contract and its result, which Core owns so hosts and Admin Console can resolve the command; this library implements it |
-| `IOrganizationService` (`Bit.Core.Services`) | Saving the organization's Privileged Controls seats and flags after each Privileged Controls change (first purchase, seat change, autoscale, removal) |
-| `IOrganizationUserRepository` (`Bit.Core.Repositories`) | Counting the Privileged Controls seats in use before a seat decrease and before an autoscale; finding the Owners to email when the autoscale limit is reached |
-| `IMailer` (`Bit.Core.Platform.Mail.Mailer`), `PrivilegedControlsSeatLimitReachedMail` (`Bit.Core.Billing.Models.Mail.Mailer`) | Sending the Privileged Controls autoscale limit reached email to the Owners |
+| `IRevertPrivilegedControlsSeatsCommand` (`Bit.Core.Billing.Organizations.Commands`) | The contract for handing back autoscaled Privileged Controls seats, which Core owns so Admin Console can undo a reservation when the rest of an action fails; this library implements it |
+| `IReservePrivilegedControlsSeatsCommand`, `ISendPrivilegedControlsSeatNeededEmailCommand` (`Bit.Core.Billing.Organizations.Commands`), `PrivilegedControlsSeatReservationResult` (`Bit.Core.Billing.Organizations.Models`) | The reserve and seat-needed email command contracts and the reservation result, which Core owns so Admin Console member actions can reserve seats before granting access and email Owners when a joining member is left without one; this library implements them |
+| `PrivilegedControlsSeatLimitReachedError`, `CannotAutoscalePrivilegedControlsSeatsOnSelfHostError`, `NotEnoughPrivilegedControlsSeatsError`, `PrivilegedControlsSeatExpansionFailedError`, `PrivilegedControlsSeatReservationUnexpectedError` (`Bit.Core.Billing.Organizations`), `Error` (`Bit.Core.AdminConsole.Utilities.v2`) | The errors a reservation returns, which Admin Console member actions pass straight to the client |
+| `ICountNewPamSeatsRequiredQuery` (`Bit.Core.Billing.Organizations.Queries`) | Checking an organization has the Privileged Controls seats a reservation needs where the seat count is a hard limit: on self-hosted, and on cloud with `PM39883_Pam_Billing_Support` off |
+| `IGlobalSettings` (`Bit.Core.Settings`), `CoreHelpers` (`Bit.Core.Utilities`) | Building the Owner email links and preventing auto-linking in email content |
+| `IReplaceOrganizationAndUpdateCacheCommand` (`Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces`) | Saving the organization's Privileged Controls seats and flags after the first purchase, a seat change, an autoscale, a revert, or removal |
+| `IOrganizationUserRepository` (`Bit.Core.Repositories`) | Counting the Privileged Controls seats in use before a seat decrease and before an autoscale; finding the Owners to email when the autoscale limit is reached or a joining member needs a seat |
+| `IMailer` (`Bit.Core.Platform.Mail.Mailer`), `PrivilegedControlsSeatLimitReachedMail`, `PrivilegedControlsSeatNeededMail` (`Bit.Core.Billing.Models.Mail.Mailer`) | Sending the Owners the Privileged Controls autoscale limit reached email, and the email about a joining member who needs a seat |
 | `ISubscriptionDiscountService`, `DiscountTierType` (`Bit.Core.Billing.Services`, `Bit.Core.Billing.Enums`) | Eligibility-checking Families purchase coupons |
 | `ITaxService` (`Bit.Core.Billing.Tax.Services`), `StripeConstants.TaxIdType` | Deriving the Stripe tax-id code (and the Spanish-NIF EU-VAT pairing) for `CustomerDetails.TaxIds` |
 | `SponsoredPlans`, `PlanSponsorshipType` (`Bit.Core.Billing.Models`, `Bit.Core.Enums`) | The Families-for-Enterprise sponsored price |

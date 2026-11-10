@@ -11,8 +11,9 @@ BEGIN
         UCD.[CreationDate],
         UCD.[RevisionDate],
         UCD.[ExternalId],
-        MIN(UCD.[ReadOnly]) AS [ReadOnly],
-        MIN(UCD.[HidePasswords]) AS [HidePasswords],
+        -- ReadOnly and HidePasswords are the Edit (2) and ViewPassword (1) parts of the highest rank, inverted
+        1 - (MAX(R.[Rank]) / 2) % 2 AS [ReadOnly],
+        1 - MAX(R.[Rank]) % 2 AS [HidePasswords],
         MAX(UCD.[Manage]) AS [Manage],
         UCD.[DefaultUserCollectionEmail],
         UCD.[Type],
@@ -22,6 +23,10 @@ BEGIN
         [dbo].[UserCollectionDetails](@UserId) UCD
     LEFT JOIN
         [dbo].[AccessRule] AR ON AR.[Id] = UCD.[AccessRuleId]
+    -- Rank orders a grant by Manage, then Edit, then ViewPassword, so the highest permission level wins
+    CROSS APPLY (
+        SELECT UCD.[Manage] * 4 + (1 - UCD.[ReadOnly]) * 2 + (1 - UCD.[HidePasswords]) AS [Rank]
+    ) R
     GROUP BY
         UCD.[Id],
         UCD.[OrganizationId],

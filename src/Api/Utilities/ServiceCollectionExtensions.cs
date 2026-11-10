@@ -1,5 +1,6 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.Tools.Authorization;
+using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Authorization.Ciphers;
@@ -52,7 +53,8 @@ public static class ServiceCollectionExtensions
             // Configure Bitwarden cloud servers. These will appear in the swagger.json build artifact
             // used for our help center. These are overwritten with the local server when running in self-hosted
             // or dev mode (see Api Startup.cs).
-            foreach (var regionConfig in CloudRegionConfig.All)
+            // The Gov region is intentionally excluded from the published spec until it is publicly announced.
+            foreach (var regionConfig in CloudRegionConfig.All.Where(c => c.Region != CloudRegion.Gov))
             {
                 config.AddSwaggerServerWithSecurity(
                     serverId: $"{regionConfig.Region}_server",

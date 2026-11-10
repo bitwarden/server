@@ -10,6 +10,7 @@ namespace Bit.Core.Settings;
 public class GlobalSettings : IGlobalSettings
 {
     public const int DefaultOrganizationInviteReminderBatchSize = 500;
+    public const int DefaultOrganizationInviteReminderIntervalHours = 120; // 5 days
 
     private string _mailTemplateDirectory;
     private string _licenseDirectory;
@@ -56,6 +57,11 @@ public class GlobalSettings : IGlobalSettings
     /// </summary>
     public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
     public virtual int OrganizationInviteReminderBatchSize { get; set; } = DefaultOrganizationInviteReminderBatchSize; // Set to 0 to turn off invite reminders
+    /// <summary>
+    /// Hours from the invite to the first reminder, and between each later reminder.
+    /// 0 sends each reminder on the next job run. Negative values use the default.
+    /// </summary>
+    public virtual int OrganizationInviteReminderIntervalHours { get; set; } = DefaultOrganizationInviteReminderIntervalHours;
     /// <summary>
     /// Lifetime of emergency access invite links, in hours.
     /// </summary>

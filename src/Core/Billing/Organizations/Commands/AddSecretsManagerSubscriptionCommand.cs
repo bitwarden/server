@@ -1,13 +1,13 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Exceptions;
-using Bit.Core.Services;
 using StaticStorePlan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Core.Billing.Organizations.Commands;
@@ -18,7 +18,7 @@ public interface IAddSecretsManagerSubscriptionCommand
 }
 
 public class AddSecretsManagerSubscriptionCommand(
-    IOrganizationService organizationService,
+    IReplaceOrganizationAndUpdateCacheCommand replaceOrganizationAndUpdateCacheCommand,
     IProviderRepository providerRepository,
     IPricingClient pricingClient,
     IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand)
@@ -56,7 +56,7 @@ public class AddSecretsManagerSubscriptionCommand(
         organization.SmSeats = plan.SecretsManager.BaseSeats + additionalSmSeats;
         organization.SmServiceAccounts = plan.SecretsManager.BaseServiceAccount + additionalServiceAccounts;
         organization.UseSecretsManager = true;
-        await organizationService.ReplaceAndUpdateCacheAsync(organization);
+        await replaceOrganizationAndUpdateCacheCommand.RunAsync(organization);
 
         // TODO: call ReferenceEventService - see AC-1481
     }
