@@ -506,25 +506,33 @@ public static class ServiceCollectionExtensions
         this IIdentityServerBuilder identityServerBuilder, IWebHostEnvironment env, GlobalSettings globalSettings)
     {
         return AddSigningCertificateSet(identityServerBuilder, env, globalSettings,
-            GetIdentitySigningCertificates(globalSettings), CertificateSourceReport.IdentitySigning);
+            GetIdentitySigningCertificates(new IdentityCertificates(globalSettings)),
+            CertificateSourceReport.IdentitySigning);
     }
 
+    /// <summary>
+    /// Registers the loaded SSO signing certificates: the active certificate signs, and the staged and validation
+    /// certificates are published for token validation. With no active certificate, a Development host uses a
+    /// developer signing key.
+    /// </summary>
+    /// <exception cref="Exception">The host is not a Development host and has no active certificate.</exception>
     public static IIdentityServerBuilder AddSsoSigningCertificate(
-        this IIdentityServerBuilder identityServerBuilder, IWebHostEnvironment env, GlobalSettings globalSettings)
+        this IIdentityServerBuilder identityServerBuilder, IWebHostEnvironment env, GlobalSettings globalSettings,
+        SigningCertificateSet certificates)
     {
-        return AddSigningCertificateSet(identityServerBuilder, env, globalSettings,
-            GetSsoSigningCertificates(env, globalSettings), CertificateSourceReport.SsoSigning);
+        return AddSigningCertificateSet(identityServerBuilder, env, globalSettings, certificates,
+            CertificateSourceReport.SsoSigning);
     }
 
     /// <summary>
     /// Gets the SSO signing certificates. An SSO active source uses only the SSO slots. With no SSO active source,
-    /// a self-hosted or Development host uses the Identity signing certificates and the SSO slots. A cloud host that
-    /// is not a Development host must have an SSO active source.
+    /// a self-hosted or Development host uses the Identity signing certificates from <paramref name="identity"/> and
+    /// the SSO slots. A cloud host that is not a Development host must have an SSO active source.
     /// </summary>
     /// <exception cref="InvalidOperationException">A cloud host has no SSO active source, or a configured
     /// certificate did not load, or a configured certificate does not have an RSA key.</exception>
     public static SigningCertificateSet GetSsoSigningCertificates(IWebHostEnvironment env,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings, IdentityCertificates identity)
     {
         const string ssoServerPath = "globalSettings:ssoServer";
         var ssoServer = globalSettings.SsoServer;
@@ -548,7 +556,6 @@ public static class ServiceCollectionExtensions
             return new SigningCertificateSet(active, ssoStagedList, ssoValidation, IsFallback: false);
         }
 
-        var identity = GetIdentitySigningCertificates(globalSettings);
         return new SigningCertificateSet(identity.Active, [.. identity.Staged, .. ssoStagedList],
             [.. identity.Validation, .. ssoValidation], IsFallback: true);
     }
@@ -644,16 +651,8 @@ public static class ServiceCollectionExtensions
         }
     }
 
-    private static SigningCertificateSet GetIdentitySigningCertificates(GlobalSettings globalSettings)
-    {
-        var identityServer = globalSettings.IdentityServer;
-        var active = CoreHelpers.GetIdentityServerCertificate(globalSettings);
-        var staged = CoreHelpers.GetStagedCertificate(globalSettings, identityServer.FutureCertificate,
-            "globalSettings:identityServer:futureCertificate");
-        var validation = CoreHelpers.GetRetiredCertificates(globalSettings, identityServer.ValidationCertificates,
-            "globalSettings:identityServer:validationCertificates");
-        return new SigningCertificateSet(active, staged == null ? [] : [staged], validation, IsFallback: false);
-    }
+    private static SigningCertificateSet GetIdentitySigningCertificates(IdentityCertificates identity) =>
+        new(identity.Active, identity.Staged, identity.Validation, IsFallback: false);
 
     private static IIdentityServerBuilder AddSigningCertificates(IIdentityServerBuilder identityServerBuilder,
         X509Certificate2 active, IEnumerable<X509Certificate2> published)

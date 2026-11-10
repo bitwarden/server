@@ -15,13 +15,13 @@ public static class Saml2ServiceCertificates
     /// <summary>
     /// Gets the SSO encryption certificates. An SSO encryption active source uses only the SSO encryption slots.
     /// With no SSO encryption active source, a self-hosted or Development host uses the Identity active and staged
-    /// certificates and the SSO encryption slots. A cloud host that is not a Development host must have an SSO
-    /// encryption active source.
+    /// certificates from <paramref name="identity"/> and the SSO encryption slots. A cloud host that is not a
+    /// Development host must have an SSO encryption active source.
     /// </summary>
     /// <exception cref="InvalidOperationException">A cloud host has no SSO encryption active source, or a configured
     /// certificate did not load, or a configured certificate does not have an RSA key.</exception>
     public static EncryptionCertificateSet GetEncryptionCertificates(IWebHostEnvironment env,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings, IdentityCertificates identity)
     {
         const string encryptionPath = "globalSettings:ssoServer:encryption";
         var encryption = globalSettings.SsoServer.Encryption;
@@ -45,11 +45,7 @@ public static class Saml2ServiceCertificates
             return new EncryptionCertificateSet(active, ssoStagedList, decryption, IsFallback: false);
         }
 
-        var identityActive = CoreHelpers.GetIdentityServerCertificate(globalSettings);
-        var identityStaged = CoreHelpers.GetStagedCertificate(globalSettings,
-            globalSettings.IdentityServer.FutureCertificate, "globalSettings:identityServer:futureCertificate");
-        IReadOnlyList<X509Certificate2> identityStagedList = identityStaged == null ? [] : [identityStaged];
-        return new EncryptionCertificateSet(identityActive, [.. identityStagedList, .. ssoStagedList], decryption,
+        return new EncryptionCertificateSet(identity.Active, [.. identity.Staged, .. ssoStagedList], decryption,
             IsFallback: true);
     }
 

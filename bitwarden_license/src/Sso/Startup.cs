@@ -8,6 +8,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Bit.Sso.Utilities;
+using Bit.Sso.Utilities.Saml2;
 using Bit.Subscriptions.Organization;
 using Duende.IdentityServer.Services;
 using Stripe;
@@ -71,10 +72,15 @@ public class Startup
         services.AddDistributedIdentityServices();
         services.AddAuthentication()
             .AddCookie(AuthenticationSchemes.SsoExternalCookie);
-        services.AddSsoServices(globalSettings, Environment);
+        var identityCertificates = new IdentityCertificates(globalSettings);
+        var encryptionCertificates =
+            Saml2ServiceCertificates.GetEncryptionCertificates(Environment, globalSettings, identityCertificates);
+        var signingCertificates = SharedWeb.Utilities.ServiceCollectionExtensions.GetSsoSigningCertificates(
+            Environment, globalSettings, identityCertificates);
+        services.AddSsoServices(globalSettings, signingCertificates, encryptionCertificates);
 
         // IdentityServer
-        services.AddSsoIdentityServerServices(Environment, globalSettings);
+        services.AddSsoIdentityServerServices(Environment, globalSettings, signingCertificates);
 
         // Identity
         services.AddCustomIdentityServices(globalSettings);

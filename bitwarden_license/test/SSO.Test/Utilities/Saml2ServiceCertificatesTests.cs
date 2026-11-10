@@ -183,7 +183,7 @@ public class Saml2ServiceCertificatesTests
         globalSettings.SsoServer.Encryption.DecryptionCertificates = [RetiredEntry(decryption)];
 
         var certificates = Saml2ServiceCertificates.GetEncryptionCertificates(Environment("Production"),
-            globalSettings);
+            globalSettings, new IdentityCertificates(globalSettings));
 
         Assert.True(certificates.IsFallback);
         Assert.Equal(identity.Thumbprint, certificates.Active?.Thumbprint);
@@ -207,7 +207,7 @@ public class Saml2ServiceCertificatesTests
         globalSettings.SsoServer.Encryption.DecryptionCertificates = [RetiredEntry(decryption)];
 
         var certificates = Saml2ServiceCertificates.GetEncryptionCertificates(Environment("Production"),
-            globalSettings);
+            globalSettings, new IdentityCertificates(globalSettings));
 
         Assert.False(certificates.IsFallback);
         Assert.Equal(encryption.Thumbprint, certificates.Active?.Thumbprint);
@@ -225,7 +225,7 @@ public class Saml2ServiceCertificatesTests
         globalSettings.SsoServer.Encryption.FutureCertificate.Active = true;
 
         var certificates = Saml2ServiceCertificates.GetEncryptionCertificates(Environment("Production"),
-            globalSettings);
+            globalSettings, new IdentityCertificates(globalSettings));
 
         Assert.False(certificates.IsFallback);
         Assert.Equal(promoted.Thumbprint, certificates.Active?.Thumbprint);
@@ -246,12 +246,79 @@ public class Saml2ServiceCertificatesTests
         };
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            Saml2ServiceCertificates.GetEncryptionCertificates(Environment("Production"), globalSettings));
+            Saml2ServiceCertificates.GetEncryptionCertificates(Environment("Production"), globalSettings,
+                new IdentityCertificates(globalSettings)));
 
         Assert.Equal(
             "No SSO encryption certificate is configured. A cloud host must set globalSettings:ssoServer:encryption.",
             exception.Message);
     }
+
+    [Fact]
+    public void GetEncryptionCertificates_EncryptionAndSigningFallBack_ShareTheIdentityCertificateObjects()
+    {
+        using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");
+        using var identityStaged = TestCertificates.Create("CN=Bitwarden Test Identity Staged");
+        var globalSettings = SelfHostedSettings(identity);
+        globalSettings.IdentityServer.FutureCertificate = FutureSlot(identityStaged);
+        var identityCertificates = new IdentityCertificates(globalSettings);
+
+        var encryption = Saml2ServiceCertificates.GetEncryptionCertificates(Environment("Production"),
+            globalSettings, identityCertificates);
+        var signing = SharedWeb.Utilities.ServiceCollectionExtensions.GetSsoSigningCertificates(
+            Environment("Production"), globalSettings, identityCertificates);
+
+        Assert.True(encryption.IsFallback);
+        Assert.True(signing.IsFallback);
+        Assert.NotNull(encryption.Active);
+        Assert.Same(encryption.Active, signing.Active);
+        Assert.Same(Assert.Single(encryption.Staged), Assert.Single(signing.Staged));
+    }
+
+    [Fact]
+    public void GetEncryptionCertificates_FallbackWithSsoSigningActiveSource_DoesNotLoadIdentityValidation()
+    {
+        using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");
+        using var ssoSigning = TestCertificates.Create("CN=Bitwarden Test SSO Signing");
+        var globalSettings = SelfHostedSettings(identity);
+        globalSettings.IdentityServer.ValidationCertificates = [UnloadableEntry()];
+        globalSettings.SsoServer.CertificateLocation = TestCertificates.WritePfx(ssoSigning, Password);
+        globalSettings.SsoServer.CertificatePassword = Password;
+        var identityCertificates = new IdentityCertificates(globalSettings);
+
+        var encryption = Saml2ServiceCertificates.GetEncryptionCertificates(Environment("Production"),
+            globalSettings, identityCertificates);
+        var signing = SharedWeb.Utilities.ServiceCollectionExtensions.GetSsoSigningCertificates(
+            Environment("Production"), globalSettings, identityCertificates);
+
+        Assert.True(encryption.IsFallback);
+        Assert.Equal(identity.Thumbprint, encryption.Active?.Thumbprint);
+        Assert.False(signing.IsFallback);
+        Assert.Equal(ssoSigning.Thumbprint, signing.Active?.Thumbprint);
+    }
+
+    [Fact]
+    public void GetEncryptionCertificates_EncryptionAndSigningFallBack_UnloadableIdentityValidation_SigningThrows()
+    {
+        using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");
+        var globalSettings = SelfHostedSettings(identity);
+        globalSettings.IdentityServer.ValidationCertificates = [UnloadableEntry()];
+        var identityCertificates = new IdentityCertificates(globalSettings);
+
+        Saml2ServiceCertificates.GetEncryptionCertificates(Environment("Production"), globalSettings,
+            identityCertificates);
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            SharedWeb.Utilities.ServiceCollectionExtensions.GetSsoSigningCertificates(Environment("Production"),
+                globalSettings, identityCertificates));
+
+        Assert.Contains("globalSettings:identityServer:validationCertificates:0 ", exception.Message);
+    }
+
+    private static GlobalSettings.RetiredCertificateSettings UnloadableEntry() => new()
+    {
+        CertificateLocation = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}-missing.pfx"),
+        CertificatePassword = Password,
+    };
 
     private static SigningCertificateSet Signing(X509Certificate2? active, X509Certificate2[]? staged = null,
         X509Certificate2[]? validation = null, bool isFallback = false) =>

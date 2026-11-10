@@ -14,11 +14,13 @@ using Bit.Core.Utilities;
 using Bit.IntegrationTestCommon;
 using Bit.SharedWeb.Utilities;
 using Bit.Sso.IntegrationTest.Utilities;
+using Bit.Sso.Models;
 using Bit.Test.Common.Helpers;
 using DotNet.Testcontainers.Builders;
 using Duende.IdentityModel;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Stores;
+using Microsoft.IdentityModel.Tokens;
 using Sustainsys.Saml2;
 using Xunit;
 
@@ -222,6 +224,57 @@ public class SsoCertificateTests
 
         // Act & Assert
         await JwksTestHelpers.AssertPublishesExactlyAsync(client, ssoCertificate);
+    }
+
+    [Fact]
+    public async Task Startup_WithSsoSigningCertificate_SamlAndTokenSigningUseTheSameCertificateObject()
+    {
+        // Arrange
+        using var identityCertificate = TestCertificates.Create("CN=Bitwarden Test Identity");
+        using var ssoCertificate = TestCertificates.Create("CN=Bitwarden Test SSO");
+        using var factory = new SsoApplicationFactory();
+        foreach (var (key, value) in CertificateTestConfiguration.SelfHosted(identityCertificate)
+                     .WithSsoSigningCertificate(ssoCertificate))
+        {
+            factory.UpdateConfiguration(key, value);
+        }
+
+        // Act
+        var samlSigning = Assert.Single(factory.GetService<SamlEnvironment>().ServiceCertificates,
+            entry => entry.Use == CertificateUse.Signing).Certificate;
+        var tokenSigning = await GetTokenSigningCertificateAsync(factory);
+
+        // Assert
+        Assert.Equal(ssoCertificate.Thumbprint, samlSigning.Thumbprint);
+        Assert.Same(samlSigning, tokenSigning);
+        Assert.Same(samlSigning, GetReport(factory, CertificateSourceReport.SsoSigning).Active);
+    }
+
+    [Fact]
+    public async Task Startup_FallbackForBothSsoRoles_SharesTheIdentityCertificateObject()
+    {
+        // Arrange
+        using var identityCertificate = TestCertificates.Create("CN=Bitwarden Test Identity");
+        using var factory = new SsoApplicationFactory();
+        foreach (var (key, value) in CertificateTestConfiguration.SelfHosted(identityCertificate))
+        {
+            factory.UpdateConfiguration(key, value);
+        }
+
+        // Act
+        var encryption = GetReport(factory, CertificateSourceReport.SsoEncryption);
+        var signing = GetReport(factory, CertificateSourceReport.SsoSigning);
+        var samlEntry = Assert.Single(factory.GetService<SamlEnvironment>().ServiceCertificates);
+        var tokenSigning = await GetTokenSigningCertificateAsync(factory);
+
+        // Assert
+        Assert.True(encryption.IsFallback);
+        Assert.True(signing.IsFallback);
+        Assert.Equal(identityCertificate.Thumbprint, encryption.Active?.Thumbprint);
+        Assert.Same(encryption.Active, signing.Active);
+        Assert.Equal(CertificateUse.Both, samlEntry.Use);
+        Assert.Same(signing.Active, samlEntry.Certificate);
+        Assert.Same(signing.Active, tokenSigning);
     }
 
     [Fact]
@@ -674,6 +727,15 @@ public class SsoCertificateTests
         Assert.Equal(StartupTestHelpers.NoRsaKeyMessage("globalSettings:ssoServer:encryption", encryption.Thumbprint),
             exception.Message);
     }
+
+    private static async Task<X509Certificate2> GetTokenSigningCertificateAsync(SsoApplicationFactory factory)
+    {
+        var credential = await factory.GetService<ISigningCredentialStore>().GetSigningCredentialsAsync();
+        return Assert.IsType<X509SecurityKey>(credential.Key).Certificate;
+    }
+
+    private static CertificateSourceReport GetReport(SsoApplicationFactory factory, string role) =>
+        Assert.Single(factory.Services.GetServices<CertificateSourceReport>(), report => report.Role == role);
 
     private static async Task<string> GetMetadataAsync(Dictionary<string, string?> configuration)
     {
