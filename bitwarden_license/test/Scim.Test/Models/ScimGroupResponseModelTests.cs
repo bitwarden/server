@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Scim.Models;
@@ -27,7 +27,7 @@ public class ScimGroupResponseModelTests
         // Arrange
         var group = new Group { Id = Guid.NewGuid(), Name = "Test Group", ExternalId = null };
         var model = new ScimGroupResponseModel(group);
-        
+
         // Add a member
         model.Members.Add(new ScimGroupResponseModel.GroupMemberReference
         {
@@ -37,7 +37,7 @@ public class ScimGroupResponseModelTests
         });
 
         // Act
-        var options = new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
+        var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
         var json = JsonSerializer.Serialize(model, options);
 
         // Assert
