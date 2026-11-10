@@ -17,7 +17,8 @@ internal static class UserSeeder
         IPasswordHasher<User> passwordHasher,
         IManglerService manglerService)
     {
-        if (seed.UsesSsoAuth && (seed.Password is not null || seed.MasterPasswordHint is not null))
+        var setsMasterPasswordInput = seed.Password is not null || seed.MasterPasswordHint is not null;
+        if (seed.UsesSsoAuth && setsMasterPasswordInput)
         {
             throw new InvalidOperationException(
                 "UsesSsoAuth accounts have no master password, so Password and MasterPasswordHint must not be set.");
