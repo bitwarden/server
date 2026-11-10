@@ -1,9 +1,11 @@
-﻿namespace Bit.AppHost.Resources;
+﻿using Bit.AppHost.Configuration;
+
+namespace Bit.AppHost.Resources;
 
 /// <summary>
 /// Adds the script that applies database migrations, passing the self-host flag when configured.
 /// </summary>
-public static class MigrationResources
+internal static class DatabaseMigrationResources
 {
     extension(IDistributedApplicationBuilder builder)
     {
@@ -11,14 +13,15 @@ public static class MigrationResources
         /// Configures the migrations executable resource.
         /// </summary>
         /// <returns>>The configured resource builder for the migrations executable.</returns>
-        public IResourceBuilder<ExecutableResource> ConfigureMigrations()
+        internal IResourceBuilder<ExecutableResource> ConfigureDatabaseMigrations()
         {
-            var migrationArgs = new List<string> { "-File", builder.Required("Scripts:DbMigration") };
-            if (builder.IsSelfHosted())
+            var settings = builder.Settings;
+            var migrationArgs = new List<string> { "-File", settings.Scripts.DbMigration };
+            if (settings.SelfHost)
                 migrationArgs.Add("-selfhost");
 
             return builder
-                .AddExecutable("run-db-migrations", "pwsh", builder.Required("WorkingDirectory"), migrationArgs.ToArray());
+                .AddExecutable("run-db-migrations", "pwsh", settings.WorkingDirectory, migrationArgs.ToArray());
         }
     }
 }
