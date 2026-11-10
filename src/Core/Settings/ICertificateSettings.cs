@@ -3,6 +3,7 @@
 /// <summary>
 /// Identifies the source of one certificate. A cloud host loads the certificate from blob storage
 /// or from the certificate store. A self-hosted host loads the certificate from a file.
+/// IDENTITY_SSO_CERTIFICATE_ROTATION.md, in this folder, describes the certificate roles, the settings, and rotation.
 /// </summary>
 public interface ICertificateSettings
 {

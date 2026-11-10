@@ -6,6 +6,8 @@
 
 ## Certificate Rotation
 
+Read `src/Core/Settings/IDENTITY_SSO_CERTIFICATE_ROTATION.md` before you change certificate loading or rotation. It describes the three certificate roles, the settings, the rotation steps, and the rollback rules.
+
 ### Signing-key rotation and encryption-key rotation carry different risk windows
 
 Both keys below are Bitwarden's own SP certificates (`SamlEnvironment.ServiceCertificates` and `SPOptions.DecryptionServiceCertificates`), not the IdP's.
