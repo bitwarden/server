@@ -35,6 +35,7 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
             Id = groupId,
             DisplayName = "Test Group 1",
             ExternalId = "A",
+            Members = GetInitialGroupMembers(),
             Schemas = new List<string> { ScimConstants.Scim2SchemaGroup }
         };
 
@@ -87,6 +88,7 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
                     Id = ScimApplicationFactory.TestGroupId1,
                     DisplayName = "Test Group 1",
                     ExternalId = "A",
+                    Members = GetInitialGroupMembers(),
                     Schemas = new List<string> { ScimConstants.Scim2SchemaGroup }
                 },
                 new ScimGroupResponseModel
@@ -416,5 +418,26 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
 
         var responseModel = JsonSerializer.Deserialize<ScimErrorResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
+    }
+
+    private static List<ScimGroupResponseModel.GroupMemberReference> GetInitialGroupMembers()
+    {
+        return
+        [
+            new()
+            {
+                Value = ScimApplicationFactory.TestOrganizationUserId4.ToString(),
+                Display = "user4@example.com",
+                Ref = $"http://localhost/v2/{ScimApplicationFactory.TestOrganizationId1}/Users/{ScimApplicationFactory.TestOrganizationUserId4}",
+                Type = "User"
+            },
+            new()
+            {
+                Value = ScimApplicationFactory.TestOrganizationUserId1.ToString(),
+                Display = "user1@example.com",
+                Ref = $"http://localhost/v2/{ScimApplicationFactory.TestOrganizationId1}/Users/{ScimApplicationFactory.TestOrganizationUserId1}",
+                Type = "User"
+            }
+        ];
     }
 }

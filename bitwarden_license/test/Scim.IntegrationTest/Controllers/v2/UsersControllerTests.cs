@@ -46,7 +46,16 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             {
                 new BaseScimUserModel.EmailModel { Primary = true, Type = "work", Value = "user1@example.com" }
             },
-            Groups = new List<BaseScimUserModel.UserGroupReference>(),
+            Groups = new List<BaseScimUserModel.UserGroupReference>
+            {
+                new()
+                {
+                    Value = ScimApplicationFactory.TestGroupId1.ToString(),
+                    Display = "Test Group 1",
+                    Ref = $"http://localhost/v2/{ScimApplicationFactory.TestOrganizationId1}/Groups/{ScimApplicationFactory.TestGroupId1}",
+                    Type = "direct"
+                }
+            },
             Name = new BaseScimUserModel.NameModel("Test User 1"),
             UserName = "user1@example.com",
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
@@ -105,7 +114,16 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
                     {
                         new BaseScimUserModel.EmailModel { Primary = true, Type = "work", Value = "user1@example.com" }
                     },
-                    Groups = new List<BaseScimUserModel.UserGroupReference>(),
+                    Groups = new List<BaseScimUserModel.UserGroupReference>
+                    {
+                        new()
+                        {
+                            Value = ScimApplicationFactory.TestGroupId1.ToString(),
+                            Display = "Test Group 1",
+                            Ref = $"http://localhost/v2/{ScimApplicationFactory.TestOrganizationId1}/Groups/{ScimApplicationFactory.TestGroupId1}",
+                            Type = "direct"
+                        }
+                    },
                     Name = new BaseScimUserModel.NameModel("Test User 1"),
                     UserName = "user1@example.com",
                     Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
