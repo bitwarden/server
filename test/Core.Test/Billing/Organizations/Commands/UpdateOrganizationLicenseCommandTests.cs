@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using System.Text.RegularExpressions;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Organizations.Commands;
@@ -10,7 +11,6 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -85,9 +85,9 @@ public class UpdateOrganizationLicenseCommandTests
             // Assertion: should have updated and saved the organization
             // Properties excluded from the comparison below are exceptions to the rule that the Organization mirrors
             // the OrganizationLicense
-            await sutProvider.GetDependency<IOrganizationService>()
+            await sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>()
                 .Received(1)
-                .ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(
+                .RunAsync(Arg.Is<Organization>(
                     org => AssertPropertyEqual(license, org,
                         "Id", "MaxStorageGb", "Issued", "Refresh", "Version", "Trial", "LicenseType",
                         "Hash", "Signature", "SignatureBytes", "InstallationId", "Expires",
@@ -205,9 +205,9 @@ public class UpdateOrganizationLicenseCommandTests
             AssertHelper.AssertPropertyEqual(license, licenseFromFile, "SignatureBytes");
 
             // Assertion: organization should be updated with ALL properties extracted from claims
-            await sutProvider.GetDependency<IOrganizationService>()
+            await sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>()
                 .Received(1)
-                .ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(org =>
+                .RunAsync(Arg.Is<Organization>(org =>
                     org.Name == "Test Organization" &&
                     org.BillingEmail == "billing@test.com" &&
                     org.BusinessName == "Test Business" &&
@@ -300,9 +300,9 @@ public class UpdateOrganizationLicenseCommandTests
             var licenseFromFile = await JsonSerializer.DeserializeAsync<OrganizationLicense>(fs);
             Assert.Null(licenseFromFile.PamSeats);
 
-            await sutProvider.GetDependency<IOrganizationService>()
+            await sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>()
                 .Received(1)
-                .ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(org => org.PamSeats == null));
+                .RunAsync(Arg.Is<Organization>(org => org.PamSeats == null));
         }
         finally
         {
@@ -351,9 +351,9 @@ public class UpdateOrganizationLicenseCommandTests
         {
             await sutProvider.Sut.UpdateLicenseAsync(selfHostedOrg, license, null);
 
-            await sutProvider.GetDependency<IOrganizationService>()
+            await sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>()
                 .Received(1)
-                .ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(org => org.UsePam && org.PamSeats == null));
+                .RunAsync(Arg.Is<Organization>(org => org.UsePam && org.PamSeats == null));
         }
         finally
         {
@@ -405,9 +405,9 @@ public class UpdateOrganizationLicenseCommandTests
         Assert.Contains("The installation ID does not match the current installation.", exception.Message);
 
         // Verify organization was NOT saved
-        await sutProvider.GetDependency<IOrganizationService>()
+        await sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>()
             .DidNotReceive()
-            .ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+            .RunAsync(Arg.Any<Organization>());
     }
 
     [Theory, BitAutoData]
@@ -453,9 +453,9 @@ public class UpdateOrganizationLicenseCommandTests
         Assert.Contains("The license has expired.", exception.Message);
 
         // Verify organization was NOT saved
-        await sutProvider.GetDependency<IOrganizationService>()
+        await sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>()
             .DidNotReceive()
-            .ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+            .RunAsync(Arg.Any<Organization>());
     }
 
     [Fact]
