@@ -59,10 +59,8 @@ public class EmergencyAccessControllerInviteTests : IClassFixture<ApiApplication
     [Fact]
     public async Task PostAccept_ExpiredToken_BadRequest()
     {
-        // Seed a separate EA in Invited state addressed to the grantee. The
-        // class-level seed targets RecoveryApproved for the password tests; we
-        // need a distinct Invited row so the accept-invite handler will reach
-        // the token-validation gate.
+        // Seed an EA in Invited state addressed to the grantee, so the
+        // accept-invite handler reaches the token-validation gate.
         var grantor = await _userRepository.GetByEmailAsync(_grantorEmail);
         Assert.NotNull(grantor);
         var invitedEa = await _emergencyAccessRepository.CreateAsync(new Core.Auth.Entities.EmergencyAccess
