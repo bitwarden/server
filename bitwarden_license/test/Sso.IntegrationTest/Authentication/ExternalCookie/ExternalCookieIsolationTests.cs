@@ -12,7 +12,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Xunit;
 
-namespace Bit.Sso.IntegrationTest.Protocol;
+namespace Bit.Sso.IntegrationTest.Authentication.ExternalCookie;
 
 /// <summary>
 /// Runs the Sso and Identity hosts side by side with one persistent distributed cache and one data protection

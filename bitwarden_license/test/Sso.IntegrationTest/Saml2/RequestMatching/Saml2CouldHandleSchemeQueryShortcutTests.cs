@@ -6,7 +6,7 @@ using Xunit;
 using static Bit.Sso.IntegrationTest.Utilities.Saml2CouldHandleTestHelpers;
 using static Bit.Sso.IntegrationTest.Utilities.Saml2MessageBuilder;
 
-namespace Bit.Sso.IntegrationTest.Protocol.Saml2;
+namespace Bit.Sso.IntegrationTest.Saml2.RequestMatching;
 
 /// <summary>
 /// Exercises the <c>scheme</c> query string shortcut in <c>CouldHandleAsync</c>, and requests that carry

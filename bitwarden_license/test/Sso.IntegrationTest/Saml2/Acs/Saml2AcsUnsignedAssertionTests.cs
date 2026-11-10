@@ -5,7 +5,7 @@ using Bit.Sso.IntegrationTest.Utilities;
 using Sustainsys.Saml2;
 using Xunit;
 
-namespace Bit.Sso.IntegrationTest.Protocol.Saml2;
+namespace Bit.Sso.IntegrationTest.Saml2.Acs;
 
 /// <summary>
 /// Posts an unsigned SAML response to the assertion consumer service (ACS) URL through the whole

@@ -9,7 +9,7 @@ using static Bit.Sso.IntegrationTest.Utilities.Saml2CouldHandleTestHelpers;
 using static Bit.Sso.IntegrationTest.Utilities.Saml2MessageBuilder;
 using EncryptedXml = System.Security.Cryptography.Xml.EncryptedXml;
 
-namespace Bit.Sso.IntegrationTest.Protocol.Saml2;
+namespace Bit.Sso.IntegrationTest.Saml2.RequestMatching;
 
 /// <summary>
 /// Exercises the assertion signature check in <c>CouldHandleAsync</c> through the real, database-backed

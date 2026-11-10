@@ -3,7 +3,7 @@ using Xunit;
 using static Bit.Sso.IntegrationTest.Utilities.Saml2CouldHandleTestHelpers;
 using static Bit.Sso.IntegrationTest.Utilities.Saml2MessageBuilder;
 
-namespace Bit.Sso.IntegrationTest.Protocol.Saml2;
+namespace Bit.Sso.IntegrationTest.Saml2.RequestMatching;
 
 /// <summary>
 /// Exercises how the assertion signature check in <c>CouldHandleAsync</c> reads the <c>samlp:Status</c>

@@ -4,7 +4,7 @@ using Bit.Sso.IntegrationTest.Utilities;
 using Bit.Test.Common.Helpers;
 using Xunit;
 
-namespace Bit.Sso.IntegrationTest.Protocol;
+namespace Bit.Sso.IntegrationTest.DiscoveryEndpoint;
 
 public class SsoDiscoveryDocumentTests : IClassFixture<SsoApplicationFactory>
 {

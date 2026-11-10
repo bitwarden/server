@@ -8,7 +8,7 @@ using Bit.Core.Utilities;
 using Bit.Sso.IntegrationTest.Utilities;
 using Xunit;
 
-namespace Bit.Sso.IntegrationTest.Protocol.Saml2;
+namespace Bit.Sso.IntegrationTest.Saml2.Metadata;
 
 public class Saml2AcsMetadataEndpointTests(SsoApplicationFactory factory) : IClassFixture<SsoApplicationFactory>
 {

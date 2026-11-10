@@ -9,7 +9,7 @@ using Xunit;
 using static Bit.Sso.IntegrationTest.Utilities.Saml2CouldHandleTestHelpers;
 using static Bit.Sso.IntegrationTest.Utilities.Saml2MessageBuilder;
 
-namespace Bit.Sso.IntegrationTest.Protocol.Saml2;
+namespace Bit.Sso.IntegrationTest.Saml2.RequestMatching;
 
 /// <summary>
 /// Exercises <c>CouldHandleAsync</c> with SAML logout messages. A <c>LogoutRequest</c> or
