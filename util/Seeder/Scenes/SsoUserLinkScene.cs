@@ -15,6 +15,7 @@ public struct SsoUserLinkSceneResult
 public class SsoUserLinkScene(
     IOrganizationUserRepository organizationUserRepository,
     ISsoUserRepository ssoUserRepository,
+    IUserRepository userRepository,
     IManglerService manglerService) : IScene<SsoUserLinkScene.Request, SsoUserLinkSceneResult>
 {
     public class Request
@@ -30,8 +31,25 @@ public class SsoUserLinkScene(
 
     public async Task<SceneResult<SsoUserLinkSceneResult>> SeedAsync(Request request)
     {
+        if (string.IsNullOrWhiteSpace(request.ExternalId) || request.ExternalId.Length > 300)
+        {
+            throw new InvalidOperationException("ExternalId must be 1 to 300 characters.");
+        }
+
         await organizationUserRepository.ThrowIfUserNotConfirmedOrRevokedMemberOfOrganizationAsync(
             request.UserId, request.OrganizationId);
+
+        if (await ssoUserRepository.GetByUserIdOrganizationIdAsync(request.OrganizationId, request.UserId) is not null)
+        {
+            throw new InvalidOperationException(
+                $"User {request.UserId} is already linked in organization {request.OrganizationId}.");
+        }
+
+        if (await userRepository.GetBySsoUserAsync(request.ExternalId, request.OrganizationId) is not null)
+        {
+            throw new InvalidOperationException(
+                $"ExternalId is already linked to a user in organization {request.OrganizationId}.");
+        }
 
         var ssoUser = new SsoUser
         {

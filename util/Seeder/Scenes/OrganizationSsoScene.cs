@@ -44,6 +44,7 @@ public class OrganizationSsoScene(
         public OpenIdConnectRedirectBehavior RedirectBehavior { get; set; } = OpenIdConnectRedirectBehavior.RedirectGet;
         public bool GetClaimsFromUserInfoEndpoint { get; set; } = true;
         public MemberDecryptionType MemberDecryptionType { get; set; } = MemberDecryptionType.MasterPassword;
+        // Master-password orgs only; TDE always writes its policies.
         public bool RequireSsoLoginPolicy { get; set; }
     }
 

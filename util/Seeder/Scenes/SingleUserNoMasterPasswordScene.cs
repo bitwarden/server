@@ -36,7 +36,7 @@ public class SingleUserNoMasterPasswordScene(
             {
                 Email = request.Email,
                 EmailVerified = request.EmailVerified,
-                NoMasterPassword = true
+                UsesSsoAuth = true
             },
             passwordHasher,
             manglerService);

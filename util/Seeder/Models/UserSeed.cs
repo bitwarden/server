@@ -110,7 +110,7 @@ internal record UserSeed
     /// <summary>
     /// No password hash and a null <see cref="User.Key"/>. The keypair is still written.
     /// </summary>
-    public bool NoMasterPassword { get; init; }
+    public bool UsesSsoAuth { get; init; }
 
     /// <summary>
     /// Serialized via <see cref="User.SetTwoFactorProviders"/>. Provider metadata (TOTP secrets,
