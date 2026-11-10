@@ -1,23 +1,20 @@
 ﻿using System.Net;
-using System.Text.Json;
+using Bit.Api.IntegrationTest.Auth.Helpers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.Utilities;
 using Bit.IntegrationTestCommon.Factories;
 using Xunit;
 
-namespace Bit.Api.IntegrationTest.Auth.Controllers;
+namespace Bit.Api.IntegrationTest.Auth.Controllers.SsoJitProvisionFinish;
 
 public class SsoJitProvisionFinishControllerTrustedDeviceTests
     : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
@@ -66,15 +63,9 @@ public class SsoJitProvisionFinishControllerTrustedDeviceTests
             Data = "{}"
         });
 
-        await _factory.GetService<ISsoConfigRepository>().CreateAsync(new SsoConfig
-        {
-            OrganizationId = _organization.Id,
-            Enabled = true,
-            Data = JsonSerializer.Serialize(new SsoConfigurationData
-            {
-                MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
-            }, JsonHelpers.CamelCase),
-        });
+        await SsoJitProvisionTestHelpers.CreateSsoConfigAsync(
+            _factory.GetService<ISsoConfigRepository>(), _organization.Id,
+            MemberDecryptionType.TrustedDeviceEncryption);
     }
 
     public Task DisposeAsync()

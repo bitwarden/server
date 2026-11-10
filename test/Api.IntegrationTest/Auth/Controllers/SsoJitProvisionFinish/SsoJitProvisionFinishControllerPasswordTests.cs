@@ -1,12 +1,11 @@
 ﻿using System.Net;
 using System.Text.Json;
+using Bit.Api.IntegrationTest.Auth.Helpers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -14,13 +13,12 @@ using Bit.Core.Enums;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;
 using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
-namespace Bit.Api.IntegrationTest.Auth.Controllers;
+namespace Bit.Api.IntegrationTest.Auth.Controllers.SsoJitProvisionFinish;
 
 public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
@@ -269,15 +267,8 @@ public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApp
         organization.Identifier = $"sso-{Guid.NewGuid()}";
         await _organizationRepository.ReplaceAsync(organization);
 
-        await _ssoConfigRepository.CreateAsync(new SsoConfig
-        {
-            OrganizationId = organization.Id,
-            Enabled = true,
-            Data = JsonSerializer.Serialize(new SsoConfigurationData
-            {
-                MemberDecryptionType = MemberDecryptionType.MasterPassword,
-            }, JsonHelpers.CamelCase),
-        });
+        await SsoJitProvisionTestHelpers.CreateSsoConfigAsync(
+            _ssoConfigRepository, organization.Id, MemberDecryptionType.MasterPassword);
 
         var userEmail = $"user-{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(userEmail);
@@ -290,12 +281,7 @@ public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApp
         await _loginHelper.LoginAsync(userEmail);
 
         // Simulate a newly JIT provisioned SSO user.
-        user.MasterPassword = null;
-        user.Key = null;
-        user.PrivateKey = null;
-        user.PublicKey = null;
-        user.SignedPublicKey = null;
-        await _userRepository.ReplaceAsync(user);
+        await SsoJitProvisionTestHelpers.ClearMasterPasswordAndKeysAsync(_userRepository, user);
 
         return (organization, userEmail);
     }
@@ -342,13 +328,10 @@ public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApp
         await AssertOrgUserStatusAsync(organizationId, user.Id, OrganizationUserStatusType.Invited);
     }
 
-    private async Task AssertOrgUserStatusAsync(Guid organizationId, Guid userId,
-        OrganizationUserStatusType expectedStatus)
-    {
-        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
-        Assert.NotNull(orgUser);
-        Assert.Equal(expectedStatus, orgUser.Status);
-    }
+    private Task AssertOrgUserStatusAsync(Guid organizationId, Guid userId,
+        OrganizationUserStatusType expectedStatus) =>
+        SsoJitProvisionAssertions.AssertOrganizationUserStatusAsync(
+            _organizationUserRepository, organizationId, userId, expectedStatus);
 
     private static void AddAcceptOrganizationInvite(Dictionary<string, object?> request, bool? acceptOrganizationInvite)
     {
