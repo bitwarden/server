@@ -60,6 +60,7 @@ public class UsersController : Controller
         [FromQuery] int groupStartIndex = 1,
         [FromQuery] int groupCount = int.MaxValue)
     {
+        var projection = new ScimAttributeProjection(Request);
         var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(id);
         if (orgUser == null || orgUser.OrganizationId != organizationId)
         {
@@ -69,7 +70,9 @@ public class UsersController : Controller
         var userResponse = new ScimUserResponseModel(orgUser);
 
         // Populate groups for this user with pagination
-        var groupIds = await _organizationUserRepository.GetManyGroupIdsByUserIdAsync(orgUser.Id);
+        var groupIds = projection.Includes("groups")
+            ? await _organizationUserRepository.GetManyGroupIdsByUserIdAsync(orgUser.Id)
+            : Array.Empty<Guid>();
         if (groupIds.Any())
         {
             var groups = await _groupRepository.GetManyByManyIds(groupIds);
@@ -85,7 +88,7 @@ public class UsersController : Controller
             userResponse.Groups = ToGroupReferences(organizationId, paginatedGroups);
         }
 
-        return Ok(userResponse);
+        return Ok(projection.Apply(userResponse));
     }
 
     [HttpGet("")]
@@ -93,6 +96,7 @@ public class UsersController : Controller
         [FromRoute] Guid organizationId,
         [FromQuery] GetUsersQueryParamModel model)
     {
+        var projection = new ScimAttributeProjection(Request);
         var usersListQueryResult = await _getUsersListQuery.GetUsersListAsync(organizationId, model);
 
         // Populate groups for each user
@@ -102,7 +106,9 @@ public class UsersController : Controller
             var userResponse = new ScimUserResponseModel(user);
 
             // Fetch group IDs for this user
-            var groupIds = await _organizationUserRepository.GetManyGroupIdsByUserIdAsync(user.Id);
+            var groupIds = projection.Includes("groups")
+                ? await _organizationUserRepository.GetManyGroupIdsByUserIdAsync(user.Id)
+                : Array.Empty<Guid>();
 
             if (groupIds.Any())
             {
@@ -131,7 +137,7 @@ public class UsersController : Controller
             TotalResults = usersListQueryResult.totalResults,
             StartIndex = model.StartIndex,
         };
-        return Ok(scimListResponseModel);
+        return Ok(projection.Apply(scimListResponseModel, list: true));
     }
 
     [HttpPost("")]

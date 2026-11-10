@@ -59,6 +59,7 @@ public class GroupsController : Controller
         Guid id,
         [FromQuery] GetGroupsQueryParamModel model)
     {
+        var projection = new ScimAttributeProjection(Request);
         var group = await _groupRepository.GetByIdAsync(id);
         if (group == null || group.OrganizationId != organizationId)
         {
@@ -68,7 +69,9 @@ public class GroupsController : Controller
         var groupResponse = new ScimGroupResponseModel(group);
 
         // Populate members with pagination
-        var memberUserIds = await _groupRepository.GetManyUserIdsByIdAsync(id);
+        var memberUserIds = projection.Includes("members")
+            ? await _groupRepository.GetManyUserIdsByIdAsync(id)
+            : Array.Empty<Guid>();
         if (memberUserIds.Any())
         {
             var paginatedMemberIds = memberUserIds
@@ -77,10 +80,10 @@ public class GroupsController : Controller
                 .Take(model.MemberCount)
                 .ToList();
 
-            groupResponse.Members = await BuildMembersAsync(organizationId, paginatedMemberIds);
+            groupResponse.Members = await BuildMembersAsync(organizationId, paginatedMemberIds, projection);
         }
 
-        return Ok(groupResponse);
+        return Ok(projection.Apply(groupResponse));
     }
 
     [HttpGet("")]
@@ -88,6 +91,7 @@ public class GroupsController : Controller
         [FromRoute] Guid organizationId,
         [FromQuery] GetGroupsQueryParamModel model)
     {
+        var projection = new ScimAttributeProjection(Request);
         var groupsListQueryResult = await _getGroupsListQuery.GetGroupsListAsync(organizationId, model);
 
         // Populate members for each group with pagination
@@ -97,7 +101,9 @@ public class GroupsController : Controller
             var groupResponse = new ScimGroupResponseModel(group);
 
             // Fetch and paginate members for this group
-            var memberUserIds = await _groupRepository.GetManyUserIdsByIdAsync(group.Id);
+            var memberUserIds = projection.Includes("members")
+                ? await _groupRepository.GetManyUserIdsByIdAsync(group.Id)
+                : Array.Empty<Guid>();
             if (memberUserIds.Any())
             {
                 var paginatedMemberIds = memberUserIds
@@ -106,7 +112,7 @@ public class GroupsController : Controller
                     .Take(model.MemberCount)
                     .ToList();
 
-                groupResponse.Members = await BuildMembersAsync(organizationId, paginatedMemberIds);
+                groupResponse.Members = await BuildMembersAsync(organizationId, paginatedMemberIds, projection);
             }
 
             groupResponseList.Add(groupResponse);
@@ -119,7 +125,7 @@ public class GroupsController : Controller
             TotalResults = groupsListQueryResult.totalResults,
             StartIndex = model.StartIndex,
         };
-        return Ok(scimListResponseModel);
+        return Ok(projection.Apply(scimListResponseModel, list: true));
     }
 
     [HttpPost("")]
@@ -163,14 +169,24 @@ public class GroupsController : Controller
 
     private async Task<List<ScimGroupResponseModel.GroupMemberReference>> BuildMembersAsync(
         Guid organizationId,
-        IEnumerable<Guid> orgUserIds)
+        IEnumerable<Guid> orgUserIds,
+        ScimAttributeProjection projection)
     {
+        var usersUrl = $"{Request.Scheme}://{Request.Host}{Request.PathBase}/v2/{organizationId}/Users";
+        if (!projection.Includes("members.display"))
+        {
+            return orgUserIds.OrderBy(id => id).Select(id => new ScimGroupResponseModel.GroupMemberReference
+            {
+                Value = id.ToString(),
+                Ref = $"{usersUrl}/{id}",
+                Type = "User"
+            }).ToList();
+        }
         var orgUsers = (await _organizationUserRepository.GetManyAsync(orgUserIds)).ToList();
         var userIds = orgUsers.Where(ou => ou.UserId.HasValue).Select(ou => ou.UserId!.Value).Distinct().ToList();
         var emails = userIds.Count == 0
             ? new Dictionary<Guid, string>()
             : (await _userRepository.GetManyAsync(userIds)).ToDictionary(u => u.Id, u => u.Email);
-        var usersUrl = $"{Request.Scheme}://{Request.Host}{Request.PathBase}/v2/{organizationId}/Users";
         return orgUsers
             .OrderBy(ou => ou.Id)
             .Select(ou => new ScimGroupResponseModel.GroupMemberReference

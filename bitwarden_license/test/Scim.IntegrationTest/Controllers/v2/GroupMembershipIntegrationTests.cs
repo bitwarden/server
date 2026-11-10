@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Text.Json;
 using Bit.Core.Enums;
+using Bit.IntegrationTestCommon.Factories;
 using Bit.Scim.IntegrationTest.Factories;
 using Bit.Scim.Models;
 using Xunit;
@@ -184,6 +185,16 @@ public class GroupMembershipIntegrationTests : IClassFixture<ScimApplicationFact
             resource => resource.Id == ScimApplicationFactory.TestGroupId1);
         Assert.Equal(activeUserCount, groupWithLargeMembership.Members.Count);
         var groupListResponseBytes = groupListResponseBody.Length;
+
+        var projectedResponse = await _factory.Server.GetAsync(
+            $"/v2/{ScimApplicationFactory.TestOrganizationId1}/groups/{ScimApplicationFactory.TestGroupId1}",
+            context => context.Request.QueryString = new QueryString("?excludedAttributes=members"));
+        Assert.Equal(StatusCodes.Status200OK, projectedResponse.Response.StatusCode);
+        var projectedBody = await ReadResponseBodyAsync(projectedResponse.Response.Body);
+        using var projectedDocument = JsonDocument.Parse(projectedBody);
+        Assert.False(projectedDocument.RootElement.TryGetProperty("members", out _));
+        Assert.True(projectedBody.Length < groupResponseBytes);
+        _testOutputHelper.WriteLine($"Group projection: full {groupResponseBytes} bytes; excluding members {projectedBody.Length} bytes.");
 
         _testOutputHelper.WriteLine(
             $"8,000 organization users (1,400 active): GET /Users returned {userList.Resources.Count} records " +
