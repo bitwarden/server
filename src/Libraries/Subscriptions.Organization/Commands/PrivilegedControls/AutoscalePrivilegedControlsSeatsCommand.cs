@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Models.Mail.Mailer;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.Billing.Models.Mail.Mailer;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.Models;
@@ -6,33 +7,34 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Subscriptions.Organization.Queries;
 using Bitwarden.Server.Sdk.Environment;
 using Microsoft.Extensions.Logging;
 using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
 
-namespace Bit.Subscriptions.Organization.Commands;
+namespace Bit.Subscriptions.Organization.Commands.PrivilegedControls;
 
 internal sealed class AutoscalePrivilegedControlsSeatsCommand(
     IPrivilegedControlsSeatChangeSetFactory seatChangeSetFactory,
     IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
-    IOrganizationService organizationService,
+    IReplaceOrganizationAndUpdateCacheCommand replaceOrganizationAndUpdateCacheCommand,
     IOrganizationUserRepository organizationUserRepository,
+    IIsOnPrivilegedControlsSalesInitiatedTrialQuery isOnTrialQuery,
     IMailer mailer,
     IGlobalSettings globalSettings,
     IBitwardenEnvironment environment,
     ILogger<AutoscalePrivilegedControlsSeatsCommand> logger) : IAutoscalePrivilegedControlsSeatsCommand
 {
-    public async Task<AutoscalePrivilegedControlsSeatsResult> Run(OrganizationEntity organization, int seatsToAdd)
+    public async Task<AutoscalePrivilegedControlsSeatsResult> RunAsync(OrganizationEntity organization, int seatsRequested)
     {
         if (environment.SelfHosted)
         {
             throw new BadRequestException("Cannot update subscription on a self-hosted instance.");
         }
 
-        if (seatsToAdd < 1)
+        if (seatsRequested < 1)
         {
             throw new BadRequestException("At least one Privileged Controls seat must be added.");
         }
@@ -42,13 +44,8 @@ internal sealed class AutoscalePrivilegedControlsSeatsCommand(
             throw new BadRequestException("Your organization doesn't have Privileged Controls.");
         }
 
-        if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
-        {
-            throw new BadRequestException("No subscription found.");
-        }
-
         var seatsNeeded =
-            await organizationUserRepository.GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id) + seatsToAdd;
+            await organizationUserRepository.GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id) + seatsRequested;
 
         if (seatsNeeded > organization.PamSeats)
         {
@@ -57,11 +54,14 @@ internal sealed class AutoscalePrivilegedControlsSeatsCommand(
                 return new AutoscalePrivilegedControlsSeatsResult(false, organization.MaxAutoscalePamSeats);
             }
 
-            var changeSet = await seatChangeSetFactory.CreateAsync(organization, seatsNeeded);
-            (await updateOrganizationSubscriptionCommand.Run(organization, changeSet)).GetValueOrThrowHttpException();
+            if (!await isOnTrialQuery.Run(organization))
+            {
+                var changeSet = await seatChangeSetFactory.CreateAsync(organization, seatsNeeded);
+                (await updateOrganizationSubscriptionCommand.Run(organization, changeSet)).GetValueOrThrowHttpException();
+            }
 
             organization.PamSeats = seatsNeeded;
-            await organizationService.ReplaceAndUpdateCacheAsync(organization);
+            await replaceOrganizationAndUpdateCacheCommand.RunAsync(organization);
         }
 
         if (organization.MaxAutoscalePamSeats == seatsNeeded)
@@ -84,7 +84,7 @@ internal sealed class AutoscalePrivilegedControlsSeatsCommand(
             await mailer.SendEmail(new PrivilegedControlsSeatLimitReachedMail
             {
                 ToEmails = ownerEmails,
-                Subject = $"{organization.DisplayName()} Privileged Controls seat limit reached",
+                Subject = $"{organization.DisplayName()} has reached its Privileged Controls seat limit",
                 View = new PrivilegedControlsSeatLimitReachedView(globalSettings)
                 {
                     OrganizationId = organization.Id,

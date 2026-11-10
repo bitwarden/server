@@ -3,6 +3,7 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1;
@@ -26,7 +27,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
     private readonly IEventService _eventService;
     private readonly IMailService _mailService;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationService _organizationService;
+    private readonly IReplaceOrganizationAndUpdateCacheCommand _replaceOrganizationAndUpdateCacheCommand;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IStripeAdapter _stripeAdapter;
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
@@ -39,7 +40,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         IEventService eventService,
         IMailService mailService,
         IOrganizationRepository organizationRepository,
-        IOrganizationService organizationService,
+        IReplaceOrganizationAndUpdateCacheCommand replaceOrganizationAndUpdateCacheCommand,
         IProviderOrganizationRepository providerOrganizationRepository,
         IStripeAdapter stripeAdapter,
         Bitwarden.Server.Sdk.Features.IFeatureService featureService,
@@ -51,7 +52,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         _eventService = eventService;
         _mailService = mailService;
         _organizationRepository = organizationRepository;
-        _organizationService = organizationService;
+        _replaceOrganizationAndUpdateCacheCommand = replaceOrganizationAndUpdateCacheCommand;
         _providerOrganizationRepository = providerOrganizationRepository;
         _stripeAdapter = stripeAdapter;
         _featureService = featureService;
@@ -89,7 +90,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
         await ResetOrganizationBillingAsync(organization, provider, organizationOwnerEmails);
 
-        await _organizationService.ReplaceAndUpdateCacheAsync(organization);
+        await _replaceOrganizationAndUpdateCacheCommand.RunAsync(organization);
 
         await _providerOrganizationRepository.DeleteAsync(providerOrganization);
 

@@ -6,7 +6,7 @@ using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Exceptions;
 using Bit.Invoicing.InvoicePreviews;
 using Bit.Invoicing.InvoicePreviews.Models;
-using Bit.Subscriptions.Organization.Commands;
+using Bit.Subscriptions.Organization.Commands.InvoicePreviews;
 using Bit.Subscriptions.Organization.Models.Requests;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;

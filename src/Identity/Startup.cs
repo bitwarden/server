@@ -13,6 +13,7 @@ using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
 using Bit.SharedWeb.Swagger;
 using Bit.SharedWeb.Utilities;
+using Bit.Subscriptions.Organization;
 using Duende.IdentityServer.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi;
@@ -149,6 +150,7 @@ public class Startup
         services.AddDefaultServices(globalSettings);
         services.AddCoreLocalizationServices();
         services.AddBillingOperations();
+        services.AddPrivilegedControlsSeatAutoscaling();
 
         // TODO: Remove when OrganizationUser methods are moved out of OrganizationService, this noop dependency should
         // TODO: no longer be required - see PM-1880
