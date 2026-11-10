@@ -25,21 +25,21 @@ public class RateLimitTests : IClassFixture<IdentityApplicationFactory>
         RegisterFinishRequestModel requestModel)
     {
         requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
-        const int AmountInOneSecondAllowed = 10;
+        // The configured IP rate limit rules allow 5 requests per second to any endpoint and 10 requests per
+        // minute to POST /connect/token. Sending 11 token requests at once from one IP exceeds both rules.
+        const int TokenRequestsPerMinuteAllowed = 10;
 
-        // The rule we are testing is 10 requests in 1 second
         requestModel.Email = "test+ratelimiting@email.com";
 
-        var localFactory = new IdentityApplicationFactory();
-        var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
+        var user = await _factory.RegisterNewIdentityFactoryUserAsync(requestModel);
 
-        var database = localFactory.GetDatabaseContext();
+        var database = _factory.GetDatabaseContext();
         user = await database.Users
             .FirstAsync(u => u.Email == user.Email);
 
-        var tasks = new Task<HttpContext>[AmountInOneSecondAllowed + 1];
+        var tasks = new Task<HttpContext>[TokenRequestsPerMinuteAllowed + 1];
 
-        for (var i = 0; i < AmountInOneSecondAllowed + 1; i++)
+        for (var i = 0; i < TokenRequestsPerMinuteAllowed + 1; i++)
         {
             // Queue all the amount of calls allowed plus 1
             tasks[i] = MakeRequest();
