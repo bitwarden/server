@@ -7,6 +7,19 @@ namespace Bit.Core.Test.Billing.Extensions;
 
 public class SubscriptionExtensionsTests
 {
+    [Theory]
+    [InlineData(StripeConstants.SubscriptionStatus.Active, true)]
+    [InlineData(StripeConstants.SubscriptionStatus.Trialing, true)]
+    [InlineData(StripeConstants.SubscriptionStatus.PastDue, true)]
+    [InlineData(StripeConstants.SubscriptionStatus.Incomplete, false)]
+    [InlineData(StripeConstants.SubscriptionStatus.Unpaid, false)]
+    [InlineData(StripeConstants.SubscriptionStatus.Canceled, false)]
+    [InlineData(StripeConstants.SubscriptionStatus.IncompleteExpired, false)]
+    public void GrantsAccess_ReturnsWhetherStatusGrantsAccess(string status, bool expected)
+    {
+        Assert.Equal(expected, new Subscription { Status = status }.GrantsAccess());
+    }
+
     [Fact]
     public void HasPrivilegedControlsSeats_NullItems_ReturnsFalse()
     {
