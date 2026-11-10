@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models;
@@ -213,7 +214,7 @@ public class SavePolicyCommand(
         ExcludeCurrentContext = false,
         Payload = new SyncPolicyPushNotification
         {
-            Policy = policy,
+            Policy = LegacyClientPolicyShaping.ShapeForBroadcast(policy),
             OrganizationId = organizationId
         }
     });
