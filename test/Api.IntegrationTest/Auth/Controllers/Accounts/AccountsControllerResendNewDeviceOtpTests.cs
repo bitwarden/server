@@ -10,14 +10,14 @@ using Microsoft.Extensions.Caching.Distributed;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.IntegrationTest.Auth.Controllers;
+namespace Bit.Api.IntegrationTest.Auth.Controllers.Accounts;
 
 /// <summary>
 /// Covers how the new device verification resend endpoint decides which device to scope a code to, running
-/// the real service and distributed cache rather than a substitute. <see cref="AccountsControllerTest"/>
+/// the real service and distributed cache rather than a substitute. <see cref="SubstitutedTwoFactorEmailServiceTests"/>
 /// substitutes <see cref="ITwoFactorEmailService"/>, so it can only assert the controller's wiring.
 /// </summary>
-public class ResendNewDeviceOtpTests
+public class AccountsControllerResendNewDeviceOtpTests
 {
     private const string RequestDeviceIdentifier = "request-device-identifier";
     private const string PendingDeviceIdentifier = "pending-device-identifier";
@@ -175,5 +175,115 @@ public class ResendNewDeviceOtpTests
             Arg.Any<string>(),
             Arg.Any<string>(),
             TwoFactorEmailPurpose.NewDeviceVerification);
+    }
+
+    /// <summary>
+    /// Runs with <see cref="ITwoFactorEmailService"/> substituted, so these tests assert which user and device
+    /// the controller passes to the service.
+    /// </summary>
+    public class SubstitutedTwoFactorEmailServiceTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+    {
+        // const so it can be a default parameter value on PostResendNewDeviceOtpAsync.
+        private const string _resendDeviceIdentifier = "resend-device-identifier";
+
+        private readonly HttpClient _client;
+        private readonly ApiApplicationFactory _factory;
+        private readonly IUserRepository _userRepository;
+        private readonly ITwoFactorEmailService _twoFactorEmailService;
+
+        private string _ownerEmail = null!;
+
+        public SubstitutedTwoFactorEmailServiceTests(ApiApplicationFactory factory)
+        {
+            _factory = factory;
+            _factory.SubstituteService<ITwoFactorEmailService>(_ => { });
+            _client = factory.CreateClient();
+            _userRepository = _factory.GetService<IUserRepository>();
+            _twoFactorEmailService = _factory.GetService<ITwoFactorEmailService>();
+        }
+
+        public async Task InitializeAsync()
+        {
+            _ownerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+            await _factory.LoginWithNewAccount(_ownerEmail);
+        }
+
+        public Task DisposeAsync()
+        {
+            _client.Dispose();
+            return Task.CompletedTask;
+        }
+
+        [Fact]
+        public async Task PostResendNewDeviceOtp_ValidEmailAndSecret_OkAndSendsEmailForRequestingDevice()
+        {
+            var user = await _userRepository.GetByEmailAsync(_ownerEmail);
+            Assert.NotNull(user);
+
+            var response = await PostResendNewDeviceOtpAsync(_ownerEmail, MasterPasswordHash);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            await _twoFactorEmailService.Received(1)
+                .SendNewDeviceVerificationEmailAsync(
+                    Arg.Is<User>(u => u.Id == user.Id), _resendDeviceIdentifier);
+        }
+
+        [Fact]
+        public async Task PostResendNewDeviceOtp_WrongSecret_SilentlySucceedsWithoutSendingEmail()
+        {
+            var user = await _userRepository.GetByEmailAsync(_ownerEmail);
+            Assert.NotNull(user);
+
+            var response = await PostResendNewDeviceOtpAsync(_ownerEmail, "wrong-master-password-hash");
+
+            // Silent 200 to avoid account enumeration via response shape.
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            await _twoFactorEmailService.DidNotReceive()
+                .SendNewDeviceVerificationEmailAsync(
+                    Arg.Is<User>(u => u.Id == user.Id), Arg.Any<string>());
+        }
+
+        [Fact]
+        public async Task PostResendNewDeviceOtp_UnknownEmail_SilentlySucceeds()
+        {
+            var response = await PostResendNewDeviceOtpAsync(
+                $"does-not-exist-{Guid.NewGuid()}@bitwarden.com",
+                MasterPasswordHash);
+
+            // Silent 200 to avoid account enumeration via response shape.
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task PostResendNewDeviceOtp_NoDeviceIdentifier_SilentlySucceedsWithoutSendingEmail()
+        {
+            var user = await _userRepository.GetByEmailAsync(_ownerEmail);
+            Assert.NotNull(user);
+
+            // The code is scoped to the requesting device, so it cannot be issued without one.
+            var response = await PostResendNewDeviceOtpAsync(
+                _ownerEmail, MasterPasswordHash, deviceIdentifier: null);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            await _twoFactorEmailService.DidNotReceive()
+                .SendNewDeviceVerificationEmailAsync(
+                    Arg.Is<User>(u => u.Id == user.Id), Arg.Any<string>());
+        }
+
+        private async Task<HttpResponseMessage> PostResendNewDeviceOtpAsync(
+            string email, string masterPasswordHash, string? deviceIdentifier = _resendDeviceIdentifier)
+        {
+            using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/resend-new-device-otp");
+            if (deviceIdentifier != null)
+            {
+                message.Headers.Add("Device-Identifier", deviceIdentifier);
+            }
+            message.Content = JsonContent.Create(new UnauthenticatedSecretVerificationRequestModel
+            {
+                Email = email,
+                MasterPasswordHash = masterPasswordHash,
+            });
+            return await _client.SendAsync(message);
+        }
     }
 }

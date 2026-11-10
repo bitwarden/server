@@ -11,7 +11,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.IntegrationTest.Auth.Controllers;
+namespace Bit.Api.IntegrationTest.Auth.Controllers.Accounts;
 
 /// <summary>
 /// Covers the request-otp and verify-otp endpoints, and the api-key endpoint as a representative of the
