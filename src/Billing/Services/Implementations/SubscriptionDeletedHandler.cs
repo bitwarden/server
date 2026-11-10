@@ -21,6 +21,7 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
     private readonly IUserRepository _userRepository;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
     private readonly IOrganizationDisableCommand _organizationDisableCommand;
+    private readonly IOrganizationRepository _organizationRepository;
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderService _providerService;
     private readonly ISchedulerFactory _schedulerFactory;
@@ -34,6 +35,7 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
         IUserRepository userRepository,
         IStripeEventUtilityService stripeEventUtilityService,
         IOrganizationDisableCommand organizationDisableCommand,
+        IOrganizationRepository organizationRepository,
         IProviderRepository providerRepository,
         IProviderService providerService,
         ISchedulerFactory schedulerFactory,
@@ -46,6 +48,7 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
         _userRepository = userRepository;
         _stripeEventUtilityService = stripeEventUtilityService;
         _organizationDisableCommand = organizationDisableCommand;
+        _organizationRepository = organizationRepository;
         _providerRepository = providerRepository;
         _providerService = providerService;
         _schedulerFactory = schedulerFactory;
@@ -89,6 +92,13 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
                 return;
             }
 
+            var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
+            if (organization != null &&
+                await _stripeEventUtilityService.GetOtherLiveSubscriptionAsync(organization, subscription) != null)
+            {
+                return;
+            }
+
             await _organizationDisableCommand.DisableAsync(organizationId.Value, subscription.GetCurrentPeriodEnd());
         }
         else if (providerId.HasValue)
@@ -104,6 +114,17 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
         }
         else if (userId.HasValue)
         {
+            var subscriber = await _userRepository.GetByIdAsync(userId.Value);
+            var otherLiveSubscription = subscriber == null
+                ? null
+                : await _stripeEventUtilityService.GetOtherLiveSubscriptionAsync(subscriber, subscription);
+
+            if (subscriber != null && otherLiveSubscription != null)
+            {
+                await _stripeEventUtilityService.LinkUserSubscriptionAsync(subscriber, otherLiveSubscription);
+                return;
+            }
+
             await _userService.DisablePremiumAsync(userId.Value, subscription.GetCurrentPeriodEnd());
             var user = await _userRepository.GetByIdAsync(userId.Value);
             if (user != null)
