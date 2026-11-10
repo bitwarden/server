@@ -26,8 +26,7 @@ public class AcceptOrganizationInviteLinkCommand(
     IOrganizationService organizationService,
     IStripePaymentService stripePaymentService,
     IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand,
-    IMailService mailService,
-    IPushAutoConfirmNotificationCommand pushAutoConfirmNotificationCommand,
+    INotifyAdminsOfAcceptedUserCommand notifyAdminsOfAcceptedUserCommand,
     IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand,
     IReservePrivilegedControlsSeatsCommand reservePrivilegedControlsSeatsCommand,
     ISendPrivilegedControlsSeatNeededEmailCommand sendPrivilegedControlsSeatNeededEmailCommand,
@@ -202,16 +201,6 @@ public class AcceptOrganizationInviteLinkCommand(
                 organization.Id, user.Id, request.ResetPasswordKey, user.Id);
         }
 
-        if (validationResult.AutoConfirmPolicyEnabled)
-        {
-            await pushAutoConfirmNotificationCommand.PushAsync(user.Id, organization.Id);
-        }
-
-        var admins = await organizationUserRepository.GetManyByMinimumRoleAsync(organization.Id, OrganizationUserType.Admin);
-        var adminEmails = admins.Select(a => a.Email).Distinct().ToList();
-        if (adminEmails.Count > 0)
-        {
-            await mailService.SendOrganizationAcceptedEmailAsync(organization, user.Email, adminEmails);
-        }
+        await notifyAdminsOfAcceptedUserCommand.NotifyAsync(organization, organizationUser, user);
     }
 }

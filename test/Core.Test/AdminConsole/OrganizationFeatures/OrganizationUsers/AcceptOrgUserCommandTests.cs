@@ -63,16 +63,9 @@ public class AcceptOrgUserCommandTests
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
             Arg.Is<OrganizationUser>(ou => ou.Id == orgUser.Id && ou.Status == OrganizationUserStatusType.Accepted));
 
-        // Verify emails sent to admin
-        await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationAcceptedEmailAsync(
-            Arg.Is<Organization>(o => o.Id == org.Id),
-            Arg.Is<string>(e => e == user.Email),
-            Arg.Is<IEnumerable<string>>(a => a.Contains(adminUserDetails.Email))
-        );
-
-        await sutProvider.GetDependency<IPushAutoConfirmNotificationCommand>()
+        await sutProvider.GetDependency<INotifyAdminsOfAcceptedUserCommand>()
             .Received(1)
-            .PushAsync(user.Id, orgUser.OrganizationId);
+            .NotifyAsync(org, orgUser, user);
     }
 
     [Theory]

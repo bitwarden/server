@@ -55,6 +55,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Quartz;
 using V1_RevokeUsersCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1;
 using V2_RevokeUsersCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
 using V2_UpdateUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
@@ -248,7 +249,9 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<ICountNewSmSeatsRequiredQuery, CountNewSmSeatsRequiredQuery>();
         services.AddScoped<IAcceptOrgUserCommand, AcceptOrgUserCommand>();
         services.TryAddScoped<IAcceptOrganizationMembershipValidator, AcceptOrganizationMembershipValidator>();
-        services.AddScoped<IPushAutoConfirmNotificationCommand, PushAutoConfirmNotificationCommand>();
+        services.AddScoped<INotifyAdminsOfAcceptedUserCommand, NotifyAdminsOfAcceptedUserCommand>();
+        // In-memory scheduler for delayed one-off jobs; only hosts that start it will run them.
+        services.AddQuartz();
         services.AddScoped<IOrganizationUserUserDetailsQuery, OrganizationUserUserDetailsQuery>();
         services.AddScoped<IGetOrganizationUsersClaimedStatusQuery, GetOrganizationUsersClaimedStatusQuery>();
         services.AddScoped<IGetPendingAutoConfirmUsersQuery, GetPendingAutoConfirmUsersQuery>();
