@@ -1,5 +1,4 @@
-﻿using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
+﻿using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Settings;
 using Bit.SharedWeb.Utilities;
 using Bit.Sso.Utilities.Saml2;
@@ -104,7 +103,7 @@ public class Saml2ServiceCertificatesTests
     public void Build_NonRsaEncryptionCertificate_ThrowsNamingTheRoleAndThumbprint()
     {
         using var signing = TestCertificates.Create("CN=Bitwarden Test Signing");
-        using var ecdsa = CreateEcdsaCertificate();
+        using var ecdsa = TestCertificates.CreateEcdsa();
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
             Saml2ServiceCertificates.Build(Signing(signing), Encryption(ecdsa)));
@@ -342,14 +341,6 @@ public class Saml2ServiceCertificatesTests
         $"The SAML library rejected the {role} certificate with thumbprint {certificate.Thumbprint}. " +
         "Check that the certificate file or store entry includes its private key, and that an encryption " +
         "certificate has an RSA key.";
-
-    private static X509Certificate2 CreateEcdsaCertificate()
-    {
-        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-        var now = DateTimeOffset.UtcNow;
-        return new CertificateRequest("CN=Bitwarden Test ECDSA", key, HashAlgorithmName.SHA256)
-            .CreateSelfSigned(now.AddDays(-1), now.AddDays(365));
-    }
 
     private static IEnumerable<string> Thumbprints(IEnumerable<X509Certificate2> certificates) =>
         certificates.Select(certificate => certificate.Thumbprint);

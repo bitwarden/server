@@ -12,6 +12,7 @@ using Bit.Sso.Utilities;
 using Bit.Sso.Utilities.Saml2;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Test.Common.Helpers;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.DataProtection;
@@ -146,9 +147,9 @@ public class DynamicAuthenticationSchemeProviderTests
         Guid organizationId,
         SutProvider<DynamicAuthenticationSchemeProvider> sutProvider)
     {
-        using var signingCertificate = CreateSelfSignedCertificate("CN=Test SP signing certificate");
-        using var encryptionCertificate = CreateSelfSignedCertificate("CN=Test SP encryption certificate");
-        using var stagedSigningCertificate = CreateSelfSignedCertificate("CN=Test SP staged signing certificate");
+        using var signingCertificate = TestCertificates.Create("CN=Test SP signing certificate");
+        using var encryptionCertificate = TestCertificates.Create("CN=Test SP encryption certificate");
+        using var stagedSigningCertificate = TestCertificates.Create("CN=Test SP staged signing certificate");
         var samlEnvironment = new SamlEnvironment();
         samlEnvironment.ServiceCertificates.Add(new ServiceCertificate
         {
@@ -178,7 +179,7 @@ public class DynamicAuthenticationSchemeProviderTests
         sutProvider.SetDependency(samlEnvironment);
         sutProvider.Create();
 
-        using var idpSigningCertificate = CreateSelfSignedCertificate("CN=Test IdP signing certificate");
+        using var idpSigningCertificate = TestCertificates.Create("CN=Test IdP signing certificate");
         var ssoConfig = new SsoConfig { OrganizationId = organizationId, Enabled = true };
         ssoConfig.SetData(new SsoConfigurationData
         {
@@ -320,14 +321,6 @@ public class DynamicAuthenticationSchemeProviderTests
             .Returns(ssoConfig);
 
         return handler;
-    }
-
-    private static X509Certificate2 CreateSelfSignedCertificate(string subjectName)
-    {
-        using var key = RSA.Create(2048);
-        var now = DateTimeOffset.UtcNow;
-        return new CertificateRequest(subjectName, key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1)
-            .CreateSelfSigned(now, now.AddDays(365));
     }
 
     private static EntityDescriptor BuildEntityDescriptor(KeyDescriptor keyDescriptor)
