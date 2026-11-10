@@ -21,7 +21,7 @@ using NSubstitute;
 using Sustainsys.Saml2.AspNetCore2;
 using Xunit;
 
-namespace Bit.Sso.IntegrationTest.Endpoints;
+namespace Bit.Sso.IntegrationTest.Protocol.Saml2;
 
 /// <summary>
 /// Uses a <c>Saml2Options</c> object.

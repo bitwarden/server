@@ -4,13 +4,13 @@ using Bit.Sso.IntegrationTest.Utilities;
 using Bit.Test.Common.Helpers;
 using Xunit;
 
-namespace Bit.Sso.IntegrationTest.Endpoints;
+namespace Bit.Sso.IntegrationTest.Protocol;
 
-public class SsoConfigurationTests : IClassFixture<SsoApplicationFactory>
+public class SsoDiscoveryDocumentTests : IClassFixture<SsoApplicationFactory>
 {
     private readonly SsoApplicationFactory _factory;
 
-    public SsoConfigurationTests(SsoApplicationFactory factory)
+    public SsoDiscoveryDocumentTests(SsoApplicationFactory factory)
     {
         _factory = factory;
     }
