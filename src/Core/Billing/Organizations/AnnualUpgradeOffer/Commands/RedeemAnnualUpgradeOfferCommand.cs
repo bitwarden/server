@@ -110,7 +110,6 @@ public class RedeemAnnualUpgradeOfferCommand(
         var phase2Options = new SubscriptionSchedulePhaseOptions
         {
             StartDate = periodEnd,
-            EndDate = periodEnd.AddYears(1),
             Items = phase2Items,
             Discounts = DiscountExtensions.BuildCurrentPhaseDiscounts(subscription),
             ProrationBehavior = ProrationBehavior.None
