@@ -1,9 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
+using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.Repositories;
 using Bit.Core.Tokens;
 using Bit.IntegrationTestCommon.Factories;
@@ -14,44 +14,45 @@ using Xunit;
 
 namespace Bit.Identity.IntegrationTest.Registration;
 
-public class RegisterFinishOrgInviteTokenTests
+public class RegisterFinishSponsoredFamiliesTests
 {
     [Theory, BitAutoData]
-    public async Task RegistrationWithEmailVerification_WithOrgInviteToken_Succeeds(
-         [StringLength(1000)] string masterPasswordHash, [StringLength(50)] string masterPasswordHint, string userSymmetricKey,
-        KeysRequestModel userAsymmetricKeys, int kdfMemory, int kdfParallelism)
+    public async Task RegistrationWithEmailVerification_WithOrgSponsoredFreeFamilyPlanInviteToken_Succeeds(
+     [StringLength(1000)] string masterPasswordHash, [StringLength(50)] string masterPasswordHint, string userSymmetricKey,
+    KeysRequestModel userAsymmetricKeys, int kdfMemory, int kdfParallelism, Guid orgSponsorshipId)
     {
         userAsymmetricKeys.AccountKeys = null;
 
         // Localize factory to just this test.
         var localFactory = new IdentityApplicationFactory();
 
-        // To avoid having to call the API send org invite endpoint, I'm going to hardcode some valid org invite data:
-        var email = "jsnider+local410@bitwarden.com";
-        var orgInviteToken = "BwOrgUserInviteToken_CfDJ8HOzu6wr6nVLouuDxgOHsMwPcj9Guuip5k_XLD1bBGpwQS1f66c9kB6X4rvKGxNdywhgimzgvG9SgLwwJU70O8P879XyP94W6kSoT4N25a73kgW3nU3vl3fAtGSS52xdBjNU8o4sxmomRvhOZIQ0jwtVjdMC2IdybTbxwCZhvN0hKIFs265k6wFRSym1eu4NjjZ8pmnMneG0PlKnNZL93tDe8FMcqStJXoddIEgbA99VJp8z1LQmOMfEdoMEM7Zs8W5bZ34N4YEGu8XCrVau59kGtWQk7N4rPV5okzQbTpeoY_4FeywgLFGm-tDtTPEdSEBJkRjexANri7CGdg3dpnMifQc_bTmjZd32gOjw8N8v";
-        var orgUserId = new Guid("5e45fbdc-a080-4a77-93ff-b19c0161e81e");
+        // Hardcoded, valid org sponsored free family plan invite token data
+        var email = "jsnider+local10000008@bitwarden.com";
+        var orgSponsoredFreeFamilyPlanToken = "BWOrganizationSponsorship_CfDJ8HFsgwUNr89EtnCal5H72cx11wdMdD5_FSNMJoXJKp9migo8ZXi2Qx8GOM2b8IccesQEvZxzX_VDvhaaFi1NZc7-5bdadsfaPiwvzy28qwaW5-iF72vncmixArxKt8_FrJCqvn-5Yh45DvUWeOUBl1fPPx6LB4lgf6DcFkFZaHKOxIEywkFWEX9IWsLAfBfhU9K7AYZ02kxLRgXDK_eH3SKY0luoyUbRLBJRq1J9WnAQNcPLx9GOywQDUGRNvQGYmrzpAdq8y3MgUby_XD2NBf4-Vfr_0DIYPlGVJz0Ab1CwKbQ5G9vTXrFbbHQni40GVgohTq6WeVwk-PBMW9kjBw2rHO8QzWUb4whn831y-dEC";
 
-        var orgUser = new OrganizationUser { Id = orgUserId, Email = email, OrganizationId = Guid.NewGuid() };
-
-        var orgInviteTokenable = new OrgUserInviteTokenable(orgUser)
+        var orgSponsorship = new OrganizationSponsorship
         {
-            ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromHours(5))
+            Id = orgSponsorshipId,
+            PlanSponsorshipType = PlanSponsorshipType.FamiliesForEnterprise,
+            OfferedToEmail = email
         };
 
-        localFactory.SubstituteService<IDataProtectorTokenFactory<OrgUserInviteTokenable>>(orgInviteTokenDataProtectorFactory =>
+        var orgSponsorshipOfferTokenable = new OrganizationSponsorshipOfferTokenable(orgSponsorship) { };
+
+        localFactory.SubstituteService<IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable>>(dataProtectorTokenFactory =>
         {
-            orgInviteTokenDataProtectorFactory.TryUnprotect(Arg.Is(orgInviteToken), out Arg.Any<OrgUserInviteTokenable>())
+            dataProtectorTokenFactory.TryUnprotect(Arg.Is(orgSponsoredFreeFamilyPlanToken), out Arg.Any<OrganizationSponsorshipOfferTokenable>())
                 .Returns(callInfo =>
                 {
-                    callInfo[1] = orgInviteTokenable;
+                    callInfo[1] = orgSponsorshipOfferTokenable;
                     return true;
                 });
         });
 
-        localFactory.SubstituteService<IOrganizationUserRepository>(orgUserRepository =>
+        localFactory.SubstituteService<IOrganizationSponsorshipRepository>(organizationSponsorshipRepository =>
         {
-            orgUserRepository.GetByIdAsync(orgUserId)
-                .Returns(orgUser);
+            organizationSponsorshipRepository.GetByIdAsync(orgSponsorshipId)
+                .Returns(orgSponsorship);
         });
 
         var registerFinishReqModel = new RegisterFinishRequestModel
@@ -59,8 +60,7 @@ public class RegisterFinishOrgInviteTokenTests
             Email = email,
             MasterPasswordHash = masterPasswordHash,
             MasterPasswordHint = masterPasswordHint,
-            OrgInviteToken = orgInviteToken,
-            OrganizationUserId = orgUserId,
+            OrgSponsoredFreeFamilyPlanToken = orgSponsoredFreeFamilyPlanToken,
             Kdf = KdfType.PBKDF2_SHA256,
             KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
             UserSymmetricKey = userSymmetricKey,

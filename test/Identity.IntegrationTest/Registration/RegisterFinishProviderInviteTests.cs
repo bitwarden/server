@@ -14,7 +14,7 @@ using Xunit;
 
 namespace Bit.Identity.IntegrationTest.Registration;
 
-public class RegisterFinishProviderInviteTokenTests
+public class RegisterFinishProviderInviteTests
 {
     [Theory, BitAutoData]
     public async Task RegistrationWithEmailVerification_WithProviderInviteToken_Succeeds(

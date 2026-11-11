@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Bit.Identity.IntegrationTest.Registration;
 
-public class RegisterFinishEmergencyAccessInviteTokenTests
+public class RegisterFinishEmergencyAccessInviteTests
 {
     [Theory, BitAutoData]
     public async Task RegistrationWithEmailVerification_WithAcceptEmergencyAccessInviteToken_Succeeds(
