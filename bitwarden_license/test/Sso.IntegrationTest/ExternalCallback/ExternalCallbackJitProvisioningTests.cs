@@ -9,7 +9,7 @@ namespace Bit.Sso.IntegrationTest.ExternalCallback;
 /// <c>/Account/ExternalCallback</c> for a new user with no Bitwarden account and no organization user row.
 /// SSO provisions both just in time.
 /// </summary>
-public class AccountControllerExternalCallbackJitProvisioningTests
+public class ExternalCallbackJitProvisioningTests
 {
     /*
     * SUCCESS PATH: Test to verify /Account/ExternalCallback succeeds when JIT provisioning

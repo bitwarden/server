@@ -21,7 +21,7 @@ namespace Bit.Sso.IntegrationTest.ExternalCallback;
 /// <c>/Account/ExternalCallback</c> when the request carries a user identifier to link an existing account
 /// to SSO by hand.
 /// </summary>
-public class AccountControllerExternalCallbackManualLinkingTests(SsoApplicationFactory factory) : IClassFixture<SsoApplicationFactory>
+public class ExternalCallbackManualLinkingTests(SsoApplicationFactory factory) : IClassFixture<SsoApplicationFactory>
 {
     private readonly SsoApplicationFactory _factory = factory;
 

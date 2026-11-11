@@ -8,7 +8,7 @@ namespace Bit.Sso.IntegrationTest.ExternalCallback;
 /// <summary>
 /// <c>/Account/ExternalCallback</c> for a user who already has an SSO link to the organization.
 /// </summary>
-public class AccountControllerExternalCallbackReturningUserTests
+public class ExternalCallbackReturningUserTests
 {
     /*
     * Test to verify /Account/ExternalCallback returns error when user is found via SSO

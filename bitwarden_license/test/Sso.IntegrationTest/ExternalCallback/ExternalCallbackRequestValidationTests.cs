@@ -14,7 +14,7 @@ namespace Bit.Sso.IntegrationTest.ExternalCallback;
 /// external authentication, a missing or disabled SSO configuration, an unexpected ACR value, missing
 /// user ID or email claims, and a provider scheme that is not an organization ID.
 /// </summary>
-public class AccountControllerExternalCallbackRequestValidationTests(SsoApplicationFactory factory) : IClassFixture<SsoApplicationFactory>
+public class ExternalCallbackRequestValidationTests(SsoApplicationFactory factory) : IClassFixture<SsoApplicationFactory>
 {
     private readonly SsoApplicationFactory _factory = factory;
 

@@ -18,7 +18,7 @@ namespace Bit.Sso.IntegrationTest.ExternalCallback;
 /// provisions just in time and for an existing Bitwarden user. Covers the promotion to Invited, the
 /// seat check that the promotion runs, and the rollback when a later step fails.
 /// </summary>
-public class AccountControllerExternalCallbackStagedOrgUserTests
+public class ExternalCallbackStagedOrgUserTests
 {
     /*
     * SUCCESS PATH: Test to verify /Account/ExternalCallback promotes a Staged OrganizationUser
