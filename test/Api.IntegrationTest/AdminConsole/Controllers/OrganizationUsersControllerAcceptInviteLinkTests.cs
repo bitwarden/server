@@ -680,10 +680,10 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
     private async Task SetJoinerTwoFactorEnabledAsync(string joinerEmail)
     {
         var userRepository = _factory.GetService<IUserRepository>();
-        await TwoFactorIntegrationTestHelpers.SetUserTwoFactorProvidersJsonAsync(
+        await TwoFactorTestHelpers.SetUserTwoFactorProvidersJsonAsync(
             userRepository,
             joinerEmail,
-            TwoFactorIntegrationTestHelpers.BuildAuthenticatorProvidersJson(TwoFactorIntegrationTestHelpers.AuthenticatorKey));
+            TwoFactorTestHelpers.BuildAuthenticatorProvidersJson(TwoFactorTestHelpers.AuthenticatorKey));
     }
 
     private async Task AssertNotMemberAsync(string joinerEmail)
