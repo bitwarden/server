@@ -40,17 +40,6 @@ public interface IAccessLeaseRepository
     Task<ICollection<AccessLease>> GetManyActiveByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime now);
 
     /// <summary>
-    /// Returns the ended leases (Expired, Revoked, or Cancelled) on the given collections that ended on or after
-    /// <paramref name="since"/>.
-    /// </summary>
-    /// <remarks>
-    /// Expiry is never stored, so ended-ness is derived by composing the recorded action with a clock comparison
-    /// against <paramref name="now"/>.
-    /// </remarks>
-    Task<ICollection<AccessLease>> GetManyEndedByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime since,
-        DateTime now);
-
-    /// <summary>
     /// Race-safely mints the lease for an approved request, copying its window. Returns
     /// <see cref="AccessLeaseMintOutcome.PreconditionFailed"/> for a stale precondition, or
     /// <see cref="AccessLeaseMintOutcome.SingleActiveLeaseConflict"/> when <paramref name="enforceSingleActiveLease"/>
