@@ -301,7 +301,8 @@ public class MembersController : BaseAdminConsoleController
         {
             return new NotFoundResult();
         }
-        await _resendOrganizationInviteCommand.ResendInviteAsync(_currentContext.OrganizationId!.Value, null, id);
+        await _resendOrganizationInviteCommand.ResendInviteAsync(_currentContext.OrganizationId!.Value, null, id,
+            systemUser: EventSystemUser.PublicApi);
         return new OkResult();
     }
 
