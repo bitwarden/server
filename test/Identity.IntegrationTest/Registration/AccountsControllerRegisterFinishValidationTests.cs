@@ -6,7 +6,7 @@ using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
-namespace Bit.Identity.IntegrationTest.Controllers.Accounts;
+namespace Bit.Identity.IntegrationTest.Registration;
 
 public class AccountsControllerRegisterFinishValidationTests : IClassFixture<IdentityApplicationFactory>
 {

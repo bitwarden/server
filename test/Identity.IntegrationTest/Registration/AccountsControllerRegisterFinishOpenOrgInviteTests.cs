@@ -15,7 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using Xunit;
 using static Bit.Identity.IntegrationTest.Helpers.AccountsTestHelpers;
 
-namespace Bit.Identity.IntegrationTest.Controllers.Accounts;
+namespace Bit.Identity.IntegrationTest.Registration;
 
 public class AccountsControllerRegisterFinishOpenOrgInviteTests
 {

@@ -19,7 +19,7 @@ using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Identity.IntegrationTest.Controllers.Accounts;
+namespace Bit.Identity.IntegrationTest.Registration;
 
 public class AccountsControllerRegisterFinishInviteTokenTests
 {

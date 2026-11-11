@@ -9,7 +9,7 @@ using Xunit;
 
 #nullable enable
 
-namespace Bit.Identity.IntegrationTest.Controllers.Sso;
+namespace Bit.Identity.IntegrationTest.Sso;
 
 public class SsoControllerExternalCallbackTests
 {
