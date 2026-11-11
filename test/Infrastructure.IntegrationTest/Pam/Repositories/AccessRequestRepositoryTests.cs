@@ -4,6 +4,7 @@ using Bit.Infrastructure.IntegrationTest.AdminConsole;
 using Bit.Infrastructure.IntegrationTest.Comparers;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Xunit;
 
@@ -54,7 +55,7 @@ public class AccessRequestRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task GetManyInboxHistoryByCollectionIdsAsync_RespectsStatusAndWindow(
+    public async Task GetHistoryPageAsync_ReturnsOnlyEndedRequestsInTheWindow(
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
         IAccessRequestRepository accessRequestRepository)
@@ -63,22 +64,240 @@ public class AccessRequestRepositoryTests
         var collection = await collectionRepository.CreateTestCollectionAsync(organization);
         var now = DateTime.UtcNow;
 
-        var resolved = await accessRequestRepository.CreateAsync(BuildRequest(
+        var denied = await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, Guid.NewGuid(), AccessRequestAction.Denied, now));
+        // Approved and still inside its window, open, and ended before the window: none of them is history.
+        await accessRequestRepository.CreateAsync(BuildRequest(
             organization.Id, collection.Id, Guid.NewGuid(), AccessRequestAction.Approved, now));
         await accessRequestRepository.CreateAsync(BuildRequest(
             organization.Id, collection.Id, Guid.NewGuid(), AccessRequestAction.None, now));
         await accessRequestRepository.CreateAsync(BuildRequest(
             organization.Id, collection.Id, Guid.NewGuid(), AccessRequestAction.Denied, now.AddDays(-120)));
 
-        var history = await accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
-            [collection.Id], now.AddDays(-90), now);
+        var page = await ReadHistoryAsync(accessRequestRepository, [collection.Id], now);
 
-        var row = Assert.Single(history);
-        Assert.Equal(resolved.Id, row.Id);
+        Assert.Equal(denied.Id, Assert.Single(page.Requests).Id);
+        Assert.Equal(1, page.Total);
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task GetManyInboxHistoryByCollectionIdsAsync_SurfacesProducedLeaseStatus(
+    public async Task GetHistoryPageAsync_PagesByEndNewestFirstWithoutGapsOrRepeats(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRequestRepository accessRequestRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var now = DateTime.UtcNow;
+
+        // Created in one order, ended in the reverse one; two end at the same instant.
+        var endedAt = new[] { 9, 2, 2, 5, 1 };
+        var created = new List<Guid>();
+        for (var i = 0; i < endedAt.Length; i++)
+        {
+            var request = BuildRequest(
+                organization.Id, collection.Id, Guid.NewGuid(), AccessRequestAction.Denied, now.AddMinutes(-60 + i));
+            request.ActionDate = now.AddMinutes(-endedAt[i]);
+            created.Add((await accessRequestRepository.CreateAsync(request)).Id);
+        }
+
+        var walked = new List<AccessRequestDetails>();
+        for (var skip = 0; skip < endedAt.Length; skip += 2)
+        {
+            var page = await ReadHistoryAsync(accessRequestRepository, [collection.Id], now, skip: skip, take: 2);
+            Assert.Equal(endedAt.Length, page.Total);
+            walked.AddRange(page.Requests);
+        }
+
+        Assert.Equal(created.Order(), walked.Select(r => r.Id).Order());
+        Assert.Equal(walked.Count, walked.Select(r => r.Id).Distinct().Count());
+        Assert.True(walked.Zip(walked.Skip(1)).All(pair => pair.First.ActionDate >= pair.Second.ActionDate));
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetHistoryPageAsync_DerivesHowEachRequestEnded(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var now = DateTime.UtcNow;
+
+        var denied = await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, Guid.NewGuid(), AccessRequestAction.Denied, now));
+        var canceled = await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, Guid.NewGuid(), AccessRequestAction.Cancelled, now));
+        // BuildRequest's window closes two hours after creation.
+        var unanswered = await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, Guid.NewGuid(), AccessRequestAction.None, now.AddHours(-3)));
+        var unstarted = await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, Guid.NewGuid(), AccessRequestAction.Approved, now.AddHours(-3)));
+        var (ranOut, _) = await CreateActivatedRequestAsync(
+            accessRequestRepository, accessLeaseRepository, organization.Id, collection.Id, now.AddHours(-3));
+        var (revoked, revokedLease) = await CreateActivatedRequestAsync(
+            accessRequestRepository, accessLeaseRepository, organization.Id, collection.Id, now);
+        await accessLeaseRepository.RevokeAsync(revokedLease, AccessLeaseAction.Revoked,
+            BuildHumanDecision(revoked.Id, Guid.NewGuid(), AccessDecisionVerdict.Deny, "revoked", now), now);
+        var (ended, endedLease) = await CreateActivatedRequestAsync(
+            accessRequestRepository, accessLeaseRepository, organization.Id, collection.Id, now);
+        await accessLeaseRepository.RevokeAsync(endedLease, AccessLeaseAction.Cancelled,
+            BuildHumanDecision(ended.Id, ended.RequesterId, AccessDecisionVerdict.Deny, "done", now), now);
+        // Still running: not history.
+        await CreateActivatedRequestAsync(
+            accessRequestRepository, accessLeaseRepository, organization.Id, collection.Id, now);
+
+        async Task<Guid[]> IdsWith(AccessRequestHistoryStatus status) =>
+            (await ReadHistoryAsync(accessRequestRepository, [collection.Id], now, statuses: [status]))
+            .Requests.Select(r => r.Id).ToArray();
+
+        Assert.Equal([denied.Id], await IdsWith(AccessRequestHistoryStatus.Denied));
+        Assert.Equal([canceled.Id], await IdsWith(AccessRequestHistoryStatus.Canceled));
+        Assert.Equal(new[] { unanswered.Id, unstarted.Id }.Order(), (await IdsWith(AccessRequestHistoryStatus.Expired)).Order());
+        Assert.Equal([revoked.Id], await IdsWith(AccessRequestHistoryStatus.Revoked));
+        Assert.Equal(new[] { ranOut.Id, ended.Id }.Order(), (await IdsWith(AccessRequestHistoryStatus.SessionEnded)).Order());
+        Assert.Equal(7, (await ReadHistoryAsync(accessRequestRepository, [collection.Id], now)).Total);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetHistoryPageAsync_KeepsOnlyADeniedExtension(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        // The client folds every extension but a denied one into its lease's row, so the page must agree.
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var now = DateTime.UtcNow;
+        var (_, lease) = await CreateActivatedRequestAsync(
+            accessRequestRepository, accessLeaseRepository, organization.Id, collection.Id, now);
+
+        async Task<AccessRequest> ExtensionAsync(AccessRequestAction action, DateTime creationDate)
+        {
+            var extension = BuildRequest(organization.Id, collection.Id, Guid.NewGuid(), action, creationDate);
+            extension.ExtensionOfLeaseId = lease.Id;
+            return await accessRequestRepository.CreateAsync(extension);
+        }
+
+        var denied = await ExtensionAsync(AccessRequestAction.Denied, now);
+        await ExtensionAsync(AccessRequestAction.Cancelled, now);
+        // Unanswered, and its window closed an hour ago.
+        await ExtensionAsync(AccessRequestAction.None, now.AddHours(-3));
+
+        var page = await ReadHistoryAsync(accessRequestRepository, [collection.Id], now);
+
+        Assert.Equal(denied.Id, Assert.Single(page.Requests).Id);
+        Assert.Equal(1, page.Total);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetHistoryPageAsync_ReadsTheCallersOwnRequestsAndFiltersAndFacets(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRequestRepository accessRequestRepository)
+    {
+        var caller = await userRepository.CreateTestUserAsync("caller");
+        var other = await userRepository.CreateTestUserAsync("other");
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var managed = await collectionRepository.CreateTestCollectionAsync(organization);
+        var unmanaged = await collectionRepository.CreateTestCollectionAsync(organization);
+        var now = DateTime.UtcNow;
+
+        var othersOnManaged = await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, managed.Id, other.Id, AccessRequestAction.Denied, now));
+        var ownOnUnmanaged = await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, unmanaged.Id, caller.Id, AccessRequestAction.Cancelled, now));
+        // Someone else's request on a collection the caller does not manage.
+        await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, unmanaged.Id, other.Id, AccessRequestAction.Denied, now));
+
+        var all = await ReadHistoryAsync(accessRequestRepository, [managed.Id], now, userId: caller.Id);
+        Assert.Equal(new[] { othersOnManaged.Id, ownOnUnmanaged.Id }.Order(), all.Requests.Select(r => r.Id).Order());
+        Assert.Equal(new[] { managed.Id, unmanaged.Id }.Order(), all.CollectionIds.Order());
+        Assert.Equal(new[] { caller.Email, other.Email }.Order(), all.Requesters.Select(r => r.Email).Order());
+
+        // A filter narrows the rows and the total, never the facets.
+        var byRequester = await ReadHistoryAsync(
+            accessRequestRepository, [managed.Id], now, userId: caller.Id, requesterIds: [other.Id]);
+        Assert.Equal(othersOnManaged.Id, Assert.Single(byRequester.Requests).Id);
+        Assert.Equal(1, byRequester.Total);
+        Assert.Equal(2, byRequester.Requesters.Count);
+        var byCollection = await ReadHistoryAsync(
+            accessRequestRepository, [managed.Id], now, userId: caller.Id, collectionIds: [unmanaged.Id]);
+        Assert.Equal(ownOnUnmanaged.Id, Assert.Single(byCollection.Requests).Id);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyInboxApprovedByCollectionIdsAsync_ReturnsApprovalsThatCanStillGiveAccess(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var now = DateTime.UtcNow;
+
+        // Not started, window open: in.
+        var unstarted = await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, Guid.NewGuid(), AccessRequestAction.Approved, now));
+        // Not started, window closed; denied; pending: out.
+        await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, Guid.NewGuid(), AccessRequestAction.Approved, now.AddHours(-3)));
+        await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, Guid.NewGuid(), AccessRequestAction.Denied, now));
+        await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, Guid.NewGuid(), AccessRequestAction.None, now));
+        // Running inside its request's window: in.
+        var (running, _) = await CreateActivatedRequestAsync(
+            accessRequestRepository, accessLeaseRepository, organization.Id, collection.Id, now);
+
+        // Window [now-3h, now-1h], activated at now-2h, extended to an hour from now: the request and its extension
+        // are in, although the request's own window has closed.
+        var (extended, lease) = await CreateActivatedRequestAsync(
+            accessRequestRepository, accessLeaseRepository, organization.Id, collection.Id, now.AddHours(-2));
+        var extendedAt = now.AddMinutes(-90);
+        var extension = BuildRequest(
+            organization.Id, collection.Id, extended.RequesterId, AccessRequestAction.Approved, extendedAt);
+        extension.Id = CombGuid.Generate();
+        extension.ExtensionOfLeaseId = lease.Id;
+        extension.CipherId = extended.CipherId;
+        extension.NotBefore = lease.NotAfter;
+        extension.NotAfter = lease.NotAfter.AddHours(2);
+        extension.ActionDate = extendedAt;
+        Assert.Equal(AccessLeaseExtendOutcome.Extended, await accessRequestRepository.CreateApprovedExtensionAsync(
+            extension,
+            new AccessDecision
+            {
+                Id = CombGuid.Generate(),
+                AccessRequestId = extension.Id,
+                DeciderKind = AccessDeciderKind.Automatic,
+                Verdict = AccessDecisionVerdict.Approve,
+                CreationDate = extendedAt,
+            },
+            extendedAt,
+            denialComment: null));
+
+        // Ran to its end: out.
+        await CreateActivatedRequestAsync(
+            accessRequestRepository, accessLeaseRepository, organization.Id, collection.Id, now.AddHours(-3));
+
+        var approved = await accessRequestRepository.GetManyInboxApprovedByCollectionIdsAsync([collection.Id], now);
+
+        Assert.Equal(
+            new[] { unstarted.Id, running.Id, extended.Id, extension.Id }.Order(),
+            approved.Select(r => r.Id).Order());
+        var extendedRow = approved.Single(r => r.Id == extended.Id);
+        Assert.Equal(lease.Id, extendedRow.ProducedLeaseId);
+        Assert.Equal(AccessLeaseStatus.Active, extendedRow.ProducedLeaseStatus);
+        Assert.Empty(await accessRequestRepository.GetManyInboxApprovedByCollectionIdsAsync([Guid.NewGuid()], now));
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task ProducedLeaseStatus_ActiveOnTheApprovedRead_RevokedInTheHistory(
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
         IAccessRequestRepository accessRequestRepository,
@@ -110,8 +329,8 @@ public class AccessRequestRepositoryTests
             await accessLeaseRepository.CreateFromApprovedRequestAsync(lease, now, false));
 
         // The client offers Revoke while the produced lease reads Active.
-        var active = Assert.Single(await accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
-            [collection.Id], now.AddDays(-1), now));
+        var active = Assert.Single(await accessRequestRepository.GetManyInboxApprovedByCollectionIdsAsync(
+            [collection.Id], now));
         Assert.Equal(lease.Id, active.ProducedLeaseId);
         Assert.Equal(AccessLeaseStatus.Active, active.ProducedLeaseStatus);
 
@@ -128,8 +347,8 @@ public class AccessRequestRepositoryTests
         };
         await accessLeaseRepository.RevokeAsync(lease, AccessLeaseAction.Revoked, auditDecision, now);
 
-        var revoked = Assert.Single(await accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
-            [collection.Id], now.AddDays(-1), now));
+        var revoked = Assert.Single(
+            (await ReadHistoryAsync(accessRequestRepository, [collection.Id], now)).Requests);
         Assert.Equal(lease.Id, revoked.ProducedLeaseId);
         Assert.Equal(AccessLeaseStatus.Revoked, revoked.ProducedLeaseStatus);
     }
@@ -162,8 +381,7 @@ public class AccessRequestRepositoryTests
             request.RequesterId, now.AddDays(-1), now));
         Assert.Equal(AccessLeaseStatus.Expired, mine.ProducedLeaseStatus);
 
-        var history = Assert.Single(await accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
-            [collection.Id], now.AddDays(-1), now));
+        var history = Assert.Single((await ReadHistoryAsync(accessRequestRepository, [collection.Id], now)).Requests);
         Assert.Equal(AccessLeaseStatus.Expired, history.ProducedLeaseStatus);
 
         // Read inside the window, the same row is Active; this is a projection, not a write.
@@ -263,9 +481,9 @@ public class AccessRequestRepositoryTests
         Assert.Equal(AccessRequestAction.Approved, persisted!.Action);
         Assert.NotNull(persisted.ActionDate);
 
-        var history = await accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
-            [collection.Id], now.AddDays(-1), now);
-        var row = Assert.Single(history);
+        // Approved and not started, so the approved read holds it, not the history.
+        var row = Assert.Single(await accessRequestRepository.GetManyInboxApprovedByCollectionIdsAsync(
+            [collection.Id], now));
         var recorded = Assert.Single(row.Decisions);
         Assert.Equal(AccessDeciderKind.Human, recorded.DeciderKind);
         Assert.Equal(approverId, recorded.ApproverId!.Value);
@@ -525,7 +743,7 @@ public class AccessRequestRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task GetManyInboxHistoryByCollectionIdsAsync_MultipleHumanDecisions_ProjectsFullHistoryOldestFirst(
+    public async Task GetHistoryPageAsync_MultipleHumanDecisions_ProjectsFullHistoryOldestFirst(
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
         IAccessRequestRepository accessRequestRepository)
@@ -579,9 +797,7 @@ public class AccessRequestRepositoryTests
             },
             now.AddMinutes(1));
 
-        var history = await accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
-            [collection.Id], now.AddDays(-1), now);
-        var row = Assert.Single(history);
+        var row = Assert.Single((await ReadHistoryAsync(accessRequestRepository, [collection.Id], now)).Requests);
         Assert.Equal(2, row.Decisions.Count);
         Assert.Equal(AccessDeciderKind.Human, row.Decisions[0].DeciderKind);
         Assert.Equal(firstApproverId, row.Decisions[0].ApproverId!.Value);
@@ -701,10 +917,7 @@ public class AccessRequestRepositoryTests
         var pendingRow = Assert.Single(pendingRows);
         Assert.Equal(open.Id, pendingRow.Id);
 
-        var history = await accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
-            [collection.Id], now.AddDays(-90), now);
-
-        var historyRow = Assert.Single(history);
+        var historyRow = Assert.Single((await ReadHistoryAsync(accessRequestRepository, [collection.Id], now)).Requests);
         Assert.Equal(lapsed.Id, historyRow.Id);
         Assert.Equal(AccessRequestStatus.Expired, historyRow.Status);
         Assert.Null(historyRow.ActionDate); // nobody acted; the end time is NotAfter, not a resolution
@@ -927,11 +1140,32 @@ public class AccessRequestRepositoryTests
     public async Task GetManyInboxByCollectionIdsAsync_NoCollectionIds_ReturnsEmpty(
         IAccessRequestRepository accessRequestRepository)
     {
-        // Both reads short-circuit on an empty set instead of querying with an empty TVP (Dapper) or Contains (EF).
+        // The inbox reads short-circuit on an empty set instead of querying with an empty TVP (Dapper) or Contains
+        // (EF); the history still reads the caller's own requests.
         Assert.Empty(await accessRequestRepository.GetManyInboxPendingByCollectionIdsAsync([], DateTime.UtcNow));
-        Assert.Empty(await accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
-            [], DateTime.UtcNow.AddDays(-90), DateTime.UtcNow));
+        Assert.Empty(await accessRequestRepository.GetManyInboxApprovedByCollectionIdsAsync([], DateTime.UtcNow));
+        var history = await ReadHistoryAsync(accessRequestRepository, [], DateTime.UtcNow);
+        Assert.Empty(history.Requests);
+        Assert.Equal(0, history.Total);
     }
+
+    private static Task<AccessRequestHistoryPage> ReadHistoryAsync(
+        IAccessRequestRepository accessRequestRepository, IReadOnlyCollection<Guid> manageableCollectionIds,
+        DateTime now, Guid? userId = null, int skip = 0, int take = 100,
+        IReadOnlyCollection<AccessRequestHistoryStatus>? statuses = null,
+        IReadOnlyCollection<Guid>? collectionIds = null, IReadOnlyCollection<Guid>? requesterIds = null)
+        => accessRequestRepository.GetHistoryPageAsync(new AccessRequestHistoryFilter
+        {
+            ManageableCollectionIds = manageableCollectionIds,
+            UserId = userId ?? Guid.NewGuid(),
+            Since = now.AddDays(-90),
+            Now = now,
+            Skip = skip,
+            Take = take,
+            Statuses = statuses ?? [],
+            CollectionIds = collectionIds ?? [],
+            RequesterIds = requesterIds ?? [],
+        });
 
     private static AccessDecision BuildHumanDecision(
         Guid accessRequestId, Guid approverId, AccessDecisionVerdict verdict, string comment, DateTime now)
