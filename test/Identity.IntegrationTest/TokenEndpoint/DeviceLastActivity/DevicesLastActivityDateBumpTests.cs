@@ -24,7 +24,7 @@ namespace Bit.Identity.IntegrationTest.TokenEndpoint.DeviceLastActivity;
 /// have bucketed against an anonymous context. Post-fix, the snapshot must show the
 /// resolved User / Device populated immediately before the flag check fires.
 /// </summary>
-public class DeviceLastActivityLoginDateBumpTests
+public class DevicesLastActivityDateBumpTests
 {
     private static readonly KeysRequestModel TEST_ACCOUNT_KEYS = new()
     {

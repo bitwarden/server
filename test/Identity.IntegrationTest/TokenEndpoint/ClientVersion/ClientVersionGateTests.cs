@@ -10,12 +10,12 @@ using Xunit;
 
 namespace Bit.Identity.IntegrationTest.TokenEndpoint.ClientVersion;
 
-public class ClientVersionLoginGateTests : IClassFixture<IdentityApplicationFactory>
+public class ClientVersionGateTests : IClassFixture<IdentityApplicationFactory>
 {
     private readonly IdentityApplicationFactory _factory;
     private const string DefaultEncryptedString = "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
 
-    public ClientVersionLoginGateTests(IdentityApplicationFactory factory)
+    public ClientVersionGateTests(IdentityApplicationFactory factory)
     {
         _factory = factory;
         ReinitializeDbForTests(_factory);

@@ -15,7 +15,7 @@ using Xunit;
 
 namespace Bit.Identity.IntegrationTest.TokenEndpoint.Grants.SendAccess;
 
-public class SendAccessGrantEmailOtpTests(IdentityApplicationFactory _factory) : IClassFixture<IdentityApplicationFactory>
+public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFactory _factory) : IClassFixture<IdentityApplicationFactory>
 {
     [Fact]
     public async Task SendAccess_EmailOtpProtectedSend_MissingEmail_ReturnsInvalidRequest()
@@ -37,7 +37,7 @@ public class SendAccessGrantEmailOtpTests(IdentityApplicationFactory _factory) :
             });
         }).CreateClient();
 
-        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId); // No email
+        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId); // No email
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -82,7 +82,7 @@ public class SendAccessGrantEmailOtpTests(IdentityApplicationFactory _factory) :
         }).CreateClient();
 
 
-        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId, email: email); // Email but no OTP
+        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId, email: email); // Email but no OTP
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -125,7 +125,7 @@ public class SendAccessGrantEmailOtpTests(IdentityApplicationFactory _factory) :
             });
         }).CreateClient();
 
-        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId, email: email, emailOtp: otp);
+        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId, email: email, emailOtp: otp);
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -169,7 +169,7 @@ public class SendAccessGrantEmailOtpTests(IdentityApplicationFactory _factory) :
             });
         }).CreateClient();
 
-        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId, email: email, emailOtp: invalidOtp);
+        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId, email: email, emailOtp: invalidOtp);
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -211,7 +211,7 @@ public class SendAccessGrantEmailOtpTests(IdentityApplicationFactory _factory) :
             });
         }).CreateClient();
 
-        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId, email: email); // Email but no OTP
+        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId, email: email); // Email but no OTP
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -267,7 +267,7 @@ public class SendAccessGrantEmailOtpTests(IdentityApplicationFactory _factory) :
         var persistentCache = factory.Services.GetRequiredKeyedService<IDistributedCache>("persistent");
         await persistentCache.SetAsync(cacheKey, Encoding.UTF8.GetBytes(otp));
 
-        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId, email: email, emailOtp: otp);
+        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId, email: email, emailOtp: otp);
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);

@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Bit.Identity.IntegrationTest.TokenEndpoint.Grants.ClientCredentials;
 
-public class ClientStoreTests
+public class ClientStoreCachingTests
 {
     private const string ProbePrefix = "cache-probe";
     private const string ProbeSecret = "probe-secret";
