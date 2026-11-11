@@ -20,7 +20,7 @@ namespace Bit.Sso.IntegrationTest.Flows.Saml2SpInitiatedLogin;
 /// Sustainsys.Saml2 handler for the same request. The handler reads the cookie.
 /// The test host mocks the authentication service, so the test starts the login on the handler directly.
 /// </summary>
-public class Saml2SpInitiatedLoginFlowTests
+public class Saml2SpInitiatedLoginTests
 {
     private const string ExternalCallbackPath = "/Account/ExternalCallback";
 
