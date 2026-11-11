@@ -10,10 +10,10 @@ using Bit.Core.Utilities;
 namespace Bit.Api.IntegrationTest.Auth.Helpers;
 
 /// <summary>
-/// Arrange helpers for SSO just-in-time (JIT) provisioning tests: the organization's SSO configuration and the
-/// account state of a member that SSO has just provisioned.
+/// Arrange helpers for the tests that finish SSO just-in-time (JIT) provisioning: the organization's SSO
+/// configuration and the account state of a member that SSO has just provisioned.
 /// </summary>
-internal static class SsoJitProvisionTestHelpers
+internal static class SsoJitProvisionFinishTestHelpers
 {
     /// <summary>
     /// Creates an enabled SSO configuration for the organization with the given member decryption type.

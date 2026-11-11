@@ -14,7 +14,7 @@ using Bit.Core.Repositories;
 using Bit.IntegrationTestCommon.Factories;
 using Xunit;
 
-namespace Bit.Api.IntegrationTest.Auth.SsoJitProvisioning;
+namespace Bit.Api.IntegrationTest.Auth.SsoJitProvisionFinish;
 
 public class SsoJitProvisionFinishTrustedDeviceTests
     : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
@@ -63,7 +63,7 @@ public class SsoJitProvisionFinishTrustedDeviceTests
             Data = "{}"
         });
 
-        await SsoJitProvisionTestHelpers.CreateSsoConfigAsync(
+        await SsoJitProvisionFinishTestHelpers.CreateSsoConfigAsync(
             _factory.GetService<ISsoConfigRepository>(), _organization.Id,
             MemberDecryptionType.TrustedDeviceEncryption);
     }
