@@ -17,8 +17,15 @@ using static Bit.Identity.IntegrationTest.Helpers.AccountsTestHelpers;
 
 namespace Bit.Identity.IntegrationTest.Registration;
 
-public class RegisterFinishOpenOrgInviteTests
+public class RegisterFinishOpenOrgInviteTests : IClassFixture<IdentityApplicationFactory>
 {
+    private readonly IdentityApplicationFactory _factory;
+
+    public RegisterFinishOpenOrgInviteTests(IdentityApplicationFactory factory)
+    {
+        _factory = factory;
+    }
+
     [Theory, BitAutoData]
     public async Task RegistrationWithEmailVerification_WithOpenOrgInviteAndOpenRegistrationDisabled_Succeeds(
         [Required] string name, bool receiveMarketingEmails,
@@ -644,6 +651,38 @@ public class RegisterFinishOpenOrgInviteTests
             },
         };
         var finishCtx = await localFactory.PostRegisterFinishAsync(registerFinishReqModel);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, finishCtx.Response.StatusCode);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RegisterFinish_WithOpenOrgInviteAndOrgInviteToken_ReturnsBadRequest([Required] string name,
+        [StringLength(1000), Required] string masterPasswordHash, [Required] string userSymmetricKey,
+        [Required] KeysRequestModel userAsymmetricKeys, string orgInviteToken)
+    {
+        // DTO validation: OpenOrgInvite is only compatible with the EmailVerification token type.
+        // Sending it alongside an OrgInviteToken must be rejected at the model-validation layer → 400.
+        userAsymmetricKeys.AccountKeys = null;
+        var email = $"test+register+dtoreject+{name}@email.com";
+
+        var registerFinishReqModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
+            OrgInviteToken = orgInviteToken,
+            OrganizationUserId = Guid.NewGuid(),
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            UserSymmetricKey = userSymmetricKey,
+            UserAsymmetricKeys = userAsymmetricKeys,
+            OpenOrgInvite = new OpenOrgInviteRequestModel
+            {
+                OrganizationId = Guid.NewGuid(),
+                Code = Guid.NewGuid(),
+            },
+        };
+
+        var finishCtx = await _factory.PostRegisterFinishAsync(registerFinishReqModel);
 
         Assert.Equal(StatusCodes.Status400BadRequest, finishCtx.Response.StatusCode);
     }
