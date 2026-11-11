@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Bit.Admin.IntegrationTest.Auth.Login;
 
-public class LoginControllerTests
+public class PasswordlessLoginTests
 {
     [Fact]
     public async Task Confirm_ValidPasswordlessToken_SignsInAdmin()
