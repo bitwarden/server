@@ -5,9 +5,8 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Api.Models;
 
 /// <summary>
-/// The requested window is the only clock PAM takes off the wire, and it lands in a column every other part of the
-/// subsystem reads as UTC. These cover the three shapes System.Text.Json can produce for a timestamp, so the stored
-/// instant is the one the requester picked regardless of the API host's timezone.
+/// The requested window lands in a column read as UTC, so every timestamp shape System.Text.Json produces must keep
+/// the instant the requester picked on any host timezone.
 /// </summary>
 public class AccessRequestCreateRequestModelTests
 {
@@ -37,8 +36,7 @@ public class AccessRequestCreateRequestModelTests
         Assert.Equal(DateTimeKind.Utc, submission.End!.Value.Kind);
     }
 
-    /// <summary>A <c>Z</c>-suffixed window — what every JavaScript client's <c>toISOString()</c> sends — is already
-    /// the instant we want, and must survive untouched.</summary>
+    /// <summary>What JavaScript's <c>toISOString()</c> sends.</summary>
     [Fact]
     public void ToSubmission_WindowSentAsUtc_IsUnchanged()
     {
@@ -50,10 +48,7 @@ public class AccessRequestCreateRequestModelTests
         Assert.Equal(DateTimeKind.Utc, submission.End!.Value.Kind);
     }
 
-    /// <summary>
-    /// A timestamp carrying no designator is ambiguous on the wire; reading it as UTC keeps the stored instant
-    /// independent of the host's timezone, rather than silently meaning something different per deployment.
-    /// </summary>
+    /// <summary>Reading it as UTC keeps the stored instant independent of the host's timezone.</summary>
     [Fact]
     public void ToSubmission_WindowSentWithoutADesignator_IsReadAsUtc()
     {
@@ -65,7 +60,6 @@ public class AccessRequestCreateRequestModelTests
         Assert.Equal(DateTimeKind.Utc, submission.End!.Value.Kind);
     }
 
-    /// <summary>The automatic path sends a duration and no window; normalising must not invent one.</summary>
     [Fact]
     public void ToSubmission_AutomaticPath_LeavesTheWindowUnset()
     {

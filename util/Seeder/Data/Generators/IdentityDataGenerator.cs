@@ -6,10 +6,6 @@ namespace Bit.Seeder.Data.Generators;
 
 internal sealed class IdentityDataGenerator(int seed, GeographicRegion region = GeographicRegion.Global)
 {
-    private readonly int _seed = seed;
-
-    private readonly GeographicRegion _region = region;
-
     // Instance-level (not static) because each generator needs locale-aware Faker from the constructor
     private readonly ThreadLocal<Faker> _threadFaker = new(() => new Faker(MapRegionToLocale(region)));
 
@@ -30,8 +26,8 @@ internal sealed class IdentityDataGenerator(int seed, GeographicRegion region = 
     internal IdentityViewDto GenerateByIndex(int index)
     {
         var seededFaker = _threadFaker.Value!;
-        seededFaker.Random = new Randomizer(_seed + index);
-        var titles = _regionalTitles[_region];
+        seededFaker.Random = new Randomizer(ItemSeedMixer.Mix(seed, index));
+        var titles = _regionalTitles[region];
         var firstName = seededFaker.Name.FirstName();
         var lastName = seededFaker.Name.LastName();
 
@@ -58,14 +54,14 @@ internal sealed class IdentityDataGenerator(int seed, GeographicRegion region = 
         };
     }
 
-    private string GenerateNationalIdByIndex(int index) => _region switch
+    private string GenerateNationalIdByIndex(int index) => region switch
     {
         GeographicRegion.NorthAmerica => $"{100 + (index % 899):D3}-{10 + (index % 90):D2}-{1000 + (index % 9000):D4}",
         GeographicRegion.Europe => $"AB {10 + (index % 90):D2} {10 + ((index + 1) % 90):D2} {10 + ((index + 2) % 90):D2} C",
         GeographicRegion.AsiaPacific => $"{1000 + (index % 9000):D4}-{1000 + ((index + 1) % 9000):D4}-{1000 + ((index + 2) % 9000):D4}",
         GeographicRegion.LatinAmerica => $"{100 + (index % 900):D3}.{100 + ((index + 1) % 900):D3}.{100 + ((index + 2) % 900):D3}-{10 + (index % 90):D2}",
         GeographicRegion.MiddleEast or GeographicRegion.Africa or GeographicRegion.Global => $"{100 + (index % 899):D3}-{10 + (index % 90):D2}-{1000 + (index % 9000):D4}",
-        _ => throw new ArgumentOutOfRangeException(nameof(_region), _region, null)
+        _ => throw new ArgumentOutOfRangeException(nameof(region), region, null)
     };
 
     private static string GeneratePassportNumberByIndex(int index) =>
@@ -74,7 +70,7 @@ internal sealed class IdentityDataGenerator(int seed, GeographicRegion region = 
     private static string GenerateLicenseNumberByIndex(int index) =>
         $"DL{1000000 + index}";
 
-    private string GetCountryCode(Faker faker) => _region switch
+    private string GetCountryCode(Faker faker) => region switch
     {
         GeographicRegion.NorthAmerica => faker.PickRandom("US", "CA"),
         GeographicRegion.Europe => faker.PickRandom("GB", "DE", "FR", "ES", "IT", "NL"),
@@ -83,7 +79,7 @@ internal sealed class IdentityDataGenerator(int seed, GeographicRegion region = 
         GeographicRegion.MiddleEast => faker.PickRandom("AE", "SA", "IL", "TR"),
         GeographicRegion.Africa => faker.PickRandom("ZA", "NG", "EG", "KE"),
         GeographicRegion.Global => faker.Address.CountryCode(),
-        _ => throw new ArgumentOutOfRangeException(nameof(_region), _region, null)
+        _ => throw new ArgumentOutOfRangeException(nameof(region), region, null)
     };
 
     private static string MapRegionToLocale(GeographicRegion region) => region switch

@@ -50,9 +50,8 @@ public class AccessAuditEventRepository : BaseRepository, IAccessAuditEventRepos
             SyncState = (byte?)auditEvent.SyncState,
         });
 
-        // DATETIME2(7) rather than Dapper's default mapping, which sends DATETIME and rounds to about 3ms. The write
-        // has to keep the precision the column holds, or the same event reads back differently here than on the
-        // Entity Framework providers, and the paging cursor is built from a rounded timestamp.
+        // DATETIME2(7), since Dapper's default DATETIME rounds to about 3ms and the paging cursor needs the column's
+        // full precision.
         parameters.Add("@OccurredDate", auditEvent.OccurredDate, DbType.DateTime2, null, 7);
         parameters.Add("@LeaseNotBefore", auditEvent.LeaseNotBefore, DbType.DateTime2, null, 7);
         parameters.Add("@LeaseNotAfter", auditEvent.LeaseNotAfter, DbType.DateTime2, null, 7);
@@ -67,8 +66,7 @@ public class AccessAuditEventRepository : BaseRepository, IAccessAuditEventRepos
     public async Task<ICollection<AccessAuditEvent>> GetPageByOrganizationIdAsync(
         Guid organizationId, AccessAuditTrailFilter filter)
     {
-        // Declared as DATETIME2(7) rather than left to Dapper's default mapping, which truncates: the bounds and the
-        // cursor are only stable page boundaries if they round-trip at the column's full precision.
+        // DATETIME2(7) as on the write: the bounds and the cursor are stable page boundaries only at full precision.
         // ref: https://github.com/StackExchange/Dapper/issues/229
         var parameters = new DynamicParameters();
         parameters.Add("@OrganizationId", organizationId, DbType.Guid);
@@ -111,8 +109,7 @@ public class AccessAuditEventRepository : BaseRepository, IAccessAuditEventRepos
     }
 
     /// <summary>
-    /// A selection as the JSON array the procedure's OPENJSON reads, or null when nothing is selected, which is how
-    /// the procedure is told the dimension is unfiltered. Not the same as an empty array, which would match nothing.
+    /// Null when nothing is selected, which the procedure reads as unfiltered; an empty array would match nothing.
     /// </summary>
     private static string? JsonList<T>(IEnumerable<T> values)
     {

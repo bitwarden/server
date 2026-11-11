@@ -1,0 +1,48 @@
+<mjml>
+  <mj-head>
+    <mj-include path="../../../components/head.mjml" />
+    <mj-include path="../components/admin-console-head.mjml" />
+  </mj-head>
+
+  <mj-body css-class="border-fix">
+    <!-- Blue Header Section -->
+    <mj-wrapper css-class="border-fix" padding="20px 20px 10px 20px">
+      <mj-bw-ac-hero
+        img-src="https://assets.bitwarden.com/email/v1/ac-spot-enterprise.png"
+        title="{{OrganizationName}} invited you to join them on Bitwarden"
+        button-text="<b>Accept invite</b>"
+        button-url="{{Url}}"
+      />
+    </mj-wrapper>
+
+    <!-- Main Content -->
+    <mj-wrapper padding="5px 20px 8px 20px">
+      <mj-section background-color="#fff" padding="10px 10px 16px 10px">
+        <mj-column>
+          <mj-text
+            css-class="ac-text"
+            padding="15px 15px 0px 15px"
+          >
+            <b>{{OrganizationName}}</b> invited you to join their organization vault on
+            Bitwarden, giving you secure access to shared passwords, passkeys,
+            and other sensitive items your team relies on.
+          </mj-text>
+          <mj-text
+            css-class="ac-text"
+            padding="15px 15px 0px 15px"
+          >
+            Your invite is still waiting! Accept it to get started.
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+
+    <!-- Learn More Section -->
+    <mj-wrapper padding="8px 20px 10px 20px">
+      <mj-bw-ac-learn-more-footer />
+    </mj-wrapper>
+
+    <!-- Footer -->
+    <mj-include path="../../../components/footer.mjml" />
+  </mj-body>
+</mjml>

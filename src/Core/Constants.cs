@@ -37,6 +37,7 @@ public static class Constants
     // TODO: PM-34798 Update with actual version once the feature is implemented
     public const string PM32009NewItemTypeMinimumVersion = "2026.2.0";
     public const string DenyLegacyUserMinimumVersion = "2025.6.0";
+    public const string PamPartialCipherMinimumVersion = "2026.11.1";
 
     /// <summary>
     /// Domain suffixes for Bitwarden cloud-hosted environments.
@@ -127,24 +128,19 @@ public static class TokenPurposes
     public const string LinkSso = "LinkSso";
 }
 
-public static class AuthenticationSchemes
-{
-    public const string BitwardenExternalCookieAuthenticationScheme = "bw.external";
-}
-
 [FlagKeyCollection]
 public static partial class FeatureFlagKeys
 {
     /* Admin Console Team */
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
-    public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
-    public const string BulkAutoConfirmOnLogin = "pm-35803-browser-auto-confirm-log-in";
     public const string GenerateInviteLink = "pm-32497-generate-invite-link";
     public const string InviteLinkAutoConfirm = "pm-34429-invite-link-auto-confirm";
     public const string InviteLinkNotification = "pm-39601-invite-link-notification";
-    public const string PM35153CollectionSdkDecryption = "pm-35153-collection-sdk-decryption";
+    public const string AutoReinviteUsers = "pm-39473-auto-reinvite-users";
     public const string PM43375CollectionsDecryptListFailures = "pm-43375-collections-decrypt-list-failures";
     public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
+    public const string MembersTableV2 = "pm-37463-members-table-v2";
+    public const string GroupsTableV2 = "pm-43419-groups-table-v2";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
@@ -154,7 +150,6 @@ public static partial class FeatureFlagKeys
     public const string DesktopMigrationSettings = "desktop-ui-settings-dialog";
 
     /* Auth Team */
-    public const string Otp6Digits = "pm-18612-otp-6-digits";
     public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
     public const string SafariAccountSwitching = "pm-5594-safari-account-switching";
     public const string PM27086_UpdateAuthenticationApisForInputPassword = "pm-27086-update-authentication-apis-for-input-password";
@@ -168,11 +163,13 @@ public static partial class FeatureFlagKeys
     public const string PM35092AuthSalesAssistedTrials = "pm-35092-auth-sales-assisted-trials";
     public const string PM27060_PasswordPreloginFromSdk = "pm-27060-password-prelogin-from-sdk";
     public const string PM42982_WantAssertionsSigned = "pm-42982-want-assertions-signed";
+    public const string PM42283_Rsa15Deprecation = "pm-42283-rsa-1-5-deprecation";
     public const string PM44303_EmergencyAccessSdkApi = "pm-44303-emergency-access-sdk-api";
 
     /* Autofill Team */
     public const string NotificationRefresh = "notification-refresh";
     public const string FillAssistTargetingRules = "fill-assist-targeting-rules";
+    public const string FillAssistRuleFallback = "fill-assist-rule-fallback";
     public const string NotificationUndeterminedCipherScenarioLogic = "undetermined-cipher-scenario-logic";
     public const string EnableAutofillTriage = "enable-autofill-triage";
     public const string PM39071_DefaultPasswordManagerPrompt = "pm-39071-default-password-manager-prompt";
@@ -196,6 +193,8 @@ public static partial class FeatureFlagKeys
     public const string PM35215_BusinessPlanPriceMigration = "pm-35215-business-plan-price-migration";
     public const string PM38333_AnnualBillingSavings = "pm-38333-annual-billing-savings";
     public const string PM38728_SendInvoicePriceMigration = "pm-38728-send-invoice-price-migration";
+    public const string PM39883_Pam_Billing_Support = "pm-39883-pam-billing-support";
+    public const string PM42214_FeatureBasedUpgradePaths = "pm-42214-feature-based-upgrade-paths";
 
     /* Key Management Team */
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
@@ -205,7 +204,6 @@ public static partial class FeatureFlagKeys
     public const string SharedUnlockPart2 = "innovation-sprint-shared-unlock-part-2";
     public const string EnrollAeadOnKeyRotation = "enroll-aead-on-key-rotation";
     public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
-    public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
     public const string NoLogoutOnKdfChange = "pm-23995-no-logout-on-kdf-change";
     public const string V2RegistrationTDEJIT = "pm-27279-v2-registration-tde-jit";
     public const string EnableAccountEncryptionV2KeyConnectorRegistration = "enable-account-encryption-v2-key-connector-registration";
@@ -234,6 +232,7 @@ public static partial class FeatureFlagKeys
     public const string DeviceAuthKey = "pm-27581-device-auth-key";
     public const string PremiumUpgradePath = "pm-31697-premium-upgrade-path";
     public const string MobileCardScanner = "pm-34171-card-scanner";
+    public const string SdkPinUnlock = "pm-31059-sdk-pin-unlock";
 
     /* Platform Team */
     public const string WebPush = "web-push";
@@ -249,7 +248,6 @@ public static partial class FeatureFlagKeys
     /* Tools Team */
     public const string SendControls = "pm-31885-send-controls";
     public const string SdkSendsApi = "pm-30110-sdk-sends-api";
-    public const string SendEventLogging = "pm-36560-send-event-logging";
     public const string SendControlsExistingSends = "pm-31885-send-controls-existing-sends";
     public const string TemporaryItemSharing = "pm-34203-temporary-item-sharing";
     public const string ImportRefresh = "pm-35053-import-upgrade";
@@ -259,7 +257,6 @@ public static partial class FeatureFlagKeys
     public const string PM28190CipherSharingOpsToSdk = "pm-28190-cipher-sharing-ops-to-sdk";
     public const string PhishingDetection = "phishing-detection";
     public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
-    public const string MigrateMyVaultToMyItems = "pm-20558-migrate-myvault-to-myitems";
     public const string PM27632_CipherCrudOperationsToSdk = "pm-27632-cipher-crud-operations-to-sdk";
     public const string PM28191_CipherAdminOpsToSdk = "pm-28191-cipher-admin-ops-to-sdk";
     public const string PM32180_PremiumUpsellAccountAge = "pm-32180-premium-upsell-account-age";
@@ -278,6 +275,7 @@ public static partial class FeatureFlagKeys
     public const string PM29968_FillAfterSave = "pm-29968-fill-after-save";
     public const string PM32380_BtnTextAddCreate = "pm-32380-btn-text-add-create";
     public const string PM40201_DeriveSSHKeys = "pm-40201-derive-ssh-keys";
+    public const string PM45335_ExtensionWelcomePage = "pm-45335-extension-welcome-page";
 
     /* Secrets Manager Team */
     public const string SecretsVersioning = "sm-1587-secrets-versioning";
@@ -287,12 +285,13 @@ public static partial class FeatureFlagKeys
     public const string WindowsNativeCredentialSync = "windows-native-credential-sync";
 
     /* DIRT Team */
-    public const string AccessIntelligenceVersion2 = "pm-31920-access-intelligence-azure-file-storage";
     public const string EventManagementForBlumira = "event-management-for-blumira";
     public const string EventManagementForDataDogAndCrowdStrike = "event-management-for-datadog-and-crowdstrike";
     public const string EventDiagnosticLogging = "pm-27666-siem-event-log-debugging";
     public const string EventManagementForHuntress = "event-management-for-huntress";
     public const string EventManagementForSplunk = "event-management-for-splunk";
+    public const string EventManagementForTeams = "event-management-for-teams";
+    public const string EventManagementForSlack = "event-management-for-slack";
     public const string Milestone11AppPageImprovements = "pm-30538-dirt-milestone-11-app-page-improvements";
     public const string AccessIntelligenceNewArchitecture = "pm-31936-access-intelligence-new-architecture";
     public const string PasskeyDirectoryReport = "inno-passkey-directory-report";
@@ -308,9 +307,20 @@ public static partial class FeatureFlagKeys
     public const string PamAccessConnector = "pm-42354-rotation-daemon";
 
     /// <summary>
+    /// Sends leasing-gated ciphers to browser extensions in the partial shape. Clients older than
+    /// <see cref="Constants.PamPartialCipherMinimumVersion"/> never receive it, whatever the flag says.
+    /// </summary>
+    public const string PamBrowserPartialCiphers = "pam-121-browser-partial-ciphers";
+
+    /// <summary>
     /// Kill switch for the PAM SQL audit trail. Turning it on stops the writes and withdraws the read endpoint.
     /// </summary>
     public const string PamDisableSqlAuditLogging = "pm-42480-disable-pam-sql-audit-logging";
+
+    /// <summary>
+    /// Kill switch for the partial-cipher write guard. Turning it on lets partial-shaped cipher writes through again.
+    /// </summary>
+    public const string PamDisablePartialCipherWriteGuard = "pam-317-disable-partial-cipher-write-guard";
 
     /* VFO */
     public const string VFO1Foundation = "vfo1-foundation";

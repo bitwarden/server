@@ -8,18 +8,9 @@ BEGIN
 
     SELECT
         C.*,
-        MIN(CASE
-            WHEN
-                COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) = 0
-            THEN 0
-            ELSE 1
-        END) AS [ReadOnly],
-        MIN(CASE
-            WHEN
-                COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
-            THEN 0
-            ELSE 1
-        END) AS [HidePasswords],
+        -- ReadOnly and HidePasswords are the Edit (2) and ViewPassword (1) parts of the highest rank, inverted; no rank means 3
+        1 - (ISNULL(MAX(R.[Rank]), 3) / 2) % 2 AS [ReadOnly],
+        1 - ISNULL(MAX(R.[Rank]), 3) % 2 AS [HidePasswords],
         MAX(CASE
             WHEN
                 COALESCE(CU.[Manage], CG.[Manage], 0) = 0
@@ -68,6 +59,17 @@ BEGIN
         [dbo].[CollectionGroup] CG ON CG.[CollectionId] = C.[Id] AND CG.[GroupId] = GU.[GroupId]
     LEFT JOIN
         [dbo].[AccessRule] AR ON AR.[Id] = C.[AccessRuleId]
+    -- Rank orders a grant by Manage, then Edit, then ViewPassword; a group with no grant on this collection has no rank
+    CROSS APPLY (
+        SELECT
+            CASE
+                WHEN CU.[CollectionId] IS NULL AND CG.[CollectionId] IS NULL THEN NULL
+                ELSE
+                    CASE WHEN COALESCE(CU.[Manage], CG.[Manage], 0) = 1 THEN 4 ELSE 0 END
+                    + CASE WHEN COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) = 0 THEN 2 ELSE 0 END
+                    + CASE WHEN COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0 THEN 1 ELSE 0 END
+            END AS [Rank]
+    ) R
     WHERE
         C.[OrganizationId] = @OrganizationId AND
         C.[Type] = 0 -- Only SharedCollection

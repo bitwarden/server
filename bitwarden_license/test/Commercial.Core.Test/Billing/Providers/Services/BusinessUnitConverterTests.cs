@@ -4,6 +4,7 @@ using Bit.Commercial.Core.Billing.Providers.Services;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Constants;
@@ -35,13 +36,13 @@ public class BusinessUnitConverterTests
     private readonly GlobalSettings _globalSettings = new();
     private readonly ILogger<BusinessUnitConverter> _logger = Substitute.For<ILogger<BusinessUnitConverter>>();
     private readonly IMailService _mailService = Substitute.For<IMailService>();
-    private readonly IOrganizationRepository _organizationRepository = Substitute.For<IOrganizationRepository>();
     private readonly IOrganizationUserRepository _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IProviderOrganizationRepository _providerOrganizationRepository = Substitute.For<IProviderOrganizationRepository>();
     private readonly IProviderPlanRepository _providerPlanRepository = Substitute.For<IProviderPlanRepository>();
     private readonly IProviderRepository _providerRepository = Substitute.For<IProviderRepository>();
     private readonly IProviderUserRepository _providerUserRepository = Substitute.For<IProviderUserRepository>();
+    private readonly IReplaceOrganizationAndUpdateCacheCommand _replaceOrganizationAndUpdateCacheCommand = Substitute.For<IReplaceOrganizationAndUpdateCacheCommand>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly ISubscriberService _subscriberService = Substitute.For<ISubscriberService>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
@@ -51,13 +52,13 @@ public class BusinessUnitConverterTests
         _globalSettings,
         _logger,
         _mailService,
-        _organizationRepository,
         _organizationUserRepository,
         _pricingClient,
         _providerOrganizationRepository,
         _providerPlanRepository,
         _providerRepository,
         _providerUserRepository,
+        _replaceOrganizationAndUpdateCacheCommand,
         _stripeAdapter,
         _subscriberService,
         _userRepository);
@@ -157,7 +158,7 @@ public class BusinessUnitConverterTests
                 arguments.Items[1].Price == updatedPriceId &&
                 arguments.Items[1].Quantity == organization.Seats));
 
-        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(arguments =>
+        await _replaceOrganizationAndUpdateCacheCommand.Received(1).RunAsync(Arg.Is<Organization>(arguments =>
             arguments.PlanType == PlanType.EnterpriseAnnually &&
             arguments.Status == OrganizationStatusType.Managed &&
             arguments.UseRiskInsights == enterpriseAnnually.HasRiskInsights &&
@@ -209,6 +210,43 @@ public class BusinessUnitConverterTests
     }
 
     [Theory, BitAutoData]
+    public async Task FinalizeConversion_TokenExpiredForProviderLifetime_ThrowsBillingException(
+        Organization organization,
+        Guid userId,
+        string providerKey,
+        string organizationKey)
+    {
+        organization.PlanType = PlanType.EnterpriseAnnually2020;
+        organization.UseSecretsManager = false;
+
+        _globalSettings.ProviderInviteExpirationHours = 1;
+        _globalSettings.OrganizationInviteExpirationHours = 168;
+
+        _subscriberService.GetSubscription(organization).Returns(new Subscription
+        {
+            Status = StripeConstants.SubscriptionStatus.Active
+        });
+
+        var user = new User { Id = Guid.NewGuid(), Email = "provider-admin@example.com" };
+        _userRepository.GetByIdAsync(userId).Returns(user);
+
+        var dataProtector = new MockDataProtector(organization, user.Email)
+        {
+            Token = $"BusinessUnitConversionInvite {organization.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow.AddHours(-2))}"
+        };
+        _dataProtectionProvider.CreateProtector($"{nameof(BusinessUnitConverter)}DataProtector").Returns(dataProtector);
+        var token = dataProtector.Protect(dataProtector.Token);
+
+        var businessUnitConverter = BuildConverter();
+
+        await Assert.ThrowsAsync<BillingException>(() =>
+            businessUnitConverter.FinalizeConversion(organization, userId, token, providerKey, organizationKey));
+
+        await _organizationUserRepository.DidNotReceiveWithAnyArgs()
+            .GetByOrganizationAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
     public async Task FinalizeConversion_OrganizationUsesSecretsManager_ThrowsBillingException(
         Organization organization,
         Guid userId,
@@ -238,6 +276,7 @@ public class BusinessUnitConverterTests
     {
         organization.PlanType = PlanType.EnterpriseAnnually;
         organization.UseSecretsManager = false;
+        organization.UsePam = false;
 
         _subscriberService.GetSubscription(organization).Returns(new Subscription
         {
@@ -315,6 +354,7 @@ public class BusinessUnitConverterTests
     {
         organization.PlanType = PlanType.TeamsMonthly;
         organization.UseSecretsManager = true;
+        organization.UsePam = false;
 
         _subscriberService.GetSubscription(organization).Returns(new Subscription
         {
@@ -363,6 +403,7 @@ public class BusinessUnitConverterTests
     {
         organization.PlanType = PlanType.EnterpriseAnnually;
         organization.UseSecretsManager = true;
+        organization.UsePam = false;
 
         _subscriberService.GetSubscription(organization).Returns(new Subscription
         {
@@ -391,6 +432,46 @@ public class BusinessUnitConverterTests
         var problems = result.AsT1;
 
         Assert.Contains("Organization is subscribed to Secrets Manager. Please contact Customer Support to convert this organization to a business unit.", problems);
+
+        await _providerRepository.DidNotReceiveWithAnyArgs().CreateAsync(Arg.Any<Provider>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitiateConversion_OrganizationUsesPam_ReturnsError(
+        Organization organization,
+        string providerAdminEmail)
+    {
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        organization.UseSecretsManager = false;
+        organization.UsePam = true;
+
+        _subscriberService.GetSubscription(organization).Returns(new Subscription
+        {
+            Status = StripeConstants.SubscriptionStatus.Active
+        });
+
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = providerAdminEmail
+        };
+
+        _userRepository.GetByEmailAsync(providerAdminEmail).Returns(user);
+
+        var organizationUser = new OrganizationUser { Status = OrganizationUserStatusType.Confirmed };
+
+        _organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id)
+            .Returns(organizationUser);
+
+        var businessUnitConverter = BuildConverter();
+
+        var result = await businessUnitConverter.InitiateConversion(organization, providerAdminEmail);
+
+        Assert.True(result.IsT1);
+
+        var problems = result.AsT1;
+
+        Assert.Contains("Organization has Privileged Controls turned on. Turn it off before converting this organization to a business unit.", problems);
 
         await _providerRepository.DidNotReceiveWithAnyArgs().CreateAsync(Arg.Any<Provider>());
     }

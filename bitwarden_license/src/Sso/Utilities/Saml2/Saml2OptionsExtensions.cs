@@ -5,9 +5,11 @@ using System.IO.Compression;
 using System.Text;
 using System.Xml;
 using Bit.Core;
+using Bit.Core.Settings;
 using Bitwarden.Server.Sdk.Features;
 using Sustainsys.Saml2;
 using Sustainsys.Saml2.AspNetCore2;
+using Sustainsys.Saml2.WebSso;
 
 namespace Bit.Sso.Utilities.Saml2;
 
@@ -21,6 +23,17 @@ public static class Saml2OptionsExtensions
             return false;
         }
 
+        var featureService = context.RequestServices.GetRequiredService<IFeatureService>();
+        if (featureService.IsEnabled(FeatureFlagKeys.PM42283_Rsa15Deprecation))
+        {
+            return await CouldHandleWithOaepGateAsync(options, scheme, context);
+        }
+
+        return await CouldHandleLegacyAsync(options, scheme, context);
+    }
+
+    private static async Task<bool> CouldHandleLegacyAsync(Saml2Options options, string scheme, HttpContext context)
+    {
         var idp = options.IdentityProviders.IsEmpty ? null : options.IdentityProviders.Default;
         if (idp == null)
         {
@@ -92,7 +105,10 @@ public static class Saml2OptionsExtensions
             return false;
         }
 
-        Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
+        // Check and notify before signature verification. A signature failure should not fail notification on an unapproved
+        // key transport algorithm. Any request, including a forged, unsigned, or improperly-constructed one 
+        // that satisfies the notification criteria, should notify.
+        NotifyWhenRsa15Deprecated(envelope, scheme, context);
 
         if (options.SPOptions.WantAssertionsSigned)
         {
@@ -121,4 +137,119 @@ public static class Saml2OptionsExtensions
         return true;
     }
 
+    private static async Task<bool> CouldHandleWithOaepGateAsync(Saml2Options options, string scheme, HttpContext context)
+    {
+        var idp = options.IdentityProviders.IsEmpty ? null : options.IdentityProviders.Default;
+        if (idp == null)
+        {
+            return false;
+        }
+
+        var schemeMatchesQuery = context.Request.Query["scheme"].FirstOrDefault() == scheme;
+
+        XmlElement envelope;
+        // The scheme query parameter identifies only a request without a SAML message, such as a metadata
+        // or login-initiation request. A request with a message must pass the inspection below.
+        try
+        {
+            // Sustainsys.Saml2 finds the binding and reads the SAML message from an HttpRequestData.
+            // The handler uses the same GetBinding and Unbind calls, so this method reads the same message.
+            // This method needs no RelayState cookie, so it passes NoopCookieManager and no real cookie decryptor.
+            var requestData = context.ToHttpRequestData(new NoopCookieManager(), _ => null);
+            var binding = options.Notifications.GetBinding(requestData);
+            if (binding == null)
+            {
+                return schemeMatchesQuery;
+            }
+            // The middleware already rejects the artifact binding. Artifact resolution needs a call to the identity
+            // provider, which this check never makes.
+            if (binding is Saml2ArtifactBinding)
+            {
+                return false;
+            }
+            envelope = binding.Unbind(requestData, null).Data;
+        }
+        catch
+        {
+            return false;
+        }
+
+        if (envelope == null)
+        {
+            return false;
+        }
+
+        // Double check the entity Ids
+        var entityId = envelope["Issuer", Saml2Namespaces.Saml2Name]?.InnerText.Trim();
+        if (!string.Equals(entityId, idp.EntityId.Id, StringComparison.InvariantCultureIgnoreCase))
+        {
+            return false;
+        }
+
+        // Check and notify before signature verification. A signature failure should not fail notification on an unapproved
+        // key transport algorithm. Any request, including a forged, unsigned, or improperly-constructed one 
+        // that satisfies the notification criteria, should notify.
+        NotifyWhenRsa15Deprecated(envelope, scheme, context);
+
+        // The signature check below decrypts. Reject an unaccepted key transport algorithm first.
+        Saml2EncryptedAssertionInspector.EnsureAcceptedKeyTransportAlgorithms(envelope);
+
+        if (options.SPOptions.WantAssertionsSigned)
+        {
+            var featureService = context.RequestServices.GetRequiredService<IFeatureService>();
+            if (featureService.IsEnabled(FeatureFlagKeys.PM42982_WantAssertionsSigned))
+            {
+                Saml2AssertionSignatureVerifier.EnsureAssertionsSigned(envelope, options, idp);
+            }
+            else
+            {
+                // This can throw if an IdP sends encrypted assertions in an
+                // <EncryptedAssertion> node. Both <Assertion> and <EncryptedAssertion> are
+                // allowed per OASIS spec in an encrypted case. They are mutually exclusive
+                // on a per-assertion basis.
+                // PM-42982 exists to improve this site to handle all cases.
+                var assertion = envelope["Assertion", Saml2Namespaces.Saml2Name];
+                var isAssertionSigned = assertion != null && XmlHelpers.IsSignedByAny(assertion, idp.SigningKeys,
+                    options.SPOptions.ValidateCertificates, options.SPOptions.MinIncomingSigningAlgorithm);
+                if (!isAssertionSigned)
+                {
+                    throw new Exception("Cannot verify SAML assertion signature.");
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Queues the RSA 1.5 deprecation notice for the organization when the assertion uses RSA 1.5 key transport.
+    /// This method never throws, because a throw blocks single sign-on (SSO) login.
+    /// </summary>
+    private static void NotifyWhenRsa15Deprecated(XmlElement envelope, string scheme, HttpContext context)
+    {
+        try
+        {
+            // This is checked again later inside the command which handles the notification.
+            // A value of 0 means "no email is sent," not "send any number of emails without regard
+            // for a cooldown." This stands in for a feature flag, and 
+            // ensures notification also works for self-hosted instances.
+            var globalSettings = context.RequestServices.GetRequiredService<IGlobalSettings>();
+            if (globalSettings.Sso.Rsa15DeprecationEmailCooldownInDays <= 0)
+            {
+                return;
+            }
+
+            if (!Saml2EncryptedAssertionInspector.UsesRsa15KeyTransport(envelope) ||
+                !Guid.TryParse(scheme, out var organizationId))
+            {
+                return;
+            }
+
+            context.RequestServices.GetRequiredService<ISaml2Rsa15DeprecationNotifier>().TryQueue(organizationId);
+        }
+        catch
+        {
+            // The notice is best effort. It must never block login, and it must not log the organization ID.
+        }
+    }
 }

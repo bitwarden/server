@@ -17,14 +17,11 @@ public class RuleBypassableCiphersResponseModel : ResponseModel
         UngatedCollectionIds = ungatedCollectionIds.ToList();
     }
 
-    /// <summary>
-    /// The rule these collections were assessed against.
-    /// </summary>
     public Guid RuleId { get; }
 
     /// <summary>
-    /// The collections through which this rule's ciphers are reachable without a lease. Empty means the rule
-    /// protects everything it governs.
+    /// The collections through which this rule's ciphers are reachable without a lease. Empty when the rule protects
+    /// everything it governs, is disabled, or is not in this organization.
     /// </summary>
     public IEnumerable<Guid> UngatedCollectionIds { get; }
 }

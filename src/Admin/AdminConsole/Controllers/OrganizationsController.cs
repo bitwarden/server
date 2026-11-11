@@ -22,9 +22,12 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Organizations.Helpers;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
@@ -79,6 +82,8 @@ public class OrganizationsController : Controller
     private readonly IOrganizationPlanMigrationCohortRepository _organizationPlanMigrationCohortRepository;
     private readonly IOrganizationPlanMigrationCohortAssignmentRepository _organizationPlanMigrationCohortAssignmentRepository;
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
+    private readonly IGetOrganizationTrialQuery _getOrganizationTrialQuery;
+    private readonly IStripeAdapter _stripeAdapter;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -111,7 +116,9 @@ public class OrganizationsController : Controller
         ISubscriberService subscriberService,
         IOrganizationPlanMigrationCohortRepository organizationPlanMigrationCohortRepository,
         IOrganizationPlanMigrationCohortAssignmentRepository organizationPlanMigrationCohortAssignmentRepository,
-        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
+        IGetOrganizationTrialQuery getOrganizationTrialQuery,
+        IStripeAdapter stripeAdapter)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -144,6 +151,8 @@ public class OrganizationsController : Controller
         _organizationPlanMigrationCohortRepository = organizationPlanMigrationCohortRepository;
         _organizationPlanMigrationCohortAssignmentRepository = organizationPlanMigrationCohortAssignmentRepository;
         _featureService = featureService;
+        _getOrganizationTrialQuery = getOrganizationTrialQuery;
+        _stripeAdapter = stripeAdapter;
     }
 
     private bool CanManagePlanMigrationCohortAssignment() =>
@@ -346,9 +355,77 @@ public class OrganizationsController : Controller
                 { ChurnDiscountAppliedDate: not null } => "Locked: a churn-mitigation discount has already been applied to this organization.",
                 _ => null,
             },
+            Trial = await GetTrialAsync(organization),
         };
 
+        if (provider == null)
+        {
+            if (_featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support))
+            {
+                model.PrivilegedControlsStripeSeats = await GetPrivilegedControlsStripeSeatsAsync(organization);
+            }
+
+            model.OccupiedPamSeatsCount =
+                await _organizationUserRepository.GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id);
+        }
+
         return View(model);
+    }
+
+    /// <summary>
+    /// The organization's trial when the current user may extend trials, otherwise null.
+    /// </summary>
+    private async Task<OrganizationTrial> GetTrialAsync(Organization organization)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.PM35092AuthSalesAssistedTrials)
+            || !_accessControlService.UserHasPermission(Permission.Org_ExtendTrial))
+        {
+            return null;
+        }
+
+        try
+        {
+            return await _getOrganizationTrialQuery.Run(organization);
+        }
+        catch (Exception ex)
+        {
+            // Stripe being unreachable must not block the Edit page; the command re-validates on POST.
+            _logger.LogError(ex,
+                "Failed to load the trial for organization {OrganizationId}.",
+                organization.Id);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// The quantity of the Stripe subscription's Privileged Controls seat line, or null when there is no such line.
+    /// </summary>
+    private async Task<int?> GetPrivilegedControlsStripeSeatsAsync(Organization organization)
+    {
+        if (string.IsNullOrEmpty(organization.GatewaySubscriptionId))
+        {
+            return null;
+        }
+
+        try
+        {
+            var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
+                _stripeAdapter, _logger, organization);
+
+            var item = subscription?.Items?.Data?.FirstOrDefault(i =>
+                i.Price?.Metadata?.GetValueOrDefault(StripeConstants.MetadataKeys.PurchasableReference)
+                    == StripeConstants.PurchasableReferences.PrivilegedControlsSeat);
+
+            return item == null ? null : (int)item.Quantity;
+        }
+        catch (Exception ex)
+        {
+            // Stripe being unreachable must not block the Edit page.
+            _logger.LogError(ex,
+                "Failed to load the Privileged Controls seats for organization {OrganizationId}.",
+                organization.Id);
+            return null;
+        }
     }
 
     [HttpPost]
@@ -379,7 +456,8 @@ public class OrganizationsController : Controller
             PlanType = organization.PlanType,
             Seats = organization.Seats,
             UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation,
-            Enabled = organization.Enabled
+            Enabled = organization.Enabled,
+            UsePam = organization.UsePam
         };
 
         if (model.PlanType.HasValue)
@@ -407,11 +485,25 @@ public class OrganizationsController : Controller
             }
         }
 
-        UpdateOrganization(organization, model);
+        var isProviderManaged = await _providerRepository.GetByOrganizationIdAsync(organization.Id) != null;
+        UpdateOrganization(organization, model, isProviderManaged);
         var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
         if (organization.UseSecretsManager && !plan.SupportsSecretsManager)
         {
             TempData["Error"] = "Plan does not support Secrets Manager";
+            return RedirectToAction("Edit", new { id });
+        }
+
+        if (_accessControlService.UserHasPermission(Permission.Org_Plan_Edit)
+            && !isProviderManaged
+            && ValidatePrivilegedControls(
+                organization,
+                plan,
+                organization.UsePam
+                    ? await _organizationUserRepository.GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id)
+                    : 0) is { } privilegedControlsError)
+        {
+            TempData["Error"] = privilegedControlsError;
             return RedirectToAction("Edit", new { id });
         }
 
@@ -432,6 +524,12 @@ public class OrganizationsController : Controller
         await HandlePotentialProviderSeatScalingAsync(
             existingOrganizationData,
             model);
+
+        if (isProviderManaged && existingOrganizationData.UsePam)
+        {
+            TempData["Warning"] =
+                "Privileged Access Management was turned off because organizations managed by a provider can't use it.";
+        }
 
         await _organizationRepository.ReplaceAsync(organization);
 
@@ -674,7 +772,8 @@ public class OrganizationsController : Controller
         var organizationUsers = await _organizationUserRepository.GetManyByOrganizationAsync(id, OrganizationUserType.Owner);
         foreach (var organizationUser in organizationUsers)
         {
-            await _resendOrganizationInviteCommand.ResendInviteAsync(id, null, organizationUser.Id, true);
+            await _resendOrganizationInviteCommand.ResendInviteAsync(id, null, organizationUser.Id, true,
+                EventSystemUser.BitwardenPortal);
         }
 
         return Json(null);
@@ -775,7 +874,66 @@ public class OrganizationsController : Controller
         return new MigrationCohortAssignmentChange(assignmentToReplace, cohortToAssign, true, null);
     }
 
-    private void UpdateOrganization(Organization organization, OrganizationEditModel model)
+    private static string ValidatePrivilegedControls(
+        Organization organization,
+        Bit.Core.Models.StaticStore.Plan plan,
+        int occupiedPamSeats)
+    {
+        if (!organization.UsePam)
+        {
+            return null;
+        }
+
+        if (!plan.SupportsPrivilegedControls)
+        {
+            return "Plan does not support Privileged Access Management";
+        }
+
+        if (organization.PamSeats is null or < 1)
+        {
+            return "Privileged Access Management seats must be at least 1";
+        }
+
+        if (organization.PamSeats < occupiedPamSeats)
+        {
+            return $"Privileged Access Management seats can't be lower than the {occupiedPamSeats} members who have access";
+        }
+
+        if (organization.PamSeats > organization.Seats)
+        {
+            return "You cannot have more Privileged Controls seats than Password Manager seats. " +
+                   $"This organization has {organization.PamSeats} Privileged Controls seats and {organization.Seats} Password Manager seats.";
+        }
+
+        return null;
+    }
+
+    private void UpdatePrivilegedControls(Organization organization, OrganizationEditModel model, bool isProviderManaged)
+    {
+        // Organizations managed by a provider can't use Privileged Access Management, so a save turns it off.
+        if (isProviderManaged)
+        {
+            organization.UsePam = false;
+            organization.PamSeats = null;
+            organization.MaxAutoscalePamSeats = null;
+            return;
+        }
+
+        organization.UsePam = model.UsePam;
+
+        // Autoscaling is self-serve, so the Admin Portal never stores a limit.
+        organization.MaxAutoscalePamSeats = null;
+
+        // Turning it off keeps the seat count, so it's still there if it's turned back on.
+        if (!model.UsePam)
+        {
+            return;
+        }
+
+        organization.PamSeats = model.PamSeats;
+    }
+
+    private void UpdateOrganization(Organization organization, OrganizationEditModel model, bool isProviderManaged)
     {
         if (_accessControlService.UserHasPermission(Permission.Org_Name_Edit))
         {
@@ -820,13 +978,14 @@ public class OrganizationsController : Controller
             organization.UsePhishingBlocker = model.UsePhishingBlocker;
             organization.UseMyItems = model.UseMyItems;
             organization.UseInviteLinks = model.UseInviteLinks;
-            organization.UsePam = model.UsePam;
 
             //secrets
             organization.SmSeats = model.SmSeats;
             organization.MaxAutoscaleSmSeats = model.MaxAutoscaleSmSeats;
             organization.SmServiceAccounts = model.SmServiceAccounts;
             organization.MaxAutoscaleSmServiceAccounts = model.MaxAutoscaleSmServiceAccounts;
+
+            UpdatePrivilegedControls(organization, model, isProviderManaged);
         }
 
         if (_accessControlService.UserHasPermission(Permission.Org_Licensing_Edit))

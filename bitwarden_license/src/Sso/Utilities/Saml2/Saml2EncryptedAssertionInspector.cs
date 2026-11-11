@@ -9,60 +9,174 @@ namespace Bit.Sso.Utilities.Saml2;
 /// </summary>
 public static class Saml2EncryptedAssertionInspector
 {
-    // Encryption algorithms found outside the known list are categorized an "unrecognized."
-    private const string _unrecognizedAlgorithm = "unrecognized";
-
     private const string _xencNamespace = "http://www.w3.org/2001/04/xmlenc#";
+    private const string _dsigNamespace = "http://www.w3.org/2000/09/xmldsig#";
+
+    public const string KeyTransportAlgorithmNotAcceptedMessage =
+        "SAML encrypted assertion key transport algorithm is not accepted.";
 
     /// <summary>
-    /// Examines which algorithms encrypted the keys of the assertions in the envelope.
-    /// Records a metric when an unaccepted algorithm is in use.
+    /// Determines whether any key of any encrypted assertion in the envelope uses the RSA 1.5 key transport algorithm.
     /// </summary>
     /// <param name="envelope">The root element of a SAML response or request.</param>
-    /// <param name="context">The current request context.</param>
-    /// <returns><see langword="false"/> when any exception interrupts the check. Otherwise, <see langword="true"/>.</returns>
+    /// <returns><see langword="true"/> when a key uses RSA 1.5. <see langword="false"/> otherwise, or when any exception interrupts the check.</returns>
     /// <remarks>
     /// A SAML response can hold more than one assertion. It is defined in the SAML2.0 Schema Protocol as a choice group
     /// with 0 minimum occurrences, and unbounded maximum occurrences. Mixing both Assertion and EncryptedAssertion
     /// in a single Response is allowed. Each encrypted assertion holds one or more keys.
-    /// Every key of every assertion must be checked.
+    /// This method checks every key of every assertion.
     /// This method runs on the unauthenticated assertion consumer service (ACS) request path.
-    /// It must not throw for any XML shape, because a throw blocks single sign-on (SSO) login.
-    /// The recorded metric is an anonymous, aggregate count. It never carries an organization or a user identifier.
+    /// This method never throws, because a throw blocks single sign-on (SSO) login.
     /// </remarks>
-    /// <see href="https://docs.oasis-open.org/security/saml/v2.0/saml-schema-protocol-2.0.xsd" /> 
-    public static bool TryRecordUnsupportedKeyTransportAlgorithms(XmlElement envelope, HttpContext context)
+    /// <see href="https://docs.oasis-open.org/security/saml/v2.0/saml-schema-protocol-2.0.xsd" />
+    public static bool UsesRsa15KeyTransport(XmlElement envelope)
     {
         try
         {
-            // Only the first-child nodes are relevant. We don't need a recursive check.
-            var encryptedAssertions = envelope.ChildNodes
-                .OfType<XmlElement>()
-                .Where(e => e.LocalName == "EncryptedAssertion"
-                    && e.NamespaceURI == Saml2Namespaces.Saml2Name);
-
-            var unacceptedAlgorithms = encryptedAssertions
-                .SelectMany(ReadKeyEncryptionAlgorithms)
-                .Where(algorithm => !Saml2KeyTransportEncryptionAlgorithms.Accepted.Contains(algorithm))
-                .Distinct()
-                .ToArray();
-
-            if (unacceptedAlgorithms.Length > 0)
-            {
-                var metrics = context.RequestServices.GetRequiredService<Saml2AssertionMetrics>();
-
-                foreach (var unacceptedAlgorithm in unacceptedAlgorithms)
-                {
-                    metrics.RecordUnsupportedKeyTransportAlgorithm(unacceptedAlgorithm);
-                }
-            }
-
-            return true;
+            return ReadEnvelopeKeyEncryptionAlgorithms(envelope)
+                .Any(algorithm => string.Equals(
+                    algorithm, Saml2KeyTransportEncryptionAlgorithms.Rsa15, StringComparison.Ordinal));
         }
         catch
         {
             return false;
         }
+    }
+
+    /// <summary>
+    /// Throws when a top-level encrypted assertion has no xenc:EncryptedKey, or has any key whose
+    /// key transport algorithm is not in <see cref="Saml2KeyTransportEncryptionAlgorithms.Accepted"/>.
+    /// Also throws when a top-level encrypted assertion does not hold exactly one xenc:EncryptedData.
+    /// </summary>
+    /// <param name="envelope">The root element of a SAML response or request.</param>
+    /// <remarks>
+    /// This method never decrypts an assertion, and it must run before any decryption.
+    /// Only OAEP key transport is accepted.
+    /// A ds:RetrievalMethod must name an xenc:EncryptedKey in the same encrypted assertion.
+    /// An encrypted assertion must hold exactly one xenc:EncryptedData.
+    /// The SAML 2.0 assertion schema declares this in saml:EncryptedElementType.
+    /// Decryption then resolves one key, before any decrypted content enters the document.
+    /// Thus, every key that decryption can use is a key that this method checks.
+    /// This method does not catch exceptions, so an envelope it cannot read fails closed.
+    /// The exception message is constant. It never includes a value from the envelope.
+    /// </remarks>
+    public static void EnsureAcceptedKeyTransportAlgorithms(XmlElement envelope)
+    {
+        var encryptedAssertions = envelope.ChildNodes
+            .OfType<XmlElement>()
+            .Where(e => e.LocalName == "EncryptedAssertion"
+                && e.NamespaceURI == Saml2Namespaces.Saml2Name);
+
+        foreach (var encryptedAssertion in encryptedAssertions)
+        {
+            EnsureSingleEncryptedData(encryptedAssertion);
+
+            var algorithms = ReadKeyEncryptionAlgorithms(encryptedAssertion).ToArray();
+            if (algorithms.Length == 0 || algorithms.Any(a =>
+                    !Saml2KeyTransportEncryptionAlgorithms.Accepted.Contains(a, StringComparer.Ordinal)))
+            {
+                throw new Exception(KeyTransportAlgorithmNotAcceptedMessage);
+            }
+
+            EnsureRetrievalMethodsNameEncryptedKeys(encryptedAssertion);
+        }
+    }
+
+    private static void EnsureSingleEncryptedData(XmlElement encryptedAssertion)
+    {
+        var encryptedDataCount = encryptedAssertion
+            .GetElementsByTagName("EncryptedData", _xencNamespace)
+            .Count;
+        if (encryptedDataCount != 1)
+        {
+            throw new Exception(KeyTransportAlgorithmNotAcceptedMessage);
+        }
+    }
+
+    private static void EnsureRetrievalMethodsNameEncryptedKeys(XmlElement encryptedAssertion)
+    {
+        var retrievalMethods = encryptedAssertion
+            .GetElementsByTagName("RetrievalMethod", _dsigNamespace)
+            .OfType<XmlElement>()
+            .ToArray();
+        if (retrievalMethods.Length == 0)
+        {
+            return;
+        }
+
+        var idTargetsAreEncryptedKeys = ReadIdTargetsAreEncryptedKeys(encryptedAssertion);
+
+        foreach (var retrievalMethod in retrievalMethods)
+        {
+            var id = ReadLocalReferenceId(retrievalMethod.GetAttribute("URI"));
+            if (id == null
+                || !idTargetsAreEncryptedKeys.TryGetValue(id, out var allTargetsAreEncryptedKeys)
+                || !allTargetsAreEncryptedKeys)
+            {
+                throw new Exception(KeyTransportAlgorithmNotAcceptedMessage);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Maps each Id value in one encrypted assertion to <see langword="true"/> when every element with that Id
+    /// is an xenc:EncryptedKey. Reads the Id, id, and ID attributes of the assertion and of each descendant.
+    /// </summary>
+    private static Dictionary<string, bool> ReadIdTargetsAreEncryptedKeys(XmlElement encryptedAssertion)
+    {
+        var idTargetsAreEncryptedKeys = new Dictionary<string, bool>(StringComparer.Ordinal);
+        var elements = encryptedAssertion.GetElementsByTagName("*").OfType<XmlElement>()
+            .Prepend(encryptedAssertion);
+
+        foreach (var element in elements)
+        {
+            var isEncryptedKey = IsEncryptedKey(element);
+            var ids = new[] { element.GetAttribute("Id"), element.GetAttribute("id"), element.GetAttribute("ID") }
+                .Where(id => id.Length > 0)
+                .Distinct(StringComparer.Ordinal);
+
+            foreach (var id in ids)
+            {
+                idTargetsAreEncryptedKeys[id] =
+                    (!idTargetsAreEncryptedKeys.TryGetValue(id, out var allTargetsAreEncryptedKeys)
+                        || allTargetsAreEncryptedKeys)
+                    && isEncryptedKey;
+            }
+        }
+
+        return idTargetsAreEncryptedKeys;
+    }
+
+    private static string? ReadLocalReferenceId(string uri)
+    {
+        if (uri.Length < 2 || uri[0] != '#')
+        {
+            return null;
+        }
+
+        var id = uri.Substring(1);
+        try
+        {
+            return XmlConvert.VerifyNCName(id);
+        }
+        catch (XmlException)
+        {
+            return null;
+        }
+    }
+
+    private static bool IsEncryptedKey(XmlElement element) =>
+        element.LocalName == "EncryptedKey" && element.NamespaceURI == _xencNamespace;
+
+    private static IEnumerable<string?> ReadEnvelopeKeyEncryptionAlgorithms(XmlElement envelope)
+    {
+        // Only the first-child nodes are relevant. We don't need a recursive check.
+        var encryptedAssertions = envelope.ChildNodes
+            .OfType<XmlElement>()
+            .Where(e => e.LocalName == "EncryptedAssertion"
+                && e.NamespaceURI == Saml2Namespaces.Saml2Name);
+
+        return encryptedAssertions.SelectMany(ReadKeyEncryptionAlgorithms);
     }
 
     /// <summary>
@@ -86,31 +200,14 @@ public static class Saml2EncryptedAssertionInspector
             .OfType<XmlElement>()
             .ToArray();
 
-        // An assertion that names no key relies on an out-of-band agreement. Report it as an absent algorithm.
-        if (encryptedKeys.Length == 0)
-        {
-            return [null];
-        }
-
-        return encryptedKeys.Select(ClassifyAlgorithm);
+        return encryptedKeys.Select(ReadAlgorithm);
     }
 
-    private static string? ClassifyAlgorithm(XmlElement encryptedKey)
+    private static string? ReadAlgorithm(XmlElement encryptedKey)
     {
         // The xenc:EncryptionMethod child of xenc:EncryptedKey names the key encryption algorithm.
         // The xenc:EncryptionMethod child of xenc:EncryptedData names the data encryption algorithm.
         // Read only the first one. The indexer restricts the read to a direct child.
-        //
-        // GetAttribute returns an empty string for a missing attribute.
-        var rawAlgorithm = encryptedKey["EncryptionMethod", _xencNamespace]?.GetAttribute("Algorithm");
-
-        if (string.IsNullOrEmpty(rawAlgorithm))
-        {
-            return null;
-        }
-        return (Saml2KeyTransportEncryptionAlgorithms.Accepted.Contains(rawAlgorithm) ||
-            rawAlgorithm.Equals(Saml2KeyTransportEncryptionAlgorithms.Rsa15)) ?
-            rawAlgorithm :
-            _unrecognizedAlgorithm;
+        return encryptedKey["EncryptionMethod", _xencNamespace]?.GetAttribute("Algorithm");
     }
 }

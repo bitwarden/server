@@ -219,11 +219,6 @@ public class SendValidationService : ISendValidationService
                 throw new BadRequestException("You must have premium status to use file Sends.");
             }
 
-            if (!user.EmailVerified)
-            {
-                throw new BadRequestException("You must confirm your email to use file Sends.");
-            }
-
             if (user.Premium)
             {
                 storageBytesRemaining = user.StorageBytesRemaining();

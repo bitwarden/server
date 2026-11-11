@@ -48,7 +48,7 @@ public class UserEmailVerificationQuery(IUserRepository userRepository,
     {
 
         return dataProtectorTokenizer.Protect(
-            new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails)
+            new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails, emailSent: true)
         );
     }
 }

@@ -14,13 +14,29 @@ public static class GlobalSettingsServiceCollectionExtensions
         var globalSettings = new GlobalSettings();
         ConfigurationBinder.Bind(configuration.GetSection("GlobalSettings"), globalSettings);
 
-        if (environment.IsDevelopment() && configuration.GetValue<bool>("developSelfHosted"))
+        if (environment.IsDevelopment() && configuration.GetValue<bool>("developSelfHosted")
+            && !HasDevSelfHostOverrideProvider(configuration))
         {
             // Override settings with selfHostedOverride settings
             ConfigurationBinder.Bind(configuration.GetSection("Dev:SelfHostOverride:GlobalSettings"), globalSettings);
         }
 
         return globalSettings;
+    }
+
+    /// <summary>
+    /// Whether the host registered GlobalSettingsBridge's <c>ConfigureDevSelfHostOverride()</c>, which already
+    /// applies the override to configuration. Binding it again here would let it win over sources added after it.
+    /// </summary>
+    /// <remarks>
+    /// Matched by name because SharedWeb doesn't reference GlobalSettingsBridge. Remove this along with the override
+    /// above once every service registers <c>ConfigureDevSelfHostOverride()</c>.
+    /// </remarks>
+    private static bool HasDevSelfHostOverrideProvider(IConfiguration configuration)
+    {
+        const string providerTypeName = "Bit.GlobalSettingsBridge.DevSelfHostOverrideConfigurationProvider";
+        return configuration is IConfigurationRoot root
+            && root.Providers.Any(p => p.GetType().FullName == providerTypeName);
     }
 
     /// <summary>

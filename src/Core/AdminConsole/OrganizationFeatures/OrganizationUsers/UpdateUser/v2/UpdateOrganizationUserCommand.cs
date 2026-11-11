@@ -5,6 +5,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.UserFeatures.UserEmail;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -26,6 +28,7 @@ public class UpdateOrganizationUserCommand(
     IOrganizationUserRepository organizationUserRepository,
     IUpdateOrganizationUserValidator validator,
     ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
+    IReservePrivilegedControlsSeatsCommand reservePrivilegedControlsSeatsCommand,
     IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
     IPricingClient pricingClient,
     IEventService eventService,
@@ -60,6 +63,15 @@ public class UpdateOrganizationUserCommand(
         if (request.IsEnablingSecretsManager())
         {
             var commandError = await TryEnablingSecretsManagerAsync(request);
+            if (commandError is not null)
+            {
+                return commandError;
+            }
+        }
+
+        if (request.IsEnablingPam())
+        {
+            var commandError = await TryEnablingPamAsync(request);
             if (commandError is not null)
             {
                 return commandError;
@@ -189,6 +201,17 @@ public class UpdateOrganizationUserCommand(
         }
 
         return null;
+    }
+
+    private async Task<CommandError?> TryEnablingPamAsync(UpdateOrganizationUserRequest request)
+    {
+        if (!PrivilegedControlsSeatOccupancy.OccupiesSeat(request.OrganizationUserToUpdate.Status))
+        {
+            return null;
+        }
+
+        var reservation = await reservePrivilegedControlsSeatsCommand.RunAsync(request.Organization, 1);
+        return reservation.Error;
     }
 
     private async Task<UpdateOrganizationUserRequest> LoadUserToUpdateAsync(UpdateOrganizationUserRequest request)

@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using Bit.Admin.AdminConsole.Jobs;
 using Bit.Admin.Auth.Jobs;
 using Bit.Admin.Tools.Jobs;
 using Bit.Core.Dirt.Services;
@@ -44,6 +45,11 @@ public class JobsHostedService : BaseJobsHostedService
             .StartNow()
             .WithCronSchedule("0 0 22 ? * FRI", x => x.InTimeZone(timeZone))
             .Build();
+        var everySaturdayAt430amTrigger = TriggerBuilder.Create()
+            .WithIdentity("EverySaturdayAt430amTrigger")
+            .StartNow()
+            .WithCronSchedule("0 30 4 ? * SAT", x => x.InTimeZone(timeZone))
+            .Build();
         var everySaturdayAtMidnightTrigger = TriggerBuilder.Create()
             .WithIdentity("EverySaturdayAtMidnightTrigger")
             .StartNow()
@@ -83,16 +89,23 @@ public class JobsHostedService : BaseJobsHostedService
             .StartNow()
             .WithCronSchedule("0 */5 * * * ?")
             .Build();
+        var everyWeekdayTopOfTheHourTrigger = TriggerBuilder.Create()
+            .WithIdentity("EveryWeekdayTopOfTheHourTrigger")
+            .StartNow()
+            .WithCronSchedule("0 0 * ? * MON-FRI", x => x.InTimeZone(timeZone))
+            .Build();
 
         var jobs = new List<Tuple<Type, ITrigger>>
         {
             new Tuple<Type, ITrigger>(typeof(DeleteSendsJob), everyFiveMinutesTrigger),
             new Tuple<Type, ITrigger>(typeof(DatabaseExpiredGrantsJob), everyFridayAt10pmTrigger),
+            new Tuple<Type, ITrigger>(typeof(DeleteExpiredTwoFactorRememberTokensJob), everySaturdayAt430amTrigger),
             new Tuple<Type, ITrigger>(typeof(DeleteCiphersJob), everyDayAtMidnightUtc),
             new Tuple<Type, ITrigger>(typeof(DatabaseExpiredSponsorshipsJob), everyMondayAtMidnightTrigger),
             new Tuple<Type, ITrigger>(typeof(DeleteAuthRequestsJob), everyFifteenMinutesTrigger),
             new Tuple<Type, ITrigger>(typeof(DeleteUnverifiedOrganizationDomainsJob), everyDayAtTwoAmUtcTrigger),
             new Tuple<Type, ITrigger>(typeof(OrganizationDeleteTasksJob), organizationDeleteTasksTrigger),
+            new Tuple<Type, ITrigger>(typeof(SendInviteRemindersJob), everyWeekdayTopOfTheHourTrigger),
         };
 
         if (!(_globalSettings.SqlServer?.DisableDatabaseMaintenanceJobs ?? false))
@@ -122,10 +135,12 @@ public class JobsHostedService : BaseJobsHostedService
         services.AddTransient<DatabaseUpdateStatisticsJob>();
         services.AddTransient<DatabaseRebuildlIndexesJob>();
         services.AddTransient<DatabaseExpiredGrantsJob>();
+        services.AddTransient<DeleteExpiredTwoFactorRememberTokensJob>();
         services.AddTransient<DatabaseExpiredSponsorshipsJob>();
         services.AddTransient<DeleteSendsJob>();
         services.AddTransient<DeleteCiphersJob>();
         services.AddTransient<DeleteAuthRequestsJob>();
         services.AddTransient<DeleteUnverifiedOrganizationDomainsJob>();
+        services.AddTransient<SendInviteRemindersJob>();
     }
 }

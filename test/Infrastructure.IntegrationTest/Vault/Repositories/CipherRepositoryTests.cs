@@ -628,6 +628,370 @@ public class CipherRepositoryTests
         Assert.True(deletableCipher.Manage);
     }
 
+    [Theory, DatabaseData]
+    public async Task GetManyByUserIdAsync_WhenUserReachesCiphersThroughSeveralGroups_ReturnsEachCipherOnceWithMostPrivilegedAccess(
+        ICipherRepository cipherRepository,
+        IUserRepository userRepository,
+        ICollectionCipherRepository collectionCipherRepository,
+        ICollectionRepository collectionRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository)
+    {
+        // Arrange
+        var (user, organization, orgUser) = await CreateTestUserAndOrganization(userRepository, organizationRepository, organizationUserRepository);
+
+        var allGroupsCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "All Groups",
+            OrganizationId = organization.Id
+        });
+        var readOnlyGroupsCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Read-Only Groups",
+            OrganizationId = organization.Id
+        });
+
+        var allGroupsCiphers = new List<Cipher>();
+        for (var i = 0; i < 2; i++)
+        {
+            var cipher = await cipherRepository.CreateAsync(new Cipher
+            {
+                Type = CipherType.Login,
+                OrganizationId = organization.Id,
+                Data = ""
+            });
+            await collectionCipherRepository.UpdateCollectionsForAdminAsync(cipher.Id, organization.Id,
+                [allGroupsCollection.Id]);
+            allGroupsCiphers.Add(cipher);
+        }
+
+        var readOnlyGroupsCipher = await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = organization.Id,
+            Data = ""
+        });
+        await collectionCipherRepository.UpdateCollectionsForAdminAsync(readOnlyGroupsCipher.Id, organization.Id,
+            [readOnlyGroupsCollection.Id]);
+
+        var groupAccess = new (bool ReadOnly, bool HidePasswords, bool Manage, bool GrantsReadOnlyGroupsCollection)[]
+        {
+            (ReadOnly: true, HidePasswords: true, Manage: false, GrantsReadOnlyGroupsCollection: true),
+            (ReadOnly: true, HidePasswords: false, Manage: false, GrantsReadOnlyGroupsCollection: true),
+            (ReadOnly: false, HidePasswords: false, Manage: false, GrantsReadOnlyGroupsCollection: false),
+            (ReadOnly: false, HidePasswords: false, Manage: true, GrantsReadOnlyGroupsCollection: false),
+        };
+        foreach (var access in groupAccess)
+        {
+            var collections = new List<CollectionAccessSelection>
+            {
+                new() { Id = allGroupsCollection.Id, ReadOnly = access.ReadOnly, HidePasswords = access.HidePasswords, Manage = access.Manage }
+            };
+            if (access.GrantsReadOnlyGroupsCollection)
+            {
+                collections.Add(new() { Id = readOnlyGroupsCollection.Id, ReadOnly = access.ReadOnly, HidePasswords = access.HidePasswords, Manage = access.Manage });
+            }
+
+            var group = new Group { OrganizationId = organization.Id, Name = "Test Group" };
+            await groupRepository.CreateAsync(group, collections);
+            await groupRepository.UpdateUsersAsync(group.Id, [orgUser.Id], DateTime.UtcNow);
+        }
+
+        // Act
+        var ciphers = await cipherRepository.GetManyByUserIdAsync(user.Id);
+
+        // Assert
+        Assert.Equal(3, ciphers.Count);
+        Assert.Equal(3, ciphers.Select(c => c.Id).Distinct().Count());
+
+        foreach (var cipher in allGroupsCiphers.Select(expected => Assert.Single(ciphers, c => c.Id == expected.Id)))
+        {
+            Assert.True(cipher.Manage);
+            Assert.True(cipher.Edit);
+            Assert.True(cipher.ViewPassword);
+        }
+
+        var readOnlyCipher = Assert.Single(ciphers, c => c.Id == readOnlyGroupsCipher.Id);
+        Assert.False(readOnlyCipher.Manage);
+        Assert.False(readOnlyCipher.Edit);
+        Assert.True(readOnlyCipher.ViewPassword);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyByUserIdAsync_WhenGroupsGrantEditExceptPasswordsAndViewOnly_ReturnsHighestPermissionLevel(
+        ICipherRepository cipherRepository,
+        IUserRepository userRepository,
+        ICollectionCipherRepository collectionCipherRepository,
+        ICollectionRepository collectionRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository)
+    {
+        // Arrange
+        var (user, organization, orgUser) = await CreateTestUserAndOrganization(userRepository, organizationRepository, organizationUserRepository);
+
+        var collection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Test Collection",
+            OrganizationId = organization.Id
+        });
+        var cipher = await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = organization.Id,
+            Data = ""
+        });
+        await collectionCipherRepository.UpdateCollectionsForAdminAsync(cipher.Id, organization.Id, [collection.Id]);
+
+        var editExceptPasswordsGroup = new Group { OrganizationId = organization.Id, Name = "Edit Except Passwords" };
+        await groupRepository.CreateAsync(editExceptPasswordsGroup,
+            [new CollectionAccessSelection { Id = collection.Id, ReadOnly = false, HidePasswords = true, Manage = false }]);
+        await groupRepository.UpdateUsersAsync(editExceptPasswordsGroup.Id, [orgUser.Id], DateTime.UtcNow);
+
+        var viewGroup = new Group { OrganizationId = organization.Id, Name = "View" };
+        await groupRepository.CreateAsync(viewGroup,
+            [new CollectionAccessSelection { Id = collection.Id, ReadOnly = true, HidePasswords = false, Manage = false }]);
+        await groupRepository.UpdateUsersAsync(viewGroup.Id, [orgUser.Id], DateTime.UtcNow);
+
+        // Act
+        var ciphers = await cipherRepository.GetManyByUserIdAsync(user.Id);
+
+        // Assert
+        var result = Assert.Single(ciphers);
+        Assert.True(result.Edit);
+        Assert.False(result.ViewPassword);
+        Assert.False(result.Manage);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyByUserIdAsync_WhenUserHasDirectGrantAndGroupGrantOnSameCollection_UsesDirectGrant(
+        ICipherRepository cipherRepository,
+        IUserRepository userRepository,
+        ICollectionCipherRepository collectionCipherRepository,
+        ICollectionRepository collectionRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository)
+    {
+        // Arrange
+        var (user, organization, orgUser) = await CreateTestUserAndOrganization(userRepository, organizationRepository, organizationUserRepository);
+
+        var collection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Test Collection",
+            OrganizationId = organization.Id
+        });
+        var cipher = await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = organization.Id,
+            Data = ""
+        });
+        await collectionCipherRepository.UpdateCollectionsForAdminAsync(cipher.Id, organization.Id, [collection.Id]);
+
+        await collectionRepository.UpdateUsersAsync(collection.Id,
+            [new CollectionAccessSelection { Id = orgUser.Id, ReadOnly = true, HidePasswords = true, Manage = false }]);
+
+        var manageGroup = new Group { OrganizationId = organization.Id, Name = "Manage" };
+        await groupRepository.CreateAsync(manageGroup,
+            [new CollectionAccessSelection { Id = collection.Id, ReadOnly = false, HidePasswords = false, Manage = true }]);
+        await groupRepository.UpdateUsersAsync(manageGroup.Id, [orgUser.Id], DateTime.UtcNow);
+
+        // Act
+        var ciphers = await cipherRepository.GetManyByUserIdAsync(user.Id);
+
+        // Assert
+        var result = Assert.Single(ciphers);
+        Assert.False(result.Edit);
+        Assert.False(result.ViewPassword);
+        Assert.False(result.Manage);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetByIdAsync_WhenGroupsGrantEditExceptPasswordsAndViewOnly_ReturnsHighestPermissionLevel(
+        ICipherRepository cipherRepository,
+        IUserRepository userRepository,
+        ICollectionCipherRepository collectionCipherRepository,
+        ICollectionRepository collectionRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository)
+    {
+        // Arrange
+        var (user, organization, orgUser) = await CreateTestUserAndOrganization(userRepository, organizationRepository, organizationUserRepository);
+        var (cipher, collections) = await CreateCipherInNewCollectionsAsync(
+            cipherRepository, collectionRepository, collectionCipherRepository, organization, 1);
+        await CreateGroupGrantAsync(groupRepository, organization, orgUser, collections[0], readOnly: false, hidePasswords: true, manage: false);
+        await CreateGroupGrantAsync(groupRepository, organization, orgUser, collections[0], readOnly: true, hidePasswords: false, manage: false);
+
+        // Act
+        var result = await cipherRepository.GetByIdAsync(cipher.Id, user.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.True(result.Edit);
+        Assert.False(result.ViewPassword);
+        Assert.False(result.Manage);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetByIdAsync_WhenUserHasDirectGrantAndGroupGrantOnSameCollection_UsesDirectGrant(
+        ICipherRepository cipherRepository,
+        IUserRepository userRepository,
+        ICollectionCipherRepository collectionCipherRepository,
+        ICollectionRepository collectionRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository)
+    {
+        // Arrange
+        var (user, organization, orgUser) = await CreateTestUserAndOrganization(userRepository, organizationRepository, organizationUserRepository);
+        var (cipher, collections) = await CreateCipherInNewCollectionsAsync(
+            cipherRepository, collectionRepository, collectionCipherRepository, organization, 1);
+        await collectionRepository.UpdateUsersAsync(collections[0],
+            [new CollectionAccessSelection { Id = orgUser.Id, ReadOnly = true, HidePasswords = false, Manage = false }]);
+        await CreateGroupGrantAsync(groupRepository, organization, orgUser, collections[0], readOnly: false, hidePasswords: false, manage: true);
+
+        // Act
+        var result = await cipherRepository.GetByIdAsync(cipher.Id, user.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.Edit);
+        Assert.True(result.ViewPassword);
+        Assert.False(result.Manage);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetCipherPermissionsForOrganizationAsync_WhenGroupsGrantEditExceptPasswordsAndViewOnly_ReturnsHighestPermissionLevel(
+        ICipherRepository cipherRepository,
+        IUserRepository userRepository,
+        ICollectionCipherRepository collectionCipherRepository,
+        ICollectionRepository collectionRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository)
+    {
+        // Arrange
+        var (user, organization, orgUser) = await CreateTestUserAndOrganization(userRepository, organizationRepository, organizationUserRepository);
+        var (cipher, collections) = await CreateCipherInNewCollectionsAsync(
+            cipherRepository, collectionRepository, collectionCipherRepository, organization, 1);
+        await CreateGroupGrantAsync(groupRepository, organization, orgUser, collections[0], readOnly: false, hidePasswords: true, manage: false);
+        await CreateGroupGrantAsync(groupRepository, organization, orgUser, collections[0], readOnly: true, hidePasswords: false, manage: false);
+
+        // Act
+        var permissions = await cipherRepository.GetCipherPermissionsForOrganizationAsync(organization.Id, user.Id);
+
+        // Assert
+        var result = Assert.Single(permissions, p => p.Id == cipher.Id);
+        Assert.True(result.Read);
+        Assert.True(result.Edit);
+        Assert.False(result.ViewPassword);
+        Assert.False(result.Manage);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetCipherPermissionsForOrganizationAsync_WhenUserHasDirectGrantAndGroupGrantOnSameCollection_UsesDirectGrant(
+        ICipherRepository cipherRepository,
+        IUserRepository userRepository,
+        ICollectionCipherRepository collectionCipherRepository,
+        ICollectionRepository collectionRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository)
+    {
+        // Arrange
+        var (user, organization, orgUser) = await CreateTestUserAndOrganization(userRepository, organizationRepository, organizationUserRepository);
+        var (cipher, collections) = await CreateCipherInNewCollectionsAsync(
+            cipherRepository, collectionRepository, collectionCipherRepository, organization, 1);
+        await collectionRepository.UpdateUsersAsync(collections[0],
+            [new CollectionAccessSelection { Id = orgUser.Id, ReadOnly = true, HidePasswords = false, Manage = false }]);
+        await CreateGroupGrantAsync(groupRepository, organization, orgUser, collections[0], readOnly: false, hidePasswords: false, manage: true);
+
+        // Act
+        var permissions = await cipherRepository.GetCipherPermissionsForOrganizationAsync(organization.Id, user.Id);
+
+        // Assert
+        var result = Assert.Single(permissions, p => p.Id == cipher.Id);
+        Assert.True(result.Read);
+        Assert.False(result.Edit);
+        Assert.True(result.ViewPassword);
+        Assert.False(result.Manage);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetCipherPermissionsForOrganizationAsync_WhenDirectGrantOnOneCollectionAndGroupGrantOnAnother_ReturnsHighestPermissionLevel(
+        ICipherRepository cipherRepository,
+        IUserRepository userRepository,
+        ICollectionCipherRepository collectionCipherRepository,
+        ICollectionRepository collectionRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository)
+    {
+        // Arrange
+        var (user, organization, orgUser) = await CreateTestUserAndOrganization(userRepository, organizationRepository, organizationUserRepository);
+        var (cipher, collections) = await CreateCipherInNewCollectionsAsync(
+            cipherRepository, collectionRepository, collectionCipherRepository, organization, 2);
+        await collectionRepository.UpdateUsersAsync(collections[0],
+            [new CollectionAccessSelection { Id = orgUser.Id, ReadOnly = true, HidePasswords = false, Manage = false }]);
+        await CreateGroupGrantAsync(groupRepository, organization, orgUser, collections[1], readOnly: false, hidePasswords: false, manage: true);
+
+        // Act
+        var permissions = await cipherRepository.GetCipherPermissionsForOrganizationAsync(organization.Id, user.Id);
+
+        // Assert
+        var result = Assert.Single(permissions, p => p.Id == cipher.Id);
+        Assert.True(result.Read);
+        Assert.True(result.Edit);
+        Assert.True(result.ViewPassword);
+        Assert.True(result.Manage);
+    }
+
+    private static async Task<(Cipher Cipher, List<Guid> CollectionIds)> CreateCipherInNewCollectionsAsync(
+        ICipherRepository cipherRepository,
+        ICollectionRepository collectionRepository,
+        ICollectionCipherRepository collectionCipherRepository,
+        Organization organization,
+        int collectionCount)
+    {
+        var cipher = await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = organization.Id,
+            Data = ""
+        });
+        var collectionIds = new List<Guid>();
+        for (var i = 0; i < collectionCount; i++)
+        {
+            var collection = await collectionRepository.CreateAsync(new Collection
+            {
+                Name = $"Test Collection {i}",
+                OrganizationId = organization.Id
+            });
+            collectionIds.Add(collection.Id);
+        }
+
+        await collectionCipherRepository.UpdateCollectionsForAdminAsync(cipher.Id, organization.Id, collectionIds);
+        return (cipher, collectionIds);
+    }
+
+    private static async Task CreateGroupGrantAsync(
+        IGroupRepository groupRepository,
+        Organization organization,
+        OrganizationUser orgUser,
+        Guid collectionId,
+        bool readOnly,
+        bool hidePasswords,
+        bool manage)
+    {
+        var group = new Group { OrganizationId = organization.Id, Name = $"Group {Guid.NewGuid()}" };
+        await groupRepository.CreateAsync(group,
+            [new CollectionAccessSelection { Id = collectionId, ReadOnly = readOnly, HidePasswords = hidePasswords, Manage = manage }]);
+        await groupRepository.UpdateUsersAsync(group.Id, [orgUser.Id], DateTime.UtcNow);
+    }
+
     private async Task<(User user, Organization org, OrganizationUser orgUser)> CreateTestUserAndOrganization(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,

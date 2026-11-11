@@ -7,8 +7,10 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 using Bit.Core.Billing.Organizations.Commands;
@@ -51,7 +53,8 @@ public class OrganizationsController(
     IOrganizationInstallationRepository organizationInstallationRepository,
     IPricingClient pricingClient,
     IReinstateSubscriptionCommand reinstateSubscriptionCommand,
-    IGetPendingAnnualUpgradeQuery getPendingAnnualUpgradeQuery)
+    IGetPendingAnnualUpgradeQuery getPendingAnnualUpgradeQuery,
+    Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     : Controller
 {
     [HttpGet("{id:guid}/subscription")]
@@ -77,9 +80,18 @@ public class OrganizationsController(
 
         var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
+        int? occupiedPamSeats = organization.UsePam
+            ? await organizationUserRepository.GetOccupiedPamSeatCountByOrganizationIdAsync(organization.Id)
+            : null;
+
+        var includePrivilegedControlsPlanFeatures = featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support);
+
         if (string.IsNullOrEmpty(organization.GatewaySubscriptionId))
         {
-            return new OrganizationSubscriptionResponseModel(organization, plan);
+            return new OrganizationSubscriptionResponseModel(
+                organization, plan, occupiedPamSeats,
+                organization.IsOnPrivilegedControlsSalesInitiatedTrial(plan, subscriptionHasPrivilegedControlsSeats: false),
+                includePrivilegedControlsPlanFeatures);
         }
 
         var subscriptionInfo = await paymentService.GetSubscriptionAsync(organization);
@@ -97,7 +109,10 @@ public class OrganizationsController(
             : await getPendingAnnualUpgradeQuery.Run(organization);
 
         return new OrganizationSubscriptionResponseModel(
-            organization, subscriptionInfo, plan, hideSensitiveData, pendingAnnualUpgrade);
+            organization, subscriptionInfo, plan, hideSensitiveData, pendingAnnualUpgrade, occupiedPamSeats,
+            organization.IsOnPrivilegedControlsSalesInitiatedTrial(
+                plan, subscriptionInfo.Subscription?.HasPrivilegedControlsSeats == true),
+            includePrivilegedControlsPlanFeatures);
     }
 
     [HttpGet("{id:guid}/license")]

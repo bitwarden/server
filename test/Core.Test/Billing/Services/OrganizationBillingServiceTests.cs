@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Sales;
@@ -101,6 +102,11 @@ public class OrganizationBillingServiceTests
         Assert.NotNull(capturedOptions.TrialSettings);
         Assert.NotNull(capturedOptions.TrialSettings.EndBehavior);
         Assert.Equal("cancel", capturedOptions.TrialSettings.EndBehavior.MissingPaymentMethod);
+
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .Received(1)
+            .UpsertOrganizationAbilityAsync(organization);
+        Assert.True(organization.Enabled);
     }
 
     // Literal strings on purpose: the initiation path sentence must match the clients-repo

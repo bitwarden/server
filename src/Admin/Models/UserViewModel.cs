@@ -30,6 +30,7 @@ public class UserViewModel
     public string GatewaySubscriptionId { get; }
     public string LicenseKey { get; }
     public int CipherCount { get; set; }
+    public UserCryptoViewModel Crypto { get; private set; }
 
     public UserViewModel(Guid id,
         string name,
@@ -107,9 +108,10 @@ public class UserViewModel
             Array.Empty<Cipher>());
 
     public static UserViewModel MapViewModel(User user, bool isTwoFactorEnabled) =>
-        MapViewModel(user, isTwoFactorEnabled, Array.Empty<Cipher>(), false);
+        MapViewModel(user, isTwoFactorEnabled, Array.Empty<Cipher>(), false, false);
 
-    public static UserViewModel MapViewModel(User user, bool isTwoFactorEnabled, IEnumerable<Cipher> ciphers, bool? claimedAccount) =>
+    public static UserViewModel MapViewModel(User user, bool isTwoFactorEnabled, IEnumerable<Cipher> ciphers, bool? claimedAccount,
+        bool needsRecoveryKeyV2Update) =>
         new(
             user.Id,
             user.Name,
@@ -131,7 +133,10 @@ public class UserViewModel
             user.GatewayCustomerId ?? string.Empty,
             user.GatewaySubscriptionId ?? string.Empty,
             user.LicenseKey ?? string.Empty,
-            ciphers);
+            ciphers)
+        {
+            Crypto = UserCryptoViewModel.Map(user, needsRecoveryKeyV2Update),
+        };
 
     public static bool IsTwoFactorEnabled(User user,
         IEnumerable<(Guid userId, bool twoFactorIsEnabled)> twoFactorIsEnabledLookup) =>

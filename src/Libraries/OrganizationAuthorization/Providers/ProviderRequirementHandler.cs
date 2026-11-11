@@ -1,4 +1,4 @@
-﻿using Bit.Core.Services;
+﻿using Bit.CurrentUser;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 
@@ -11,7 +11,7 @@ namespace Bit.Api.AdminConsole.Authorization.Providers;
 /// </summary>
 public class ProviderRequirementHandler(
     IHttpContextAccessor httpContextAccessor,
-    IUserService userService)
+    ICurrentUserContext currentUserContext)
     : AuthorizationHandler<IProviderRequirement>
 {
     public const string NoHttpContextError = "This method should only be called in the context of an HTTP Request.";
@@ -26,8 +26,7 @@ public class ProviderRequirementHandler(
 
         var providerId = httpContext.GetProviderId();
 
-        var userId = userService.GetProperUserId(httpContext.User);
-        if (userId == null)
+        if (!currentUserContext.TryGetUserId(out _))
         {
             return Task.CompletedTask;
         }

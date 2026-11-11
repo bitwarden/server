@@ -98,6 +98,9 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             await TryUpdateDeviceLastActivityForRefreshAsync(context);
         }
 
+        // Every token request that passes IdentityServer's own grant validation reaches this validator. Only SSO
+        // (authorization_code) and user API key (client_credentials) logins are validated as user logins here; every
+        // other request returns early.
         string[] allowedGrantTypes = ["authorization_code", "client_credentials"];
         string clientId = context.Result.ValidatedRequest.ClientId;
         if (!allowedGrantTypes.Contains(context.Result.ValidatedRequest.GrantType)
@@ -143,13 +146,9 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         context.Result.CustomResponse = customResponse;
         if (claims?.Any() ?? false)
         {
-            context.Result.ValidatedRequest.Client.AlwaysSendClientClaims = true;
-            context.Result.ValidatedRequest.Client.ClientClaimsPrefix = string.Empty;
-            foreach (var claim in claims)
-            {
-                context.Result.ValidatedRequest.ClientClaims.Add(claim);
-            }
+            AddClaimsToNewAccessToken(context.Result.ValidatedRequest, claims);
         }
+
         if (context.Result.CustomResponse == null || user.MasterPassword != null)
         {
             return Task.CompletedTask;
@@ -168,6 +167,40 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         }
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Adds the claims to the access token issued for this request.
+    /// </summary>
+    /// <remarks>
+    /// The grant is already validated when this validator runs, so this method can only add to the request's existing
+    /// subject, if any.
+    /// <list type="bullet">
+    ///   <item>
+    ///     With a subject: the claims go on the subject, which IdentityServer stores with any refresh token. Only claim
+    ///     types in <see cref="Claims.UserIdentityClaimTypes"/> carry over to the access token, at issuance and on
+    ///     refresh. Today, this applies only to the SSO authorization_code flow.
+    ///   </item>
+    ///   <item>
+    ///     Without a subject: the claims go out as client claims, on this request's access token only. Today, this
+    ///     applies only to the user API key client_credentials flow.
+    ///   </item>
+    /// </list>
+    /// </remarks>
+    private static void AddClaimsToNewAccessToken(ValidatedTokenRequest request, List<Claim> claims)
+    {
+        if (request.Subject?.Identity is ClaimsIdentity subjectIdentity)
+        {
+            subjectIdentity.AddClaims(claims);
+            return;
+        }
+
+        request.Client.AlwaysSendClientClaims = true;
+        request.Client.ClientClaimsPrefix = string.Empty;
+        foreach (var claim in claims)
+        {
+            request.ClientClaims.Add(claim);
+        }
     }
 
     protected override ClaimsPrincipal? GetSubject(CustomTokenRequestValidationContext context)

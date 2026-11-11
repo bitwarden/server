@@ -3,21 +3,16 @@
 namespace Bit.SeederUtility.Commands;
 
 /// <summary>
-/// Shared validation and mapping for the <c>--stripe-billing</c> / <c>--skip-trial</c> / <c>--trial-days</c>
-/// trio, which the <c>organization</c> and <c>preset</c> commands expose identically.
+/// Shared validation and mapping for the Stripe billing flags: <c>--stripe-billing</c>, <c>--stripe-card</c>,
+/// and <c>--stripe-address</c> on every billing command, plus <c>--skip-trial</c> / <c>--trial-days</c> on
+/// the <c>organization</c> and <c>preset</c> commands.
 /// </summary>
 internal static class StripeBillingArgs
 {
-    private const int _minTrialDays = 1;
-    private const int _maxTrialDays = 30;
-    private const int _defaultTrialDays = 30;
-
     /// <summary>
-    /// Rejects trial flags that are meaningless or contradictory. The day range mirrors production's
-    /// <c>ValidateTrialLength</c> — <c>IOrganizationBillingService.Finalize</c> enforces nothing itself, so an
-    /// out-of-range value would reach Stripe unchecked.
+    /// Rejects trial flags that are meaningless or contradictory, then the card and address flags.
     /// </summary>
-    internal static void Validate(bool stripeBilling, bool skipTrial, int? trialDays)
+    internal static void Validate(bool stripeBilling, bool skipTrial, int? trialDays, string? card, string? address)
     {
         if (!stripeBilling && (skipTrial || trialDays.HasValue))
         {
@@ -25,25 +20,45 @@ internal static class StripeBillingArgs
                 "--skip-trial and --trial-days only apply to Stripe billing. Add --stripe-billing or drop them.");
         }
 
-        if (skipTrial && trialDays.HasValue)
+        StripeBillingOptions.ValidateTrial(skipTrial, trialDays, "--skip-trial", "--trial-days");
+
+        ValidateProfile(stripeBilling, card, address);
+    }
+
+    /// <summary>
+    /// Rejects <c>--stripe-card</c> / <c>--stripe-address</c> without <c>--stripe-billing</c>, and names the
+    /// Seeder's catalog doesn't know.
+    /// </summary>
+    internal static void ValidateProfile(bool stripeBilling, string? card, string? address)
+    {
+        if (!stripeBilling && (!string.IsNullOrEmpty(card) || !string.IsNullOrEmpty(address)))
         {
             throw new ArgumentException(
-                "--skip-trial and --trial-days are mutually exclusive: one asks for no trial, the other for a trial.");
+                "--stripe-card and --stripe-address only apply to Stripe billing. Add --stripe-billing or drop them.");
         }
 
-        if (trialDays is < _minTrialDays or > _maxTrialDays)
-        {
-            throw new ArgumentException(
-                $"--trial-days must be between {_minTrialDays} and {_maxTrialDays}.");
-        }
+        StripeBillingProfile.Parse(card, address);
     }
 
     /// <summary>
     /// Returns null when billing was not requested — the signal every seeding path reads as
     /// "make no Stripe calls".
     /// </summary>
-    internal static StripeBillingOptions? ToOptions(bool stripeBilling, bool skipTrial, int? trialDays) =>
+    internal static StripeBillingOptions? ToOptions(
+        bool stripeBilling, bool skipTrial, int? trialDays, string? card, string? address) =>
         stripeBilling
-            ? new StripeBillingOptions { SkipTrial = skipTrial, TrialDays = trialDays ?? _defaultTrialDays }
+            ? new StripeBillingOptions
+            {
+                SkipTrial = skipTrial,
+                TrialDays = trialDays ?? StripeBillingOptions.DefaultTrialDays,
+                Profile = StripeBillingProfile.Parse(card, address),
+            }
             : null;
+
+    /// <summary>
+    /// Returns null when billing was not requested — the signal every seeding path reads as
+    /// "make no Stripe calls".
+    /// </summary>
+    internal static StripeBillingProfile? ToProfile(bool stripeBilling, string? card, string? address) =>
+        stripeBilling ? StripeBillingProfile.Parse(card, address) : null;
 }

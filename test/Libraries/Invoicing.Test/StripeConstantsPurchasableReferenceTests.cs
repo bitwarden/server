@@ -10,4 +10,5 @@ public class StripeConstantsPurchasableReferenceTests
     [Fact] public void PasswordManagerStorage_IsPmStorage() => Assert.Equal("pm-storage", StripeConstants.PurchasableReferences.PasswordManagerStorage);
     [Fact] public void SecretsManagerSeat_IsSmSeat() => Assert.Equal("sm-seat", StripeConstants.PurchasableReferences.SecretsManagerSeat);
     [Fact] public void SecretsManagerServiceAccount_IsSmServiceAccount() => Assert.Equal("sm-service-account", StripeConstants.PurchasableReferences.SecretsManagerServiceAccount);
+    [Fact] public void PrivilegedControlsSeat_IsPamSeat() => Assert.Equal("pam-seat", StripeConstants.PurchasableReferences.PrivilegedControlsSeat);
 }

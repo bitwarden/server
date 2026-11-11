@@ -4,11 +4,15 @@
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteReminders;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Constants;
@@ -58,6 +62,9 @@ public class OrganizationService : IOrganizationService
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand;
     private readonly TimeProvider _timeProvider;
+    private readonly IReplaceOrganizationAndUpdateCacheCommand _replaceOrganizationAndUpdateCacheCommand;
+    private readonly IReservePrivilegedControlsSeatsCommand _reservePrivilegedControlsSeatsCommand;
+    private readonly IRevertPrivilegedControlsSeatsCommand _revertPrivilegedControlsSeatsCommand;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -81,7 +88,10 @@ public class OrganizationService : IOrganizationService
         ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
         IStripeAdapter stripeAdapter,
         IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IReplaceOrganizationAndUpdateCacheCommand replaceOrganizationAndUpdateCacheCommand,
+        IReservePrivilegedControlsSeatsCommand reservePrivilegedControlsSeatsCommand,
+        IRevertPrivilegedControlsSeatsCommand revertPrivilegedControlsSeatsCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -105,6 +115,9 @@ public class OrganizationService : IOrganizationService
         _stripeAdapter = stripeAdapter;
         _updateOrganizationSubscriptionCommand = updateOrganizationSubscriptionCommand;
         _timeProvider = timeProvider;
+        _replaceOrganizationAndUpdateCacheCommand = replaceOrganizationAndUpdateCacheCommand;
+        _reservePrivilegedControlsSeatsCommand = reservePrivilegedControlsSeatsCommand;
+        _revertPrivilegedControlsSeatsCommand = revertPrivilegedControlsSeatsCommand;
     }
 
     public async Task<string> AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb)
@@ -131,7 +144,7 @@ public class OrganizationService : IOrganizationService
             plan.PasswordManager.StripeStoragePlanId,
             plan.PasswordManager.BaseStorageGb,
             plan);
-        await ReplaceAndUpdateCacheAsync(organization);
+        await _replaceOrganizationAndUpdateCacheCommand.RunAsync(organization);
         return secret;
     }
 
@@ -147,6 +160,14 @@ public class OrganizationService : IOrganizationService
         if (maxAutoscaleSeats.HasValue && newSeatCount > maxAutoscaleSeats.Value)
         {
             throw new BadRequestException("Cannot set max seat autoscaling below seat count.");
+        }
+
+        if (organization.UsePam &&
+            _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support) &&
+            !BillingExtensions.PrivilegedControlsAutoscaleLimitFits(organization.MaxAutoscalePamSeats, maxAutoscaleSeats))
+        {
+            throw new BadRequestException(
+                "You cannot set a Password Manager autoscale limit lower than the Privileged Controls autoscale limit.");
         }
 
         if (seatAdjustment != 0)
@@ -191,7 +212,7 @@ public class OrganizationService : IOrganizationService
 
         organization.MaxAutoscaleSeats = maxAutoscaleSeats;
 
-        await ReplaceAndUpdateCacheAsync(organization);
+        await _replaceOrganizationAndUpdateCacheCommand.RunAsync(organization);
     }
 
     public async Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment)
@@ -274,6 +295,15 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
         }
 
+        // Only decreases are checked; adding seats is never blocked by this rule.
+        if (organization.UsePam &&
+            seatAdjustment < 0 &&
+            newSeatTotal < organization.PamSeats &&
+            _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support))
+        {
+            throw new BadRequestException(new PrivilegedControlsSeatsMustNotExceedPasswordManagerSeatsError().Message);
+        }
+
         _logger.LogInformation("{Method}: Invoking _paymentService.AdjustSeatsAsync with {AdditionalSeats} additional seats for Organization ({OrganizationID})",
             nameof(AdjustSeatsAsync), additionalSeats, organization.Id);
 
@@ -296,7 +326,7 @@ public class OrganizationService : IOrganizationService
 
         _logger.LogInformation("{Method}: Invoking _organizationRepository.ReplaceAsync with {Seats} seats for Organization ({OrganizationID})", nameof(AdjustSeatsAsync), organization.Seats, organization.Id); ;
 
-        await ReplaceAndUpdateCacheAsync(organization);
+        await _replaceOrganizationAndUpdateCacheCommand.RunAsync(organization);
 
         if (organization.Seats.HasValue && organization.MaxAutoscaleSeats.HasValue &&
             organization.Seats == organization.MaxAutoscaleSeats)
@@ -328,7 +358,7 @@ public class OrganizationService : IOrganizationService
         {
             org.ExpirationDate = expirationDate;
             org.RevisionDate = DateTime.UtcNow;
-            await ReplaceAndUpdateCacheAsync(org);
+            await _replaceOrganizationAndUpdateCacheCommand.RunAsync(org);
         }
     }
 
@@ -348,7 +378,7 @@ public class OrganizationService : IOrganizationService
             }
         }
 
-        await ReplaceAndUpdateCacheAsync(organization, EventType.Organization_Updated);
+        await _replaceOrganizationAndUpdateCacheCommand.RunAsync(organization, EventType.Organization_Updated);
 
         if (updateBilling && !string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
         {
@@ -647,12 +677,17 @@ public class OrganizationService : IOrganizationService
 
         // Promote the staged rows set aside above. They keep their Id and ExternalId because SCIM and
         // Directory Connector key off both, and only the fields the invite specifies are overwritten.
+        // The reminder fields match what sending the invites stores, because the promotion is saved after the send.
+        var inviteReminderDueDate = _timeProvider.GetUtcNow().UtcDateTime
+            .AddHours(InviteReminderSchedule.GetIntervalHours(_globalSettings, _logger));
         foreach (var (orgUser, invite) in stagedInvitations.Values)
         {
             orgUser.Type = invite.Type.Value;
             orgUser.Status = OrganizationUserStatusType.Invited;
             orgUser.AccessSecretsManager = invite.AccessSecretsManager;
             orgUser.RevisionDate = DateTime.UtcNow;
+            orgUser.InviteReminderDueDate = inviteReminderDueDate;
+            orgUser.InviteRemindersSentCount = 0;
             // Custom permissions only apply to the Custom role, and a staged row may already carry some.
             orgUser.Permissions = null;
 
@@ -671,6 +706,12 @@ public class OrganizationService : IOrganizationService
         var allOrgUsers = createdOrgUsers
             .Concat(stagedInvitations.Values.Select(s => s.OrgUser))
             .ToList();
+
+        // Staged members keep any Privileged Controls access they were given, and become Invited, which occupies a seat.
+        var privilegedControlsSeatsToReserve = organization.UsePam
+            ? stagedInvitations.Values.Count(s => s.OrgUser.AccessPam)
+            : 0;
+        var initialPrivilegedControlsSeats = organization.PamSeats;
 
         // Staged rows whose promotion has actually committed, and so must be put back if the batch fails.
         var promotedStagedUsers = new List<OrganizationUser>();
@@ -699,6 +740,11 @@ public class OrganizationService : IOrganizationService
             if (additionalSmSeatsRequired > 0)
             {
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdate);
+            }
+
+            if (privilegedControlsSeatsToReserve > 0)
+            {
+                await ReservePrivilegedControlsSeatsAsync(organization, privilegedControlsSeatsToReserve);
             }
 
             await SendInvitesAsync(allOrgUsers, organization, invitingUserId);
@@ -730,6 +776,8 @@ public class OrganizationService : IOrganizationService
 
             // Demote any staged rows that were promoted before the failure.
             await RestorePromotedStagedUsersAsync(promotedStagedUsers, stagedSnapshots);
+
+            await ReleasePrivilegedControlsSeatsAsync(organization, initialPrivilegedControlsSeats);
 
             var currentOrganization = await _organizationRepository.GetByIdAsync(organization.Id);
 
@@ -799,9 +847,45 @@ public class OrganizationService : IOrganizationService
             orgUser.Permissions = snapshot.Permissions;
             orgUser.AccessSecretsManager = snapshot.AccessSecretsManager;
             orgUser.RevisionDate = snapshot.RevisionDate;
+            orgUser.ClearInviteReminders();
         }
 
         await _organizationUserRepository.ReplaceManyAsync(promotedStagedUsers);
+    }
+
+    private async Task ReservePrivilegedControlsSeatsAsync(Organization organization, int seatsRequested)
+    {
+        var reservation = await _reservePrivilegedControlsSeatsCommand.RunAsync(organization, seatsRequested);
+        if (reservation.Success)
+        {
+            return;
+        }
+
+        throw reservation.Error is InternalError
+            ? new InvalidOperationException(reservation.Error.Message, reservation.Exception)
+            : new BadRequestException(reservation.Error.Message);
+    }
+
+    /// <summary>
+    /// Restores the Privileged Controls seat count captured before the reservation when the invite fails.
+    /// </summary>
+    private async Task ReleasePrivilegedControlsSeatsAsync(Organization organization, int? initialPrivilegedControlsSeats)
+    {
+        if (initialPrivilegedControlsSeats is null || initialPrivilegedControlsSeats == organization.PamSeats)
+        {
+            return;
+        }
+
+        try
+        {
+            await _revertPrivilegedControlsSeatsCommand.RunAsync(organization, initialPrivilegedControlsSeats.Value);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to release Privileged Controls seat(s) for organization {OrganizationId}",
+                organization.Id);
+        }
     }
 
     private async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization, Guid? invitingUserId = null) =>
@@ -949,26 +1033,6 @@ public class OrganizationService : IOrganizationService
                 await _eventService.LogOrganizationUserEventAsync(organizationUser,
                     EventType.OrganizationUser_UnlinkedSso);
             }
-        }
-    }
-
-
-    public async Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null)
-    {
-        try
-        {
-            await _organizationRepository.ReplaceAsync(org);
-            await _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(org);
-
-            if (orgEvent.HasValue)
-            {
-                await _eventService.LogOrganizationEventAsync(org, orgEvent.Value);
-            }
-        }
-        catch (Exception exception)
-        {
-            _logger.LogError(exception, "An error occurred while calling {Method} for Organization ({OrganizationID})", nameof(ReplaceAndUpdateCacheAsync), org.Id);
-            throw;
         }
     }
 
@@ -1210,6 +1274,11 @@ public class OrganizationService : IOrganizationService
         }
 
         if (permissions.ManageAccessRules && !org.Permissions.ManageAccessRules)
+        {
+            return false;
+        }
+
+        if (permissions.ManageRotation && !org.Permissions.ManageRotation)
         {
             return false;
         }

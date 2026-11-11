@@ -17,7 +17,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using NSubstitute;
 using Xunit;
-using AuthenticationSchemes = Bit.Core.AuthenticationSchemes;
+using AuthenticationSchemes = Bit.Core.Auth.IdentityServer.AuthenticationSchemes;
 
 namespace Bit.Sso.IntegrationTest.Controllers;
 
@@ -102,8 +102,11 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
     }
 
+    /*
+    * Test to verify /Account/ExternalCallback returns error when the organization has no SSO config.
+    */
     [Fact]
-    public async Task ExternalCallback_FindUserFromExternalProviderAsync_OrganizationOrSsoConfigNotFound_ReturnsError()
+    public async Task ExternalCallback_WithNoSsoConfig_ReturnsError()
     {
         // Arrange
         var testData = await new SsoTestDataBuilder()
@@ -114,7 +117,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
 
-        // Assert - Should fail because user has invalid status
+        // Assert - Should fail because the organization has no SSO config
         var stringResponse = await response.Content.ReadAsStringAsync();
         Assert.Contains("Organization not found or SSO configuration not enabled", stringResponse);
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
@@ -416,7 +419,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
 
-        AssertNoSeatsAvailableRedirect(response);
+        ExternalCallbackAssertions.AssertNoSeatsAvailableRedirect(response);
     }
 
     /*
@@ -445,7 +448,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
 
-        AssertNoSeatsAvailableRedirect(response);
+        ExternalCallbackAssertions.AssertNoSeatsAvailableRedirect(response);
     }
 
     /*
@@ -622,7 +625,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
                 var authService = Substitute.For<IAuthenticationService>();
                 authService.AuthenticateAsync(
                         Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
+                        AuthenticationSchemes.SsoExternalCookie)
                     .Returns(MockSuccessfulAuthResult.Build(organizationId, providerUserId, testEmail, testName, null, userIdentifier));
                 services.AddSingleton(authService);
             });
@@ -698,10 +701,8 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     * NOTE: This test uses the substitute pattern instead of SsoTestDataBuilder because:
     * - Organization.Id is of type Guid and cannot be set to a non-GUID value
     * - The auth mock scheme must be a non-GUID string to trigger this error path
-    * - This cannot be tested since ln 438 in AccountController.FindUserFromExternalProviderAsync throws a different exception
-    *   before reaching the organization lookup exception.
     */
-    [Fact(Skip = "This test cannot be executed because the organization ID must be a GUID. See note in test summary.")]
+    [Fact]
     public async Task ExternalCallback_WithInvalidProviderGuid_ReturnsError()
     {
         // Arrange
@@ -718,7 +719,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
                 var authService = Substitute.For<IAuthenticationService>();
                 authService.AuthenticateAsync(
                         Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
+                        AuthenticationSchemes.SsoExternalCookie)
                     .Returns(MockSuccessfulAuthResult.Build(invalidScheme, providerUserId, testEmail, testName));
                 services.AddSingleton(authService);
             });
@@ -729,7 +730,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
 
         // Assert - Should fail because provider is not a valid organization GUID
         var stringResponse = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Organization not found from identifier.", stringResponse);
+        Assert.Contains($"SSO provider, {invalidScheme} is not an organization id", stringResponse);
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
     }
 
@@ -960,7 +961,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
 
-        AssertNoSeatsAvailableRedirect(response);
+        ExternalCallbackAssertions.AssertNoSeatsAvailableRedirect(response);
 
         // Assert — rollback ran with the exact delta before the redirect fired.
         var orgService = testData.Factory.Services.GetRequiredService<IOrganizationService>();
@@ -997,7 +998,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         var response = await client.GetAsync("/Account/ExternalCallback");
 
         // Promoting the Staged row would exceed the seat cap and self-hosted cannot autoscale.
-        AssertNoSeatsAvailableRedirect(response);
+        ExternalCallbackAssertions.AssertNoSeatsAvailableRedirect(response);
     }
 
     /*
@@ -1031,7 +1032,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
 
         // Promoting the Staged row would exceed the seat cap and autoscale cannot grow past
         // MaxAutoscaleSeats.
-        AssertNoSeatsAvailableRedirect(response);
+        ExternalCallbackAssertions.AssertNoSeatsAvailableRedirect(response);
     }
 
     /*
@@ -1114,7 +1115,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         // Phase 1 act — first SSO attempt should be rejected.
         var response1 = await client.GetAsync("/Account/ExternalCallback");
 
-        AssertNoSeatsAvailableRedirect(response1);
+        ExternalCallbackAssertions.AssertNoSeatsAvailableRedirect(response1);
 
         // Phase 1 assert — no BW User row was persisted. This is the fix's contract:
         // the seat check runs before RegisterSSOAutoProvisionedUserAsync so a rejection
@@ -1189,11 +1190,8 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         var response = await client.GetAsync("/Account/ExternalCallback");
 
         // Assert — 302 to /login with the StagedOrgUserInviteAcceptanceRequired error code and context.
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.NotNull(response.Headers.Location);
+        ExternalCallbackAssertions.AssertStagedInviteAcceptanceRequiredRedirect(response);
         var location = response.Headers.Location!.ToString();
-        Assert.Contains("/login?", location);
-        Assert.Contains("error=ssoStagedOrgUserInviteAcceptanceRequired", location);
         Assert.Contains($"email={Uri.EscapeDataString(testData.User!.Email)}", location);
         Assert.Contains($"organizationId={testData.Organization!.Id}", location);
 
@@ -1247,7 +1245,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
 
-        AssertNoSeatsAvailableRedirect(response);
+        ExternalCallbackAssertions.AssertNoSeatsAvailableRedirect(response);
 
         // Assert — no invite was sent (seat check must run before the email step).
         var inviteCommand = testData.Factory.Services.GetRequiredService<ISendOrganizationInvitesCommand>();
@@ -1289,7 +1287,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
 
-        AssertNoSeatsAvailableRedirect(response);
+        ExternalCallbackAssertions.AssertNoSeatsAvailableRedirect(response);
 
         // Assert — no invite was sent.
         var inviteCommand = testData.Factory.Services.GetRequiredService<ISendOrganizationInvitesCommand>();
@@ -1451,21 +1449,5 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         // and the response should contain the redirect view
         var content = await response.Content.ReadAsStringAsync();
         Assert.NotEmpty(content); // View content should be present
-    }
-
-    /// <summary>
-    /// Asserts the response is a 302 redirect to the web client's
-    /// <c>/sso-login-failed</c> terminal page carrying the
-    /// <c>no-seats-available</c> kind. Shared by every SSO no-seats test path
-    /// (self-hosted, cloud autoscale-fail, autoscale partial-failure rollback,
-    /// fresh-JIT, and Staged-promotion variants).
-    /// </summary>
-    private static void AssertNoSeatsAvailableRedirect(HttpResponseMessage response)
-    {
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.NotNull(response.Headers.Location);
-        var location = response.Headers.Location!.ToString();
-        Assert.Contains("/sso-login-failed?", location);
-        Assert.Contains("kind=no-seats-available", location);
     }
 }

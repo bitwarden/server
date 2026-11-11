@@ -14,5 +14,4 @@ public class TrialSendVerificationEmailRequestModel : RegisterSendVerificationEm
     [Range(0, 30)]
     public int? TrialLength { get; init; }
     public bool PaymentOptional { get; init; }
-    public int? PamSeatMinimum { get; init; }
 }

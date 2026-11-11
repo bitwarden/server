@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Constants;
+﻿using Bit.Core;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Pricing;
@@ -9,6 +10,7 @@ using Bit.Core.Exceptions;
 using Bit.Invoicing.InvoicePreviews;
 using Bit.Invoicing.InvoicePreviews.Models;
 using Bit.Subscriptions.Organization.Models.Requests;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using OrganizationPlan = Bit.Core.Models.StaticStore.Plan;
@@ -26,13 +28,19 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
     IPricingClient pricingClient,
     ISubscriptionDiscountService subscriptionDiscountService,
     ITaxService taxService,
+    IFeatureService featureService,
     IInvoicePreviewService invoicePreviewService) : IPreviewOrganizationSubscriptionPurchaseQuery
 {
     private const string CatalogFaultMessage = "The plan could not be previewed. Please contact support for assistance.";
 
     public async Task<InvoicePreview> Run(UserEntity user, PreviewOrganizationSubscriptionPurchaseRequest request)
     {
-        var (purchase, tier, cadence, passwordManager) = ValidatePurchase(request.Purchase);
+        var requestedPurchase = request.Purchase is { PrivilegedControls: not null } purchaseSelections &&
+                                !featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support)
+            ? purchaseSelections with { PrivilegedControls = null }
+            : request.Purchase;
+
+        var (purchase, tier, cadence, passwordManager) = ValidatePurchase(requestedPurchase);
         var customerDetails = ResolveBillingAddress(request.BillingAddress);
         var (planType, planTier) = ResolvePlan(tier, cadence);
 
@@ -67,7 +75,14 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
         {
             var plan = await GetPlanAsync(user, planType);
 
-            options.SubscriptionDetails.Items = BuildItems(plan, passwordManager, purchase.SecretsManager);
+            if (purchase.PrivilegedControls is not null && !plan.SupportsPrivilegedControls)
+            {
+                throw new BadRequestException(
+                    $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.PrivilegedControls)}",
+                    "Invalid Privileged Controls plan selected.");
+            }
+
+            options.SubscriptionDetails.Items = BuildItems(plan, passwordManager, purchase.SecretsManager, purchase.PrivilegedControls);
 
             if (purchase.SecretsManager is { Standalone: true })
             {
@@ -83,18 +98,20 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
         InvoicePreview preview;
         try
         {
-            preview = await invoicePreviewService.GetInvoicePreviewAsync(options, planTier, cadence);
+            preview = await invoicePreviewService.GetInvoicePreviewForBillingAddressAsync(options, planTier, cadence);
         }
         catch (StripeException stripeException)
             when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.CustomerTaxLocationInvalid)
         {
             throw new BadRequestException(
+                BillingErrorKeys.BillingAddress,
                 "Your location wasn't recognized. Please ensure your country and postal code are valid and try again.");
         }
         catch (StripeException stripeException)
             when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.TaxIdInvalid)
         {
             throw new BadRequestException(
+                BillingErrorKeys.BillingAddress,
                 "The tax ID number you provided was invalid. Please try again or contact support for assistance.");
         }
 
@@ -169,7 +186,7 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
                 "Sponsorship is only available on the Families plan.");
         }
 
-        if (passwordManager.Seats is < 1 or > 100000)
+        if (passwordManager.Seats is < 1 or > PlanConstants.MaxPurchasableQuantity)
         {
             throw new BadRequestException(
                 $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.PasswordManager)}.{nameof(PasswordManagerSelections.Seats)}",
@@ -185,18 +202,49 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
 
         if (purchase.SecretsManager is { } secretsManager)
         {
-            if (secretsManager.Seats is < 1 or > 100000)
+            if (secretsManager.Seats is < 1 or > PlanConstants.MaxPurchasableQuantity)
             {
                 throw new BadRequestException(
                     $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.SecretsManager)}.{nameof(SecretsManagerSelections.Seats)}",
                     "Secrets Manager seats must be between 1 and 100,000.");
             }
 
-            if (secretsManager.AdditionalServiceAccounts is < 0 or > 100000)
+            if (secretsManager.AdditionalServiceAccounts is < 0 or > PlanConstants.MaxPurchasableQuantity)
             {
                 throw new BadRequestException(
                     $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.SecretsManager)}.{nameof(SecretsManagerSelections.AdditionalServiceAccounts)}",
                     "Additional service accounts must be between 0 and 100,000.");
+            }
+        }
+
+        if (purchase.PrivilegedControls is { } privilegedControls)
+        {
+            if (tier != ProductTierType.Enterprise)
+            {
+                throw new BadRequestException(
+                    $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.PrivilegedControls)}",
+                    "Privileged Controls is only available on the Enterprise plan.");
+            }
+
+            if (purchase.SecretsManager is { Standalone: true })
+            {
+                throw new BadRequestException(
+                    $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.PrivilegedControls)}",
+                    "Privileged Controls cannot be combined with a standalone Secrets Manager purchase.");
+            }
+
+            if (privilegedControls.Seats is < 1 or > PlanConstants.MaxPurchasableQuantity)
+            {
+                throw new BadRequestException(
+                    $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.PrivilegedControls)}.{nameof(PrivilegedControlsSelections.Seats)}",
+                    "Privileged Controls seats must be between 1 and 100,000.");
+            }
+
+            if (privilegedControls.Seats > passwordManager.Seats)
+            {
+                throw new BadRequestException(
+                    $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.PrivilegedControls)}.{nameof(PrivilegedControlsSelections.Seats)}",
+                    "You cannot have more Privileged Controls seats than Password Manager seats.");
             }
         }
 
@@ -314,7 +362,8 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
     }
 
     private static List<InvoiceSubscriptionDetailsItemOptions> BuildItems(
-        OrganizationPlan plan, PasswordManagerSelections passwordManager, SecretsManagerSelections? secretsManager)
+        OrganizationPlan plan, PasswordManagerSelections passwordManager, SecretsManagerSelections? secretsManager,
+        PrivilegedControlsSelections? privilegedControls)
     {
         // Packaged plans (Families) bill one package regardless of seats, matching subscription creation.
         var items = new List<InvoiceSubscriptionDetailsItemOptions>
@@ -349,6 +398,16 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
                     Quantity = secretsManager.AdditionalServiceAccounts
                 });
             }
+        }
+
+        // Run rejects a selection on a plan without Privileged Controls support before this runs.
+        if (privilegedControls is not null)
+        {
+            items.Add(new InvoiceSubscriptionDetailsItemOptions
+            {
+                Price = plan.PrivilegedControls.StripeSeatPlanId,
+                Quantity = privilegedControls.Seats
+            });
         }
 
         return items;

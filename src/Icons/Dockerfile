@@ -1,7 +1,7 @@
 ###############################################
 #                 Build stage                 #
 ###############################################
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0-alpine3.23 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0-alpine3.24 AS build
 
 # Docker buildx supplies the value for this arg
 ARG TARGETPLATFORM
@@ -36,7 +36,7 @@ RUN . /tmp/rid.txt && dotnet publish \
 ###############################################
 #                  App stage                  #
 ###############################################
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine3.23
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine3.24
 
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
@@ -57,6 +57,6 @@ WORKDIR /app
 COPY --from=build /source/src/Icons/out /app
 COPY ./src/Icons/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
-HEALTHCHECK CMD wget -Y off --quiet --tries=1 --output-document=/dev/null http://localhost:5000/google.com/icon.png || exit 1
+HEALTHCHECK CMD wget -Y off --quiet --tries=1 --output-document=/dev/null http://localhost:5000/config || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]

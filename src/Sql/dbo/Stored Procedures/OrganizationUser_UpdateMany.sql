@@ -24,7 +24,9 @@ BEGIN
         [RevocationReason] TINYINT NULL,
         [StatusNew] SMALLINT NULL,
         [AccessPam] BIT,
-        [V2UpgradeToken] VARCHAR(MAX) NULL
+        [V2UpgradeToken] VARCHAR(MAX) NULL,
+        [InviteReminderDueDate] DATETIME2(7) NULL,
+        [InviteRemindersSentCount] TINYINT NULL
     )
 
     INSERT INTO @OrganizationUserInput
@@ -45,7 +47,9 @@ BEGIN
         [RevocationReason],
         [StatusNew],
         [AccessPam],
-        [V2UpgradeToken]
+        [V2UpgradeToken],
+        [InviteReminderDueDate],
+        [InviteRemindersSentCount]
     FROM OPENJSON(@jsonData)
     WITH (
         [Id] UNIQUEIDENTIFIER '$.Id',
@@ -64,7 +68,9 @@ BEGIN
         [RevocationReason] TINYINT '$.RevocationReason',
         [StatusNew] SMALLINT '$.StatusNew',
         [AccessPam] BIT '$.AccessPam',
-        [V2UpgradeToken] VARCHAR(MAX) '$.V2UpgradeToken'
+        [V2UpgradeToken] VARCHAR(MAX) '$.V2UpgradeToken',
+        [InviteReminderDueDate] DATETIME2(7) '$.InviteReminderDueDate',
+        [InviteRemindersSentCount] TINYINT '$.InviteRemindersSentCount'
     )
 
     -- Perform the update
@@ -86,7 +92,9 @@ BEGIN
         [RevocationReason] = OUI.[RevocationReason],
         [StatusNew] = OUI.[StatusNew],
         [AccessPam] = ISNULL(OUI.[AccessPam], 0),
-        [V2UpgradeToken] = OUI.[V2UpgradeToken]
+        [V2UpgradeToken] = OUI.[V2UpgradeToken],
+        [InviteReminderDueDate] = OUI.[InviteReminderDueDate],
+        [InviteRemindersSentCount] = OUI.[InviteRemindersSentCount]
     FROM
         [dbo].[OrganizationUser] OU
     INNER JOIN

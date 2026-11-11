@@ -24,6 +24,19 @@ public class SsoConfigRepository : Repository<Core.Auth.Entities.SsoConfig, SsoC
         }
     }
 
+    public async Task<ICollection<Core.Auth.Entities.SsoConfig>> GetManyByOrganizationIdsAsync(
+        IEnumerable<Guid> organizationIds)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var ssoConfigs = await GetDbSet(dbContext)
+                .Where(sc => organizationIds.Contains(sc.OrganizationId))
+                .ToListAsync();
+            return Mapper.Map<List<Core.Auth.Entities.SsoConfig>>(ssoConfigs);
+        }
+    }
+
     public async Task<Core.Auth.Entities.SsoConfig?> GetByIdentifierAsync(string identifier)
     {
 

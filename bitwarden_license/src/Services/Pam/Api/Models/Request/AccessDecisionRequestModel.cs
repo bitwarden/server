@@ -4,14 +4,9 @@ using Bit.Services.Pam.Models;
 
 namespace Bit.Services.Pam.Api.Models.Request;
 
-/// <summary>
-/// An approver's decision on a pending access request: approve or deny, with a comment for the requester.
-/// </summary>
+/// <summary>An approver's decision on a pending access request.</summary>
 public class AccessDecisionRequestModel
 {
-    /// <summary>
-    /// The approver's verdict on the request: approve or deny.
-    /// </summary>
     [Required]
     [EnumDataType(typeof(AccessDecisionVerdict))]
     public AccessDecisionVerdict? Verdict { get; set; }

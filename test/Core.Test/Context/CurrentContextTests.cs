@@ -385,6 +385,24 @@ public class CurrentContextTests
     }
 
     [Theory, BitAutoData]
+    public async Task SetContextAsync_OrganizationCustomClaims_SetsEveryMappedPermission(
+        SutProvider<CurrentContext> sutProvider,
+        Guid orgId)
+    {
+        // Arrange
+        var claims = new List<Claim> { new(Claims.OrganizationCustom, orgId.ToString()) };
+        claims.AddRange(new Permissions().ClaimsMap.Select(c => new Claim(c.ClaimName, orgId.ToString())));
+        var user = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        // Act
+        await sutProvider.Sut.SetContextAsync(user);
+
+        // Assert
+        var org = Assert.Single(sutProvider.Sut.Organizations);
+        Assert.All(org.Permissions.ClaimsMap, c => Assert.True(c.Permission, c.ClaimName));
+    }
+
+    [Theory, BitAutoData]
     public async Task SetContextAsync_SecretsManagerAccess_SetsAccessSecretsManager(
         SutProvider<CurrentContext> sutProvider,
         Guid orgId)

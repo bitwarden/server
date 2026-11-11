@@ -51,6 +51,9 @@ public class OrganizationArgs : IArgumentModel
     [Option("mangle", Description = "Enable mangling for test isolation")]
     public bool Mangle { get; set; } = false;
 
+    [Option("no-data-protection", Description = "Write User.Key and User.MasterPassword without the server's data protection, so a server with different data-protection keys can read them. DEV/QA only")]
+    public bool NoDataProtection { get; set; }
+
     [Option("password", Description = "Password for all seeded accounts (default: asdfasdfasdf)")]
     public string? Password { get; set; }
 
@@ -87,6 +90,12 @@ public class OrganizationArgs : IArgumentModel
     [Option("trial-days", Description = "Trial length in days, 1-30 (default: 30). Requires --stripe-billing; not valid with --skip-trial.")]
     public int? TrialDays { get; set; }
 
+    [Option("stripe-card", Description = "Stripe test card: visa (default), mastercard, amex, fails-on-charge, or requires-authentication. Requires --stripe-billing.")]
+    public string? StripeCard { get; set; }
+
+    [Option("stripe-address", Description = "Billing address: us (default), us-alaska, de, de-vat, or ph. Requires --stripe-billing.")]
+    public string? StripeAddress { get; set; }
+
     public void Validate()
     {
         if (Users < 1)
@@ -116,7 +125,7 @@ public class OrganizationArgs : IArgumentModel
 
         var planType = PlanFeatures.Parse(PlanType);
 
-        StripeBillingArgs.Validate(StripeBilling, SkipTrial, TrialDays);
+        StripeBillingArgs.Validate(StripeBilling, SkipTrial, TrialDays, StripeCard, StripeAddress);
 
         if (StripeBilling && planType == CorePlanType.Free)
         {
@@ -152,7 +161,7 @@ public class OrganizationArgs : IArgumentModel
         OwnerEmail = OwnerEmail,
         PlanType = PlanFeatures.Parse(PlanType),
         KdfIterations = KdfIterations,
-        StripeBilling = StripeBillingArgs.ToOptions(StripeBilling, SkipTrial, TrialDays),
+        StripeBilling = StripeBillingArgs.ToOptions(StripeBilling, SkipTrial, TrialDays, StripeCard, StripeAddress),
         Overrides = new()
         {
             UseAutomaticUserConfirmation = UseAutomaticUserConfirmation,

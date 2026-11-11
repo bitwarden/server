@@ -15,7 +15,7 @@ public class IndividualCommand
         {
             args.Validate();
 
-            using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
+            using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle, DisableDataProtection = args.NoDataProtection });
 
             var result = await ConsoleProgressReporter.RunWithProgressAsync(
                 deps.ToDependencies(),
@@ -34,6 +34,12 @@ public class IndividualCommand
             }
             ConsoleOutput.PrintCountRow("Folders", result.FoldersCount);
             ConsoleOutput.PrintCountRow("Ciphers", result.CiphersCount);
+
+            if (args.StripeBilling)
+            {
+                ConsoleOutput.PrintRow("StripeCustomer", result.GatewayCustomerId);
+                ConsoleOutput.PrintRow("StripeSubscription", result.GatewaySubscriptionId);
+            }
 
             ConsoleOutput.PrintMangleMap(deps);
         }

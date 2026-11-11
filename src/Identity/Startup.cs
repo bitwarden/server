@@ -2,6 +2,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using AspNetCoreRateLimit;
 using Bit.Core;
+using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
@@ -12,6 +13,7 @@ using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
 using Bit.SharedWeb.Swagger;
 using Bit.SharedWeb.Utilities;
+using Bit.Subscriptions.Organization;
 using Duende.IdentityServer.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi;
@@ -95,8 +97,8 @@ public class Startup
         services
             .AddDistributedIdentityServices()
             .AddAuthentication()
-            .AddCookie(AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
-            .AddOpenIdConnect("sso", "Single Sign On", options =>
+            .AddCookie(AuthenticationSchemes.IdentityExternalCookie)
+            .AddOpenIdConnect(AuthenticationSchemes.IdentitySsoOidc, "Single Sign On", options =>
             {
                 options.Authority = globalSettings.BaseServiceUri.InternalSso;
                 options.RequireHttpsMetadata = !Environment.IsDevelopment() &&
@@ -105,7 +107,7 @@ public class Startup
                 options.ClientSecret = globalSettings.OidcIdentityClientKey;
                 options.ResponseMode = "form_post";
 
-                options.SignInScheme = AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme;
+                options.SignInScheme = AuthenticationSchemes.IdentityExternalCookie;
                 options.ResponseType = "code";
                 options.SaveTokens = false;
                 options.GetClaimsFromUserInfoEndpoint = true;
@@ -148,6 +150,7 @@ public class Startup
         services.AddDefaultServices(globalSettings);
         services.AddCoreLocalizationServices();
         services.AddBillingOperations();
+        services.AddPrivilegedControlsSeatAutoscaling();
 
         // TODO: Remove when OrganizationUser methods are moved out of OrganizationService, this noop dependency should
         // TODO: no longer be required - see PM-1880
@@ -221,8 +224,14 @@ public class Startup
         // Add current context
         app.UseMiddleware<CurrentContextMiddleware>();
 
+        // Tag IdentityServer protocol requests with http.route for traces and metrics
+        app.UseMiddleware<IdentityServerRouteDiagnosticsMiddleware>();
+
         // Add IdentityServer to the request pipeline.
         app.UseIdentityServer();
+
+        // Requests IdentityServer passes on (e.g. disabled endpoints) are not tagged with its routes
+        app.Use(IdentityServerRouteDiagnosticsMiddleware.MarkUnhandled);
 
         // Gates endpoints carrying IFeatureMetadata; required in any app that
         // routes requests through endpoints tagged with [RequireFeature].

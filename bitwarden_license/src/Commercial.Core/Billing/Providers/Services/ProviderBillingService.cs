@@ -6,6 +6,7 @@ using Bit.Commercial.Core.Billing.Providers.Models;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Constants;
@@ -48,6 +49,7 @@ public class ProviderBillingService(
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderPlanRepository providerPlanRepository,
     IProviderUserRepository providerUserRepository,
+    IReplaceOrganizationAndUpdateCacheCommand replaceOrganizationAndUpdateCacheCommand,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
     ITaxService taxService)
@@ -64,6 +66,12 @@ public class ProviderBillingService(
         if (existingProviderOrganization != null)
         {
             throw new ConflictException("Organization already belongs to a provider.");
+        }
+
+        if (organization.UsePam)
+        {
+            throw new BadRequestException(
+                "Organizations managed by a provider can't use Privileged Controls. Please contact Customer Support.");
         }
 
         await priceIncreaseScheduler.Release(
@@ -142,7 +150,7 @@ public class ProviderBillingService(
         await ScaleSeats(provider, organization.PlanType, organization.Seats!.Value);
 
         await Task.WhenAll(
-            organizationRepository.ReplaceAsync(organization),
+            replaceOrganizationAndUpdateCacheCommand.RunAsync(organization),
             providerOrganizationRepository.CreateAsync(providerOrganization)
         );
 

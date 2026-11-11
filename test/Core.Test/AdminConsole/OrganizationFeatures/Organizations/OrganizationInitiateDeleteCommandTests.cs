@@ -10,6 +10,7 @@ using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
@@ -44,6 +45,35 @@ public class OrganizationInitiateDeleteCommandTests
 
         await sutProvider.GetDependency<IMailService>().Received(1)
             .SendInitiateDeleteOrganzationEmailAsync(orgAdmin.Email, organization, token);
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitiateDeleteAsync_ValidAdminUser_IssuesTokenValidFor48Hours(
+        Organization organization, User orgAdmin, OrganizationUserOrganizationDetails orgAdminUser)
+    {
+        var sutProvider = new SutProvider<OrganizationInitiateDeleteCommand>()
+            .WithFakeTimeProvider()
+            .Create();
+        var now = new DateTime(2026, 10, 21, 12, 0, 0, DateTimeKind.Utc);
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(now);
+
+        orgAdminUser.Type = OrganizationUserType.Owner;
+        orgAdminUser.Status = OrganizationUserStatusType.Confirmed;
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(orgAdmin.Email)
+            .Returns(orgAdmin);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetDetailsByUserAsync(orgAdmin.Id, organization.Id)
+            .Returns(orgAdminUser);
+
+        await sutProvider.Sut.InitiateDeleteAsync(organization, orgAdmin.Email);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<OrgDeleteTokenable>>().Received(1)
+            .Protect(Arg.Is<OrgDeleteTokenable>(t =>
+                t.Id == organization.Id &&
+                t.ExpirationDate == now.AddHours(48)));
     }
 
     [Theory, BitAutoData]

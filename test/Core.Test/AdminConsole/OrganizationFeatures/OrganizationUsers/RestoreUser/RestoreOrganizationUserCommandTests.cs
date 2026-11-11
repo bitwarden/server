@@ -10,6 +10,10 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Err
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -19,11 +23,14 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
@@ -54,6 +61,88 @@ public class RestoreOrganizationUserCommandTests
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
             .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncOrgKeys && n.TargetId == organizationUser.UserId!.Value));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_WhenRestoredToInvited_StartsReminderSequenceDueNow(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser)
+    {
+        var now = new DateTimeOffset(2026, 10, 27, 12, 0, 0, TimeSpan.Zero);
+        var sutProvider = new SutProvider<RestoreOrganizationUserCommand>().WithFakeTimeProvider().Create();
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+        organizationUser.StatusNew = OrganizationUserStatusTypeNew.Invited;
+        organizationUser.UserId = null;
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(now);
+
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
+            .StartInviteReminderSequencesAsync(
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == 1 && ids.Contains(organizationUser.Id)),
+                now.UtcDateTime);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_WhenRestoredToNonInvitedStatus_DoesNotStartReminders(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        organizationUser.Email = null;
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>());
+
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceive()
+            .StartInviteReminderSequencesAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<DateTime>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUsers_StartsReminderSequenceForInvitedUsers(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser firstInvited,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser secondInvited)
+    {
+        var now = new DateTimeOffset(2026, 10, 27, 12, 0, 0, TimeSpan.Zero);
+        var sutProvider = new SutProvider<RestoreOrganizationUserCommand>().WithFakeTimeProvider().Create();
+        RestoreUser_Setup(organization, owner, firstInvited, sutProvider);
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var userService = Substitute.For<IUserService>();
+
+        foreach (var invited in new[] { firstInvited, secondInvited })
+        {
+            invited.StatusNew = OrganizationUserStatusTypeNew.Invited;
+            invited.UserId = null;
+            invited.OrganizationId = organization.Id;
+        }
+
+        organizationUserRepository
+            .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(firstInvited.Id) && ids.Contains(secondInvited.Id)))
+            .Returns([firstInvited, secondInvited]);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 1 });
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(now);
+
+        await sutProvider.Sut.RestoreUsersAsync(
+            organization.Id, new[] { firstInvited.Id, secondInvited.Id }, owner.Id, userService, null);
+
+        await organizationUserRepository.Received(1)
+            .StartInviteReminderSequencesAsync(
+                Arg.Is<IEnumerable<Guid>>(ids =>
+                    ids.Count() == 2 && ids.Contains(firstInvited.Id) && ids.Contains(secondInvited.Id)),
+                now.UtcDateTime);
     }
 
     [Theory, BitAutoData]
@@ -1149,6 +1238,602 @@ public class RestoreOrganizationUserCommandTests
             .RestoreAsync(orgUser1.Id, Arg.Is<OrganizationUserStatusType>(x => x != OrganizationUserStatusType.Revoked));
     }
 
+    [Theory, BitAutoData]
+    public async Task RestoreUser_Admin_MemberWithPrivilegedControls_ReservesOneSeat(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        organizationUser.AccessPam = true;
+        organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null);
+
+        await sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .Received(1)
+            .RunAsync(organization, 1);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .RestoreAsync(organizationUser.Id, OrganizationUserStatusType.Confirmed);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_Admin_MemberWithPrivilegedControls_AtLimit_ThrowsSeatLimitMessage(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        organizationUser.AccessPam = true;
+        organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(new PrivilegedControlsSeatReservationResult(new PrivilegedControlsSeatLimitReachedError()));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null));
+
+        Assert.Equal(new PrivilegedControlsSeatLimitReachedError().Message, exception.Message);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .RestoreAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_Admin_MemberWithPrivilegedControls_SelfHostedShortfall_ThrowsSelfHostMessage(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        organizationUser.AccessPam = true;
+        organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(new PrivilegedControlsSeatReservationResult(new CannotAutoscalePrivilegedControlsSeatsOnSelfHostError()));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null));
+
+        Assert.Equal(new CannotAutoscalePrivilegedControlsSeatsOnSelfHostError().Message, exception.Message);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .RestoreAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_Admin_MemberWithPrivilegedControls_AtLimit_GivesBackThePasswordManagerSeatItBought(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        organization.Seats = 1;
+        organizationUser.AccessPam = true;
+        organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+        SetupAutoAddSeatsRaisesSeatCount(organization, sutProvider);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(new PrivilegedControlsSeatReservationResult(new PrivilegedControlsSeatLimitReachedError()));
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null));
+
+        var organizationService = sutProvider.GetDependency<IOrganizationService>();
+        Received.InOrder(() =>
+        {
+            organizationService.AutoAddSeatsAsync(organization, 1);
+            organizationService.AdjustSeatsAsync(organization.Id, -1);
+        });
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_Admin_MemberWithPrivilegedControls_ReservationFails_GivesBackThePasswordManagerSeatAndThrowsBadRequest(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        organization.Seats = 1;
+        organizationUser.AccessPam = true;
+        organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+        SetupAutoAddSeatsRaisesSeatCount(organization, sutProvider);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(new PrivilegedControlsSeatReservationResult(
+                new PrivilegedControlsSeatExpansionFailedError("Stripe rejected the update."),
+                new BadRequestException("Stripe rejected the update.")));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null));
+
+        Assert.Equal("Stripe rejected the update.", exception.Message);
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).AdjustSeatsAsync(organization.Id, -1);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_Admin_MemberWithPrivilegedControls_ReservationFailsUnexpectedly_GivesBackThePasswordManagerSeatAndThrowsWithTheOriginalFailure(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        organization.Seats = 1;
+        organizationUser.AccessPam = true;
+        organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+        SetupAutoAddSeatsRaisesSeatCount(organization, sutProvider);
+        var failure = new TimeoutException("Stripe is unreachable.");
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(new PrivilegedControlsSeatReservationResult(new PrivilegedControlsSeatReservationUnexpectedError(), failure));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null));
+
+        Assert.Same(failure, exception.InnerException);
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).AdjustSeatsAsync(organization.Id, -1);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_Admin_MemberWithPrivilegedControls_AtLimit_GivingBackTheSeatFails_StillThrowsSeatLimitMessage(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        organization.Seats = 1;
+        organizationUser.AccessPam = true;
+        organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+        SetupAutoAddSeatsRaisesSeatCount(organization, sutProvider);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(new PrivilegedControlsSeatReservationResult(new PrivilegedControlsSeatLimitReachedError()));
+        sutProvider.GetDependency<IOrganizationService>()
+            .AdjustSeatsAsync(organization.Id, -1)
+            .ThrowsAsync(new GatewayException("Stripe is unavailable."));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null));
+
+        Assert.Equal(new PrivilegedControlsSeatLimitReachedError().Message, exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_Admin_MemberWithPrivilegedControls_AtLimitWithFreePasswordManagerSeat_GivesNothingBack(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        organization.Seats = 5;
+        organizationUser.AccessPam = true;
+        organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(new PrivilegedControlsSeatReservationResult(new PrivilegedControlsSeatLimitReachedError()));
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null));
+
+        await sutProvider.GetDependency<IOrganizationService>()
+            .DidNotReceiveWithAnyArgs()
+            .AdjustSeatsAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_Admin_PriorStatusStaged_DoesNotReserve(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        organizationUser.AccessPam = true;
+        organizationUser.StatusNew = OrganizationUserStatusTypeNew.Staged;
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null);
+
+        await sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default!, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_Scim_AtLimit_RestoresWithoutPrivilegedControlsAndSaves(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        organizationUser.AccessPam = true;
+        organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        organizationUser.Email = "member@example.com";
+        RestoreUser_Setup(organization, null, organizationUser, sutProvider);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(new PrivilegedControlsSeatReservationResult(new PrivilegedControlsSeatLimitReachedError()));
+
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, EventSystemUser.SCIM);
+
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var sendSeatNeededEmailCommand = sutProvider.GetDependency<ISendPrivilegedControlsSeatNeededEmailCommand>();
+        Received.InOrder(() =>
+        {
+            organizationUserRepository.ReplaceAsync(Arg.Is<OrganizationUser>(ou => ou.Id == organizationUser.Id && !ou.AccessPam));
+            organizationUserRepository.RestoreAsync(organizationUser.Id, OrganizationUserStatusType.Confirmed);
+            sendSeatNeededEmailCommand.RunAsync(organization, "member@example.com");
+        });
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_Scim_SelfHostedShortfall_RestoresWithoutPrivilegedControlsOrEmail(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        organizationUser.AccessPam = true;
+        organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        RestoreUser_Setup(organization, null, organizationUser, sutProvider);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(new PrivilegedControlsSeatReservationResult(new CannotAutoscalePrivilegedControlsSeatsOnSelfHostError()));
+
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, EventSystemUser.SCIM);
+
+        Assert.False(organizationUser.AccessPam);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
+            .RestoreAsync(organizationUser.Id, OrganizationUserStatusType.Confirmed);
+        await sutProvider.GetDependency<ISendPrivilegedControlsSeatNeededEmailCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default!, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_Scim_AtLimit_LinkedMember_EmailsOwnersWithAccountEmail(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        User user,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        organizationUser.AccessPam = true;
+        organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        organizationUser.Email = null;
+        organizationUser.UserId = user.Id;
+        RestoreUser_Setup(organization, null, organizationUser, sutProvider);
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).Returns(user);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(new PrivilegedControlsSeatReservationResult(new PrivilegedControlsSeatLimitReachedError()));
+
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, EventSystemUser.SCIM);
+
+        await sutProvider.GetDependency<ISendPrivilegedControlsSeatNeededEmailCommand>()
+            .Received(1)
+            .RunAsync(organization, user.Email);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_Scim_ReservationFailed_RestoresWithoutPrivilegedControlsOrEmail(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        organizationUser.AccessPam = true;
+        organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        RestoreUser_Setup(organization, null, organizationUser, sutProvider);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(new PrivilegedControlsSeatReservationResult(
+                new PrivilegedControlsSeatReservationUnexpectedError(), new TimeoutException("Stripe is unreachable.")));
+
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, EventSystemUser.SCIM);
+
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        await organizationUserRepository.Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou => ou.Id == organizationUser.Id && !ou.AccessPam));
+        await organizationUserRepository.Received(1).RestoreAsync(organizationUser.Id, OrganizationUserStatusType.Confirmed);
+        await sutProvider.GetDependency<ISendPrivilegedControlsSeatNeededEmailCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default!, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_Scim_SeatAvailable_RestoresWithPrivilegedControls(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        organizationUser.AccessPam = true;
+        organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        RestoreUser_Setup(organization, null, organizationUser, sutProvider);
+
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, EventSystemUser.SCIM);
+
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        await sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>().Received(1).RunAsync(organization, 1);
+        await organizationUserRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+        await organizationUserRepository.Received(1).RestoreAsync(organizationUser.Id, OrganizationUserStatusType.Confirmed);
+        await sutProvider.GetDependency<ISendPrivilegedControlsSeatNeededEmailCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default!, default!);
+        Assert.True(organizationUser.AccessPam);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_PublicApi_MemberWithPrivilegedControls_AtLimit_ThrowsContactSalesMessageWithoutBuyingSeats(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        organization.Seats = 1;
+        organizationUser.AccessPam = true;
+        organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        RestoreUser_Setup(organization, null, organizationUser, sutProvider);
+        sutProvider.GetDependency<ICountNewPamSeatsRequiredQuery>()
+            .CountNewPamSeatsRequiredAsync(organization, 1)
+            .Returns(1);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, EventSystemUser.PublicApi));
+
+        Assert.Equal(new NotEnoughPrivilegedControlsSeatsError().Message, exception.Message);
+        await sutProvider.GetDependency<IOrganizationService>()
+            .DidNotReceiveWithAnyArgs()
+            .AutoAddSeatsAsync(default!, default);
+        await sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default!, default);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .RestoreAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_PublicApi_MemberWithPrivilegedControls_SelfHostedShortfall_ThrowsSelfHostMessage(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        organizationUser.AccessPam = true;
+        organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        RestoreUser_Setup(organization, null, organizationUser, sutProvider);
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(true);
+        sutProvider.GetDependency<ICountNewPamSeatsRequiredQuery>()
+            .CountNewPamSeatsRequiredAsync(organization, 1)
+            .Returns(1);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, EventSystemUser.PublicApi));
+
+        Assert.Equal(new CannotAutoscalePrivilegedControlsSeatsOnSelfHostError().Message, exception.Message);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .RestoreAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_PublicApi_MemberWithPrivilegedControls_SeatAvailable_RestoresWithoutReserving(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        organizationUser.AccessPam = true;
+        organizationUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        RestoreUser_Setup(organization, null, organizationUser, sutProvider);
+        sutProvider.GetDependency<ICountNewPamSeatsRequiredQuery>()
+            .CountNewPamSeatsRequiredAsync(organization, 1)
+            .Returns(0);
+
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, EventSystemUser.PublicApi);
+
+        await sutProvider.GetDependency<ICountNewPamSeatsRequiredQuery>()
+            .Received(1)
+            .CountNewPamSeatsRequiredAsync(organization, 1);
+        await sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default!, default);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .RestoreAsync(organizationUser.Id, OrganizationUserStatusType.Confirmed);
+        Assert.True(organizationUser.AccessPam);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUsers_Bulk_CountsOnlyRevokedMembersWithPrivilegedControlsReturningToSeatUsingStatus(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser confirmedWithPrivilegedControls,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser acceptedWithPrivilegedControls,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser invitedWithPrivilegedControls,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser stagedWithPrivilegedControls,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser confirmedWithoutPrivilegedControls,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        var userService = Substitute.For<IUserService>();
+        RestoreUser_Setup(organization, owner, confirmedWithPrivilegedControls, sutProvider);
+        confirmedWithPrivilegedControls.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        acceptedWithPrivilegedControls.StatusNew = OrganizationUserStatusTypeNew.Accepted;
+        invitedWithPrivilegedControls.StatusNew = OrganizationUserStatusTypeNew.Invited;
+        stagedWithPrivilegedControls.StatusNew = OrganizationUserStatusTypeNew.Staged;
+        confirmedWithoutPrivilegedControls.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        OrganizationUser[] orgUsers = [confirmedWithPrivilegedControls, acceptedWithPrivilegedControls, invitedWithPrivilegedControls, stagedWithPrivilegedControls, confirmedWithoutPrivilegedControls];
+        foreach (var orgUser in orgUsers)
+        {
+            orgUser.OrganizationId = organization.Id;
+            orgUser.AccessPam = true;
+        }
+        confirmedWithoutPrivilegedControls.AccessPam = false;
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(orgUsers);
+
+        await sutProvider.Sut.RestoreUsersAsync(organization.Id, orgUsers.Select(ou => ou.Id).ToList(), owner.Id, userService, null);
+
+        await sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .Received(1)
+            .RunAsync(organization, 3);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUsers_Bulk_AtLimit_ThrowsBeforeRestoringAnyone(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser orgUser1,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        var userService = Substitute.For<IUserService>();
+        RestoreUser_Setup(organization, owner, orgUser1, sutProvider);
+        orgUser1.AccessPam = true;
+        orgUser1.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([orgUser1]);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(new PrivilegedControlsSeatReservationResult(new PrivilegedControlsSeatLimitReachedError()));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RestoreUsersAsync(organization.Id, [orgUser1.Id], owner.Id, userService, null));
+
+        Assert.Equal(new PrivilegedControlsSeatLimitReachedError().Message, exception.Message);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .RestoreAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUsers_Bulk_AtLimit_GivesBackThePasswordManagerSeatsItBought(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser orgUser1,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser orgUser2,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        organization.Seats = 1;
+        var userService = Substitute.For<IUserService>();
+        RestoreUser_Setup(organization, owner, orgUser1, sutProvider);
+        SetupAutoAddSeatsRaisesSeatCount(organization, sutProvider);
+        OrganizationUser[] orgUsers = [orgUser1, orgUser2];
+        foreach (var orgUser in orgUsers)
+        {
+            orgUser.OrganizationId = organization.Id;
+            orgUser.AccessPam = true;
+            orgUser.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        }
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(orgUsers);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 2)
+            .Returns(new PrivilegedControlsSeatReservationResult(new PrivilegedControlsSeatLimitReachedError()));
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RestoreUsersAsync(organization.Id, [orgUser1.Id, orgUser2.Id], owner.Id, userService, null));
+
+        var organizationService = sutProvider.GetDependency<IOrganizationService>();
+        Received.InOrder(() =>
+        {
+            organizationService.AutoAddSeatsAsync(organization, 2);
+            organizationService.AdjustSeatsAsync(organization.Id, -2);
+        });
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUsers_Bulk_ReservationFailsUnexpectedly_GivesBackThePasswordManagerSeatsAndThrows(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser orgUser1,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        organization.Seats = 1;
+        var userService = Substitute.For<IUserService>();
+        RestoreUser_Setup(organization, owner, orgUser1, sutProvider);
+        SetupAutoAddSeatsRaisesSeatCount(organization, sutProvider);
+        orgUser1.AccessPam = true;
+        orgUser1.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([orgUser1]);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(new PrivilegedControlsSeatReservationResult(
+                new PrivilegedControlsSeatReservationUnexpectedError(), new TimeoutException("Stripe is unreachable.")));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => sutProvider.Sut.RestoreUsersAsync(organization.Id, [orgUser1.Id], owner.Id, userService, null));
+
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).AdjustSeatsAsync(organization.Id, -1);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUsers_Bulk_AtLimitWithFreePasswordManagerSeats_GivesNothingBack(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser orgUser1,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.UsePam = true;
+        organization.Seats = 5;
+        var userService = Substitute.For<IUserService>();
+        RestoreUser_Setup(organization, owner, orgUser1, sutProvider);
+        orgUser1.AccessPam = true;
+        orgUser1.StatusNew = OrganizationUserStatusTypeNew.Confirmed;
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([orgUser1]);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(new PrivilegedControlsSeatReservationResult(new PrivilegedControlsSeatLimitReachedError()));
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RestoreUsersAsync(organization.Id, [orgUser1.Id], owner.Id, userService, null));
+
+        await sutProvider.GetDependency<IOrganizationService>()
+            .DidNotReceiveWithAnyArgs()
+            .AdjustSeatsAsync(default, default);
+    }
+
+    /// <summary>
+    /// Raises the organization's seat count when seats are auto-added, as the real <see cref="IOrganizationService"/> does.
+    /// </summary>
+    private static void SetupAutoAddSeatsRaisesSeatCount(
+        Organization organization,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationService>()
+            .When(service => service.AutoAddSeatsAsync(organization, Arg.Is<int>(seats => seats > 0)))
+            .Do(callInfo => organization.Seats += callInfo.ArgAt<int>(1));
+    }
+
     private static void RestoreUser_Setup(
         Organization organization,
         OrganizationUser? requestingOrganizationUser,
@@ -1168,6 +1853,9 @@ public class RestoreOrganizationUserCommandTests
             Sponsored = 0,
             Users = 1
         });
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, Arg.Any<int>())
+            .Returns(new PrivilegedControlsSeatReservationResult());
 
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(requestingOrganizationUser != null && requestingOrganizationUser.Type is OrganizationUserType.Owner);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organization.Id).Returns(requestingOrganizationUser != null && requestingOrganizationUser.Type is OrganizationUserType.Owner or OrganizationUserType.Admin);

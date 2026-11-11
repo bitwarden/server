@@ -31,6 +31,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IStripeEventService _stripeEventService;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
     private readonly IOrganizationService _organizationService;
+    private readonly IReplaceOrganizationAndUpdateCacheCommand _replaceOrganizationAndUpdateCacheCommand;
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IOrganizationSponsorshipRenewCommand _organizationSponsorshipRenewCommand;
     private readonly IUserService _userService;
@@ -52,6 +53,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IStripeEventService stripeEventService,
         IStripeEventUtilityService stripeEventUtilityService,
         IOrganizationService organizationService,
+        IReplaceOrganizationAndUpdateCacheCommand replaceOrganizationAndUpdateCacheCommand,
         IStripeAdapter stripeAdapter,
         IOrganizationSponsorshipRenewCommand organizationSponsorshipRenewCommand,
         IUserService userService,
@@ -72,6 +74,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _stripeEventService = stripeEventService;
         _stripeEventUtilityService = stripeEventUtilityService;
         _organizationService = organizationService;
+        _replaceOrganizationAndUpdateCacheCommand = replaceOrganizationAndUpdateCacheCommand;
         _providerService = providerService;
         _stripeAdapter = stripeAdapter;
         _organizationSponsorshipRenewCommand = organizationSponsorshipRenewCommand;
@@ -497,7 +500,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             organization.UsersGetPremium = familiesPlan.UsersGetPremium;
             organization.Seats = familiesPlan.PasswordManager.BaseSeats;
 
-            await _organizationRepository.ReplaceAsync(organization);
+            await _replaceOrganizationAndUpdateCacheCommand.RunAsync(organization);
 
             _logger.LogInformation(
                 "Updated organization ({OrganizationId}) to FamiliesAnnually plan after schedule transition",
@@ -647,7 +650,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 organization.Seats = (int)Math.Max(Math.Max(1L, billedSeatQuantity), (long)(organization.SmSeats ?? 0));
             }
 
-            await _organizationRepository.ReplaceAsync(organization);
+            await _replaceOrganizationAndUpdateCacheCommand.RunAsync(organization);
 
             var sourceProvidedServiceAccounts = sourcePlan.SecretsManager?.BaseServiceAccount ?? 0;
             var targetProvidedServiceAccounts = targetPlan.SecretsManager?.BaseServiceAccount ?? 0;
@@ -787,7 +790,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             }
 
             organization.ChangePlan(targetPlan);
-            await _organizationRepository.ReplaceAsync(organization);
+            await _replaceOrganizationAndUpdateCacheCommand.RunAsync(organization);
 
             _logger.LogInformation(
                 "Schedule-triggered annual upgrade applied for organization ({OrganizationId}): PlanType {SourcePlanType} -> {TargetPlanType}",

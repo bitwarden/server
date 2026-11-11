@@ -53,7 +53,11 @@ internal static class Saml2TestXml
     /// of the plaintext into the <c>&lt;EncryptedAssertion&gt;</c>. A payload with more than one
     /// node, or with a nested assertion, tests those shapes.
     /// </param>
-    public static string EncryptAssertion(string payloadXml, X509Certificate2 encryptionCertificate)
+    /// <param name="keyTransportAlgorithm">
+    /// The URI of the algorithm that wraps the content key. It defaults to RSA-OAEP.
+    /// </param>
+    public static string EncryptAssertion(string payloadXml, X509Certificate2 encryptionCertificate,
+        string keyTransportAlgorithm = EncryptedXml.XmlEncRSAOAEPUrl)
     {
         var document = XmlHelpers.XmlDocumentFromString(
             "<saml:EncryptedAssertion xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\" />");
@@ -71,9 +75,10 @@ internal static class Saml2TestXml
         encryptedData.KeyInfo = new KeyInfo();
         var encryptedKey = new EncryptedKey
         {
-            EncryptionMethod = new EncryptionMethod(EncryptedXml.XmlEncRSAOAEPUrl),
+            EncryptionMethod = new EncryptionMethod(keyTransportAlgorithm),
             CipherData = new CipherData(
-                EncryptedXml.EncryptKey(contentKey.Key, encryptionCertificate.GetRSAPublicKey()!, useOAEP: true)),
+                EncryptedXml.EncryptKey(contentKey.Key, encryptionCertificate.GetRSAPublicKey()!,
+                    useOAEP: keyTransportAlgorithm != EncryptedXml.XmlEncRSA15Url)),
         };
         encryptedData.KeyInfo.AddClause(new KeyInfoEncryptedKey(encryptedKey));
 

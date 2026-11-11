@@ -156,6 +156,7 @@ public class SubscriptionInfo
                 ? 14
                 : 30;
             ServiceAccountGrace = sub?.GetMigrationGraceServiceAccounts() ?? 0;
+            HasPrivilegedControlsSeats = sub?.HasPrivilegedControlsSeats() ?? false;
             ScheduleId = sub?.ScheduleId;
         }
 
@@ -179,6 +180,12 @@ public class SubscriptionInfo
         /// during a pricing migration. Read from Stripe subscription metadata; 0 when none was granted.
         /// </summary>
         public int ServiceAccountGrace { get; set; }
+
+        /// <summary>
+        /// Whether the subscription carries a Privileged Controls seat line. Internal only; not mapped to the
+        /// API response. An organization with Privileged Controls on and no line is on a sales-initiated trial.
+        /// </summary>
+        public bool HasPrivilegedControlsSeats { get; set; }
 
         /// <summary>
         /// The Stripe subscription schedule id, or null when no schedule is attached. Internal only;

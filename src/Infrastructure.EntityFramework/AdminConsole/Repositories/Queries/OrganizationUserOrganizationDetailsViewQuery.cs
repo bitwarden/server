@@ -49,6 +49,7 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         ResetPasswordKey = ou.ResetPasswordKey,
                         PublicKey = o.PublicKey,
                         PrivateKey = o.PrivateKey,
+                        OrganizationKeyId = o.OrganizationKeyId,
                         Status = ou.Status,
                         Type = ou.Type,
                         SsoExternalId = su.ExternalId,

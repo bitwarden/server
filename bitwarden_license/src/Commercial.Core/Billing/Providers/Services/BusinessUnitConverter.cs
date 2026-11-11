@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Constants;
@@ -31,13 +32,13 @@ public class BusinessUnitConverter(
     GlobalSettings globalSettings,
     ILogger<BusinessUnitConverter> logger,
     IMailService mailService,
-    IOrganizationRepository organizationRepository,
     IOrganizationUserRepository organizationUserRepository,
     IPricingClient pricingClient,
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderPlanRepository providerPlanRepository,
     IProviderRepository providerRepository,
     IProviderUserRepository providerUserRepository,
+    IReplaceOrganizationAndUpdateCacheCommand replaceOrganizationAndUpdateCacheCommand,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
     IUserRepository userRepository) : IBusinessUnitConverter
@@ -172,7 +173,7 @@ public class BusinessUnitConverter(
 
         // Complete database updates for provider setup.
         await Task.WhenAll(
-            organizationRepository.ReplaceAsync(organization),
+            replaceOrganizationAndUpdateCacheCommand.RunAsync(organization),
             providerOrganizationRepository.ReplaceAsync(providerOrganization),
             providerRepository.ReplaceAsync(provider),
             providerUserRepository.ReplaceAsync(providerUser));
@@ -362,7 +363,7 @@ public class BusinessUnitConverter(
                 token,
                 user.Email,
                 organization.Id,
-                globalSettings.OrganizationInviteExpirationHours))
+                globalSettings.ProviderInviteExpirationHours))
         {
             Fail("Email token is invalid.");
         }
@@ -427,6 +428,11 @@ public class BusinessUnitConverter(
         if (organization.UseSecretsManager)
         {
             problems.Add("Organization is subscribed to Secrets Manager. Please contact Customer Support to convert this organization to a business unit.");
+        }
+
+        if (organization.UsePam)
+        {
+            problems.Add("Organization has Privileged Controls turned on. Turn it off before converting this organization to a business unit.");
         }
 
         var subscription = await subscriberService.GetSubscription(organization);

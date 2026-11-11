@@ -13,6 +13,7 @@ internal static class PurchasableReferences
         [StripeConstants.PurchasableReferences.PasswordManagerStorage] = ProductType.PasswordManager,
         [StripeConstants.PurchasableReferences.SecretsManagerSeat] = ProductType.SecretsManager,
         [StripeConstants.PurchasableReferences.SecretsManagerServiceAccount] = ProductType.SecretsManager,
+        [StripeConstants.PurchasableReferences.PrivilegedControlsSeat] = ProductType.PrivilegedControls,
     };
 
     /// <summary>True when the reference maps to a known product. Tolerates null/empty.</summary>

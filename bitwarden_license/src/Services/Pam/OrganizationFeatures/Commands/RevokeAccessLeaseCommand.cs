@@ -3,6 +3,7 @@ using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.AccessConnector.Commands.Interfaces;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.Services;
 
@@ -16,7 +17,9 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
     private readonly IRequesterNotifier _requesterNotifier;
     private readonly ILeaseRevokedMailNotifier _leaseRevokedMailNotifier;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
+    private readonly IHandleAccessGrantEndedCommand _handleAccessGrantEndedCommand;
     private readonly TimeProvider _timeProvider;
+    private readonly ILogger<RevokeAccessLeaseCommand> _logger;
 
     public RevokeAccessLeaseCommand(
         IAccessLeaseRepository accessLeaseRepository,
@@ -25,7 +28,9 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         IRequesterNotifier requesterNotifier,
         ILeaseRevokedMailNotifier leaseRevokedMailNotifier,
         IAccessAuditEventEmitter accessAuditEventEmitter,
-        TimeProvider timeProvider)
+        IHandleAccessGrantEndedCommand handleAccessGrantEndedCommand,
+        TimeProvider timeProvider,
+        ILogger<RevokeAccessLeaseCommand> logger)
     {
         _accessLeaseRepository = accessLeaseRepository;
         _approverCollectionAccessQuery = approverCollectionAccessQuery;
@@ -33,7 +38,9 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         _requesterNotifier = requesterNotifier;
         _leaseRevokedMailNotifier = leaseRevokedMailNotifier;
         _accessAuditEventEmitter = accessAuditEventEmitter;
+        _handleAccessGrantEndedCommand = handleAccessGrantEndedCommand;
         _timeProvider = timeProvider;
+        _logger = logger;
     }
 
     public async Task RevokeAsync(Guid userId, Guid leaseId, string? reason)
@@ -92,6 +99,18 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         await _accessLeaseRepository.RevokeAsync(lease, endAction, auditDecision, now);
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
+
+        // The lease has already ended, so a failure here is logged rather than failing the revoke.
+        try
+        {
+            await _handleAccessGrantEndedCommand.HandleAsync(lease.CipherId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to trigger the rotation access-end handler for cipher {CipherId} after revoking lease {AccessLeaseId}.",
+                lease.CipherId, lease.Id);
+        }
 
         await _approverInboxNotifier.NotifyCollectionApproversAsync(lease.CollectionId);
         await _requesterNotifier.NotifyRequesterAsync(lease.RequesterId);

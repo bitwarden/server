@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using System.Text.RegularExpressions;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Organizations.Commands;
@@ -10,7 +11,6 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -85,9 +85,9 @@ public class UpdateOrganizationLicenseCommandTests
             // Assertion: should have updated and saved the organization
             // Properties excluded from the comparison below are exceptions to the rule that the Organization mirrors
             // the OrganizationLicense
-            await sutProvider.GetDependency<IOrganizationService>()
+            await sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>()
                 .Received(1)
-                .ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(
+                .RunAsync(Arg.Is<Organization>(
                     org => AssertPropertyEqual(license, org,
                         "Id", "MaxStorageGb", "Issued", "Refresh", "Version", "Trial", "LicenseType",
                         "Hash", "Signature", "SignatureBytes", "InstallationId", "Expires",
@@ -121,6 +121,7 @@ public class UpdateOrganizationLicenseCommandTests
         license.InstallationId = globalSettings.Installation.Id;
         license.LicenseType = LicenseType.Organization;
         license.Token = "test-token"; // Indicates this is a claims-based license
+        license.PamSeats = 99; // Differs from the claim to prove the signed claim wins over the JSON body
         sutProvider.GetDependency<ILicensingService>().VerifyLicense(license).Returns(true);
 
         // Create a ClaimsPrincipal with all organization license claims
@@ -171,7 +172,8 @@ public class UpdateOrganizationLicenseCommandTests
             new(OrganizationLicenseConstants.AllowAdminAccessToAllCollectionItems, "true"),
             new(OrganizationLicenseConstants.UseMyItems, "true"),
             new(OrganizationLicenseConstants.UseInviteLinks, "true"),
-            new(OrganizationLicenseConstants.UsePam, "true")
+            new(OrganizationLicenseConstants.UsePam, "true"),
+            new(OrganizationLicenseConstants.PamSeats, "25")
         };
         var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity(claims));
 
@@ -203,9 +205,9 @@ public class UpdateOrganizationLicenseCommandTests
             AssertHelper.AssertPropertyEqual(license, licenseFromFile, "SignatureBytes");
 
             // Assertion: organization should be updated with ALL properties extracted from claims
-            await sutProvider.GetDependency<IOrganizationService>()
+            await sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>()
                 .Received(1)
-                .ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(org =>
+                .RunAsync(Arg.Is<Organization>(org =>
                     org.Name == "Test Organization" &&
                     org.BillingEmail == "billing@test.com" &&
                     org.BusinessName == "Test Business" &&
@@ -241,11 +243,120 @@ public class UpdateOrganizationLicenseCommandTests
                     org.UsePhishingBlocker == true &&
                     org.UseMyItems &&
                     org.UseInviteLinks &&
-                    org.UsePam));
+                    org.UsePam &&
+                    org.PamSeats == 25));
         }
         finally
         {
             // Clean up temporary directory
+            if (Directory.Exists(OrganizationLicenseDirectory.Value))
+            {
+                Directory.Delete(OrganizationLicenseDirectory.Value, true);
+            }
+        }
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateLicenseAsync_WithoutClaimsPrincipal_IgnoresPamSeatsFromLicenseBody(
+        SelfHostedOrganizationDetails selfHostedOrg,
+        OrganizationLicense license,
+        SutProvider<UpdateOrganizationLicenseCommand> sutProvider)
+    {
+        var globalSettings = sutProvider.GetDependency<IGlobalSettings>();
+        globalSettings.LicenseDirectory = LicenseDirectory;
+        globalSettings.SelfHosted = true;
+
+        license.Token = null;
+        license.PamSeats = 25;
+        license.Enabled = true;
+        license.Issued = DateTime.Now.AddDays(-1);
+        license.Expires = DateTime.Now.AddDays(1);
+        license.Version = OrganizationLicense.CurrentLicenseFileVersion;
+        license.InstallationId = globalSettings.Installation.Id;
+        license.LicenseType = LicenseType.Organization;
+        license.SelfHost = true;
+        sutProvider.GetDependency<ILicensingService>().VerifyLicense(license).Returns(true);
+        sutProvider.GetDependency<ILicensingService>()
+            .GetClaimsPrincipalFromLicense(license)
+            .Returns((ClaimsPrincipal)null);
+
+        // Passing values for SelfHostedOrganizationDetails.CanUseLicense
+        license.Seats = null;
+        license.MaxCollections = null;
+        license.UseGroups = true;
+        license.UsePolicies = true;
+        license.UseSso = true;
+        license.UseKeyConnector = true;
+        license.UseScim = true;
+        license.UseCustomPermissions = true;
+        license.UseResetPassword = true;
+
+        try
+        {
+            await sutProvider.Sut.UpdateLicenseAsync(selfHostedOrg, license, null);
+
+            var filePath = Path.Combine(LicenseDirectory, "organization", $"{selfHostedOrg.Id}.json");
+            await using var fs = File.OpenRead(filePath);
+            var licenseFromFile = await JsonSerializer.DeserializeAsync<OrganizationLicense>(fs);
+            Assert.Null(licenseFromFile.PamSeats);
+
+            await sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>()
+                .Received(1)
+                .RunAsync(Arg.Is<Organization>(org => org.PamSeats == null));
+        }
+        finally
+        {
+            if (Directory.Exists(OrganizationLicenseDirectory.Value))
+            {
+                Directory.Delete(OrganizationLicenseDirectory.Value, true);
+            }
+        }
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateLicenseAsync_WithClaimsPrincipal_PamSeatsClaimAbsent_SetsOrganizationPamSeatsNull(
+        SelfHostedOrganizationDetails selfHostedOrg,
+        OrganizationLicense license,
+        SutProvider<UpdateOrganizationLicenseCommand> sutProvider)
+    {
+        var globalSettings = sutProvider.GetDependency<IGlobalSettings>();
+        globalSettings.LicenseDirectory = LicenseDirectory;
+        globalSettings.SelfHosted = true;
+
+        license.Token = "test-token";
+        license.PamSeats = 25; // Present in the JSON body, absent from the signed claims
+        sutProvider.GetDependency<ILicensingService>().VerifyLicense(license).Returns(true);
+
+        var claims = new List<Claim>
+        {
+            new(OrganizationLicenseConstants.LicenseType, ((int)LicenseType.Organization).ToString()),
+            new(OrganizationLicenseConstants.InstallationId, globalSettings.Installation.Id.ToString()),
+            new(OrganizationLicenseConstants.Enabled, "true"),
+            new(OrganizationLicenseConstants.SelfHost, "true"),
+            new(OrganizationLicenseConstants.Expires, DateTime.Now.AddDays(1).ToString("O")),
+            new(OrganizationLicenseConstants.UseGroups, "true"),
+            new(OrganizationLicenseConstants.UsePolicies, "true"),
+            new(OrganizationLicenseConstants.UseSso, "true"),
+            new(OrganizationLicenseConstants.UseKeyConnector, "true"),
+            new(OrganizationLicenseConstants.UseScim, "true"),
+            new(OrganizationLicenseConstants.UseCustomPermissions, "true"),
+            new(OrganizationLicenseConstants.UseResetPassword, "true"),
+            new(OrganizationLicenseConstants.UsePam, "true")
+        };
+        sutProvider.GetDependency<ILicensingService>()
+            .GetClaimsPrincipalFromLicense(license)
+            .Returns(new ClaimsPrincipal(new ClaimsIdentity(claims)));
+
+        try
+        {
+            await sutProvider.Sut.UpdateLicenseAsync(selfHostedOrg, license, null);
+
+            await sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>()
+                .Received(1)
+                .RunAsync(Arg.Is<Organization>(org => org.UsePam && org.PamSeats == null));
+        }
+        finally
+        {
             if (Directory.Exists(OrganizationLicenseDirectory.Value))
             {
                 Directory.Delete(OrganizationLicenseDirectory.Value, true);
@@ -294,9 +405,9 @@ public class UpdateOrganizationLicenseCommandTests
         Assert.Contains("The installation ID does not match the current installation.", exception.Message);
 
         // Verify organization was NOT saved
-        await sutProvider.GetDependency<IOrganizationService>()
+        await sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>()
             .DidNotReceive()
-            .ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+            .RunAsync(Arg.Any<Organization>());
     }
 
     [Theory, BitAutoData]
@@ -342,9 +453,9 @@ public class UpdateOrganizationLicenseCommandTests
         Assert.Contains("The license has expired.", exception.Message);
 
         // Verify organization was NOT saved
-        await sutProvider.GetDependency<IOrganizationService>()
+        await sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>()
             .DidNotReceive()
-            .ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+            .RunAsync(Arg.Any<Organization>());
     }
 
     [Fact]

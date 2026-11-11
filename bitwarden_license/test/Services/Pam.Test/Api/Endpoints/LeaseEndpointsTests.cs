@@ -15,17 +15,14 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Api.Endpoints;
 
 /// <summary>
-/// Locks the lease wire contract (routes, names, methods, return types) that the generated OpenAPI spec and
-/// client bindings depend on, by reading the built <see cref="EndpointDataSource"/>.
+/// Locks the lease wire contract (routes, names, methods, return types) the OpenAPI spec depends on.
 /// </summary>
 public class LeaseEndpointsTests
 {
     private static List<RouteEndpoint> MaterializeEndpoints()
     {
         var builder = WebApplication.CreateSlimBuilder();
-        // The handlers must be known services so Minimal API binding treats the handler parameter as injected
-        // (not an inferred request body) — the same registration AddPamServices performs in the app.
-        // MapPamEndpoints maps every PAM group, so each group's handler has to be resolvable here.
+        // Unregistered handlers would bind as a request body.
         builder.Services.AddScoped<LeaseEndpointsHandler>();
         builder.Services.AddScoped<AccessRequestEndpointsHandler>();
         builder.Services.AddScoped<AccessRuleEndpointsHandler>();
@@ -40,8 +37,7 @@ public class LeaseEndpointsTests
         var app = builder.Build();
         app.MapPamEndpoints();
 
-        // Enumerating the data sources builds the endpoints — applying the route group's prefix, metadata, and
-        // conventions — without starting the request pipeline, the same set the OpenAPI generator discovers.
+        // Builds the endpoints without starting the request pipeline.
         return ((IEndpointRouteBuilder)app).DataSources
             .SelectMany(dataSource => dataSource.Endpoints)
             .OfType<RouteEndpoint>()
@@ -73,8 +69,7 @@ public class LeaseEndpointsTests
         var endpoint = Assert.Single(
             endpoints,
             e => e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == name);
-        // Trim slashes: the raw pattern carries routing's leading/trailing slashes (e.g. "/leases/active")
-        // that the generated spec path does not.
+        // The raw pattern carries leading and trailing slashes.
         Assert.Equal(route, endpoint.RoutePattern.RawText?.Trim('/'));
         Assert.Contains(method, endpoint.Metadata.GetMetadata<HttpMethodMetadata>()!.HttpMethods);
     }

@@ -100,7 +100,7 @@ jobs:
         uses: grafana/setup-k6-action@db07bd9765aac508ef18982e52ab937fe633a065 # v1.2.1
 
       - name: Run k6 tests
-        uses: grafana/run-k6-action@de51a7390bdf0ac85a3bef493691bd71d4c7c158 # v1.4.0
+        uses: grafana/run-k6-action@4082a08c7e40cf6d65863911077dfb60ae0a4f04 # v1.5.0
         continue-on-error: false
         env:
           K6_OTEL_METRIC_PREFIX: k6_

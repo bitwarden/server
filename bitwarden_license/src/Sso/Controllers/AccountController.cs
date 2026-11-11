@@ -12,6 +12,9 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.Registration;
+using Bit.Core.Billing.Organizations;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
@@ -31,7 +34,7 @@ using Duende.IdentityServer.Stores;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using AuthenticationSchemes = Bit.Core.AuthenticationSchemes;
+using AuthenticationSchemes = Bit.Core.Auth.IdentityServer.AuthenticationSchemes;
 using DIM = Duende.IdentityServer.Models;
 
 namespace Bit.Sso.Controllers;
@@ -59,6 +62,8 @@ public class AccountController : Controller
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly IRegisterUserCommand _registerUserCommand;
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
+    private readonly IReservePrivilegedControlsSeatsCommand _reservePrivilegedControlsSeatsCommand;
+    private readonly ISendPrivilegedControlsSeatNeededEmailCommand _sendPrivilegedControlsSeatNeededEmailCommand;
 
     public AccountController(
         IAuthenticationSchemeProvider schemeProvider,
@@ -80,7 +85,9 @@ public class AccountController : Controller
         IDataProtectorTokenFactory<SsoTokenable> dataProtector,
         IOrganizationDomainRepository organizationDomainRepository,
         IRegisterUserCommand registerUserCommand,
-        ISendOrganizationInvitesCommand sendOrganizationInvitesCommand)
+        ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
+        IReservePrivilegedControlsSeatsCommand reservePrivilegedControlsSeatsCommand,
+        ISendPrivilegedControlsSeatNeededEmailCommand sendPrivilegedControlsSeatNeededEmailCommand)
     {
         _schemeProvider = schemeProvider;
         _clientStore = clientStore;
@@ -102,6 +109,8 @@ public class AccountController : Controller
         _organizationDomainRepository = organizationDomainRepository;
         _registerUserCommand = registerUserCommand;
         _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
+        _reservePrivilegedControlsSeatsCommand = reservePrivilegedControlsSeatsCommand;
+        _sendPrivilegedControlsSeatNeededEmailCommand = sendPrivilegedControlsSeatNeededEmailCommand;
     }
 
     [HttpGet]
@@ -272,16 +281,20 @@ public class AccountController : Controller
     {
         // Read external identity from the temporary cookie
         var result = await HttpContext.AuthenticateAsync(
-            AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+            AuthenticationSchemes.SsoExternalCookie);
 
         if (!result.Succeeded)
         {
             throw new Exception(_i18nService.T("ExternalAuthenticationError"));
         }
 
+        var (organizationId, ssoConfigData) = await GetEnabledSsoConfigAsync(result.Properties);
+        EnsureExpectedAcrReturned(result.Principal, ssoConfigData);
+        var (providerUserId, claims) = GetProviderUserId(result.Principal, ssoConfigData);
+
         // See if the user has logged in with this SSO provider before and has already been provisioned.
         // This is signified by the user existing in the User table and the SSOUser table for the SSO provider they're using.
-        var (possibleSsoLinkedUser, provider, providerUserId, claims, ssoConfigData) = await FindUserFromExternalProviderAsync(result);
+        var possibleSsoLinkedUser = await _userRepository.GetBySsoUserAsync(providerUserId, organizationId);
 
         // We will look these up as required (lazy resolution) to avoid multiple DB hits.
         Organization? organization = null;
@@ -302,7 +315,7 @@ public class AccountController : Controller
             {
                 var (resolvedUser, foundOrganization, foundOrCreatedOrgUser) =
                     await CreateUserAndOrgUserConditionallyAsync(
-                        provider,
+                        organizationId,
                         providerUserId,
                         claims,
                         userIdentifier,
@@ -317,7 +330,7 @@ public class AccountController : Controller
                 // Clean up external auth cookie so retry attempts start fresh.
                 // Mirrors the success path's cleanup at the end of ExternalCallback.
                 await HttpContext.SignOutAsync(
-                    AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+                    AuthenticationSchemes.SsoExternalCookie);
 
                 var redirectUrl = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
                     _globalSettings.BaseServiceUri.VaultWithHash,
@@ -335,7 +348,7 @@ public class AccountController : Controller
                 // its own match/no-match split (see SsoAuthnRequiresOrgMembershipException
                 // for the two scenarios that converge here).
                 await HttpContext.SignOutAsync(
-                    AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+                    AuthenticationSchemes.SsoExternalCookie);
 
                 var redirectUrl = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
                     _globalSettings.BaseServiceUri.VaultWithHash,
@@ -352,7 +365,7 @@ public class AccountController : Controller
                 // StagedOrgUserInviteAcceptanceRequired so the client can prompt the user to
                 // check their email for the invite that was just sent by the Staged-user promotion.
                 await HttpContext.SignOutAsync(
-                    AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+                    AuthenticationSchemes.SsoExternalCookie);
 
                 var redirectUrl = SsoRedirectUrlBuilder.BuildLoginRedirectUrl(
                     _globalSettings.BaseServiceUri.VaultWithHash,
@@ -368,7 +381,7 @@ public class AccountController : Controller
                 // Sign out the external auth cookie and redirect directly to the client's
                 // terminal error page.
                 await HttpContext.SignOutAsync(
-                    AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+                    AuthenticationSchemes.SsoExternalCookie);
 
                 var redirectUrl = SsoRedirectUrlBuilder.BuildSsoLoginFailedRedirectUrl(
                     _globalSettings.BaseServiceUri.VaultWithHash,
@@ -382,7 +395,7 @@ public class AccountController : Controller
         User resolvedSsoLinkedUser = possibleSsoLinkedUser
                                               ?? throw new Exception(_i18nService.T("UserShouldBeFound"));
 
-        await PreventOrgUserLoginIfStatusInvalidAsync(organization, provider, orgUser, resolvedSsoLinkedUser);
+        await PreventOrgUserLoginIfStatusInvalidAsync(organization, organizationId, orgUser, resolvedSsoLinkedUser);
 
         // This allows us to collect any additional claims or properties
         // for the specific protocols used and store them in the local auth cookie.
@@ -400,12 +413,12 @@ public class AccountController : Controller
             new IdentityServerUser(resolvedSsoLinkedUser.Id.ToString())
             {
                 DisplayName = resolvedSsoLinkedUser.Email,
-                IdentityProvider = provider,
+                IdentityProvider = organizationId.ToString(),
                 AdditionalClaims = additionalLocalClaims.ToArray()
             }, localSignInProps);
 
         // Delete temporary cookie used during external authentication
-        await HttpContext.SignOutAsync(AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+        await HttpContext.SignOutAsync(AuthenticationSchemes.SsoExternalCookie);
 
         // FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
@@ -469,41 +482,58 @@ public class AccountController : Controller
 #nullable restore
 
     /// <summary>
-    /// Attempts to map the external identity to a Bitwarden user, through the SsoUser table, which holds the `externalId`.
-    /// The claims on the external identity are used to determine an `externalId`, and that is used to find the appropriate `SsoUser` and `User` records.
+    /// Gets the enabled SSO configuration of the organization that the external login was challenged for.
+    /// Each organization's SSO scheme is named for its organization id.
     /// </summary>
-    private async Task<(
-        User? possibleSsoUser,
-        string provider,
-        string providerUserId,
-        IEnumerable<Claim> claims,
-        SsoConfigurationData config
-    )> FindUserFromExternalProviderAsync(AuthenticateResult result)
+    /// <exception cref="Exception">Thrown if the scheme is not an organization id, or if the organization
+    /// has no enabled SSO configuration.</exception>
+    private async Task<(Guid organizationId, SsoConfigurationData ssoConfigData)> GetEnabledSsoConfigAsync(
+        AuthenticationProperties properties)
     {
-        // FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-        var provider = result.Properties.Items["scheme"];
-        //Todo: Validate provider is a valid GUID with TryParse instead. When this is invalid it throws an exception
-        var orgId = new Guid(provider);
-        var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgId);
+        if (!properties.Items.TryGetValue("scheme", out var scheme) ||
+            !Guid.TryParse(scheme, out var organizationId))
+        {
+            throw new Exception(_i18nService.T("SSOProviderIsNotAnOrgId", scheme));
+        }
+
+        var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organizationId);
         if (ssoConfig == null || !ssoConfig.Enabled)
         {
             throw new Exception(_i18nService.T("OrganizationOrSsoConfigNotFound"));
         }
 
-        var ssoConfigData = ssoConfig.GetData();
-        var externalUser = result.Principal;
+        return (organizationId, ssoConfig.GetData());
+    }
 
-        // Validate acr claim against expectation before going further
-        if (!string.IsNullOrWhiteSpace(ssoConfigData.ExpectedReturnAcrValue))
+    /// <summary>
+    /// Ensures the external login returned the authentication context class reference (acr) that the
+    /// SSO configuration expects, when it expects one.
+    /// </summary>
+    /// <exception cref="Exception">Thrown if the expected acr is missing or different.</exception>
+    private void EnsureExpectedAcrReturned(ClaimsPrincipal externalUser, SsoConfigurationData ssoConfigData)
+    {
+        if (string.IsNullOrWhiteSpace(ssoConfigData.ExpectedReturnAcrValue))
         {
-            var acrClaim = externalUser.FindFirst(JwtClaimTypes.AuthenticationContextClassReference);
-            if (acrClaim?.Value != ssoConfigData.ExpectedReturnAcrValue)
-            {
-                throw new Exception(_i18nService.T("AcrMissingOrInvalid"));
-            }
+            return;
         }
 
+        var acrClaim = externalUser.FindFirst(JwtClaimTypes.AuthenticationContextClassReference);
+        if (acrClaim?.Value != ssoConfigData.ExpectedReturnAcrValue)
+        {
+            throw new Exception(_i18nService.T("AcrMissingOrInvalid"));
+        }
+    }
+
+    /// <summary>
+    /// Gets the external user's id, as issued by the identity provider, and the external user's other claims.
+    /// The id claim is left out of the other claims so it is not reused when provisioning the user.
+    /// </summary>
+    /// <exception cref="Exception">Thrown if no claim holds a usable user id.</exception>
+    private (string providerUserId, IEnumerable<Claim> otherClaims) GetProviderUserId(
+        ClaimsPrincipal externalUser, SsoConfigurationData ssoConfigData)
+    {
+        // FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
         // Ensure the NameIdentifier used is not a transient name ID, if so, we need a different attribute
         //  for the user identifier.
         static bool nameIdIsNotTransient(Claim c) => c.Type == ClaimTypes.NameIdentifier
@@ -527,16 +557,10 @@ public class AccountController : Controller
                           throw new Exception(_i18nService.T("UnknownUserId"));
 #nullable restore
 
-        // Remove the user id claim so we don't include it as an extra claim if/when we provision the user
-        var claims = externalUser.Claims.ToList();
-        claims.Remove(userIdClaim);
+        var otherClaims = externalUser.Claims.ToList();
+        otherClaims.Remove(userIdClaim);
 
-        // find external user
-        var providerUserId = userIdClaim.Value;
-
-        var possibleSsoUser = await _userRepository.GetBySsoUserAsync(providerUserId, orgId);
-
-        return (possibleSsoUser, provider, providerUserId, claims, ssoConfigData);
+        return (userIdClaim.Value, otherClaims);
     }
 
     /// <summary>
@@ -551,7 +575,7 @@ public class AccountController : Controller
     /// 3. Creating a new User for an existing OrganizationUser (created by invitation), then establishing an SsoUser link
     ///     - User is signing in with a pending invitation.
     /// </summary>
-    /// <param name="provider">The external identity provider.</param>
+    /// <param name="organizationId">The organization whose SSO configuration the user signed in through.</param>
     /// <param name="providerUserId">The external identity provider's user identifier.</param>
     /// <param name="claims">The claims from the external IdP.</param>
     /// <param name="userIdentifier">The user identifier used for manual SSO linking.</param>
@@ -559,7 +583,7 @@ public class AccountController : Controller
     /// <returns>Guaranteed to return the user to sign in as well as the found organization and org user.</returns>
     /// <exception cref="Exception">An exception if the user cannot be provisioned as requested.</exception>
     private async Task<(User resolvedUser, Organization foundOrganization, OrganizationUser foundOrgUser)> CreateUserAndOrgUserConditionallyAsync(
-            string provider,
+            Guid organizationId,
             string providerUserId,
             IEnumerable<Claim> claims,
             string userIdentifier,
@@ -586,7 +610,7 @@ public class AccountController : Controller
         }
 
         // Find the org (we error if we can't find an org because no org is not valid)
-        var organization = await GetOrganizationByProviderAsync(provider);
+        var organization = await GetOrganizationByIdAsync(organizationId);
 
         // Try to find an org user (null org user possible and valid here)
         var possibleOrgUser = await GetOrganizationUserByUserAndOrgIdOrEmailAsync(possibleExistingUser, organization.Id, email);
@@ -678,10 +702,20 @@ public class AccountController : Controller
         // won't complete. Staged rows aren't seat-counted; a Staged→Invited promotion
         // consumes a seat and must gate here alongside the fresh-JIT case.
         var willPromoteStagedOrgUser = possibleOrgUser?.Status == OrganizationUserStatusType.Staged;
+        PrivilegedControlsSeatReservationResult? privilegedControlsSeatReservation = null;
 
         if (possibleOrgUser == null || willPromoteStagedOrgUser)
         {
             await EnsureSeatAvailableAsync(organization);
+
+            if (possibleOrgUser is { Status: OrganizationUserStatusType.Staged, AccessPam: true })
+            {
+                privilegedControlsSeatReservation = await _reservePrivilegedControlsSeatsCommand.RunAsync(organization, 1);
+                if (!privilegedControlsSeatReservation.Success)
+                {
+                    possibleOrgUser.AccessPam = false;
+                }
+            }
         }
 
         // If the email domain is verified, we can mark the email as verified
@@ -757,13 +791,21 @@ public class AccountController : Controller
 
             if (possibleOrgUser.Status == OrganizationUserStatusType.Staged)
             {
-                // Seat availability was verified up-front before user creation so safe to consume this seat.
+                // The Password Manager member seat was checked up front, before user creation, so it is safe to
+                // consume it here. If the Privileged Controls seat reservation failed, AccessPam was set to false on
+                // possibleOrgUser in memory, and the ReplaceAsync below saves that change.
                 possibleOrgUser.Status = OrganizationUserStatusType.Invited;
             }
 
             possibleOrgUser.UserId = newUser.Id;
             possibleOrgUser.RevisionDate = DateTime.UtcNow;
             await _organizationUserRepository.ReplaceAsync(possibleOrgUser);
+
+            if (privilegedControlsSeatReservation?.Error is PrivilegedControlsSeatLimitReachedError)
+            {
+                await _sendPrivilegedControlsSeatNeededEmailCommand.RunAsync(
+                    organization, possibleOrgUser.Email ?? newUser.Email);
+            }
         }
 
         // Create the SsoUser record to link the user to the SSO provider.
@@ -836,6 +878,17 @@ public class AccountController : Controller
 
         var previousStatus = orgUser.Status;
         var previousRevisionDate = orgUser.RevisionDate;
+        var previousAccessPam = orgUser.AccessPam;
+
+        PrivilegedControlsSeatReservationResult? privilegedControlsSeatReservation = null;
+        if (orgUser.AccessPam)
+        {
+            privilegedControlsSeatReservation = await _reservePrivilegedControlsSeatsCommand.RunAsync(organization, 1);
+            if (!privilegedControlsSeatReservation.Success)
+            {
+                orgUser.AccessPam = false;
+            }
+        }
 
         orgUser.Status = OrganizationUserStatusType.Invited;
         orgUser.RevisionDate = DateTime.UtcNow;
@@ -858,9 +911,15 @@ public class AccountController : Controller
 
             orgUser.Status = previousStatus;
             orgUser.RevisionDate = previousRevisionDate;
+            orgUser.AccessPam = previousAccessPam;
             await _organizationUserRepository.ReplaceAsync(orgUser);
 
             throw;
+        }
+
+        if (privilegedControlsSeatReservation?.Error is PrivilegedControlsSeatLimitReachedError)
+        {
+            await _sendPrivilegedControlsSeatNeededEmailCommand.RunAsync(organization, orgUser.Email!);
         }
     }
 
@@ -868,20 +927,20 @@ public class AccountController : Controller
     /// Validates an organization user is allowed to log in via SSO and blocks invalid statuses.
     /// Lazily resolves the organization and organization user if not provided.
     /// </summary>
-    /// <param name="organization">The target organization; if null, resolved from provider.</param>
-    /// <param name="provider">The SSO scheme provider value (organization id as a GUID string).</param>
+    /// <param name="organization">The target organization; if null, resolved from <paramref name="organizationId"/>.</param>
+    /// <param name="organizationId">The organization whose SSO configuration the user signed in through.</param>
     /// <param name="orgUser">The organization-user record; if null, looked up by user/org or user email for invited users.</param>
     /// <param name="user">The user attempting to sign in (existing or newly provisioned).</param>
-    /// <exception cref="Exception">Thrown if the organization cannot be resolved from provider;
+    /// <exception cref="Exception">Thrown if the organization cannot be found;
     /// the organization user cannot be found; or the organization user status is not allowed.</exception>
     private async Task PreventOrgUserLoginIfStatusInvalidAsync(
         Organization? organization,
-        string provider,
+        Guid organizationId,
         OrganizationUser? orgUser,
         User user)
     {
         // Lazily get organization if not already known
-        organization ??= await GetOrganizationByProviderAsync(provider);
+        organization ??= await GetOrganizationByIdAsync(organizationId);
 
         // Lazily get the org user if not already known
         orgUser ??= await GetOrganizationUserByUserAndOrgIdOrEmailAsync(
@@ -941,19 +1000,11 @@ public class AccountController : Controller
     }
 
     /// <summary>
-    /// Tries to get the organization by the provider which is org id for us as we use the scheme
-    /// to identify organizations - not identity providers.
+    /// Gets the organization by id.
     /// </summary>
-    /// <param name="provider">Org id string from SSO scheme property</param>
-    /// <exception cref="Exception">Errors if the provider string is not a valid org id guid or if the org cannot be found by the id.</exception>
-    private async Task<Organization> GetOrganizationByProviderAsync(string provider)
+    /// <exception cref="Exception">Errors if the organization cannot be found by the id.</exception>
+    private async Task<Organization> GetOrganizationByIdAsync(Guid organizationId)
     {
-        if (!Guid.TryParse(provider, out var organizationId))
-        {
-            // TODO: support non-org (server-wide) SSO in the future?
-            throw new Exception(_i18nService.T("SSOProviderIsNotAnOrgId", provider));
-        }
-
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
 
         if (organization == null)

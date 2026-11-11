@@ -1,7 +1,12 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Invoicing;
-using Bit.Subscriptions.Organization.Commands;
+using Bit.Subscriptions.Organization.Commands.InvoicePreviews;
+using Bit.Subscriptions.Organization.Commands.PrivilegedControls;
+using Bit.Subscriptions.Organization.Commands.Purchase;
 using Bit.Subscriptions.Organization.Handlers;
+using Bit.Subscriptions.Organization.Helpers;
 using Bit.Subscriptions.Organization.Queries;
 using Bit.Subscriptions.Organization.Requirements;
 using Microsoft.AspNetCore.Authorization;
@@ -18,13 +23,40 @@ public static class SubscriptionsOrganizationServiceCollectionExtensions
     {
         services.AddInvoicing();
         services.AddOrganizationAuthorization();
+        services.AddPrivilegedControlsSeatAutoscaling();
         services.TryAddScoped<GetOrganizationSubscriptionPreviewHandler>();
         services.TryAddScoped<IPreviewOrganizationSubscriptionPurchaseQuery, PreviewOrganizationSubscriptionPurchaseQuery>();
         services.TryAddScoped<PreviewOrganizationSubscriptionPurchaseHandler>();
         services.TryAddScoped<PreviewOrganizationPlanChangeHandler>();
+        services.TryAddScoped<PurchasePrivilegedControlsHandler>();
         services.TryAddScoped<IPreviewOrganizationPlanChangeCommand, PreviewOrganizationPlanChangeCommand>();
+        services.TryAddScoped<PreviewOrganizationRestartHandler>();
+        services.TryAddScoped<IPreviewOrganizationRestartCommand, PreviewOrganizationRestartCommand>();
+        services.TryAddScoped<IAddPrivilegedControlsToExistingSubscriptionCommand, AddPrivilegedControlsToExistingSubscriptionCommand>();
+        services.TryAddScoped<IChangePrivilegedControlsSeatsCommand, ChangePrivilegedControlsSeatsCommand>();
+        services.TryAddScoped<ChangePrivilegedControlsSeatsHandler>();
+        services.TryAddScoped<RemovePrivilegedControlsHandler>();
+        services.TryAddScoped<IRemovePrivilegedControlsCommand, RemovePrivilegedControlsCommand>();
+        services.TryAddScoped<ICreateOrganizationSubscriptionCommand, CreateOrganizationSubscriptionCommand>();
         services.TryAddEnumerable(
             ServiceDescriptor.Scoped<IAuthorizationHandler, StandaloneOrganizationOwnerRequirementHandler>());
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the Privileged Controls seat reserve, autoscale, and revert commands, the seat-needed email command,
+    /// and the services they use. A host that resolves <see cref="IReservePrivilegedControlsSeatsCommand"/>,
+    /// <see cref="IAutoscalePrivilegedControlsSeatsCommand"/>, <see cref="IRevertPrivilegedControlsSeatsCommand"/>, or
+    /// <see cref="ISendPrivilegedControlsSeatNeededEmailCommand"/> without mapping the endpoints calls this.
+    /// </summary>
+    public static IServiceCollection AddPrivilegedControlsSeatAutoscaling(this IServiceCollection services)
+    {
+        services.TryAddScoped<IPrivilegedControlsSeatChangeSetFactory, PrivilegedControlsSeatChangeSetFactory>();
+        services.TryAddScoped<IIsOnPrivilegedControlsSalesInitiatedTrialQuery, IsOnPrivilegedControlsSalesInitiatedTrialQuery>();
+        services.TryAddScoped<IAutoscalePrivilegedControlsSeatsCommand, AutoscalePrivilegedControlsSeatsCommand>();
+        services.TryAddScoped<IRevertPrivilegedControlsSeatsCommand, RevertPrivilegedControlsSeatsCommand>();
+        services.TryAddScoped<IReservePrivilegedControlsSeatsCommand, ReservePrivilegedControlsSeatsCommand>();
+        services.TryAddScoped<ISendPrivilegedControlsSeatNeededEmailCommand, SendPrivilegedControlsSeatNeededEmailCommand>();
         return services;
     }
 }

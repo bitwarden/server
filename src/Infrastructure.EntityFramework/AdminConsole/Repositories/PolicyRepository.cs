@@ -44,6 +44,17 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
         }
     }
 
+    public async Task<ICollection<AdminConsoleEntities.Policy>> GetManyByOrganizationIdsTypeAsync(
+        IEnumerable<Guid> organizationIds, PolicyType type)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var results = await dbContext.Policies
+            .Where(p => organizationIds.Contains(p.OrganizationId) && p.Type == type)
+            .ToListAsync();
+        return Mapper.Map<List<AdminConsoleEntities.Policy>>(results);
+    }
+
     public async Task<ICollection<AdminConsoleEntities.Policy>> GetManyByUserIdAsync(Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())

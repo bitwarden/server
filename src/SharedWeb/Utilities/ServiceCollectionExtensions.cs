@@ -28,6 +28,7 @@ using Bit.Core.Billing.Providers.Services.NoopImplementations;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Billing.TrialInitiation;
+using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Dirt.Reports.ReportFeatures;
 using Bit.Core.Dirt.Reports.Services;
 using Bit.Core.Entities;
@@ -157,6 +158,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<ICipherService, CipherService>();
         services.TryAddScoped<ICipherSyncPushService, CipherSyncPushService>();
+        services.TryAddScoped<IPartialCipherWriteGuard, PartialCipherWriteGuard>();
         // PAM credential leasing is commercial; OSS builds never gate. The commercial Pam library
         // overrides this default by registering the real gate after AddBaseServices, where the last
         // registration wins — the shape AddOosServices uses for IProviderService. That override must
@@ -240,6 +242,18 @@ public static class ServiceCollectionExtensions
                 DuoUserStateTokenable.DataProtectorPurpose,
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<DuoUserStateTokenable>>>()));
+        services.AddSingleton<IDataProtectorTokenFactory<IntegrationOAuthStateTokenable>>(serviceProvider =>
+            new DataProtectorTokenFactory<IntegrationOAuthStateTokenable>(
+                IntegrationOAuthStateTokenable.ClearTextPrefix,
+                IntegrationOAuthStateTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<IntegrationOAuthStateTokenable>>>()));
+        services.AddSingleton<IDataProtectorTokenFactory<TwoFactorRememberTokenable>>(serviceProvider =>
+            new DataProtectorTokenFactory<TwoFactorRememberTokenable>(
+                TwoFactorRememberTokenable.ClearTextPrefix,
+                TwoFactorRememberTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<TwoFactorRememberTokenable>>>()));
 
         services.AddSingleton<IDataProtectorTokenFactory<ProviderDeleteTokenable>>(serviceProvider =>
             new DataProtectorTokenFactory<ProviderDeleteTokenable>(
@@ -261,6 +275,7 @@ public static class ServiceCollectionExtensions
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable>>>()));
         services.AddSingleton<ITwoFactorUserVerificationTokenableFactory, TwoFactorUserVerificationTokenableFactory>();
+        services.AddSingleton<ITwoFactorRememberTokenableFactory, TwoFactorRememberTokenableFactory>();
         services.AddSingleton<IDataProtectorTokenFactory<TwoFactorUserVerificationTokenable>>(
             serviceProvider => new DataProtectorTokenFactory<TwoFactorUserVerificationTokenable>(
                 TwoFactorUserVerificationTokenable.ClearTextPrefix,
@@ -302,6 +317,7 @@ public static class ServiceCollectionExtensions
         services.TryAddTransient(typeof(IOtpTokenProvider<>), typeof(OtpTokenProvider<>));
         services.AddScoped<ITwoFactorEmailService, TwoFactorEmailService>();
         services.AddScoped<INewDeviceVerificationOtpStore, NewDeviceVerificationOtpStore>();
+        services.AddScoped<IUserVerificationOtpStore, UserVerificationOtpStore>();
         // Legacy mailer service
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();
@@ -319,23 +335,8 @@ public static class ServiceCollectionExtensions
         services.AddOrganizationAbilityCache(globalSettings);
         services.AddProviderAbilityCache(globalSettings);
 
-        var awsConfigured = CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret);
-        if (awsConfigured && CoreHelpers.SettingHasValue(globalSettings.Mail?.SendGridApiKey))
-        {
-            services.AddSingleton<IMailDeliveryService, MultiServiceMailDeliveryService>();
-        }
-        else if (awsConfigured)
-        {
-            services.AddSingleton<IMailDeliveryService, AmazonSesMailDeliveryService>();
-        }
-        else if (CoreHelpers.SettingHasValue(globalSettings.Mail?.Smtp?.Host))
-        {
-            services.AddSingleton<IMailDeliveryService, MailKitSmtpMailDeliveryService>();
-        }
-        else
-        {
-            services.AddSingleton<IMailDeliveryService, NoopMailDeliveryService>();
-        }
+        services.ConfigureMailDeliveryOptionsFromGlobalSettings();
+        services.AddMailDelivery();
 
         services.AddPush(globalSettings);
         services.AddPushRegistration();
@@ -450,8 +451,6 @@ public static class ServiceCollectionExtensions
             .AddTokenProvider<DataProtectorTokenProvider<User>>(TokenOptions.DefaultProvider)
             .AddTokenProvider<AuthenticatorTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Authenticator))
-            .AddTokenProvider<EmailTwoFactorTokenProvider>(
-                CoreHelpers.CustomProviderName(TwoFactorProviderType.Email))
             .AddTokenProvider<YubicoOtpTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.YubiKey))
             .AddTokenProvider<DuoUniversalTokenProvider>(

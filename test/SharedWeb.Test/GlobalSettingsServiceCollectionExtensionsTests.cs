@@ -184,6 +184,64 @@ public class GlobalSettingsServiceCollectionExtensionsTests
         Assert.Equal("override", returned.SiteName);
     }
 
+    [Fact]
+    public void AddGlobalSettings_WithDevSelfHostOverrideProvider_GetsOverrideFromConfiguration()
+    {
+        using var host = BuildHostWithDevSelfHostOverride(sourceAddedAfterward: null);
+
+        Assert.Equal("override", host.Services.GetRequiredService<GlobalSettings>().SiteName);
+    }
+
+    [Fact]
+    public void AddGlobalSettings_WithDevSelfHostOverrideProvider_DoesNotReapplyOverride()
+    {
+        // The override would beat this later source if AddGlobalSettings failed to detect the provider and
+        // bound Dev:SelfHostOverride:GlobalSettings again.
+        using var host = BuildHostWithDevSelfHostOverride(sourceAddedAfterward: new()
+        {
+            { "GlobalSettings:SiteName", "added-afterward" },
+        });
+
+        Assert.Equal("added-afterward", host.Services.GetRequiredService<GlobalSettings>().SiteName);
+    }
+
+    [Fact]
+    public void AddGlobalSettingsServices_WithDevSelfHostOverrideProvider_DoesNotReapplyOverride()
+    {
+        using var host = BuildHostWithDevSelfHostOverride(sourceAddedAfterward: new()
+        {
+            { "GlobalSettings:SiteName", "added-afterward" },
+        });
+
+        var returned = new ServiceCollection().AddGlobalSettingsServices(
+            host.Services.GetRequiredService<IConfiguration>(),
+            host.Services.GetRequiredService<IHostEnvironment>());
+
+        Assert.Equal("added-afterward", returned.SiteName);
+    }
+
+    private static IHost BuildHostWithDevSelfHostOverride(Dictionary<string, string?>? sourceAddedAfterward)
+    {
+        return new HostBuilder()
+            .UseEnvironment("Development")
+            .ConfigureAppConfiguration(config => config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                { "GlobalSettings:SiteName", "base" },
+                { "developSelfHosted", "true" },
+                { "Dev:SelfHostOverride:GlobalSettings:SiteName", "override" },
+            }))
+            .ConfigureDevSelfHostOverride()
+            .ConfigureAppConfiguration(config =>
+            {
+                if (sourceAddedAfterward is not null)
+                {
+                    config.AddInMemoryCollection(sourceAddedAfterward);
+                }
+            })
+            .ConfigureServices(services => services.AddGlobalSettings())
+            .Build();
+    }
+
     private static IConfiguration BuildConfiguration(Dictionary<string, string?>? values = null)
     {
         return new ConfigurationBuilder()

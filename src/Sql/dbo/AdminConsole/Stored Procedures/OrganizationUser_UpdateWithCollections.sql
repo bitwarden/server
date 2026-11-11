@@ -16,12 +16,14 @@
     @RevocationReason TINYINT = NULL,
     @StatusNew SMALLINT = NULL,
     @AccessPam BIT = 0,
-    @V2UpgradeToken VARCHAR(MAX) = NULL
+    @V2UpgradeToken VARCHAR(MAX) = NULL,
+    @InviteReminderDueDate DATETIME2(7) = NULL,
+    @InviteRemindersSentCount TINYINT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[OrganizationUser_Update] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @ExternalId, @CreationDate, @RevisionDate, @Permissions, @ResetPasswordKey, @AccessSecretsManager, @RevocationReason, @StatusNew, @AccessPam, @V2UpgradeToken
+    EXEC [dbo].[OrganizationUser_Update] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @ExternalId, @CreationDate, @RevisionDate, @Permissions, @ResetPasswordKey, @AccessSecretsManager, @RevocationReason, @StatusNew, @AccessPam, @V2UpgradeToken, @InviteReminderDueDate, @InviteRemindersSentCount
 
     -- Bump RevisionDate on all affected collections
     ;WITH [AffectedCollectionsCTE] AS (

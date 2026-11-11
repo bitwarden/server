@@ -64,7 +64,8 @@ BEGIN
            o.[UsePam],
            o.[PamSeats],
            o.[MaxAutoscalePamSeats],
-           o.[PamSeatMinimum]
+           o.[PamSeatMinimum],
+           o.[OrganizationKeyId]
     FROM [dbo].[OrganizationView] o
     INNER JOIN @OrganizationIds ids ON o.[Id] = ids.[Id]
 

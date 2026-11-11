@@ -239,6 +239,13 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
+    private static int HighestRank(IEnumerable<CollectionDetails> grants) =>
+        grants.Max(c => PermissionRank.Of(c.Manage, c.ReadOnly, c.HidePasswords));
+
+    private static int HighestRank(IEnumerable<CollectionAdminDetails> grants) =>
+        grants.Max(c => c.Assigned ? PermissionRank.Of(c.Manage, c.ReadOnly, c.HidePasswords) : (int?)null)
+        ?? PermissionRank.Unassigned;
+
     public async Task<ICollection<CollectionDetails>> GetManyByUserIdAsync(Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -269,8 +276,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         CreationDate = collectionGroup.Key.CreationDate,
                         RevisionDate = collectionGroup.Key.RevisionDate,
                         ExternalId = collectionGroup.Key.ExternalId,
-                        ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
-                        HidePasswords = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
+                        ReadOnly = (HighestRank(collectionGroup) & PermissionRank.Edit) == 0,
+                        HidePasswords = (HighestRank(collectionGroup) & PermissionRank.ViewPassword) == 0,
                         Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
                         Type = collectionGroup.Key.Type,
                         HasEnabledAccessRule = collectionGroup.Key.HasEnabledAccessRule,
@@ -290,19 +297,26 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                               c.Type,
                               c.HasEnabledAccessRule
                           } into collectionGroup
+                          select new
+                          {
+                              collectionGroup.Key,
+                              Rank = collectionGroup.Max(c => (c.Manage ? PermissionRank.Manage : 0) + (c.ReadOnly ? 0 : PermissionRank.Edit) + (c.HidePasswords ? 0 : PermissionRank.ViewPassword)),
+                              Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
+                          }
+                          into ranked
                           select new CollectionDetails
                           {
-                              Id = collectionGroup.Key.Id,
-                              OrganizationId = collectionGroup.Key.OrganizationId,
-                              Name = collectionGroup.Key.Name,
-                              CreationDate = collectionGroup.Key.CreationDate,
-                              RevisionDate = collectionGroup.Key.RevisionDate,
-                              ExternalId = collectionGroup.Key.ExternalId,
-                              ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
-                              HidePasswords = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
-                              Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
-                              Type = collectionGroup.Key.Type,
-                              HasEnabledAccessRule = collectionGroup.Key.HasEnabledAccessRule,
+                              Id = ranked.Key.Id,
+                              OrganizationId = ranked.Key.OrganizationId,
+                              Name = ranked.Key.Name,
+                              CreationDate = ranked.Key.CreationDate,
+                              RevisionDate = ranked.Key.RevisionDate,
+                              ExternalId = ranked.Key.ExternalId,
+                              ReadOnly = (ranked.Rank & PermissionRank.Edit) == 0,
+                              HidePasswords = (ranked.Rank & PermissionRank.ViewPassword) == 0,
+                              Manage = ranked.Manage,
+                              Type = ranked.Key.Type,
+                              HasEnabledAccessRule = ranked.Key.HasEnabledAccessRule,
                           }).ToListAsync();
         }
     }
@@ -342,9 +356,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         RevisionDate = collectionGroup.Key.RevisionDate,
                         ExternalId = collectionGroup.Key.ExternalId,
                         Type = collectionGroup.Key.Type,
-                        ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
-                        HidePasswords =
-                            Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
+                        ReadOnly = (HighestRank(collectionGroup) & PermissionRank.Edit) == 0,
+                        HidePasswords = (HighestRank(collectionGroup) & PermissionRank.ViewPassword) == 0,
                         Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
                         Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
                         Unmanaged = collectionGroup.Key.Unmanaged,
@@ -369,23 +382,30 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                                          c.HasEnabledAccessRule
                                      }
                     into collectionGroup
-                                     select new CollectionAdminDetails
+                                     select new
                                      {
-                                         Id = collectionGroup.Key.Id,
-                                         OrganizationId = collectionGroup.Key.OrganizationId,
-                                         Name = collectionGroup.Key.Name,
-                                         CreationDate = collectionGroup.Key.CreationDate,
-                                         RevisionDate = collectionGroup.Key.RevisionDate,
-                                         ExternalId = collectionGroup.Key.ExternalId,
-                                         Type = collectionGroup.Key.Type,
-                                         ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
-                                         HidePasswords =
-                                             Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
+                                         collectionGroup.Key,
+                                         Rank = collectionGroup.Max(c => c.Assigned ? (c.Manage ? PermissionRank.Manage : 0) + (c.ReadOnly ? 0 : PermissionRank.Edit) + (c.HidePasswords ? 0 : PermissionRank.ViewPassword) : (int?)null) ?? PermissionRank.Unassigned,
                                          Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
                                          Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
-                                         Unmanaged = collectionGroup.Key.Unmanaged,
-                                         DefaultUserCollectionEmail = collectionGroup.Key.DefaultUserCollectionEmail,
-                                         HasEnabledAccessRule = collectionGroup.Key.HasEnabledAccessRule
+                                     }
+                                     into ranked
+                                     select new CollectionAdminDetails
+                                     {
+                                         Id = ranked.Key.Id,
+                                         OrganizationId = ranked.Key.OrganizationId,
+                                         Name = ranked.Key.Name,
+                                         CreationDate = ranked.Key.CreationDate,
+                                         RevisionDate = ranked.Key.RevisionDate,
+                                         ExternalId = ranked.Key.ExternalId,
+                                         Type = ranked.Key.Type,
+                                         ReadOnly = (ranked.Rank & PermissionRank.Edit) == 0,
+                                         HidePasswords = (ranked.Rank & PermissionRank.ViewPassword) == 0,
+                                         Manage = ranked.Manage,
+                                         Assigned = ranked.Assigned,
+                                         Unmanaged = ranked.Key.Unmanaged,
+                                         DefaultUserCollectionEmail = ranked.Key.DefaultUserCollectionEmail,
+                                         HasEnabledAccessRule = ranked.Key.HasEnabledAccessRule,
                                      }).ToListAsync();
             }
 
@@ -462,9 +482,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         RevisionDate = collectionGroup.Key.RevisionDate,
                         ExternalId = collectionGroup.Key.ExternalId,
                         Type = collectionGroup.Key.Type,
-                        ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
-                        HidePasswords =
-                            Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
+                        ReadOnly = (HighestRank(collectionGroup) & PermissionRank.Edit) == 0,
+                        HidePasswords = (HighestRank(collectionGroup) & PermissionRank.ViewPassword) == 0,
                         Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
                         Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
                         Unmanaged = collectionGroup.Key.Unmanaged,
@@ -486,23 +505,30 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                              c.HasEnabledAccessRule
                          }
                     into collectionGroup
-                         select new CollectionAdminDetails
+                         select new
                          {
-                             Id = collectionGroup.Key.Id,
-                             OrganizationId = collectionGroup.Key.OrganizationId,
-                             Name = collectionGroup.Key.Name,
-                             CreationDate = collectionGroup.Key.CreationDate,
-                             RevisionDate = collectionGroup.Key.RevisionDate,
-                             ExternalId = collectionGroup.Key.ExternalId,
-                             Type = collectionGroup.Key.Type,
-                             ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
-                             HidePasswords =
-                                 Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
+                             collectionGroup.Key,
+                             Rank = collectionGroup.Max(c => c.Assigned ? (c.Manage ? PermissionRank.Manage : 0) + (c.ReadOnly ? 0 : PermissionRank.Edit) + (c.HidePasswords ? 0 : PermissionRank.ViewPassword) : (int?)null) ?? PermissionRank.Unassigned,
                              Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
                              Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
-                             Unmanaged = collectionGroup.Key.Unmanaged,
-                             DefaultUserCollectionEmail = collectionGroup.Key.DefaultUserCollectionEmail,
-                             HasEnabledAccessRule = collectionGroup.Key.HasEnabledAccessRule
+                         }
+                         into ranked
+                         select new CollectionAdminDetails
+                         {
+                             Id = ranked.Key.Id,
+                             OrganizationId = ranked.Key.OrganizationId,
+                             Name = ranked.Key.Name,
+                             CreationDate = ranked.Key.CreationDate,
+                             RevisionDate = ranked.Key.RevisionDate,
+                             ExternalId = ranked.Key.ExternalId,
+                             Type = ranked.Key.Type,
+                             ReadOnly = (ranked.Rank & PermissionRank.Edit) == 0,
+                             HidePasswords = (ranked.Rank & PermissionRank.ViewPassword) == 0,
+                             Manage = ranked.Manage,
+                             Assigned = ranked.Assigned,
+                             Unmanaged = ranked.Key.Unmanaged,
+                             DefaultUserCollectionEmail = ranked.Key.DefaultUserCollectionEmail,
+                             HasEnabledAccessRule = ranked.Key.HasEnabledAccessRule,
                          }).ToListAsync();
 
             var collectionIds = collections.Select(c => c.Id).ToHashSet();
@@ -570,9 +596,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         CreationDate = collectionGroup.Key.CreationDate,
                         RevisionDate = collectionGroup.Key.RevisionDate,
                         ExternalId = collectionGroup.Key.ExternalId,
-                        ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
-                        HidePasswords =
-                            Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
+                        ReadOnly = (HighestRank(collectionGroup) & PermissionRank.Edit) == 0,
+                        HidePasswords = (HighestRank(collectionGroup) & PermissionRank.ViewPassword) == 0,
                         Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
                         Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
                         Unmanaged = collectionGroup.Select(c => c.Unmanaged).FirstOrDefault(),
@@ -593,21 +618,29 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                                                c.HasEnabledAccessRule
                                            }
                     into collectionGroup
-                                           select new CollectionAdminDetails
+                                           select new
                                            {
-                                               Id = collectionGroup.Key.Id,
-                                               OrganizationId = collectionGroup.Key.OrganizationId,
-                                               Name = collectionGroup.Key.Name,
-                                               CreationDate = collectionGroup.Key.CreationDate,
-                                               RevisionDate = collectionGroup.Key.RevisionDate,
-                                               ExternalId = collectionGroup.Key.ExternalId,
-                                               ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
-                                               HidePasswords =
-                                                   Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
+                                               collectionGroup.Key,
+                                               Rank = collectionGroup.Max(c => c.Assigned ? (c.Manage ? PermissionRank.Manage : 0) + (c.ReadOnly ? 0 : PermissionRank.Edit) + (c.HidePasswords ? 0 : PermissionRank.ViewPassword) : (int?)null) ?? PermissionRank.Unassigned,
                                                Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
                                                Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
                                                Unmanaged = collectionGroup.Select(c => c.Unmanaged).FirstOrDefault(),
-                                               HasEnabledAccessRule = collectionGroup.Key.HasEnabledAccessRule
+                                           }
+                                           into ranked
+                                           select new CollectionAdminDetails
+                                           {
+                                               Id = ranked.Key.Id,
+                                               OrganizationId = ranked.Key.OrganizationId,
+                                               Name = ranked.Key.Name,
+                                               CreationDate = ranked.Key.CreationDate,
+                                               RevisionDate = ranked.Key.RevisionDate,
+                                               ExternalId = ranked.Key.ExternalId,
+                                               ReadOnly = (ranked.Rank & PermissionRank.Edit) == 0,
+                                               HidePasswords = (ranked.Rank & PermissionRank.ViewPassword) == 0,
+                                               Manage = ranked.Manage,
+                                               Assigned = ranked.Assigned,
+                                               Unmanaged = ranked.Unmanaged,
+                                               HasEnabledAccessRule = ranked.Key.HasEnabledAccessRule,
                                            }).FirstOrDefaultAsync();
             }
 

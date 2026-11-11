@@ -16,6 +16,7 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
     private readonly IGoverningRuleResolver _resolver;
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IAccessRequestRepository _accessRequestRepository;
+    private readonly IAccessRuleEngine _ruleEngine;
     private readonly ICurrentContext _currentContext;
     private readonly TimeProvider _timeProvider;
 
@@ -24,6 +25,7 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
         IGoverningRuleResolver resolver,
         IAccessLeaseRepository accessLeaseRepository,
         IAccessRequestRepository accessRequestRepository,
+        IAccessRuleEngine ruleEngine,
         ICurrentContext currentContext,
         TimeProvider timeProvider)
     {
@@ -31,6 +33,7 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
         _resolver = resolver;
         _accessLeaseRepository = accessLeaseRepository;
         _accessRequestRepository = accessRequestRepository;
+        _ruleEngine = ruleEngine;
         _currentContext = currentContext;
         _timeProvider = timeProvider;
     }
@@ -58,10 +61,10 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
 
         var extensionsAllowed = false;
         int? maxExtensionDurationSeconds = null;
+        var canRequest = true;
         if (activeLease is not null)
         {
-            // Extendable once, while the rule the lease was granted under opts in, as RequestLeaseExtensionCommand
-            // enforces.
+            // Extendable once under the lease's own rule, as RequestLeaseExtensionCommand enforces.
             var originatingRequest = await _accessRequestRepository.GetByIdAsync(activeLease.AccessRequestId);
             var rule = originatingRequest?.RuleId is { } ruleId
                 ? await _resolver.ResolvePinnedAsync(ruleId, activeLease.CollectionId)
@@ -73,11 +76,18 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
                 maxExtensionDurationSeconds = rule.MaxExtensionDurationSeconds;
             }
         }
-        else if (pending is null && approved is null
-                 && await _resolver.ResolveAsync(userId, cipherId, signals) is null)
+        else if (pending is null && approved is null)
         {
-            // Nothing to report and the cipher isn't leasing-gated.
-            throw new NotFoundException();
+            var governingRule = await _resolver.ResolveAsync(userId, cipherId, signals);
+            if (governingRule is null)
+            {
+                // Nothing to report and the cipher isn't leasing-gated.
+                throw new NotFoundException();
+            }
+
+            // Mirrors SubmitAccessRequestCommand: only the automatic path refuses a request on its conditions.
+            canRequest = governingRule.RequiresHumanApproval
+                || _ruleEngine.Evaluate(governingRule.Conditions, signals).Outcome == AccessEvaluationOutcome.Allow;
         }
 
         return new CipherAccessState(
@@ -87,6 +97,7 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
             pending is null ? null : AccessRequestDetails.From(pending, now),
             approved is null ? null : AccessRequestDetails.From(approved, now),
             extensionsAllowed,
-            maxExtensionDurationSeconds);
+            maxExtensionDurationSeconds,
+            canRequest);
     }
 }

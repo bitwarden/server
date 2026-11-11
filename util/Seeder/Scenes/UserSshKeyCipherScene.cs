@@ -3,13 +3,14 @@ using System.Text.Json;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
+using Bit.Seeder.Extensions;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Services;
 
 namespace Bit.Seeder.Scenes;
 
-public class UserSshKeyCipherScene(IUserRepository userRepository, ICipherRepository cipherRepository, IManglerService manglerService) : IScene<UserSshKeyCipherScene.Request, UserSshKeyCipherScene.Result>
+public class UserSshKeyCipherScene(IUserRepository userRepository, ICipherRepository cipherRepository, IFolderRepository folderRepository, IManglerService manglerService) : IScene<UserSshKeyCipherScene.Request, UserSshKeyCipherScene.Result>
 {
     public class Request
     {
@@ -40,6 +41,8 @@ public class UserSshKeyCipherScene(IUserRepository userRepository, ICipherReposi
         {
             throw new Exception($"User with ID {request.UserId} not found.");
         }
+
+        await folderRepository.ThrowIfFolderNotOwnedByUserAsync(request.FolderId, request.UserId);
 
         var sshKey = new SshKeyViewDto
         {

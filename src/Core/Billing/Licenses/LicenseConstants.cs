@@ -49,6 +49,7 @@ public static class OrganizationLicenseConstants
     public const string UseMyItems = nameof(UseMyItems);
     public const string UseInviteLinks = nameof(UseInviteLinks);
     public const string UsePam = nameof(UsePam);
+    public const string PamSeats = nameof(PamSeats);
 }
 
 public static class UserLicenseConstants

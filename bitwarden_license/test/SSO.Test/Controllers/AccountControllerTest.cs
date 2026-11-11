@@ -1,11 +1,20 @@
 ﻿using System.Reflection;
 using System.Security.Claims;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.Registration;
+using Bit.Core.Billing.Organizations;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -14,6 +23,7 @@ using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Sso.Controllers;
 using Bit.Sso.Exceptions;
+using Bit.Sso.Utilities.Saml2;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Duende.IdentityModel;
@@ -25,8 +35,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit.Abstractions;
 using AuthenticationOptions = Duende.IdentityServer.Configuration.AuthenticationOptions;
+using CommandError = Bit.Core.AdminConsole.Utilities.v2.Error;
 
 namespace Bit.SSO.Test.Controllers;
 
@@ -52,7 +64,7 @@ public class AccountControllerTest
         var resolvedAuthService = authService ?? Substitute.For<IAuthenticationService>();
         resolvedAuthService.AuthenticateAsync(
                 Arg.Any<HttpContext>(),
-                AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
+                AuthenticationSchemes.SsoExternalCookie)
             .Returns(authResult);
 
         var services = new ServiceCollection();
@@ -96,7 +108,7 @@ public class AccountControllerTest
                 ["user_identifier"] = string.Empty
             }
         };
-        var ticket = new AuthenticationTicket(principal, properties, AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+        var ticket = new AuthenticationTicket(principal, properties, AuthenticationSchemes.SsoExternalCookie);
         return AuthenticateResult.Success(ticket);
     }
 
@@ -169,6 +181,253 @@ public class AccountControllerTest
         Assert.Equal("CouldNotFindOrganizationUser", ex.Message);
     }
 
+    [Theory]
+    [BitAutoData("not-a-guid")]
+    [BitAutoData("")]
+    public async Task ExternalCallback_SchemeIsNotOrganizationId_ThrowsSsoProviderIsNotAnOrgId(
+        string scheme,
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        var authResult = BuildSuccessfulExternalAuth(Guid.NewGuid(), "ext-user", "user@example.com");
+        authResult.Properties!.Items["scheme"] = scheme;
+
+        // Act + Assert
+        await AssertExternalCallbackThrowsSsoProviderIsNotAnOrgIdAsync(sutProvider, authResult);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_NoScheme_ThrowsSsoProviderIsNotAnOrgId(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        var authResult = BuildSuccessfulExternalAuth(Guid.NewGuid(), "ext-user", "user@example.com");
+        authResult.Properties!.Items.Remove("scheme");
+
+        // Act + Assert
+        await AssertExternalCallbackThrowsSsoProviderIsNotAnOrgIdAsync(sutProvider, authResult);
+    }
+
+    private static async Task AssertExternalCallbackThrowsSsoProviderIsNotAnOrgIdAsync(
+        SutProvider<AccountController> sutProvider,
+        AuthenticateResult authResult)
+    {
+        var authService = SetupHttpContextWithAuth(sutProvider, authResult);
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>(), Arg.Any<object?[]>())
+            .Returns(ci => (string)ci[0]!);
+
+        var ex = await Assert.ThrowsAsync<Exception>(() => sutProvider.Sut.ExternalCallback());
+
+        Assert.Equal("SSOProviderIsNotAnOrgId", ex.Message);
+        await sutProvider.GetDependency<ISsoConfigRepository>()
+            .DidNotReceiveWithAnyArgs().GetByOrganizationIdAsync(default);
+        await authService.DidNotReceiveWithAnyArgs().SignInAsync(default!, default, default!, default);
+    }
+
+    [Theory]
+    [BitAutoData("sub,nameid,uid,upn,eppn", "sub")]
+    [BitAutoData("nameid,uid,upn,eppn", "nameid")]
+    [BitAutoData("uid,upn,eppn", "uid")]
+    [BitAutoData("upn,eppn", "upn")]
+    [BitAutoData("eppn", "eppn")]
+    public async Task ExternalCallback_UserIdClaims_LooksUpSsoUserByHighestPrecedenceClaim(
+        string claimKeys,
+        string expectedKey,
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        // Claims are added lowest precedence first, so claim order cannot decide the result.
+        var orgId = Guid.NewGuid();
+        var claims = claimKeys.Split(',').Reverse()
+            .Select(key => new Claim(UserIdClaimTypeFor(key), $"{key}-value"))
+            .ToArray();
+        ArrangeExternalLogin(sutProvider, orgId, new SsoConfigurationData(), claims);
+
+        // Act
+        await Record.ExceptionAsync(() => sutProvider.Sut.ExternalCallback());
+
+        // Assert
+        await sutProvider.GetDependency<IUserRepository>().Received(1)
+            .GetBySsoUserAsync($"{expectedKey}-value", orgId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_AdditionalUserIdClaimType_TakesPrecedenceOverSub(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        ArrangeExternalLogin(sutProvider, orgId,
+            new SsoConfigurationData { AdditionalUserIdClaimTypes = "employee_id" },
+            new Claim(JwtClaimTypes.Subject, "sub-value"),
+            new Claim("employee_id", "employee-value"));
+
+        // Act
+        await Record.ExceptionAsync(() => sutProvider.Sut.ExternalCallback());
+
+        // Assert
+        await sutProvider.GetDependency<IUserRepository>().Received(1)
+            .GetBySsoUserAsync("employee-value", orgId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_TransientNameIdentifier_IsSkippedForUserId(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        ArrangeExternalLogin(sutProvider, orgId, new SsoConfigurationData(),
+            TransientNameIdentifier("transient-value"),
+            new Claim("uid", "uid-value"));
+
+        // Act
+        await Record.ExceptionAsync(() => sutProvider.Sut.ExternalCallback());
+
+        // Assert
+        await sutProvider.GetDependency<IUserRepository>().Received(1)
+            .GetBySsoUserAsync("uid-value", orgId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_OnlyTransientNameIdentifier_ThrowsUnknownUserId(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        ArrangeExternalLogin(sutProvider, orgId, new SsoConfigurationData(),
+            TransientNameIdentifier("transient-value"));
+
+        // Act
+        var ex = await Assert.ThrowsAsync<Exception>(() => sutProvider.Sut.ExternalCallback());
+
+        // Assert
+        Assert.Equal("UnknownUserId", ex.Message);
+        await sutProvider.GetDependency<IUserRepository>().DidNotReceiveWithAnyArgs()
+            .GetBySsoUserAsync(default!, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_UserIdClaim_IsNotUsedToFindEmail(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        // The user id claim has the highest-precedence email claim type. The email lookup must use the
+        // next email claim instead.
+        var orgId = Guid.NewGuid();
+        ArrangeExternalLogin(sutProvider, orgId,
+            new SsoConfigurationData { AdditionalUserIdClaimTypes = JwtClaimTypes.Email },
+            new Claim(JwtClaimTypes.Email, "user-id@example.com"),
+            new Claim("mail", "mail@example.com"));
+
+        // Act
+        await Record.ExceptionAsync(() => sutProvider.Sut.ExternalCallback());
+
+        // Assert
+        var userRepository = sutProvider.GetDependency<IUserRepository>();
+        await userRepository.Received(1).GetBySsoUserAsync("user-id@example.com", orgId);
+        await userRepository.Received(1).GetByEmailAsync("mail@example.com");
+        await userRepository.DidNotReceive().GetByEmailAsync("user-id@example.com");
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_ExpectedAcrReturned_LooksUpSsoUser(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        ArrangeExternalLogin(sutProvider, orgId,
+            new SsoConfigurationData { ExpectedReturnAcrValue = "urn:expected:acr" },
+            new Claim(JwtClaimTypes.Subject, "sub-value"),
+            new Claim(JwtClaimTypes.AuthenticationContextClassReference, "urn:expected:acr"));
+
+        // Act
+        await Record.ExceptionAsync(() => sutProvider.Sut.ExternalCallback());
+
+        // Assert
+        await sutProvider.GetDependency<IUserRepository>().Received(1)
+            .GetBySsoUserAsync("sub-value", orgId);
+    }
+
+    [Theory]
+    [BitAutoData("urn:other:acr", "sub-value")]
+    [BitAutoData("urn:other:acr", null)]
+    public async Task ExternalCallback_UnexpectedAcrReturned_ThrowsAcrMissingOrInvalid(
+        string acr,
+        string? subject,
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        // With no user id claim, the error is still the acr error, so the acr check runs first.
+        var orgId = Guid.NewGuid();
+        var claims = new List<Claim> { new(JwtClaimTypes.AuthenticationContextClassReference, acr) };
+        if (subject != null)
+        {
+            claims.Add(new Claim(JwtClaimTypes.Subject, subject));
+        }
+
+        ArrangeExternalLogin(sutProvider, orgId,
+            new SsoConfigurationData { ExpectedReturnAcrValue = "urn:expected:acr" },
+            claims.ToArray());
+
+        // Act
+        var ex = await Assert.ThrowsAsync<Exception>(() => sutProvider.Sut.ExternalCallback());
+
+        // Assert
+        Assert.Equal("AcrMissingOrInvalid", ex.Message);
+        await sutProvider.GetDependency<IUserRepository>().DidNotReceiveWithAnyArgs()
+            .GetBySsoUserAsync(default!, default);
+    }
+
+    /// <summary>
+    /// Sets up an enabled SSO configuration for <paramref name="orgId"/>, and an external login for that
+    /// organization that carries <paramref name="claims"/>.
+    /// </summary>
+    private static void ArrangeExternalLogin(
+        SutProvider<AccountController> sutProvider,
+        Guid orgId,
+        SsoConfigurationData ssoConfigData,
+        params Claim[] claims)
+    {
+        var ssoConfig = new SsoConfig { OrganizationId = orgId, Enabled = true };
+        ssoConfig.SetData(ssoConfigData);
+        sutProvider.GetDependency<ISsoConfigRepository>().GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
+
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>(), Arg.Any<object?[]>())
+            .Returns(ci => (string)ci[0]!);
+
+        var properties = new AuthenticationProperties
+        {
+            Items =
+            {
+                ["scheme"] = orgId.ToString(),
+                ["return_url"] = "~/",
+                ["state"] = "state",
+                ["user_identifier"] = string.Empty,
+            },
+        };
+        var ticket = new AuthenticationTicket(
+            new ClaimsPrincipal(new ClaimsIdentity(claims, "External")),
+            properties,
+            AuthenticationSchemes.SsoExternalCookie);
+        SetupHttpContextWithAuth(sutProvider, AuthenticateResult.Success(ticket));
+    }
+
+    private static string UserIdClaimTypeFor(string key) => key switch
+    {
+        "sub" => JwtClaimTypes.Subject,
+        "nameid" => ClaimTypes.NameIdentifier,
+        _ => key,
+    };
+
+    private static Claim TransientNameIdentifier(string value)
+    {
+        var claim = new Claim(ClaimTypes.NameIdentifier, value);
+        claim.Properties[Saml2PropertyKeys.ClaimFormat] = Saml2NameIdFormats.Transient;
+        return claim;
+    }
+
     [Theory, BitAutoData]
     public async Task ExternalCallback_ExistingUser_OrgUserInvited_AllowsLogin(
         SutProvider<AccountController> sutProvider)
@@ -214,12 +473,12 @@ public class AccountControllerTest
         await authService.Received().SignInAsync(
             Arg.Any<HttpContext>(),
             Arg.Any<string?>(),
-            Arg.Any<ClaimsPrincipal>(),
+            Arg.Is<ClaimsPrincipal>(p => p.FindFirstValue(JwtClaimTypes.IdentityProvider) == orgId.ToString()),
             Arg.Any<AuthenticationProperties>());
 
         await authService.Received().SignOutAsync(
             Arg.Any<HttpContext>(),
-            AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme,
+            AuthenticationSchemes.SsoExternalCookie,
             Arg.Any<AuthenticationProperties>());
     }
 
@@ -286,7 +545,7 @@ public class AccountControllerTest
         // External auth cookie is cleared so retry attempts start fresh.
         await authService.Received(1).SignOutAsync(
             Arg.Any<HttpContext>(),
-            AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme,
+            AuthenticationSchemes.SsoExternalCookie,
             Arg.Any<AuthenticationProperties>());
 
         // Security invariant: no local auth session is established for an invited user.
@@ -423,12 +682,12 @@ public class AccountControllerTest
         await authService.Received().SignInAsync(
             Arg.Any<HttpContext>(),
             Arg.Any<string?>(),
-            Arg.Any<ClaimsPrincipal>(),
+            Arg.Is<ClaimsPrincipal>(p => p.FindFirstValue(JwtClaimTypes.IdentityProvider) == orgId.ToString()),
             Arg.Any<AuthenticationProperties>());
 
         await authService.Received().SignOutAsync(
             Arg.Any<HttpContext>(),
-            AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme,
+            AuthenticationSchemes.SsoExternalCookie,
             Arg.Any<AuthenticationProperties>());
     }
 
@@ -669,7 +928,7 @@ public class AccountControllerTest
         // Act
         var task = (Task<(User user, Organization organization, OrganizationUser orgUser)>)method.Invoke(sutProvider.Sut, new object[]
         {
-            orgId.ToString(),
+            orgId,
             providerUserId,
             claims,
             null!,
@@ -733,7 +992,7 @@ public class AccountControllerTest
         // Act + Assert
         var task = (Task<(User user, Organization organization, OrganizationUser orgUser)>)method.Invoke(sutProvider.Sut, new object[]
         {
-            orgId.ToString(),
+            orgId,
             providerUserId,
             claims,
             null!,
@@ -790,7 +1049,7 @@ public class AccountControllerTest
         // Act + Assert
         var task = (Task<(User user, Organization organization, OrganizationUser orgUser)>)method.Invoke(sutProvider.Sut, new object[]
         {
-            orgId.ToString(),
+            orgId,
             providerUserId,
             claims,
             null!,
@@ -805,6 +1064,212 @@ public class AccountControllerTest
         Assert.Equal(orgId, ex.OrganizationId);
         Assert.Equal("Org", ex.OrganizationDisplayName);
         Assert.Equal(email, ex.UserEmail);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_ExistingUserStagedWithPrivilegedControls_AtLimit_PromotesWithoutPrivilegedControls(
+        SutProvider<AccountController> sutProvider)
+    {
+        var orgId = Guid.NewGuid();
+        var email = "staged.user@example.com";
+        var existingUser = new User { Id = Guid.NewGuid(), Email = email, UsesKeyConnector = false };
+        var organization = new Organization { Id = orgId, Name = "Org", Seats = null };
+        var orgUser = BuildStagedOrgUserWithPrivilegedControls(orgId, email);
+        ArrangeStagedMember(sutProvider, organization, existingUser, orgUser, email);
+        var sendSeatNeededEmailCommand = ArrangePrivilegedControlsSeatUnavailable(
+            sutProvider, organization, new PrivilegedControlsSeatLimitReachedError());
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+
+        await Assert.ThrowsAsync<SsoAuthnStagedOrgUserRequiresInviteAcceptanceException>(
+            () => InvokeCreateUserAndOrgUserConditionallyAsync(sutProvider, orgId, email));
+
+        Received.InOrder(() =>
+        {
+            organizationUserRepository.ReplaceAsync(Arg.Is<OrganizationUser>(ou =>
+                ou.Id == orgUser.Id &&
+                ou.Status == OrganizationUserStatusType.Invited &&
+                !ou.AccessPam));
+            sendSeatNeededEmailCommand.RunAsync(organization, email);
+        });
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_NewUserStagedWithPrivilegedControls_AtLimit_ProvisionsWithoutPrivilegedControls(
+        SutProvider<AccountController> sutProvider)
+    {
+        var orgId = Guid.NewGuid();
+        var email = "staged.new.user@example.com";
+        var organization = new Organization { Id = orgId, Name = "Org", Seats = null };
+        var orgUser = BuildStagedOrgUserWithPrivilegedControls(orgId, email);
+        ArrangeStagedMember(sutProvider, organization, null, orgUser, email);
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(orgId, PolicyType.TwoFactorAuthentication)
+            .Returns(new PolicyStatus(orgId, PolicyType.TwoFactorAuthentication));
+        var sendSeatNeededEmailCommand = ArrangePrivilegedControlsSeatUnavailable(
+            sutProvider, organization, new PrivilegedControlsSeatLimitReachedError());
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+
+        await InvokeCreateUserAndOrgUserConditionallyAsync(sutProvider, orgId, email);
+
+        Received.InOrder(() =>
+        {
+            organizationUserRepository.ReplaceAsync(Arg.Is<OrganizationUser>(ou =>
+                ou.Id == orgUser.Id &&
+                ou.Status == OrganizationUserStatusType.Invited &&
+                !ou.AccessPam));
+            sendSeatNeededEmailCommand.RunAsync(organization, email);
+        });
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_ExistingUserStagedWithPrivilegedControls_ReservationFailed_PromotesWithoutPrivilegedControlsOrEmail(
+        SutProvider<AccountController> sutProvider)
+    {
+        var orgId = Guid.NewGuid();
+        var email = "staged.user@example.com";
+        var existingUser = new User { Id = Guid.NewGuid(), Email = email, UsesKeyConnector = false };
+        var organization = new Organization { Id = orgId, Name = "Org", Seats = null };
+        var orgUser = BuildStagedOrgUserWithPrivilegedControls(orgId, email);
+        ArrangeStagedMember(sutProvider, organization, existingUser, orgUser, email);
+        var sendSeatNeededEmailCommand = ArrangePrivilegedControlsSeatUnavailable(
+            sutProvider, organization, new PrivilegedControlsSeatReservationUnexpectedError());
+
+        await Assert.ThrowsAsync<SsoAuthnStagedOrgUserRequiresInviteAcceptanceException>(
+            () => InvokeCreateUserAndOrgUserConditionallyAsync(sutProvider, orgId, email));
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou =>
+                ou.Id == orgUser.Id &&
+                ou.Status == OrganizationUserStatusType.Invited &&
+                !ou.AccessPam));
+        await sendSeatNeededEmailCommand.DidNotReceiveWithAnyArgs().RunAsync(default!, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_NewUserStagedWithPrivilegedControls_ReservationFailed_ProvisionsWithoutPrivilegedControlsOrEmail(
+        SutProvider<AccountController> sutProvider)
+    {
+        var orgId = Guid.NewGuid();
+        var email = "staged.new.user@example.com";
+        var organization = new Organization { Id = orgId, Name = "Org", Seats = null };
+        var orgUser = BuildStagedOrgUserWithPrivilegedControls(orgId, email);
+        ArrangeStagedMember(sutProvider, organization, null, orgUser, email);
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(orgId, PolicyType.TwoFactorAuthentication)
+            .Returns(new PolicyStatus(orgId, PolicyType.TwoFactorAuthentication));
+        var sendSeatNeededEmailCommand = ArrangePrivilegedControlsSeatUnavailable(
+            sutProvider, organization, new PrivilegedControlsSeatReservationUnexpectedError());
+
+        await InvokeCreateUserAndOrgUserConditionallyAsync(sutProvider, orgId, email);
+
+        await sutProvider.GetDependency<IRegisterUserCommand>()
+            .Received(1)
+            .RegisterSSOAutoProvisionedUserAsync(Arg.Any<User>(), organization);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou => ou.Id == orgUser.Id && !ou.AccessPam));
+        await sendSeatNeededEmailCommand.DidNotReceiveWithAnyArgs().RunAsync(default!, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_ExistingUserStagedWithPrivilegedControls_InviteSendFails_RestoresPrivilegedControls(
+        SutProvider<AccountController> sutProvider)
+    {
+        var orgId = Guid.NewGuid();
+        var email = "staged.user@example.com";
+        var existingUser = new User { Id = Guid.NewGuid(), Email = email, UsesKeyConnector = false };
+        var organization = new Organization { Id = orgId, Name = "Org", Seats = null };
+        var orgUser = BuildStagedOrgUserWithPrivilegedControls(orgId, email);
+        ArrangeStagedMember(sutProvider, organization, existingUser, orgUser, email);
+        var sendSeatNeededEmailCommand = ArrangePrivilegedControlsSeatUnavailable(
+            sutProvider, organization, new PrivilegedControlsSeatLimitReachedError());
+        sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
+            .SendInvitesAsync(Arg.Any<SendInvitesRequest>())
+            .ThrowsAsync(new InvalidOperationException("mail failure"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => InvokeCreateUserAndOrgUserConditionallyAsync(sutProvider, orgId, email));
+
+        // The promotion is saved and then reverted; both saves see the same instance, which ends back as Staged with access.
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(2)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou =>
+                ou.Id == orgUser.Id &&
+                ou.Status == OrganizationUserStatusType.Staged &&
+                ou.AccessPam));
+        await sendSeatNeededEmailCommand.DidNotReceiveWithAnyArgs().RunAsync(default!, default!);
+    }
+
+    private static ISendPrivilegedControlsSeatNeededEmailCommand ArrangePrivilegedControlsSeatUnavailable(
+        SutProvider<AccountController> sutProvider,
+        Organization organization,
+        CommandError error)
+    {
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(new PrivilegedControlsSeatReservationResult(error));
+        return sutProvider.GetDependency<ISendPrivilegedControlsSeatNeededEmailCommand>();
+    }
+
+    private static OrganizationUser BuildStagedOrgUserWithPrivilegedControls(Guid orgId, string email) =>
+        new()
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            UserId = null,
+            Email = email,
+            Status = OrganizationUserStatusType.Staged,
+            Type = OrganizationUserType.User,
+            AccessPam = true,
+        };
+
+    private static void ArrangeStagedMember(
+        SutProvider<AccountController> sutProvider,
+        Organization organization,
+        User? existingUser,
+        OrganizationUser stagedOrgUser,
+        string email)
+    {
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>(), Arg.Any<object?[]>())
+            .Returns(ci => (string)ci[0]!);
+        sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(email).Returns(existingUser);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        if (existingUser != null)
+        {
+            sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(existingUser.Id)
+                .Returns(new List<OrganizationUser>());
+        }
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationEmailAsync(organization.Id, email).Returns(stagedOrgUser);
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, Arg.Any<int>())
+            .Returns(new PrivilegedControlsSeatReservationResult());
+    }
+
+    private static async Task InvokeCreateUserAndOrgUserConditionallyAsync(
+        SutProvider<AccountController> sutProvider, Guid orgId, string email)
+    {
+        var claims = new[]
+        {
+            new Claim(JwtClaimTypes.Email, email),
+            new Claim(JwtClaimTypes.Name, "Staged User")
+        } as IEnumerable<Claim>;
+
+        var method = typeof(AccountController).GetMethod(
+            "CreateUserAndOrgUserConditionallyAsync",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        await (Task)method.Invoke(sutProvider.Sut, new object[]
+        {
+            orgId,
+            "provider-user-id",
+            claims,
+            null!,
+            new SsoConfigurationData()
+        })!;
     }
 
     [Theory, BitAutoData]
