@@ -29,7 +29,7 @@ namespace Bit.Api.IntegrationTest.Auth.TwoFactor;
 /// Login requests identify their device the way shipped clients do: the <c>Device-Identifier</c> header, a
 /// <c>DeviceIdentifier</c> body field, or both.
 /// </remarks>
-public class TwoFactorControllerEmailLoginSendTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class TwoFactorEmailLoginSendTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private const string DeviceIdentifier = "two-factor-email-device";
     private const string OtherDeviceIdentifier = "two-factor-email-other-device";
@@ -47,7 +47,7 @@ public class TwoFactorControllerEmailLoginSendTests : IClassFixture<ApiApplicati
 
     private string _userEmail = null!;
 
-    public TwoFactorControllerEmailLoginSendTests(ApiApplicationFactory factory)
+    public TwoFactorEmailLoginSendTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         SubstituteTwoFactorProviderServices(_factory);

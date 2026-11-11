@@ -19,7 +19,7 @@ namespace Bit.Api.IntegrationTest.Auth.EmergencyAccess;
 /// Covers the grantee setting a new master password on the grantor's account after an approved takeover
 /// recovery.
 /// </summary>
-public class EmergencyAccessControllerTakeoverTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class EmergencyAccessTakeoverTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private static readonly string _masterKeyWrappedUserKey =
         "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
@@ -40,7 +40,7 @@ public class EmergencyAccessControllerTakeoverTests : IClassFixture<ApiApplicati
     private string _granteeEmail = null!;
     private Guid _emergencyAccessId;
 
-    public EmergencyAccessControllerTakeoverTests(ApiApplicationFactory factory)
+    public EmergencyAccessTakeoverTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         _factory.SubstituteService<IPushNotificationService>(_ => { });
