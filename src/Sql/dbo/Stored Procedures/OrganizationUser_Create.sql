@@ -17,7 +17,8 @@
     @AccessPam BIT = 0,
     @V2UpgradeToken VARCHAR(MAX) = NULL,
     @InviteReminderDueDate DATETIME2(7) = NULL,
-    @InviteRemindersSentCount TINYINT = NULL
+    @InviteRemindersSentCount TINYINT = NULL,
+    @ExternalName NVARCHAR(300) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -42,7 +43,8 @@ BEGIN
         [AccessPam],
         [V2UpgradeToken],
         [InviteReminderDueDate],
-        [InviteRemindersSentCount]
+        [InviteRemindersSentCount],
+        [ExternalName]
     )
     VALUES
     (
@@ -64,6 +66,7 @@ BEGIN
         @AccessPam,
         @V2UpgradeToken,
         @InviteReminderDueDate,
-        @InviteRemindersSentCount
+        @InviteRemindersSentCount,
+        @ExternalName
     )
 END

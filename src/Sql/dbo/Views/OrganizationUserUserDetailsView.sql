@@ -20,7 +20,8 @@ SELECT
     CASE WHEN U.[MasterPassword] IS NOT NULL THEN 1 ELSE 0 END AS HasMasterPassword,
     OU.[RevocationReason],
     OU.[CreationDate],
-    OU.[AccessPam]
+    OU.[AccessPam],
+    OU.[ExternalName]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN
