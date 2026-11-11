@@ -21,7 +21,7 @@ using static Bit.Identity.IntegrationTest.Helpers.SsoLoginTestHelpers;
 
 namespace Bit.Identity.IntegrationTest.TokenEndpoint.DecryptionOptions;
 
-public class DecryptionOptionsLoginTrustedDeviceTests
+public class SsoLoginTrustedDeviceDecryptionOptionTests
 {
     [Fact]
     public async Task SsoLogin_TrustedDeviceEncryption_ReturnsOptions()

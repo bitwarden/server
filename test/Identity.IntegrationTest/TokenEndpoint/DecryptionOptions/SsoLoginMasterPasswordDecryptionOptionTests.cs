@@ -10,7 +10,7 @@ using static Bit.Identity.IntegrationTest.Helpers.SsoLoginTestHelpers;
 
 namespace Bit.Identity.IntegrationTest.TokenEndpoint.DecryptionOptions;
 
-public class DecryptionOptionsLoginMasterPasswordTests
+public class SsoLoginMasterPasswordDecryptionOptionTests
 {
     [Fact]
     public async Task Test_MasterPassword_DecryptionType()

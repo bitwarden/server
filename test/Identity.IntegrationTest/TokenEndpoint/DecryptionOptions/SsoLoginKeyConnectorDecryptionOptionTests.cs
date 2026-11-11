@@ -8,7 +8,7 @@ using static Bit.Identity.IntegrationTest.Helpers.SsoLoginTestHelpers;
 
 namespace Bit.Identity.IntegrationTest.TokenEndpoint.DecryptionOptions;
 
-public class DecryptionOptionsLoginKeyConnectorTests
+public class SsoLoginKeyConnectorDecryptionOptionTests
 {
     [Fact]
     public async Task SsoLogin_KeyConnector_ReturnsOptions()
