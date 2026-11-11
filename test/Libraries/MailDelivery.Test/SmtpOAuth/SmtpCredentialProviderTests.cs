@@ -55,7 +55,7 @@ public class SmtpCredentialProviderTests
     public async Task InvalidateAsync_NonOAuth2Credentials_DoesNotThrow()
     {
         _options.Smtp.AuthType = SmtpAuthType.MicrosoftOAuth;
-        _options.Smtp.Username = "smtp-user@example.com";
+        _options.Smtp.OutboundMailbox = "smtp-user@example.com";
         _options.Smtp.OAuth.TokenEndpoint = "https://login.microsoftonline.com/tenant-id/oauth2/v2.0/token";
         _options.Smtp.OAuth.ClientId = "client-id";
         _options.Smtp.OAuth.ClientSecret = "client-secret";
@@ -69,7 +69,7 @@ public class SmtpCredentialProviderTests
     public void Constructor_MicrosoftOAuth_DoesNotThrow()
     {
         _options.Smtp.AuthType = SmtpAuthType.MicrosoftOAuth;
-        _options.Smtp.Username = "smtp-user@example.com";
+        _options.Smtp.OutboundMailbox = "smtp-user@example.com";
         _options.Smtp.OAuth.TokenEndpoint = "https://login.microsoftonline.com/tenant-id/oauth2/v2.0/token";
         _options.Smtp.OAuth.ClientId = "client-id";
         _options.Smtp.OAuth.ClientSecret = "client-secret";
@@ -84,7 +84,7 @@ public class SmtpCredentialProviderTests
     public void Constructor_CustomOAuth_DoesNotThrow()
     {
         _options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
-        _options.Smtp.Username = "smtp-user@example.com";
+        _options.Smtp.OutboundMailbox = "smtp-user@example.com";
         _options.Smtp.OAuth.TokenEndpoint = "https://auth.example.com/oauth2/token";
         _options.Smtp.OAuth.ClientId = "client-id";
         _options.Smtp.OAuth.ClientSecret = "client-secret";
@@ -99,7 +99,7 @@ public class SmtpCredentialProviderTests
     public async Task InvalidateAsync_OAuth2Credentials_NextGetCredentialsFetchesNewToken()
     {
         _options.Smtp.AuthType = SmtpAuthType.MicrosoftOAuth;
-        _options.Smtp.Username = "smtp-user@example.com";
+        _options.Smtp.OutboundMailbox = "smtp-user@example.com";
         _options.Smtp.OAuth.TokenEndpoint = "https://login.microsoftonline.com/tenant-id/oauth2/v2.0/token";
         _options.Smtp.OAuth.ClientId = "client-id";
         _options.Smtp.OAuth.ClientSecret = "client-secret";

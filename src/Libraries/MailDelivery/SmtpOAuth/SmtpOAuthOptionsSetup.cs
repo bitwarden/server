@@ -90,9 +90,9 @@ internal sealed class SmtpOAuthOptionsSetup :
 
     private static void AddClientCredentialErrors(MailDeliveryOptions.SmtpOptions smtp, List<string> errors)
     {
-        if (string.IsNullOrWhiteSpace(smtp.Username))
+        if (string.IsNullOrWhiteSpace(smtp.OutboundMailbox))
         {
-            errors.Add($"Smtp:Username (the sending mailbox) is required when Smtp:AuthType is {smtp.AuthType}.");
+            errors.Add($"Smtp:OutboundMailbox (the sending mailbox) is required when Smtp:AuthType is {smtp.AuthType}.");
         }
         if (string.IsNullOrWhiteSpace(smtp.OAuth.ClientId))
         {
