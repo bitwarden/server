@@ -18,7 +18,7 @@ using NSubstitute;
 using Xunit;
 using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
-namespace Bit.Api.IntegrationTest.Auth.SsoJitProvisioning;
+namespace Bit.Api.IntegrationTest.Auth.SsoJitProvisionFinish;
 
 public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
