@@ -232,7 +232,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
             IncludeCollections = includeCollections
         };
 
-        if ((await _authorizationService.AuthorizeAsync(User, new ManageUsersRequirement())).Succeeded)
+        if ((await _authorizationService.AuthorizeAsync(User, new ManageUsersRequirement())).Succeeded ||
+            (await _authorizationService.AuthorizeAsync(User, new AccessReportsRequirement())).Succeeded)
         {
             return GetResultListResponseModel(await _organizationUserUserDetailsQuery.Get(request));
         }
