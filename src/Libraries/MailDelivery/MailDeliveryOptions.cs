@@ -128,6 +128,13 @@ public sealed class MailDeliveryOptions
         public string? Password { get; set; }
 
         /// <summary>
+        /// OAuth-mode mailbox identity sent as the XOAUTH2 user to <see cref="SmtpAuthType.MicrosoftOAuth"/> and
+        /// <see cref="SmtpAuthType.CustomOAuth"/> servers. Distinct from <see cref="Username"/>, which is the
+        /// Basic-auth credential; this is not a reuse of <see cref="Username"/> for OAuth mailbox identity.
+        /// </summary>
+        public string? OutboundMailbox { get; set; }
+
+        /// <summary>
         /// Accept the server certificate without validation.
         /// </summary>
         public bool TrustServer { get; set; }
