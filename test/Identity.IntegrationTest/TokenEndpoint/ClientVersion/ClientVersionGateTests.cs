@@ -7,6 +7,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Constants;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using static Bit.Identity.IntegrationTest.Helpers.TokenEndpointTestHelpers;
 
 namespace Bit.Identity.IntegrationTest.TokenEndpoint.ClientVersion;
 
@@ -135,16 +136,6 @@ public class ClientVersionGateTests : IClassFixture<IdentityApplicationFactory>
             });
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-    }
-
-    private void ReinitializeDbForTests(IdentityApplicationFactory factory)
-    {
-        var databaseContext = factory.GetDatabaseContext();
-        databaseContext.Policies.RemoveRange(databaseContext.Policies);
-        databaseContext.OrganizationUsers.RemoveRange(databaseContext.OrganizationUsers);
-        databaseContext.Organizations.RemoveRange(databaseContext.Organizations);
-        databaseContext.Users.RemoveRange(databaseContext.Users);
-        databaseContext.SaveChanges();
     }
 
     private static void NormalizeEncryptedStrings(RegisterFinishRequestModel requestModel)
