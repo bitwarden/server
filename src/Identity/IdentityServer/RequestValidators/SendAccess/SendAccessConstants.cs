@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Auth.Identity.TokenProviders;
+using Bit.Core.Context;
 using Duende.IdentityServer.Validation;
 
 namespace Bit.Identity.IdentityServer.RequestValidators.SendAccess;
@@ -72,6 +73,14 @@ public static class SendAccessConstants
         /// Represents the status indicating that both email and OTP are required, and the OTP has been sent.
         /// </summary>
         public const string EmailAndOtpRequired = "email_and_otp_required";
+        /// <summary>
+        /// The <see cref="RequestHeaderNames.DeviceIdentifier"/> header is missing from the request.
+        /// </summary>
+        public const string DeviceIdentifierRequired = "device_identifier_required";
+        /// <summary>
+        /// The <see cref="RequestHeaderNames.DeviceIdentifier"/> header is present but not a valid device identifier.
+        /// </summary>
+        public const string DeviceIdentifierInvalid = "device_identifier_invalid";
     }
 
     /// <summary>
@@ -84,9 +93,9 @@ public static class SendAccessConstants
         public const string TokenProviderName = "send_access";
         public const string Purpose = "email_otp";
         /// <summary>
-        /// This will be send_id {0} and email {1}
+        /// This will be send_id {0}, email {1}, and the hashed device identifier {2}
         /// </summary>
-        public const string TokenUniqueIdentifier = "{0}_{1}";
+        public const string TokenUniqueIdentifier = "{0}_{1}_{2}";
     }
 
     public static class OtpEmail
