@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Bit.Identity.IntegrationTest.Controllers.Accounts;
 
-public class RegisterVerificationEmailClickedTests
+public class AccountsControllerRegisterVerificationEmailClickedTests
 {
     [Theory, BitAutoData]
     public async Task PostRegisterVerificationEmailClicked_Success(

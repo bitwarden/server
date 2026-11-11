@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Bit.Identity.IntegrationTest.Controllers.Accounts;
 
-public class RegisterFinishSalesAssistedTests
+public class AccountsControllerRegisterFinishSalesAssistedTests
 {
     [Theory, BitAutoData]
     public async Task RegisterViaSalesAssistedToken_WithDisabledRegistration_Succeeds(

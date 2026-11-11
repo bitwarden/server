@@ -17,7 +17,7 @@ using static Bit.Identity.IntegrationTest.Helpers.AccountsTestHelpers;
 
 namespace Bit.Identity.IntegrationTest.Controllers.Accounts;
 
-public class RegisterFinishOpenOrgInviteTests
+public class AccountsControllerRegisterFinishOpenOrgInviteTests
 {
     [Theory, BitAutoData]
     public async Task RegistrationWithEmailVerification_WithOpenOrgInviteAndOpenRegistrationDisabled_Succeeds(
