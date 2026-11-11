@@ -126,7 +126,7 @@ public class SmtpOAuthOptionsSetupTests
         options.Smtp.OAuth.ClientId = "";
         options.Smtp.OAuth.ClientSecret = "  ";
         options.Smtp.OAuth.Scope = "";
-        options.Smtp.Username = "sender@example.com";
+        options.Smtp.OutboundMailbox = "sender@example.com";
 
         _sut.PostConfigure(name: null, options);
         var result = _sut.Validate(name: null, options);
@@ -142,7 +142,7 @@ public class SmtpOAuthOptionsSetupTests
     {
         var options = new MailDeliveryOptions();
         options.Smtp.AuthType = SmtpAuthType.MicrosoftOAuth;
-        options.Smtp.Username = "sender@example.com";
+        options.Smtp.OutboundMailbox = "sender@example.com";
         options.Smtp.OAuth.TokenEndpoint = "https://login.microsoftonline.com/test-tenant/oauth2/v2.0/token";
         options.Smtp.OAuth.ClientId = "client-id";
         options.Smtp.OAuth.ClientSecret = "client-secret";
@@ -164,7 +164,7 @@ public class SmtpOAuthOptionsSetupTests
         Assert.Collection(
             result.Failures!,
             failure => Assert.Contains("Smtp:TenantId or Smtp:OAuth:TokenEndpoint", failure),
-            failure => Assert.Contains("Smtp:Username", failure),
+            failure => Assert.Contains("Smtp:OutboundMailbox", failure),
             failure => Assert.Contains("Smtp:ClientId or Smtp:OAuth:ClientId", failure),
             failure => Assert.Contains("Smtp:ClientSecret or Smtp:OAuth:ClientSecret", failure));
     }
@@ -191,7 +191,7 @@ public class SmtpOAuthOptionsSetupTests
         options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
         options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
         options.Smtp.OAuth.Scope = "custom-scope";
-        options.Smtp.Username = "sender@example.com";
+        options.Smtp.OutboundMailbox = "sender@example.com";
         options.Smtp.ClientId = "shorthand-client-id";
         options.Smtp.ClientSecret = "shorthand-client-secret";
         options.Smtp.OAuth.ClientId = "";
@@ -239,7 +239,7 @@ public class SmtpOAuthOptionsSetupTests
     {
         var options = new MailDeliveryOptions();
         options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
-        options.Smtp.Username = "sender@example.com";
+        options.Smtp.OutboundMailbox = "sender@example.com";
         options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
         options.Smtp.OAuth.Scope = "custom-scope";
         options.Smtp.OAuth.ClientId = "client-id";
@@ -264,7 +264,7 @@ public class SmtpOAuthOptionsSetupTests
             result.Failures!,
             failure => Assert.Contains("Smtp:OAuth:TokenEndpoint", failure),
             failure => Assert.Contains("Smtp:OAuth:Scope", failure),
-            failure => Assert.Contains("Smtp:Username", failure),
+            failure => Assert.Contains("Smtp:OutboundMailbox", failure),
             failure => Assert.Contains("Smtp:ClientId or Smtp:OAuth:ClientId", failure),
             failure => Assert.Contains("Smtp:ClientSecret or Smtp:OAuth:ClientSecret", failure));
     }
@@ -278,7 +278,7 @@ public class SmtpOAuthOptionsSetupTests
     {
         var options = new MailDeliveryOptions();
         options.Smtp.AuthType = authType;
-        options.Smtp.Username = "sender@example.com";
+        options.Smtp.OutboundMailbox = "sender@example.com";
         options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
         options.Smtp.OAuth.Scope = "custom-scope";
         options.Smtp.OAuth.ClientId = "client-id";
@@ -301,7 +301,7 @@ public class SmtpOAuthOptionsSetupTests
     {
         var options = new MailDeliveryOptions();
         options.Smtp.AuthType = authType;
-        options.Smtp.Username = "sender@example.com";
+        options.Smtp.OutboundMailbox = "sender@example.com";
         options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
         options.Smtp.OAuth.Scope = "custom-scope";
         options.Smtp.OAuth.ClientId = "client-id";
@@ -325,7 +325,7 @@ public class SmtpOAuthOptionsSetupTests
     {
         var options = new MailDeliveryOptions();
         options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
-        options.Smtp.Username = "sender@example.com";
+        options.Smtp.OutboundMailbox = "sender@example.com";
         options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
         options.Smtp.OAuth.Scope = "custom-scope";
         options.Smtp.OAuth.ClientId = "client-id";
@@ -361,11 +361,11 @@ public class SmtpOAuthOptionsSetupTests
     [InlineData(SmtpAuthType.CustomOAuth, null)]
     [InlineData(SmtpAuthType.CustomOAuth, "")]
     [InlineData(SmtpAuthType.CustomOAuth, "   ")]
-    public void Validate_OAuthMissingUsername_FailsWithUsernameMessage(SmtpAuthType authType, string? username)
+    public void Validate_OAuthMissingOutboundMailbox_FailsWithOutboundMailboxMessage(SmtpAuthType authType, string? outboundMailbox)
     {
         var options = new MailDeliveryOptions();
         options.Smtp.AuthType = authType;
-        options.Smtp.Username = username;
+        options.Smtp.OutboundMailbox = outboundMailbox;
         options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
         options.Smtp.OAuth.Scope = "custom-scope";
         options.Smtp.OAuth.ClientId = "client-id";
@@ -376,7 +376,29 @@ public class SmtpOAuthOptionsSetupTests
         Assert.False(result.Succeeded);
         var failure = Assert.Single(result.Failures!);
         Assert.Equal(
-            $"Smtp:Username (the sending mailbox) is required when Smtp:AuthType is {authType}.",
+            $"Smtp:OutboundMailbox (the sending mailbox) is required when Smtp:AuthType is {authType}.",
+            failure);
+    }
+
+    [Theory]
+    [InlineData(SmtpAuthType.MicrosoftOAuth)]
+    [InlineData(SmtpAuthType.CustomOAuth)]
+    public void Validate_OAuthWithUsernameSetButOutboundMailboxMissing_FailsWithOutboundMailboxMessage(SmtpAuthType authType)
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = authType;
+        options.Smtp.Username = "sender@example.com";
+        options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
+        options.Smtp.OAuth.Scope = "custom-scope";
+        options.Smtp.OAuth.ClientId = "client-id";
+        options.Smtp.OAuth.ClientSecret = "client-secret";
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.False(result.Succeeded);
+        var failure = Assert.Single(result.Failures!);
+        Assert.Equal(
+            $"Smtp:OutboundMailbox (the sending mailbox) is required when Smtp:AuthType is {authType}.",
             failure);
     }
 }
