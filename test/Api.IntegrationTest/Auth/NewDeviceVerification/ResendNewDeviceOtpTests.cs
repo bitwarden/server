@@ -17,7 +17,7 @@ namespace Bit.Api.IntegrationTest.Auth.NewDeviceVerification;
 /// the real service and distributed cache rather than a substitute. <see cref="SubstitutedTwoFactorEmailServiceTests"/>
 /// substitutes <see cref="ITwoFactorEmailService"/>, so it can only assert the controller's wiring.
 /// </summary>
-public class AccountsControllerResendNewDeviceOtpTests
+public class ResendNewDeviceOtpTests
 {
     private const string RequestDeviceIdentifier = "request-device-identifier";
     private const string PendingDeviceIdentifier = "pending-device-identifier";
