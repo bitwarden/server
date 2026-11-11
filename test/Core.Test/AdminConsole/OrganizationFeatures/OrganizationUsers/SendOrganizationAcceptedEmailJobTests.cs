@@ -1,10 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -31,8 +30,7 @@ public class SendOrganizationAcceptedEmailJobTests
         SutProvider<SendOrganizationAcceptedEmailJob> sutProvider,
         OrganizationUser orgUser,
         Organization organization,
-        User user,
-        OrganizationUserUserDetails admin)
+        User user)
     {
         // Arrange
         orgUser.Status = OrganizationUserStatusType.Accepted;
@@ -42,20 +40,14 @@ public class SendOrganizationAcceptedEmailJobTests
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUser.Id).Returns(orgUser);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).Returns(user);
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByMinimumRoleAsync(organization.Id, OrganizationUserType.Admin)
-            .Returns([admin]);
 
         // Act
         await sutProvider.Sut.Execute(CreateContext(orgUser.Id));
 
         // Assert
-        await sutProvider.GetDependency<IMailService>()
+        await sutProvider.GetDependency<ISendOrganizationAcceptedEmailCommand>()
             .Received(1)
-            .SendOrganizationAcceptedEmailAsync(
-                organization,
-                user.Email,
-                Arg.Is<IEnumerable<string>>(emails => emails.Contains(admin.Email)));
+            .SendAsync(organization, user.Email);
     }
 
     [Theory]
@@ -75,9 +67,9 @@ public class SendOrganizationAcceptedEmailJobTests
         await sutProvider.Sut.Execute(CreateContext(orgUser.Id));
 
         // Assert
-        await sutProvider.GetDependency<IMailService>()
+        await sutProvider.GetDependency<ISendOrganizationAcceptedEmailCommand>()
             .DidNotReceiveWithAnyArgs()
-            .SendOrganizationAcceptedEmailAsync(default!, default!, default!);
+            .SendAsync(default!, default!);
     }
 
     [Theory, BitAutoData]
@@ -94,8 +86,8 @@ public class SendOrganizationAcceptedEmailJobTests
         await sutProvider.Sut.Execute(CreateContext(organizationUserId));
 
         // Assert
-        await sutProvider.GetDependency<IMailService>()
+        await sutProvider.GetDependency<ISendOrganizationAcceptedEmailCommand>()
             .DidNotReceiveWithAnyArgs()
-            .SendOrganizationAcceptedEmailAsync(default!, default!, default!);
+            .SendAsync(default!, default!);
     }
 }

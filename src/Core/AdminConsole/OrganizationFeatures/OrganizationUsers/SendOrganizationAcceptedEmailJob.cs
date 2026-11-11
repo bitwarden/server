@@ -1,7 +1,7 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.Enums;
 using Bit.Core.Jobs;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Quartz;
 
@@ -14,7 +14,7 @@ public class SendOrganizationAcceptedEmailJob(
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationRepository organizationRepository,
     IUserRepository userRepository,
-    IMailService mailService,
+    ISendOrganizationAcceptedEmailCommand sendOrganizationAcceptedEmailCommand,
     ILogger<SendOrganizationAcceptedEmailJob> logger)
     : BaseJob(logger)
 {
@@ -37,11 +37,6 @@ public class SendOrganizationAcceptedEmailJob(
             return;
         }
 
-        var admins = await organizationUserRepository.GetManyByMinimumRoleAsync(organization.Id, OrganizationUserType.Admin);
-        var adminEmails = admins.Select(a => a.Email).Distinct().ToList();
-        if (adminEmails.Count > 0)
-        {
-            await mailService.SendOrganizationAcceptedEmailAsync(organization, user.Email, adminEmails);
-        }
+        await sendOrganizationAcceptedEmailCommand.SendAsync(organization, user.Email);
     }
 }

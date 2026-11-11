@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -11,7 +12,6 @@ using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -58,15 +58,11 @@ public class NotifyAdminsOfAcceptedUserCommandTests
     private static async Task AssertAcceptedEmailSentAsync(
         SutProvider<NotifyAdminsOfAcceptedUserCommand> sutProvider,
         Organization organization,
-        User user,
-        OrganizationUserUserDetails admin)
+        User user)
     {
-        await sutProvider.GetDependency<IMailService>()
+        await sutProvider.GetDependency<ISendOrganizationAcceptedEmailCommand>()
             .Received(1)
-            .SendOrganizationAcceptedEmailAsync(
-                organization,
-                user.Email,
-                Arg.Is<IEnumerable<string>>(emails => emails.Contains(admin.Email)));
+            .SendAsync(organization, user.Email);
     }
 
     private static async Task AssertNoPushOrScheduledEmailAsync(SutProvider<NotifyAdminsOfAcceptedUserCommand> sutProvider)
@@ -101,9 +97,9 @@ public class NotifyAdminsOfAcceptedUserCommandTests
             Arg.Is<ITrigger>(t => t.StartTimeUtc > DateTimeOffset.UtcNow),
             Arg.Any<CancellationToken>());
 
-        await sutProvider.GetDependency<IMailService>()
+        await sutProvider.GetDependency<ISendOrganizationAcceptedEmailCommand>()
             .DidNotReceiveWithAnyArgs()
-            .SendOrganizationAcceptedEmailAsync(default!, default!, default!);
+            .SendAsync(default!, default!);
     }
 
     [Theory]
@@ -133,7 +129,7 @@ public class NotifyAdminsOfAcceptedUserCommandTests
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
             .PushAsync(Arg.Any<PushNotification<AutoConfirmPushNotification>>());
-        await AssertAcceptedEmailSentAsync(sutProvider, organization, user, admin);
+        await AssertAcceptedEmailSentAsync(sutProvider, organization, user);
         await scheduler.DidNotReceiveWithAnyArgs()
             .ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>());
     }
@@ -144,22 +140,17 @@ public class NotifyAdminsOfAcceptedUserCommandTests
         SutProvider<NotifyAdminsOfAcceptedUserCommand> sutProvider,
         Organization organization,
         OrganizationUser orgUser,
-        User user,
-        OrganizationUserUserDetails admin)
+        User user)
     {
         // Arrange
         var scheduler = SetupPassingGuards(sutProvider, organization, orgUser);
         scheduler.IsStarted.Returns(false);
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByMinimumRoleAsync(organization.Id, OrganizationUserType.Admin)
-            .Returns([admin]);
-
         // Act
         await sutProvider.Sut.NotifyAsync(organization, orgUser, user);
 
         // Assert
-        await AssertAcceptedEmailSentAsync(sutProvider, organization, user, admin);
+        await AssertAcceptedEmailSentAsync(sutProvider, organization, user);
         await scheduler.DidNotReceiveWithAnyArgs()
             .ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>());
     }
@@ -170,22 +161,17 @@ public class NotifyAdminsOfAcceptedUserCommandTests
         SutProvider<NotifyAdminsOfAcceptedUserCommand> sutProvider,
         Organization organization,
         OrganizationUser orgUser,
-        User user,
-        OrganizationUserUserDetails admin)
+        User user)
     {
         // Arrange
         var scheduler = SetupPassingGuards(sutProvider, organization, orgUser);
         scheduler.IsShutdown.Returns(true);
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByMinimumRoleAsync(organization.Id, OrganizationUserType.Admin)
-            .Returns([admin]);
-
         // Act
         await sutProvider.Sut.NotifyAsync(organization, orgUser, user);
 
         // Assert
-        await AssertAcceptedEmailSentAsync(sutProvider, organization, user, admin);
+        await AssertAcceptedEmailSentAsync(sutProvider, organization, user);
         await scheduler.DidNotReceiveWithAnyArgs()
             .ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>());
     }
@@ -196,8 +182,7 @@ public class NotifyAdminsOfAcceptedUserCommandTests
         SutProvider<NotifyAdminsOfAcceptedUserCommand> sutProvider,
         Organization organization,
         OrganizationUser orgUser,
-        User user,
-        OrganizationUserUserDetails admin)
+        User user)
     {
         // Arrange
         var scheduler = SetupPassingGuards(sutProvider, organization, orgUser);
@@ -208,15 +193,11 @@ public class NotifyAdminsOfAcceptedUserCommandTests
             .ApplicationStopping
             .Returns(stoppingTokenSource.Token);
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByMinimumRoleAsync(organization.Id, OrganizationUserType.Admin)
-            .Returns([admin]);
-
         // Act
         await sutProvider.Sut.NotifyAsync(organization, orgUser, user);
 
         // Assert
-        await AssertAcceptedEmailSentAsync(sutProvider, organization, user, admin);
+        await AssertAcceptedEmailSentAsync(sutProvider, organization, user);
         await scheduler.DidNotReceiveWithAnyArgs()
             .ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>());
     }
@@ -472,8 +453,7 @@ public class NotifyAdminsOfAcceptedUserCommandTests
         SutProvider<NotifyAdminsOfAcceptedUserCommand> sutProvider,
         Organization organization,
         OrganizationUser orgUser,
-        User user,
-        OrganizationUserUserDetails admin)
+        User user)
     {
         // Arrange
         orgUser.Type = OrganizationUserType.User;
@@ -482,15 +462,11 @@ public class NotifyAdminsOfAcceptedUserCommandTests
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns((OrganizationAbility?)null);
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByMinimumRoleAsync(organization.Id, OrganizationUserType.Admin)
-            .Returns([admin]);
-
         // Act
         await sutProvider.Sut.NotifyAsync(organization, orgUser, user);
 
         // Assert
-        await AssertAcceptedEmailSentAsync(sutProvider, organization, user, admin);
+        await AssertAcceptedEmailSentAsync(sutProvider, organization, user);
         await AssertNoPushOrScheduledEmailAsync(sutProvider);
     }
 
@@ -500,8 +476,7 @@ public class NotifyAdminsOfAcceptedUserCommandTests
         SutProvider<NotifyAdminsOfAcceptedUserCommand> sutProvider,
         Organization organization,
         OrganizationUser orgUser,
-        User user,
-        OrganizationUserUserDetails admin)
+        User user)
     {
         // Arrange
         orgUser.Type = OrganizationUserType.User;
@@ -510,15 +485,11 @@ public class NotifyAdminsOfAcceptedUserCommandTests
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility { UseAutomaticUserConfirmation = false });
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByMinimumRoleAsync(organization.Id, OrganizationUserType.Admin)
-            .Returns([admin]);
-
         // Act
         await sutProvider.Sut.NotifyAsync(organization, orgUser, user);
 
         // Assert
-        await AssertAcceptedEmailSentAsync(sutProvider, organization, user, admin);
+        await AssertAcceptedEmailSentAsync(sutProvider, organization, user);
         await AssertNoPushOrScheduledEmailAsync(sutProvider);
     }
 
@@ -528,8 +499,7 @@ public class NotifyAdminsOfAcceptedUserCommandTests
         SutProvider<NotifyAdminsOfAcceptedUserCommand> sutProvider,
         Organization organization,
         OrganizationUser orgUser,
-        User user,
-        OrganizationUserUserDetails admin)
+        User user)
     {
         // Arrange
         orgUser.Type = OrganizationUserType.User;
@@ -542,15 +512,11 @@ public class NotifyAdminsOfAcceptedUserCommandTests
             .RunAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
             .Returns(disabledPolicy);
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByMinimumRoleAsync(organization.Id, OrganizationUserType.Admin)
-            .Returns([admin]);
-
         // Act
         await sutProvider.Sut.NotifyAsync(organization, orgUser, user);
 
         // Assert
-        await AssertAcceptedEmailSentAsync(sutProvider, organization, user, admin);
+        await AssertAcceptedEmailSentAsync(sutProvider, organization, user);
         await AssertNoPushOrScheduledEmailAsync(sutProvider);
     }
 
@@ -563,22 +529,17 @@ public class NotifyAdminsOfAcceptedUserCommandTests
         SutProvider<NotifyAdminsOfAcceptedUserCommand> sutProvider,
         Organization organization,
         OrganizationUser orgUser,
-        User user,
-        OrganizationUserUserDetails admin)
+        User user)
     {
         // Arrange
         SetupPassingGuards(sutProvider, organization, orgUser);
         orgUser.Type = privilegedType;
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByMinimumRoleAsync(organization.Id, OrganizationUserType.Admin)
-            .Returns([admin]);
-
         // Act
         await sutProvider.Sut.NotifyAsync(organization, orgUser, user);
 
         // Assert
-        await AssertAcceptedEmailSentAsync(sutProvider, organization, user, admin);
+        await AssertAcceptedEmailSentAsync(sutProvider, organization, user);
         await AssertNoPushOrScheduledEmailAsync(sutProvider);
     }
 }

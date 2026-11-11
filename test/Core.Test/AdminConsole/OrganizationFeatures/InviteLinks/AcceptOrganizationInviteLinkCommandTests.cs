@@ -750,9 +750,5 @@ public class AcceptOrganizationInviteLinkCommandTests
         sutProvider.GetDependency<IStripePaymentService>()
             .HasSecretsManagerStandalone(org)
             .Returns(false);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByMinimumRoleAsync(org.Id, OrganizationUserType.Admin)
-            .Returns(new List<OrganizationUserUserDetails>());
     }
 }

@@ -8,7 +8,6 @@ using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bitwarden.Server.Sdk.Features;
 using Microsoft.Extensions.Hosting;
 using Quartz;
@@ -20,7 +19,7 @@ public class NotifyAdminsOfAcceptedUserCommand(
     IPushNotificationService pushNotificationService,
     IPolicyQuery policyQuery,
     IOrganizationAbilityCacheService organizationAbilityCacheService,
-    IMailService mailService,
+    ISendOrganizationAcceptedEmailCommand sendOrganizationAcceptedEmailCommand,
     IFeatureService featureService,
     ISchedulerFactory schedulerFactory,
     IHostApplicationLifetime hostApplicationLifetime)
@@ -32,7 +31,7 @@ public class NotifyAdminsOfAcceptedUserCommand(
     {
         if (!await IsAutoConfirmEnabledAsync(organization.Id, organizationUser))
         {
-            await SendAcceptedEmailAsync(organization, user);
+            await sendOrganizationAcceptedEmailCommand.SendAsync(organization, user.Email);
             return;
         }
 
@@ -40,7 +39,7 @@ public class NotifyAdminsOfAcceptedUserCommand(
 
         if (!featureService.IsEnabled(FeatureFlagKeys.AutoConfirmDelayAcceptedEmail))
         {
-            await SendAcceptedEmailAsync(organization, user);
+            await sendOrganizationAcceptedEmailCommand.SendAsync(organization, user.Email);
             return;
         }
 
@@ -49,7 +48,7 @@ public class NotifyAdminsOfAcceptedUserCommand(
             return;
         }
 
-        await SendAcceptedEmailAsync(organization, user);
+        await sendOrganizationAcceptedEmailCommand.SendAsync(organization, user.Email);
     }
 
     private async Task<bool> IsAutoConfirmEnabledAsync(Guid organizationId, OrganizationUser organizationUser)
@@ -134,15 +133,5 @@ public class NotifyAdminsOfAcceptedUserCommand(
 
         await scheduler.ScheduleJob(job, trigger);
         return true;
-    }
-
-    private async Task SendAcceptedEmailAsync(Organization organization, User user)
-    {
-        var admins = await organizationUserRepository.GetManyByMinimumRoleAsync(organization.Id, OrganizationUserType.Admin);
-        var adminEmails = admins.Select(a => a.Email).Distinct().ToList();
-        if (adminEmails.Count > 0)
-        {
-            await mailService.SendOrganizationAcceptedEmailAsync(organization, user.Email, adminEmails);
-        }
     }
 }
