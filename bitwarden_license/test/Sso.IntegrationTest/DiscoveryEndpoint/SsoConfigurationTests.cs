@@ -6,11 +6,11 @@ using Xunit;
 
 namespace Bit.Sso.IntegrationTest.DiscoveryEndpoint;
 
-public class SsoDiscoveryDocumentTests : IClassFixture<SsoApplicationFactory>
+public class SsoConfigurationTests : IClassFixture<SsoApplicationFactory>
 {
     private readonly SsoApplicationFactory _factory;
 
-    public SsoDiscoveryDocumentTests(SsoApplicationFactory factory)
+    public SsoConfigurationTests(SsoApplicationFactory factory)
     {
         _factory = factory;
     }
