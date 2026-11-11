@@ -16,7 +16,7 @@ namespace Bit.Identity.IntegrationTest.TokenEndpoint.DeviceLastActivity;
 /// (or skip it under the feature flag) when a real /connect/token request flows through the pipeline.
 /// </summary>
 [SutProviderCustomize]
-public class DeviceLastActivityLoginCommandTests
+public class DeviceLastActivityLoginTriggerTests
 {
     private const string FlagSettingKey =
         $"globalSettings:launchDarkly:flagValues:{FeatureFlagKeys.DevicesLastActivityDate}";
