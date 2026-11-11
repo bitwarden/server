@@ -86,6 +86,8 @@ public enum EventType : int
     OrganizationUser_InviteLinkAccepted = 1524, // User was accepted into an organization invite via invite link
     OrganizationUser_AdminChangedEmail = 1525, // Admin changed a member's email address
     OrganizationUser_InviteLinkConfirmed = 1526, // User was confirmed into an organization via invite link
+    OrganizationUser_InviteReminderSent = 1527, // The invite reminder job sent a member a reminder email
+    OrganizationUser_Reinvited = 1528, // An admin or internal resent a member's invite
 
     Organization_Updated = 1600,
     Organization_PurgedVault = 1601,

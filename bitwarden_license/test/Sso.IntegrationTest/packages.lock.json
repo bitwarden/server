@@ -752,6 +752,11 @@
           "StackExchange.Redis": "2.7.27"
         }
       },
+      "Microsoft.Extensions.Compliance.Abstractions": {
+        "type": "Transitive",
+        "resolved": "10.11.0",
+        "contentHash": "2mjAb3Sm5k6uNeI+IyXpggYMpfdDDGgZSwUm9QQsm5QgZboJWbm2eU+6wNMrlfFEao11yq6JS1zXI7SVQQ0NuQ=="
+      },
       "Microsoft.Extensions.Configuration.EnvironmentVariables": {
         "type": "Transitive",
         "resolved": "10.0.14",
@@ -767,6 +772,14 @@
         "resolved": "10.0.14",
         "contentHash": "N8OcqM0370wSXMJ3ZxO66rSElHrIgxvpfUn0vV7zRj7NvKo0nfwgEoTmC3Yz3860o60IaQ4KIPyeLIGX9EeNWA=="
       },
+      "Microsoft.Extensions.Diagnostics.Testing": {
+        "type": "Transitive",
+        "resolved": "10.11.0",
+        "contentHash": "Waxh+cfGkAj6n9gxmnIaYT681UxBXrlQdYF5w9yycofFCuNcmknBml2r65OZxuClrUjI4v8IK85+guWGzUja+A==",
+        "dependencies": {
+          "Microsoft.Extensions.Telemetry.Abstractions": "10.11.0"
+        }
+      },
       "Microsoft.Extensions.Identity.Stores": {
         "type": "Transitive",
         "resolved": "10.0.8",
@@ -776,6 +789,14 @@
         "type": "Transitive",
         "resolved": "10.0.14",
         "contentHash": "O2fXL6JmtkFwkigxS8fPTQpLXxGDjgZco5D+h88s++Cl0bDCs023PVkpNoifciJ+f30I82jnp8tpwF0wCLdFtA=="
+      },
+      "Microsoft.Extensions.Telemetry.Abstractions": {
+        "type": "Transitive",
+        "resolved": "10.11.0",
+        "contentHash": "FzcHRan/C2g5X5KD0kPlL4tTROFRpM8sqcXfOIi6FGLsw/d2yoOYMbLJ5hyb8N5QgOVW7e1TdwEN4zVUfcwfdw==",
+        "dependencies": {
+          "Microsoft.Extensions.Compliance.Abstractions": "10.11.0"
+        }
       },
       "Microsoft.Extensions.TimeProvider.Testing": {
         "type": "Transitive",
@@ -1450,6 +1471,20 @@
           "ZiggyCreatures.FusionCache": "[2.0.2, 2.0.2]",
           "ZiggyCreatures.FusionCache.Backplane.StackExchangeRedis": "[2.0.2, 2.0.2]",
           "ZiggyCreatures.FusionCache.Serialization.SystemTextJson": "[2.0.2, 2.0.2]"
+        }
+      },
+      "core.test": {
+        "type": "Project",
+        "dependencies": {
+          "AutoFixture.AutoNSubstitute": "[4.18.1, )",
+          "AutoFixture.Xunit2": "[4.18.1, )",
+          "Common": "[2026.11.0, )",
+          "Core": "[2026.11.0, )",
+          "Kralizek.AutoFixture.Extensions.MockHttp": "[2.2.1, 2.2.1]",
+          "Microsoft.Extensions.Diagnostics.Testing": "[10.11.0, 10.11.0]",
+          "Microsoft.NET.Test.Sdk": "[18.0.1, )",
+          "NSubstitute": "[5.1.0, )",
+          "xunit": "[2.6.6, )"
         }
       },
       "currentuser": {

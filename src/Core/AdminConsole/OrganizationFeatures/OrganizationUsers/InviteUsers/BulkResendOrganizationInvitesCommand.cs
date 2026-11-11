@@ -4,6 +4,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
@@ -13,17 +14,20 @@ public class BulkResendOrganizationInvitesCommand : IBulkResendOrganizationInvit
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
+    private readonly IEventService _eventService;
     private readonly ILogger<BulkResendOrganizationInvitesCommand> _logger;
 
     public BulkResendOrganizationInvitesCommand(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
         ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
+        IEventService eventService,
         ILogger<BulkResendOrganizationInvitesCommand> logger)
     {
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
         _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
+        _eventService = eventService;
         _logger = logger;
     }
 
@@ -56,10 +60,12 @@ public class BulkResendOrganizationInvitesCommand : IBulkResendOrganizationInvit
             }
         }
 
-        if (validUsers.Any())
+        if (validUsers.Count != 0)
         {
             await _sendOrganizationInvitesCommand.SendInvitesAsync(
                 new SendInvitesRequest(validUsers, org, invitingUserId: invitingUserId));
+            await _eventService.LogOrganizationUserEventsAsync(
+                validUsers.Select(u => (u, EventType.OrganizationUser_Reinvited, (DateTime?)null)));
 
             result.AddRange(validUsers.Select(u => Tuple.Create(u, "")));
         }

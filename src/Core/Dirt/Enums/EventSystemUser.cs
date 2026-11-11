@@ -11,4 +11,7 @@ public enum EventSystemUser : byte
 
     /// <summary>PAM itself: an automatic access decision, or a background sweep acting on a lease.</summary>
     Pam = 6,
+
+    /// <summary>A scheduled background job, such as the invite reminder job.</summary>
+    ScheduledJob = 7,
 }
