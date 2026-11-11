@@ -354,7 +354,7 @@ public class OrganizationUsersControllerTests
         Guid orgId, List<OrganizationUserUserDetails> organizationUsers,
         SutProvider<OrganizationUsersController> sutProvider)
     {
-        SetupGetAllAuthorization<AccessReportsRequirement>(sutProvider);
+        SetupGetAllAuthorization(sutProvider, typeof(AccessReportsRequirement));
         var query = sutProvider.GetDependency<IOrganizationUserUserDetailsQuery>();
         query.Get(Arg.Any<OrganizationUserUserDetailsQueryRequest>())
             .Returns(organizationUsers.Select(ou => (ou, false, false)));
@@ -370,13 +370,47 @@ public class OrganizationUsersControllerTests
     public async Task GetAll_WithoutPermission_ThrowsNotFound(
         Guid orgId, SutProvider<OrganizationUsersController> sutProvider)
     {
-        SetupGetAllAuthorization<MemberRequirement>(sutProvider);
+        SetupGetAllAuthorization(sutProvider);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAll(orgId, false, false));
     }
 
-    private static void SetupGetAllAuthorization<TAllowed>(SutProvider<OrganizationUsersController> sutProvider)
-        where TAllowed : IAuthorizationRequirement
+    [Theory]
+    [BitAutoData]
+    public async Task GetAll_WithAccessReportsAndAccountRecovery_ReturnsAllUsers(
+        Guid orgId, List<OrganizationUserUserDetails> organizationUsers,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        SetupGetAllAuthorization(sutProvider, typeof(AccessReportsRequirement), typeof(ManageAccountRecoveryRequirement));
+        var query = sutProvider.GetDependency<IOrganizationUserUserDetailsQuery>();
+        query.Get(Arg.Any<OrganizationUserUserDetailsQueryRequest>())
+            .Returns(organizationUsers.Select(ou => (ou, false, false)));
+
+        var response = await sutProvider.Sut.GetAll(orgId, true, false);
+
+        Assert.Equal(organizationUsers.Count, response.Data.Count());
+        await query.DidNotReceiveWithAnyArgs().GetAccountRecoveryEnrolledUsers(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetAll_WithAccountRecoveryOnly_ReturnsEnrolledUsers(
+        Guid orgId, List<OrganizationUserUserDetails> enrolledUsers,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        SetupGetAllAuthorization(sutProvider, typeof(ManageAccountRecoveryRequirement));
+        var query = sutProvider.GetDependency<IOrganizationUserUserDetailsQuery>();
+        query.GetAccountRecoveryEnrolledUsers(Arg.Any<OrganizationUserUserDetailsQueryRequest>())
+            .Returns(enrolledUsers.Select(ou => (ou, false, false)));
+
+        var response = await sutProvider.Sut.GetAll(orgId, false, false);
+
+        Assert.Equal(enrolledUsers.Count, response.Data.Count());
+        await query.DidNotReceiveWithAnyArgs().Get(default);
+    }
+
+    private static void SetupGetAllAuthorization(
+        SutProvider<OrganizationUsersController> sutProvider, params Type[] allowed)
     {
         var authorizationService = sutProvider.GetDependency<IAuthorizationService>();
         authorizationService
@@ -384,7 +418,7 @@ public class OrganizationUsersControllerTests
             .Returns(AuthorizationResult.Failed());
         authorizationService
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<object>(),
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Any(x => x is TAllowed)))
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Any(x => allowed.Contains(x.GetType()))))
             .Returns(AuthorizationResult.Success());
     }
 
