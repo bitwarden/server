@@ -251,7 +251,6 @@ public static class OrganizationServiceCollectionExtensions
         services.TryAddScoped<IAcceptOrganizationMembershipValidator, AcceptOrganizationMembershipValidator>();
         services.AddScoped<INotifyAdminsOfAcceptedUserCommand, NotifyAdminsOfAcceptedUserCommand>();
         services.AddScoped<ISendOrganizationAcceptedEmailCommand, SendOrganizationAcceptedEmailCommand>();
-        // In-memory scheduler for delayed one-off jobs; only hosts that start it will run them.
         services.AddQuartz();
         services.AddScoped<IOrganizationUserUserDetailsQuery, OrganizationUserUserDetailsQuery>();
         services.AddScoped<IGetOrganizationUsersClaimedStatusQuery, GetOrganizationUsersClaimedStatusQuery>();
