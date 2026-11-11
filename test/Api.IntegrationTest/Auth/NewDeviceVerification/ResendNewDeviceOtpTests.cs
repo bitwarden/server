@@ -35,6 +35,21 @@ public class ResendNewDeviceOtpTests
     }
 
     [Fact]
+    public async Task ResendNewDeviceOtp_WithDeviceIdentifierHeader_PendingDeviceRecorded_SendsCodeForRequestingDevice()
+    {
+        var (factory, mailService, user) = await ArrangeAsync();
+        await RecordPendingDeviceAsync(factory, user, PendingDeviceIdentifier);
+        mailService.ClearReceivedCalls();
+
+        var response = await PostResendAsync(factory, user.Email, RequestDeviceIdentifier);
+
+        // The device making the request takes precedence over the device the pending code was issued to.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await AssertCodeSentAsync(mailService);
+        await AssertCodeRedeemableByDeviceAsync(factory, mailService, user, RequestDeviceIdentifier);
+    }
+
+    [Fact]
     public async Task ResendNewDeviceOtp_WrongMasterPassword_SendsNothing()
     {
         var (factory, mailService, user) = await ArrangeAsync();
@@ -75,6 +90,7 @@ public class ResendNewDeviceOtpTests
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         await AssertCodeSentAsync(mailService);
+        await AssertCodeRedeemableByDeviceAsync(factory, mailService, user, PendingDeviceIdentifier);
     }
 
     // TODO: PM-43465 - Delete this test once mobile sends the Device-Identifier header on this request
@@ -98,6 +114,7 @@ public class ResendNewDeviceOtpTests
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         await AssertCodeSentAsync(mailService);
+        await AssertCodeRedeemableByDeviceAsync(factory, mailService, user, PendingDeviceIdentifier);
     }
 
     [Fact]
