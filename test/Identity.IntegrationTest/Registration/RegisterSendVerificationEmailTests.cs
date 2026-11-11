@@ -2,7 +2,8 @@
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
-using static Bit.Identity.IntegrationTest.Helpers.AccountsTestHelpers;
+using static Bit.Identity.IntegrationTest.Helpers.RegistrationTestHelpers;
+using static Bit.Identity.IntegrationTest.Helpers.UserTestHelpers;
 
 namespace Bit.Identity.IntegrationTest.Registration;
 

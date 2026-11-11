@@ -5,7 +5,7 @@ using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Xunit;
-using static Bit.Identity.IntegrationTest.Helpers.AccountsTestHelpers;
+using static Bit.Identity.IntegrationTest.Helpers.UserTestHelpers;
 
 namespace Bit.Identity.IntegrationTest.Prelogin;
 

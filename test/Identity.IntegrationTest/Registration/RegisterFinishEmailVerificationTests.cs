@@ -7,7 +7,7 @@ using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
-using static Bit.Identity.IntegrationTest.Helpers.AccountsTestHelpers;
+using static Bit.Identity.IntegrationTest.Helpers.RegistrationTestHelpers;
 
 namespace Bit.Identity.IntegrationTest.Registration;
 

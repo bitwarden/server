@@ -11,9 +11,9 @@ using Microsoft.AspNetCore.DataProtection;
 namespace Bit.Identity.IntegrationTest.Helpers;
 
 /// <summary>
-/// Arrange helpers for tests of the accounts registration and prelogin endpoints.
+/// Arrange helpers for the registration tests: organizations with invite links, and registration tokens.
 /// </summary>
-public static class AccountsTestHelpers
+public static class RegistrationTestHelpers
 {
     public static async Task<(Organization Org, OrganizationInviteLink InviteLink)> SeedOrgWithClaimedDomainAndInviteLinkAsync(
         IdentityApplicationFactory factory, string claimedDomain, IEnumerable<string>? allowedDomains = null)
@@ -110,24 +110,5 @@ public static class AccountsTestHelpers
         var protector = factory.GetService<IDataProtectionProvider>()
             .CreateProtector(RegistrationEmailVerificationTokenable.DataProtectorPurpose);
         return RegistrationEmailVerificationTokenable.ClearTextPrefix + protector.Protect(payload.ToJsonString());
-    }
-
-    public static async Task<User> CreateUserAsync(string email, string name, IdentityApplicationFactory factory, string masterPasswordSalt = null)
-    {
-        var userRepository = factory.Services.GetRequiredService<IUserRepository>();
-
-        var user = new User
-        {
-            Email = email,
-            Id = Guid.NewGuid(),
-            Name = name,
-            SecurityStamp = Guid.NewGuid().ToString(),
-            ApiKey = "test_api_key",
-            MasterPasswordSalt = masterPasswordSalt,
-        };
-
-        await userRepository.CreateAsync(user);
-
-        return user;
     }
 }
