@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Sso.IntegrationTest.Controllers.Account;
+namespace Bit.Sso.IntegrationTest.ExternalCallback;
 
 /// <summary>
 /// <c>/Account/ExternalCallback</c> against a Staged organization user row, for a new user that SSO

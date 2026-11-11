@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Sso.IntegrationTest.Controllers.Account;
+namespace Bit.Sso.IntegrationTest.ExternalCallback;
 
 /// <summary>
 /// <c>/Account/ExternalCallback</c> seat check before just-in-time provisioning: free seats, a seat cap on

@@ -3,7 +3,7 @@ using Bit.Sso.IntegrationTest.Utilities;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
-namespace Bit.Sso.IntegrationTest.Controllers.Account;
+namespace Bit.Sso.IntegrationTest.ExternalCallback;
 
 /// <summary>
 /// <c>/Account/ExternalCallback</c> for a user who already has an SSO link to the organization.

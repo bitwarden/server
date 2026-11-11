@@ -22,7 +22,7 @@ using NSubstitute.ExceptionExtensions;
 using Stripe;
 using Xunit;
 
-namespace Bit.Sso.IntegrationTest.Controllers.Account;
+namespace Bit.Sso.IntegrationTest.ExternalCallback;
 
 /// <summary>
 /// When an SSO sign-in moves a Staged member that has Privileged Controls access to Invited, the member starts

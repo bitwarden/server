@@ -7,7 +7,7 @@ using NSubstitute;
 using Xunit;
 using AuthenticationSchemes = Bit.Core.Auth.IdentityServer.AuthenticationSchemes;
 
-namespace Bit.Sso.IntegrationTest.Controllers.Account;
+namespace Bit.Sso.IntegrationTest.ExternalCallback;
 
 /// <summary>
 /// Requests to <c>/Account/ExternalCallback</c> that fail before any user lookup: a missing or failed

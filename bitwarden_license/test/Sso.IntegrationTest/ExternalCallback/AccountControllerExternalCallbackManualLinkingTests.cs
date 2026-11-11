@@ -15,7 +15,7 @@ using NSubstitute;
 using Xunit;
 using AuthenticationSchemes = Bit.Core.Auth.IdentityServer.AuthenticationSchemes;
 
-namespace Bit.Sso.IntegrationTest.Controllers.Account;
+namespace Bit.Sso.IntegrationTest.ExternalCallback;
 
 /// <summary>
 /// <c>/Account/ExternalCallback</c> when the request carries a user identifier to link an existing account
