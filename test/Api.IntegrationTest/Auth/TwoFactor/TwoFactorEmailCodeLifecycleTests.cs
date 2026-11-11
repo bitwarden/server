@@ -25,7 +25,7 @@ namespace Bit.Api.IntegrationTest.Auth.TwoFactor;
 /// Identity host's persistent cache, so a login code emailed by the API can be redeemed against the Identity
 /// token endpoint, as it is in a deployed environment.
 /// </summary>
-public class TwoFactorEmailLoginCodeLifecycleTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class TwoFactorEmailCodeLifecycleTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private const string DeviceIdentifier = "two-factor-email-device";
     private const string OtherDeviceIdentifier = "two-factor-email-other-device";
@@ -38,7 +38,7 @@ public class TwoFactorEmailLoginCodeLifecycleTests : IClassFixture<ApiApplicatio
 
     private string _userEmail = null!;
 
-    public TwoFactorEmailLoginCodeLifecycleTests(ApiApplicationFactory factory)
+    public TwoFactorEmailCodeLifecycleTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         SubstituteTwoFactorProviderServices(_factory);
