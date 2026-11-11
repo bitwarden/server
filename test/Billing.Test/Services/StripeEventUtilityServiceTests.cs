@@ -88,55 +88,6 @@ public class StripeEventUtilityServiceTests
     }
 
     [Fact]
-    public async Task GetOtherLiveSubscriptionAsync_OrganizationsLinkedSubscriptionIsLive_ReturnsIt()
-    {
-        var organization = new Organization { Id = Guid.NewGuid(), GatewaySubscriptionId = "sub_linked" };
-        var ending = OrganizationSubscription("sub_ending", StripeSubscriptionStatus.Canceled, organization.Id);
-        CustomerSubscriptions(ending, OrganizationSubscription("sub_linked", StripeSubscriptionStatus.Active, organization.Id));
-
-        var result = await _sut.GetOtherLiveSubscriptionAsync(organization, ending);
-
-        Assert.Equal("sub_linked", result?.Id);
-    }
-
-    [Fact]
-    public async Task GetOtherLiveSubscriptionAsync_OrganizationsLinkedSubscriptionEnds_ReturnsNull()
-    {
-        var organization = new Organization { Id = Guid.NewGuid(), GatewaySubscriptionId = "sub_ending" };
-        var ending = OrganizationSubscription("sub_ending", StripeSubscriptionStatus.Unpaid, organization.Id);
-        CustomerSubscriptions(ending, OrganizationSubscription("sub_unlinked", StripeSubscriptionStatus.Active, organization.Id));
-
-        var result = await _sut.GetOtherLiveSubscriptionAsync(organization, ending);
-
-        Assert.Null(result);
-    }
-
-    [Fact]
-    public async Task GetOtherLiveSubscriptionAsync_OrganizationsLinkedSubscriptionIsTheEventSubscription_ReturnsNullWithoutListing()
-    {
-        var organization = new Organization { Id = Guid.NewGuid(), GatewaySubscriptionId = "sub_linked" };
-        var linked = OrganizationSubscription("sub_linked", StripeSubscriptionStatus.Canceled, organization.Id);
-        CustomerSubscriptions(linked, OrganizationSubscription("sub_other", StripeSubscriptionStatus.Active, organization.Id));
-
-        var result = await _sut.GetOtherLiveSubscriptionAsync(organization, linked);
-
-        Assert.Null(result);
-        await _stripeFacade.DidNotReceiveWithAnyArgs().ListSubscriptions(default!);
-    }
-
-    [Fact]
-    public async Task GetOtherLiveSubscriptionAsync_OnlyAUserSubscriptionWithTheOrganizationsIdIsLive_ReturnsNull()
-    {
-        var organization = new Organization { Id = Guid.NewGuid(), GatewaySubscriptionId = "sub_other" };
-        var ending = OrganizationSubscription("sub_ending", StripeSubscriptionStatus.Canceled, organization.Id);
-        CustomerSubscriptions(ending, Subscription("sub_other", StripeSubscriptionStatus.Active, organization.Id));
-
-        var result = await _sut.GetOtherLiveSubscriptionAsync(organization, ending);
-
-        Assert.Null(result);
-    }
-
-    [Fact]
     public async Task GetOtherLiveSubscriptionAsync_EndingSubscriptionIsLinked_ReturnsUnlinkedLiveSubscription()
     {
         var user = new User { Id = Guid.NewGuid(), GatewaySubscriptionId = "sub_ending" };
@@ -179,15 +130,81 @@ public class StripeEventUtilityServiceTests
     }
 
     [Fact]
-    public async Task GetOtherLiveSubscriptionAsync_ListingFails_ReturnsNull()
+    public async Task GetOtherLiveSubscriptionAsync_ListingFails_Throws()
     {
         var user = new User { Id = Guid.NewGuid(), GatewaySubscriptionId = "sub_other" };
         var ending = Subscription("sub_ending", StripeSubscriptionStatus.Canceled, user.Id);
         _stripeFacade.ListSubscriptions(Arg.Any<SubscriptionListOptions>()).ThrowsAsync(new StripeException("unavailable"));
 
-        var result = await _sut.GetOtherLiveSubscriptionAsync(user, ending);
+        await Assert.ThrowsAsync<StripeException>(() => _sut.GetOtherLiveSubscriptionAsync(user, ending));
+    }
+
+    [Theory]
+    [InlineData(StripeSubscriptionStatus.Active)]
+    [InlineData(StripeSubscriptionStatus.Trialing)]
+    [InlineData(StripeSubscriptionStatus.PastDue)]
+    public async Task GetLiveLinkedSubscriptionAsync_LinkedSubscriptionIsLive_ReturnsIt(string status)
+    {
+        var organization = new Organization { Id = Guid.NewGuid(), GatewaySubscriptionId = "sub_linked" };
+        var ending = OrganizationSubscription("sub_ending", StripeSubscriptionStatus.Canceled, organization.Id);
+        _stripeFacade.GetSubscription("sub_linked").Returns(OrganizationSubscription("sub_linked", status, organization.Id));
+
+        var result = await _sut.GetLiveLinkedSubscriptionAsync(organization, ending);
+
+        Assert.Equal("sub_linked", result?.Id);
+    }
+
+    [Theory]
+    [InlineData(StripeSubscriptionStatus.Canceled)]
+    [InlineData(StripeSubscriptionStatus.Unpaid)]
+    [InlineData(StripeSubscriptionStatus.Incomplete)]
+    [InlineData(StripeSubscriptionStatus.IncompleteExpired)]
+    public async Task GetLiveLinkedSubscriptionAsync_LinkedSubscriptionIsNotLive_ReturnsNull(string status)
+    {
+        var organization = new Organization { Id = Guid.NewGuid(), GatewaySubscriptionId = "sub_linked" };
+        var ending = OrganizationSubscription("sub_ending", StripeSubscriptionStatus.Canceled, organization.Id);
+        _stripeFacade.GetSubscription("sub_linked").Returns(OrganizationSubscription("sub_linked", status, organization.Id));
+
+        var result = await _sut.GetLiveLinkedSubscriptionAsync(organization, ending);
 
         Assert.Null(result);
+    }
+
+    [Theory]
+    [InlineData("sub_ending")]
+    [InlineData(null)]
+    public async Task GetLiveLinkedSubscriptionAsync_EventSubscriptionIsLinkedOrNoneIsLinked_ReturnsNullWithoutFetching(string? linkedSubscriptionId)
+    {
+        var organization = new Organization { Id = Guid.NewGuid(), GatewaySubscriptionId = linkedSubscriptionId };
+        var ending = OrganizationSubscription("sub_ending", StripeSubscriptionStatus.Unpaid, organization.Id);
+
+        var result = await _sut.GetLiveLinkedSubscriptionAsync(organization, ending);
+
+        Assert.Null(result);
+        await _stripeFacade.DidNotReceiveWithAnyArgs().GetSubscription(default!);
+    }
+
+    [Fact]
+    public async Task GetLiveLinkedSubscriptionAsync_LinkedSubscriptionDoesNotExist_ReturnsNull()
+    {
+        var organization = new Organization { Id = Guid.NewGuid(), GatewaySubscriptionId = "sub_missing" };
+        var ending = OrganizationSubscription("sub_ending", StripeSubscriptionStatus.Canceled, organization.Id);
+        _stripeFacade.GetSubscription("sub_missing")
+            .ThrowsAsync(new StripeException { StripeError = new StripeError { Code = "resource_missing" } });
+
+        var result = await _sut.GetLiveLinkedSubscriptionAsync(organization, ending);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetLiveLinkedSubscriptionAsync_FetchFails_Throws()
+    {
+        var organization = new Organization { Id = Guid.NewGuid(), GatewaySubscriptionId = "sub_linked" };
+        var ending = OrganizationSubscription("sub_ending", StripeSubscriptionStatus.Canceled, organization.Id);
+        _stripeFacade.GetSubscription("sub_linked").ThrowsAsync(new StripeException("unavailable"));
+
+        await Assert.ThrowsAsync<StripeException>(() => _sut.GetLiveLinkedSubscriptionAsync(organization, ending));
     }
 
     [Fact]

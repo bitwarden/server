@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Entities;
 using Stripe;
 using Transaction = Bit.Core.Entities.Transaction;
 namespace Bit.Billing.Services;
@@ -56,16 +57,27 @@ public interface IStripeEventUtilityService
     bool ShouldAttemptToPayInvoice(Invoice invoice);
 
     /// <summary>
-    /// Finds another subscription for the user or organization on the same Stripe customer as the specified subscription
-    /// that still grants access. For an organization, only its linked subscription is considered.
+    /// Finds another subscription for the user on the same Stripe customer as the specified subscription that still
+    /// grants Premium.
     /// </summary>
-    /// <param name="subscriber">The user or organization named in the subscription's metadata.</param>
+    /// <param name="user">The user named in the subscription's metadata.</param>
     /// <param name="subscription">The subscription the event is about.</param>
     /// <returns>
-    /// The subscriber's linked subscription if it is another live subscription, otherwise the other live subscription with
-    /// the latest period end, or <c>null</c> when there is none or the customer's subscriptions cannot be retrieved.
+    /// The user's linked subscription if it is another live subscription, otherwise the other live subscription with the
+    /// latest period end, or <c>null</c> when there is none.
     /// </returns>
-    Task<Subscription?> GetOtherLiveSubscriptionAsync(ISubscriber subscriber, Subscription subscription);
+    Task<Subscription?> GetOtherLiveSubscriptionAsync(User user, Subscription subscription);
+
+    /// <summary>
+    /// Gets the organization's linked subscription when it is not the specified subscription and still grants access.
+    /// </summary>
+    /// <param name="organization">The organization named in the subscription's metadata.</param>
+    /// <param name="subscription">The subscription the event is about.</param>
+    /// <returns>
+    /// The linked subscription, or <c>null</c> when it is the specified subscription, no longer grants access, or does
+    /// not exist.
+    /// </returns>
+    Task<Subscription?> GetLiveLinkedSubscriptionAsync(Organization organization, Subscription subscription);
 
     /// <summary>
     /// Links the user to the specified subscription and sets their Premium expiration to its current period end.

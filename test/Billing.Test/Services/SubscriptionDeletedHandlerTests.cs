@@ -160,7 +160,7 @@ public class SubscriptionDeletedHandlerTests
             .Returns(Tuple.Create<Guid?, Guid?, Guid?>(organizationId, null, null));
         _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
         var liveSubscription = new Subscription { Id = "sub_current" };
-        _stripeEventUtilityService.GetOtherLiveSubscriptionAsync(organization, subscription).Returns(liveSubscription);
+        _stripeEventUtilityService.GetLiveLinkedSubscriptionAsync(organization, subscription).Returns(liveSubscription);
 
         // Act
         await _sut.HandleAsync(stripeEvent);
@@ -241,6 +241,67 @@ public class SubscriptionDeletedHandlerTests
         await _stripeEventUtilityService.Received(1).LinkUserSubscriptionAsync(user, liveSubscription);
         await _userService.DidNotReceiveWithAnyArgs().DisablePremiumAsync(default, default);
         await _pushNotificationAdapter.DidNotReceiveWithAnyArgs().NotifyPremiumStatusChangedAsync(default);
+    }
+
+    [Fact]
+    public async Task HandleAsync_UserSubscriptionCanceled_LookupFails_ThrowsWithoutDisablingPremium()
+    {
+        // Arrange
+        var stripeEvent = new Event();
+        var userId = Guid.NewGuid();
+        var subscription = new Subscription
+        {
+            Id = "sub_old",
+            Status = StripeSubscriptionStatus.Canceled,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(30) }]
+            },
+            Metadata = new Dictionary<string, string> { { "userId", userId.ToString() } }
+        };
+
+        var user = new User { Id = userId, Premium = true, GatewaySubscriptionId = "sub_current" };
+
+        _stripeEventService.GetSubscription(stripeEvent, true).Returns(subscription);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
+        _userRepository.GetByIdAsync(userId).Returns(user);
+        _stripeEventUtilityService.GetOtherLiveSubscriptionAsync(user, subscription).ThrowsAsync(new StripeException("unavailable"));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<StripeException>(() => _sut.HandleAsync(stripeEvent));
+        await _userService.DidNotReceiveWithAnyArgs().DisablePremiumAsync(default, default);
+    }
+
+    [Fact]
+    public async Task HandleAsync_OrganizationSubscriptionCanceled_LookupFails_ThrowsWithoutDisablingOrganization()
+    {
+        // Arrange
+        var stripeEvent = new Event();
+        var organizationId = Guid.NewGuid();
+        var subscription = new Subscription
+        {
+            Id = "sub_old",
+            Status = StripeSubscriptionStatus.Canceled,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(30) }]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } }
+        };
+
+        var organization = new Organization { Id = organizationId, Enabled = true, GatewaySubscriptionId = "sub_current" };
+
+        _stripeEventService.GetSubscription(stripeEvent, true).Returns(subscription);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(organizationId, null, null));
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _stripeEventUtilityService.GetLiveLinkedSubscriptionAsync(organization, subscription)
+            .ThrowsAsync(new StripeException("unavailable"));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<StripeException>(() => _sut.HandleAsync(stripeEvent));
+        await _organizationDisableCommand.DidNotReceiveWithAnyArgs().DisableAsync(default, default);
     }
 
     [Fact]

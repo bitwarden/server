@@ -819,7 +819,7 @@ public class SubscriptionUpdatedHandlerTests
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new Enterprise2023Plan(true));
         _pricingClient.ListPlans().Returns(MockPlans.Plans);
         var liveSubscription = new Subscription { Id = "sub_live" };
-        _stripeEventUtilityService.GetOtherLiveSubscriptionAsync(organization, subscription).Returns(liveSubscription);
+        _stripeEventUtilityService.GetLiveLinkedSubscriptionAsync(organization, subscription).Returns(liveSubscription);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -875,7 +875,7 @@ public class SubscriptionUpdatedHandlerTests
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new Enterprise2023Plan(true));
         _pricingClient.ListPlans().Returns(MockPlans.Plans);
         _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(true);
-        _stripeEventUtilityService.GetOtherLiveSubscriptionAsync(organization, subscription)
+        _stripeEventUtilityService.GetLiveLinkedSubscriptionAsync(organization, subscription)
             .Returns(new Subscription { Id = "sub_current" });
 
         // Act

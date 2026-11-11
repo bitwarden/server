@@ -6,7 +6,6 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -269,46 +268,61 @@ public class StripeEventUtilityService : IStripeEventUtilityService
             Parent.SubscriptionDetails: not null
         };
 
-    public async Task<Subscription> GetOtherLiveSubscriptionAsync(ISubscriber subscriber, Subscription subscription)
+    public async Task<Subscription> GetOtherLiveSubscriptionAsync(User user, Subscription subscription)
     {
-        if (subscriber is Organization && subscription.Id == subscriber.GatewaySubscriptionId)
+        var subscriptions = await _stripeFacade.ListSubscriptions(new SubscriptionListOptions
+        {
+            Customer = subscription.CustomerId,
+            Limit = 100
+        });
+
+        var live = subscriptions.Data
+            .Where(other => other.Id != subscription.Id &&
+                            other.GrantsAccess() &&
+                            GetIdsFromMetadata(other.Metadata).Item2 == user.Id)
+            .ToList();
+
+        var otherLive = live.FirstOrDefault(other => other.Id == user.GatewaySubscriptionId) ??
+                        live.MaxBy(other => other.GetCurrentPeriodEnd());
+
+        if (otherLive != null)
+        {
+            _logger.LogInformation(
+                "User ({UserId}) has another live subscription ({OtherSubscriptionId}) besides subscription ({SubscriptionId})",
+                user.Id, otherLive.Id, subscription.Id);
+        }
+
+        return otherLive;
+    }
+
+    public async Task<Subscription> GetLiveLinkedSubscriptionAsync(Organization organization, Subscription subscription)
+    {
+        // An organization's subscriptions can differ in plan and seats, so only its linked one keeps it enabled.
+        if (string.IsNullOrEmpty(organization.GatewaySubscriptionId) || organization.GatewaySubscriptionId == subscription.Id)
         {
             return null;
         }
 
+        Subscription linked;
         try
         {
-            var subscriptions = await _stripeFacade.ListSubscriptions(new SubscriptionListOptions
-            {
-                Customer = subscription.CustomerId,
-                Limit = 100
-            });
-
-            var live = subscriptions.Data
-                .Where(other => other.Id != subscription.Id &&
-                                other.GrantsAccess() &&
-                                IsForSubscriber(other, subscriber))
-                .ToList();
-
-            var otherLive = live.FirstOrDefault(other => other.Id == subscriber.GatewaySubscriptionId) ??
-                            live.MaxBy(other => other.GetCurrentPeriodEnd());
-
-            if (otherLive != null)
-            {
-                _logger.LogInformation(
-                    "Subscriber ({SubscriberId}) has another live subscription ({OtherSubscriptionId}) besides subscription ({SubscriptionId})",
-                    subscriber.Id, otherLive.Id, subscription.Id);
-            }
-
-            return otherLive;
+            linked = await _stripeFacade.GetSubscription(organization.GatewaySubscriptionId);
         }
-        catch (Exception exception)
+        catch (StripeException exception) when (exception.StripeError?.Code == StripeConstants.ErrorCodes.ResourceMissing)
         {
-            _logger.LogWarning(exception,
-                "Could not list subscriptions for customer ({CustomerId}) of subscriber ({SubscriberId}); treating subscription ({SubscriptionId}) as the subscriber's only subscription",
-                subscription.CustomerId, subscriber.Id, subscription.Id);
             return null;
         }
+
+        if (!linked.GrantsAccess())
+        {
+            return null;
+        }
+
+        _logger.LogInformation(
+            "Organization ({OrganizationId}) has a live linked subscription ({LinkedSubscriptionId}) besides subscription ({SubscriptionId})",
+            organization.Id, linked.Id, subscription.Id);
+
+        return linked;
     }
 
     public async Task LinkUserSubscriptionAsync(User user, Subscription subscription)
@@ -324,18 +338,6 @@ public class StripeEventUtilityService : IStripeEventUtilityService
         user.PremiumExpirationDate = currentPeriodEnd;
         user.RevisionDate = DateTime.UtcNow;
         await _userRepository.ReplaceAsync(user);
-    }
-
-    private bool IsForSubscriber(Subscription subscription, ISubscriber subscriber)
-    {
-        var (organizationId, userId, _) = GetIdsFromMetadata(subscription.Metadata);
-        return subscriber switch
-        {
-            User => userId == subscriber.Id,
-            // An organization's subscriptions can differ in plan and seats, so only its linked one keeps it enabled.
-            Organization => organizationId == subscriber.Id && subscription.Id == subscriber.GatewaySubscriptionId,
-            _ => false
-        };
     }
 
     private async Task<bool> AttemptToPayInvoiceWithBraintreeAsync(Invoice invoice, Customer customer)

@@ -112,12 +112,15 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
         var currentPeriodEnd = subscription.GetCurrentPeriodEnd();
         var clearOrgBillingAutomationExemption = false;
-        var otherLiveSubscription = subscriber is User or Organization &&
-                                    (subscription.Id != subscriber.GatewaySubscriptionId ||
-                                     SubscriptionWentUnpaid(parsedEvent, subscription) ||
-                                     SubscriptionWentIncompleteExpired(parsedEvent, subscription))
-            ? await _stripeEventUtilityService.GetOtherLiveSubscriptionAsync(subscriber, subscription)
-            : null;
+        var lookUpOtherSubscription = subscription.Id != subscriber.GatewaySubscriptionId ||
+                                      SubscriptionWentUnpaid(parsedEvent, subscription) ||
+                                      SubscriptionWentIncompleteExpired(parsedEvent, subscription);
+        var otherLiveSubscription = (subscriber, lookUpOtherSubscription) switch
+        {
+            (User user, true) => await _stripeEventUtilityService.GetOtherLiveSubscriptionAsync(user, subscription),
+            (Organization organization, true) => await _stripeEventUtilityService.GetLiveLinkedSubscriptionAsync(organization, subscription),
+            _ => null
+        };
         var linkedToOtherSubscription = false;
 
         if (SubscriptionWentUnpaid(parsedEvent, subscription))
