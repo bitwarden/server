@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Collections;
+using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Core.AdminConsole.Entities;
@@ -32,6 +33,8 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -343,6 +346,46 @@ public class OrganizationUsersControllerTests
         var response = await sutProvider.Sut.GetAll(orgId, false, false);
 
         Assert.True(response.Data.All(r => organizationUsers.Any(ou => ou.Id == r.Id)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetAll_WithAccessReports_ReturnsAllUsers(
+        Guid orgId, List<OrganizationUserUserDetails> organizationUsers,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        SetupGetAllAuthorization<AccessReportsRequirement>(sutProvider);
+        var query = sutProvider.GetDependency<IOrganizationUserUserDetailsQuery>();
+        query.Get(Arg.Any<OrganizationUserUserDetailsQueryRequest>())
+            .Returns(organizationUsers.Select(ou => (ou, false, false)));
+
+        var response = await sutProvider.Sut.GetAll(orgId, true, false);
+
+        Assert.Equal(organizationUsers.Count, response.Data.Count());
+        await query.DidNotReceiveWithAnyArgs().GetAccountRecoveryEnrolledUsers(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetAll_WithoutPermission_ThrowsNotFound(
+        Guid orgId, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        SetupGetAllAuthorization<MemberRequirement>(sutProvider);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAll(orgId, false, false));
+    }
+
+    private static void SetupGetAllAuthorization<TAllowed>(SutProvider<OrganizationUsersController> sutProvider)
+        where TAllowed : IAuthorizationRequirement
+    {
+        var authorizationService = sutProvider.GetDependency<IAuthorizationService>();
+        authorizationService
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<object>(), Arg.Any<IEnumerable<IAuthorizationRequirement>>())
+            .Returns(AuthorizationResult.Failed());
+        authorizationService
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<object>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Any(x => x is TAllowed)))
+            .Returns(AuthorizationResult.Success());
     }
 
     [Theory]
