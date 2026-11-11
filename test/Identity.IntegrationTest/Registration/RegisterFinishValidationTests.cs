@@ -8,11 +8,11 @@ using Xunit;
 
 namespace Bit.Identity.IntegrationTest.Registration;
 
-public class AccountsControllerRegisterFinishValidationTests : IClassFixture<IdentityApplicationFactory>
+public class RegisterFinishValidationTests : IClassFixture<IdentityApplicationFactory>
 {
     private readonly IdentityApplicationFactory _factory;
 
-    public AccountsControllerRegisterFinishValidationTests(IdentityApplicationFactory factory)
+    public RegisterFinishValidationTests(IdentityApplicationFactory factory)
     {
         _factory = factory;
     }

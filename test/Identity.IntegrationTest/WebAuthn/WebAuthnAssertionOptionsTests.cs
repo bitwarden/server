@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Bit.Identity.IntegrationTest.WebAuthn;
 
-public class AccountsControllerWebAuthnAssertionOptionsTests(IdentityApplicationFactory _factory) : IClassFixture<IdentityApplicationFactory>
+public class WebAuthnAssertionOptionsTests(IdentityApplicationFactory _factory) : IClassFixture<IdentityApplicationFactory>
 {
     [Fact]
     public async Task AssertionOptions_ReturnsTokenAndOptions()

@@ -9,7 +9,7 @@ using static Bit.Identity.IntegrationTest.Helpers.AccountsTestHelpers;
 
 namespace Bit.Identity.IntegrationTest.Prelogin;
 
-public class AccountsControllerPreloginTests
+public class PreloginTests
 {
     [Theory, BitAutoData]
     public async Task PostPrelogin_WhenUserExistsWithSalt_ReturnsStoredSalt([Required] string name)
