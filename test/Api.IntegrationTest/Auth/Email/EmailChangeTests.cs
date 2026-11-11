@@ -21,7 +21,7 @@ using static Bit.Api.IntegrationTest.Auth.Helpers.MasterPasswordPayloads;
 
 namespace Bit.Api.IntegrationTest.Auth.Email;
 
-public class AccountsControllerEmailChangeTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class EmailChangeTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
@@ -34,7 +34,7 @@ public class AccountsControllerEmailChangeTests : IClassFixture<ApiApplicationFa
 
     private string _ownerEmail = null!;
 
-    public AccountsControllerEmailChangeTests(ApiApplicationFactory factory)
+    public EmailChangeTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         _factory.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(_ => { });

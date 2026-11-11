@@ -16,7 +16,7 @@ using static Bit.Api.IntegrationTest.Auth.Helpers.MasterPasswordPayloads;
 
 namespace Bit.Api.IntegrationTest.Auth.MasterPassword;
 
-public class AccountsControllerKdfTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class KdfChangeTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
@@ -27,7 +27,7 @@ public class AccountsControllerKdfTests : IClassFixture<ApiApplicationFactory>, 
 
     private string _ownerEmail = null!;
 
-    public AccountsControllerKdfTests(ApiApplicationFactory factory)
+    public KdfChangeTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         _factory.SubstituteService<IPushNotificationService>(_ => { });

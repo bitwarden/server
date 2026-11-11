@@ -9,7 +9,7 @@ using static Bit.Api.IntegrationTest.Auth.Helpers.MasterPasswordPayloads;
 
 namespace Bit.Api.IntegrationTest.Auth.MasterPassword;
 
-public class AccountsControllerTdeOffboardingPasswordTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class TdeOffboardingPasswordTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
@@ -17,7 +17,7 @@ public class AccountsControllerTdeOffboardingPasswordTests : IClassFixture<ApiAp
 
     private string _ownerEmail = null!;
 
-    public AccountsControllerTdeOffboardingPasswordTests(ApiApplicationFactory factory)
+    public TdeOffboardingPasswordTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         _client = factory.CreateClient();

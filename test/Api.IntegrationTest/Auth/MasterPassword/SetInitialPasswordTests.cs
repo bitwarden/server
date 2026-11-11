@@ -22,7 +22,7 @@ using static Bit.Core.KeyManagement.Enums.SignatureAlgorithm;
 
 namespace Bit.Api.IntegrationTest.Auth.MasterPassword;
 
-public class AccountsControllerSetInitialPasswordTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class SetInitialPasswordTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private static readonly string _mockEncryptedType7String = "7.AOs41Hd8OQiCPXjyJKCiDA==";
     private static readonly string _mockEncryptedType7WrappedSigningKey = "7.DRv74Kg1RSlFSam1MNFlGD==";
@@ -39,7 +39,7 @@ public class AccountsControllerSetInitialPasswordTests : IClassFixture<ApiApplic
     private readonly IEventRepository _eventRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
 
-    public AccountsControllerSetInitialPasswordTests(ApiApplicationFactory factory)
+    public SetInitialPasswordTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         _factory.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(_ => { });

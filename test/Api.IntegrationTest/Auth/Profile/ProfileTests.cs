@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Bit.Api.IntegrationTest.Auth.Profile;
 
-public class AccountsControllerProfileTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class ProfileTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
@@ -13,7 +13,7 @@ public class AccountsControllerProfileTests : IClassFixture<ApiApplicationFactor
 
     private string _ownerEmail = null!;
 
-    public AccountsControllerProfileTests(ApiApplicationFactory factory)
+    public ProfileTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         _client = factory.CreateClient();

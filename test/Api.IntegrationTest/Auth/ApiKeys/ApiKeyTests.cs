@@ -10,7 +10,7 @@ using static Bit.Api.IntegrationTest.Auth.Helpers.MasterPasswordPayloads;
 
 namespace Bit.Api.IntegrationTest.Auth.ApiKeys;
 
-public class AccountsControllerApiKeyTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class ApiKeyTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
@@ -20,7 +20,7 @@ public class AccountsControllerApiKeyTests : IClassFixture<ApiApplicationFactory
 
     private string _ownerEmail = null!;
 
-    public AccountsControllerApiKeyTests(ApiApplicationFactory factory)
+    public ApiKeyTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         _factory.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(_ => { });
