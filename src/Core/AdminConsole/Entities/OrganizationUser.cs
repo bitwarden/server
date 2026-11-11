@@ -77,6 +77,11 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     [MaxLength(300)]
     public string? ExternalId { get; set; }
     /// <summary>
+    /// The name used to identify the OrganizationUser in an external directory service, e.g. the SCIM userName.
+    /// </summary>
+    [MaxLength(300)]
+    public string? ExternalName { get; set; }
+    /// <summary>
     /// The date the OrganizationUser was created, i.e. when the User was first invited to the Organization.
     /// </summary>
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
