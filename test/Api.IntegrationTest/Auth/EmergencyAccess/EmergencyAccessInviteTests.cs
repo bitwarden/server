@@ -15,7 +15,7 @@ namespace Bit.Api.IntegrationTest.Auth.EmergencyAccess;
 /// <summary>
 /// Covers the grantee accepting an emergency access invitation.
 /// </summary>
-public class EmergencyAccessControllerInviteTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class EmergencyAccessInviteTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
@@ -26,7 +26,7 @@ public class EmergencyAccessControllerInviteTests : IClassFixture<ApiApplication
     private string _grantorEmail = null!;
     private string _granteeEmail = null!;
 
-    public EmergencyAccessControllerInviteTests(ApiApplicationFactory factory)
+    public EmergencyAccessInviteTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         _factory.SubstituteService<IPushNotificationService>(_ => { });

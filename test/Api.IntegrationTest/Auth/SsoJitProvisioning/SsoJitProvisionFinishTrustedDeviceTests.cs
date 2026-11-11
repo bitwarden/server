@@ -16,7 +16,7 @@ using Xunit;
 
 namespace Bit.Api.IntegrationTest.Auth.SsoJitProvisioning;
 
-public class SsoJitProvisionFinishControllerTrustedDeviceTests
+public class SsoJitProvisionFinishTrustedDeviceTests
     : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private const string _route = "sso-jit-provision-finish/trusted-device";
@@ -34,7 +34,7 @@ public class SsoJitProvisionFinishControllerTrustedDeviceTests
 
     private Organization _organization = null!;
 
-    public SsoJitProvisionFinishControllerTrustedDeviceTests(ApiApplicationFactory factory)
+    public SsoJitProvisionFinishTrustedDeviceTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         _client = _factory.CreateClient();

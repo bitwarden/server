@@ -16,7 +16,7 @@ namespace Bit.Api.IntegrationTest.Auth.AuthRequests;
 /// <summary>
 /// Covers reading auth requests: the list, a single request, the pending list, and the anonymous response read.
 /// </summary>
-public class AuthRequestsControllerQueryTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class AuthRequestQueryTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     // A second, never-authenticated client used for the two AllowAnonymous endpoints (Post, GetResponse) so
     // CurrentContext.UserId is never populated from a bearer token during those calls.
@@ -30,7 +30,7 @@ public class AuthRequestsControllerQueryTests : IClassFixture<ApiApplicationFact
     private string _userEmail = null!;
     private User _user = null!;
 
-    public AuthRequestsControllerQueryTests(ApiApplicationFactory factory)
+    public AuthRequestQueryTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         // AuthRequestService pushes real notifications on create/approve/deny; the default push service isn't

@@ -16,7 +16,7 @@ namespace Bit.Api.IntegrationTest.Auth.AuthRequests;
 /// <summary>
 /// Covers creating auth requests: the anonymous login-with-device request and the authenticated admin request.
 /// </summary>
-public class AuthRequestsControllerCreateTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class AuthRequestCreateTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     // A second, never-authenticated client used for the two AllowAnonymous endpoints (Post, GetResponse) so
     // CurrentContext.UserId is never populated from a bearer token during those calls.
@@ -30,7 +30,7 @@ public class AuthRequestsControllerCreateTests : IClassFixture<ApiApplicationFac
     private string _userEmail = null!;
     private User _user = null!;
 
-    public AuthRequestsControllerCreateTests(ApiApplicationFactory factory)
+    public AuthRequestCreateTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         // AuthRequestService pushes real notifications on create/approve/deny; the default push service isn't

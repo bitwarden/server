@@ -17,7 +17,7 @@ namespace Bit.Api.IntegrationTest.Auth.AuthRequests;
 /// <summary>
 /// Covers approving and denying an auth request.
 /// </summary>
-public class AuthRequestsControllerRespondTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class AuthRequestRespondTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
@@ -28,7 +28,7 @@ public class AuthRequestsControllerRespondTests : IClassFixture<ApiApplicationFa
     private string _userEmail = null!;
     private User _user = null!;
 
-    public AuthRequestsControllerRespondTests(ApiApplicationFactory factory)
+    public AuthRequestRespondTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         // AuthRequestService pushes real notifications on create/approve/deny; the default push service isn't

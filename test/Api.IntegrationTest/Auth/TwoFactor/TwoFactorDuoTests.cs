@@ -12,7 +12,7 @@ using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorTestHelpers;
 
 namespace Bit.Api.IntegrationTest.Auth.TwoFactor;
 
-public class TwoFactorControllerDuoTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class TwoFactorDuoTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
@@ -22,7 +22,7 @@ public class TwoFactorControllerDuoTests : IClassFixture<ApiApplicationFactory>,
 
     private string _userEmail = null!;
 
-    public TwoFactorControllerDuoTests(ApiApplicationFactory factory)
+    public TwoFactorDuoTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         SubstituteTwoFactorProviderServices(_factory);
