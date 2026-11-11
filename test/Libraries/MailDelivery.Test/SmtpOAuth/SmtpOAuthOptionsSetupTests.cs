@@ -401,4 +401,111 @@ public class SmtpOAuthOptionsSetupTests
             $"Smtp:OutboundMailbox (the sending mailbox) is required when Smtp:AuthType is {authType}.",
             failure);
     }
+
+    [Fact]
+    public void BuildAuthConfig_Password_ReturnsPasswordAuthConfig()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.Password;
+        options.Smtp.Username = "smtp-user";
+        options.Smtp.Password = "smtp-password";
+
+        var authConfig = SmtpOAuthOptionsSetup.BuildAuthConfig(options.Smtp);
+
+        var passwordAuthConfig = Assert.IsType<PasswordAuthConfig>(authConfig);
+        Assert.Equal("smtp-user", passwordAuthConfig.Username);
+        Assert.Equal("smtp-password", passwordAuthConfig.Password);
+    }
+
+    [Fact]
+    public void BuildAuthConfig_MicrosoftOAuth_ReturnsMicrosoftOAuthConfigFromOutboundMailbox()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.MicrosoftOAuth;
+        options.Smtp.TenantId = "test-tenant";
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.ClientId = "shorthand-client-id";
+        options.Smtp.ClientSecret = "shorthand-client-secret";
+
+        _sut.PostConfigure(name: null, options);
+        var result = _sut.Validate(name: null, options);
+        var authConfig = SmtpOAuthOptionsSetup.BuildAuthConfig(options.Smtp);
+
+        Assert.True(result.Succeeded);
+        var microsoftOAuthConfig = Assert.IsType<MicrosoftOAuthConfig>(authConfig);
+        Assert.Equal(
+            "https://login.microsoftonline.com/test-tenant/oauth2/v2.0/token",
+            microsoftOAuthConfig.TokenEndpoint);
+        Assert.Equal("sender@example.com", microsoftOAuthConfig.OutboundMailbox);
+        Assert.Equal("shorthand-client-id", microsoftOAuthConfig.ClientId);
+        Assert.Equal("shorthand-client-secret", microsoftOAuthConfig.ClientSecret);
+        Assert.Equal("https://outlook.office365.com/.default", microsoftOAuthConfig.Scope);
+        Assert.Equal(ClientCredentialsHandler.GrantType, microsoftOAuthConfig.GrantType);
+    }
+
+    [Fact]
+    public void BuildAuthConfig_MicrosoftOAuthWithExplicitOAuthClientIdAndSecret_PrefersOAuthShortcutOverTopLevel()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.MicrosoftOAuth;
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.TenantId = "test-tenant";
+        options.Smtp.ClientId = "shorthand-client-id";
+        options.Smtp.ClientSecret = "shorthand-client-secret";
+        options.Smtp.OAuth.ClientId = "explicit-client-id";
+        options.Smtp.OAuth.ClientSecret = "explicit-client-secret";
+
+        _sut.PostConfigure(name: null, options);
+        var authConfig = SmtpOAuthOptionsSetup.BuildAuthConfig(options.Smtp);
+
+        var microsoftOAuthConfig = Assert.IsType<MicrosoftOAuthConfig>(authConfig);
+        Assert.Equal("explicit-client-id", microsoftOAuthConfig.ClientId);
+        Assert.Equal("explicit-client-secret", microsoftOAuthConfig.ClientSecret);
+    }
+
+    [Fact]
+    public void BuildAuthConfig_CustomOAuth_ReturnsCustomOAuthConfigFromOutboundMailbox()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
+        options.Smtp.OAuth.Scope = "custom-scope";
+        options.Smtp.ClientId = "shorthand-client-id";
+        options.Smtp.ClientSecret = "shorthand-client-secret";
+
+        _sut.PostConfigure(name: null, options);
+        var result = _sut.Validate(name: null, options);
+        var authConfig = SmtpOAuthOptionsSetup.BuildAuthConfig(options.Smtp);
+
+        Assert.True(result.Succeeded);
+        var customOAuthConfig = Assert.IsType<CustomOAuthConfig>(authConfig);
+        Assert.Equal("https://example.com/token", customOAuthConfig.TokenEndpoint);
+        Assert.Equal("sender@example.com", customOAuthConfig.OutboundMailbox);
+        Assert.Equal("shorthand-client-id", customOAuthConfig.ClientId);
+        Assert.Equal("shorthand-client-secret", customOAuthConfig.ClientSecret);
+        Assert.Equal("custom-scope", customOAuthConfig.Scope);
+        Assert.Equal(ClientCredentialsHandler.GrantType, customOAuthConfig.GrantType);
+    }
+
+    [Fact]
+    public void BuildAuthConfig_CustomOAuthWithExplicitOAuthClientIdAndSecret_PrefersOAuthShortcutOverTopLevel()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
+        options.Smtp.OAuth.Scope = "custom-scope";
+        options.Smtp.ClientId = "shorthand-client-id";
+        options.Smtp.ClientSecret = "shorthand-client-secret";
+        options.Smtp.OAuth.ClientId = "explicit-client-id";
+        options.Smtp.OAuth.ClientSecret = "explicit-client-secret";
+
+        _sut.PostConfigure(name: null, options);
+        var authConfig = SmtpOAuthOptionsSetup.BuildAuthConfig(options.Smtp);
+
+        var customOAuthConfig = Assert.IsType<CustomOAuthConfig>(authConfig);
+        Assert.Equal("explicit-client-id", customOAuthConfig.ClientId);
+        Assert.Equal("explicit-client-secret", customOAuthConfig.ClientSecret);
+    }
 }

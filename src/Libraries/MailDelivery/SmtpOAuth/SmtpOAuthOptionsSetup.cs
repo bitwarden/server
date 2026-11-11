@@ -5,9 +5,10 @@ namespace Bit.Core.Platform.Mail.Delivery;
 // Derives per-provider defaults and validates required OAuth fields for MicrosoftOAuth and
 // CustomOAuth. Operates only on the already-bound MailDeliveryOptions instance: no IConfiguration
 // dependency, per LIBRARY.md's "host owns binding" rule. PostConfigure derives defaults before
-// validation runs; Validate fails fast with an actionable message.
-// PostConfigure and Validate dispatch through switch expressions, so a new SmtpAuthType fails
-// the build (CS8509) until it is handled here.
+// validation runs; Validate fails fast with an actionable message, then builds the matching
+// SmtpAuthConfig now that its required fields are known to be present.
+// PostConfigure, Validate, and BuildAuthConfig dispatch through switch expressions, so a new
+// SmtpAuthType fails the build (CS8509) until it is handled here.
 internal sealed class SmtpOAuthOptionsSetup :
     IPostConfigureOptions<MailDeliveryOptions>,
     IValidateOptions<MailDeliveryOptions>
@@ -31,8 +32,47 @@ internal sealed class SmtpOAuthOptionsSetup :
             SmtpAuthType.MicrosoftOAuth => MicrosoftErrors(options.Smtp),
             SmtpAuthType.CustomOAuth => CustomErrors(options.Smtp),
         };
-        return errors.Count > 0 ? ValidateOptionsResult.Fail(errors) : ValidateOptionsResult.Success;
+        if (errors.Count > 0)
+        {
+            return ValidateOptionsResult.Fail(errors);
+        }
+
+        // Validation above has already enforced the invariants each SmtpAuthConfig's required
+        // members encode, so construction here cannot fail. The result isn't wired into a
+        // consumer yet; that lands in the next TODO (SmtpCredentialProvider).
+        _ = BuildAuthConfig(options.Smtp);
+        return ValidateOptionsResult.Success;
     }
+
+    // Converts the already-validated SmtpOptions into the SmtpAuthConfig matching its AuthType.
+    // Exposed internally so SmtpCredentialProvider can call it directly once it's updated to
+    // consume SmtpAuthConfig instead of raw SmtpOptions.
+    internal static SmtpAuthConfig BuildAuthConfig(MailDeliveryOptions.SmtpOptions smtp) => smtp.AuthType switch
+    {
+        SmtpAuthType.Password => new PasswordAuthConfig
+        {
+            Username = smtp.Username!,
+            Password = smtp.Password!,
+        },
+        SmtpAuthType.MicrosoftOAuth => new MicrosoftOAuthConfig
+        {
+            TokenEndpoint = smtp.OAuth.TokenEndpoint!,
+            OutboundMailbox = smtp.OutboundMailbox!,
+            ClientId = smtp.OAuth.ClientId!,
+            ClientSecret = smtp.OAuth.ClientSecret!,
+            Scope = smtp.OAuth.Scope!,
+            GrantType = smtp.OAuth.GrantType!,
+        },
+        SmtpAuthType.CustomOAuth => new CustomOAuthConfig
+        {
+            TokenEndpoint = smtp.OAuth.TokenEndpoint!,
+            OutboundMailbox = smtp.OutboundMailbox!,
+            ClientId = smtp.OAuth.ClientId!,
+            ClientSecret = smtp.OAuth.ClientSecret!,
+            Scope = smtp.OAuth.Scope!,
+            GrantType = smtp.OAuth.GrantType!,
+        },
+    };
 
     private static void DeriveNoDefaults(MailDeliveryOptions.SmtpOptions smtp) { }
 
