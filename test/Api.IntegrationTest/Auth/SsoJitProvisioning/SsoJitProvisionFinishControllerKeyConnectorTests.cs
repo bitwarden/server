@@ -17,7 +17,7 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Xunit;
 
-namespace Bit.Api.IntegrationTest.Auth.Controllers.SsoJitProvisionFinish;
+namespace Bit.Api.IntegrationTest.Auth.SsoJitProvisioning;
 
 public class SsoJitProvisionFinishControllerKeyConnectorTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {

@@ -12,7 +12,7 @@ using Bit.IntegrationTestCommon.Factories;
 using Xunit;
 using static Bit.Api.IntegrationTest.Auth.Helpers.AuthRequestAssertions;
 
-namespace Bit.Api.IntegrationTest.Auth.Controllers.AuthRequests;
+namespace Bit.Api.IntegrationTest.Auth.AuthRequests;
 
 /// <summary>
 /// Covers approving and denying an auth request.

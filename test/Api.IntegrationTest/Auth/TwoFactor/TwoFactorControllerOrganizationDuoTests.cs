@@ -13,7 +13,7 @@ using NSubstitute;
 using Xunit;
 using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorTestHelpers;
 
-namespace Bit.Api.IntegrationTest.Auth.Controllers.TwoFactor;
+namespace Bit.Api.IntegrationTest.Auth.TwoFactor;
 
 public class TwoFactorControllerOrganizationDuoTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {

@@ -15,7 +15,7 @@ using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorEmailAssertions;
 using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorEmailTestHelpers;
 using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorTestHelpers;
 
-namespace Bit.Api.IntegrationTest.Auth.Controllers.TwoFactor;
+namespace Bit.Api.IntegrationTest.Auth.TwoFactor;
 
 /// <summary>
 /// Covers what an emailed two-factor code can be used for after it is sent, with the real two-factor email

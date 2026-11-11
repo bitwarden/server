@@ -16,7 +16,7 @@ using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorEmailAssertions;
 using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorEmailTestHelpers;
 using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorTestHelpers;
 
-namespace Bit.Api.IntegrationTest.Auth.Controllers.TwoFactor;
+namespace Bit.Api.IntegrationTest.Auth.TwoFactor;
 
 /// <summary>
 /// Covers send-email-login, which emails a two-factor login code during login, with the real two-factor email

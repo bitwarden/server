@@ -13,7 +13,7 @@ using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Identity;
 using Xunit;
 
-namespace Bit.Api.IntegrationTest.Auth.Controllers.EmergencyAccess;
+namespace Bit.Api.IntegrationTest.Auth.EmergencyAccess;
 
 /// <summary>
 /// Covers the grantee setting a new master password on the grantor's account after an approved takeover

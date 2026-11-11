@@ -11,7 +11,7 @@ using Bit.IntegrationTestCommon.Factories;
 using Xunit;
 using static Bit.Api.IntegrationTest.Auth.Helpers.AuthRequestAssertions;
 
-namespace Bit.Api.IntegrationTest.Auth.Controllers.AuthRequests;
+namespace Bit.Api.IntegrationTest.Auth.AuthRequests;
 
 /// <summary>
 /// Covers creating auth requests: the anonymous login-with-device request and the authenticated admin request.

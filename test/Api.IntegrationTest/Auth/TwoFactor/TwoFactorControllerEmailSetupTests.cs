@@ -18,7 +18,7 @@ using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorEmailAssertions;
 using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorEmailTestHelpers;
 using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorTestHelpers;
 
-namespace Bit.Api.IntegrationTest.Auth.Controllers.TwoFactor;
+namespace Bit.Api.IntegrationTest.Auth.TwoFactor;
 
 /// <summary>
 /// Covers turning email two-factor on and off with the real two-factor email service: get-email, delete,

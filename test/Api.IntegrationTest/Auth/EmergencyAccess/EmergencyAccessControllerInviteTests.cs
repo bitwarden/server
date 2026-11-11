@@ -10,7 +10,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Tokens;
 using Xunit;
 
-namespace Bit.Api.IntegrationTest.Auth.Controllers.EmergencyAccess;
+namespace Bit.Api.IntegrationTest.Auth.EmergencyAccess;
 
 /// <summary>
 /// Covers the grantee accepting an emergency access invitation.
