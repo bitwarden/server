@@ -108,34 +108,6 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         return Mapper.Map<List<CoreEntity>>(leases);
     }
 
-    public async Task<ICollection<CoreEntity>> GetManyEndedByCollectionIdsAsync(IEnumerable<Guid> collectionIds,
-        DateTime since, DateTime now)
-    {
-        var ids = collectionIds.ToList();
-        if (ids.Count == 0)
-        {
-            return new List<CoreEntity>();
-        }
-
-        using var scope = ServiceScopeFactory.CreateScope();
-        var dbContext = GetDatabaseContext(scope);
-
-        // End is RevokedDate for an early end, NotAfter for a natural close; mirrors the matching stored procedure.
-        var leases = await dbContext.AccessLeases
-            .Where(l => ids.Contains(l.CollectionId)
-                && (
-                    // Ended early (Revoked, Cancelled): its end is RevokedDate, whatever its window says.
-                    ((l.Action == AccessLeaseAction.Revoked || l.Action == AccessLeaseAction.Cancelled) && l.RevokedDate >= since)
-                    // Window closed on its own: its end is NotAfter.
-                    || (l.Action == AccessLeaseAction.None && l.NotAfter <= now && l.NotAfter >= since)
-                ))
-            .OrderByDescending(l => l.RevokedDate ?? l.NotAfter)
-            .AsNoTracking()
-            .ToListAsync();
-
-        return Mapper.Map<List<CoreEntity>>(leases);
-    }
-
     /// <remarks>
     /// Retried on a fresh transaction after a provider serialization failure; bounded retries propagate on exhaustion.
     /// Applies only under <paramref name="enforceSingleActiveLease"/>; see <see cref="MintFromApprovedRequestAsync"/>.
