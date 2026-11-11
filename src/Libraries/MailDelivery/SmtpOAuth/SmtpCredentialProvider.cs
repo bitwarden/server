@@ -17,30 +17,38 @@ internal sealed class SmtpCredentialProvider : ISmtpCredentialProvider
         TimeProvider timeProvider,
         ILoggerFactory loggerFactory)
     {
-        var smtp = options.Value.Smtp;
+        var authConfig = SmtpOAuthOptionsSetup.BuildAuthConfig(options.Value.Smtp);
 
-        _handler = smtp.AuthType switch
+        // Switches on AuthType (not authConfig's type) so the compiler's CS8509 exhaustiveness
+        // check still fires: pattern-matching switches over a record hierarchy are never
+        // considered exhaustive by the compiler, so a type-pattern switch here would need a
+        // discard arm and silently swallow a future unhandled AuthType (e.g. GoogleOAuth in PR 2).
+        _handler = options.Value.Smtp.AuthType switch
         {
             SmtpAuthType.Password => null,
-            SmtpAuthType.MicrosoftOAuth => new ClientCredentialsHandler(
-                httpClientFactory,
-                timeProvider,
-                loggerFactory.CreateLogger<ClientCredentialsHandler>(),
-                smtp.OAuth.TokenEndpoint!,
-                smtp.OutboundMailbox!,
-                smtp.OAuth.ClientId!,
-                smtp.OAuth.ClientSecret!,
-                smtp.OAuth.Scope!),
-            SmtpAuthType.CustomOAuth => new ClientCredentialsHandler(
-                httpClientFactory,
-                timeProvider,
-                loggerFactory.CreateLogger<ClientCredentialsHandler>(),
-                smtp.OAuth.TokenEndpoint!,
-                smtp.OutboundMailbox!,
-                smtp.OAuth.ClientId!,
-                smtp.OAuth.ClientSecret!,
-                smtp.OAuth.Scope!),
+            SmtpAuthType.MicrosoftOAuth => CreateHandlerFromMicrosoftOAuth((MicrosoftOAuthConfig)authConfig),
+            SmtpAuthType.CustomOAuth => CreateHandlerFromCustomOAuth((CustomOAuthConfig)authConfig),
         };
+
+        ClientCredentialsHandler CreateHandlerFromMicrosoftOAuth(MicrosoftOAuthConfig oauth) => new(
+            httpClientFactory,
+            timeProvider,
+            loggerFactory.CreateLogger<ClientCredentialsHandler>(),
+            oauth.TokenEndpoint,
+            oauth.OutboundMailbox,
+            oauth.ClientId,
+            oauth.ClientSecret,
+            oauth.Scope);
+
+        ClientCredentialsHandler CreateHandlerFromCustomOAuth(CustomOAuthConfig oauth) => new(
+            httpClientFactory,
+            timeProvider,
+            loggerFactory.CreateLogger<ClientCredentialsHandler>(),
+            oauth.TokenEndpoint,
+            oauth.OutboundMailbox,
+            oauth.ClientId,
+            oauth.ClientSecret,
+            oauth.Scope);
     }
 
     public Task<SaslMechanism> GetCredentialsAsync(CancellationToken cancellationToken)
