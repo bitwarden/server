@@ -19,6 +19,7 @@ using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
 using Bit.Core.Vault.Repositories;
+using Bit.Core.Vault.Utilities;
 namespace Bit.Core.Vault.Services;
 
 public class CipherService : ICipherService
@@ -113,6 +114,12 @@ public class CipherService : ICipherService
                 {
                     // Set user ID to limit scope of collection ids in the create sproc
                     cipher.UserId = savingUserId;
+                }
+                else
+                {
+                    // Without a user scope the create sproc accepts any org collection, including another member's My Items.
+                    await DefaultUserCollectionGuard.EnsureNoForeignDefaultCollectionsAsync(
+                        _collectionRepository, cipher.OrganizationId.Value, collectionIds, savingUserId);
                 }
                 await _cipherRepository.CreateAsync(cipher, collectionIds);
             }
@@ -227,7 +234,7 @@ public class CipherService : ICipherService
         ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
         await ValidateCipherEditForAttachmentAsync(cipher, savingUserId, adminRequest, fileSize);
 
-        var attachmentId = Utilities.CoreHelpers.SecureRandomString(32, upper: false, special: false);
+        var attachmentId = CoreHelpers.SecureRandomString(32, upper: false, special: false);
         var data = new CipherAttachment.MetaData
         {
             AttachmentId = attachmentId,
@@ -266,7 +273,7 @@ public class CipherService : ICipherService
         ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
         await ValidateCipherEditForAttachmentAsync(cipher, savingUserId, orgAdmin, requestLength);
 
-        var attachmentId = Utilities.CoreHelpers.SecureRandomString(32, upper: false, special: false);
+        var attachmentId = CoreHelpers.SecureRandomString(32, upper: false, special: false);
         var data = new CipherAttachment.MetaData
         {
             AttachmentId = attachmentId,
@@ -1205,13 +1212,8 @@ public class CipherService : ICipherService
         return requirement.IgnoreStorageLimitsOnMigration(organization.Id);
     }
 
-    private async Task<HashSet<Guid>> GetOwnedDefaultCollectionIdsAsync(Guid userId)
-    {
-        return (await _collectionRepository.GetManyByUserIdAsync(userId))
-            .Where(c => c.Type == CollectionType.DefaultUserCollection)
-            .Select(c => c.Id)
-            .ToHashSet();
-    }
+    private Task<HashSet<Guid>> GetOwnedDefaultCollectionIdsAsync(Guid userId) =>
+        DefaultUserCollectionGuard.GetOwnedDefaultCollectionIdsAsync(_collectionRepository, userId);
 
     // A cipher that lives only in default ("My Items") collections is personal to their owners. Returns those
     // default collection ids, or an empty list once the cipher is also in a shared collection (it is then

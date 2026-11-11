@@ -3919,4 +3919,104 @@ public class CiphersControllerTests
         await sutProvider.GetDependency<ICipherLeaseGate>()
             .DidNotReceiveWithAnyArgs().EnsureCanMutateManyAsync(default, default!);
     }
+
+    [Theory, BitAutoData]
+    public async Task PostBulkCollections_AddToAnotherUsersDefaultCollection_ThrowsBadRequestAndDoesNotWrite(
+        Guid userId, Guid organizationId, Guid cipherId, Collection foreignDefaultCollection,
+        CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
+    {
+        ArrangeBulkCollectionsAsEditAnyCollection(
+            sutProvider, userId, organizationId, cipherId, foreignDefaultCollection, organization);
+        // The caller owns no default collections.
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByUserIdAsync(userId)
+            .Returns(new List<CollectionDetails>());
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PostBulkCollections(
+            new CipherBulkUpdateCollectionsRequestModel
+            {
+                OrganizationId = organizationId,
+                CipherIds = [cipherId],
+                CollectionIds = [foreignDefaultCollection.Id],
+            }));
+
+        await sutProvider.GetDependency<ICollectionCipherRepository>()
+            .DidNotReceiveWithAnyArgs().AddCollectionsForManyCiphersAsync(default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostBulkCollections_AddToOwnDefaultCollection_Writes(
+        Guid userId, Guid organizationId, Guid cipherId, Collection ownDefaultCollection,
+        CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
+    {
+        ArrangeBulkCollectionsAsEditAnyCollection(
+            sutProvider, userId, organizationId, cipherId, ownDefaultCollection, organization);
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByUserIdAsync(userId)
+            .Returns(new List<CollectionDetails>
+            {
+                new() { Id = ownDefaultCollection.Id, Type = CollectionType.DefaultUserCollection },
+            });
+
+        await sutProvider.Sut.PostBulkCollections(
+            new CipherBulkUpdateCollectionsRequestModel
+            {
+                OrganizationId = organizationId,
+                CipherIds = [cipherId],
+                CollectionIds = [ownDefaultCollection.Id],
+            });
+
+        await sutProvider.GetDependency<ICollectionCipherRepository>().Received(1).AddCollectionsForManyCiphersAsync(
+            organizationId,
+            Arg.Is<IEnumerable<Guid>>(ids => ids.Single() == cipherId),
+            Arg.Is<IEnumerable<Guid>>(ids => ids.Single() == ownDefaultCollection.Id));
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostBulkCollections_RemoveCollections_DoesNotCheckDefaultCollectionOwnership(
+        Guid userId, Guid organizationId, Guid cipherId, Collection defaultCollection,
+        CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
+    {
+        // Removal rules for default collections are enforced by ValidateBulkCollectionAssignmentAsync instead.
+        ArrangeBulkCollectionsAsEditAnyCollection(
+            sutProvider, userId, organizationId, cipherId, defaultCollection, organization);
+
+        await sutProvider.Sut.PostBulkCollections(
+            new CipherBulkUpdateCollectionsRequestModel
+            {
+                OrganizationId = organizationId,
+                CipherIds = [cipherId],
+                CollectionIds = [defaultCollection.Id],
+                RemoveCollections = true,
+            });
+
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .DidNotReceiveWithAnyArgs().GetManyByManyIdsAsync(default!);
+        await sutProvider.GetDependency<ICollectionCipherRepository>()
+            .Received(1).RemoveCollectionsForManyCiphersAsync(organizationId, Arg.Any<IEnumerable<Guid>>(),
+                Arg.Any<IEnumerable<Guid>>());
+    }
+
+    private static void ArrangeBulkCollectionsAsEditAnyCollection(
+        SutProvider<CiphersController> sutProvider, Guid userId, Guid organizationId, Guid cipherId,
+        Collection defaultCollection, CurrentContextOrganization organization)
+    {
+        organization.Id = organizationId;
+        organization.Type = OrganizationUserType.Custom;
+        organization.Permissions.EditAnyCollection = true;
+        defaultCollection.OrganizationId = organizationId;
+        defaultCollection.Type = CollectionType.DefaultUserCollection;
+
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organizationId).Returns(organization);
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<Cipher> { new() { Id = cipherId, OrganizationId = organizationId } });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<Collection> { defaultCollection });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Single() == defaultCollection.Id))
+            .Returns(new List<Collection> { defaultCollection });
+    }
 }

@@ -32,6 +32,7 @@ using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
 using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
+using Bit.Core.Vault.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -1068,6 +1069,13 @@ public class CiphersController : Controller
             !await CanEditItemsInCollections(model.OrganizationId, model.CollectionIds))
         {
             throw new NotFoundException();
+        }
+
+        // Runs after authorization so the 400 reveals nothing to a caller who could not otherwise make this change.
+        if (!model.RemoveCollections)
+        {
+            await DefaultUserCollectionGuard.EnsureNoForeignDefaultCollectionsAsync(
+                _collectionRepository, model.OrganizationId, model.CollectionIds, userId);
         }
 
         // This writes straight to the repository, so the service-level gate does not cover it. A caller who can

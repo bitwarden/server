@@ -441,6 +441,125 @@ public class CiphersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Contains(sharedCollectionId, collectionIds);
     }
 
+    [Theory]
+    [MemberData(nameof(EditorRoles))]
+    public async Task PostAdmin_CannotCreateCipherInAnotherUsersDefaultCollection(OrganizationUserType editorType)
+    {
+        var collectionCipherRepository = _factory.GetService<ICollectionCipherRepository>();
+
+        var (editorEmail, _, defaultCollectionId, _) = await ArrangeCipherInDefaultCollectionAsync(editorType);
+        var orgCipherCountBefore = (await _cipherRepository.GetManyByOrganizationIdAsync(_organization.Id)).Count;
+
+        // Act: the editor creates an organization cipher directly in another member's default ("My Items") collection.
+        await _loginHelper.LoginAsync(editorEmail);
+
+        var response = await _client.PostAsJsonAsync("ciphers/admin", new CipherCreateRequestModel
+        {
+            CollectionIds = [defaultCollectionId],
+            Cipher = new CipherRequestModel
+            {
+                Type = CipherType.Login,
+                OrganizationId = _organization.Id.ToString(),
+                Name = _mockEncryptedString,
+                Data = "{}"
+            }
+        });
+
+        // Assert: the request is rejected and nothing is created.
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var orgCipherCountAfter = (await _cipherRepository.GetManyByOrganizationIdAsync(_organization.Id)).Count;
+        Assert.Equal(orgCipherCountBefore, orgCipherCountAfter);
+
+        var defaultCollectionCiphers = (await collectionCipherRepository.GetManyByOrganizationIdAsync(_organization.Id))
+            .Where(cc => cc.CollectionId == defaultCollectionId);
+        Assert.Single(defaultCollectionCiphers);
+    }
+
+    [Theory]
+    [MemberData(nameof(EditorRoles))]
+    public async Task PostAdmin_CanCreateCipherInTheirOwnDefaultCollection(OrganizationUserType editorType)
+    {
+        var collectionRepository = _factory.GetService<ICollectionRepository>();
+        var collectionCipherRepository = _factory.GetService<ICollectionCipherRepository>();
+
+        // Custom members need the EditAnyCollection permission; Owners/Admins rely on the org setting.
+        var permissions = editorType == OrganizationUserType.Custom
+            ? new Permissions { EditAnyCollection = true }
+            : null;
+
+        var (editorEmail, editor) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, editorType, permissions);
+
+        var defaultCollection = new Collection
+        {
+            OrganizationId = _organization.Id,
+            Name = "My Items",
+            Type = CollectionType.DefaultUserCollection
+        };
+        await collectionRepository.CreateAsync(defaultCollection, null, [new CollectionAccessSelection
+            { Id = editor.Id, ReadOnly = false, HidePasswords = false, Manage = true }
+        ]);
+
+        // Act: the editor creates an organization cipher in their own default ("My Items") collection.
+        await _loginHelper.LoginAsync(editorEmail);
+
+        var response = await _client.PostAsJsonAsync("ciphers/admin", new CipherCreateRequestModel
+        {
+            CollectionIds = [defaultCollection.Id],
+            Cipher = new CipherRequestModel
+            {
+                Type = CipherType.Login,
+                OrganizationId = _organization.Id.ToString(),
+                Name = _mockEncryptedString,
+                Data = "{}"
+            }
+        });
+
+        // Assert: the cipher is created in the editor's own default collection.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var cipherId = document.RootElement.GetProperty("id").GetGuid();
+        var collectionIds = await collectionCipherRepository.GetCollectionIdsByCipherIdAsync(cipherId);
+        Assert.Contains(defaultCollection.Id, collectionIds);
+    }
+
+    [Theory]
+    [MemberData(nameof(EditorRoles))]
+    public async Task PostBulkCollections_CannotAddCipherToAnotherUsersDefaultCollection(OrganizationUserType editorType)
+    {
+        var collectionCipherRepository = _factory.GetService<ICollectionCipherRepository>();
+
+        var (editorEmail, _, defaultCollectionId, _) = await ArrangeCipherInDefaultCollectionAsync(editorType);
+
+        // An unassigned organization cipher, so no other collection rule applies to it.
+        var cipher = new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = _organization.Id,
+            Data = "{}"
+        };
+        await _cipherRepository.CreateAsync(cipher, Array.Empty<Guid>());
+
+        // Act: the editor adds the cipher to another member's default ("My Items") collection.
+        await _loginHelper.LoginAsync(editorEmail);
+
+        var response = await _client.PostAsJsonAsync("ciphers/bulk-collections", new CipherBulkUpdateCollectionsRequestModel
+        {
+            OrganizationId = _organization.Id,
+            CipherIds = [cipher.Id],
+            CollectionIds = [defaultCollectionId],
+            RemoveCollections = false
+        });
+
+        // Assert: the request is rejected and the cipher is not linked.
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var collectionIds = await collectionCipherRepository.GetCollectionIdsByCipherIdAsync(cipher.Id);
+        Assert.DoesNotContain(defaultCollectionId, collectionIds);
+    }
+
     /// <summary>
     /// Creates the acting member with the given role, a second member who owns a default user collection
     /// ("My Items") containing an org-owned cipher, and a shared collection.
