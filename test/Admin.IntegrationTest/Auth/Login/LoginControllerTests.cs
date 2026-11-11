@@ -3,7 +3,7 @@ using Bit.IntegrationTestCommon;
 using Bit.IntegrationTestCommon.Factories;
 using Xunit;
 
-namespace Bit.Admin.IntegrationTest.Auth.Controllers.Login;
+namespace Bit.Admin.IntegrationTest.Auth.Login;
 
 public class LoginControllerTests
 {
