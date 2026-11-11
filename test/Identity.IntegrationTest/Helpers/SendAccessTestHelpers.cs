@@ -7,7 +7,7 @@ using Duende.IdentityModel;
 
 namespace Bit.Identity.IntegrationTest.Helpers;
 
-public static class SendAccessTestUtilities
+public static class SendAccessTestHelpers
 {
     public static FormUrlEncodedContent CreateTokenRequestBody(
         Guid sendId,

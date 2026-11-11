@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Bit.Identity.IntegrationTest.TokenEndpoint.Grants.SendAccess;
 
-public class SendPasswordRequestValidatorIntegrationTests(IdentityApplicationFactory _factory) : IClassFixture<IdentityApplicationFactory>
+public class SendAccessGrantPasswordTests(IdentityApplicationFactory _factory) : IClassFixture<IdentityApplicationFactory>
 {
     [Fact]
     public async Task SendAccess_PasswordProtectedSend_ValidPassword_ReturnsAccessToken()
@@ -38,7 +38,7 @@ public class SendPasswordRequestValidatorIntegrationTests(IdentityApplicationFac
             });
         }).CreateClient();
 
-        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId, password: clientPasswordHash);
+        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId, password: clientPasswordHash);
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -75,7 +75,7 @@ public class SendPasswordRequestValidatorIntegrationTests(IdentityApplicationFac
             });
         }).CreateClient();
 
-        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId, password: wrongClientPasswordHash);
+        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId, password: wrongClientPasswordHash);
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -107,7 +107,7 @@ public class SendPasswordRequestValidatorIntegrationTests(IdentityApplicationFac
             });
         }).CreateClient();
 
-        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId); // No password
+        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId); // No password
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -148,7 +148,7 @@ public class SendPasswordRequestValidatorIntegrationTests(IdentityApplicationFac
             });
         }).CreateClient();
 
-        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId, string.Empty);
+        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId, string.Empty);
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
