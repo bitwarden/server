@@ -75,6 +75,23 @@ public class OrganizationSsoSceneTests : IClassFixture<InPlaySeederApiApplicatio
         Assert.Single(policies, p => p.Type == PolicyType.RequireSso);
     }
 
+    [Fact]
+    public async Task SeedAsync_MasterPasswordWithRequireSsoLoginPolicy_AddsSingleOrgAndRequireSso()
+    {
+        var organizationId = await SeedOrganizationWithoutSsoAsync();
+        var request = Sso(organizationId, "mp-policies");
+        request.RequireSsoLoginPolicy = true;
+
+        await _client.PostSceneAsync(_playId, nameof(OrganizationSsoScene), request);
+
+        var policies = await _factory.QueryAsync(db => db.Policies
+            .Where(p => p.OrganizationId == organizationId).ToListAsync());
+        Assert.Equal(2, policies.Count);
+        Assert.All(policies, p => Assert.True(p.Enabled));
+        Assert.Single(policies, p => p.Type == PolicyType.SingleOrg);
+        Assert.Single(policies, p => p.Type == PolicyType.RequireSso);
+    }
+
     private async Task<Guid> SeedOrganizationWithoutSsoAsync()
     {
         var owner = await _client.SeedUserAsync(_playId);
