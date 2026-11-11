@@ -1,14 +1,7 @@
 ﻿using System.Net;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.IntegrationTest.Factories;
-using Bit.Core.Auth.Services;
-using Bit.Core.Entities;
-using Bit.Core.Repositories;
-using Bit.Core.Services;
-using Core.Auth.Enums;
 using Microsoft.Extensions.Caching.Distributed;
-using NSubstitute;
-using Xunit;
 
 namespace Bit.Api.IntegrationTest.Auth.NewDeviceVerification;
 
@@ -181,6 +174,8 @@ public class ResendNewDeviceOtpTests
     /// Runs with <see cref="ITwoFactorEmailService"/> substituted, so these tests assert which user and device
     /// the controller passes to the service.
     /// </summary>
+    // TODO: Move the cases below that the outer class does not cover into the outer class, which runs the real
+    // service, and then delete this class.
     public class SubstitutedTwoFactorEmailServiceTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
     {
         // const so it can be a default parameter value on PostResendNewDeviceOtpAsync.
@@ -214,6 +209,7 @@ public class ResendNewDeviceOtpTests
             return Task.CompletedTask;
         }
 
+        // TODO: The outer class covers this request. Assert there that the code is scoped to the requesting device.
         [Fact]
         public async Task PostResendNewDeviceOtp_ValidEmailAndSecret_OkAndSendsEmailForRequestingDevice()
         {
@@ -228,6 +224,7 @@ public class ResendNewDeviceOtpTests
                     Arg.Is<User>(u => u.Id == user.Id), _resendDeviceIdentifier);
         }
 
+        // TODO: The outer class has no wrong master password case. Move this case there.
         [Fact]
         public async Task PostResendNewDeviceOtp_WrongSecret_SilentlySucceedsWithoutSendingEmail()
         {
@@ -243,6 +240,7 @@ public class ResendNewDeviceOtpTests
                     Arg.Is<User>(u => u.Id == user.Id), Arg.Any<string>());
         }
 
+        // TODO: The outer class has no unknown email case. Move this case there, and assert that no email is sent.
         [Fact]
         public async Task PostResendNewDeviceOtp_UnknownEmail_SilentlySucceeds()
         {
@@ -254,6 +252,7 @@ public class ResendNewDeviceOtpTests
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         }
 
+        // TODO: Duplicates ResendNewDeviceOtp_NoHeader_NoPendingDevice_SendsNothing. Delete this case.
         [Fact]
         public async Task PostResendNewDeviceOtp_NoDeviceIdentifier_SilentlySucceedsWithoutSendingEmail()
         {
