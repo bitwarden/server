@@ -1,15 +1,10 @@
-﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
-using Bit.Core.Enums;
-using Bit.Core.Test.Auth.AutoFixture;
+﻿using Bit.Core.Enums;
 using Bit.IntegrationTestCommon.Factories;
-using Bit.Test.Common.AutoFixture.Attributes;
-using Microsoft.EntityFrameworkCore;
 using Xunit;
 using static Bit.Identity.IntegrationTest.Helpers.TokenEndpointTestHelpers;
 
 namespace Bit.Identity.IntegrationTest.Middleware;
 
-[SutProviderCustomize]
 public class RateLimitTests : IClassFixture<IdentityApplicationFactory>
 {
     private readonly IdentityApplicationFactory _factory;
@@ -20,22 +15,15 @@ public class RateLimitTests : IClassFixture<IdentityApplicationFactory>
         InitializeSharedFactory(_factory);
     }
 
-    [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
-    public async Task TokenEndpoint_TooQuickInOneSecond_BlockRequest(
-        RegisterFinishRequestModel requestModel)
+    [Fact]
+    public async Task TokenEndpoint_TooQuickInOneSecond_BlockRequest()
     {
-        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
         // The configured IP rate limit rules allow 5 requests per second to any endpoint and 10 requests per
         // minute to POST /connect/token. Sending 11 token requests at once from one IP exceeds both rules.
         const int TokenRequestsPerMinuteAllowed = 10;
 
-        requestModel.Email = "test+ratelimiting@email.com";
-
-        var user = await _factory.RegisterNewIdentityFactoryUserAsync(requestModel);
-
-        var database = _factory.GetDatabaseContext();
-        user = await database.Users
-            .FirstAsync(u => u.Email == user.Email);
+        // Rate limiting runs before login, so the requests do not need an existing user.
+        const string Email = "test+ratelimiting@email.com";
 
         var tasks = new Task<HttpContext>[TokenRequestsPerMinuteAllowed + 1];
 
@@ -60,7 +48,7 @@ public class RateLimitTests : IClassFixture<IdentityApplicationFactory>
                 { "deviceIdentifier", IdentityApplicationFactory.DefaultDeviceIdentifier },
                 { "deviceName", "firefox" },
                 { "grant_type", "password" },
-                { "username", user.Email},
+                { "username", Email },
                 { "password", "master_password_hash" },
             }), context => context.SetIp("1.1.1.2"));
         }
