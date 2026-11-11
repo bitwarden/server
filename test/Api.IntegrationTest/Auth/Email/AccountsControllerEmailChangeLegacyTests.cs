@@ -13,7 +13,7 @@ using Xunit;
 using static Bit.Api.IntegrationTest.Auth.Helpers.EmailChangeTestHelpers;
 using static Bit.Api.IntegrationTest.Auth.Helpers.MasterPasswordPayloads;
 
-namespace Bit.Api.IntegrationTest.Auth.Controllers.Accounts;
+namespace Bit.Api.IntegrationTest.Auth.Email;
 
 public class AccountsControllerEmailChangeLegacyTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {

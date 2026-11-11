@@ -10,7 +10,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.IntegrationTest.Auth.Controllers.Accounts;
+namespace Bit.Api.IntegrationTest.Auth.NewDeviceVerification;
 
 /// <summary>
 /// Covers how the new device verification resend endpoint decides which device to scope a code to, running

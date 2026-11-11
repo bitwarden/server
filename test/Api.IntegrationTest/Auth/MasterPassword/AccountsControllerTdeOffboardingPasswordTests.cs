@@ -7,7 +7,7 @@ using Bit.Core.KeyManagement.Models.Api.Request;
 using Xunit;
 using static Bit.Api.IntegrationTest.Auth.Helpers.MasterPasswordPayloads;
 
-namespace Bit.Api.IntegrationTest.Auth.Controllers.Accounts;
+namespace Bit.Api.IntegrationTest.Auth.MasterPassword;
 
 public class AccountsControllerTdeOffboardingPasswordTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {

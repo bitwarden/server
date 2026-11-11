@@ -8,7 +8,7 @@ using NSubstitute;
 using Xunit;
 using static Bit.Api.IntegrationTest.Auth.Helpers.MasterPasswordPayloads;
 
-namespace Bit.Api.IntegrationTest.Auth.Controllers.Accounts;
+namespace Bit.Api.IntegrationTest.Auth.ApiKeys;
 
 public class AccountsControllerApiKeyTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {

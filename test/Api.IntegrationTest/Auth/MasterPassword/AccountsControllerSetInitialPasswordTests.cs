@@ -20,7 +20,7 @@ using Xunit;
 using static Bit.Api.IntegrationTest.Auth.Helpers.MasterPasswordPayloads;
 using static Bit.Core.KeyManagement.Enums.SignatureAlgorithm;
 
-namespace Bit.Api.IntegrationTest.Auth.Controllers.Accounts;
+namespace Bit.Api.IntegrationTest.Auth.MasterPassword;
 
 public class AccountsControllerSetInitialPasswordTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {

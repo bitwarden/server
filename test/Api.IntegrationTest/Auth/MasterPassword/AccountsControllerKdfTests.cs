@@ -14,7 +14,7 @@ using NSubstitute;
 using Xunit;
 using static Bit.Api.IntegrationTest.Auth.Helpers.MasterPasswordPayloads;
 
-namespace Bit.Api.IntegrationTest.Auth.Controllers.Accounts;
+namespace Bit.Api.IntegrationTest.Auth.MasterPassword;
 
 public class AccountsControllerKdfTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {

@@ -3,7 +3,7 @@ using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Response;
 using Xunit;
 
-namespace Bit.Api.IntegrationTest.Auth.Controllers.Accounts;
+namespace Bit.Api.IntegrationTest.Auth.Profile;
 
 public class AccountsControllerProfileTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
