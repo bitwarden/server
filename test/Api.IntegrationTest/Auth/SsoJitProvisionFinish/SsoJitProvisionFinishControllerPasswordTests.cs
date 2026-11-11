@@ -267,7 +267,7 @@ public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApp
         organization.Identifier = $"sso-{Guid.NewGuid()}";
         await _organizationRepository.ReplaceAsync(organization);
 
-        await SsoJitProvisionTestHelpers.CreateSsoConfigAsync(
+        await SsoJitProvisionFinishTestHelpers.CreateSsoConfigAsync(
             _ssoConfigRepository, organization.Id, MemberDecryptionType.MasterPassword);
 
         var userEmail = $"user-{Guid.NewGuid()}@bitwarden.com";
@@ -281,7 +281,7 @@ public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApp
         await _loginHelper.LoginAsync(userEmail);
 
         // Simulate a newly JIT provisioned SSO user.
-        await SsoJitProvisionTestHelpers.ClearMasterPasswordAndKeysAsync(_userRepository, user);
+        await SsoJitProvisionFinishTestHelpers.ClearMasterPasswordAndKeysAsync(_userRepository, user);
 
         return (organization, userEmail);
     }
@@ -330,7 +330,7 @@ public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApp
 
     private Task AssertOrgUserStatusAsync(Guid organizationId, Guid userId,
         OrganizationUserStatusType expectedStatus) =>
-        SsoJitProvisionAssertions.AssertOrganizationUserStatusAsync(
+        SsoJitProvisionFinishAssertions.AssertOrganizationUserStatusAsync(
             _organizationUserRepository, organizationId, userId, expectedStatus);
 
     private static void AddAcceptOrganizationInvite(Dictionary<string, object?> request, bool? acceptOrganizationInvite)

@@ -257,7 +257,7 @@ public class SsoJitProvisionFinishControllerKeyConnectorTests : IClassFixture<Ap
     {
         var user = await _userRepository.GetByEmailAsync(email);
         Assert.NotNull(user);
-        await SsoJitProvisionTestHelpers.ClearMasterPasswordAndKeysAsync(_userRepository, user);
+        await SsoJitProvisionFinishTestHelpers.ClearMasterPasswordAndKeysAsync(_userRepository, user);
 
         await AssertJitProvisionedStateAsync(email);
     }
@@ -280,7 +280,7 @@ public class SsoJitProvisionFinishControllerKeyConnectorTests : IClassFixture<Ap
     private async Task AssertOrganizationUserStatusAsync(Organization organization, User user,
         OrganizationUserStatusType expectedStatus)
     {
-        var organizationUser = await SsoJitProvisionAssertions.AssertOrganizationUserStatusAsync(
+        var organizationUser = await SsoJitProvisionFinishAssertions.AssertOrganizationUserStatusAsync(
             _organizationUserRepository, organization.Id, user.Id, expectedStatus);
         Assert.Equal(user.Id, organizationUser.UserId);
     }

@@ -63,7 +63,7 @@ public class SsoJitProvisionFinishControllerTrustedDeviceTests
             Data = "{}"
         });
 
-        await SsoJitProvisionTestHelpers.CreateSsoConfigAsync(
+        await SsoJitProvisionFinishTestHelpers.CreateSsoConfigAsync(
             _factory.GetService<ISsoConfigRepository>(), _organization.Id,
             MemberDecryptionType.TrustedDeviceEncryption);
     }

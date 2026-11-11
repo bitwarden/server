@@ -6,9 +6,9 @@ using Xunit;
 namespace Bit.Api.IntegrationTest.Auth.Helpers;
 
 /// <summary>
-/// Assert helpers for SSO just-in-time (JIT) provisioning tests.
+/// Assert helpers for the tests that finish SSO just-in-time (JIT) provisioning.
 /// </summary>
-internal static class SsoJitProvisionAssertions
+internal static class SsoJitProvisionFinishAssertions
 {
     /// <summary>
     /// Asserts that the user has an organization user record in the organization with the expected status, and
