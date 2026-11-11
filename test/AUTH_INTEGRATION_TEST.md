@@ -1,56 +1,46 @@
 # Auth Integration Tests
 
-This guide extends [Integration Testing](INTEGRATION_TEST.md). Read that guide first. This page covers only what Auth adds to it. It applies to these test suites:
+This page extends [Integration Testing](INTEGRATION_TEST.md). Follow that guide. This page lists only where the Auth suites add to it or differ from it. It applies to `test/Identity.IntegrationTest/`, `bitwarden_license/test/Sso.IntegrationTest/`, and the `Auth/` folder of other integration test projects, such as `test/Api.IntegrationTest/Auth/`.
 
-1. `test/Identity.IntegrationTest/`
-2. `test/Api.IntegrationTest/Auth/`
-3. `test/Admin.IntegrationTest/Auth/`
-4. `bitwarden_license/test/Sso.IntegrationTest/`
+## Folders
 
-## Folders: domain first, protocol where the protocol is the domain
+The repo guide names test classes after scenarios. Auth also organizes folders:
 
-1. Name a folder after the domain that its tests cover, for example `MasterPassword/`, `Email/`, `Registration/`, `TwoFactor/`, or `EmergencyAccess/`.
-2. Name a folder after a protocol surface when that surface serves several domains through shared machinery. This is the one place where Auth differs from pure domain naming:
-   1. `TokenEndpoint/`: `/connect/token` issues tokens for user login, session renewal, machine clients, and Send access. One validation pipeline applies the same login rules (two-step login, new device verification, required SSO, client version, decryption options) to several grant types. Tests go in `TokenEndpoint/Grants/{GrantType}/` and `TokenEndpoint/{Rule}/`. Domain folders would scatter these tests and hide the shared pipeline.
-   2. `Saml2/`, `Oidc/`, `AuthorizeEndpoint/`, `DiscoveryEndpoint/`, `Authentication/{Scheme}/`, and `Middleware/` follow the same reasoning.
-3. Put a journey that crosses domains or hosts in `Flows/{Journey}/`.
-4. Do not name a folder after a controller or another production class. Do not name it after a route prefix either: one prefix, such as `/accounts`, can hold many domains.
-5. A folder name becomes a namespace segment. Do not use a name that hides an existing type, for example `AuthenticationSchemes` or `ApiKey`.
+1. Name a folder after the domain that its tests cover, such as master password, email, registration, or two-step login. Do not name a folder after a controller or a route prefix: one prefix, such as `/accounts`, can hold many domains.
+2. Exception: name a folder after a protocol surface when that surface serves several domains through shared machinery. The token endpoint (`/connect/token`) issues tokens for user login, session renewal, machine clients, and Send access, and one validation pipeline applies the same login rules (two-step login, new device verification, required SSO, client version, decryption options) to several grant types. Put its tests in one folder for the endpoint, grouped by grant type and by shared rule, so that the shared pipeline stays visible. SAML handler routes follow the same reasoning.
+3. A folder name becomes a namespace segment. Do not use a name that hides an existing type, such as `AuthenticationSchemes` or `ApiKey`.
 
 ## Names
 
-| Level  | Answers                             | Example                                                  |
-|--------|-------------------------------------|----------------------------------------------------------|
-| Folder | Which domain or protocol surface?   | `MasterPassword/`                                        |
-| Class  | Which scenario?                     | `PasswordChangeTests`                                    |
-| Method | Which case?                         | `WrongCurrentPassword_ChangesPassword_ReturnsBadRequest` |
+1. Inside a protocol folder, the protocol noun can lead the class name, for example `RefreshTokenGrantTests` or `Saml2AcsRequestPathTests`.
+2. Keep class names unique within a project.
+3. Many existing Auth test methods start with the controller action, for example `PostPassword_…`. You do not need to rename them.
 
-1. Class: `{Scenario}Tests`. Inside a protocol folder, the protocol noun can lead the name, for example `PasswordGrantAuthRequestTests` or `Saml2AcsRequestPathTests`. Journey classes are `{Journey}FlowTests`. Keep class names unique within a project.
-2. Method: use the repo guide's form, `{StateOrActor}_{Action}_{Outcome}`. You do not need to rename existing methods that use a different form.
-3. Route-table authorization checks for a domain (no token, wrong token type, deleted user) go in `{Domain}AuthorizationTests`.
+## Scope of a test class
 
-## What goes in one file
+1. Use one fixture configuration per class. A test that needs a different substitute or setting goes in another class, because the class fixture shares one host across its tests.
+2. Split a class when it mixes scenarios or fixture configurations, not because of its length.
+3. Each test seeds its own users and organizations, with unique email addresses.
+4. When a behavior includes observable side effects (events, push notifications, email, a security stamp change), assert them.
+5. For WebAuthn, use `FakeWebAuthnAuthenticator` from `test/Common` instead of a substitute.
 
-1. One scenario and one fixture configuration per file. A class fixture shares one host across its tests, so a substitute or setting that one test needs leaks into the others. A test that needs a different setup goes in another class.
-2. Split a file when it mixes scenarios or fixture configurations, not because of its length.
-3. Each test seeds its own users and organizations, with unique email addresses. Do not share seeded rows across tests.
-4. Substitute only external boundaries: Duo, Yubico, Stripe, mail and push transport, and outbound HTTP. Use fakes for authenticators, for example `FakeWebAuthnAuthenticator`.
-5. When a behavior includes observable side effects (events, push notifications, email, a security stamp change), assert them.
+## Helpers outside the application factory
 
-## Helpers
+The repo guide puts test operations in intent methods on the application factory. For helpers that are not intent methods, use these name suffixes, and keep each helper in the narrowest folder that all its callers share:
 
-1. Use one of four helper kinds:
-   1. `{Domain}TestHelpers`: static arrange helpers.
-   2. `{Domain}TestDataBuilder`: a fluent builder that seeds related records in order and returns them.
-   3. `{Domain}Assertions`: static assert helpers.
-   4. `{Domain}Payloads`: request body builders.
-2. Keep a helper in the narrowest folder that all its callers share: `Auth/Helpers/` (Api, Admin), `Helpers/` (Identity), or `Utilities/` (Sso). Extract a helper at its second use, not before.
-3. Do not add new code to `IntegrationTestCommon`. The repo guide treats it as legacy.
+1. `TestHelpers`: static arrange helpers.
+2. `TestDataBuilder`: a fluent builder that seeds related records in order and returns them.
+3. `Assertions`: static assert helpers.
+4. `Payloads`: request body builders.
+
+## Existing suites that predate the repo guide
+
+Most existing Auth suites use application factories built on the shared `WebApplicationFactoryBase` in `IntegrationTestCommon`, and some tests read services directly. The repo guide lists both as anti-patterns. Leave these tests as they are when you move or rename them. New tests follow the repo guide.
 
 ## Behavior whose intent is not confirmed
 
 Do not add a test that asserts behavior that may be a bug or whose intent nobody has confirmed. List it in the pull request description and confirm the intended behavior first. A test that pins the current behavior makes a later fix look like a regression.
 
-## Changing the layout
+## Moves and renames
 
-Keep file moves, splits, and class renames in pull requests that change no test behavior, so that reviewers can check them mechanically. Put moves and renames in separate pull requests when both are large.
+Put file moves, splits, and class renames in pull requests that change no test behavior. When both are large, put moves and renames in separate pull requests, so that reviewers can check each one mechanically.
