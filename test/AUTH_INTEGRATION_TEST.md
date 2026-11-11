@@ -18,11 +18,10 @@ The repo guide names test classes after scenarios. Auth also organizes folders:
 
 ## Scope of a test class
 
-1. Use one fixture configuration per class. A test that needs a different substitute or setting goes in another class, because the class fixture shares one host across its tests.
-2. Split a class when it mixes scenarios or fixture configurations, not because of its length.
-3. Each test seeds its own users and organizations, with unique email addresses.
-4. When a behavior includes observable side effects (events, push notifications, email, a security stamp change), assert them.
-5. For WebAuthn, use `FakeWebAuthnAuthenticator` from `test/Common` instead of a substitute.
+1. Line count alone is not a reason to split a class.
+2. Tests in a class share one database, so each test seeds its own users and organizations, with unique email addresses.
+3. When a behavior includes observable side effects (events, push notifications, email, a security stamp change), assert them.
+4. For WebAuthn, use `FakeWebAuthnAuthenticator` from `test/Common` instead of a substitute.
 
 ## Helpers outside the application factory
 
