@@ -114,17 +114,25 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // The caller is the requester, so no requester identity is loaded.
-        var requests = await dbContext.AccessRequests
-            .Where(r => r.RequesterId == requesterId
-                && (since == null
-                    || r.CreationDate >= since
-                    || ((r.Action == AccessRequestAction.None || r.Action == AccessRequestAction.Approved)
-                        && r.NotAfter > now)))
+        // The caller is the requester, so no requester identity is loaded. Every live row comes back uncapped; a
+        // produced lease can outlive its request's window through an extension.
+        var mine = dbContext.AccessRequests.Where(r => r.RequesterId == requesterId);
+        var live = await mine
+            .Where(r => ((r.Action == AccessRequestAction.None || r.Action == AccessRequestAction.Approved)
+                    && r.NotAfter > now)
+                || dbContext.AccessLeases.Any(l => l.AccessRequestId == r.Id
+                    && l.Action == AccessLeaseAction.None
+                    && l.NotAfter > now))
+            .AsNoTracking()
+            .ToListAsync();
+        var liveIds = live.Select(r => r.Id).ToList();
+        var history = await mine
+            .Where(r => (since == null || r.CreationDate >= since) && !liveIds.Contains(r.Id))
             .OrderByDescending(r => r.CreationDate)
             .Take(250)
             .AsNoTracking()
             .ToListAsync();
+        var requests = live.Concat(history).OrderByDescending(r => r.CreationDate).ToList();
 
         if (requests.Count == 0)
         {

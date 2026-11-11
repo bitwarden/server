@@ -482,6 +482,32 @@ public class AccessRequestRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
+    public async Task GetManyByRequesterIdAsync_KeepsALiveRowOlderThanTheCap(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRequestRepository accessRequestRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var requesterId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+
+        // Open until now + 30 min, but older than the 250 resolved rows after it.
+        var live = await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, requesterId, AccessRequestAction.None, now.AddMinutes(-90)));
+        for (var i = 0; i < 250; i++)
+        {
+            await accessRequestRepository.CreateAsync(BuildRequest(
+                organization.Id, collection.Id, requesterId, AccessRequestAction.Denied, now.AddMinutes(-60).AddSeconds(i)));
+        }
+
+        var mine = await accessRequestRepository.GetManyByRequesterIdAsync(requesterId, now.AddDays(-90), now);
+
+        Assert.Equal(251, mine.Count);
+        Assert.Contains(mine, r => r.Id == live.Id);
+    }
+
+    [DatabaseTheory, DatabaseData]
     public async Task GetManyByRequesterIdAsync_ResolvesHumanApproverIdentity(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,

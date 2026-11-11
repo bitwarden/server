@@ -10,16 +10,30 @@ BEGIN
     -- Ids are materialized first so both result sets share the same rows.
     DECLARE @RequestIds TABLE ([Id] UNIQUEIDENTIFIER PRIMARY KEY)
 
+    -- Every live row, uncapped: the vault badges and the nav count read them from this list.
     INSERT INTO @RequestIds ([Id])
-    SELECT TOP (250) [Id]
-    FROM [dbo].[AccessRequest]
-    WHERE [RequesterId] = @RequesterId
+    SELECT AR.[Id]
+    FROM [dbo].[AccessRequest] AR
+    WHERE AR.[RequesterId] = @RequesterId
         AND (
-            @Since IS NULL
-            OR [CreationDate] >= @Since
-            OR ([Action] IN (0, 1) AND [NotAfter] > @Now) -- live: open and answerable, or approved and activatable
+            (AR.[Action] IN (0, 1) AND AR.[NotAfter] > @Now) -- open and answerable, or approved and activatable
+            OR EXISTS ( -- produced a lease still running, which an extension can keep past the request's window
+                SELECT 1
+                FROM [dbo].[AccessLease] AL
+                WHERE AL.[AccessRequestId] = AR.[Id]
+                    AND AL.[Action] = 0 -- None (no early end)
+                    AND AL.[NotAfter] > @Now
+            )
         )
-    ORDER BY [CreationDate] DESC
+
+    -- Then the newest of the rest, capped.
+    INSERT INTO @RequestIds ([Id])
+    SELECT TOP (250) AR.[Id]
+    FROM [dbo].[AccessRequest] AR
+    WHERE AR.[RequesterId] = @RequesterId
+        AND (@Since IS NULL OR AR.[CreationDate] >= @Since)
+        AND NOT EXISTS (SELECT 1 FROM @RequestIds RI WHERE RI.[Id] = AR.[Id])
+    ORDER BY AR.[CreationDate] DESC
 
     -- A request produces at most one lease, so this joins at most one row.
     SELECT

@@ -34,8 +34,9 @@ public interface IAccessRequestRepository
     Task<AccessRequest?> GetActiveApprovedByRequesterIdCipherIdAsync(Guid requesterId, Guid cipherId, DateTime now);
 
     /// <summary>
-    /// The caller's requests across every organization, newest first and capped. <paramref name="since"/> bounds the
-    /// history, but live rows (pending, or approved and unlapsed) are returned regardless of age.
+    /// The caller's requests across every organization, newest first. Every live row (pending, approved and unlapsed,
+    /// or with a lease still running) is returned, whatever its age; the rest is bounded by <paramref name="since"/>
+    /// and capped.
     /// </summary>
     Task<ICollection<AccessRequestDetails>> GetManyByRequesterIdAsync(Guid requesterId, DateTime? since, DateTime now);
 
