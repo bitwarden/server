@@ -38,7 +38,7 @@ namespace Bit.Sso.IntegrationTest.ExternalCallback;
 /// <see cref="FeatureFlagKeys.PM39883_Pam_Billing_Support"/>. On cloud with the flag on, a reservation can autoscale
 /// seats. With the flag off, the seat count is a hard limit and nothing autoscales.
 /// </remarks>
-public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
+public class ExternalCallbackPrivilegedControlsSeatTests
 {
     private const string _billingSupportFlagSetting =
         $"globalSettings:launchDarkly:flagValues:{FeatureFlagKeys.PM39883_Pam_Billing_Support}";

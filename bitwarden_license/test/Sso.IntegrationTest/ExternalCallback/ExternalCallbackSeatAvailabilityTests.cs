@@ -12,7 +12,7 @@ namespace Bit.Sso.IntegrationTest.ExternalCallback;
 /// <c>/Account/ExternalCallback</c> seat check before just-in-time provisioning: free seats, a seat cap on
 /// self-hosted, and cloud autoscale that succeeds, fails, or fails after it changed the seat count.
 /// </summary>
-public class AccountControllerExternalCallbackSeatAvailabilityTests
+public class ExternalCallbackSeatAvailabilityTests
 {
     /*
     * Test to verify /Account/ExternalCallback redirects directly to the client's

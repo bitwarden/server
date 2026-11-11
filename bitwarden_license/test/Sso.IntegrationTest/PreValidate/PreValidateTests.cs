@@ -17,7 +17,7 @@ namespace Bit.Sso.IntegrationTest.PreValidate;
 /// Each test points the Authority at a loopback listener owned by the test, which stands in for an
 /// internal host, and checks whether the SSO server opened a connection to it.
 /// </remarks>
-public class AccountControllerPreValidateTests
+public class PreValidateTests
 {
     /// <summary>
     /// The request to the internal address must be refused before any connection opens. PreValidate

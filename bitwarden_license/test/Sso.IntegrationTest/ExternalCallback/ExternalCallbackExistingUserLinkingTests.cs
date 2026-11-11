@@ -14,7 +14,7 @@ namespace Bit.Sso.IntegrationTest.ExternalCallback;
 /// <c>/Account/ExternalCallback</c> for an existing Bitwarden user with no SSO link yet. The organization
 /// user status, and whether the user uses Key Connector, decide the outcome.
 /// </summary>
-public class AccountControllerExternalCallbackExistingUserLinkingTests
+public class ExternalCallbackExistingUserLinkingTests
 {
     /*
     * Test to verify /Account/ExternalCallback returns error when an existing user
