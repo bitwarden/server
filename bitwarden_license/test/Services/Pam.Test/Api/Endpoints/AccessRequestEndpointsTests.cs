@@ -45,19 +45,20 @@ public class AccessRequestEndpointsTests
     }
 
     [Fact]
-    public void MapPamEndpoints_RegistersTheSevenAccessRequestRoutes_InTheInternalDoc()
+    public void MapPamEndpoints_RegistersTheEightAccessRequestRoutes_InTheInternalDoc()
     {
         var endpoints = MaterializeEndpoints()
             .Where(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("AccessRequests"))
             .ToList();
 
-        Assert.Equal(7, endpoints.Count);
+        Assert.Equal(8, endpoints.Count);
         Assert.All(endpoints, endpoint =>
             Assert.Equal("internal", endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>()?.EndpointGroupName));
     }
 
     [Theory]
     [InlineData("Pam_AccessRequests_GetInbox", "GET", "access-requests/inbox")]
+    [InlineData("Pam_AccessRequests_GetApproved", "GET", "access-requests/approved")]
     [InlineData("Pam_AccessRequests_GetHistory", "GET", "access-requests/history")]
     [InlineData("Pam_AccessRequests_GetMine", "GET", "access-requests/mine")]
     [InlineData("Pam_AccessRequests_GetDetails", "GET", "access-requests/{id:guid}")]
@@ -89,7 +90,8 @@ public class AccessRequestEndpointsTests
 
     [Theory]
     [InlineData(nameof(AccessRequestEndpointsHandler.GetInbox), typeof(Task<ListResponseModel<AccessRequestDetailsResponseModel>>))]
-    [InlineData(nameof(AccessRequestEndpointsHandler.GetHistory), typeof(Task<ListResponseModel<AccessRequestDetailsResponseModel>>))]
+    [InlineData(nameof(AccessRequestEndpointsHandler.GetApproved), typeof(Task<ListResponseModel<AccessRequestDetailsResponseModel>>))]
+    [InlineData(nameof(AccessRequestEndpointsHandler.GetHistory), typeof(Task<AccessRequestHistoryPageResponseModel>))]
     [InlineData(nameof(AccessRequestEndpointsHandler.GetMine), typeof(Task<ListResponseModel<AccessRequestDetailsResponseModel>>))]
     [InlineData(nameof(AccessRequestEndpointsHandler.GetDetails), typeof(Task<AccessRequestDetailsResponseModel>))]
     [InlineData(nameof(AccessRequestEndpointsHandler.Decide), typeof(Task<AccessRequestDetailsResponseModel>))]

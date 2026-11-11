@@ -1,6 +1,8 @@
-﻿using Bit.Pam.Models;
+﻿using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.OrganizationFeatures.Queries;
+using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -15,41 +17,51 @@ public class ListInboxHistoryQueryTests
     private static readonly DateTime _now = new(2026, 6, 5, 12, 0, 0, DateTimeKind.Utc);
 
     [Theory, BitAutoData]
-    public async Task GetHistoryAsync_NoManageableCollections_ReturnsEmptyWithoutQuerying(Guid userId)
+    public async Task GetHistoryAsync_ReadsThePageOfTheRetentionWindowWithTheFilters(
+        SutProvider<ListInboxHistoryQuery> sutProvider, Guid userId, Guid collectionId, Guid requesterId,
+        AccessRequestHistoryPage page)
     {
-        var sutProvider = Setup();
-        sutProvider.GetDependency<IApproverCollectionAccessQuery>()
-            .GetManageableCollectionIdsAsync(userId).Returns([]);
-
-        var result = await sutProvider.Sut.GetHistoryAsync(userId, _now);
-
-        Assert.Empty(result);
-        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
-            .GetManyInboxHistoryByCollectionIdsAsync(default!, default, default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetHistoryAsync_QueriesWithRetentionWindow(Guid userId, Guid collectionId, AccessRequestDetails row)
-    {
-        var sutProvider = Setup();
         var manageable = new HashSet<Guid> { collectionId };
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .GetManageableCollectionIdsAsync(userId).Returns(manageable);
-        var expectedSince = _now.AddDays(-AccessHistoryWindow.RetentionDays);
         sutProvider.GetDependency<IAccessRequestRepository>()
-            .GetManyInboxHistoryByCollectionIdsAsync(manageable, expectedSince, _now).Returns([row]);
+            .GetHistoryPageAsync(Arg.Any<AccessRequestHistoryFilter>()).Returns(page);
+        var options = new AccessRequestHistoryQueryOptions
+        {
+            Page = 3,
+            PageSize = 25,
+            Statuses = [AccessRequestHistoryStatus.Revoked],
+            CollectionIds = [collectionId],
+            RequesterIds = [requesterId],
+        };
 
-        var result = await sutProvider.Sut.GetHistoryAsync(userId, _now);
+        var result = await sutProvider.Sut.GetHistoryAsync(userId, _now, options);
 
-        Assert.Single(result);
-        // `now` is the clock produced-lease status is projected against, distinct from the `since` window bound.
-        await sutProvider.GetDependency<IAccessRequestRepository>().Received(1)
-            .GetManyInboxHistoryByCollectionIdsAsync(manageable, expectedSince, _now);
+        Assert.Same(page, result);
+        await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).GetHistoryPageAsync(
+            Arg.Is<AccessRequestHistoryFilter>(filter =>
+                filter.ManageableCollectionIds == manageable
+                && filter.UserId == userId
+                && filter.Since == _now.AddDays(-AccessHistoryWindow.RetentionDays)
+                && filter.Now == _now
+                && filter.Skip == 75
+                && filter.Take == 25
+                && filter.Statuses.SequenceEqual(options.Statuses)
+                && filter.CollectionIds.SequenceEqual(options.CollectionIds)
+                && filter.RequesterIds.SequenceEqual(options.RequesterIds)));
     }
 
-    private static SutProvider<ListInboxHistoryQuery> Setup()
+    [Theory, BitAutoData]
+    public async Task GetHistoryAsync_NoManageableCollections_StillReadsTheCallersOwnRequests(
+        SutProvider<ListInboxHistoryQuery> sutProvider, Guid userId)
     {
-        var sutProvider = new SutProvider<ListInboxHistoryQuery>().Create();
-        return sutProvider;
+        sutProvider.GetDependency<IApproverCollectionAccessQuery>()
+            .GetManageableCollectionIdsAsync(userId).Returns([]);
+
+        await sutProvider.Sut.GetHistoryAsync(userId, _now, new AccessRequestHistoryQueryOptions { PageSize = 10 });
+
+        await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).GetHistoryPageAsync(
+            Arg.Is<AccessRequestHistoryFilter>(filter =>
+                filter.ManageableCollectionIds.Count == 0 && filter.UserId == userId && filter.Skip == 0));
     }
 }

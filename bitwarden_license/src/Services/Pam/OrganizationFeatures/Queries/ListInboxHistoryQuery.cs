@@ -18,15 +18,25 @@ public class ListInboxHistoryQuery : IListInboxHistoryQuery
         _accessRequestRepository = accessRequestRepository;
     }
 
-    public async Task<ICollection<AccessRequestDetails>> GetHistoryAsync(Guid userId, DateTime now)
+    public async Task<AccessRequestHistoryPage> GetHistoryAsync(Guid userId, DateTime now,
+        AccessRequestHistoryQueryOptions options)
     {
-        var manageableCollectionIds = await _approverCollectionAccessQuery.GetManageableCollectionIdsAsync(userId);
-        if (manageableCollectionIds.Count == 0)
-        {
-            return new List<AccessRequestDetails>();
-        }
+        ArgumentNullException.ThrowIfNull(options);
 
-        return await _accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
-            manageableCollectionIds, now.AddDays(-AccessHistoryWindow.RetentionDays), now);
+        // A member who manages no collection still reads their own requests.
+        var manageableCollectionIds = await _approverCollectionAccessQuery.GetManageableCollectionIdsAsync(userId);
+
+        return await _accessRequestRepository.GetHistoryPageAsync(new AccessRequestHistoryFilter
+        {
+            ManageableCollectionIds = manageableCollectionIds,
+            UserId = userId,
+            Since = now.AddDays(-AccessHistoryWindow.RetentionDays),
+            Now = now,
+            Skip = options.Page * options.PageSize,
+            Take = options.PageSize,
+            Statuses = options.Statuses,
+            CollectionIds = options.CollectionIds,
+            RequesterIds = options.RequesterIds,
+        });
     }
 }
