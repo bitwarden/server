@@ -23,6 +23,10 @@ internal static class LeaseEndpoints
         group.MapGet("mine", (LeaseEndpointsHandler handler, ClaimsPrincipal user) => handler.GetMine(user))
             .WithName("Pam_Leases_GetMine");
 
+        // One read for every gated cipher's badge; leases/ciphers/{id}/state reads one cipher in full.
+        group.MapGet("ciphers/state", (LeaseEndpointsHandler handler, ClaimsPrincipal user) => handler.GetCipherStates(user))
+            .WithName("Pam_Leases_GetCipherStates");
+
         group.MapPost("{id:guid}/revoke",
             async (Guid id, AccessLeaseRevokeRequestModel model, LeaseEndpointsHandler handler, ClaimsPrincipal user) =>
             {

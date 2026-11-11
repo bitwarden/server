@@ -399,6 +399,87 @@ public class GoverningRuleResolverTests
         Assert.Null(result.MaxLeaseDurationSeconds);
     }
 
+    // ResolveManyAsync is ResolveAsync over every reachable cipher, read in a fixed number of queries.
+
+    [Theory]
+    [BitAutoData(_denies, _humanApproval)]
+    [BitAutoData(_denies, _admits)]
+    [BitAutoData(_denies, _denies)]
+    [BitAutoData(_admits, "[]")]
+    [BitAutoData(_humanApproval, _admitsWithHumanApproval)]
+    [BitAutoData(_unreadable, _humanApproval)]
+    [BitAutoData(_unreadable, _denies)]
+    public async Task ResolveManyAsync_PicksTheRuleResolveAsyncPicks(
+        string olderConditions, string newerConditions,
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
+        Collection olderCollection, AccessRule olderRule, Collection newerCollection, AccessRule newerRule)
+    {
+        olderRule.CreationDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        olderRule.Conditions = olderConditions;
+        newerRule.CreationDate = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+        newerRule.Conditions = newerConditions;
+        SetupGovernedCollections(sutProvider, userId, cipherId, (newerCollection, newerRule), (olderCollection, olderRule));
+        SetupCallerMappings(sutProvider, userId, [(cipherId, newerCollection), (cipherId, olderCollection)], olderRule, newerRule);
+
+        var single = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
+        var many = await sutProvider.Sut.ResolveManyAsync(userId, _signals);
+
+        Assert.NotNull(single);
+        var governing = Assert.Single(many, kv => kv.Key == cipherId).Value;
+        // Compared by field: each read parses its own copy of the conditions.
+        Assert.Equal(single!.RuleId, governing.RuleId);
+        Assert.Equal(single.CollectionId, governing.CollectionId);
+        Assert.Equal(single.RequiresHumanApproval, governing.RequiresHumanApproval);
+        Assert.Equal(single.ConditionsUnreadable, governing.ConditionsUnreadable);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolveManyAsync_LeavesOutCiphersWithAnEscape(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId,
+        Guid governedCipherId, Guid plainCipherId, Guid disabledCipherId,
+        Collection gatedCollection, Collection plainCollection, Collection disabledCollection,
+        AccessRule rule, AccessRule disabledRule)
+    {
+        rule.Enabled = true;
+        rule.Conditions = _humanApproval;
+        gatedCollection.AccessRuleId = rule.Id;
+        plainCollection.AccessRuleId = null;
+        disabledRule.Enabled = false;
+        disabledCollection.AccessRuleId = disabledRule.Id;
+        SetupCallerMappings(sutProvider, userId,
+            [
+                (governedCipherId, gatedCollection),
+                // Also in a collection with no rule, so nothing governs it.
+                (plainCipherId, gatedCollection),
+                (plainCipherId, plainCollection),
+                // Its only path's rule is disabled.
+                (disabledCipherId, disabledCollection),
+            ],
+            rule, disabledRule);
+
+        var result = await sutProvider.Sut.ResolveManyAsync(userId, _signals);
+
+        var (cipherId, governing) = Assert.Single(result);
+        Assert.Equal(governedCipherId, cipherId);
+        Assert.Equal(rule.Id, governing.RuleId);
+        Assert.Equal(gatedCollection.Id, governing.CollectionId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolveManyAsync_NoReachableCollections_ReturnsEmptyWithoutReadingRules(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId)
+    {
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetManyByUserIdAsync(userId)
+            .Returns(new List<CollectionCipher>());
+
+        var result = await sutProvider.Sut.ResolveManyAsync(userId, _signals);
+
+        Assert.Empty(result);
+        await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs()
+            .GetManyByOrganizationIdAsync(default);
+    }
+
     // ResolvePinnedAsync reads the rule by id; a rule re-pointed since submit can't take over.
 
     [Theory, BitAutoData]
@@ -504,6 +585,22 @@ public class GoverningRuleResolverTests
             .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(collections.ToList());
         // Real engine, so selection evaluates the allowlists against _signals. Named, as the mock is registered by name.
+        sutProvider.SetDependency<IAccessRuleEngine>(new AccessRuleEngine(), "ruleEngine").Create();
+    }
+
+    private static void SetupCallerMappings(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId,
+        (Guid cipherId, Collection collection)[] mappings, params AccessRule[] rules)
+    {
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetManyByUserIdAsync(userId)
+            .Returns(mappings.Select(m => new CollectionCipher { CollectionId = m.collection.Id, CipherId = m.cipherId }).ToList());
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(mappings.Select(m => m.collection).DistinctBy(c => c.Id).ToList());
+        sutProvider.GetDependency<IAccessRuleRepository>()
+            .GetManyByOrganizationIdAsync(Arg.Any<Guid>())
+            .Returns(rules.ToList());
         sutProvider.SetDependency<IAccessRuleEngine>(new AccessRuleEngine(), "ruleEngine").Create();
     }
 

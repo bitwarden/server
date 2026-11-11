@@ -17,7 +17,8 @@ public class LeaseEndpointsHandler(
     IListLeaseHistoryQuery listLeaseHistoryQuery,
     IAccessLeaseRepository accessLeaseRepository,
     IRevokeAccessLeaseCommand revokeAccessLeaseCommand,
-    IRequestLeaseExtensionCommand requestLeaseExtensionCommand)
+    IRequestLeaseExtensionCommand requestLeaseExtensionCommand,
+    IGetCipherAccessStateQuery cipherAccessStateQuery)
 {
     public async Task<ListResponseModel<AccessLeaseResponseModel>> GetActive(ClaimsPrincipal user)
     {
@@ -44,6 +45,14 @@ public class LeaseEndpointsHandler(
         var leases = await accessLeaseRepository.GetManyActiveByRequesterIdAsync(userId, now);
         return new ListResponseModel<AccessLeaseResponseModel>(
             leases.Select(l => new AccessLeaseResponseModel(l, now)));
+    }
+
+    public async Task<ListResponseModel<CipherAccessSummaryResponseModel>> GetCipherStates(ClaimsPrincipal user)
+    {
+        var userId = userService.GetProperUserId(user)!.Value;
+        var summaries = await cipherAccessStateQuery.GetSummariesAsync(userId);
+        return new ListResponseModel<CipherAccessSummaryResponseModel>(
+            summaries.Select(s => new CipherAccessSummaryResponseModel(s)));
     }
 
     public async Task Revoke(ClaimsPrincipal user, Guid id, AccessLeaseRevokeRequestModel model)

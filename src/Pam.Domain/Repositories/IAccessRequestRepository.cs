@@ -34,6 +34,13 @@ public interface IAccessRequestRepository
     Task<AccessRequest?> GetActiveApprovedByRequesterIdCipherIdAsync(Guid requesterId, Guid cipherId, DateTime now);
 
     /// <summary>
+    /// Every request <see cref="GetActivePendingByRequesterIdCipherIdAsync"/> or
+    /// <see cref="GetActiveApprovedByRequesterIdCipherIdAsync"/> could return for the caller, across ciphers and
+    /// uncapped.
+    /// </summary>
+    Task<ICollection<AccessRequest>> GetManyActiveByRequesterIdAsync(Guid requesterId, DateTime now);
+
+    /// <summary>
     /// The caller's requests across every organization, newest first and capped. <paramref name="since"/> bounds the
     /// history, but live rows (pending, or approved and unlapsed) are returned regardless of age.
     /// </summary>

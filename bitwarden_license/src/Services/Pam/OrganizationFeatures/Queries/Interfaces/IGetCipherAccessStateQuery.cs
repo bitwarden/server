@@ -9,4 +9,10 @@ public interface IGetCipherAccessStateQuery
     /// nothing to report.
     /// </summary>
     Task<CipherAccessState> GetStateAsync(Guid userId, Guid cipherId);
+
+    /// <summary>
+    /// The badge facts for every cipher an access rule governs for the caller, in a fixed number of queries. A cipher
+    /// with no lease, no request and a rule that would accept a request now is left out.
+    /// </summary>
+    Task<IReadOnlyList<CipherAccessSummary>> GetSummariesAsync(Guid userId);
 }

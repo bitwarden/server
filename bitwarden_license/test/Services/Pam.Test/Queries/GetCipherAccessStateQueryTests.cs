@@ -368,6 +368,89 @@ public class GetCipherAccessStateQueryTests
         Assert.Equal(3600, result.MaxExtensionDurationSeconds);
     }
 
+    // GetSummariesAsync: the badge facts for every governed cipher in one call.
+
+    [Theory, BitAutoData]
+    public async Task GetSummariesAsync_ReportsLeasesAndRequests_AndLeavesOutRestingCiphers(
+        Guid userId, Guid leasedId, Guid approvedId, Guid pendingId, Guid restingId, Guid ungovernedId,
+        Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        var humanRule = new GoverningRule(orgId, collectionId, RequiresHumanApproval: true, [new HumanApprovalCondition()]);
+        SetupGoverned(sutProvider, userId,
+            (leasedId, humanRule), (approvedId, humanRule), (pendingId, humanRule), (restingId, humanRule));
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .GetManyActiveByRequesterIdAsync(userId, _now)
+            .Returns(
+            [
+                new AccessLease { CipherId = leasedId, NotAfter = _now.AddMinutes(10) },
+                // A second lease on the same cipher: the later end wins, as the per-cipher read picks.
+                new AccessLease { CipherId = leasedId, NotAfter = _now.AddHours(1) },
+                // Not governed for the caller, so not reported.
+                new AccessLease { CipherId = ungovernedId, NotAfter = _now.AddHours(1) },
+            ]);
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .GetManyActiveByRequesterIdAsync(userId, _now)
+            .Returns(
+            [
+                new AccessRequest { CipherId = approvedId, Action = AccessRequestAction.Approved },
+                new AccessRequest { CipherId = pendingId, Action = AccessRequestAction.None },
+            ]);
+
+        var result = await sutProvider.Sut.GetSummariesAsync(userId);
+
+        Assert.Equal(3, result.Count);
+        Assert.Equal(new CipherAccessSummary(leasedId, _now.AddHours(1), false, false, true),
+            Assert.Single(result, r => r.CipherId == leasedId));
+        Assert.Equal(new CipherAccessSummary(approvedId, null, true, false, true),
+            Assert.Single(result, r => r.CipherId == approvedId));
+        Assert.Equal(new CipherAccessSummary(pendingId, null, false, true, true),
+            Assert.Single(result, r => r.CipherId == pendingId));
+    }
+
+    [Theory]
+    [BitAutoData("10.1.2.3", false)]
+    [BitAutoData("192.168.1.1", true)]
+    public async Task GetSummariesAsync_AutomaticRuleWithIpAllowlist_ReportsOnlyARefusal(
+        string ipAddress, bool reported, Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
+        SetupGoverned(sutProvider, userId,
+            (cipherId, new GoverningRule(orgId, collectionId, RequiresHumanApproval: false,
+                [new IpAllowlistCondition { Cidrs = ["10.0.0.0/8"] }])));
+
+        var result = await sutProvider.Sut.GetSummariesAsync(userId);
+
+        if (reported)
+        {
+            Assert.Equal(new CipherAccessSummary(cipherId, null, false, false, CanRequest: false), Assert.Single(result));
+        }
+        else
+        {
+            Assert.Empty(result);
+        }
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetSummariesAsync_PendingRequestOutsideIpAllowlist_CanRequest(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns("192.168.1.1");
+        SetupGoverned(sutProvider, userId,
+            (cipherId, new GoverningRule(orgId, collectionId, RequiresHumanApproval: false,
+                [new IpAllowlistCondition { Cidrs = ["10.0.0.0/8"] }])));
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .GetManyActiveByRequesterIdAsync(userId, _now)
+            .Returns([new AccessRequest { CipherId = cipherId, Action = AccessRequestAction.None }]);
+
+        var result = await sutProvider.Sut.GetSummariesAsync(userId);
+
+        // As GetStateAsync: the refusal is reported only when nothing is held or pending.
+        Assert.True(Assert.Single(result).CanRequest);
+    }
+
     private static SutProvider<GetCipherAccessStateQuery> Setup()
     {
         var sutProvider = new SutProvider<GetCipherAccessStateQuery>()
@@ -377,6 +460,20 @@ public class GetCipherAccessStateQueryTests
             .Create();
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
         return sutProvider;
+    }
+
+    private static void SetupGoverned(
+        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, params (Guid cipherId, GoverningRule rule)[] governed)
+    {
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolveManyAsync(userId, Arg.Any<AccessSignals>())
+            .Returns(governed.ToDictionary(g => g.cipherId, g => g.rule));
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .GetManyActiveByRequesterIdAsync(userId, _now)
+            .Returns(new List<AccessLease>());
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .GetManyActiveByRequesterIdAsync(userId, _now)
+            .Returns(new List<AccessRequest>());
     }
 
     private static void SetupCipher(SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId)

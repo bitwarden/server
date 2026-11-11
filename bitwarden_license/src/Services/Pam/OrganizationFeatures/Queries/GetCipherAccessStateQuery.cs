@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Vault.Repositories;
+using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.Engine;
@@ -85,9 +86,7 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
                 throw new NotFoundException();
             }
 
-            // Mirrors SubmitAccessRequestCommand: only the automatic path refuses a request on its conditions.
-            canRequest = governingRule.RequiresHumanApproval
-                || _ruleEngine.Evaluate(governingRule.Conditions, signals).Outcome == AccessEvaluationOutcome.Allow;
+            canRequest = CanRequest(governingRule, signals);
         }
 
         return new CipherAccessState(
@@ -100,4 +99,49 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
             maxExtensionDurationSeconds,
             canRequest);
     }
+
+    public async Task<IReadOnlyList<CipherAccessSummary>> GetSummariesAsync(Guid userId)
+    {
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var signals = AccessSignals.From(_currentContext.IpAddress, new DateTimeOffset(now, TimeSpan.Zero));
+
+        var governedTask = _resolver.ResolveManyAsync(userId, signals);
+        var leasesTask = _accessLeaseRepository.GetManyActiveByRequesterIdAsync(userId, now);
+        var requestsTask = _accessRequestRepository.GetManyActiveByRequesterIdAsync(userId, now);
+        await Task.WhenAll(governedTask, leasesTask, requestsTask);
+        var governed = await governedTask;
+        var requests = await requestsTask;
+
+        // The latest end, as GetActiveByRequesterIdCipherIdAsync picks.
+        var leaseEnds = (await leasesTask)
+            .GroupBy(l => l.CipherId)
+            .ToDictionary(g => g.Key, g => g.Max(l => l.NotAfter));
+        var approved = requests.Where(r => r.Action == AccessRequestAction.Approved).Select(r => r.CipherId).ToHashSet();
+        var pending = requests.Where(r => r.Action == AccessRequestAction.None).Select(r => r.CipherId).ToHashSet();
+
+        var summaries = new List<CipherAccessSummary>();
+        foreach (var (cipherId, governingRule) in governed)
+        {
+            DateTime? leaseEnd = leaseEnds.TryGetValue(cipherId, out var end) ? end : null;
+            var hasApproved = approved.Contains(cipherId);
+            var hasPending = pending.Contains(cipherId);
+            var held = leaseEnd is not null || hasApproved || hasPending;
+            var canRequest = held || CanRequest(governingRule, signals);
+
+            // A cipher with nothing to report is left out; the caller reads its absence as resting.
+            if (!held && canRequest)
+            {
+                continue;
+            }
+
+            summaries.Add(new CipherAccessSummary(cipherId, leaseEnd, hasApproved, hasPending, canRequest));
+        }
+
+        return summaries;
+    }
+
+    // Mirrors SubmitAccessRequestCommand: only the automatic path refuses a request on its conditions.
+    private bool CanRequest(GoverningRule governingRule, AccessSignals signals) =>
+        governingRule.RequiresHumanApproval
+            || _ruleEngine.Evaluate(governingRule.Conditions, signals).Outcome == AccessEvaluationOutcome.Allow;
 }

@@ -1029,6 +1029,58 @@ public class AccessRequestRepositoryTests
         Assert.Null(await accessRequestRepository.GetDetailsByIdAsync(Guid.NewGuid(), DateTime.UtcNow));
     }
 
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyActiveByRequesterIdAsync_ReturnsOpenAndActivatableRequestsOnly(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var requesterId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+
+        var pending = await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, requesterId, AccessRequestAction.None, now));
+        var approved = await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, requesterId, AccessRequestAction.Approved, now));
+
+        // Left out: a lapsed window, a denial, an activated approval, an approved extension, another requester's.
+        await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, requesterId, AccessRequestAction.None, now.AddHours(-3)));
+        await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, requesterId, AccessRequestAction.Denied, now));
+        var activated = BuildRequest(organization.Id, collection.Id, requesterId, AccessRequestAction.Approved, now);
+        activated.NotBefore = now.AddHours(-1);
+        activated.NotAfter = now.AddHours(1);
+        activated = await accessRequestRepository.CreateAsync(activated);
+        var lease = new AccessLease
+        {
+            Id = CombGuid.Generate(),
+            AccessRequestId = activated.Id,
+            OrganizationId = activated.OrganizationId,
+            CollectionId = activated.CollectionId,
+            CipherId = activated.CipherId,
+            RequesterId = activated.RequesterId,
+            Action = AccessLeaseAction.None,
+            NotBefore = activated.NotBefore,
+            NotAfter = activated.NotAfter,
+            CreationDate = now,
+        };
+        Assert.Equal(AccessLeaseMintOutcome.Minted,
+            await accessLeaseRepository.CreateFromApprovedRequestAsync(lease, now, false));
+        var extension = BuildRequest(organization.Id, collection.Id, requesterId, AccessRequestAction.Approved, now);
+        extension.ExtensionOfLeaseId = lease.Id;
+        await accessRequestRepository.CreateAsync(extension);
+        await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, Guid.NewGuid(), AccessRequestAction.None, now));
+
+        var rows = await accessRequestRepository.GetManyActiveByRequesterIdAsync(requesterId, now);
+
+        Assert.Equal(new[] { pending.Id, approved.Id }.Order(), rows.Select(r => r.Id).Order());
+    }
+
     private static AccessRequest BuildRequest(
         Guid organizationId, Guid collectionId, Guid requesterId, AccessRequestAction action, DateTime creationDate)
         => new()

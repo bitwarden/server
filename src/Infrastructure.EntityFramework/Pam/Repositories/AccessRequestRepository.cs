@@ -87,6 +87,24 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         return Mapper.Map<CoreEntity>(request);
     }
 
+    public async Task<ICollection<CoreEntity>> GetManyActiveByRequesterIdAsync(Guid requesterId, DateTime now)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        // The union of the two reads above, across ciphers.
+        var requests = await dbContext.AccessRequests
+            .Where(r => r.RequesterId == requesterId
+                && r.NotAfter > now
+                && (r.Action == AccessRequestAction.None
+                    || (r.Action == AccessRequestAction.Approved
+                        && r.ExtensionOfLeaseId == null
+                        && !dbContext.AccessLeases.Any(l => l.AccessRequestId == r.Id))))
+            .AsNoTracking()
+            .ToListAsync();
+        return Mapper.Map<List<CoreEntity>>(requests);
+    }
+
     public async Task<AccessRequestDetails?> GetDetailsByIdAsync(Guid id, DateTime now)
     {
         using var scope = ServiceScopeFactory.CreateScope();

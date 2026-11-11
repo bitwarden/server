@@ -14,6 +14,12 @@ public interface IGoverningRuleResolver
     Task<GoverningRule?> ResolveAsync(Guid userId, Guid cipherId, AccessSignals signals);
 
     /// <summary>
+    /// <see cref="ResolveAsync"/> for every cipher the caller reaches through a collection, in a fixed number of
+    /// queries, keyed by cipher id. A cipher nothing governs is left out.
+    /// </summary>
+    Task<IReadOnlyDictionary<Guid, GoverningRule>> ResolveManyAsync(Guid userId, AccessSignals signals);
+
+    /// <summary>
     /// Loads the rule a request pinned at submit instead of re-resolving, so a rule created or re-pointed since cannot
     /// take over. Null if the rule is disabled or deleted.
     /// </summary>

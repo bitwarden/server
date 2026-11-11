@@ -67,6 +67,17 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
         return results.FirstOrDefault();
     }
 
+    public async Task<ICollection<AccessRequest>> GetManyActiveByRequesterIdAsync(Guid requesterId, DateTime now)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<AccessRequest>(
+            $"[{Schema}].[AccessRequest_ReadManyActiveByRequesterId]",
+            new { RequesterId = requesterId, Now = now },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToList();
+    }
+
     public async Task<AccessRequestDetails?> GetDetailsByIdAsync(Guid id, DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);

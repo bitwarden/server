@@ -65,12 +65,84 @@ public class GoverningRuleResolver : IGoverningRuleResolver
             return null;
         }
 
-        return candidates
-            .OrderBy(c => TierOf(c.Governing, signals))
-            .ThenBy(c => c.Rule.CreationDate)
-            .ThenBy(c => c.Rule.Id)
-            .First()
-            .Governing;
+        return Choose(candidates, rule => TierOf(rule, signals));
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, GoverningRule>> ResolveManyAsync(Guid userId, AccessSignals signals)
+    {
+        var governed = new Dictionary<Guid, GoverningRule>();
+        var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(userId);
+        if (collectionCiphers.Count == 0)
+        {
+            return governed;
+        }
+
+        var collections = await _collectionRepository.GetManyByManyIdsAsync(
+            collectionCiphers.Select(cc => cc.CollectionId).ToHashSet());
+        var rules = new Dictionary<Guid, AccessRule>();
+        foreach (var organizationId in collections.Where(c => c.AccessRuleId.HasValue).Select(c => c.OrganizationId).Distinct())
+        {
+            foreach (var rule in await _accessRuleRepository.GetManyByOrganizationIdAsync(organizationId))
+            {
+                rules[rule.Id] = rule;
+            }
+        }
+
+        // Each collection's candidate, as ResolveAsync builds it; null where the path is an escape.
+        var candidateByCollection = collections.ToDictionary(
+            c => c.Id,
+            c =>
+            {
+                // No rule, a disabled rule, or a deleted one.
+                if (c.AccessRuleId is not { } ruleId || !rules.TryGetValue(ruleId, out var rule) || !rule.Enabled)
+                {
+                    return ((AccessRule Rule, GoverningRule Governing)?)null;
+                }
+
+                return (rule, Build(c.OrganizationId, c.Id, rule));
+            });
+
+        // A rule's tier depends only on the rule and the signals, so it is evaluated once per call.
+        var tiers = new Dictionary<Guid, Tier>();
+        Tier CachedTierOf(GoverningRule rule)
+        {
+            if (!tiers.TryGetValue(rule.RuleId, out var tier))
+            {
+                tier = TierOf(rule, signals);
+                tiers[rule.RuleId] = tier;
+            }
+
+            return tier;
+        }
+
+        foreach (var paths in collectionCiphers.GroupBy(cc => cc.CipherId))
+        {
+            var candidates = new List<(AccessRule Rule, GoverningRule Governing)>();
+            var escapes = false;
+            foreach (var collectionId in paths.Select(cc => cc.CollectionId).Distinct())
+            {
+                // A mapped collection that did not load is skipped, as in ResolveAsync.
+                if (!candidateByCollection.TryGetValue(collectionId, out var candidate))
+                {
+                    continue;
+                }
+
+                if (candidate is null)
+                {
+                    escapes = true;
+                    break;
+                }
+
+                candidates.Add(candidate.Value);
+            }
+
+            if (!escapes && candidates.Count > 0)
+            {
+                governed[paths.Key] = Choose(candidates, CachedTierOf);
+            }
+        }
+
+        return governed;
     }
 
     public async Task<GoverningRule?> ResolvePinnedAsync(Guid ruleId, Guid collectionId)
@@ -80,6 +152,16 @@ public class GoverningRuleResolver : IGoverningRuleResolver
         // A disabled or deleted rule governs nothing, as in ResolveAsync.
         return rule is { Enabled: true } ? Build(rule.OrganizationId, collectionId, rule) : null;
     }
+
+    /// <summary>The lowest tier governs; the oldest rule wins within a tier.</summary>
+    private static GoverningRule Choose(
+        IEnumerable<(AccessRule Rule, GoverningRule Governing)> candidates, Func<GoverningRule, Tier> tierOf) =>
+        candidates
+            .OrderBy(c => tierOf(c.Governing))
+            .ThenBy(c => c.Rule.CreationDate)
+            .ThenBy(c => c.Rule.Id)
+            .First()
+            .Governing;
 
     /// <summary>Where a governing candidate ranks; a lower tier governs.</summary>
     private enum Tier

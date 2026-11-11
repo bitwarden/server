@@ -45,13 +45,13 @@ public class LeaseEndpointsTests
     }
 
     [Fact]
-    public void MapPamEndpoints_RegistersTheFiveLeaseRoutes_InTheInternalDoc()
+    public void MapPamEndpoints_RegistersTheSixLeaseRoutes_InTheInternalDoc()
     {
         var endpoints = MaterializeEndpoints()
             .Where(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("Leases"))
             .ToList();
 
-        Assert.Equal(5, endpoints.Count);
+        Assert.Equal(6, endpoints.Count);
         Assert.All(endpoints, endpoint =>
             Assert.Equal("internal", endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>()?.EndpointGroupName));
     }
@@ -60,6 +60,7 @@ public class LeaseEndpointsTests
     [InlineData("Pam_Leases_GetActive", "GET", "leases/active")]
     [InlineData("Pam_Leases_GetHistory", "GET", "leases/history")]
     [InlineData("Pam_Leases_GetMine", "GET", "leases/mine")]
+    [InlineData("Pam_Leases_GetCipherStates", "GET", "leases/ciphers/state")]
     [InlineData("Pam_Leases_Revoke", "POST", "leases/{id:guid}/revoke")]
     [InlineData("Pam_Leases_Extend", "POST", "leases/{id:guid}/extend")]
     public void MapPamEndpoints_RegistersExpectedRoute(string name, string method, string route)
@@ -89,6 +90,7 @@ public class LeaseEndpointsTests
     [InlineData(nameof(LeaseEndpointsHandler.GetActive), typeof(Task<ListResponseModel<AccessLeaseResponseModel>>))]
     [InlineData(nameof(LeaseEndpointsHandler.GetHistory), typeof(Task<ListResponseModel<AccessLeaseResponseModel>>))]
     [InlineData(nameof(LeaseEndpointsHandler.GetMine), typeof(Task<ListResponseModel<AccessLeaseResponseModel>>))]
+    [InlineData(nameof(LeaseEndpointsHandler.GetCipherStates), typeof(Task<ListResponseModel<CipherAccessSummaryResponseModel>>))]
     [InlineData(nameof(LeaseEndpointsHandler.Revoke), typeof(Task))]
     [InlineData(nameof(LeaseEndpointsHandler.Extend), typeof(Task<AccessRequestDetailsResponseModel>))]
     public void Handler_HasExpectedReturnType(string methodName, Type expectedReturnType)
