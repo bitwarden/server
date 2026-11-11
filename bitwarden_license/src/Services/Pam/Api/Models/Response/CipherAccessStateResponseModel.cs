@@ -48,8 +48,9 @@ public class CipherAccessStateResponseModel : ResponseModel
     public int? MaxExtensionDurationSeconds { get; set; }
 
     /// <summary>
-    /// False when no lease or request is in play and the rule's conditions would refuse a new request now, for example
-    /// outside its IP allowlist. Submit would fail the same way. Absent means true.
+    /// False when no lease or request is in play and a new request would be refused now: the rule's conditions refuse it,
+    /// for example outside its IP allowlist, or another member holds the cipher's single active lease. A bare flag by
+    /// design, so the holder's identity never reaches the client. Absent means true.
     /// </summary>
     public bool CanRequest { get; set; } = true;
 }

@@ -368,6 +368,148 @@ public class GetCipherAccessStateQueryTests
         Assert.Equal(3600, result.MaxExtensionDurationSeconds);
     }
 
+    // PAM-372: another member holds the single active lease, so the vault badge reads "Unavailable".
+    [Theory, BitAutoData]
+    public async Task GetStateAsync_SingletonHeldByAnotherMember_CannotRequest(
+        Guid userId, Guid cipherId, AccessLease othersLease)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupAutomaticRule(sutProvider, userId, cipherId);
+        sutProvider.GetDependency<ISingleActiveLeaseEvaluator>().AppliesAsync(userId, cipherId).Returns(true);
+        othersLease.CipherId = cipherId;
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .GetActiveByCipherIdAsync(cipherId, _now)
+            .Returns(othersLease);
+
+        var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
+
+        Assert.False(result.CanRequest);
+        // The other member's lease must never be surfaced as the caller's own.
+        Assert.Null(result.ActiveLease);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetStateAsync_SingletonFree_CanRequest(Guid userId, Guid cipherId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupAutomaticRule(sutProvider, userId, cipherId);
+        sutProvider.GetDependency<ISingleActiveLeaseEvaluator>().AppliesAsync(userId, cipherId).Returns(true);
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .GetActiveByCipherIdAsync(cipherId, _now)
+            .Returns((AccessLease?)null);
+
+        var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
+
+        Assert.True(result.CanRequest);
+    }
+
+    // Concurrent leases are allowed, so someone else's lease doesn't make the cipher unavailable.
+    [Theory, BitAutoData]
+    public async Task GetStateAsync_SingletonDoesNotBind_CanRequestWithoutTheCipherScopedRead(
+        Guid userId, Guid cipherId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupAutomaticRule(sutProvider, userId, cipherId);
+        sutProvider.GetDependency<ISingleActiveLeaseEvaluator>().AppliesAsync(userId, cipherId).Returns(false);
+
+        var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
+
+        Assert.True(result.CanRequest);
+        await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
+            .GetActiveByCipherIdAsync(default, default);
+    }
+
+    // The caller's own lease starting between the requester-scoped and cipher-scoped reads isn't "another member".
+    [Theory, BitAutoData]
+    public async Task GetStateAsync_CipherScopedHitIsTheCallersOwn_CanRequest(
+        Guid userId, Guid cipherId, AccessLease ownLease)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupAutomaticRule(sutProvider, userId, cipherId);
+        sutProvider.GetDependency<ISingleActiveLeaseEvaluator>().AppliesAsync(userId, cipherId).Returns(true);
+        ownLease.CipherId = cipherId;
+        ownLease.RequesterId = userId;
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .GetActiveByCipherIdAsync(cipherId, _now)
+            .Returns(ownLease);
+
+        var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
+
+        Assert.True(result.CanRequest);
+    }
+
+    // The caller's own lease badges as active; the singleton check is skipped entirely.
+    [Theory, BitAutoData]
+    public async Task GetStateAsync_CallerHoldsTheLease_SkipsTheSingletonCheck(
+        Guid userId, Guid cipherId, AccessLease activeLease)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, _now)
+            .Returns(activeLease);
+
+        var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
+
+        Assert.True(result.CanRequest);
+        await sutProvider.GetDependency<ISingleActiveLeaseEvaluator>().DidNotReceiveWithAnyArgs()
+            .AppliesAsync(default, default);
+        await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
+            .GetActiveByCipherIdAsync(default, default);
+    }
+
+    // A pending request outranks "Unavailable" in the badge, so the slot isn't checked.
+    [Theory, BitAutoData]
+    public async Task GetStateAsync_PendingRequest_SkipsTheSingletonCheck(
+        Guid userId, Guid cipherId, AccessRequest pending)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        pending.Action = AccessRequestAction.None;
+        pending.NotAfter = _now.AddHours(1);
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .GetActivePendingByRequesterIdCipherIdAsync(userId, cipherId, _now)
+            .Returns(pending);
+
+        var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
+
+        Assert.True(result.CanRequest);
+        await sutProvider.GetDependency<ISingleActiveLeaseEvaluator>().DidNotReceiveWithAnyArgs()
+            .AppliesAsync(default, default);
+    }
+
+    // Already refused on its conditions, so the extra read is skipped.
+    [Theory, BitAutoData]
+    public async Task GetStateAsync_ConditionsRefuse_SkipsTheSingletonCheck(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns("192.168.1.1");
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
+            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: false,
+                [new IpAllowlistCondition { Cidrs = ["10.0.0.0/8"] }]));
+
+        var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
+
+        Assert.False(result.CanRequest);
+        await sutProvider.GetDependency<ISingleActiveLeaseEvaluator>().DidNotReceiveWithAnyArgs()
+            .AppliesAsync(default, default);
+    }
+
+    private static void SetupAutomaticRule(
+        SutProvider<GetCipherAccessStateQuery> sutProvider, Guid userId, Guid cipherId)
+    {
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
+            .Returns(new GoverningRule(Guid.NewGuid(), Guid.NewGuid(), RequiresHumanApproval: false, []));
+    }
+
     private static SutProvider<GetCipherAccessStateQuery> Setup()
     {
         var sutProvider = new SutProvider<GetCipherAccessStateQuery>()

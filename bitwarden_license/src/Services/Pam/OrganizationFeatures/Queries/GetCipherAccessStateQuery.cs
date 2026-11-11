@@ -17,6 +17,7 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IAccessRequestRepository _accessRequestRepository;
     private readonly IAccessRuleEngine _ruleEngine;
+    private readonly ISingleActiveLeaseEvaluator _singleActiveLeaseEvaluator;
     private readonly ICurrentContext _currentContext;
     private readonly TimeProvider _timeProvider;
 
@@ -26,6 +27,7 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
         IAccessLeaseRepository accessLeaseRepository,
         IAccessRequestRepository accessRequestRepository,
         IAccessRuleEngine ruleEngine,
+        ISingleActiveLeaseEvaluator singleActiveLeaseEvaluator,
         ICurrentContext currentContext,
         TimeProvider timeProvider)
     {
@@ -34,6 +36,7 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
         _accessLeaseRepository = accessLeaseRepository;
         _accessRequestRepository = accessRequestRepository;
         _ruleEngine = ruleEngine;
+        _singleActiveLeaseEvaluator = singleActiveLeaseEvaluator;
         _currentContext = currentContext;
         _timeProvider = timeProvider;
     }
@@ -88,6 +91,15 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
             // Mirrors SubmitAccessRequestCommand: only the automatic path refuses a request on its conditions.
             canRequest = governingRule.RequiresHumanApproval
                 || _ruleEngine.Evaluate(governingRule.Conditions, signals).Outcome == AccessEvaluationOutcome.Allow;
+
+            // Another member holding the cipher's single active lease refuses a new lease too, as AccessPreCheckQuery
+            // reports. The requester check covers the caller's own lease starting between the two reads. Only the bool
+            // leaves this method: the holder's identity and the lease's timing are never surfaced.
+            if (canRequest && await _singleActiveLeaseEvaluator.AppliesAsync(userId, cipherId))
+            {
+                var holder = await _accessLeaseRepository.GetActiveByCipherIdAsync(cipherId, now);
+                canRequest = holder is null || holder.RequesterId == userId;
+            }
         }
 
         return new CipherAccessState(

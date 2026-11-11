@@ -7,7 +7,8 @@ namespace Bit.Services.Pam.Models;
 /// <param name="ApprovedRequest">An approved request the caller has not yet activated into a lease.</param>
 /// <param name="ExtensionsAllowed">Whether the active lease can still be extended.</param>
 /// <param name="CanRequest">
-/// False when nothing is held or pending and the rule's conditions would refuse a new request now.
+/// False when nothing is held or pending and a new request would be refused now: the rule's conditions refuse it, or
+/// another member holds the cipher's single active lease.
 /// </param>
 public record CipherAccessState(
     Guid CipherId,
