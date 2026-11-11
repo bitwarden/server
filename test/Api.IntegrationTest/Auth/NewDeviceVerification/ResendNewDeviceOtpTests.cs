@@ -1,7 +1,14 @@
 ﻿using System.Net;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.IntegrationTest.Factories;
+using Bit.Core.Auth.Services;
+using Bit.Core.Entities;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
+using Core.Auth.Enums;
 using Microsoft.Extensions.Caching.Distributed;
+using NSubstitute;
+using Xunit;
 
 namespace Bit.Api.IntegrationTest.Auth.NewDeviceVerification;
 
