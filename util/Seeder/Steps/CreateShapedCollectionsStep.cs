@@ -37,7 +37,7 @@ internal sealed class CreateShapedCollectionsStep(
     {
         var orgId = context.RequireOrgId();
         var orgKey = context.RequireOrgKey();
-        var progress = context.GetProgress();
+        var progress = context.Progress;
         var random = new Random(seed + 1);
 
         var collectionShape = shape.Collections ?? new SeedPresetShapeCollections();
