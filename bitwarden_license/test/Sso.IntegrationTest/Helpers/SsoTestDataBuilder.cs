@@ -361,7 +361,7 @@ public class SsoTestDataBuilder
                 authService.AuthenticateAsync(
                         Arg.Any<HttpContext>(),
                         AuthenticationSchemes.SsoExternalCookie)
-                    .Returns(AuthenticateResult.Fail("External authentication error"));
+                    .Returns(AuthenticateResult.Fail("simulated external authentication failure"));
             }
         });
 
