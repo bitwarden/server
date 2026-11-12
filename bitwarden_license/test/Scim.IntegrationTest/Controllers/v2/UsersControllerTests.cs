@@ -46,7 +46,16 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             {
                 new BaseScimUserModel.EmailModel { Primary = true, Type = "work", Value = "user1@example.com" }
             },
-            Groups = new List<string>(),
+            Groups = new List<BaseScimUserModel.UserGroupReference>
+            {
+                new()
+                {
+                    Value = ScimApplicationFactory.TestGroupId1.ToString(),
+                    Display = "Test Group 1",
+                    Ref = $"http://localhost/v2/{ScimApplicationFactory.TestOrganizationId1}/Groups/{ScimApplicationFactory.TestGroupId1}",
+                    Type = "direct"
+                }
+            },
             Name = new BaseScimUserModel.NameModel("Test User 1"),
             UserName = "user1@example.com",
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
@@ -105,7 +114,16 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
                     {
                         new BaseScimUserModel.EmailModel { Primary = true, Type = "work", Value = "user1@example.com" }
                     },
-                    Groups = new List<string>(),
+                    Groups = new List<BaseScimUserModel.UserGroupReference>
+                    {
+                        new()
+                        {
+                            Value = ScimApplicationFactory.TestGroupId1.ToString(),
+                            Display = "Test Group 1",
+                            Ref = $"http://localhost/v2/{ScimApplicationFactory.TestOrganizationId1}/Groups/{ScimApplicationFactory.TestGroupId1}",
+                            Type = "direct"
+                        }
+                    },
                     Name = new BaseScimUserModel.NameModel("Test User 1"),
                     UserName = "user1@example.com",
                     Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
@@ -120,7 +138,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
                     {
                         new BaseScimUserModel.EmailModel { Primary = true, Type = "work", Value = "user2@example.com" }
                     },
-                    Groups = new List<string>(),
+                    Groups = new List<BaseScimUserModel.UserGroupReference>(),
                     Name = new BaseScimUserModel.NameModel("Test User 2"),
                     UserName = "user2@example.com",
                     Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
@@ -160,7 +178,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
                     {
                         new BaseScimUserModel.EmailModel { Primary = true, Type = "work", Value = "user2@example.com" }
                     },
-                    Groups = new List<string>(),
+                    Groups = new List<BaseScimUserModel.UserGroupReference>(),
                     Name = new BaseScimUserModel.NameModel("Test User 2"),
                     UserName = "user2@example.com",
                     Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
@@ -200,7 +218,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
                     {
                         new BaseScimUserModel.EmailModel { Primary = true, Type = "work", Value = "user3@example.com" }
                     },
-                    Groups = new List<string>(),
+                    Groups = new List<BaseScimUserModel.UserGroupReference>(),
                     Name = new BaseScimUserModel.NameModel("Test User 3"),
                     UserName = "user3@example.com",
                     Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
@@ -263,7 +281,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
                     {
                         new BaseScimUserModel.EmailModel { Primary = true, Type = "work", Value = "user2@example.com" }
                     },
-                    Groups = new List<string>(),
+                    Groups = new List<BaseScimUserModel.UserGroupReference>(),
                     Name = new BaseScimUserModel.NameModel("Test User 2"),
                     UserName = "user2@example.com",
                     Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
@@ -313,7 +331,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             {
                 new BaseScimUserModel.EmailModel { Primary = true, Type = "work", Value = email }
             },
-            Groups = new List<string>(),
+            Groups = new List<BaseScimUserModel.UserGroupReference>(),
             Name = new BaseScimUserModel.NameModel(),
             UserName = email,
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
@@ -494,7 +512,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             {
                 new BaseScimUserModel.EmailModel { Primary = true, Type = "work", Value = "user2@example.com" }
             },
-            Groups = new List<string>(),
+            Groups = new List<BaseScimUserModel.UserGroupReference>(),
             Name = new BaseScimUserModel.NameModel("Test User 2"),
             UserName = "user2@example.com",
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
@@ -529,7 +547,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             {
                 new BaseScimUserModel.EmailModel { Primary = true, Type = "work", Value = "user3@example.com" }
             },
-            Groups = new List<string>(),
+            Groups = new List<BaseScimUserModel.UserGroupReference>(),
             Name = new BaseScimUserModel.NameModel("Test User 3"),
             UserName = "user3@example.com",
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }

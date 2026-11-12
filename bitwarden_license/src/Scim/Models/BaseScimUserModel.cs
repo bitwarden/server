@@ -22,8 +22,17 @@ public abstract class BaseScimUserModel : BaseScimModel
     public string WorkEmail => Emails?.FirstOrDefault(e => e.Type == "work" && !string.IsNullOrWhiteSpace(e.Value))?.Value;
     public string DisplayName { get; set; }
     public bool Active { get; set; }
-    public List<string> Groups { get; set; }
+    public List<UserGroupReference> Groups { get; set; }
     public string ExternalId { get; set; }
+
+    public class UserGroupReference
+    {
+        public string Value { get; set; }
+        public string Display { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("$ref")]
+        public string Ref { get; set; }
+        public string Type { get; set; } = "direct";
+    }
 
     public class NameModel
     {

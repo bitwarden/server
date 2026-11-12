@@ -38,11 +38,20 @@ public class PatchUserCommand : IPatchUserCommand
         var operationHandled = false;
         foreach (var operation in model.Operations)
         {
-            // Replace operations
-            if (operation.Op?.ToLowerInvariant() == PatchOps.Replace)
+            var opLower = operation.Op?.ToLowerInvariant();
+            var pathLower = operation.Path?.ToLowerInvariant();
+
+            // RFC 7643 section 4.1.2: User.groups is readOnly; membership is changed via the Group resource.
+            if (pathLower == "groups")
+            {
+                throw new BadRequestException(
+                    "The 'groups' attribute is read-only (mutability). Modify membership through the Group resource.");
+            }
+
+            if (opLower == PatchOps.Replace)
             {
                 // Active from path
-                if (operation.Path?.ToLowerInvariant() == "active")
+                if (pathLower == "active")
                 {
                     var active = operation.Value.ToString()?.ToLowerInvariant();
                     var handled = await HandleActiveOperationAsync(orgUser, active == "true");
@@ -58,7 +67,7 @@ public class PatchUserCommand : IPatchUserCommand
                     }
                 }
                 // ExternalId from path
-                else if (operation.Path?.ToLowerInvariant() == PatchPaths.ExternalId)
+                else if (pathLower == PatchPaths.ExternalId)
                 {
                     var newExternalId = operation.Value.GetString();
                     await HandleExternalIdOperationAsync(orgUser, newExternalId);

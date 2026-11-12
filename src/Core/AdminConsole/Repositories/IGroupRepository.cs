@@ -25,6 +25,8 @@ public interface IGroupRepository : IRepository<Group, Guid>
     /// <returns></returns>
     Task<ICollection<Guid>> GetManyUserIdsByIdAsync(Guid id, bool useReadOnlyReplica = false);
     Task<ICollection<GroupUser>> GetManyGroupUsersByOrganizationIdAsync(Guid organizationId);
+    Task<ICollection<GroupUser>> GetManyGroupUsersByGroupIdsAsync(Guid organizationId, IEnumerable<Guid> groupIds);
+    Task<ICollection<GroupUser>> GetManyGroupUsersByOrganizationUserIdsAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds);
     Task CreateAsync(Group obj, IEnumerable<CollectionAccessSelection> collections);
     Task ReplaceAsync(Group obj, IEnumerable<CollectionAccessSelection> collections);
     /// <summary>

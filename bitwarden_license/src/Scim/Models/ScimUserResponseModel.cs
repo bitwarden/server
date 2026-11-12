@@ -8,7 +8,7 @@ public class ScimUserResponseModel : BaseScimUserModel
         : base(true)
     {
         Meta = new ScimMetaModel("User");
-        Groups = new List<string>();
+        Groups = new List<UserGroupReference>();
     }
 
     public ScimUserResponseModel(OrganizationUserUserDetails orgUser)

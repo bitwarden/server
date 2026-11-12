@@ -166,6 +166,32 @@ public class GroupRepository : Repository<AdminConsoleEntities.Group, Group, Gui
         }
     }
 
+    public async Task<ICollection<AdminConsoleEntities.GroupUser>> GetManyGroupUsersByGroupIdsAsync(
+        Guid organizationId, IEnumerable<Guid> groupIds)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var groupUsers = await dbContext.GroupUsers
+            .Where(gu => groupIds.Contains(gu.GroupId) &&
+                gu.Group.OrganizationId == organizationId &&
+                gu.OrganizationUser.OrganizationId == organizationId)
+            .ToListAsync();
+        return Mapper.Map<List<AdminConsoleEntities.GroupUser>>(groupUsers);
+    }
+
+    public async Task<ICollection<AdminConsoleEntities.GroupUser>> GetManyGroupUsersByOrganizationUserIdsAsync(
+        Guid organizationId, IEnumerable<Guid> organizationUserIds)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var groupUsers = await dbContext.GroupUsers
+            .Where(gu => organizationUserIds.Contains(gu.OrganizationUserId) &&
+                gu.Group.OrganizationId == organizationId &&
+                gu.OrganizationUser.OrganizationId == organizationId)
+            .ToListAsync();
+        return Mapper.Map<List<AdminConsoleEntities.GroupUser>>(groupUsers);
+    }
+
     public async Task<ICollection<Guid>> GetManyIdsByUserIdAsync(Guid organizationUserId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())

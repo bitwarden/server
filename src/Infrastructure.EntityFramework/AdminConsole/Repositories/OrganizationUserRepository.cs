@@ -675,6 +675,25 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
+    public async Task<ICollection<Guid>> GetManyGroupIdsByUserIdAsync(Guid organizationUserId, bool useReadOnlyReplica = false)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            IQueryable<GroupUser> query = dbContext.GroupUsers;
+
+            if (useReadOnlyReplica)
+            {
+                query = query.AsNoTracking();
+            }
+
+            return await query
+                .Where(gu => gu.OrganizationUserId == organizationUserId)
+                .Select(gu => gu.GroupId)
+                .ToListAsync();
+        }
+    }
+
     public async Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds, DateTime revisionDate)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
