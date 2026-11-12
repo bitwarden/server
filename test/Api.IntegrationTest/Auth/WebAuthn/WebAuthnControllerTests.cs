@@ -10,7 +10,7 @@ using Bit.Test.Common.Fakes;
 using Fido2NetLib;
 using Xunit;
 
-namespace Bit.Api.IntegrationTest.Auth.Controllers;
+namespace Bit.Api.IntegrationTest.Auth.WebAuthn;
 
 /// <summary>
 /// Real-crypto coverage for WebAuthn passkey registration (attestation), mirroring
