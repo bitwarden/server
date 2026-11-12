@@ -47,7 +47,7 @@ public static class SsoRedirectUrlBuilder
     /// <param name="organizationId">The organization id. The client uses this as the stable
     /// match key against its locally stashed invite — display names can drift between
     /// when an invite is sent and when SSO is attempted, so id is the source of truth.</param>
-    /// <param name="organizationDisplayName">The organization display name, surfaced in the toast.</param>
+    /// <param name="organizationDisplayName">The organization display name, surfaced in the client's error page copy.</param>
     /// <param name="errorCode">A constant from <see cref="ErrorCodes"/>.</param>
     public static string BuildLoginRedirectUrl(
         string vaultWithHashUrl,

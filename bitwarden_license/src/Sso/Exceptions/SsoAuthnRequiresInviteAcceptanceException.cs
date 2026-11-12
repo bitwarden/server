@@ -8,9 +8,10 @@
 /// Carries the organization id + display name and the invited org user's email so
 /// that the SSO callback can redirect the user back to the web client's /login
 /// with enough context for the client to match the redirect against its stashed
-/// invite and surface an actionable toast. The id is the stable match key — the
-/// display name can drift between when the invite was sent and when SSO is
-/// attempted.
+/// invite, or — when nothing matches — show the <c>/sso-login-failed</c> full-page
+/// error telling the user to accept their invite first. The id is the stable match
+/// key — the display name can drift between when the invite was sent and when SSO
+/// is attempted.
 /// </summary>
 public class SsoAuthnRequiresInviteAcceptanceException : Exception
 {
