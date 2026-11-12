@@ -142,6 +142,22 @@ public class SmtpCredentialProviderTests
     }
 
     [Fact]
+    public void Constructor_GoogleOAuth_DoesNotThrow()
+    {
+        using var rsa = RSA.Create(2048);
+        _options.Smtp.AuthType = SmtpAuthType.GoogleOAuth;
+        _options.Smtp.OutboundMailbox = "smtp-user@example.com";
+        _options.Smtp.OAuth.TokenEndpoint = "https://oauth2.googleapis.com/token";
+        _options.Smtp.OAuth.GrantType = "urn:ietf:params:oauth:grant-type:jwt-bearer";
+        _options.Smtp.OAuth.SigningKey = rsa.ExportPkcs8PrivateKeyPem();
+        _options.Smtp.OAuth.Claims["iss"] = "service-account@example.com";
+
+        var sut = CreateSut();
+
+        Assert.NotNull(sut);
+    }
+
+    [Fact]
     public async Task InvalidateAsync_OAuth2Credentials_NextGetCredentialsFetchesNewToken()
     {
         _options.Smtp.AuthType = SmtpAuthType.MicrosoftOAuth;
