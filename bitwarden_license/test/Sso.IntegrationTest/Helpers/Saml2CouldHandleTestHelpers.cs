@@ -20,11 +20,12 @@ public static class Saml2CouldHandleTestHelpers
         (CreateSelfSignedCertificate("CN=Test IdP"), CreateSelfSignedCertificate("CN=Test SP"));
 
     // Builds the real, database-backed scheme and returns the pieces each arrangement needs.
-    // PM42982_WantAssertionsSigned is on, so the signature check runs the multi-assertion verifier
-    // (Saml2AssertionSignatureVerifier.EnsureAssertionsSigned).
+    // PM42982_WantAssertionsSigned is on by default, so the signature check runs the multi-assertion
+    // verifier (Saml2AssertionSignatureVerifier.EnsureAssertionsSigned). Pass featureFlagEnabled: false
+    // to run the flag-off check, which reads only a plaintext assertion.
     public static async Task<(SsoTestData TestData, Saml2Options SamlOptions, string OrganizationId)>
         BuildSchemeAsync(X509Certificate2 idpCertificate, X509Certificate2 spCertificate,
-            bool wantAssertionsSigned, int? rsa15EmailCooldownInDays = null,
+            bool wantAssertionsSigned, bool featureFlagEnabled = true, int? rsa15EmailCooldownInDays = null,
             bool rsa15DeprecationFlag = false)
     {
         var builder = new SsoTestDataBuilder()
@@ -38,7 +39,7 @@ public static class Saml2CouldHandleTestHelpers
                 SpWantAssertionsSigned = wantAssertionsSigned,
             }))
             .WithSamlSigningCertificate(spCertificate)
-            .WithPM42982WantAssertionsSignedFlag()
+            .WithPM42982WantAssertionsSignedFlag(featureFlagEnabled)
             .WithPM42283Rsa15DeprecationFlag(rsa15DeprecationFlag);
         if (rsa15EmailCooldownInDays.HasValue)
         {
@@ -57,10 +58,11 @@ public static class Saml2CouldHandleTestHelpers
 
     public static async Task<Saml2CouldHandleArrangement> ArrangeAsync(string assertionElement,
         X509Certificate2 idpCertificate, X509Certificate2 spCertificate, bool wantAssertionsSigned,
-        bool rsa15DeprecationFlag = false)
+        bool featureFlagEnabled = true, bool rsa15DeprecationFlag = false)
     {
         var (testData, samlOptions, organizationId) = await BuildSchemeAsync(
-            idpCertificate, spCertificate, wantAssertionsSigned, rsa15DeprecationFlag: rsa15DeprecationFlag);
+            idpCertificate, spCertificate, wantAssertionsSigned, featureFlagEnabled,
+            rsa15DeprecationFlag: rsa15DeprecationFlag);
 
         var context = BuildPostContext(testData,
             SsoConfigurationData.BuildSaml2AcsUrl(null, organizationId),

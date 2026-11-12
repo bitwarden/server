@@ -14,7 +14,8 @@ namespace Bit.Sso.IntegrationTest.Saml2.RequestMatching;
 /// When <c>WantAssertionsSigned</c> is on, <c>CouldHandleAsync</c> throws unless every assertion in the
 /// response, plaintext or encrypted, has a valid signature from the identity provider. Covers mixed and nested
 /// assertions, untrusted and undecryptable assertions, and the order of this check and the key transport
-/// algorithm check. Uses the real, database-backed <c>Saml2Options</c> object that
+/// algorithm check. With the <c>PM42982_WantAssertionsSigned</c> flag off, the check reads only a plaintext
+/// assertion. Uses the real, database-backed <c>Saml2Options</c> object that
 /// <c>DynamicAuthenticationScheme</c> holds.
 /// </summary>
 public class Saml2CouldHandleAssertionSignatureTests
@@ -283,6 +284,64 @@ public class Saml2CouldHandleAssertionSignatureTests
         var exception = await Assert.ThrowsAsync<Exception>(
             () => arrangement.SamlOptions.CouldHandleAsync(arrangement.Scheme, arrangement.Context));
         Assert.Equal(Saml2EncryptedAssertionInspector.KeyTransportAlgorithmNotAcceptedMessage, exception.Message);
+    }
+
+    // With the PM42982_WantAssertionsSigned flag off, the signature check reads only the first plaintext
+    // <Assertion> element. The RSA 1.5 deprecation flag selects the CouldHandleAsync path, and each path
+    // holds its own copy of this check.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CouldHandleAsync_SignedPlaintextAssertionAndWantAssertionsSignedAndPM42982FlagOff_ReturnsTrue(
+        bool rsa15DeprecationFlag)
+    {
+        var (idpCertificate, spCertificate) = BuildCertificates();
+        var signedAssertion = BuildSignedAssertion(idpCertificate);
+
+        var arrangement = await ArrangeAsync(
+            signedAssertion.OuterXml, idpCertificate, spCertificate, wantAssertionsSigned: true,
+            featureFlagEnabled: false, rsa15DeprecationFlag: rsa15DeprecationFlag);
+
+        Assert.True(await arrangement.SamlOptions.CouldHandleAsync(arrangement.Scheme, arrangement.Context));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CouldHandleAsync_UnsignedPlaintextAssertionAndWantAssertionsSignedAndPM42982FlagOff_Throws(
+        bool rsa15DeprecationFlag)
+    {
+        var (idpCertificate, spCertificate) = BuildCertificates();
+        var unsignedAssertion = BuildAssertionDocument().DocumentElement!.OuterXml;
+
+        var arrangement = await ArrangeAsync(
+            unsignedAssertion, idpCertificate, spCertificate, wantAssertionsSigned: true,
+            featureFlagEnabled: false, rsa15DeprecationFlag: rsa15DeprecationFlag);
+
+        var exception = await Assert.ThrowsAsync<Exception>(
+            () => arrangement.SamlOptions.CouldHandleAsync(arrangement.Scheme, arrangement.Context));
+        Assert.Equal("Cannot verify SAML assertion signature.", exception.Message);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CouldHandleAsync_SignedEncryptedAssertionAndWantAssertionsSignedAndPM42982FlagOff_Throws(
+        bool rsa15DeprecationFlag)
+    {
+        // A response that carries only an <EncryptedAssertion> has no plaintext <Assertion> element, so the
+        // flag-off check throws even though the assertion inside is signed.
+        var (idpCertificate, spCertificate) = BuildCertificates();
+        var encryptedAssertionXml = Saml2AcsPostHarness.EncryptAssertion(
+            BuildSignedAssertion(idpCertificate).OuterXml, spCertificate, EncryptedXml.XmlEncRSAOAEPUrl);
+
+        var arrangement = await ArrangeAsync(
+            encryptedAssertionXml, idpCertificate, spCertificate, wantAssertionsSigned: true,
+            featureFlagEnabled: false, rsa15DeprecationFlag: rsa15DeprecationFlag);
+
+        var exception = await Assert.ThrowsAsync<Exception>(
+            () => arrangement.SamlOptions.CouldHandleAsync(arrangement.Scheme, arrangement.Context));
+        Assert.Equal("Cannot verify SAML assertion signature.", exception.Message);
     }
 
     private static async Task AssertReturnsTrueOrThrowsGateAsync(
