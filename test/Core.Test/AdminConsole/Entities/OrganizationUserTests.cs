@@ -166,4 +166,117 @@ public class OrganizationUserTests
 
         Assert.True(orgUser.GetPermissions()!.ManageUsers);
     }
+
+    [Fact]
+    public void CreateInvited_ReturnsInvitedShape()
+    {
+        var organizationId = Guid.NewGuid();
+
+        var orgUser = OrganizationUser.CreateInvited(organizationId, "Invitee@Example.com", OrganizationUserType.Admin,
+            "external-id");
+
+        Assert.NotEqual(Guid.Empty, orgUser.Id);
+        Assert.Equal(organizationId, orgUser.OrganizationId);
+        Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
+        Assert.Equal(OrganizationUserType.Admin, orgUser.Type);
+        Assert.Equal("invitee@example.com", orgUser.Email);
+        Assert.Null(orgUser.UserId);
+        Assert.Null(orgUser.Key);
+        Assert.Null(orgUser.StatusNew);
+        Assert.Equal("external-id", orgUser.ExternalId);
+    }
+
+    [Fact]
+    public void CreateInvited_NoExternalId_LeavesExternalIdNull()
+    {
+        var orgUser = OrganizationUser.CreateInvited(Guid.NewGuid(), "invitee@example.com", OrganizationUserType.User);
+
+        Assert.Null(orgUser.ExternalId);
+    }
+
+    [Fact]
+    public void CreateAccepted_ReturnsAcceptedShape()
+    {
+        var organizationId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        var orgUser = OrganizationUser.CreateAccepted(organizationId, userId, OrganizationUserType.User, "external-id");
+
+        Assert.NotEqual(Guid.Empty, orgUser.Id);
+        Assert.Equal(organizationId, orgUser.OrganizationId);
+        Assert.Equal(OrganizationUserStatusType.Accepted, orgUser.Status);
+        Assert.Equal(OrganizationUserType.User, orgUser.Type);
+        Assert.Equal(userId, orgUser.UserId);
+        Assert.Null(orgUser.Email);
+        Assert.Null(orgUser.Key);
+        Assert.Null(orgUser.StatusNew);
+        Assert.Equal("external-id", orgUser.ExternalId);
+    }
+
+    [Fact]
+    public void CreateConfirmed_ReturnsConfirmedShape()
+    {
+        var organizationId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        var orgUser = OrganizationUser.CreateConfirmed(organizationId, userId, "org-key", OrganizationUserType.Owner,
+            "external-id");
+
+        Assert.NotEqual(Guid.Empty, orgUser.Id);
+        Assert.Equal(organizationId, orgUser.OrganizationId);
+        Assert.Equal(OrganizationUserStatusType.Confirmed, orgUser.Status);
+        Assert.Equal(OrganizationUserType.Owner, orgUser.Type);
+        Assert.Equal(userId, orgUser.UserId);
+        Assert.Equal("org-key", orgUser.Key);
+        Assert.Null(orgUser.Email);
+        Assert.Null(orgUser.StatusNew);
+        Assert.Equal("external-id", orgUser.ExternalId);
+    }
+
+    [Fact]
+    public void CreateStaged_ReturnsStagedShape()
+    {
+        var organizationId = Guid.NewGuid();
+
+        var orgUser = OrganizationUser.CreateStaged(organizationId, "Staged@Example.com", "external-id",
+            OrganizationUserType.User);
+
+        Assert.NotEqual(Guid.Empty, orgUser.Id);
+        Assert.Equal(organizationId, orgUser.OrganizationId);
+        Assert.Equal(OrganizationUserStatusType.Staged, orgUser.Status);
+        Assert.Equal(OrganizationUserType.User, orgUser.Type);
+        Assert.Equal("staged@example.com", orgUser.Email);
+        Assert.Equal("external-id", orgUser.ExternalId);
+        Assert.Null(orgUser.UserId);
+        Assert.Null(orgUser.Key);
+        Assert.Null(orgUser.StatusNew);
+    }
+
+    [Fact]
+    public void Create_EachCallGeneratesDistinctId()
+    {
+        var first = OrganizationUser.CreateInvited(Guid.NewGuid(), "a@example.com", OrganizationUserType.User);
+        var second = OrganizationUser.CreateInvited(Guid.NewGuid(), "b@example.com", OrganizationUserType.User);
+
+        Assert.NotEqual(first.Id, second.Id);
+    }
+
+    public static TheoryData<OrganizationUser, OrganizationUserStatusType> FactoryArrangements => new()
+    {
+        { OrganizationUser.CreateInvited(Guid.NewGuid(), "invitee@example.com", OrganizationUserType.User), OrganizationUserStatusType.Invited },
+        { OrganizationUser.CreateAccepted(Guid.NewGuid(), Guid.NewGuid(), OrganizationUserType.User), OrganizationUserStatusType.Accepted },
+        { OrganizationUser.CreateConfirmed(Guid.NewGuid(), Guid.NewGuid(), "org-key", OrganizationUserType.User), OrganizationUserStatusType.Confirmed },
+    };
+
+    /// <summary>
+    /// Restore without a StatusNew snapshot infers status from the row's shape, so factory rows must round-trip.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(FactoryArrangements))]
+    public void GetPriorActiveOrganizationUserStatusType_FactoryArrangement_ResolvesToCreatedStatus(
+        OrganizationUser orgUser,
+        OrganizationUserStatusType expected)
+    {
+        Assert.Equal(expected, orgUser.GetPriorActiveOrganizationUserStatusType());
+    }
 }
