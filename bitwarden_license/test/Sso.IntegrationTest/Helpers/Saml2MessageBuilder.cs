@@ -5,7 +5,7 @@ using System.Xml;
 using Microsoft.Extensions.Primitives;
 using Sustainsys.Saml2;
 
-namespace Bit.Sso.IntegrationTest.Utilities;
+namespace Bit.Sso.IntegrationTest.Helpers;
 
 /// <summary>
 /// Builds SAML messages, signing certificates, and the <see cref="HttpContext"/> that carries a message

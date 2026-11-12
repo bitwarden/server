@@ -3,7 +3,7 @@ using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.IntegrationTestCommon;
 using Bit.IntegrationTestCommon.Factories;
-using Bit.Sso.IntegrationTest.Utilities;
+using Bit.Sso.IntegrationTest.Helpers;
 using Duende.IdentityModel;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;

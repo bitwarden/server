@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using Xunit;
 
-namespace Bit.Sso.IntegrationTest.Utilities;
+namespace Bit.Sso.IntegrationTest.Helpers;
 
 /// <summary>
 /// Assertions on the responses that <c>/Account/ExternalCallback</c> returns.

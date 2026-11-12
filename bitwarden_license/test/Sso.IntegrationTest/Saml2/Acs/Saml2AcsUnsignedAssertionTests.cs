@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
-using Bit.Sso.IntegrationTest.Utilities;
+using Bit.Sso.IntegrationTest.Helpers;
 using Sustainsys.Saml2;
 using Xunit;
 

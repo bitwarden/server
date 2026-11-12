@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using Bit.Core.Auth.Models.Data;
-using Bit.Sso.IntegrationTest.Utilities;
-using Bitwarden.License.Test.Sso.IntegrationTest.Utilities;
+using Bit.Sso.IntegrationTest.Helpers;
 using Microsoft.AspNetCore.Authentication;
 using NSubstitute;
 using Xunit;

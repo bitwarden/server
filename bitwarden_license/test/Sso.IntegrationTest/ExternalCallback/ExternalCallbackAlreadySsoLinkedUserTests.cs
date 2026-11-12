@@ -1,5 +1,5 @@
 ﻿using System.Net;
-using Bit.Sso.IntegrationTest.Utilities;
+using Bit.Sso.IntegrationTest.Helpers;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
