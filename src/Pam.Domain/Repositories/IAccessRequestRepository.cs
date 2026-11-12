@@ -46,7 +46,7 @@ public interface IAccessRequestRepository
     Task<ICollection<AccessRequestDetails>> GetManyInboxPendingByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime now);
 
     /// <summary>
-    /// One page of the requests that have ended, newest end first, with the requesters and collections the whole
+    /// One page of the requests that have ended, newest request first, with the requesters and collections the whole
     /// history names. An applied extension has no row of its own: it only moves its lease's end.
     /// </summary>
     Task<AccessRequestHistoryPage> GetHistoryPageAsync(AccessRequestHistoryFilter filter);

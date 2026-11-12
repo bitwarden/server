@@ -81,7 +81,7 @@ public class AccessRequestRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task GetHistoryPageAsync_PagesByEndNewestFirstWithoutGapsOrRepeats(
+    public async Task GetHistoryPageAsync_PagesByCreationNewestFirstWithoutGapsOrRepeats(
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
         IAccessRequestRepository accessRequestRepository)
@@ -90,28 +90,28 @@ public class AccessRequestRepositoryTests
         var collection = await collectionRepository.CreateTestCollectionAsync(organization);
         var now = DateTime.UtcNow;
 
-        // Created in one order, ended in the reverse one; two end at the same instant.
-        var endedAt = new[] { 9, 2, 2, 5, 1 };
+        // Ended in the reverse order of creation, so the end can't stand in for it; two are created at the same instant.
+        var createdMinutesAgo = new[] { 9, 2, 2, 5, 1 };
         var created = new List<Guid>();
-        for (var i = 0; i < endedAt.Length; i++)
+        foreach (var minutesAgo in createdMinutesAgo)
         {
-            var request = BuildRequest(
-                organization.Id, collection.Id, Guid.NewGuid(), AccessRequestAction.Denied, now.AddMinutes(-60 + i));
-            request.ActionDate = now.AddMinutes(-endedAt[i]);
+            var request = BuildRequest(organization.Id, collection.Id, Guid.NewGuid(), AccessRequestAction.Denied,
+                now.AddMinutes(-60 - minutesAgo));
+            request.ActionDate = now.AddMinutes(-10 + minutesAgo);
             created.Add((await accessRequestRepository.CreateAsync(request)).Id);
         }
 
         var walked = new List<AccessRequestDetails>();
-        for (var skip = 0; skip < endedAt.Length; skip += 2)
+        for (var skip = 0; skip < createdMinutesAgo.Length; skip += 2)
         {
             var page = await ReadHistoryAsync(accessRequestRepository, [collection.Id], now, skip: skip, take: 2);
-            Assert.Equal(endedAt.Length, page.Total);
+            Assert.Equal(createdMinutesAgo.Length, page.Total);
             walked.AddRange(page.Requests);
         }
 
         Assert.Equal(created.Order(), walked.Select(r => r.Id).Order());
         Assert.Equal(walked.Count, walked.Select(r => r.Id).Distinct().Count());
-        Assert.True(walked.Zip(walked.Skip(1)).All(pair => pair.First.ActionDate >= pair.Second.ActionDate));
+        Assert.True(walked.Zip(walked.Skip(1)).All(pair => pair.First.CreationDate >= pair.Second.CreationDate));
     }
 
     [DatabaseTheory, DatabaseData]
@@ -158,6 +158,57 @@ public class AccessRequestRepositoryTests
         Assert.Equal([revoked.Id], await IdsWith(AccessRequestHistoryStatus.Revoked));
         Assert.Equal(new[] { ranOut.Id, ended.Id }.Order(), (await IdsWith(AccessRequestHistoryStatus.SessionEnded)).Order());
         Assert.Equal(7, (await ReadHistoryAsync(accessRequestRepository, [collection.Id], now)).Total);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetHistoryPageAsync_LeavesOutALeaseExtendedPastItsRequestsWindowUntilItEnds(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var now = DateTime.UtcNow;
+
+        // Window [now-3h, now-1h], activated, extended to an hour from now.
+        async Task<(AccessRequest Request, AccessLease Lease)> ExtendedAsync()
+        {
+            var (request, lease) = await CreateActivatedRequestAsync(
+                accessRequestRepository, accessLeaseRepository, organization.Id, collection.Id, now.AddHours(-2));
+            var extendedAt = now.AddMinutes(-90);
+            var extension = BuildRequest(
+                organization.Id, collection.Id, request.RequesterId, AccessRequestAction.Approved, extendedAt);
+            extension.Id = CombGuid.Generate();
+            extension.ExtensionOfLeaseId = lease.Id;
+            extension.CipherId = request.CipherId;
+            extension.NotBefore = lease.NotAfter;
+            extension.NotAfter = lease.NotAfter.AddHours(2);
+            extension.ActionDate = extendedAt;
+            Assert.Equal(AccessLeaseExtendOutcome.Extended, await accessRequestRepository.CreateApprovedExtensionAsync(
+                extension,
+                new AccessDecision
+                {
+                    Id = CombGuid.Generate(),
+                    AccessRequestId = extension.Id,
+                    DeciderKind = AccessDeciderKind.Automatic,
+                    Verdict = AccessDecisionVerdict.Approve,
+                    CreationDate = extendedAt,
+                },
+                extendedAt,
+                denialComment: null));
+            return (request, (await accessLeaseRepository.GetByIdAsync(lease.Id))!);
+        }
+
+        await ExtendedAsync();
+        var (revoked, revokedLease) = await ExtendedAsync();
+        await accessLeaseRepository.RevokeAsync(revokedLease, AccessLeaseAction.Revoked,
+            BuildHumanDecision(revoked.Id, Guid.NewGuid(), AccessDecisionVerdict.Deny, "revoked", now), now);
+
+        var page = await ReadHistoryAsync(accessRequestRepository, [collection.Id], now);
+
+        Assert.Equal(revoked.Id, Assert.Single(page.Requests).Id);
+        Assert.Equal(1, page.Total);
     }
 
     [DatabaseTheory, DatabaseData]
