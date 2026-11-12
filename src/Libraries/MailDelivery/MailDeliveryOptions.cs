@@ -195,8 +195,9 @@ public sealed class MailDeliveryOptions
             public string? TokenEndpoint { get; set; }
 
             /// <summary>
-            /// The OAuth grant type. Defaults to <c>client_credentials</c> when unset, which is the only
-            /// supported value.
+            /// The OAuth grant type. Defaults to <c>client_credentials</c> when unset.
+            /// <see cref="SmtpAuthType.CustomOAuth"/> also accepts <c>urn:ietf:params:oauth:grant-type:jwt-bearer</c>;
+            /// <see cref="SmtpAuthType.MicrosoftOAuth"/> accepts only <c>client_credentials</c>.
             /// </summary>
             public string? GrantType { get; set; }
 
@@ -217,8 +218,8 @@ public sealed class MailDeliveryOptions
             public string? Scope { get; set; }
 
             /// <summary>
-            /// RSA private key (PEM-encoded) used to sign jwt-bearer assertions. Used as a fallback
-            /// when <see cref="SmtpOptions.ServiceAccountPrivateKey"/> is unset.
+            /// RSA private key (PEM-encoded) used to sign jwt-bearer assertions. Falls back to
+            /// <see cref="SmtpOptions.ServiceAccountPrivateKey"/> when unset.
             /// </summary>
             public string? SigningKey { get; set; }
 
