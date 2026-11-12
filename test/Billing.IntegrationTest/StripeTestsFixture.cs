@@ -345,6 +345,75 @@ public class StripeTestsFixture : IAsyncLifetime
     }
 
     /// <summary>
+    /// Bills the customer an invoice with no subscription link (as a subscription invoice that lost its link),
+    /// records a non-charge payment (check, wire, bank transfer, with no Stripe charge) as a Payment Record and
+    /// applies it to that invoice, as cash application does. Returns the invoice and the resulting paid invoice
+    /// payment, which carries the Payment Record. Used by webhook tests that simulate <c>invoice_payment.paid</c> and
+    /// <c>invoice.paid</c>.
+    /// </summary>
+    public async Task<(string InvoiceId, string InvoicePaymentId)> ApplyNonChargeCashApplicationPaymentToNewInvoiceAsync(
+        string customerId, long amountInCents, string paymentType, string reference)
+    {
+        var stripeClient = CreateStripeClient();
+        var invoice = await stripeClient.V1.Invoices.CreateAsync(new InvoiceCreateOptions
+        {
+            Customer = customerId,
+            CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
+            DaysUntilDue = 30,
+            AutoAdvance = false,
+        });
+        await stripeClient.V1.InvoiceItems.CreateAsync(new InvoiceItemCreateOptions
+        {
+            Customer = customerId,
+            Invoice = invoice.Id,
+            Amount = amountInCents,
+            Currency = "usd",
+            Description = "Non-charge cash application integration test",
+        });
+        invoice = await stripeClient.V1.Invoices.FinalizeInvoiceAsync(invoice.Id);
+
+        var now = DateTime.UtcNow;
+        var paymentRecord = await stripeClient.V1.PaymentRecords.ReportPaymentAsync(new PaymentRecordReportPaymentOptions
+        {
+            AmountRequested = new PaymentRecordAmountRequestedOptions { Value = invoice.AmountRemaining, Currency = "usd" },
+            InitiatedAt = now,
+            CustomerDetails = new PaymentRecordCustomerDetailsOptions { Customer = customerId },
+            PaymentMethodDetails = new PaymentRecordPaymentMethodDetailsOptions
+            {
+                Type = "custom",
+                Custom = new PaymentRecordPaymentMethodDetailsCustomOptions { DisplayName = paymentType },
+            },
+            ProcessorDetails = new PaymentRecordProcessorDetailsOptions
+            {
+                Type = "custom",
+                Custom = new PaymentRecordProcessorDetailsCustomOptions { PaymentReference = reference },
+            },
+            Outcome = "guaranteed",
+            Guaranteed = new PaymentRecordGuaranteedOptions { GuaranteedAt = now },
+            CustomerPresence = "off_session",
+        });
+        await stripeClient.V1.Invoices.AttachPaymentAsync(invoice.Id,
+            new InvoiceAttachPaymentOptions { PaymentRecord = paymentRecord.Id });
+
+        var invoicePayments = await stripeClient.V1.InvoicePayments.ListAsync(
+            new InvoicePaymentListOptions { Invoice = invoice.Id });
+        var invoicePayment = invoicePayments.Data.Single(payment =>
+            payment.Status == "paid" && payment.Payment?.PaymentRecordId == paymentRecord.Id);
+
+        return (invoice.Id, invoicePayment.Id);
+    }
+
+    /// <summary>
+    /// Reads the Transaction recorded for a non-charge cash application payment, if any.
+    /// </summary>
+    public async Task<Bit.Core.Entities.Transaction?> GetNonChargeCashApplicationTransactionAsync(string invoicePaymentId)
+    {
+        using var scope = Api.Services.CreateScope();
+        return await scope.ServiceProvider.GetRequiredService<ITransactionRepository>()
+            .GetByGatewayIdAsync(GatewayType.Bank, invoicePaymentId);
+    }
+
+    /// <summary>
     /// Reads the ProviderInvoiceItem rows ProviderEventService persists for a given invoice.
     /// </summary>
     public async Task<ICollection<ProviderInvoiceItem>> GetProviderInvoiceItemsAsync(Guid providerId, string invoiceId)

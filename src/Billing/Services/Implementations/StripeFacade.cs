@@ -19,6 +19,8 @@ public class StripeFacade : IStripeFacade
     private readonly SetupIntentService _setupIntentService = new();
     private readonly TestClockService _testClockService = new();
     private readonly CouponService _couponService = new();
+    private readonly InvoicePaymentService _invoicePaymentService = new();
+    private readonly PaymentRecordService _paymentRecordService = new();
 
     public async Task<Charge> GetCharge(
         string chargeId,
@@ -151,4 +153,24 @@ public class StripeFacade : IStripeFacade
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default) =>
         _couponService.GetAsync(couponId, couponGetOptions, requestOptions, cancellationToken);
+
+    public IAsyncEnumerable<InvoicePayment> ListInvoicePaymentsAutoPagingAsync(
+        InvoicePaymentListOptions options = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default) =>
+        _invoicePaymentService.ListAutoPagingAsync(options, requestOptions, cancellationToken);
+
+    public Task<InvoicePayment> GetInvoicePayment(
+        string invoicePaymentId,
+        InvoicePaymentGetOptions invoicePaymentGetOptions = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default) =>
+        _invoicePaymentService.GetAsync(invoicePaymentId, invoicePaymentGetOptions, requestOptions, cancellationToken);
+
+    public Task<PaymentRecord> GetPaymentRecord(
+        string paymentRecordId,
+        PaymentRecordGetOptions paymentRecordGetOptions = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default) =>
+        _paymentRecordService.GetAsync(paymentRecordId, paymentRecordGetOptions, requestOptions, cancellationToken);
 }

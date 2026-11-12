@@ -1,0 +1,61 @@
+{
+  "invoice_payment": {
+    "id": "inpay_dashboardcheck01",
+    "object": "invoice_payment",
+    "amount_paid": 7200,
+    "amount_requested": 7200,
+    "created": 1794480527,
+    "currency": "usd",
+    "invoice": {
+      "id": "in_dashboardcheck02",
+      "object": "invoice",
+      "customer": "cus_dashboardcheck03",
+      "metadata": {},
+      "parent": {
+        "subscription_details": {
+          "metadata": {
+            "organizationId": "1f47e87d-73ce-4733-9b60-e9a308d91cfd"
+          },
+          "subscription": "sub_dashboardcheck04"
+        },
+        "type": "subscription_details"
+      }
+    },
+    "livemode": false,
+    "payment": {
+      "payment_record": "pr_dashboardcheck05",
+      "type": "payment_record"
+    },
+    "status": "paid",
+    "status_transitions": {
+      "paid_at": 1794480401
+    }
+  },
+  "payment_record": {
+    "id": "pr_dashboardcheck05",
+    "object": "payment_record",
+    "amount": {
+      "currency": "usd",
+      "value": 7200
+    },
+    "customer_details": {
+      "customer": "cus_dashboardcheck03",
+      "name": "Example University"
+    },
+    "livemode": false,
+    "payment_method_details": {
+      "custom": {
+        "display_name": "CHECK",
+        "type": "custom"
+      },
+      "type": "custom"
+    },
+    "processor_details": {
+      "custom": {
+        "payment_reference": "1001"
+      },
+      "type": "custom"
+    },
+    "reported_by": "self"
+  }
+}

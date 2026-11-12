@@ -1,0 +1,61 @@
+{
+  "invoice_payment": {
+    "id": "inpay_apiwire01",
+    "object": "invoice_payment",
+    "amount_paid": 10000,
+    "amount_requested": 10000,
+    "created": 1794479245,
+    "currency": "usd",
+    "invoice": {
+      "id": "in_apiwire02",
+      "object": "invoice",
+      "customer": "cus_apiwire03",
+      "metadata": {},
+      "parent": {
+        "subscription_details": {
+          "metadata": {
+            "organizationId": "db4e842f-e7b9-47de-8aa9-0327271a1271"
+          },
+          "subscription": "sub_apiwire04"
+        },
+        "type": "subscription_details"
+      }
+    },
+    "livemode": false,
+    "payment": {
+      "payment_record": "pr_apiwire05",
+      "type": "payment_record"
+    },
+    "status": "paid",
+    "status_transitions": {
+      "paid_at": 1794479236
+    }
+  },
+  "payment_record": {
+    "id": "pr_apiwire05",
+    "object": "payment_record",
+    "amount": {
+      "currency": "usd",
+      "value": 10000
+    },
+    "customer_details": {
+      "customer": "cus_apiwire03",
+      "name": "Example Customer Inc"
+    },
+    "livemode": false,
+    "payment_method_details": {
+      "custom": {
+        "display_name": "In Wire - EXAMPLE CO",
+        "type": "custom"
+      },
+      "type": "custom"
+    },
+    "processor_details": {
+      "custom": {
+        "payment_reference": "11/12/2026 - EXAMPLE CO"
+      },
+      "type": "custom"
+    },
+    "reported_by": "self"
+  }
+}

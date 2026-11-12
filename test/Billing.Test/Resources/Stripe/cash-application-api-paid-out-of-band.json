@@ -1,0 +1,61 @@
+{
+  "invoice_payment": {
+    "id": "inpay_apipaidoutofband01",
+    "object": "invoice_payment",
+    "amount_paid": 10000,
+    "amount_requested": 10000,
+    "created": 1794479295,
+    "currency": "usd",
+    "invoice": {
+      "id": "in_apipaidoutofband02",
+      "object": "invoice",
+      "customer": "cus_apipaidoutofband03",
+      "metadata": {},
+      "parent": {
+        "subscription_details": {
+          "metadata": {
+            "organizationId": "469dfb07-8623-4c7b-bf57-fc3e684ee910"
+          },
+          "subscription": "sub_apipaidoutofband04"
+        },
+        "type": "subscription_details"
+      }
+    },
+    "livemode": false,
+    "payment": {
+      "payment_record": "pr_apipaidoutofband05",
+      "type": "payment_record"
+    },
+    "status": "paid",
+    "status_transitions": {
+      "paid_at": 1794479294
+    }
+  },
+  "payment_record": {
+    "id": "pr_apipaidoutofband05",
+    "object": "payment_record",
+    "amount": {
+      "currency": "usd",
+      "value": 10000
+    },
+    "customer_details": {
+      "customer": "cus_apipaidoutofband03",
+      "name": "Example Customer Inc"
+    },
+    "livemode": false,
+    "payment_method_details": {
+      "custom": {
+        "display_name": "Paid out of band",
+        "type": null
+      },
+      "type": "custom"
+    },
+    "processor_details": {
+      "custom": {
+        "payment_reference": "Out of band payment for in_apipaidoutofband02"
+      },
+      "type": "custom"
+    },
+    "reported_by": "self"
+  }
+}
