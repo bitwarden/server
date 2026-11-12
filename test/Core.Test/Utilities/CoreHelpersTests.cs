@@ -498,9 +498,31 @@ public class CoreHelpersTests
     [InlineData("a@://", "a[at]://")]
     [InlineData("Acme Corp", "Acme Corp")]
     [InlineData("Ünïcødé://näme", "näme")]
+    [InlineData("support@https://example.com", "support[at]example[dot]com")]
+    [InlineData("x.y://z", "x[dot]z")]
+    [InlineData("Acme 2.0", "Acme 2[dot]0")]
     [InlineData("", "")]
     public void SanitizeForEmail_NeutralizesAddressesAndLinks(string value, string expected)
     {
+        Assert.Equal(expected, CoreHelpers.SanitizeForEmail(value));
+    }
+
+    [Fact]
+    public void SanitizeForEmail_NullInput_ReturnsNull()
+    {
+        Assert.Null(CoreHelpers.SanitizeForEmail(null!));
+    }
+
+    [Theory]
+    [InlineData("https\u200C://example.com", "https\u200C://example[dot]com")]
+    [InlineData("https\u200D://example.com", "https\u200D://example[dot]com")]
+    [InlineData("my\u200Capp://open", "my\u200Copen")]
+    public void SanitizeForEmail_TreatsZeroWidthJoinersAsNonWordCharacters(string value, string expected)
+    {
+        // U+200C and U+200D are not \w characters, so a "://" directly after one is not a scheme
+        // and is kept, and a word run after one is stripped on its own. The regular expression
+        // this method replaced used the \b anchor, which treated them as word characters; that
+        // difference is deliberate and only affects malformed schemes.
         Assert.Equal(expected, CoreHelpers.SanitizeForEmail(value));
     }
 
