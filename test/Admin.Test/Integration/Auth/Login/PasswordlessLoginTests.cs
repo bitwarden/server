@@ -1,10 +1,9 @@
 ﻿using System.Net;
-using Bit.Admin.IntegrationTest.Factories;
-using Xunit;
+using Admin.Test.Integration.Factories;
 
-namespace Bit.Admin.IntegrationTest.Auth.Login;
+namespace Admin.Test.Integration.Auth.Login;
 
-public class LoginControllerTests(AdminApplicationFactory factory) : IClassFixture<AdminApplicationFactory>
+public class PasswordlessLoginTests(AdminApplicationFactory factory) : IClassFixture<AdminApplicationFactory>
 {
     [Fact]
     public async Task Confirm_ValidPasswordlessToken_SignsInAdmin()

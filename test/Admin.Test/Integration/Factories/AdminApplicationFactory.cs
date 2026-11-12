@@ -7,11 +7,12 @@ using Bit.Test.Common.Helpers;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NSubstitute;
-using Xunit;
 
-namespace Bit.Admin.IntegrationTest.Factories;
+namespace Admin.Test.Integration.Factories;
 
 /// <summary>
 /// Runs the Admin host in process over an in-memory SQLite database that this factory owns.
@@ -22,14 +23,14 @@ public sealed class AdminApplicationFactory : IAsyncDisposable
     private const string AdminEmail = "admin@localhost";
 
     private readonly SqliteConnection _connection;
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly WebApplicationFactory<Bit.Admin.Program> _factory;
 
     public AdminApplicationFactory()
     {
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();
 
-        _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        _factory = new WebApplicationFactory<Bit.Admin.Program>().WithWebHostBuilder(builder =>
         {
             builder.ConfigureAppConfiguration((_, config) =>
             {

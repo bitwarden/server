@@ -1,4 +1,4 @@
-<Solution>
+﻿<Solution>
   <Folder Name="/Solution Items/">
     <File Path=".dockerignore" />
     <File Path=".editorconfig" />
@@ -67,7 +67,6 @@
     <Project Path="bitwarden_license/test/SSO.Test/SSO.Test.csproj" />
   </Folder>
   <Folder Name="/test/">
-    <Project Path="test/Admin.IntegrationTest/Admin.IntegrationTest.csproj" />
     <Project Path="test/Admin.Test/Admin.Test.csproj" />
     <Project Path="test/Api.IntegrationTest/Api.IntegrationTest.csproj" />
     <Project Path="test/Api.Test/Api.Test.csproj" />
