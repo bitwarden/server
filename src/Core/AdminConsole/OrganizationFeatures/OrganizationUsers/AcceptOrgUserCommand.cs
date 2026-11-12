@@ -23,30 +23,27 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IMailService _mailService;
     private readonly IUserRepository _userRepository;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IAcceptOrganizationMembershipValidator _acceptOrganizationMembershipValidator;
-    private readonly IPushAutoConfirmNotificationCommand _pushAutoConfirmNotificationCommand;
+    private readonly INotifyAdminsOfAcceptedUserCommand _notifyAdminsOfAcceptedUserCommand;
     private readonly IDeleteEmergencyAccessCommand _deleteEmergencyAccessCommand;
 
     public AcceptOrgUserCommand(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
-        IMailService mailService,
         IUserRepository userRepository,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IAcceptOrganizationMembershipValidator acceptOrganizationMembershipValidator,
-        IPushAutoConfirmNotificationCommand pushAutoConfirmNotificationCommand,
+        INotifyAdminsOfAcceptedUserCommand notifyAdminsOfAcceptedUserCommand,
         IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand)
     {
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
-        _mailService = mailService;
         _userRepository = userRepository;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _acceptOrganizationMembershipValidator = acceptOrganizationMembershipValidator;
-        _pushAutoConfirmNotificationCommand = pushAutoConfirmNotificationCommand;
+        _notifyAdminsOfAcceptedUserCommand = notifyAdminsOfAcceptedUserCommand;
         _deleteEmergencyAccessCommand = deleteEmergencyAccessCommand;
     }
 
@@ -173,15 +170,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
 
         await _organizationUserRepository.ReplaceAsync(orgUser);
 
-        var admins = await _organizationUserRepository.GetManyByMinimumRoleAsync(orgUser.OrganizationId, OrganizationUserType.Admin);
-        var adminEmails = admins.Select(a => a.Email).Distinct().ToList();
-
-        if (adminEmails.Count > 0)
-        {
-            await _mailService.SendOrganizationAcceptedEmailAsync(org, user.Email, adminEmails);
-        }
-
-        await _pushAutoConfirmNotificationCommand.PushAsync(user.Id, orgUser.OrganizationId);
+        await _notifyAdminsOfAcceptedUserCommand.NotifyAsync(org, orgUser, user);
 
         return orgUser;
     }

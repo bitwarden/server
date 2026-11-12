@@ -543,11 +543,6 @@ public class AcceptOrganizationInviteLinkCommandTests
             AutoConfirmPolicyEnabled = true,
         });
 
-        var adminDetails = new OrganizationUserUserDetails { Email = "admin@example.com" };
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByMinimumRoleAsync(organization.Id, OrganizationUserType.Admin)
-            .Returns(new List<OrganizationUserUserDetails> { adminDetails });
-
         var request = new AcceptOrganizationInviteLinkRequest
         {
             OrganizationId = organization.Id,
@@ -577,16 +572,9 @@ public class AcceptOrganizationInviteLinkCommandTests
             .DidNotReceiveWithAnyArgs()
             .AutoAddSeatsAsync(Arg.Any<Organization>(), Arg.Any<int>());
 
-        await sutProvider.GetDependency<IMailService>()
+        await sutProvider.GetDependency<INotifyAdminsOfAcceptedUserCommand>()
             .Received(1)
-            .SendOrganizationAcceptedEmailAsync(
-                organization,
-                user.Email,
-                Arg.Is<IEnumerable<string>>(emails => emails.Contains(adminDetails.Email)));
-
-        await sutProvider.GetDependency<IPushAutoConfirmNotificationCommand>()
-            .Received(1)
-            .PushAsync(user.Id, organization.Id);
+            .NotifyAsync(organization, organizationUser, user);
 
         await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
             .Received(1)
@@ -663,9 +651,9 @@ public class AcceptOrganizationInviteLinkCommandTests
         await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
             .DidNotReceiveWithAnyArgs()
             .DeleteAllByUserIdAsync(Arg.Any<Guid>());
-        await sutProvider.GetDependency<IPushAutoConfirmNotificationCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .PushAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
+        await sutProvider.GetDependency<INotifyAdminsOfAcceptedUserCommand>()
+            .Received(1)
+            .NotifyAsync(organization, result.AsSuccess, user);
     }
 
     [Theory, BitAutoData]
@@ -762,9 +750,5 @@ public class AcceptOrganizationInviteLinkCommandTests
         sutProvider.GetDependency<IStripePaymentService>()
             .HasSecretsManagerStandalone(org)
             .Returns(false);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByMinimumRoleAsync(org.Id, OrganizationUserType.Admin)
-            .Returns(new List<OrganizationUserUserDetails>());
     }
 }

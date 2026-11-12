@@ -11,7 +11,6 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -39,10 +38,10 @@ public class AcceptOrgUserCommandTests
     [BitAutoData]
     public async Task AcceptOrgUser_InvitedUserToSingleOrg_AcceptsOrgUser(
         SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+        User user, Organization org, OrganizationUser orgUser)
     {
         // Arrange
-        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser);
 
         sutProvider.GetDependency<IAcceptOrganizationMembershipValidator>()
             .ValidateAsync(Arg.Any<AcceptOrganizationMembershipValidationRequest>())
@@ -63,26 +62,19 @@ public class AcceptOrgUserCommandTests
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
             Arg.Is<OrganizationUser>(ou => ou.Id == orgUser.Id && ou.Status == OrganizationUserStatusType.Accepted));
 
-        // Verify emails sent to admin
-        await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationAcceptedEmailAsync(
-            Arg.Is<Organization>(o => o.Id == org.Id),
-            Arg.Is<string>(e => e == user.Email),
-            Arg.Is<IEnumerable<string>>(a => a.Contains(adminUserDetails.Email))
-        );
-
-        await sutProvider.GetDependency<IPushAutoConfirmNotificationCommand>()
+        await sutProvider.GetDependency<INotifyAdminsOfAcceptedUserCommand>()
             .Received(1)
-            .PushAsync(user.Id, orgUser.OrganizationId);
+            .NotifyAsync(org, orgUser, user);
     }
 
     [Theory]
     [BitAutoData]
     public async Task AcceptOrgUser_ClearsInviteReminders(
         SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+        User user, Organization org, OrganizationUser orgUser)
     {
         // Arrange
-        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser);
         orgUser.InviteReminderDueDate = DateTime.UtcNow;
         orgUser.InviteRemindersSentCount = 2;
 
@@ -105,10 +97,10 @@ public class AcceptOrgUserCommandTests
     [BitAutoData]
     public async Task AcceptOrgUser_OrgUserStatusIsRevoked_ReturnsBadRequest(
         SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+        User user, Organization org, OrganizationUser orgUser)
     {
         // Common setup
-        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser);
 
         // Revoke user status
         orgUser.Status = OrganizationUserStatusType.Revoked;
@@ -126,10 +118,10 @@ public class AcceptOrgUserCommandTests
     public async Task AcceptOrgUser_OrgUserStatusIsNotInvited_ThrowsBadRequest(
         OrganizationUserStatusType orgUserStatus,
         SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+        User user, Organization org, OrganizationUser orgUser)
     {
         // Arrange
-        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser);
 
         // Set status to something other than invited
         orgUser.Status = orgUserStatus;
@@ -145,9 +137,9 @@ public class AcceptOrgUserCommandTests
     [BitAutoData]
     public async Task AcceptOrgUserAsync_UserWithout2FAJoining2FARequiredOrg_ThrowsBadRequest(
         SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+        User user, Organization org, OrganizationUser orgUser)
     {
-        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser);
 
         sutProvider.GetDependency<IAcceptOrganizationMembershipValidator>()
             .ValidateAsync(Arg.Any<AcceptOrganizationMembershipValidationRequest>())
@@ -165,9 +157,9 @@ public class AcceptOrgUserCommandTests
     [BitAutoData]
     public async Task AcceptOrgUserAsync_UserWith2FAJoining2FARequiredOrg_Succeeds(
         SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+        User user, Organization org, OrganizationUser orgUser)
     {
-        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser);
 
         // Validator passes (2FA is satisfied) — default from SetupCommonAcceptOrgUserMocks
         await sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService);
@@ -181,9 +173,9 @@ public class AcceptOrgUserCommandTests
     [BitAutoData]
     public async Task AcceptOrgUserAsync_UserJoiningOrgWithout2FARequirement_Succeeds(
         SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+        User user, Organization org, OrganizationUser orgUser)
     {
-        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser);
 
         // Validator passes (no 2FA requirement) — default from SetupCommonAcceptOrgUserMocks
         await sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService);
@@ -197,10 +189,10 @@ public class AcceptOrgUserCommandTests
     [BitAutoData]
     public async Task AcceptOrgUserAsync_WithSingleOrgEnabled_UserJoiningOrgWithSingleOrgPolicy_ThrowsBadRequest(
         SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+        User user, Organization org, OrganizationUser orgUser)
     {
         // Arrange
-        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser);
 
         sutProvider.GetDependency<IAcceptOrganizationMembershipValidator>()
             .ValidateAsync(Arg.Any<AcceptOrganizationMembershipValidationRequest>())
@@ -219,11 +211,10 @@ public class AcceptOrgUserCommandTests
     [BitAutoData]
     public async Task AcceptOrgUserAsync_UserInOrgWithSingleOrgPolicyAlready_ThrowsBadRequest(
         SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser,
-        OrganizationUserUserDetails adminUserDetails)
+        User user, Organization org, OrganizationUser orgUser)
     {
         // Arrange
-        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser);
 
         sutProvider.GetDependency<IAcceptOrganizationMembershipValidator>()
             .ValidateAsync(Arg.Any<AcceptOrganizationMembershipValidationRequest>())
@@ -242,10 +233,10 @@ public class AcceptOrgUserCommandTests
     [BitAutoData]
     public async Task AcceptOrgUserAsync_NoSingleOrgPolicy_Succeeds(
         SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+        User user, Organization org, OrganizationUser orgUser)
     {
         // Arrange
-        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser);
 
         // Act
         var resultOrgUser = await sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService);
@@ -260,10 +251,10 @@ public class AcceptOrgUserCommandTests
     public async Task AcceptOrgUser_AdminOfFreePlanTryingToJoinSecondFreeOrg_ThrowsBadRequest(
         OrganizationUserType userType,
         SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+        User user, Organization org, OrganizationUser orgUser)
     {
         // Arrange
-        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser);
         org.PlanType = PlanType.Free;
         orgUser.Type = userType;
 
@@ -284,7 +275,7 @@ public class AcceptOrgUserCommandTests
     [BitAutoData]
     public async Task AcceptOrgUserByToken_NewToken_AcceptsUserAndVerifiesEmail(
         SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+        User user, Organization org, OrganizationUser orgUser)
     {
         // Arrange
         // Setup FakeDataProtectorTokenFactory for creating new tokens - this must come first in order
@@ -292,7 +283,7 @@ public class AcceptOrgUserCommandTests
         sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
         sutProvider.Create();
 
-        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser);
         SetupCommonAcceptOrgUserByTokenMocks(sutProvider, user, orgUser);
 
         // Must come after common mocks as they mutate the org user.
@@ -501,10 +492,10 @@ public class AcceptOrgUserCommandTests
     [BitAutoData]
     public async Task AcceptOrgUserByOrgSsoIdAsync_ValidData_AcceptsOrgUser(
         SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+        User user, Organization org, OrganizationUser orgUser)
     {
         // Arrange
-        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser);
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdentifierAsync(org.Identifier)
@@ -566,10 +557,10 @@ public class AcceptOrgUserCommandTests
     [BitAutoData]
     public async Task AcceptOrgUserByOrgId_ValidData_AcceptsOrgUser(
         SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+        User user, Organization org, OrganizationUser orgUser)
     {
         // Arrange
-        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser);
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(org.Id)
@@ -631,10 +622,10 @@ public class AcceptOrgUserCommandTests
     [BitAutoData]
     public async Task AcceptOrgUserAsync_WhenValidatorReturnsValid_AcceptsUser(
         SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+        User user, Organization org, OrganizationUser orgUser)
     {
         // Arrange
-        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser);
 
         // Act
         var resultOrgUser = await sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService);
@@ -650,10 +641,10 @@ public class AcceptOrgUserCommandTests
     [BitAutoData]
     public async Task AcceptOrgUserAsync_WhenValidatorReturnsInvalid_ThrowsBadRequestException(
         SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+        User user, Organization org, OrganizationUser orgUser)
     {
         // Arrange
-        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser);
 
         sutProvider.GetDependency<IAcceptOrganizationMembershipValidator>()
             .ValidateAsync(Arg.Any<AcceptOrganizationMembershipValidationRequest>())
@@ -675,10 +666,10 @@ public class AcceptOrgUserCommandTests
     [BitAutoData]
     public async Task AcceptOrgUserAsync_WithEmergencyAccessDeletionRequired_DeletesEmergencyAccess(
         SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+        User user, Organization org, OrganizationUser orgUser)
     {
         // Arrange
-        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser);
 
         sutProvider.GetDependency<IAcceptOrganizationMembershipValidator>()
             .ValidateAsync(Arg.Any<AcceptOrganizationMembershipValidationRequest>())
@@ -701,10 +692,10 @@ public class AcceptOrgUserCommandTests
     [BitAutoData]
     public async Task AcceptOrgUserAsync_WithNoEmergencyAccessDeletion_DoesNotDeleteEmergencyAccess(
         SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+        User user, Organization org, OrganizationUser orgUser)
     {
         // Arrange
-        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser);
 
         // AutoConfirmPolicyEnabled defaults to false in SetupCommonAcceptOrgUserMocks
 
@@ -757,12 +748,11 @@ public class AcceptOrgUserCommandTests
     /// - Confirms the target organization doesn't have a single org policy.
     /// - Ensures the user doesn't belong to an organization with a single org policy.
     /// - Assumes the user doesn't have 2FA enabled and the organization doesn't require it.
-    /// - Provides mock data for an admin to validate email functionality.
     /// - Returns the corresponding organization for the given org ID.
     /// </summary>
     private static void SetupCommonAcceptOrgUserMocks(SutProvider<AcceptOrgUserCommand> sutProvider, User user,
         Organization org,
-        OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+        OrganizationUser orgUser)
     {
         // Arrange
         orgUser.Email = user.Email;
@@ -774,11 +764,6 @@ public class AcceptOrgUserCommandTests
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyByUserAsync(user.Id)
             .Returns([]);
-
-        // Provide at least 1 admin to test email functionality
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByMinimumRoleAsync(orgUser.OrganizationId, OrganizationUserType.Admin)
-            .Returns([adminUserDetails]);
 
         // Return org
         sutProvider.GetDependency<IOrganizationRepository>()
