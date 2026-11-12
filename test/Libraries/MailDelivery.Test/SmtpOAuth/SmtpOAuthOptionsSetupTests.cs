@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Platform.Mail.Delivery;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Bit.MailDelivery.Test.SmtpOAuth;
 
@@ -424,6 +425,83 @@ public class SmtpOAuthOptionsSetupTests
         Assert.Contains(
             $"Grant type '{JwtBearerHandler.GrantType}' is not supported for AuthType MicrosoftOAuth; only " +
             $"'{ClientCredentialsHandler.GrantType}' is supported.",
+            result.Failures!);
+    }
+
+    [Fact]
+    public void Validate_CustomOAuthJwtBearerAlgorithmUnset_ReturnsSuccess()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
+        options.Smtp.OAuth.Scope = "custom-scope";
+        options.Smtp.OAuth.GrantType = JwtBearerHandler.GrantType;
+        options.Smtp.OAuth.SigningKey = "-----BEGIN PRIVATE KEY-----fake-----END PRIVATE KEY-----";
+        options.Smtp.OAuth.Claims["iss"] = "service-account@example.com";
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public void Validate_CustomOAuthJwtBearerAlgorithmRS256_ReturnsSuccess()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
+        options.Smtp.OAuth.Scope = "custom-scope";
+        options.Smtp.OAuth.GrantType = JwtBearerHandler.GrantType;
+        options.Smtp.OAuth.SigningKey = "-----BEGIN PRIVATE KEY-----fake-----END PRIVATE KEY-----";
+        options.Smtp.OAuth.Claims["iss"] = "service-account@example.com";
+        options.Smtp.OAuth.Algorithm = SecurityAlgorithms.RsaSha256;
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public void Validate_CustomOAuthJwtBearerUnsupportedAlgorithm_FailsNamingValueAndRS256()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
+        options.Smtp.OAuth.Scope = "custom-scope";
+        options.Smtp.OAuth.GrantType = JwtBearerHandler.GrantType;
+        options.Smtp.OAuth.SigningKey = "-----BEGIN PRIVATE KEY-----fake-----END PRIVATE KEY-----";
+        options.Smtp.OAuth.Claims["iss"] = "service-account@example.com";
+        options.Smtp.OAuth.Algorithm = "ES256";
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(
+            "Algorithm 'ES256' is not supported for AuthType CustomOAuth; only 'RS256' is supported.",
+            result.Failures!);
+    }
+
+    [Fact]
+    public void Validate_CustomOAuthJwtBearerAlgorithmWrongCase_Fails()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
+        options.Smtp.OAuth.Scope = "custom-scope";
+        options.Smtp.OAuth.GrantType = JwtBearerHandler.GrantType;
+        options.Smtp.OAuth.SigningKey = "-----BEGIN PRIVATE KEY-----fake-----END PRIVATE KEY-----";
+        options.Smtp.OAuth.Claims["iss"] = "service-account@example.com";
+        options.Smtp.OAuth.Algorithm = "rs256";
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(
+            "Algorithm 'rs256' is not supported for AuthType CustomOAuth; only 'RS256' is supported.",
             result.Failures!);
     }
 

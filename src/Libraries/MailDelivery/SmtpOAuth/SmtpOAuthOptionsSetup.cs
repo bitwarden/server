@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Bit.Core.Platform.Mail.Delivery;
 
@@ -178,6 +179,21 @@ internal sealed class SmtpOAuthOptionsSetup :
         {
             errors.Add(
                 $"Smtp:ServiceAccountEmail or Smtp:OAuth:Claims:{IssuerClaimName} is required when Smtp:AuthType is {smtp.AuthType} and the grant type is '{JwtBearerHandler.GrantType}'.");
+        }
+        AddAlgorithmErrors(smtp, errors);
+    }
+
+    private static void AddAlgorithmErrors(MailDeliveryOptions.SmtpOptions smtp, List<string> errors)
+    {
+        if (string.IsNullOrWhiteSpace(smtp.OAuth.Algorithm))
+        {
+            return;
+        }
+
+        if (!string.Equals(smtp.OAuth.Algorithm, SecurityAlgorithms.RsaSha256, StringComparison.Ordinal))
+        {
+            errors.Add(
+                $"Algorithm '{smtp.OAuth.Algorithm}' is not supported for AuthType {smtp.AuthType}; only '{SecurityAlgorithms.RsaSha256}' is supported.");
         }
     }
 
