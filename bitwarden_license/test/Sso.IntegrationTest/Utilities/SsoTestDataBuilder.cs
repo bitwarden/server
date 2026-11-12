@@ -67,7 +67,6 @@ public class SsoTestDataBuilder
     private bool _isSelfHosted = false;
     private bool _isSelfHostedEnvironment = false;
     private bool _includeProviderUserId = true;
-    private bool _useNonExistentOrgInAuth = false;
     private bool _isNativeClient = false;
     private bool _mockAutoscaleSuccess = false;
     private bool _mockAutoscalePartialFailure = false;
@@ -192,16 +191,6 @@ public class SsoTestDataBuilder
     public SsoTestDataBuilder WithSelfHostedEnvironment()
     {
         _isSelfHostedEnvironment = true;
-        return this;
-    }
-
-    /// <summary>
-    /// Causes the auth result to use a different (non-existent) organization ID than what is seeded
-    /// in the database. This simulates the "organization not found" scenario.
-    /// </summary>
-    public SsoTestDataBuilder WithNonExistentOrganizationInAuth()
-    {
-        _useNonExistentOrgInAuth = true;
         return this;
     }
 
@@ -345,8 +334,6 @@ public class SsoTestDataBuilder
 
         // Pre-generate IDs and values needed for auth mock (before accessing Services)
         var organizationId = Guid.NewGuid();
-        // Use a different org ID in auth if testing "organization not found" scenario
-        var authOrganizationId = _useNonExistentOrgInAuth ? Guid.NewGuid() : organizationId;
         var providerUserId = _includeProviderUserId ? Guid.NewGuid().ToString() : "";
         var userEmail = _withNullEmail ? null : $"user_{Guid.NewGuid()}@test.com";
         var userName = "TestUser";
@@ -363,7 +350,7 @@ public class SsoTestDataBuilder
                         Arg.Any<HttpContext>(),
                         AuthenticationSchemes.SsoExternalCookie)
                     .Returns(_ => MockSuccessfulAuthResult.Build(
-                        authOrganizationId,
+                        organizationId,
                         providerUserId,
                         userEmail,
                         userName,
@@ -614,7 +601,7 @@ public class SsoTestDataBuilder
         {
             ssoConfig = new SsoConfig
             {
-                OrganizationId = authOrganizationId,
+                OrganizationId = organizationId,
                 Enabled = true
             };
             ssoConfig.SetData(new SsoConfigurationData());

@@ -218,30 +218,4 @@ public class ExternalCallbackRequestValidationTests(SsoApplicationFactory factor
         Assert.Contains($"SSO provider, {invalidScheme} is not an organization id", stringResponse);
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
     }
-
-    /*
-    * Test to verify /Account/ExternalCallback returns error when the organization ID
-    * in the auth result does not match any organization in the database.
-    * NOTE: This code path is unreachable because the SsoConfig must exist to proceed, but there is a circular dependency:
-    * - SsoConfig cannot exist without a valid Organization but the test is testing that an Organization cannot be found.
-    */
-    [Fact(Skip = "This code path is unreachable because the SsoConfig must exist to proceed. But the SsoConfig cannot exist without a valid Organization.")]
-    public async Task ExternalCallback_WithNonExistentOrganization_ReturnsError()
-    {
-        // Arrange
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithNonExistentOrganizationInAuth()
-            .BuildAsync();
-
-        var client = testData.Factory.CreateClient();
-
-        // Act
-        var response = await client.GetAsync("/Account/ExternalCallback");
-
-        // Assert - Should fail because organization cannot be found by the ID in auth result
-        var stringResponse = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Could not find organization", stringResponse);
-        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
-    }
 }
