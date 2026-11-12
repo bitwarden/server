@@ -47,6 +47,7 @@ public class ReservePrivilegedControlsSeatsCommandTests
 
         Assert.True(result.Success);
         await _autoscalePrivilegedControlsSeatsCommand.DidNotReceiveWithAnyArgs().RunAsync(default!, default);
+        await _validateSeatReservationQuery.DidNotReceiveWithAnyArgs().RunAsync(default!, default, default);
     }
 
     [Fact]
@@ -58,6 +59,7 @@ public class ReservePrivilegedControlsSeatsCommandTests
 
         Assert.True(result.Success);
         await _autoscalePrivilegedControlsSeatsCommand.DidNotReceiveWithAnyArgs().RunAsync(default!, default);
+        await _validateSeatReservationQuery.DidNotReceiveWithAnyArgs().RunAsync(default!, default, default);
     }
 
     [Theory]
