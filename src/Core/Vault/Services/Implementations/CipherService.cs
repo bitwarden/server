@@ -114,6 +114,11 @@ public class CipherService : ICipherService
                     // Set user ID to limit scope of collection ids in the create sproc
                     cipher.UserId = savingUserId;
                 }
+                else
+                {
+                    // Without a user scope the create sproc accepts any org collection, including another member's My Items.
+                    await EnsureNoForeignDefaultCollectionsAsync(cipher.OrganizationId.Value, collectionIds, savingUserId);
+                }
                 await _cipherRepository.CreateAsync(cipher, collectionIds);
             }
             else
@@ -941,10 +946,10 @@ public class CipherService : ICipherService
 
         var targetContainsDefault = targetDefaultCollectionIds.Count > 0;
 
-        // Removal only touches the collections named in the request. Block only when a member is
-        // removing a cipher from another member's default collection.
-        if (removeCollections
-            && targetContainsDefault
+        // Adding or removing only touches the collections named in the request. Block either when it names
+        // another member's default collection. This runs before the caller's authorization check, so it throws
+        // the same NotFound that check does and reveals nothing about the collection.
+        if (targetContainsDefault
             && targetDefaultCollectionIds.Any(id => !ownedDefaultCollectionIds.Contains(id)))
         {
             throw new NotFoundException();
@@ -1211,6 +1216,27 @@ public class CipherService : ICipherService
             .Where(c => c.Type == CollectionType.DefaultUserCollection)
             .Select(c => c.Id)
             .ToHashSet();
+    }
+
+    // Throws if any of the collections is another member's default ("My Items") collection in the organization.
+    // The message is the generic permission error so the response reveals nothing about the collection.
+    private async Task EnsureNoForeignDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> collectionIds, Guid userId)
+    {
+        var defaultCollectionIds = (await _collectionRepository.GetManyByManyIdsAsync(collectionIds))
+            .Where(c => c.OrganizationId == organizationId && c.Type == CollectionType.DefaultUserCollection)
+            .Select(c => c.Id)
+            .ToList();
+
+        if (defaultCollectionIds.Count == 0)
+        {
+            return;
+        }
+
+        var ownedDefaultCollectionIds = await GetOwnedDefaultCollectionIdsAsync(userId);
+        if (defaultCollectionIds.Any(id => !ownedDefaultCollectionIds.Contains(id)))
+        {
+            throw new BadRequestException("You do not have permissions to edit this.");
+        }
     }
 
     // A cipher that lives only in default ("My Items") collections is personal to their owners. Returns those
