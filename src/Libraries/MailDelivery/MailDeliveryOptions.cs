@@ -20,6 +20,11 @@ public enum SmtpAuthType
     /// Microsoft Entra OAuth 2.0 client-credentials authentication for Microsoft 365 SMTP.
     /// </summary>
     MicrosoftOAuth,
+
+    /// <summary>
+    /// Google Workspace service-account authentication for Gmail SMTP, using the OAuth 2.0 jwt-bearer grant.
+    /// </summary>
+    GoogleOAuth,
 }
 
 /// <summary>
@@ -129,9 +134,10 @@ public sealed class MailDeliveryOptions
         public string? Password { get; set; }
 
         /// <summary>
-        /// OAuth-mode mailbox identity sent as the XOAUTH2 user to <see cref="SmtpAuthType.MicrosoftOAuth"/> and
-        /// <see cref="SmtpAuthType.CustomOAuth"/> servers. Distinct from <see cref="Username"/>, which is the
-        /// Basic-auth credential; this is not a reuse of <see cref="Username"/> for OAuth mailbox identity.
+        /// OAuth-mode mailbox identity sent as the XOAUTH2 user to <see cref="SmtpAuthType.MicrosoftOAuth"/>,
+        /// <see cref="SmtpAuthType.CustomOAuth"/>, and <see cref="SmtpAuthType.GoogleOAuth"/> servers. Distinct
+        /// from <see cref="Username"/>, which is the Basic-auth credential; this is not a reuse of
+        /// <see cref="Username"/> for OAuth mailbox identity.
         /// </summary>
         public string? OutboundMailbox { get; set; }
 
@@ -190,14 +196,17 @@ public sealed class MailDeliveryOptions
         {
             /// <summary>
             /// The OAuth token endpoint URL. For <see cref="SmtpAuthType.MicrosoftOAuth"/>, this can be
-            /// omitted in favor of <see cref="SmtpOptions.TenantId"/>, from which it is derived.
+            /// omitted in favor of <see cref="SmtpOptions.TenantId"/>, from which it is derived. For
+            /// <see cref="SmtpAuthType.GoogleOAuth"/>, this defaults to <c>https://oauth2.googleapis.com/token</c>.
             /// </summary>
             public string? TokenEndpoint { get; set; }
 
             /// <summary>
-            /// The OAuth grant type. Defaults to <c>client_credentials</c> when unset.
-            /// <see cref="SmtpAuthType.CustomOAuth"/> also accepts <c>urn:ietf:params:oauth:grant-type:jwt-bearer</c>;
-            /// <see cref="SmtpAuthType.MicrosoftOAuth"/> accepts only <c>client_credentials</c>.
+            /// The OAuth grant type. Defaults to <c>client_credentials</c> when unset, except for
+            /// <see cref="SmtpAuthType.GoogleOAuth"/>, which defaults to and accepts only
+            /// <c>urn:ietf:params:oauth:grant-type:jwt-bearer</c>. <see cref="SmtpAuthType.CustomOAuth"/> also
+            /// accepts the jwt-bearer grant; <see cref="SmtpAuthType.MicrosoftOAuth"/> accepts only
+            /// <c>client_credentials</c>.
             /// </summary>
             public string? GrantType { get; set; }
 

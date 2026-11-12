@@ -22,12 +22,13 @@ internal sealed class SmtpCredentialProvider : ISmtpCredentialProvider
         // Switches on AuthType (not authConfig's type) so the compiler's CS8509 exhaustiveness
         // check still fires: pattern-matching switches over a record hierarchy are never
         // considered exhaustive by the compiler, so a type-pattern switch here would need a
-        // discard arm and silently swallow a future unhandled AuthType (e.g. GoogleOAuth in PR 2).
+        // discard arm and silently swallow a future unhandled AuthType.
         _handler = options.Value.Smtp.AuthType switch
         {
             SmtpAuthType.Password => null,
             SmtpAuthType.MicrosoftOAuth => CreateHandlerFromMicrosoftOAuth((MicrosoftOAuthConfig)authConfig),
             SmtpAuthType.CustomOAuth => CreateHandlerFromCustomOAuth((CustomOAuthConfig)authConfig),
+            SmtpAuthType.GoogleOAuth => CreateHandlerFromGoogleOAuth((GoogleOAuthConfig)authConfig),
         };
 
         ClientCredentialsHandler CreateHandlerFromMicrosoftOAuth(MicrosoftOAuthConfig oauth) => new(
@@ -62,6 +63,15 @@ internal sealed class SmtpCredentialProvider : ISmtpCredentialProvider
                 oauth.ClientSecret,
                 oauth.Scope),
         };
+
+        JwtBearerHandler CreateHandlerFromGoogleOAuth(GoogleOAuthConfig oauth) => new(
+            httpClientFactory,
+            timeProvider,
+            loggerFactory.CreateLogger<JwtBearerHandler>(),
+            oauth.TokenEndpoint,
+            oauth.OutboundMailbox,
+            oauth.SigningKey,
+            oauth.Claims);
     }
 
     public Task<SaslMechanism> GetCredentialsAsync(CancellationToken cancellationToken)
