@@ -50,9 +50,9 @@ internal sealed class CreateCiphersStep : IStep
             encryptionKey = context.RequireOrgKey();
         }
 
-        var seedFile = context.GetSeedReader().Read<SeedFile>($"ciphers.{_fixtureName}");
+        var seedFile = context.SeedReader.Read<SeedFile>($"ciphers.{_fixtureName}");
         var collectionIds = context.Registry.CollectionIds;
-        var progress = context.GetProgress();
+        var progress = context.Progress;
 
         var ciphers = new List<Cipher>(seedFile.Items.Count);
         var collectionCiphers = new List<CollectionCipher>();
