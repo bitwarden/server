@@ -8,47 +8,50 @@ using Microsoft.Extensions.Logging;
 namespace Bit.Seeder.Pipeline;
 
 /// <summary>
-/// Convenience extension methods for resolving common services from <see cref="SeederContext.Services"/>.
+/// Convenience extension members for resolving common services from <see cref="SeederContext.Services"/>.
 /// Minimizes churn in step implementations when transitioning from direct property access to DI.
 /// </summary>
 internal static class SeederContextExtensions
 {
-    internal static IPasswordHasher<User> GetPasswordHasher(this SeederContext context) =>
-        context.Services.GetRequiredService<IPasswordHasher<User>>();
+    extension(SeederContext context)
+    {
+        internal IPasswordHasher<User> PasswordHasher =>
+            context.Services.GetRequiredService<IPasswordHasher<User>>();
 
-    internal static IManglerService GetMangler(this SeederContext context) =>
-        context.Services.GetRequiredService<IManglerService>();
+        internal IManglerService Mangler =>
+            context.Services.GetRequiredService<IManglerService>();
 
-    internal static ILogger<T>? GetLogger<T>(this SeederContext context) =>
-        context.Services.GetService<ILogger<T>>();
+        internal ILogger<T>? GetLogger<T>() =>
+            context.Services.GetService<ILogger<T>>();
 
-    internal static ISeedReader GetSeedReader(this SeederContext context) =>
-        context.Services.GetRequiredService<ISeedReader>();
+        internal ISeedReader SeedReader =>
+            context.Services.GetRequiredService<ISeedReader>();
 
-    internal static IAttachmentStorageService GetAttachmentStorageService(this SeederContext context) =>
-        context.Services.GetRequiredService<IAttachmentStorageService>();
+        internal IAttachmentStorageService AttachmentStorageService =>
+            context.Services.GetRequiredService<IAttachmentStorageService>();
 
-    internal static SeederSettings GetSettings(this SeederContext context) =>
-        context.Services.GetRequiredService<SeederSettings>();
+        internal SeederSettings Settings =>
+            context.Services.GetRequiredService<SeederSettings>();
 
-    internal static string GetPassword(this SeederContext context) =>
-        context.GetSettings().Password ?? Factories.UserSeeder.DefaultPassword;
+        internal string Password =>
+            context.Settings.Password ?? Factories.UserSeeder.DefaultPassword;
 
-    internal static int GetKdfIterations(this SeederContext context) =>
-        context.GetSettings().KdfIterations;
+        internal int KdfIterations =>
+            context.Settings.KdfIterations;
 
-    internal static string? GetOrgNameOverride(this SeederContext context) =>
-        context.GetSettings().OrgNameOverride;
+        internal string? OrgNameOverride =>
+            context.Settings.OrgNameOverride;
 
-    internal static string? GetOwnerEmailOverride(this SeederContext context) =>
-        context.GetSettings().OwnerEmailOverride;
+        internal string? OwnerEmailOverride =>
+            context.Settings.OwnerEmailOverride;
 
-    /// <summary>
-    /// Resolves the optional progress reporter. Returns null when no UI is attached.
-    /// Callers should null-check before constructing events to keep the no-reporter path allocation-free.
-    /// </summary>
-    internal static IProgress<SeederProgressEvent>? GetProgress(this SeederContext context) =>
-        context.Services.GetService<IProgress<SeederProgressEvent>>();
+        /// <summary>
+        /// Resolves the optional progress reporter. Returns null when no UI is attached.
+        /// Callers should null-check before constructing events to keep the no-reporter path allocation-free.
+        /// </summary>
+        internal IProgress<SeederProgressEvent>? Progress =>
+            context.Services.GetService<IProgress<SeederProgressEvent>>();
+    }
 }
 
 /// <summary>

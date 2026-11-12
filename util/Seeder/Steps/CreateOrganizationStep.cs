@@ -62,7 +62,7 @@ internal sealed class CreateOrganizationStep : IStep
 
         if (_fixtureName is not null)
         {
-            var fixture = context.GetSeedReader().Read<SeedOrganization>($"organizations.{_fixtureName}");
+            var fixture = context.SeedReader.Read<SeedOrganization>($"organizations.{_fixtureName}");
             name = fixture.Name;
             domain = fixture.Domain;
         }
@@ -72,7 +72,7 @@ internal sealed class CreateOrganizationStep : IStep
             domain = _domain!;
         }
 
-        var nameOverride = context.GetOrgNameOverride();
+        var nameOverride = context.OrgNameOverride;
         if (!string.IsNullOrWhiteSpace(nameOverride))
         {
             name = nameOverride;
@@ -91,7 +91,7 @@ internal sealed class CreateOrganizationStep : IStep
                 PrivateKey = orgKeys.PrivateKey,
                 Overrides = _overrides
             },
-            context.GetMangler());
+            context.Mangler);
 
         context.Organization = organization;
         context.OrgKeys = orgKeys;

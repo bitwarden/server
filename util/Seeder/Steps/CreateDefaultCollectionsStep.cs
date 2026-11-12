@@ -43,7 +43,7 @@ internal sealed class CreateDefaultCollectionsStep(
         var orgId = context.RequireOrgId();
         var orgKey = context.RequireOrgKey();
         var generator = context.RequireGenerator();
-        var progress = context.GetProgress();
+        var progress = context.Progress;
 
         // The server's policy exempts Owners and Admins; Confirmed is implied by UserDigests.
         var exempt = context.OrganizationUsers
