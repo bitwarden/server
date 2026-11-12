@@ -13,6 +13,8 @@ internal sealed class SmtpOAuthOptionsSetup :
     IPostConfigureOptions<MailDeliveryOptions>,
     IValidateOptions<MailDeliveryOptions>
 {
+    private const string IssuerClaimName = "iss";
+
     public void PostConfigure(string? name, MailDeliveryOptions options)
     {
         Action<MailDeliveryOptions.SmtpOptions> deriveDefaults = options.Smtp.AuthType switch
@@ -96,6 +98,12 @@ internal sealed class SmtpOAuthOptionsSetup :
         smtp.OAuth.ClientId = OrFallback(smtp.OAuth.ClientId, smtp.ClientId);
         smtp.OAuth.ClientSecret = OrFallback(smtp.OAuth.ClientSecret, smtp.ClientSecret);
         smtp.OAuth.GrantType = OrFallback(smtp.OAuth.GrantType, ClientCredentialsHandler.GrantType);
+        smtp.OAuth.SigningKey = OrFallback(smtp.OAuth.SigningKey, smtp.ServiceAccountPrivateKey);
+        if (string.IsNullOrWhiteSpace(smtp.OAuth.Claims.GetValueOrDefault(IssuerClaimName)) &&
+            !string.IsNullOrWhiteSpace(smtp.ServiceAccountEmail))
+        {
+            smtp.OAuth.Claims[IssuerClaimName] = smtp.ServiceAccountEmail;
+        }
     }
 
     private static List<string> MicrosoftErrors(MailDeliveryOptions.SmtpOptions smtp)
@@ -121,19 +129,32 @@ internal sealed class SmtpOAuthOptionsSetup :
         {
             errors.Add("Smtp:OAuth:Scope is required when Smtp:AuthType is CustomOAuth.");
         }
-        AddClientCredentialErrors(smtp, errors);
-        AddGrantTypeErrors(smtp, errors);
+        if (smtp.OAuth.GrantType == JwtBearerHandler.GrantType)
+        {
+            AddOutboundMailboxError(smtp, errors);
+            AddJwtBearerErrors(smtp, errors);
+        }
+        else
+        {
+            AddClientCredentialErrors(smtp, errors);
+        }
+        AddCustomGrantTypeErrors(smtp, errors);
         return errors;
     }
 
     private static string? OrFallback(string? value, string? fallback) => string.IsNullOrWhiteSpace(value) ? fallback : value;
 
-    private static void AddClientCredentialErrors(MailDeliveryOptions.SmtpOptions smtp, List<string> errors)
+    private static void AddOutboundMailboxError(MailDeliveryOptions.SmtpOptions smtp, List<string> errors)
     {
         if (string.IsNullOrWhiteSpace(smtp.OutboundMailbox))
         {
             errors.Add($"Smtp:OutboundMailbox (the sending mailbox) is required when Smtp:AuthType is {smtp.AuthType}.");
         }
+    }
+
+    private static void AddClientCredentialErrors(MailDeliveryOptions.SmtpOptions smtp, List<string> errors)
+    {
+        AddOutboundMailboxError(smtp, errors);
         if (string.IsNullOrWhiteSpace(smtp.OAuth.ClientId))
         {
             errors.Add($"Smtp:ClientId or Smtp:OAuth:ClientId is required when Smtp:AuthType is {smtp.AuthType}.");
@@ -141,6 +162,20 @@ internal sealed class SmtpOAuthOptionsSetup :
         if (string.IsNullOrWhiteSpace(smtp.OAuth.ClientSecret))
         {
             errors.Add($"Smtp:ClientSecret or Smtp:OAuth:ClientSecret is required when Smtp:AuthType is {smtp.AuthType}.");
+        }
+    }
+
+    private static void AddJwtBearerErrors(MailDeliveryOptions.SmtpOptions smtp, List<string> errors)
+    {
+        if (string.IsNullOrWhiteSpace(smtp.OAuth.SigningKey))
+        {
+            errors.Add(
+                $"Smtp:ServiceAccountPrivateKey or Smtp:OAuth:SigningKey is required when Smtp:AuthType is {smtp.AuthType} and the grant type is '{JwtBearerHandler.GrantType}'.");
+        }
+        if (string.IsNullOrWhiteSpace(smtp.OAuth.Claims.GetValueOrDefault(IssuerClaimName)))
+        {
+            errors.Add(
+                $"Smtp:ServiceAccountEmail or Smtp:OAuth:Claims:{IssuerClaimName} is required when Smtp:AuthType is {smtp.AuthType} and the grant type is '{JwtBearerHandler.GrantType}'.");
         }
     }
 
@@ -155,6 +190,21 @@ internal sealed class SmtpOAuthOptionsSetup :
         {
             errors.Add(
                 $"Grant type '{smtp.OAuth.GrantType}' is not supported for AuthType {smtp.AuthType}; only '{ClientCredentialsHandler.GrantType}' is supported.");
+        }
+    }
+
+    private static void AddCustomGrantTypeErrors(MailDeliveryOptions.SmtpOptions smtp, List<string> errors)
+    {
+        if (string.IsNullOrWhiteSpace(smtp.OAuth.GrantType))
+        {
+            return;
+        }
+
+        if (smtp.OAuth.GrantType != ClientCredentialsHandler.GrantType &&
+            smtp.OAuth.GrantType != JwtBearerHandler.GrantType)
+        {
+            errors.Add(
+                $"Grant type '{smtp.OAuth.GrantType}' is not supported for AuthType {smtp.AuthType}; only '{ClientCredentialsHandler.GrantType}' or '{JwtBearerHandler.GrantType}' is supported.");
         }
     }
 }
