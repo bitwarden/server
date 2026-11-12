@@ -4,6 +4,7 @@
 using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
+using Bit.Core;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -45,6 +46,7 @@ public class ServiceAccountsController : Controller
     private readonly IPricingClient _pricingClient;
     private readonly IEventService _eventService;
     private readonly IGlobalSettings _globalSettings;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public ServiceAccountsController(
         ICurrentContext currentContext,
@@ -63,7 +65,8 @@ public class ServiceAccountsController : Controller
         IRevokeAccessTokensCommand revokeAccessTokensCommand,
         IPricingClient pricingClient,
         IEventService eventService,
-        IGlobalSettings globalSettings)
+        IGlobalSettings globalSettings,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
         _currentContext = currentContext;
         _userService = userService;
@@ -82,6 +85,7 @@ public class ServiceAccountsController : Controller
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _eventService = eventService;
         _globalSettings = globalSettings;
+        _featureService = featureService;
     }
 
     [HttpGet("/organizations/{organizationId}/service-accounts")]
@@ -256,6 +260,13 @@ public class ServiceAccountsController : Controller
         }
 
         var result = await _createAccessTokenCommand.CreateAsync(request.ToApiKey(id));
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.Sm2060MachineAccountAuditLogs))
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            await _eventService.LogServiceAccountEventAsync(userId, [serviceAccount], EventType.AccessToken_Created, _currentContext.IdentityClientType);
+        }
+
         return new AccessTokenCreationResponseModel(result);
     }
 
@@ -272,6 +283,14 @@ public class ServiceAccountsController : Controller
             throw new NotFoundException();
         }
 
-        await _revokeAccessTokensCommand.RevokeAsync(serviceAccount, request.Ids);
+        var revokedAccessTokens = await _revokeAccessTokensCommand.RevokeAsync(serviceAccount, request.Ids);
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.Sm2060MachineAccountAuditLogs) && revokedAccessTokens.Any())
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+
+            var eventPerRevokedToken = Enumerable.Repeat(serviceAccount, revokedAccessTokens.Count).ToList();
+            await _eventService.LogServiceAccountEventAsync(userId, eventPerRevokedToken, EventType.AccessToken_Revoked, _currentContext.IdentityClientType);
+        }
     }
 }
