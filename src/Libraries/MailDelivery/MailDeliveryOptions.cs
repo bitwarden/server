@@ -167,6 +167,18 @@ public sealed class MailDeliveryOptions
         public string? ClientSecret { get; set; }
 
         /// <summary>
+        /// Google service-account email address used for jwt-bearer authentication. Checked first;
+        /// when unset, falls back to the <c>iss</c> entry of <see cref="OAuthOptions.Claims"/>.
+        /// </summary>
+        public string? ServiceAccountEmail { get; set; }
+
+        /// <summary>
+        /// Google service-account RSA private key (PEM-encoded) used to sign jwt-bearer assertions.
+        /// Checked first; when unset, falls back to <see cref="OAuthOptions.SigningKey"/>.
+        /// </summary>
+        public string? ServiceAccountPrivateKey { get; set; }
+
+        /// <summary>
         /// OAuth settings used when <see cref="AuthType"/> is not <see cref="SmtpAuthType.Password"/>.
         /// </summary>
         public OAuthOptions OAuth { get; set; } = new();
@@ -203,6 +215,19 @@ public sealed class MailDeliveryOptions
             /// <see cref="SmtpAuthType.MicrosoftOAuth"/> when unset.
             /// </summary>
             public string? Scope { get; set; }
+
+            /// <summary>
+            /// RSA private key (PEM-encoded) used to sign jwt-bearer assertions. Used as a fallback
+            /// when <see cref="SmtpOptions.ServiceAccountPrivateKey"/> is unset.
+            /// </summary>
+            public string? SigningKey { get; set; }
+
+            /// <summary>
+            /// Jwt-bearer assertion claims, keyed by claim name (for example <c>sub</c> or <c>iss</c>), merged into
+            /// the signed assertion and overriding any value otherwise derived automatically. The <c>iss</c> entry
+            /// is used as a fallback when <see cref="SmtpOptions.ServiceAccountEmail"/> is unset.
+            /// </summary>
+            public Dictionary<string, string> Claims { get; set; } = new();
         }
     }
 
