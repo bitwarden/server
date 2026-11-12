@@ -17,7 +17,6 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Sso.Models;
-using Bitwarden.License.Test.Sso.IntegrationTest.Utilities;
 using Bitwarden.Server.Sdk.Environment;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Services;
@@ -26,7 +25,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using NSubstitute;
 using AuthenticationSchemes = Bit.Core.Auth.IdentityServer.AuthenticationSchemes;
 
-namespace Bit.Sso.IntegrationTest.Utilities;
+namespace Bit.Sso.IntegrationTest.Helpers;
 
 /// <summary>
 /// Contains the factory and all entities created by <see cref="SsoTestDataBuilder"/> for use in integration tests.

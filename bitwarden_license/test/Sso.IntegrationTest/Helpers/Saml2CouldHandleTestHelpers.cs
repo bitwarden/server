@@ -6,9 +6,9 @@ using Bit.Sso.Utilities;
 using Microsoft.AspNetCore.Authentication;
 using Sustainsys.Saml2.AspNetCore2;
 using Xunit;
-using static Bit.Sso.IntegrationTest.Utilities.Saml2MessageBuilder;
+using static Bit.Sso.IntegrationTest.Helpers.Saml2MessageBuilder;
 
-namespace Bit.Sso.IntegrationTest.Utilities;
+namespace Bit.Sso.IntegrationTest.Helpers;
 
 /// <summary>
 /// Builds a real, database-backed SAML organization scheme and the request context that tests pass to

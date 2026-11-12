@@ -1,6 +1,6 @@
 ﻿using Bit.IntegrationTestCommon.Factories;
 
-namespace Bit.Sso.IntegrationTest.Utilities;
+namespace Bit.Sso.IntegrationTest.Helpers;
 
 public class SsoApplicationFactory : WebApplicationFactoryBase<Startup>
 {

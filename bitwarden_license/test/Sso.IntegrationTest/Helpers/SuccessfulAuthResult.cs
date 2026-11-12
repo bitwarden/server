@@ -3,7 +3,7 @@ using Bit.Core.Auth.IdentityServer;
 using Duende.IdentityModel;
 using Microsoft.AspNetCore.Authentication;
 
-namespace Bitwarden.License.Test.Sso.IntegrationTest.Utilities;
+namespace Bit.Sso.IntegrationTest.Helpers;
 
 /// <summary>
 /// Creates a mock for use in tests requiring a valid external authentication result.
