@@ -15,7 +15,7 @@ using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Utilities;
-using Bit.Sso.IntegrationTest.Utilities;
+using Bit.Sso.IntegrationTest.Helpers;
 using Microsoft.AspNetCore.Mvc.Testing;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;

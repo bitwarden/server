@@ -41,7 +41,7 @@
     <PackageReference Include="Fido2.AspNet" Version="[4.0.1]" />
     <PackageReference Include="Handlebars.Net" Version="[2.1.6]" />
     <PackageReference Include="MailKit" Version="[4.18.2]" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="[10.0.8]" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="[10.0.14]" />
     <PackageReference Include="Microsoft.Azure.Cosmos" Version="[3.52.0]" />
     <PackageReference Include="Microsoft.Azure.NotificationHubs" Version="[4.2.0]" />
     <PackageReference Include="Microsoft.Bot.Builder" Version="[4.23.0]" />
@@ -53,7 +53,7 @@
     <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="[10.0.14]" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="[10.0.14]" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="[10.0.14]" />
-    <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="[10.0.8]" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="[10.0.14]" />
     <PackageReference Include="OneOf" Version="[3.0.271]" />
     <PackageReference Include="Duende.IdentityServer" Version="[7.4.6]" />
     <PackageReference Include="Newtonsoft.Json" Version="[13.0.3]" />

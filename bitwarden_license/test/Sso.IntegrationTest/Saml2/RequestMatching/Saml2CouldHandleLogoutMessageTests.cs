@@ -2,12 +2,12 @@
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Bit.Core.Auth.Models.Data;
-using Bit.Sso.IntegrationTest.Utilities;
+using Bit.Sso.IntegrationTest.Helpers;
 using Bit.Sso.Utilities.Saml2;
 using Sustainsys.Saml2;
 using Xunit;
-using static Bit.Sso.IntegrationTest.Utilities.Saml2CouldHandleTestHelpers;
-using static Bit.Sso.IntegrationTest.Utilities.Saml2MessageBuilder;
+using static Bit.Sso.IntegrationTest.Helpers.Saml2CouldHandleTestHelpers;
+using static Bit.Sso.IntegrationTest.Helpers.Saml2MessageBuilder;
 
 namespace Bit.Sso.IntegrationTest.Saml2.RequestMatching;
 

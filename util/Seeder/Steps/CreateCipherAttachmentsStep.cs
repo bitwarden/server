@@ -35,7 +35,7 @@ internal sealed class CreateCipherAttachmentsStep : IAsyncStep
 
     public async Task ExecuteAsync(SeederContext context)
     {
-        var seedFile = context.GetSeedReader().Read<SeedFile>($"ciphers.{_fixtureName}");
+        var seedFile = context.SeedReader.Read<SeedFile>($"ciphers.{_fixtureName}");
         var itemsWithAttachments = seedFile.Items.Where(i => i.Attachments is { Count: > 0 }).ToList();
         if (itemsWithAttachments.Count == 0)
         {
@@ -46,8 +46,8 @@ internal sealed class CreateCipherAttachmentsStep : IAsyncStep
             ? context.Registry.UserDigests[0].SymmetricKey
             : context.RequireOrgKey();
 
-        var reader = context.GetSeedReader();
-        var storage = context.GetAttachmentStorageService();
+        var reader = context.SeedReader;
+        var storage = context.AttachmentStorageService;
         if (storage is NoopAttachmentStorageService)
         {
             throw new InvalidOperationException(
@@ -58,7 +58,7 @@ internal sealed class CreateCipherAttachmentsStep : IAsyncStep
         var cipherLookup = context.Ciphers.ToDictionary(c => c.Id);
         var nameToId = context.Registry.FixtureCipherNameToId;
 
-        var progress = context.GetProgress();
+        var progress = context.Progress;
         var total = itemsWithAttachments.Sum(i => i.Attachments!.Count);
         progress?.Report(new PhaseStarted(SeederPhases.CreatingAttachments, total));
 

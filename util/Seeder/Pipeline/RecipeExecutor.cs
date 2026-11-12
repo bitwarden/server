@@ -64,7 +64,7 @@ internal sealed class RecipeExecutor
             context.Owner?.Email,
             context.Owner?.ApiKey,
             context.OrganizationApiKey?.ApiKey,
-            context.GetPassword(),
+            context.Password,
             context.Owner?.Premium ?? false,
             context.Users.Count,
             context.Groups.Count,
@@ -75,7 +75,7 @@ internal sealed class RecipeExecutor
             context.Owner?.GatewayCustomerId,
             context.Owner?.GatewaySubscriptionId);
 
-        var progress = context.GetProgress();
+        var progress = context.Progress;
         progress?.Report(new PhaseStarted(SeederPhases.CommittingToDatabase, null));
         try
         {

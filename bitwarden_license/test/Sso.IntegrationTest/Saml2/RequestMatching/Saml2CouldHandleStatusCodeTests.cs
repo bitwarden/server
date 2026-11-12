@@ -1,7 +1,7 @@
 ﻿using Bit.Sso.Utilities.Saml2;
 using Xunit;
-using static Bit.Sso.IntegrationTest.Utilities.Saml2CouldHandleTestHelpers;
-using static Bit.Sso.IntegrationTest.Utilities.Saml2MessageBuilder;
+using static Bit.Sso.IntegrationTest.Helpers.Saml2CouldHandleTestHelpers;
+using static Bit.Sso.IntegrationTest.Helpers.Saml2MessageBuilder;
 
 namespace Bit.Sso.IntegrationTest.Saml2.RequestMatching;
 
