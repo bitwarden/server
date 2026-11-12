@@ -5,7 +5,7 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Sso.IntegrationTest.Utilities;
 using Xunit;
 
-namespace Bit.Sso.IntegrationTest.Controllers;
+namespace Bit.Sso.IntegrationTest.PreValidate;
 
 /// <summary>
 /// An organization's OpenID Connect Authority is a URL the organization chooses, and PreValidate
