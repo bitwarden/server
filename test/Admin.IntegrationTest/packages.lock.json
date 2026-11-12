@@ -257,11 +257,6 @@
           "Bitwarden.Server.Sdk.Environment": "0.1.0"
         }
       },
-      "Bogus": {
-        "type": "Transitive",
-        "resolved": "35.6.5",
-        "contentHash": "2FGZn+aAVHjmCgClgmGkTDBVZk0zkLvAKGaxEf5JL6b3i9JbHTE4wnuY4vHCuzlCmJdU6VZjgDfHwmYkQF8VAA=="
-      },
       "BouncyCastle.Cryptography": {
         "type": "Transitive",
         "resolved": "2.7.0",
@@ -1468,25 +1463,6 @@
       "httpextensions": {
         "type": "Project"
       },
-      "identity": {
-        "type": "Project",
-        "dependencies": {
-          "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
-          "Bitwarden.Server.Sdk.Features": "[1.5.0, )",
-          "Bitwarden.Server.Sdk.WebEssentials": "[0.5.0, )",
-          "Core": "[2026.11.0, )",
-          "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.19.1, )",
-          "OpenTelemetry.Extensions.Hosting": "[1.19.1, )",
-          "OpenTelemetry.Instrumentation.AspNetCore": "[1.15.2, )",
-          "OpenTelemetry.Instrumentation.EntityFrameworkCore": "[1.12.0-beta.2, )",
-          "OpenTelemetry.Instrumentation.Http": "[1.15.1, )",
-          "OpenTelemetry.Instrumentation.Runtime": "[1.15.1, )",
-          "OpenTelemetry.Instrumentation.SqlClient": "[1.15.2, )",
-          "Pam.Domain": "[2026.11.0, )",
-          "SharedWeb": "[2026.11.0, )",
-          "Subscriptions.Organization": "[0.0.1, )"
-        }
-      },
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
@@ -1508,17 +1484,6 @@
           "Pomelo.EntityFrameworkCore.MySql": "[8.0.2, 8.0.2]",
           "linq2db": "[6.5.0, 6.5.0]",
           "linq2db.EntityFrameworkCore": "[8.8.0, 8.8.0]"
-        }
-      },
-      "integrationtestcommon": {
-        "type": "Project",
-        "dependencies": {
-          "Common": "[2026.11.0, )",
-          "Fido2.Models": "[4.0.1, 4.0.1]",
-          "Identity": "[2026.11.0, )",
-          "Microsoft.AspNetCore.Mvc.Testing": "[10.0.14, 10.0.14]",
-          "Migrator": "[2026.11.0, )",
-          "Seeder": "[2026.11.0, )"
         }
       },
       "invoicing": {
@@ -1575,19 +1540,6 @@
       },
       "push.infrastructure": {
         "type": "Project"
-      },
-      "rustsdk": {
-        "type": "Project"
-      },
-      "seeder": {
-        "type": "Project",
-        "dependencies": {
-          "Bogus": "[35.6.5, 35.6.5]",
-          "Core": "[2026.11.0, )",
-          "Infrastructure.EntityFramework": "[2026.11.0, )",
-          "RustSdk": "[2026.11.0, )",
-          "SharedWeb": "[2026.11.0, )"
-        }
       },
       "serilogfilelogging": {
         "type": "Project",

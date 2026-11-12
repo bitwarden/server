@@ -1,31 +1,21 @@
 ﻿using System.Net;
-using Bit.IntegrationTestCommon;
-using Bit.IntegrationTestCommon.Factories;
+using Bit.Admin.IntegrationTest.Factories;
 using Xunit;
 
 namespace Bit.Admin.IntegrationTest.Auth.Login;
 
-public class LoginControllerTests
+public class LoginControllerTests(AdminApplicationFactory factory) : IClassFixture<AdminApplicationFactory>
 {
     [Fact]
     public async Task Confirm_ValidPasswordlessToken_SignsInAdmin()
     {
-        ITestDatabase testDatabase = new SqliteTestDatabase();
-        try
-        {
-            await using var factory = new AdminApplicationFactory(testDatabase);
-            var client = await factory.SignInAdminAsync();
+        var client = await factory.SignInAdminAsync();
 
-            // The home page requires an authenticated admin. Without a session the request
-            // redirects to the login page, so the final path proves the session is valid.
-            var response = await client.GetAsync("/");
+        // The home page requires an authenticated admin. Without a session the request
+        // redirects to the login page, so the final path proves the session is valid.
+        var response = await client.GetAsync("/");
 
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            Assert.Equal("/", response.RequestMessage?.RequestUri?.AbsolutePath);
-        }
-        finally
-        {
-            testDatabase.Dispose();
-        }
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("/", response.RequestMessage?.RequestUri?.AbsolutePath);
     }
 }

@@ -2,7 +2,7 @@
 
 Most tests here exercise Bitwarden's billing surface against a **real Stripe test account**. They exist to catch one specific class of bug that unit tests cannot see: a mismatch between the `Expand = [...]` paths a query asks Stripe for and the fields the C# code subsequently reads back.
 
-> **Also hosted here:** a small set of **Admin host integration tests** that reuse the shared [`AdminApplicationFactory`](../IntegrationTestCommon/Factories/AdminApplicationFactory.cs) — the same factory the billing tests already rely on to drive Admin-portal billing flows (e.g. business-unit conversion). These tests boot the Admin MVC host over the SQLite `ITestDatabase`, make **no** Stripe calls, and therefore use plain `[Fact]` and run unconditionally in CI (see [What belongs here](#what-belongs-here)). They are not Stripe-`Expand` tests.
+> **Also hosted here:** a small set of **Admin host integration tests** that reuse `AdminApplicationFactory` — the same factory the billing tests already rely on to drive Admin-portal billing flows (e.g. business-unit conversion). These tests boot the Admin MVC host over the SQLite `ITestDatabase`, make **no** Stripe calls, and therefore use plain `[Fact]` and run unconditionally in CI (see [What belongs here](#what-belongs-here)). They live alongside the billing tests only because the shared factory does; they are not Stripe-`Expand` tests.
 
 ## Why these tests exist
 

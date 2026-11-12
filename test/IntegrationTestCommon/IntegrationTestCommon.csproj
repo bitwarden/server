@@ -12,12 +12,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!--
-      Private so the Admin host does not flow to every consumer of this project. Admin's static
-      web assets conflict with those of other web hosts, such as Sso. A test project that uses
-      AdminApplicationFactory references Admin.csproj directly.
-    -->
-    <ProjectReference Include="..\..\src\Admin\Admin.csproj" PrivateAssets="all" />
     <ProjectReference Include="..\..\src\Identity\Identity.csproj" />
     <ProjectReference Include="..\..\util\Migrator\Migrator.csproj" />
     <ProjectReference Include="..\..\util\Seeder\Seeder.csproj" />
