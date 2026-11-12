@@ -1,9 +1,16 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Kdf;
+using Bit.Core.Utilities;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.EntityFrameworkCore;
+using NSubstitute;
+using Xunit;
 
 namespace Bit.Identity.IntegrationTest.Registration;
 

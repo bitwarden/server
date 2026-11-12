@@ -1,4 +1,6 @@
-﻿using Bit.IntegrationTestCommon.Factories;
+﻿using Bit.Core.Enums;
+using Bit.IntegrationTestCommon.Factories;
+using Xunit;
 using static Bit.Identity.IntegrationTest.Helpers.TokenEndpointTestHelpers;
 
 namespace Bit.Identity.IntegrationTest.Middleware;

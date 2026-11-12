@@ -1,4 +1,6 @@
-﻿using Bit.IntegrationTestCommon.Factories;
+﻿using Bit.Core.Entities;
+using Bit.Core.Repositories;
+using Bit.IntegrationTestCommon.Factories;
 
 namespace Bit.Identity.IntegrationTest.Helpers;
 

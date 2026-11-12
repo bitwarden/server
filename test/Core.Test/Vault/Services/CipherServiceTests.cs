@@ -10,6 +10,7 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Pricing.Premium;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
@@ -25,6 +26,9 @@ using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
+using Xunit;
 
 namespace Bit.Core.Test.Services;
 

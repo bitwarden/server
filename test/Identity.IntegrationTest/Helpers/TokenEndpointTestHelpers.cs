@@ -1,7 +1,12 @@
 ﻿using System.Globalization;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Identity.IdentityServer;
 using Bit.Identity.IdentityServer.RequestValidators;
 using Bit.IntegrationTestCommon.Factories;
+using Microsoft.AspNetCore.TestHost;
+using NSubstitute;
 
 namespace Bit.Identity.IntegrationTest.Helpers;
 

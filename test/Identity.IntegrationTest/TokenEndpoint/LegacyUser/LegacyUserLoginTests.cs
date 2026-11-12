@@ -1,8 +1,12 @@
 ﻿using System.Text.Json;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Enums;
 using Bit.Core.Test.Auth.AutoFixture;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
+using Microsoft.EntityFrameworkCore;
+using Xunit;
 using static Bit.Identity.IntegrationTest.Helpers.TokenEndpointTestHelpers;
 
 namespace Bit.Identity.IntegrationTest.TokenEndpoint.LegacyUser;

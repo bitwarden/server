@@ -1,6 +1,8 @@
-﻿using Bit.Seeder.Pipeline;
+﻿using Bit.Core.Entities;
+using Bit.Seeder.Pipeline;
 using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
+using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest.Pipeline;
 

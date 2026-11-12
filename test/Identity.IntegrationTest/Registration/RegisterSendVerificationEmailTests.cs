@@ -1,5 +1,7 @@
-﻿using Bit.IntegrationTestCommon.Factories;
+﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Xunit;
 using static Bit.Identity.IntegrationTest.Helpers.RegistrationTestHelpers;
 using static Bit.Identity.IntegrationTest.Helpers.UserTestHelpers;
 

@@ -1,9 +1,12 @@
 ﻿using System.Text.Json;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Identity.IntegrationTest.Helpers;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Microsoft.AspNetCore.Identity;
+using Xunit;
 using static Bit.Identity.IntegrationTest.Helpers.PasswordGrantTestHelpers;
 using static Bit.Identity.IntegrationTest.Helpers.TokenEndpointTestHelpers;
 

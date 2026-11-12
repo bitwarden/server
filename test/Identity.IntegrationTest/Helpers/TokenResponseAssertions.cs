@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Test.Common.Helpers;
+using Xunit;
 
 namespace Bit.Identity.IntegrationTest.Helpers;
 

@@ -1,4 +1,6 @@
-﻿using Bit.IntegrationTestCommon.Factories;
+﻿using Bit.Core.Auth.Models.Api.Response.Accounts;
+using Bit.IntegrationTestCommon.Factories;
+using Xunit;
 
 namespace Bit.Identity.IntegrationTest.WebAuthn;
 

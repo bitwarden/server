@@ -1,7 +1,11 @@
-﻿using Bit.Seeder.Factories;
+﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Options;
 using Bit.Seeder.Services;
+using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest.Factories;
 

@@ -1,8 +1,12 @@
 ﻿using System.Text.Json;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Test.Auth.AutoFixture;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
+using Xunit;
 using static Bit.Identity.IntegrationTest.Helpers.TokenEndpointTestHelpers;
 using static Bit.Identity.IntegrationTest.Helpers.TokenResponseAssertions;
 

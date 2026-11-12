@@ -1,4 +1,7 @@
-﻿using Bit.IntegrationTestCommon.Factories;
+﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Kdf;
+using Bit.IntegrationTestCommon.Factories;
 
 namespace Bit.Identity.IntegrationTest.Helpers;
 

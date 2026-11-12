@@ -1,8 +1,23 @@
 ﻿using System.Globalization;
 using System.Text.Json;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.Services;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Kdf;
+using Bit.Core.Models.Data;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Bit.IntegrationTestCommon;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.Fakes;
+using Xunit;
 
 namespace Bit.Identity.IntegrationTest.Helpers;
 

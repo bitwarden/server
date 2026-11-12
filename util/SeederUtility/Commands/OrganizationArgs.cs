@@ -2,6 +2,7 @@
 using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Options;
+using CommandDotNet;
 
 // Aliased because this class has its own string PlanType property, which would otherwise shadow the enum.
 using CorePlanType = Bit.Core.Billing.Enums.PlanType;

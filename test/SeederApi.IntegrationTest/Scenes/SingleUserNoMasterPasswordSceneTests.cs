@@ -1,4 +1,7 @@
 ﻿using Bit.Seeder.Scenes;
+using Duende.IdentityModel.Client;
+using Microsoft.EntityFrameworkCore;
+using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest.Scenes;
 

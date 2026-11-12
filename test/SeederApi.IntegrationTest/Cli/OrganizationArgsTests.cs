@@ -1,6 +1,7 @@
 ﻿using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Options;
 using Bit.SeederUtility.Commands;
+using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest.Cli;
 

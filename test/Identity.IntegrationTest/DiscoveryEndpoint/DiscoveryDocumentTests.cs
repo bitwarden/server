@@ -2,6 +2,7 @@
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
+using Xunit;
 using static Bit.Identity.IntegrationTest.Helpers.TokenEndpointTestHelpers;
 
 namespace Bit.Identity.IntegrationTest.DiscoveryEndpoint;
