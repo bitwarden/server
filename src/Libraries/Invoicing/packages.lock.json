@@ -177,6 +177,11 @@
           "Newtonsoft.Json": "12.0.2"
         }
       },
+      "Bitwarden.Server.Sdk.PasswordHashing": {
+        "type": "Transitive",
+        "resolved": "0.1.0-alpha.1",
+        "contentHash": "5DDiFocgB6ZhqXZeZ0GS+aowifucwVYxOHlJpm5qWn7+wo3pzuC0bgcxStvRwOjE4WHRdhIXahViA1uCTDR+eg=="
+      },
       "BouncyCastle.Cryptography": {
         "type": "Transitive",
         "resolved": "2.7.0",
@@ -898,6 +903,7 @@
           "BitPay.Light": "[1.0.1907, 1.0.1907]",
           "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
           "Bitwarden.Server.Sdk.Features": "[1.5.0, )",
+          "Bitwarden.Server.Sdk.PasswordHashing": "[0.1.0-alpha.1, 0.1.0-alpha.1]",
           "Braintree": "[5.36.0, 5.36.0]",
           "Clients": "[0.0.1, )",
           "CsvHelper": "[33.1.0, 33.1.0]",

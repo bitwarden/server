@@ -22,7 +22,6 @@ using Bit.Core.Auth.Services.Implementations;
 using Bit.Core.Auth.UserFeatures;
 using Bit.Core.Auth.UserFeatures.Devices;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess;
-using Bit.Core.Auth.UserFeatures.PasswordValidation;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Providers.Services.NoopImplementations;
 using Bit.Core.Billing.Services;
@@ -415,7 +414,7 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services, GlobalSettings globalSettings)
     {
         services.AddScoped<IOrganizationDuoUniversalTokenProvider, OrganizationDuoUniversalTokenProvider>();
-        services.Configure<PasswordHasherOptions>(options => options.IterationCount = PasswordValidationConstants.PasswordHasherKdfIterations);
+        services.AddUserPasswordHasher();
         services.Configure<TwoFactorRememberTokenProviderOptions>(options =>
         {
             options.TokenLifespan = TimeSpan.FromDays(30);
