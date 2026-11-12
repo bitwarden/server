@@ -1,15 +1,13 @@
-﻿using System.Globalization;
-using Bit.Core;
+﻿using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Test.Auth.AutoFixture;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Microsoft.AspNetCore.TestHost;
 using NSubstitute;
 using Xunit;
+using static Bit.Identity.IntegrationTest.Helpers.TokenEndpointTestHelpers;
 
 namespace Bit.Identity.IntegrationTest.TokenEndpoint.DeviceLastActivity;
 
@@ -20,13 +18,6 @@ namespace Bit.Identity.IntegrationTest.TokenEndpoint.DeviceLastActivity;
 [SutProviderCustomize]
 public class DeviceLastActivityIntegrationTests
 {
-    private static readonly KeysRequestModel TEST_ACCOUNT_KEYS = new()
-    {
-        AccountKeys = null,
-        PublicKey = "public-key",
-        EncryptedPrivateKey = "encrypted-private-key",
-    };
-
     private const string FlagSettingKey =
         $"globalSettings:launchDarkly:flagValues:{FeatureFlagKeys.DevicesLastActivityDate}";
 
@@ -40,7 +31,7 @@ public class DeviceLastActivityIntegrationTests
         localFactory.UpdateConfiguration(FlagSettingKey, "true");
 
         var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
-        var context = await PostPasswordTokenAsync(localFactory.Server, user, requestModel.MasterPasswordHash);
+        var context = await PostLoginAsync(localFactory.Server, user, requestModel.MasterPasswordHash);
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
 
@@ -60,7 +51,7 @@ public class DeviceLastActivityIntegrationTests
         localFactory.UpdateConfiguration(FlagSettingKey, "false");
 
         var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
-        var context = await PostPasswordTokenAsync(localFactory.Server, user, requestModel.MasterPasswordHash);
+        var context = await PostLoginAsync(localFactory.Server, user, requestModel.MasterPasswordHash);
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
 
@@ -99,21 +90,5 @@ public class DeviceLastActivityIntegrationTests
             IdentityApplicationFactory.DefaultDeviceIdentifier,
             user.Id,
             Arg.Any<string?>());
-    }
-
-    private static async Task<HttpContext> PostPasswordTokenAsync(
-        TestServer server, User user, string masterPasswordHash)
-    {
-        return await server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "scope", "api offline_access" },
-            { "client_id", "web" },
-            { "deviceType", ((int)DeviceType.FirefoxBrowser).ToString(CultureInfo.InvariantCulture) },
-            { "deviceIdentifier", IdentityApplicationFactory.DefaultDeviceIdentifier },
-            { "deviceName", "firefox" },
-            { "grant_type", "password" },
-            { "username", user.Email },
-            { "password", masterPasswordHash },
-        }));
     }
 }
