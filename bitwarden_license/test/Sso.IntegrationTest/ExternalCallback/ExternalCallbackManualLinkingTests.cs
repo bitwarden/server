@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using Bit.Sso.IntegrationTest.Utilities;
-using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
 namespace Bit.Sso.IntegrationTest.ExternalCallback;
@@ -41,19 +40,14 @@ public class ExternalCallbackManualLinkingTests
     /*
     * Test to verify /Account/ExternalCallback returns error when userIdentifier
     * is malformed (doesn't contain comma separator for userId,token format).
-    * There is only a single test case here but in the future we may need to expand the
-    * tests to cover other invalid formats.
     */
-    [Theory]
-    [BitAutoData("No-Comas-Identifier")]
-    public async Task ExternalCallback_WithInvalidUserIdentifierFormat_ReturnsError(
-        string UserIdentifier
-    )
+    [Fact]
+    public async Task ExternalCallback_WithInvalidUserIdentifierFormat_ReturnsError()
     {
         // Arrange
         var testData = await new SsoTestDataBuilder()
             .WithSsoConfig()
-            .WithUserIdentifier(UserIdentifier)
+            .WithUserIdentifier("No-Commas-Identifier")
             .BuildAsync();
 
         var client = testData.Factory.CreateClient();
