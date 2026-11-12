@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Sso.IntegrationTest.Helpers;
@@ -11,10 +12,10 @@ using Xunit;
 namespace Bit.Sso.IntegrationTest.ExternalCallback;
 
 /// <summary>
-/// <c>/Account/ExternalCallback</c> finds an existing Bitwarden user with no SSO link by the email claim. It accepts
-/// the external login only when the organization user is Accepted or Confirmed. With no organization user or an Invited
-/// one, the user goes back to the web vault login page with an error code. A Key Connector user who is not yet a
-/// member, a Revoked organization user, and an unknown status each get an error.
+/// <c>/Account/ExternalCallback</c> finds an existing Bitwarden user with no SSO link by the email claim. It links the
+/// account to SSO and accepts the external login only when the organization user is Accepted or Confirmed. With no
+/// organization user or an Invited one, the user goes back to the web vault login page with an error code. A Key
+/// Connector user who is not yet a member, a Revoked organization user, and an unknown status each get an error.
 /// </summary>
 public class ExternalCallbackEmailMatchedUserTests
 {
@@ -301,6 +302,12 @@ public class ExternalCallbackEmailMatchedUserTests
             $"Expected success/redirect but got {response.StatusCode}");
 
         Assert.NotNull(response.Headers.Location);
+
+        // Assert - The endpoint linked the account to SSO for this organization
+        var ssoUserRepository = testData.Factory.Services.GetRequiredService<ISsoUserRepository>();
+        var ssoUser = await ssoUserRepository.GetByUserIdOrganizationIdAsync(
+            testData.Organization!.Id, testData.User!.Id);
+        Assert.NotNull(ssoUser);
     }
 
     /*
@@ -334,5 +341,11 @@ public class ExternalCallbackEmailMatchedUserTests
             $"Expected success/redirect but got {response.StatusCode}");
 
         Assert.NotNull(response.Headers.Location);
+
+        // Assert - The endpoint linked the account to SSO for this organization
+        var ssoUserRepository = testData.Factory.Services.GetRequiredService<ISsoUserRepository>();
+        var ssoUser = await ssoUserRepository.GetByUserIdOrganizationIdAsync(
+            testData.Organization!.Id, testData.User!.Id);
+        Assert.NotNull(ssoUser);
     }
 }
