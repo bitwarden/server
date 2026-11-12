@@ -12,9 +12,8 @@ using static Bit.Sso.IntegrationTest.Utilities.Saml2MessageBuilder;
 namespace Bit.Sso.IntegrationTest.Saml2.RequestMatching;
 
 /// <summary>
-/// Exercises <c>CouldHandleAsync</c> with SAML logout messages. A <c>LogoutRequest</c> or
-/// <c>LogoutResponse</c> carries no assertions, so the assertion signature check lets it through on
-/// both the HTTP-POST and the HTTP-Redirect bindings.
+/// A <c>LogoutRequest</c> or <c>LogoutResponse</c> carries no assertions, so the assertion signature check in
+/// <c>CouldHandleAsync</c> lets it pass on both the HTTP-POST and the HTTP-Redirect bindings.
 /// </summary>
 public class Saml2CouldHandleLogoutMessageTests
 {

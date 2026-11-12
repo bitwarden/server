@@ -10,9 +10,10 @@ using AuthenticationSchemes = Bit.Core.Auth.IdentityServer.AuthenticationSchemes
 namespace Bit.Sso.IntegrationTest.ExternalCallback;
 
 /// <summary>
-/// Requests to <c>/Account/ExternalCallback</c> that fail before any user lookup: a missing or failed
-/// external authentication, a missing or disabled SSO configuration, an unexpected ACR value, missing
-/// user ID or email claims, and a provider scheme that is not an organization ID.
+/// <c>/Account/ExternalCallback</c> returns an error before any user lookup when the external sign-in, the SSO
+/// configuration, or the identity provider's claims are not valid. Covers a missing or failed external sign-in,
+/// a missing or disabled SSO configuration, an unexpected ACR value, a missing user ID or email claim, and a
+/// provider scheme that is not an organization ID.
 /// </summary>
 public class ExternalCallbackRequestValidationTests(SsoApplicationFactory factory) : IClassFixture<SsoApplicationFactory>
 {

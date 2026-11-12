@@ -14,9 +14,11 @@ using Xunit;
 namespace Bit.Sso.IntegrationTest.ExternalCallback;
 
 /// <summary>
-/// <c>/Account/ExternalCallback</c> against a Staged organization user row, for a new user that SSO
-/// provisions just in time and for an existing Bitwarden user. Covers the promotion to Invited, the
-/// seat check that the promotion runs, and the rollback when a later step fails.
+/// SSO sign-in through <c>/Account/ExternalCallback</c> against a Staged organization user moves the row to
+/// Invited, and that move needs a seat. A new user is provisioned just in time. An existing Bitwarden user gets
+/// an invite email and goes back to the login page. When no seat is available, the row stays Staged, SSO creates
+/// no account, no invite is sent, and the user goes to the client's SSO login failed page. When the invite email
+/// fails, the row goes back to Staged.
 /// </summary>
 public class ExternalCallbackStagedOrgUserTests
 {

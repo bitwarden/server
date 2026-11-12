@@ -9,10 +9,10 @@ using static Bit.Sso.IntegrationTest.Utilities.Saml2MessageBuilder;
 namespace Bit.Sso.IntegrationTest.Saml2.RequestMatching;
 
 /// <summary>
-/// Exercises how <c>CouldHandleAsync</c> decides if the scheme handles a request: the <c>scheme</c> query
-/// string shortcut, requests that carry no SAML message, a message from another identity provider, and a
-/// message that cannot be read. A declined request returns false without throwing, so that the middleware
-/// can try the next scheme.
+/// <c>CouldHandleAsync</c> decides if this scheme handles a request. A <c>scheme</c> query selects the scheme;
+/// with the RSA 1.5 deprecation flag on, only for a request with no SAML message. Otherwise the message must be
+/// readable and come from this scheme's identity provider. A declined request returns false, not an exception,
+/// so that the middleware can try the next scheme.
 /// </summary>
 public class Saml2CouldHandleSchemeSelectionTests
 {

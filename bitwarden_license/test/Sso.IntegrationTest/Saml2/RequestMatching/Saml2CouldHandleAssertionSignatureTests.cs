@@ -11,10 +11,11 @@ using EncryptedXml = System.Security.Cryptography.Xml.EncryptedXml;
 namespace Bit.Sso.IntegrationTest.Saml2.RequestMatching;
 
 /// <summary>
-/// Exercises the assertion signature check in <c>CouldHandleAsync</c> through the real, database-backed
-/// <c>Saml2Options</c> object that <c>DynamicAuthenticationScheme</c> holds. Covers plaintext, encrypted,
-/// mixed, and nested assertions, untrusted and undecryptable assertions, and how the check orders with the
-/// encrypted-assertion key-transport algorithm check.
+/// When <c>WantAssertionsSigned</c> is on, <c>CouldHandleAsync</c> throws unless every assertion in the
+/// response, plaintext or encrypted, has a valid signature from the identity provider. Covers mixed and nested
+/// assertions, untrusted and undecryptable assertions, and the order of this check and the key transport
+/// algorithm check. Uses the real, database-backed <c>Saml2Options</c> object that
+/// <c>DynamicAuthenticationScheme</c> holds.
 /// </summary>
 public class Saml2CouldHandleAssertionSignatureTests
 {

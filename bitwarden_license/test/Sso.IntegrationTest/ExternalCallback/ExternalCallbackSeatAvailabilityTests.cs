@@ -9,8 +9,10 @@ using Xunit;
 namespace Bit.Sso.IntegrationTest.ExternalCallback;
 
 /// <summary>
-/// <c>/Account/ExternalCallback</c> seat check before just-in-time provisioning: free seats, a seat cap on
-/// self-hosted, and cloud autoscale that succeeds, fails, or fails after it changed the seat count.
+/// Just-in-time provisioning through <c>/Account/ExternalCallback</c> needs a free seat. When the seat cap blocks
+/// the user and autoscale cannot add a seat, the user goes to the client's SSO login failed page. An autoscale
+/// that fails after it changed the seat count is rolled back. Covers free seats, a seat cap on self-hosted, and
+/// cloud autoscale that succeeds or fails.
 /// </summary>
 public class ExternalCallbackSeatAvailabilityTests
 {
