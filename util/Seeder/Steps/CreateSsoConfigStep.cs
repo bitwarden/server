@@ -36,7 +36,7 @@ internal sealed class CreateSsoConfigStep(
 
         // The Admin Console sets Organization.Identifier when SSO is saved; replicate that so the
         // identifier typed at login (domain_hint) resolves to this org. Mangle it so --mangle runs stay unique.
-        organization.Identifier = context.GetMangler().Mangle(identifier);
+        organization.Identifier = context.Mangler.Mangle(identifier);
         context.SsoIdentifier = organization.Identifier;
 
         // Fetched after the two mutations above, matching where the inline call used to sit in the
