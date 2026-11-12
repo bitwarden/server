@@ -193,6 +193,11 @@
           "Newtonsoft.Json": "12.0.2"
         }
       },
+      "Bitwarden.Server.Sdk.Crypto": {
+        "type": "Transitive",
+        "resolved": "0.1.0-beta.1",
+        "contentHash": "NDCYBgqJ6mX8aIgd802uRrHc9S5Uy3Ukk2hRzfYW0vTxSzbEpldO/7dY27eZ/djX9KU1clo1KoFte6zC6BBQdw=="
+      },
       "Bitwarden.Server.Sdk.Environment": {
         "type": "Transitive",
         "resolved": "0.1.0",
@@ -999,6 +1004,7 @@
           "Azure.Storage.Blobs.Batch": "[12.26.0, 12.26.0]",
           "Azure.Storage.Queues": "[12.27.1, 12.27.1]",
           "BitPay.Light": "[1.0.1907, 1.0.1907]",
+          "Bitwarden.Server.Sdk.Crypto": "[0.1.0-beta.1, 0.1.0-beta.1]",
           "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
           "Bitwarden.Server.Sdk.Features": "[1.5.0, )",
           "Braintree": "[5.36.0, 5.36.0]",

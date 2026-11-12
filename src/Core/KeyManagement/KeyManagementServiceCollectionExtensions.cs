@@ -3,12 +3,15 @@ using Bit.Core.KeyManagement.Commands;
 using Bit.Core.KeyManagement.Commands.Interfaces;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Kdf.Implementations;
+using Bit.Core.KeyManagement.KeyService;
 using Bit.Core.KeyManagement.Queries;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.KeyManagement.UserKey.Queries;
 using Bit.Core.KeyManagement.UserKey.Queries.Interfaces;
+using Bitwarden.Server.Sdk.Crypto;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bit.Core.KeyManagement;
 
@@ -20,6 +23,7 @@ public static class KeyManagementServiceCollectionExtensions
         services.AddKeyManagementCommands();
         services.AddKeyManagementQueries();
         services.AddSendPasswordServices();
+        services.AddKeyServiceQueries();
     }
 
     private static void AddKeyManagementAuthorizationHandlers(this IServiceCollection services)
@@ -42,5 +46,14 @@ public static class KeyManagementServiceCollectionExtensions
         services.AddScoped<IUserAccountKeysQuery, UserAccountKeysQuery>();
         services.AddScoped<IKeyConnectorConfirmationDetailsQuery, KeyConnectorConfirmationDetailsQuery>();
         services.AddScoped<IKeyRotationDataQuery, KeyRotationDataQuery>();
+    }
+
+    private static void AddKeyServiceQueries(this IServiceCollection services)
+    {
+        services.AddServerSdkCrypto();
+        services.TryAddSingleton<IKeyIdReader, SdkKeyIdReader>();
+        services.TryAddScoped<IPublicKeysQuery, PublicKeysQuery>();
+        services.TryAddScoped<IOwnKeysQuery, OwnKeysQuery>();
+        services.TryAddScoped<IUnlockMethodsQuery, UnlockMethodsQuery>();
     }
 }

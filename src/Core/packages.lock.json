@@ -104,6 +104,15 @@
           "Newtonsoft.Json": "12.0.2"
         }
       },
+      "Bitwarden.Server.Sdk.Crypto": {
+        "type": "Direct",
+        "requested": "[0.1.0-beta.1, 0.1.0-beta.1]",
+        "resolved": "0.1.0-beta.1",
+        "contentHash": "NDCYBgqJ6mX8aIgd802uRrHc9S5Uy3Ukk2hRzfYW0vTxSzbEpldO/7dY27eZ/djX9KU1clo1KoFte6zC6BBQdw==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.14"
+        }
+      },
       "Bitwarden.Server.Sdk.Environment": {
         "type": "Direct",
         "requested": "[0.1.0, )",
