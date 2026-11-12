@@ -15,7 +15,10 @@ using static Bit.Api.IntegrationTest.Auth.Helpers.AuthRequestAssertions;
 namespace Bit.Api.IntegrationTest.Auth.AuthRequests;
 
 /// <summary>
-/// Covers approving and denying an auth request.
+/// The owner approves or denies the most recent auth request for a device, once, from one of the owner's own
+/// devices. Approval stores the encrypted key and the master password hash. An answered request, a request that is
+/// not the most recent, an unknown approving device, another user's request, and an expired admin request are
+/// rejected.
 /// </summary>
 public class AuthRequestRespondTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {

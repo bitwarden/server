@@ -18,9 +18,9 @@ using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorIntegrationTestHelper
 namespace Bit.Api.IntegrationTest.Auth.TwoFactor;
 
 /// <summary>
-/// Covers what an emailed two-factor code can be used for after it is sent, with the real two-factor email
-/// service: single use, replacement by a newer code, security stamp changes, device binding, and the
-/// separation of login codes from setup codes.
+/// An emailed two-factor code works once, for one purpose, on the device that asked for it. A newer code replaces
+/// an older one, and a security stamp change cancels the code. A login code does not work for setup, a setup code
+/// does not work at login, and a code stored in the previous format is rejected.
 /// Only the mail service is substituted, so tests read the emailed code from it. The API host shares the
 /// Identity host's persistent cache, so a login code emailed by the API can be redeemed against the Identity
 /// token endpoint, as it is in a deployed environment.

@@ -16,8 +16,10 @@ using Xunit;
 namespace Bit.Api.IntegrationTest.Auth.EmergencyAccess;
 
 /// <summary>
-/// Covers the grantee setting a new master password on the grantor's account after an approved takeover
-/// recovery.
+/// After an approved takeover recovery, the grantee sets a new master password on the grantor's account. The
+/// emergency access must be recovery approved, and the authentication and unlock data must agree on KDF and salt.
+/// The grantor's KDF does not change, even when it is below the current minimum. The takeover turns off the
+/// grantor's two-step login and new device verification.
 /// </summary>
 public class EmergencyAccessTakeoverTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {

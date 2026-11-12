@@ -14,7 +14,9 @@ using static Bit.Api.IntegrationTest.Auth.Helpers.AuthRequestAssertions;
 namespace Bit.Api.IntegrationTest.Auth.AuthRequests;
 
 /// <summary>
-/// Covers reading auth requests: the list, a single request, the pending list, and the anonymous response read.
+/// A user reads only the user's own auth requests: the list, one request, and the pending list, which leaves out
+/// answered requests. Another user's request returns 404. The anonymous response read needs the matching access
+/// code.
 /// </summary>
 public class AuthRequestQueryTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {

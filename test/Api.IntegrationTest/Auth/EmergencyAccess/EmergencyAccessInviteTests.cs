@@ -13,7 +13,8 @@ using Xunit;
 namespace Bit.Api.IntegrationTest.Auth.EmergencyAccess;
 
 /// <summary>
-/// Covers the grantee accepting an emergency access invitation.
+/// The grantee accepts an emergency access invitation only with a token that has not expired. An expired token
+/// leaves the invitation in the Invited status with no grantee.
 /// </summary>
 public class EmergencyAccessInviteTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
