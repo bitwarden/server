@@ -80,6 +80,19 @@ public class ValidatePrivilegedControlsSeatReservationQueryTests
     }
 
     [Fact]
+    public async Task RunAsync_SelfHosted_FlagOff_Shortfall_ReturnsCannotAutoscaleOnSelfHost()
+    {
+        var organization = CreateOrganization();
+        _environment.SelfHosted.Returns(true);
+        _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(false);
+        _countNewPamSeatsRequiredQuery.CountNewPamSeatsRequiredAsync(organization, 2).Returns(1);
+
+        var error = await _sut.RunAsync(organization, 2, 0);
+
+        Assert.IsType<CannotAutoscalePrivilegedControlsSeatsOnSelfHostError>(error);
+    }
+
+    [Fact]
     public async Task RunAsync_SelfHosted_NoShortfall_ReturnsNull()
     {
         var organization = CreateOrganization();
