@@ -45,6 +45,7 @@ public class RestoreOrganizationUserCommand(
     IReservePrivilegedControlsSeatsCommand reservePrivilegedControlsSeatsCommand,
     ISendPrivilegedControlsSeatNeededEmailCommand sendPrivilegedControlsSeatNeededEmailCommand,
     ICountNewPamSeatsRequiredQuery countNewPamSeatsRequiredQuery,
+    IValidatePrivilegedControlsSeatReservationQuery validatePrivilegedControlsSeatReservationQuery,
     IGlobalSettings globalSettings,
     ILogger<RestoreOrganizationUserCommand> logger) : IRestoreOrganizationUserCommand
 {
@@ -113,6 +114,12 @@ public class RestoreOrganizationUserCommand(
         var seatCounts = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
         var availableSeats = organization.Seats.GetValueOrDefault(0) - seatCounts.Total;
         var initialPasswordManagerSeats = organization.Seats;
+
+        // An admin restore is rejected before any Password Manager seat is bought when the seat could not be reserved.
+        if (restoresPrivilegedControlsAccess && systemUser is null)
+        {
+            await ValidatePrivilegedControlsSeatsOrThrowAsync(organization, 1, availableSeats < 1 ? 1 : 0);
+        }
 
         if (availableSeats < 1)
         {
@@ -183,6 +190,21 @@ public class RestoreOrganizationUserCommand(
             await collectionRepository.CreateDefaultCollectionsAsync(organizationUser.OrganizationId,
                 [organizationUser.Id],
                 defaultCollectionName);
+        }
+    }
+
+    /// <summary>
+    /// Fails the restore before any Password Manager seat is bought when the Privileged Controls seats it needs could
+    /// not be reserved.
+    /// </summary>
+    private async Task ValidatePrivilegedControlsSeatsOrThrowAsync(Organization organization, int seatsRequested,
+        int passwordManagerSeatsToAdd)
+    {
+        var error = await validatePrivilegedControlsSeatReservationQuery.RunAsync(organization, seatsRequested,
+            passwordManagerSeatsToAdd);
+        if (error is not null)
+        {
+            throw new BadRequestException(error.Message);
         }
     }
 
@@ -297,17 +319,26 @@ public class RestoreOrganizationUserCommand(
         var availableSeats = organization.Seats.GetValueOrDefault(0) - seatCounts.Total;
         var newSeatsRequired = organizationUserIds.Count() - availableSeats;
         var initialPasswordManagerSeats = organization.Seats;
+
+        // Only revoked members are restored, and only those returning to a seat-using status with Privileged
+        // Controls access need a seat.
+        var privilegedControlsSeatsRequested = filteredUsers.Count(u =>
+            u.Status == OrganizationUserStatusType.Revoked
+            && u.AccessPam
+            && PrivilegedControlsSeatOccupancy.OccupiesSeat(u.GetPriorActiveOrganizationUserStatusType()));
+
+        if (organization.UsePam)
+        {
+            await ValidatePrivilegedControlsSeatsOrThrowAsync(organization, privilegedControlsSeatsRequested,
+                Math.Max(0, newSeatsRequired));
+        }
+
         await organizationService.AutoAddSeatsAsync(organization, newSeatsRequired);
 
         if (organization.UsePam)
         {
-            // Only revoked members are restored, and only those returning to a seat-using status with Privileged
-            // Controls access need a seat. Seats are reserved once for the whole selection before the per-member
-            // checks, the same way Password Manager seats are.
-            var privilegedControlsSeatsRequested = filteredUsers.Count(u =>
-                u.Status == OrganizationUserStatusType.Revoked
-                && u.AccessPam
-                && PrivilegedControlsSeatOccupancy.OccupiesSeat(u.GetPriorActiveOrganizationUserStatusType()));
+            // Seats are reserved once for the whole selection before the per-member checks, the same way Password
+            // Manager seats are.
             await ReservePrivilegedControlsSeatsOrThrowAsync(organization, privilegedControlsSeatsRequested,
                 initialPasswordManagerSeats);
         }
