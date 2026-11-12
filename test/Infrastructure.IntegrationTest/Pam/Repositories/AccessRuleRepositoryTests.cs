@@ -397,14 +397,170 @@ public class AccessRuleRepositoryTests
         Assert.Equal([collection.Id], actualRule.CollectionIds);
     }
 
+    /// <summary>
+    /// Members sync whether each collection is governed by an enabled rule, so disabling a rule makes the members of
+    /// its collections resync. Members who cannot see those collections see nothing change.
+    /// </summary>
+    [DatabaseTheory, DatabaseData]
+    public async Task ReplaceAsync_DisablingRule_BumpsOnlyMembersOfGovernedCollections(
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IUserRepository userRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRuleRepository accessRuleRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var (member, memberOrgUser) =
+            await userRepository.CreateConfirmedMemberAsync(organizationUserRepository, organization);
+        var (outsider, outsiderOrgUser) =
+            await userRepository.CreateConfirmedMemberAsync(organizationUserRepository, organization);
+
+        var rule = await CreateRuleAsync(accessRuleRepository, organization.Id, $"Disable {Guid.NewGuid()}");
+        var collection = await collectionRepository.CreateCollectionWithMembersAsync(organization, memberOrgUser);
+        await collectionRepository.CreateCollectionWithMembersAsync(organization, outsiderOrgUser);
+        await collectionRepository.SetAccessRuleAssociationsAsync(organization.Id, rule.Id, [collection.Id], []);
+        await userRepository.BackdateAccountRevisionDatesAsync(member, outsider);
+
+        // Act
+        rule.Enabled = false;
+        await accessRuleRepository.ReplaceAsync(rule);
+
+        // Assert
+        await userRepository.AssertBumpedAsync(member);
+        await userRepository.AssertNotBumpedAsync(outsider);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task ReplaceAsync_EnablingRule_BumpsMembersOfGovernedCollections(
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IUserRepository userRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRuleRepository accessRuleRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var (member, memberOrgUser) =
+            await userRepository.CreateConfirmedMemberAsync(organizationUserRepository, organization);
+
+        var rule = await CreateRuleAsync(accessRuleRepository, organization.Id, $"Enable {Guid.NewGuid()}",
+            enabled: false);
+        var collection = await collectionRepository.CreateCollectionWithMembersAsync(organization, memberOrgUser);
+        await collectionRepository.SetAccessRuleAssociationsAsync(organization.Id, rule.Id, [collection.Id], []);
+        await userRepository.BackdateAccountRevisionDatesAsync(member);
+
+        // Act
+        rule.Enabled = true;
+        await accessRuleRepository.ReplaceAsync(rule);
+
+        // Assert
+        await userRepository.AssertBumpedAsync(member);
+    }
+
+    /// <summary>
+    /// A rename, like any change other than <c>Enabled</c>, is invisible to sync, so no member resyncs.
+    /// </summary>
+    [DatabaseTheory, DatabaseData]
+    public async Task ReplaceAsync_RenamingRule_BumpsNoOne(
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IUserRepository userRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRuleRepository accessRuleRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var (member, memberOrgUser) =
+            await userRepository.CreateConfirmedMemberAsync(organizationUserRepository, organization);
+
+        var rule = await CreateRuleAsync(accessRuleRepository, organization.Id, $"Rename {Guid.NewGuid()}");
+        var collection = await collectionRepository.CreateCollectionWithMembersAsync(organization, memberOrgUser);
+        await collectionRepository.SetAccessRuleAssociationsAsync(organization.Id, rule.Id, [collection.Id], []);
+        await userRepository.BackdateAccountRevisionDatesAsync(member);
+
+        // Act
+        rule.Name = $"Renamed {Guid.NewGuid()}";
+        await accessRuleRepository.ReplaceAsync(rule);
+
+        // Assert
+        await userRepository.AssertNotBumpedAsync(member);
+        var actual = await accessRuleRepository.GetByIdAsync(rule.Id);
+        Assert.NotNull(actual);
+        Assert.Equal(rule.Name, actual.Name);
+    }
+
+    /// <summary>
+    /// Deleting an enabled rule ungates its collections, so their members resync and nobody else does.
+    /// </summary>
+    [DatabaseTheory, DatabaseData]
+    public async Task DeleteAsync_EnabledRule_BumpsOnlyMembersOfGovernedCollections(
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IUserRepository userRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRuleRepository accessRuleRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var (member, memberOrgUser) =
+            await userRepository.CreateConfirmedMemberAsync(organizationUserRepository, organization);
+        var (outsider, outsiderOrgUser) =
+            await userRepository.CreateConfirmedMemberAsync(organizationUserRepository, organization);
+
+        var rule = await CreateRuleAsync(accessRuleRepository, organization.Id, $"Delete {Guid.NewGuid()}");
+        var collection = await collectionRepository.CreateCollectionWithMembersAsync(organization, memberOrgUser);
+        await collectionRepository.CreateCollectionWithMembersAsync(organization, outsiderOrgUser);
+        await collectionRepository.SetAccessRuleAssociationsAsync(organization.Id, rule.Id, [collection.Id], []);
+        await userRepository.BackdateAccountRevisionDatesAsync(member, outsider);
+
+        // Act
+        await accessRuleRepository.DeleteAsync(rule);
+
+        // Assert
+        await userRepository.AssertBumpedAsync(member);
+        await userRepository.AssertNotBumpedAsync(outsider);
+    }
+
+    /// <summary>
+    /// A disabled rule gated nothing, so deleting it is invisible to sync.
+    /// </summary>
+    [DatabaseTheory, DatabaseData]
+    public async Task DeleteAsync_DisabledRule_BumpsNoOne(
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IUserRepository userRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRuleRepository accessRuleRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var (member, memberOrgUser) =
+            await userRepository.CreateConfirmedMemberAsync(organizationUserRepository, organization);
+
+        var rule = await CreateRuleAsync(accessRuleRepository, organization.Id, $"Delete {Guid.NewGuid()}",
+            enabled: false);
+        var collection = await collectionRepository.CreateCollectionWithMembersAsync(organization, memberOrgUser);
+        await collectionRepository.SetAccessRuleAssociationsAsync(organization.Id, rule.Id, [collection.Id], []);
+        await userRepository.BackdateAccountRevisionDatesAsync(member);
+
+        // Act
+        await accessRuleRepository.DeleteAsync(rule);
+
+        // Assert
+        await userRepository.AssertNotBumpedAsync(member);
+    }
+
     private static Task<AccessRule> CreateRuleAsync(
         IAccessRuleRepository accessRuleRepository,
         Guid organizationId,
-        string name)
+        string name,
+        bool enabled = true)
         => accessRuleRepository.CreateAsync(new AccessRule
         {
             OrganizationId = organizationId,
             Name = name,
             Conditions = _conditions,
+            Enabled = enabled,
         });
 }
