@@ -14,8 +14,15 @@ public class PamRotationConfigDetails : PamRotationConfig
     /// </summary>
     public bool HasActiveJob { get; set; }
 
+    /// <summary>
+    /// Whether the newest job ended badly: <see cref="PamRotationJobAction.Failed"/>, or unresolved with its timeout
+    /// already recorded by the sweep. Lets a list read tell Failed apart without fetching each config's history.
+    /// Mutually exclusive with <see cref="HasActiveJob"/>, which holds an unswept job active.
+    /// </summary>
+    public bool LastJobFailed { get; set; }
+
     public static PamRotationConfigDetails From(PamRotationConfig config, string targetSystemName,
-        PamTargetSystemMethod targetSystemMethod, bool hasActiveJob) => new()
+        PamTargetSystemMethod targetSystemMethod, bool hasActiveJob, bool lastJobFailed = false) => new()
         {
             Id = config.Id,
             OrganizationId = config.OrganizationId,
@@ -33,5 +40,6 @@ public class PamRotationConfigDetails : PamRotationConfig
             TargetSystemName = targetSystemName,
             TargetSystemMethod = targetSystemMethod,
             HasActiveJob = hasActiveJob,
+            LastJobFailed = lastJobFailed,
         };
 }
