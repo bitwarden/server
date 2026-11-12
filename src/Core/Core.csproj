@@ -54,6 +54,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="[10.0.14]" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="[10.0.14]" />
     <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="[10.0.8]" />
+    <PackageReference Include="Bitwarden.Server.Sdk.PasswordHashing" Version="[0.1.0-alpha.1]" />
     <PackageReference Include="OneOf" Version="[3.0.271]" />
     <PackageReference Include="Duende.IdentityServer" Version="[7.4.6]" />
     <PackageReference Include="Newtonsoft.Json" Version="[13.0.3]" />

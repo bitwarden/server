@@ -1,7 +1,8 @@
 ﻿using Bit.Core.KeyManagement.Sends;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Microsoft.AspNetCore.Identity;
+using Bitwarden.Server.Sdk.PasswordHashing;
+using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Xunit;
 
@@ -11,27 +12,24 @@ namespace Bit.Core.Test.KeyManagement.Sends;
 public class SendPasswordHasherTests
 {
     [Theory]
-    [BitAutoData(PasswordVerificationResult.Success)]
-    [BitAutoData(PasswordVerificationResult.SuccessRehashNeeded)]
+    [BitAutoData(PasswordHashVerification.Success)]
+    [BitAutoData(PasswordHashVerification.SuccessRehashNeeded)]
     void VerifyPasswordHash_WithValidMatching_ReturnsTrue(
-        PasswordVerificationResult passwordVerificationResult,
+        PasswordHashVerification verification,
         SutProvider<SendPasswordHasher> sutProvider,
         string sendPasswordHash,
         string inputPasswordHash)
     {
         // Arrange
-        sutProvider.GetDependency<IPasswordHasher<SendPasswordHasherMarker>>()
-            .VerifyHashedPassword(Arg.Any<SendPasswordHasherMarker>(), sendPasswordHash, inputPasswordHash)
-            .Returns(passwordVerificationResult);
+        sutProvider.GetDependency<IServerPasswordHasher>()
+            .VerifyStoredHash(new ServerStorableHash(sendPasswordHash), new ClientCreatedHash(inputPasswordHash))
+            .Returns(verification);
 
         // Act
         var result = sutProvider.Sut.PasswordHashMatches(sendPasswordHash, inputPasswordHash);
 
         // Assert
         Assert.True(result);
-        sutProvider.GetDependency<IPasswordHasher<SendPasswordHasherMarker>>()
-            .Received(1)
-            .VerifyHashedPassword(Arg.Any<SendPasswordHasherMarker>(), sendPasswordHash, inputPasswordHash);
     }
 
     [Theory, BitAutoData]
@@ -41,18 +39,15 @@ public class SendPasswordHasherTests
         string inputPasswordHash)
     {
         // Arrange
-        sutProvider.GetDependency<IPasswordHasher<SendPasswordHasherMarker>>()
-            .VerifyHashedPassword(Arg.Any<SendPasswordHasherMarker>(), sendPasswordHash, inputPasswordHash)
-            .Returns(PasswordVerificationResult.Failed);
+        sutProvider.GetDependency<IServerPasswordHasher>()
+            .VerifyStoredHash(new ServerStorableHash(sendPasswordHash), new ClientCreatedHash(inputPasswordHash))
+            .Returns(PasswordHashVerification.Failed);
 
         // Act
         var result = sutProvider.Sut.PasswordHashMatches(sendPasswordHash, inputPasswordHash);
 
         // Assert
         Assert.False(result);
-        sutProvider.GetDependency<IPasswordHasher<SendPasswordHasherMarker>>()
-            .Received(1)
-            .VerifyHashedPassword(Arg.Any<SendPasswordHasherMarker>(), sendPasswordHash, inputPasswordHash);
     }
 
     [Theory]
@@ -69,15 +64,15 @@ public class SendPasswordHasherTests
         string? inputPasswordHash)
     {
         // Arrange
-        var passwordHasher = Substitute.For<IPasswordHasher<SendPasswordHasherMarker>>();
-        var sut = new SendPasswordHasher(passwordHasher);
+        var hasher = new ServiceCollection().AddServerPasswordHasher().BuildServiceProvider()
+            .GetRequiredService<IServerPasswordHasher>();
+        var sut = new SendPasswordHasher(hasher);
 
         // Act
-        var result = sut.PasswordHashMatches(sendPasswordHash, inputPasswordHash);
+        var result = sut.PasswordHashMatches(sendPasswordHash!, inputPasswordHash!);
 
         // Assert
         Assert.False(result);
-        passwordHasher.DidNotReceive().VerifyHashedPassword(Arg.Any<SendPasswordHasherMarker>(), Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Theory, BitAutoData]
@@ -87,17 +82,14 @@ public class SendPasswordHasherTests
         string expectedHashedResult)
     {
         // Arrange
-        sutProvider.GetDependency<IPasswordHasher<SendPasswordHasherMarker>>()
-            .HashPassword(Arg.Any<SendPasswordHasherMarker>(), clientHashedPassword)
-            .Returns(expectedHashedResult);
+        sutProvider.GetDependency<IServerPasswordHasher>()
+            .CreateStoredHash(new ClientCreatedHash(clientHashedPassword))
+            .Returns(new ServerStorableHash(expectedHashedResult));
 
         // Act
         var result = sutProvider.Sut.HashOfClientPasswordHash(clientHashedPassword);
 
         // Assert
         Assert.Equal(expectedHashedResult, result);
-        sutProvider.GetDependency<IPasswordHasher<SendPasswordHasherMarker>>()
-            .Received(1)
-            .HashPassword(Arg.Any<SendPasswordHasherMarker>(), clientHashedPassword);
     }
 }
