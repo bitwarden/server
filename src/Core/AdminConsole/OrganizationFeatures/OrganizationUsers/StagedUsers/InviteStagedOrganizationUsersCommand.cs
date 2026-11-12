@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.M
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -27,6 +28,7 @@ public class InviteStagedOrganizationUsersCommand(
     IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
     IStripePaymentService stripePaymentService,
     IPricingClient pricingClient,
+    IValidatePrivilegedControlsSeatReservationQuery validatePrivilegedControlsSeatReservationQuery,
     IReservePrivilegedControlsSeatsCommand reservePrivilegedControlsSeatsCommand,
     IRevertPrivilegedControlsSeatsCommand revertPrivilegedControlsSeatsCommand,
     ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
@@ -60,6 +62,15 @@ public class InviteStagedOrganizationUsersCommand(
         var seatsToAdd = await CountSeatsToAddAsync(organization, eligible.Count);
         var secretsManagerSeatsToAdd = await CountSecretsManagerSeatsToAddAsync(organization, eligible);
 
+        // Checked before any seat is bought, so a rejection leaves nothing to hand back.
+        var membersWithPrivilegedControls = eligible.Count(organizationUser => organizationUser.AccessPam);
+        var privilegedControlsValidationError = await validatePrivilegedControlsSeatReservationQuery.RunAsync(
+            organization, membersWithPrivilegedControls, seatsToAdd);
+        if (privilegedControlsValidationError is not null)
+        {
+            return privilegedControlsValidationError;
+        }
+
         var secretsManagerValidationError = await ValidateSecretsManagerSeatsAsync(organization, seatsToAdd, secretsManagerSeatsToAdd);
         if (secretsManagerValidationError is not null)
         {
@@ -84,7 +95,6 @@ public class InviteStagedOrganizationUsersCommand(
             return secretsManagerSeatReservationError;
         }
 
-        var membersWithPrivilegedControls = eligible.Count(organizationUser => organizationUser.AccessPam);
         var privilegedControlsSeatReservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, membersWithPrivilegedControls);
         if (!privilegedControlsSeatReservation.Success)
         {
