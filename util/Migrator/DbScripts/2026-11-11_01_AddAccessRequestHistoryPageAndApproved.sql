@@ -50,7 +50,8 @@ BEGIN
             WHEN LR.[Action] = 3 THEN 2 -- Canceled
             WHEN LR.[Action] = 0 AND LR.[NotAfter] <= @Now THEN 3 -- Expired unanswered
             WHEN LR.[Action] <> 1 THEN NULL -- Open
-            WHEN PL.[Id] IS NULL THEN CASE WHEN LR.[NotAfter] <= @Now THEN 3 END -- Approved, never started
+            WHEN PL.[Id] IS NULL AND LR.[NotAfter] <= @Now THEN 3 -- Approved, never started
+            WHEN PL.[Id] IS NULL THEN NULL -- Approved, not started yet
             WHEN PL.[Action] = 2 THEN 1 -- Revoked
             WHEN PL.[Action] = 3 OR PL.[NotAfter] <= @Now THEN 4 -- Session ended
         END AS [Status]

@@ -196,7 +196,8 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
                 : r.Action == AccessRequestAction.Cancelled ? AccessRequestHistoryStatus.Canceled
                 : r.Action == AccessRequestAction.None && r.NotAfter <= now ? AccessRequestHistoryStatus.Expired
                 : r.Action != AccessRequestAction.Approved ? null
-                : l == null ? (r.NotAfter <= now ? AccessRequestHistoryStatus.Expired : null)
+                : l == null && r.NotAfter <= now ? AccessRequestHistoryStatus.Expired
+                : l == null ? null
                 : l.Action == AccessLeaseAction.Revoked ? AccessRequestHistoryStatus.Revoked
                 : l.Action == AccessLeaseAction.Cancelled || l.NotAfter <= now
                     ? AccessRequestHistoryStatus.SessionEnded
