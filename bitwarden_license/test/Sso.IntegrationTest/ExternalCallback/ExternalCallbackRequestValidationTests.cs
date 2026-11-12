@@ -20,24 +20,9 @@ public class ExternalCallbackRequestValidationTests(SsoApplicationFactory factor
     private readonly SsoApplicationFactory _factory = factory;
 
     /*
-    * Test to verify the /Account/ExternalCallback endpoint exists and is reachable.
-    */
-    [Fact]
-    public async Task ExternalCallback_EndpointExists_ReturnsExpectedStatusCode()
-    {
-        // Arrange
-        var client = _factory.CreateClient();
-
-        // Act - Verify the endpoint is accessible (even if it fails due to missing auth)
-        var response = await client.GetAsync("/Account/ExternalCallback");
-
-        // Assert - The endpoint should exist and return 500 (not 404) due to missing authentication
-        Assert.NotEqual(HttpStatusCode.NotFound, response.StatusCode);
-    }
-
-    /*
     * Test to verify calling /Account/ExternalCallback without an authentication cookie
-    * results in an error as expected.
+    * results in an error as expected. A missing route returns 404, so this test also
+    * proves that the route exists.
     */
     [Fact]
     public async Task ExternalCallback_WithNoAuthenticationCookie_ReturnsError()
