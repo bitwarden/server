@@ -6,8 +6,8 @@ using Xunit;
 namespace Bit.Sso.IntegrationTest.ExternalCallback;
 
 /// <summary>
-/// A new user with no Bitwarden account and no organization user row signs in through
-/// <c>/Account/ExternalCallback</c>. SSO creates both just in time.
+/// For a new user with no Bitwarden account and no organization user row, <c>/Account/ExternalCallback</c>
+/// creates both just in time and accepts the external login.
 /// </summary>
 public class ExternalCallbackJitProvisioningTests
 {
