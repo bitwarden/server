@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.UserFeatures.UserEmail;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Helpers;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -29,6 +30,7 @@ public class UpdateOrganizationUserCommand(
     IUpdateOrganizationUserValidator validator,
     ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
     IReservePrivilegedControlsSeatsCommand reservePrivilegedControlsSeatsCommand,
+    IValidatePrivilegedControlsSeatReservationQuery validatePrivilegedControlsSeatReservationQuery,
     IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
     IPricingClient pricingClient,
     IEventService eventService,
@@ -59,6 +61,17 @@ public class UpdateOrganizationUserCommand(
             request.NewAccessSecretsManager,
             request.NewAccessPam,
             timeProvider);
+
+        if (request.IsEnablingPam()
+            && PrivilegedControlsSeatOccupancy.OccupiesSeat(request.OrganizationUserToUpdate.Status))
+        {
+            // Check before the Secrets Manager seat is bought so a rejection leaves nothing to give back.
+            var validationError = await validatePrivilegedControlsSeatReservationQuery.RunAsync(request.Organization, 1, 0);
+            if (validationError is not null)
+            {
+                return validationError;
+            }
+        }
 
         if (request.IsEnablingSecretsManager())
         {
