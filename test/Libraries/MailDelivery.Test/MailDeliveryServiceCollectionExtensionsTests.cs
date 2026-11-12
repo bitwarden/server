@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Platform.Mail.Delivery;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 
 namespace Bit.MailDelivery.Test;
@@ -89,6 +90,21 @@ public class MailDeliveryServiceCollectionExtensionsTests
 
         using var provider = services.BuildServiceProvider();
         Assert.Same(existing, provider.GetRequiredService<IMailDeliveryService>());
+    }
+
+    [Fact]
+    public void AddMailDelivery_MicrosoftOAuthMissingRequiredFields_OptionsThrowOnAccess()
+    {
+        var services = CreateServices(options => options.Smtp.AuthType = SmtpAuthType.MicrosoftOAuth);
+        services.AddMailDelivery();
+
+        using var provider = services.BuildServiceProvider();
+        var exception = Assert.Throws<OptionsValidationException>(
+            () => provider.GetRequiredService<IOptions<MailDeliveryOptions>>().Value);
+
+        Assert.Contains("Smtp:TenantId or Smtp:OAuth:TokenEndpoint", exception.Message);
+        Assert.Contains("Smtp:ClientId or Smtp:OAuth:ClientId", exception.Message);
+        Assert.Contains("Smtp:ClientSecret or Smtp:OAuth:ClientSecret", exception.Message);
     }
 
     private static void ConfigureAmazonSes(MailDeliveryOptions options)
