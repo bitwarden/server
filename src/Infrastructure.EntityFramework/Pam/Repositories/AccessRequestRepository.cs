@@ -183,7 +183,7 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         var since = filter.Since;
         var now = filter.Now;
 
-        // Mirrors AccessRequest_ReadHistoryPage: how and when each request ended, from the request and its lease.
+        // Mirrors AccessRequest_ReadHistoryPage: how each request ended, from the request and its lease.
         var ended =
             from r in dbContext.AccessRequests
             where (manageable.Contains(r.CollectionId) || r.RequesterId == userId) && r.CreationDate >= since
@@ -208,14 +208,8 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
                 r.Id,
                 r.CollectionId,
                 r.RequesterId,
+                r.CreationDate,
                 Status = status!.Value,
-                EndDate =
-                    status == AccessRequestHistoryStatus.Denied || status == AccessRequestHistoryStatus.Canceled
-                        ? r.ActionDate ?? r.CreationDate
-                    : status == AccessRequestHistoryStatus.Expired ? r.NotAfter
-                    : status == AccessRequestHistoryStatus.Revoked || l!.Action == AccessLeaseAction.Cancelled
-                        ? l!.RevokedDate ?? l.NotAfter
-                    : l!.NotAfter,
             };
 
         // The filter options cover every ended row, so a filter never hides its own options.
@@ -244,7 +238,7 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
 
         var total = await filtered.CountAsync();
         var pageIds = await filtered
-            .OrderByDescending(e => e.EndDate)
+            .OrderByDescending(e => e.CreationDate)
             .ThenByDescending(e => e.Id)
             .Skip(filter.Skip)
             .Take(filter.Take)

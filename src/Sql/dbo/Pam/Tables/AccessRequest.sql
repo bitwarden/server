@@ -33,11 +33,12 @@ CREATE NONCLUSTERED INDEX [IX_AccessRequest_CollectionId_Action_NotAfter]
     ON [dbo].[AccessRequest] ([CollectionId] ASC, [Action] ASC, [NotAfter] ASC);
 GO
 
--- Supports the approver history read; [CreationDate] leads since the OR can't seek.
--- [Action]/[NotAfter] are INCLUDEd to settle the OR before the clustered lookup.
+-- Supports the approver history reads; [CreationDate] leads since the OR can't seek.
+-- [Action]/[NotAfter] are INCLUDEd to settle the OR before the clustered lookup; [RequesterId]/[ExtensionOfLeaseId]
+-- let the history page read its rows without one.
 CREATE NONCLUSTERED INDEX [IX_AccessRequest_CollectionId_CreationDate]
     ON [dbo].[AccessRequest] ([CollectionId] ASC, [CreationDate] ASC)
-    INCLUDE ([Action], [NotAfter]);
+    INCLUDE ([Action], [NotAfter], [RequesterId], [ExtensionOfLeaseId]);
 GO
 
 -- Supports the requester's TOP(250) history page via a backward scan on [CreationDate].

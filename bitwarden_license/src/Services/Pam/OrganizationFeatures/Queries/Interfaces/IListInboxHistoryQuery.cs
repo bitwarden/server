@@ -7,7 +7,7 @@ public interface IListInboxHistoryQuery
 {
     /// <summary>
     /// Returns one page of the requests that have ended within the history window, on the collections the user can
-    /// Manage and among the user's own, newest end first.
+    /// Manage and among the user's own, newest request first.
     /// </summary>
     Task<AccessRequestHistoryPage> GetHistoryAsync(Guid userId, DateTime now, AccessRequestHistoryQueryOptions options);
 }

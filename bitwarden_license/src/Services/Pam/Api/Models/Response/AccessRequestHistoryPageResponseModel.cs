@@ -3,7 +3,7 @@ using Bit.Pam.Models;
 
 namespace Bit.Services.Pam.Api.Models.Response;
 
-/// <summary>One page of the approver history, newest end first, with what the filters can offer.</summary>
+/// <summary>One page of the approver history, newest request first, with what the filters can offer.</summary>
 public class AccessRequestHistoryPageResponseModel : ResponseModel
 {
     public AccessRequestHistoryPageResponseModel(AccessRequestHistoryPage page)
