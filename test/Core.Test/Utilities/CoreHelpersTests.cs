@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Text;
 using AutoFixture;
 using Bit.Core.AdminConsole.Context;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -486,9 +487,84 @@ public class CoreHelpersTests
     [InlineData("user@example.com", "user[at]example[dot]com")]
     [InlineData("https://bitwarden.com", "bitwarden[dot]com")]
     [InlineData("ftp://files.example.org", "files[dot]example[dot]org")]
+    [InlineData("HTTPS://BITWARDEN.COM", "BITWARDEN[dot]COM")]
+    [InlineData("see https://a.io and http://b.io", "see a[dot]io and b[dot]io")]
+    [InlineData("my-app://open", "my-open")]
+    [InlineData("under_score://x", "x")]
+    [InlineData("://leading", "leading")]
+    [InlineData("a ://b", "a ://b")]
+    [InlineData("trailing.", "trailing.")]
+    [InlineData("a..b", "a.[dot]b")]
+    [InlineData("a@://", "a[at]://")]
+    [InlineData("Acme Corp", "Acme Corp")]
+    [InlineData("Ünïcødé://näme", "näme")]
+    [InlineData("support@https://example.com", "support[at]example[dot]com")]
+    [InlineData("x.y://z", "x[dot]z")]
+    [InlineData("Acme 2.0", "Acme 2[dot]0")]
+    [InlineData("", "")]
     public void SanitizeForEmail_NeutralizesAddressesAndLinks(string value, string expected)
     {
         Assert.Equal(expected, CoreHelpers.SanitizeForEmail(value));
+    }
+
+    [Fact]
+    public void SanitizeForEmail_NullInput_ReturnsNull()
+    {
+        Assert.Null(CoreHelpers.SanitizeForEmail(null!));
+    }
+
+    [Theory]
+    [InlineData("https\u200C://example.com", "https\u200C://example[dot]com")]
+    [InlineData("https\u200D://example.com", "https\u200D://example[dot]com")]
+    [InlineData("my\u200Capp://open", "my\u200Copen")]
+    public void SanitizeForEmail_TreatsZeroWidthJoinersAsNonWordCharacters(string value, string expected)
+    {
+        // U+200C and U+200D are not \w characters, so a "://" directly after one is not a scheme
+        // and is kept, and a word run after one is stripped on its own. The regular expression
+        // this method replaced used the \b anchor, which treated them as word characters; that
+        // difference is deliberate and only affects malformed schemes.
+        Assert.Equal(expected, CoreHelpers.SanitizeForEmail(value));
+    }
+
+    [Theory]
+    [InlineData("http://://bitwarden.com", "bitwarden[dot]com")]
+    [InlineData("a:/b:///", "")]
+    [InlineData("xc://ab://", "")]
+    public void SanitizeForEmail_StripsSchemesExposedByEarlierStripping(string value, string expected)
+    {
+        Assert.Equal(expected, CoreHelpers.SanitizeForEmail(value));
+    }
+
+    [Fact]
+    public void SanitizeForEmail_LargeInput_CompletesInLinearTime()
+    {
+        // Before the rewrite this shape of input required one full regex pass per "://",
+        // i.e. quadratic time; at this size that took minutes. Linear processing takes
+        // milliseconds, so a generous bound still cleanly separates the two.
+        var value = "a://" + string.Concat(Enumerable.Repeat("://", 100_000));
+        var stopwatch = Stopwatch.StartNew();
+
+        var result = CoreHelpers.SanitizeForEmail(value);
+
+        stopwatch.Stop();
+        Assert.Equal(string.Empty, result);
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(2),
+            $"SanitizeForEmail took {stopwatch.Elapsed} on {value.Length} characters");
+    }
+
+    [Fact]
+    public void SanitizeForEmail_LargeMixedInput_CompletesInLinearTime()
+    {
+        var value = string.Concat(Enumerable.Repeat("user@example.com https://bitwarden.com/x ", 25_000));
+        var stopwatch = Stopwatch.StartNew();
+
+        var result = CoreHelpers.SanitizeForEmail(value);
+
+        stopwatch.Stop();
+        Assert.DoesNotContain("@", result);
+        Assert.DoesNotContain("://", result);
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(2),
+            $"SanitizeForEmail took {stopwatch.Elapsed} on {value.Length} characters");
     }
 
     [Theory]
