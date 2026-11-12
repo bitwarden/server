@@ -73,6 +73,8 @@ internal sealed class SmtpOAuthOptionsSetup :
             ClientSecret = smtp.OAuth.ClientSecret!,
             Scope = smtp.OAuth.Scope!,
             GrantType = smtp.OAuth.GrantType!,
+            SigningKey = smtp.OAuth.SigningKey!,
+            Claims = smtp.OAuth.Claims,
         },
     };
 

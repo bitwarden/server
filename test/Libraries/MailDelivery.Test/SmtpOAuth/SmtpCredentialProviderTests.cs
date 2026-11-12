@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
 using Bit.Core.Platform.Mail.Delivery;
 using MailKit.Security;
 using Microsoft.Extensions.Logging;
@@ -93,6 +94,51 @@ public class SmtpCredentialProviderTests
         var sut = CreateSut();
 
         Assert.NotNull(sut);
+    }
+
+    [Fact]
+    public void Constructor_CustomOAuth_JwtBearer_DoesNotThrow()
+    {
+        using var rsa = RSA.Create(2048);
+        _options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+        _options.Smtp.OutboundMailbox = "smtp-user@example.com";
+        _options.Smtp.OAuth.TokenEndpoint = "https://auth.example.com/oauth2/token";
+        _options.Smtp.OAuth.Scope = "smtp.send";
+        _options.Smtp.OAuth.GrantType = "urn:ietf:params:oauth:grant-type:jwt-bearer";
+        _options.Smtp.OAuth.SigningKey = rsa.ExportPkcs8PrivateKeyPem();
+        _options.Smtp.OAuth.Claims["iss"] = "service-account@example.com";
+
+        var sut = CreateSut();
+
+        Assert.NotNull(sut);
+    }
+
+    [Fact]
+    public async Task GetCredentialsAsync_CustomOAuth_JwtBearer_FetchesToken()
+    {
+        using var rsa = RSA.Create(2048);
+        _options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+        _options.Smtp.OutboundMailbox = "smtp-user@example.com";
+        _options.Smtp.OAuth.TokenEndpoint = "https://auth.example.com/oauth2/token";
+        _options.Smtp.OAuth.Scope = "smtp.send";
+        _options.Smtp.OAuth.GrantType = "urn:ietf:params:oauth:grant-type:jwt-bearer";
+        _options.Smtp.OAuth.SigningKey = rsa.ExportPkcs8PrivateKeyPem();
+        _options.Smtp.OAuth.Claims["iss"] = "service-account@example.com";
+
+        _mockHandler
+            .Expect(HttpMethod.Post, "https://auth.example.com/oauth2/token")
+            .Respond(_ => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(new { access_token = "jwt-bearer-token", expires_in = 3599 }),
+            });
+
+        var sut = CreateSut();
+
+        var credentials = Assert.IsType<SaslMechanismOAuth2>(
+            await sut.GetCredentialsAsync(CancellationToken.None));
+        Assert.Equal("jwt-bearer-token", credentials.Credentials.Password);
+
+        _mockHandler.VerifyNoOutstandingExpectation();
     }
 
     [Fact]

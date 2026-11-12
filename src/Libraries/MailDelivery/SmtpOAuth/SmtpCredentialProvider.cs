@@ -40,15 +40,28 @@ internal sealed class SmtpCredentialProvider : ISmtpCredentialProvider
             oauth.ClientSecret,
             oauth.Scope);
 
-        ClientCredentialsHandler CreateHandlerFromCustomOAuth(CustomOAuthConfig oauth) => new(
-            httpClientFactory,
-            timeProvider,
-            loggerFactory.CreateLogger<ClientCredentialsHandler>(),
-            oauth.TokenEndpoint,
-            oauth.OutboundMailbox,
-            oauth.ClientId,
-            oauth.ClientSecret,
-            oauth.Scope);
+        // CustomOAuth supports two grant types, so this dispatches on GrantType (a plain string
+        // switch, not subject to CS8509) rather than AuthType.
+        OAuthHandler CreateHandlerFromCustomOAuth(CustomOAuthConfig oauth) => oauth.GrantType switch
+        {
+            JwtBearerHandler.GrantType => new JwtBearerHandler(
+                httpClientFactory,
+                timeProvider,
+                loggerFactory.CreateLogger<JwtBearerHandler>(),
+                oauth.TokenEndpoint,
+                oauth.OutboundMailbox,
+                oauth.SigningKey,
+                oauth.Claims),
+            _ => new ClientCredentialsHandler(
+                httpClientFactory,
+                timeProvider,
+                loggerFactory.CreateLogger<ClientCredentialsHandler>(),
+                oauth.TokenEndpoint,
+                oauth.OutboundMailbox,
+                oauth.ClientId,
+                oauth.ClientSecret,
+                oauth.Scope),
+        };
     }
 
     public Task<SaslMechanism> GetCredentialsAsync(CancellationToken cancellationToken)
