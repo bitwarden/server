@@ -81,10 +81,10 @@ public class Saml2CouldHandleLogoutMessageTests
     // CouldHandleAsync.
     private static async Task<Saml2CouldHandleArrangement> ArrangeLogoutAsync(string messageXml,
         X509Certificate2 idpCertificate, X509Certificate2 spCertificate, bool wantAssertionsSigned,
-        string formField = "SAMLRequest", bool featureFlagEnabled = true)
+        string formField = "SAMLRequest")
     {
         var (testData, samlOptions, organizationId) =
-            await BuildSchemeAsync(idpCertificate, spCertificate, wantAssertionsSigned, featureFlagEnabled);
+            await BuildSchemeAsync(idpCertificate, spCertificate, wantAssertionsSigned);
 
         var context = BuildPostContext(testData, LogoutPath(organizationId), formField, messageXml);
 
