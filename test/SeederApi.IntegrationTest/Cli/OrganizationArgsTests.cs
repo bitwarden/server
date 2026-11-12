@@ -221,6 +221,22 @@ public class OrganizationArgsTests
             billing.Profile);
     }
 
+    [Fact]
+    public void ToOptions_UsePam_MapsToOverrides()
+    {
+        var args = BaseArgs();
+        args.UsePam = true;
+
+        Assert.True(args.ToOptions().Overrides?.UsePam);
+    }
+
+    [Fact]
+    public void ToOptions_UsePamUnset_LeavesOverrideNull()
+    {
+        // Null means "leave the plan default alone" rather than explicitly turning PAM off.
+        Assert.Null(BaseArgs().ToOptions().Overrides?.UsePam);
+    }
+
     private static OrganizationArgs BaseArgs() => new()
     {
         Name = "Org",
