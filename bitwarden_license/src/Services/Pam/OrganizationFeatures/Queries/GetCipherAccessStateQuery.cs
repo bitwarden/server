@@ -92,10 +92,13 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
             canRequest = governingRule.RequiresHumanApproval
                 || _ruleEngine.Evaluate(governingRule.Conditions, signals).Outcome == AccessEvaluationOutcome.Allow;
 
-            // Another member holding the cipher's single active lease refuses a new lease too, as AccessPreCheckQuery
-            // reports. The requester check covers the caller's own lease starting between the two reads. Only the bool
-            // leaves this method: the holder's identity and the lease's timing are never surfaced.
-            if (canRequest && await _singleActiveLeaseEvaluator.AppliesAsync(userId, cipherId))
+            // An automatic request's lease starts now, so another member holding the cipher's single active lease
+            // refuses it, as activation would. A human-approval request asks for a future window, which Submit accepts
+            // and the slot may be free for, so it stays requestable, as the client's request form treats it. The
+            // requester check covers the caller's own lease starting between the two reads. Only the bool leaves this
+            // method: the holder's identity and the lease's timing are never surfaced.
+            if (canRequest && !governingRule.RequiresHumanApproval
+                && await _singleActiveLeaseEvaluator.AppliesAsync(userId, cipherId))
             {
                 var holder = await _accessLeaseRepository.GetActiveByCipherIdAsync(cipherId, now);
                 canRequest = holder is null || holder.RequesterId == userId;

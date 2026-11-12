@@ -482,6 +482,31 @@ public class GetCipherAccessStateQueryTests
             .AppliesAsync(default, default);
     }
 
+    // A human-approval request asks for a future window, which Submit accepts, so a held slot doesn't refuse it.
+    [Theory, BitAutoData]
+    public async Task GetStateAsync_SingletonHeldByAnotherMember_HumanApprovalRule_CanRequest(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId, AccessLease othersLease)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
+            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: true, []));
+        sutProvider.GetDependency<ISingleActiveLeaseEvaluator>().AppliesAsync(userId, cipherId).Returns(true);
+        othersLease.CipherId = cipherId;
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .GetActiveByCipherIdAsync(cipherId, _now)
+            .Returns(othersLease);
+
+        var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
+
+        Assert.True(result.CanRequest);
+        await sutProvider.GetDependency<ISingleActiveLeaseEvaluator>().DidNotReceiveWithAnyArgs()
+            .AppliesAsync(default, default);
+        await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
+            .GetActiveByCipherIdAsync(default, default);
+    }
+
     // Already refused on its conditions, so the extra read is skipped.
     [Theory, BitAutoData]
     public async Task GetStateAsync_ConditionsRefuse_SkipsTheSingletonCheck(
