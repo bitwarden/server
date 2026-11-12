@@ -36,6 +36,7 @@ public class ExternalCallbackRequestValidationTests(SsoApplicationFactory factor
         Assert.False(response.IsSuccessStatusCode);
         // The endpoint will throw an exception when authentication fails
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Contains("External authentication error", await response.Content.ReadAsStringAsync());
     }
 
     /*
@@ -55,7 +56,8 @@ public class ExternalCallbackRequestValidationTests(SsoApplicationFactory factor
         var response = await client.GetAsync("/Account/ExternalCallback");
 
         // Assert
-        Assert.False(response.IsSuccessStatusCode);
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Contains("External authentication error", await response.Content.ReadAsStringAsync());
     }
 
     /*
