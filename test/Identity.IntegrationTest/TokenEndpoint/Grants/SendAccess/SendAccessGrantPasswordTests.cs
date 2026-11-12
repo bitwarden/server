@@ -4,14 +4,13 @@ using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
 using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 using Bit.Identity.IntegrationTest.Helpers;
 using Bit.IntegrationTestCommon.Factories;
-using Bitwarden.Server.Sdk.Features;
 using Duende.IdentityModel;
 using NSubstitute;
 using Xunit;
 
 namespace Bit.Identity.IntegrationTest.TokenEndpoint.Grants.SendAccess;
 
-public class SendPasswordRequestValidatorIntegrationTests(IdentityApplicationFactory _factory) : IClassFixture<IdentityApplicationFactory>
+public class SendAccessGrantPasswordTests(IdentityApplicationFactory _factory) : IClassFixture<IdentityApplicationFactory>
 {
     [Fact]
     public async Task SendAccess_PasswordProtectedSend_ValidPassword_ReturnsAccessToken()
@@ -25,11 +24,6 @@ public class SendPasswordRequestValidatorIntegrationTests(IdentityApplicationFac
         {
             builder.ConfigureServices(services =>
             {
-                // Enable feature flag
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(Arg.Any<string>()).Returns(true);
-                services.AddSingleton(featureService);
-
                 // Mock send authentication query
                 var sendAuthQuery = Substitute.For<ISendAuthenticationQuery>();
                 sendAuthQuery.GetAuthenticationMethod(sendId)
@@ -44,7 +38,7 @@ public class SendPasswordRequestValidatorIntegrationTests(IdentityApplicationFac
             });
         }).CreateClient();
 
-        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId, password: clientPasswordHash);
+        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId, password: clientPasswordHash);
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -68,10 +62,6 @@ public class SendPasswordRequestValidatorIntegrationTests(IdentityApplicationFac
         {
             builder.ConfigureServices(services =>
             {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(Arg.Any<string>()).Returns(true);
-                services.AddSingleton(featureService);
-
                 var sendAuthQuery = Substitute.For<ISendAuthenticationQuery>();
                 sendAuthQuery.GetAuthenticationMethod(sendId)
                     .Returns(new ResourcePassword(passwordHash));
@@ -85,7 +75,7 @@ public class SendPasswordRequestValidatorIntegrationTests(IdentityApplicationFac
             });
         }).CreateClient();
 
-        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId, password: wrongClientPasswordHash);
+        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId, password: wrongClientPasswordHash);
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -107,10 +97,6 @@ public class SendPasswordRequestValidatorIntegrationTests(IdentityApplicationFac
         {
             builder.ConfigureServices(services =>
             {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(Arg.Any<string>()).Returns(true);
-                services.AddSingleton(featureService);
-
                 var sendAuthQuery = Substitute.For<ISendAuthenticationQuery>();
                 sendAuthQuery.GetAuthenticationMethod(sendId)
                     .Returns(new ResourcePassword(passwordHash));
@@ -121,7 +107,7 @@ public class SendPasswordRequestValidatorIntegrationTests(IdentityApplicationFac
             });
         }).CreateClient();
 
-        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId); // No password
+        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId); // No password
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -149,10 +135,6 @@ public class SendPasswordRequestValidatorIntegrationTests(IdentityApplicationFac
         {
             builder.ConfigureServices(services =>
             {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(Arg.Any<string>()).Returns(true);
-                services.AddSingleton(featureService);
-
                 var sendAuthQuery = Substitute.For<ISendAuthenticationQuery>();
                 sendAuthQuery.GetAuthenticationMethod(sendId)
                     .Returns(new ResourcePassword(passwordHash));
@@ -166,7 +148,7 @@ public class SendPasswordRequestValidatorIntegrationTests(IdentityApplicationFac
             });
         }).CreateClient();
 
-        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId, string.Empty);
+        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId, string.Empty);
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);

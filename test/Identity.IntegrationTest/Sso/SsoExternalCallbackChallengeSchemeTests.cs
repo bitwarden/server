@@ -11,7 +11,7 @@ using Xunit;
 
 namespace Bit.Identity.IntegrationTest.Sso;
 
-public class SsoExternalCallbackTests
+public class SsoExternalCallbackChallengeSchemeTests
 {
     private const string UserEmail = "sso_external_callback_user@email.com";
 

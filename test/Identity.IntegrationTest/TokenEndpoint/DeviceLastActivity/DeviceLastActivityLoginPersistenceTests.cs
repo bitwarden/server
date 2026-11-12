@@ -9,6 +9,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Bitwarden.Server.Sdk.Features;
 using NSubstitute;
 using Xunit;
+using static Bit.Identity.IntegrationTest.Helpers.TokenEndpointTestHelpers;
 
 namespace Bit.Identity.IntegrationTest.TokenEndpoint.DeviceLastActivity;
 
@@ -24,15 +25,8 @@ namespace Bit.Identity.IntegrationTest.TokenEndpoint.DeviceLastActivity;
 /// have bucketed against an anonymous context. Post-fix, the snapshot must show the
 /// resolved User / Device populated immediately before the flag check fires.
 /// </summary>
-public class DevicesLastActivityDateBumpTests
+public class DeviceLastActivityLoginPersistenceTests
 {
-    private static readonly KeysRequestModel TEST_ACCOUNT_KEYS = new()
-    {
-        AccountKeys = null,
-        PublicKey = "public-key",
-        EncryptedPrivateKey = "encrypted-private-key",
-    };
-
     private readonly record struct ContextSnapshot(Guid? UserId, string? DeviceIdentifier);
 
     // TODO: PM-34091 - when cleaning up the feature flag, drop the SubstituteService

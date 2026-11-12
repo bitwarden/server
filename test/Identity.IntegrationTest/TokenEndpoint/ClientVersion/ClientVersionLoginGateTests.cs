@@ -7,15 +7,16 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Constants;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using static Bit.Identity.IntegrationTest.Helpers.TokenEndpointTestHelpers;
 
 namespace Bit.Identity.IntegrationTest.TokenEndpoint.ClientVersion;
 
-public class ClientVersionGateTests : IClassFixture<IdentityApplicationFactory>
+public class ClientVersionLoginGateTests : IClassFixture<IdentityApplicationFactory>
 {
     private readonly IdentityApplicationFactory _factory;
     private const string DefaultEncryptedString = "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
 
-    public ClientVersionGateTests(IdentityApplicationFactory factory)
+    public ClientVersionLoginGateTests(IdentityApplicationFactory factory)
     {
         _factory = factory;
         ReinitializeDbForTests(_factory);
@@ -135,16 +136,6 @@ public class ClientVersionGateTests : IClassFixture<IdentityApplicationFactory>
             });
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-    }
-
-    private void ReinitializeDbForTests(IdentityApplicationFactory factory)
-    {
-        var databaseContext = factory.GetDatabaseContext();
-        databaseContext.Policies.RemoveRange(databaseContext.Policies);
-        databaseContext.OrganizationUsers.RemoveRange(databaseContext.OrganizationUsers);
-        databaseContext.Organizations.RemoveRange(databaseContext.Organizations);
-        databaseContext.Users.RemoveRange(databaseContext.Users);
-        databaseContext.SaveChanges();
     }
 
     private static void NormalizeEncryptedStrings(RegisterFinishRequestModel requestModel)

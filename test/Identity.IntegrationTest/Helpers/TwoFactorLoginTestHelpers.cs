@@ -157,14 +157,6 @@ public static class TwoFactorLoginTestHelpers
             TwoFactorProviders = orgTwoFactor,
         });
 
-        if (orgTwoFactor != null)
-        {
-            factory.WithWebHostBuilder(builder =>
-            {
-                builder.UseSetting("globalSettings:Duo:AKey", "WJHB374KM3N5hglO9hniwbkibg$789EfbhNyLpNq1");
-            });
-        }
-
         // Register User to Organization
         var organizationUserRepository = factory.Services.GetRequiredService<IOrganizationUserRepository>();
         var orgUserPermissions =

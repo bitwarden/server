@@ -11,6 +11,7 @@ using Bit.Test.Common.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Xunit;
+using static Bit.Identity.IntegrationTest.Helpers.TokenEndpointTestHelpers;
 
 namespace Bit.Identity.IntegrationTest.TokenEndpoint.NewDeviceVerification;
 
@@ -20,7 +21,7 @@ namespace Bit.Identity.IntegrationTest.TokenEndpoint.NewDeviceVerification;
 /// the device that was challenged for it.
 /// </summary>
 [SutProviderCustomize]
-public class NewDeviceVerificationTests
+public class NewDeviceVerificationLoginTests
 {
     private const string EnableNewDeviceVerificationKey = "globalSettings:enableNewDeviceVerification";
 
@@ -36,13 +37,6 @@ public class NewDeviceVerificationTests
     /// examined, which would let the assertion pass without exercising redemption.
     /// </summary>
     private const string OtherDeviceIdentifier = "other-device-identifier";
-
-    private static readonly KeysRequestModel TEST_ACCOUNT_KEYS = new()
-    {
-        AccountKeys = null,
-        PublicKey = "public-key",
-        EncryptedPrivateKey = "encrypted-private-key",
-    };
 
     [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
     public async Task NewDeviceVerification_UnrecognizedDevice_ChallengesAndSendsCode(
