@@ -49,7 +49,7 @@ internal static class SeederStepTestHelpers
                 PublicKey = orgKeys.PublicKey,
                 PrivateKey = orgKeys.PrivateKey
             },
-            context.GetMangler());
+            context.Mangler);
         context.Organization = org;
         context.OrgKeys = orgKeys;
         context.Domain = domain;

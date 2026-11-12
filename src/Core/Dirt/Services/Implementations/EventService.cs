@@ -325,9 +325,9 @@ public class EventService : IEventService
                 SystemUser = systemUser
             };
 
-            if (systemUser is EventSystemUser.SCIM)
+            if (systemUser is EventSystemUser.SCIM or EventSystemUser.ScheduledJob)
             {
-                // System user only used for SCIM logs in this method
+                // SCIM and scheduled job events have no client device,
                 // and we want event logs to report server instead of unknown
                 e.DeviceType = DeviceType.Server;
             }

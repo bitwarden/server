@@ -115,7 +115,7 @@ Design, knobs and calibration: `Seeds/docs/access-shape.md`.
 
 ## Regression Testing
 
-Changes to `Factories/`, `Steps/`, `Scenes/`, or `Recipes/` need a regression pass against a live local SQL Server database. `Seeds/docs/regression.md` maps each changed path to the preset that reaches it and the assertion that proves it, and lists the known non-regressions. Claude drives the CLI, API, and SQL (CLI via `seeding-bitwarden-data`, SQL via `exploring-bitwarden-data`); the developer smoke-tests the web vault.
+Changes to `Factories/`, `Steps/`, `Scenes/`, or `Recipes/` need a regression pass against a live local SQL Server database. `Seeds/docs/regression.md` maps each changed path to the preset that reaches it and the assertion that proves it, and lists the known non-regressions. The `live-testing-seeder-changes` skill drives the pass: the CLI, the SeederApi, SQL through `exploring-bitwarden-data`, and the web vault through the Playwright MCP.
 
 ## Data/ File Organization
 
@@ -222,9 +222,9 @@ Developer-facing documentation in `Seeds/docs/scenarios/`. Each file maps an eng
 **Maintenance rules:**
 
 - When adding a new preset, check if an existing scenario should reference it as a variation
-- When renaming or removing a preset, update the cases in `.claude/skills/seeding-bitwarden-data/evals/evals.json`
+- When renaming or removing a preset, update the cases in `.claude/skills/seeding-bitwarden-data/evals/evals.json` and the preset names in `.claude/skills/live-testing-seeder-changes/` (`SKILL.md` and `evals/evals.json`)
 - When adding a new command or flag, check if it enables a new scenario or changes an existing one
-- When CLI flags, commands, or preset names change, scan all `*.md` files under `Seeds/` and `SeederUtility/` for stale references
+- When CLI flags, commands, preset names, or console output change, scan all `*.md` files under `Seeds/` and `SeederUtility/`, plus `.claude/skills/live-testing-seeder-changes/` (`SKILL.md` and `evals/evals.json`), for stale references
 - Scenario files follow the template in `Seeds/docs/scenarios/README.md`
 - Never duplicate CLI flag documentation; link to `SeederUtility/README.md`
 - Never duplicate preset catalog details; link to `Seeds/docs/presets.md`
