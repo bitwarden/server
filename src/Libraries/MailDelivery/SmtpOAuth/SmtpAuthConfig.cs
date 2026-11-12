@@ -55,3 +55,17 @@ internal sealed record CustomOAuthConfig : SmtpAuthConfig
         $"ClientId = {ClientId}, ClientSecret = [redacted], Scope = {Scope}, GrantType = {GrantType}, " +
         $"SigningKey = [redacted], Claims = [redacted] }}";
 }
+
+internal sealed record GoogleOAuthConfig : SmtpAuthConfig
+{
+    public required string TokenEndpoint { get; init; }
+    public required string OutboundMailbox { get; init; }
+    public required string SigningKey { get; init; }
+    public required IReadOnlyDictionary<string, string> Claims { get; init; }
+
+    // Overrides the generated record ToString, which prints every property, to keep the
+    // signing key and claims out of logs.
+    public override string ToString() =>
+        $"{nameof(GoogleOAuthConfig)} {{ TokenEndpoint = {TokenEndpoint}, OutboundMailbox = {OutboundMailbox}, " +
+        $"SigningKey = [redacted], Claims = [redacted] }}";
+}
