@@ -25,16 +25,16 @@ using Xunit;
 namespace Bit.Sso.IntegrationTest.ExternalCallback;
 
 /// <summary>
-/// When an SSO sign-in moves a Staged member that has Privileged Controls access to Invited, the member starts
+/// When an SSO login attempt moves a Staged member that has Privileged Controls access to Invited, the member starts
 /// to use a Privileged Controls seat. The SSO callback must reserve that seat first. When no seat can be reserved,
 /// the member still moves to Invited, but without Privileged Controls access. When the reservation fails because
 /// autoscale reached its limit, the organization's Owners also get an email that the member needs a seat.
 /// </summary>
 /// <remarks>
-/// Each test does the SSO callback for one of two sign-ins against a Staged member: a person with no Bitwarden
-/// account, whom SSO provisions just in time, or a person with an existing Bitwarden account, who gets an invite
-/// email. Password Manager seats are unlimited unless a test sets them, so the Password Manager seat check passes.
-/// Plans come from a substituted pricing client, so no test calls the pricing service. Each test sets
+/// Each test does the SSO callback for one of two SSO login attempts against a Staged member: a person with no
+/// Bitwarden account, whom SSO provisions just in time, or a person with an existing Bitwarden account, who gets an
+/// invite email. Password Manager seats are unlimited unless a test sets them, so the Password Manager seat check
+/// passes. Plans come from a substituted pricing client, so no test calls the pricing service. Each test sets
 /// <see cref="FeatureFlagKeys.PM39883_Pam_Billing_Support"/>. On cloud with the flag on, a reservation can autoscale
 /// seats. With the flag off, the seat count is a hard limit and nothing autoscales.
 /// </remarks>
@@ -53,7 +53,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_WithFreeSeat_KeepsPrivilegedControls()
     {
         // Arrange — one Privileged Controls seat, none taken, autoscale limit of one.
-        var testData = await JitSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: 1)
+        var testData = await JitLoginAttempt(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: 1)
             .BuildAsync();
         var ownerEmail = await SeedOwnerAsync(testData);
 
@@ -85,7 +85,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_WhenAutoscaleCanGrow_AddsSeatAndKeepsPrivilegedControls()
     {
         // Arrange — one Privileged Controls seat, already taken, no autoscale limit.
-        var testData = await JitSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null)
+        var testData = await JitLoginAttempt(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null)
             .BuildAsync();
         await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
@@ -114,7 +114,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_WhenAutoscaleCanGrowOnPaidSubscription_BuysSeatAndKeepsPrivilegedControls()
     {
         // Arrange — one Privileged Controls seat, already taken, no autoscale limit, billed on a Stripe subscription.
-        var testData = await JitSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null,
+        var testData = await JitLoginAttempt(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null,
                 configureOrganization: org => org.GatewaySubscriptionId = _subscriptionId)
             .WithMockedStripeAdapter(ReturnSubscriptionWithOnePrivilegedControlsSeat)
             .BuildAsync();
@@ -150,7 +150,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     {
         // Arrange — one Privileged Controls seat, already taken, no autoscale limit. Another organization claims
         // the member's email domain and blocks account creation for it.
-        var testData = await JitSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null)
+        var testData = await JitLoginAttempt(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null)
             .BuildAsync();
         await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
@@ -179,14 +179,14 @@ public class ExternalCallbackPrivilegedControlsSeatTests
 
     /*
     * DEGRADED PATH: A just-in-time provisioned user claims a Staged member with Privileged Controls access, and
-    * the organization is at its Privileged Controls autoscale limit. The sign-in still succeeds. The member moves
-    * to Invited without Privileged Controls access, and the Owners get an email that names the member.
+    * the organization is at its Privileged Controls autoscale limit. The SSO callback still accepts the login. The
+    * member moves to Invited without Privileged Controls access, and the Owners get an email that names the member.
     */
     [Fact]
     public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_AtSeatLimit_MovesToInvitedWithoutPrivilegedControlsAndEmailsOwners()
     {
         // Arrange — one Privileged Controls seat, already taken, autoscale limit of one.
-        var testData = await JitSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: 1)
+        var testData = await JitLoginAttempt(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: 1)
             .BuildAsync();
         var ownerEmail = await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
@@ -218,7 +218,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     {
         // Arrange — one Privileged Controls seat, already taken, autoscale limit of one. Another organization
         // claims the member's email domain and blocks account creation for it.
-        var testData = await JitSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: 1)
+        var testData = await JitLoginAttempt(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: 1)
             .BuildAsync();
         await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
@@ -255,7 +255,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_WithFreeSeatAndBillingSupportFlagOff_KeepsPrivilegedControlsAndDoesNotEmail()
     {
         // Arrange — one Privileged Controls seat, none taken, autoscale limit of one, billing support flag off.
-        var testData = await JitSignIn(billingSupportFlag: false, pamSeats: 1, maxAutoscalePamSeats: 1)
+        var testData = await JitLoginAttempt(billingSupportFlag: false, pamSeats: 1, maxAutoscalePamSeats: 1)
             .BuildAsync();
         await SeedOwnerAsync(testData);
 
@@ -285,7 +285,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_WithNoFreeSeatAndBillingSupportFlagOff_MovesToInvitedWithoutPrivilegedControlsAndDoesNotEmail()
     {
         // Arrange — one Privileged Controls seat, already taken, no autoscale limit, billing support flag off.
-        var testData = await JitSignIn(billingSupportFlag: false, pamSeats: 1, maxAutoscalePamSeats: null)
+        var testData = await JitLoginAttempt(billingSupportFlag: false, pamSeats: 1, maxAutoscalePamSeats: null)
             .BuildAsync();
         await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
@@ -314,7 +314,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_WithZeroSeats_MovesToInvitedWithoutPrivilegedControlsAndEmailsOwners()
     {
         // Arrange
-        var testData = await JitSignIn(billingSupportFlag: true, pamSeats: 0, maxAutoscalePamSeats: null)
+        var testData = await JitLoginAttempt(billingSupportFlag: true, pamSeats: 0, maxAutoscalePamSeats: null)
             .BuildAsync();
         var ownerEmail = await SeedOwnerAsync(testData);
 
@@ -342,7 +342,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_JitAgainstStagedOrgUserWithPrivilegedControls_OnSelfHostedWithNoFreeSeat_MovesToInvitedWithoutPrivilegedControlsAndDoesNotEmail()
     {
         // Arrange — one Privileged Controls seat, already taken.
-        var testData = await JitSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null)
+        var testData = await JitLoginAttempt(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null)
             .AsSelfHosted()
             .WithSelfHostedEnvironment()
             .BuildAsync();
@@ -372,7 +372,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_JitAgainstStagedOrgUserWithoutPrivilegedControls_AtSeatLimit_DoesNotReserveSeatOrEmail()
     {
         // Arrange — one Privileged Controls seat, already taken, autoscale limit of one.
-        var testData = await JitSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: 1,
+        var testData = await JitLoginAttempt(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: 1,
                 stagedMemberAccessPam: false)
             .BuildAsync();
         await SeedOwnerAsync(testData);
@@ -395,7 +395,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     /*
     * FAILURE PATH: A just-in-time provisioned user claims a Staged member with Privileged Controls access, but
     * the organization has no Password Manager seat and cannot autoscale one. The Password Manager seat check runs
-    * first and stops the sign-in, so the SSO callback must not buy a Privileged Controls seat for a member who
+    * first and stops the login, so the SSO callback must not buy a Privileged Controls seat for a member who
     * stays Staged.
     */
     [Fact]
@@ -403,7 +403,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     {
         // Arrange — Password Manager seats at cap and at the autoscale limit. Privileged Controls autoscale would
         // succeed (no limit), so a reservation would show as a raised PamSeats value.
-        var testData = await JitSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null,
+        var testData = await JitLoginAttempt(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null,
                 configureOrganization: org =>
                 {
                     org.Seats = 5;
@@ -428,7 +428,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     }
 
     /*
-    * SUCCESS PATH: A person with an existing Bitwarden account signs in with SSO against a Staged member with
+    * SUCCESS PATH: A person with an existing Bitwarden account tries to log in with SSO against a Staged member with
     * Privileged Controls access, and the organization has a free Privileged Controls seat. The member moves to
     * Invited with access, gets an invite email, and the Owners get no seat-needed email. The member brings the
     * seats in use to exactly the autoscale limit, so the Owners get the limit-reached email.
@@ -437,7 +437,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_ExistingUserAgainstStagedOrgUserWithPrivilegedControls_WithFreeSeat_InvitesWithPrivilegedControls()
     {
         // Arrange — one Privileged Controls seat, none taken, autoscale limit of one.
-        var testData = await ExistingUserSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: 1)
+        var testData = await ExistingUserLoginAttempt(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: 1)
             .BuildAsync();
         var ownerEmail = await SeedOwnerAsync(testData);
 
@@ -460,7 +460,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     }
 
     /*
-    * DEGRADED PATH: A person with an existing Bitwarden account signs in with SSO against a Staged member with
+    * DEGRADED PATH: A person with an existing Bitwarden account tries to log in with SSO against a Staged member with
     * Privileged Controls access, and the organization is at its Privileged Controls autoscale limit. The member
     * moves to Invited without access and gets an invite email. The Owners get an email that names the member.
     */
@@ -468,7 +468,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_ExistingUserAgainstStagedOrgUserWithPrivilegedControls_AtSeatLimit_InvitesWithoutPrivilegedControlsAndEmailsOwners()
     {
         // Arrange — one Privileged Controls seat, already taken, autoscale limit of one.
-        var testData = await ExistingUserSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: 1)
+        var testData = await ExistingUserLoginAttempt(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: 1)
             .BuildAsync();
         var ownerEmail = await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
@@ -490,17 +490,17 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     }
 
     /*
-    * SUCCESS PATH: On cloud with the billing support flag off, a person with an existing Bitwarden account signs in
-    * with SSO against a Staged member with Privileged Controls access, and the organization has a free Privileged
-    * Controls seat. The member moves to Invited with access and gets an invite email, and no seat is added. The
-    * member brings the seats in use to exactly the autoscale limit, but the Owners get no limit-reached email,
-    * because autoscale does not run while the flag is off.
+    * SUCCESS PATH: On cloud with the billing support flag off, a person with an existing Bitwarden account tries to log
+    * in with SSO against a Staged member with Privileged Controls access, and the organization has a free Privileged
+    * Controls seat. The member moves to Invited with access and gets an invite email, and no seat is added. The member
+    * brings the seats in use to exactly the autoscale limit, but the Owners get no limit-reached email, because
+    * autoscale does not run while the flag is off.
     */
     [Fact]
     public async Task ExternalCallback_ExistingUserAgainstStagedOrgUserWithPrivilegedControls_WithFreeSeatAndBillingSupportFlagOff_InvitesWithPrivilegedControlsAndDoesNotEmail()
     {
         // Arrange — one Privileged Controls seat, none taken, autoscale limit of one, billing support flag off.
-        var testData = await ExistingUserSignIn(billingSupportFlag: false, pamSeats: 1, maxAutoscalePamSeats: 1)
+        var testData = await ExistingUserLoginAttempt(billingSupportFlag: false, pamSeats: 1, maxAutoscalePamSeats: 1)
             .BuildAsync();
         await SeedOwnerAsync(testData);
 
@@ -531,7 +531,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_ExistingUserAgainstStagedOrgUserWithPrivilegedControls_WithNoFreeSeatAndBillingSupportFlagOff_InvitesWithoutPrivilegedControlsAndDoesNotEmail()
     {
         // Arrange — one Privileged Controls seat, already taken, no autoscale limit, billing support flag off.
-        var testData = await ExistingUserSignIn(billingSupportFlag: false, pamSeats: 1, maxAutoscalePamSeats: null)
+        var testData = await ExistingUserLoginAttempt(billingSupportFlag: false, pamSeats: 1, maxAutoscalePamSeats: null)
             .BuildAsync();
         await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
@@ -553,16 +553,16 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     }
 
     /*
-    * FAILURE PATH: A person with an existing Bitwarden account signs in with SSO against a Staged member with
+    * FAILURE PATH: A person with an existing Bitwarden account tries to log in with SSO against a Staged member with
     * Privileged Controls access at the seat limit, and the invite email fails. The SSO callback rolls the member
-    * back to Staged and gives back Privileged Controls access, so the next sign-in starts again from the same
+    * back to Staged and gives back Privileged Controls access, so the next login attempt starts again from the same
     * state. The Owners get no Privileged Controls email, because the member is Staged again.
     */
     [Fact]
     public async Task ExternalCallback_ExistingUserAgainstStagedOrgUserWithPrivilegedControls_AtSeatLimit_WhenInviteSendFails_RestoresPrivilegedControlsAndDoesNotEmail()
     {
         // Arrange — one Privileged Controls seat, already taken, autoscale limit of one.
-        var testData = await ExistingUserSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: 1)
+        var testData = await ExistingUserLoginAttempt(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: 1)
             .BuildAsync();
         await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
@@ -588,7 +588,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     }
 
     /*
-    * FAILURE PATH: A person with an existing Bitwarden account signs in with SSO against a Staged member with
+    * FAILURE PATH: A person with an existing Bitwarden account tries to log in with SSO against a Staged member with
     * Privileged Controls access. All Privileged Controls seats are taken, so autoscale buys one, and then the
     * invite email fails. The SSO callback rolls the member back to Staged with Privileged Controls access. The
     * seat that autoscale bought stays bought.
@@ -597,7 +597,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_ExistingUserAgainstStagedOrgUserWithPrivilegedControls_WhenInviteSendFailsAfterSeatBought_KeepsSeatAndRestoresStaged()
     {
         // Arrange — one Privileged Controls seat, already taken, no autoscale limit.
-        var testData = await ExistingUserSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null)
+        var testData = await ExistingUserLoginAttempt(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null)
             .BuildAsync();
         await SeedOwnerAsync(testData);
         await SeedPrivilegedControlsSeatHolderAsync(testData);
@@ -634,7 +634,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     {
         // Arrange — one Privileged Controls seat, already taken, no autoscale limit. The autoscale must read the
         // Stripe subscription, and that read fails.
-        var testData = await JitSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null,
+        var testData = await JitLoginAttempt(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null,
                 configureOrganization: org => org.GatewaySubscriptionId = _subscriptionId)
             .WithMockedStripeAdapter(FailSubscriptionLookup)
             .BuildAsync();
@@ -657,7 +657,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     }
 
     /*
-    * SUCCESS PATH: A person with an existing Bitwarden account signs in with SSO against a Staged member without
+    * SUCCESS PATH: A person with an existing Bitwarden account tries to log in with SSO against a Staged member without
     * Privileged Controls access. The member does not start to use a Privileged Controls seat, so the SSO callback
     * reserves none, even when the organization is at its Privileged Controls seat limit.
     */
@@ -665,7 +665,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     public async Task ExternalCallback_ExistingUserAgainstStagedOrgUserWithoutPrivilegedControls_AtSeatLimit_DoesNotReserveSeatOrEmail()
     {
         // Arrange — one Privileged Controls seat, already taken, autoscale limit of one.
-        var testData = await ExistingUserSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: 1,
+        var testData = await ExistingUserLoginAttempt(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: 1,
                 stagedMemberAccessPam: false)
             .BuildAsync();
         await SeedOwnerAsync(testData);
@@ -686,9 +686,9 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     }
 
     /*
-    * FAILURE PATH: A person with an existing Bitwarden account signs in with SSO against a Staged member with
+    * FAILURE PATH: A person with an existing Bitwarden account tries to log in with SSO against a Staged member with
     * Privileged Controls access, but the organization has no Password Manager seat and cannot autoscale one. The
-    * Password Manager seat check runs first and stops the sign-in, so the SSO callback must not buy a Privileged
+    * Password Manager seat check runs first and stops the login, so the SSO callback must not buy a Privileged
     * Controls seat or send an invite.
     */
     [Fact]
@@ -696,7 +696,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     {
         // Arrange — Password Manager seats at cap and at the autoscale limit. Privileged Controls autoscale would
         // succeed (no limit), so a reservation would show as a raised PamSeats value.
-        var testData = await ExistingUserSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null,
+        var testData = await ExistingUserLoginAttempt(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null,
                 configureOrganization: org =>
                 {
                     org.Seats = 5;
@@ -723,7 +723,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     }
 
     /*
-    * DEGRADED PATH: On cloud, a person with an existing Bitwarden account signs in with SSO against a Staged
+    * DEGRADED PATH: On cloud, a person with an existing Bitwarden account tries to log in with SSO against a Staged
     * member with Privileged Controls access, and the seat reservation fails for a reason other than the seat
     * limit. The member is invited without Privileged Controls access. The Owners get no Privileged Controls
     * email, because more seats would not fix the failure.
@@ -733,7 +733,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     {
         // Arrange — one Privileged Controls seat, already taken, no autoscale limit. The autoscale must read the
         // Stripe subscription, and that read fails.
-        var testData = await ExistingUserSignIn(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null,
+        var testData = await ExistingUserLoginAttempt(billingSupportFlag: true, pamSeats: 1, maxAutoscalePamSeats: null,
                 configureOrganization: org => org.GatewaySubscriptionId = _subscriptionId)
             .WithMockedStripeAdapter(FailSubscriptionLookup)
             .BuildAsync();
@@ -825,9 +825,9 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     }
 
     /// <summary>
-    /// Starts the arrangement for a sign-in by a person with no Bitwarden account, whom SSO provisions just in time
-    /// against the Staged member. The organization uses Privileged Controls on an Enterprise plan, and the pricing
-    /// client and mailer are substitutes.
+    /// Starts the arrangement for an SSO login attempt by a person with no Bitwarden account, whom SSO provisions just
+    /// in time against the Staged member. The organization uses Privileged Controls on an Enterprise plan, and the
+    /// pricing client and mailer are substitutes.
     /// </summary>
     /// <param name="billingSupportFlag">The value of <see cref="FeatureFlagKeys.PM39883_Pam_Billing_Support"/>.</param>
     /// <param name="pamSeats">The organization's Privileged Controls seat count.</param>
@@ -837,7 +837,7 @@ public class ExternalCallbackPrivilegedControlsSeatTests
     /// Sets more organization fields. Use this instead of <see cref="SsoTestDataBuilder.WithOrganization"/>, which
     /// replaces the Privileged Controls seat setup.
     /// </param>
-    private static SsoTestDataBuilder JitSignIn(bool billingSupportFlag, int pamSeats, int? maxAutoscalePamSeats,
+    private static SsoTestDataBuilder JitLoginAttempt(bool billingSupportFlag, int pamSeats, int? maxAutoscalePamSeats,
         bool stagedMemberAccessPam = true, Action<Organization>? configureOrganization = null) =>
         new SsoTestDataBuilder()
             .WithSsoConfig()
@@ -852,13 +852,14 @@ public class ExternalCallbackPrivilegedControlsSeatTests
             .WithMockedMailer();
 
     /// <summary>
-    /// Starts the arrangement for a sign-in by a person with an existing Bitwarden account against the Staged
-    /// member. The setup is the same as <see cref="JitSignIn"/>, and the invite command is also a substitute.
+    /// Starts the arrangement for an SSO login attempt by a person with an existing Bitwarden account against the
+    /// Staged member. The setup is the same as <see cref="JitLoginAttempt"/>, and the invite command is also a
+    /// substitute.
     /// </summary>
-    private static SsoTestDataBuilder ExistingUserSignIn(bool billingSupportFlag, int pamSeats,
+    private static SsoTestDataBuilder ExistingUserLoginAttempt(bool billingSupportFlag, int pamSeats,
         int? maxAutoscalePamSeats, bool stagedMemberAccessPam = true,
         Action<Organization>? configureOrganization = null) =>
-        JitSignIn(billingSupportFlag, pamSeats, maxAutoscalePamSeats, stagedMemberAccessPam, configureOrganization)
+        JitLoginAttempt(billingSupportFlag, pamSeats, maxAutoscalePamSeats, stagedMemberAccessPam, configureOrganization)
             .WithUser()
             .WithMockedSendOrganizationInvitesCommand();
 

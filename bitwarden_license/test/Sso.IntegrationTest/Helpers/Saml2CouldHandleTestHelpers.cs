@@ -20,10 +20,9 @@ public static class Saml2CouldHandleTestHelpers
         (CreateSelfSignedCertificate("CN=Test IdP"), CreateSelfSignedCertificate("CN=Test SP"));
 
     // Builds the real, database-backed scheme and returns the pieces each arrangement needs.
-    // The callers exercise the multi-assertion signature verifier
-    // (Saml2AssertionSignatureVerifier.EnsureAssertionsSigned), so PM42982_WantAssertionsSigned
-    // is enabled by default. A test that wants the legacy, pre-flag branch instead must pass
-    // featureFlagEnabled: false.
+    // PM42982_WantAssertionsSigned is on by default, so the signature check runs the multi-assertion
+    // verifier (Saml2AssertionSignatureVerifier.EnsureAssertionsSigned). Pass featureFlagEnabled: false
+    // to run the flag-off check, which reads only a plaintext assertion.
     public static async Task<(SsoTestData TestData, Saml2Options SamlOptions, string OrganizationId)>
         BuildSchemeAsync(X509Certificate2 idpCertificate, X509Certificate2 spCertificate,
             bool wantAssertionsSigned, bool featureFlagEnabled = true, int? rsa15EmailCooldownInDays = null,

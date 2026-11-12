@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Sso.IntegrationTest.Helpers;
@@ -11,10 +12,12 @@ using Xunit;
 namespace Bit.Sso.IntegrationTest.ExternalCallback;
 
 /// <summary>
-/// <c>/Account/ExternalCallback</c> finds an existing Bitwarden user with no SSO link by the email claim. It accepts
-/// the external login only when the organization user is Accepted or Confirmed. With no organization user or an Invited
-/// one, the user goes back to the web vault login page with an error code. A Key Connector user who is not yet a
-/// member, a Revoked organization user, and an unknown status each get an error.
+/// <c>/Account/ExternalCallback</c> finds an existing Bitwarden user by the email claim when the user has no
+/// <c>SsoUser</c> record for the organization. It creates an <c>SsoUser</c> record, which stores the identity
+/// provider's user ID for the user and the organization, and accepts the external login only when the
+/// organization user is Accepted or Confirmed. With no organization user or an Invited one, the user goes back to
+/// the web vault login page with an error code. A Key Connector user who is not yet a member, a Revoked
+/// organization user, and an unknown status each get an error.
 /// </summary>
 public class ExternalCallbackEmailMatchedUserTests
 {
@@ -277,7 +280,7 @@ public class ExternalCallbackEmailMatchedUserTests
     [Fact]
     public async Task ExternalCallback_WithExistingUserAndConfirmedOrgUser_ReturnsSuccess()
     {
-        // Arrange - Existing user with confirmed org user status, no SSO link yet
+        // Arrange - Existing user with confirmed org user status, no SsoUser record yet
         var testData = await new SsoTestDataBuilder()
             .WithSsoConfig()
             .WithUser()
@@ -301,6 +304,12 @@ public class ExternalCallbackEmailMatchedUserTests
             $"Expected success/redirect but got {response.StatusCode}");
 
         Assert.NotNull(response.Headers.Location);
+
+        // Assert - The endpoint created an SsoUser record for the user and the organization
+        var ssoUserRepository = testData.Factory.Services.GetRequiredService<ISsoUserRepository>();
+        var ssoUser = await ssoUserRepository.GetByUserIdOrganizationIdAsync(
+            testData.Organization!.Id, testData.User!.Id);
+        Assert.NotNull(ssoUser);
     }
 
     /*
@@ -334,5 +343,11 @@ public class ExternalCallbackEmailMatchedUserTests
             $"Expected success/redirect but got {response.StatusCode}");
 
         Assert.NotNull(response.Headers.Location);
+
+        // Assert - The endpoint created an SsoUser record for the user and the organization
+        var ssoUserRepository = testData.Factory.Services.GetRequiredService<ISsoUserRepository>();
+        var ssoUser = await ssoUserRepository.GetByUserIdOrganizationIdAsync(
+            testData.Organization!.Id, testData.User!.Id);
+        Assert.NotNull(ssoUser);
     }
 }
