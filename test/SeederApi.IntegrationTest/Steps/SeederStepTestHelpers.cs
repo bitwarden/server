@@ -1,7 +1,4 @@
-﻿using Bit.Core.Billing.Enums;
-using Bit.Core.Entities;
-using Bit.RustSDK;
-using Bit.Seeder.Factories;
+﻿using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Pipeline;
 using Bit.Seeder.Services;
@@ -49,7 +46,7 @@ internal static class SeederStepTestHelpers
                 PublicKey = orgKeys.PublicKey,
                 PrivateKey = orgKeys.PrivateKey
             },
-            context.GetMangler());
+            context.Mangler);
         context.Organization = org;
         context.OrgKeys = orgKeys;
         context.Domain = domain;

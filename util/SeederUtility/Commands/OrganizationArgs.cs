@@ -2,7 +2,6 @@
 using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Options;
-using CommandDotNet;
 
 // Aliased because this class has its own string PlanType property, which would otherwise shadow the enum.
 using CorePlanType = Bit.Core.Billing.Enums.PlanType;
@@ -80,6 +79,9 @@ public class OrganizationArgs : IArgumentModel
 
     [Option("limit-collection-deletion", Description = "Restrict collection deletion to admins/owners")]
     public bool? LimitCollectionDeletion { get; set; }
+
+    [Option("use-pam", Description = "Enable Privileged Access Management for the organization. Seeded members are created with PAM access.")]
+    public bool? UsePam { get; set; }
 
     [Option("stripe-billing", Description = "Create a real Stripe test-environment customer and subscription for the organization. Requires a sk_test_ key and pricingUri; not valid with --plan-type free.")]
     public bool StripeBilling { get; set; }
@@ -169,6 +171,7 @@ public class OrganizationArgs : IArgumentModel
             LimitItemDeletion = LimitItemDeletion,
             LimitCollectionCreation = LimitCollectionCreation,
             LimitCollectionDeletion = LimitCollectionDeletion,
+            UsePam = UsePam,
         },
     };
 

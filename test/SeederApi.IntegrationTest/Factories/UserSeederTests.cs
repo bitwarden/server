@@ -1,13 +1,7 @@
-﻿using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Models;
-using Bit.Core.Entities;
-using Bit.Core.Enums;
-using Bit.RustSDK;
-using Bit.Seeder.Factories;
+﻿using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
-using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest.Factories;
 
@@ -125,6 +119,20 @@ public class UserSeederTests
         var after = DateTime.UtcNow;
         Assert.InRange(user.RevisionDate, before, after);
         Assert.InRange(user.AccountRevisionDate, before, after);
+    }
+
+    [Fact]
+    public void Create_WithUsesSsoAuth_OmitsPasswordHashAndUserKey()
+    {
+        var (user, _) = UserSeeder.Create(
+            new UserSeed { Email = _email, UsesSsoAuth = true },
+            _passwordHasher,
+            new NoOpManglerService());
+
+        Assert.Null(user.MasterPassword);
+        Assert.Null(user.Key);
+        Assert.NotNull(user.PublicKey);
+        Assert.NotNull(user.PrivateKey);
     }
 
     [Fact]

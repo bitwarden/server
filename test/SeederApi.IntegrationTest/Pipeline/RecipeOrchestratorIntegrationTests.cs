@@ -1,20 +1,9 @@
-﻿using AutoMapper;
-using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Enums;
-using Bit.Core.Entities;
-using Bit.Core.Services;
-using Bit.Core.Vault.Services;
-using Bit.Infrastructure.EntityFramework.Repositories;
-using Bit.Seeder.Data.Enums;
+﻿using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Options;
 using Bit.Seeder.Pipeline;
 using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
-using Xunit;
 using EfUser = Bit.Infrastructure.EntityFramework.Models.User;
 
 namespace Bit.SeederApi.IntegrationTest.Pipeline;
@@ -239,7 +228,7 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
     public async Task Execute_Options_BillingAccepted_GatewayIdsReachTheResultAsync()
     {
         // The one test in this fixture that runs the real pipeline to completion: proves the DI
-        // registration (RecipeOrchestrator) and resolution (RecipeBuilderExtensions.WithStripeOrganizationBilling)
+        // registration (RecipeOrchestrator) and resolution (RecipeBuilderOrganizationExtensions.WithStripeOrganizationBilling)
         // seam actually works, and that CreateOrganizationBillingStep's gateway IDs reach the result.
         var billingService = new RecordingOrganizationStripeBillingService(throwOnValidate: false);
         var orchestrator = NewOrchestrator(

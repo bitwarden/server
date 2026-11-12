@@ -1,14 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
-using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Auth.Enums;
-using Bit.Core.Billing.Enums;
-using Bit.Seeder.Options;
+﻿using Bit.Seeder.Options;
 using Bit.Seeder.Scenes;
-using Duende.IdentityModel.Client;
-using Microsoft.EntityFrameworkCore;
-using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest.Scenes;
 
@@ -72,6 +63,23 @@ public class OrganizationSsoSceneTests : IClassFixture<InPlaySeederApiApplicatio
         var resetPassword = policies.Single(p => p.Type == PolicyType.ResetPassword);
         Assert.Equal(existingResetPassword.Id, resetPassword.Id);
         Assert.True(resetPassword.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled);
+        Assert.Single(policies, p => p.Type == PolicyType.RequireSso);
+    }
+
+    [Fact]
+    public async Task SeedAsync_MasterPasswordWithRequireSsoLoginPolicy_AddsSingleOrgAndRequireSso()
+    {
+        var organizationId = await SeedOrganizationWithoutSsoAsync();
+        var request = Sso(organizationId, "mp-policies");
+        request.RequireSsoLoginPolicy = true;
+
+        await _client.PostSceneAsync(_playId, nameof(OrganizationSsoScene), request);
+
+        var policies = await _factory.QueryAsync(db => db.Policies
+            .Where(p => p.OrganizationId == organizationId).ToListAsync());
+        Assert.Equal(2, policies.Count);
+        Assert.All(policies, p => Assert.True(p.Enabled));
+        Assert.Single(policies, p => p.Type == PolicyType.SingleOrg);
         Assert.Single(policies, p => p.Type == PolicyType.RequireSso);
     }
 
