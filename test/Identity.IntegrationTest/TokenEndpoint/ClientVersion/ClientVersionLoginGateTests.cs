@@ -11,12 +11,12 @@ using static Bit.Identity.IntegrationTest.Helpers.TokenEndpointTestHelpers;
 
 namespace Bit.Identity.IntegrationTest.TokenEndpoint.ClientVersion;
 
-public class ClientVersionGateTests : IClassFixture<IdentityApplicationFactory>
+public class ClientVersionLoginGateTests : IClassFixture<IdentityApplicationFactory>
 {
     private readonly IdentityApplicationFactory _factory;
     private const string DefaultEncryptedString = "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
 
-    public ClientVersionGateTests(IdentityApplicationFactory factory)
+    public ClientVersionLoginGateTests(IdentityApplicationFactory factory)
     {
         _factory = factory;
         ReinitializeDbForTests(_factory);

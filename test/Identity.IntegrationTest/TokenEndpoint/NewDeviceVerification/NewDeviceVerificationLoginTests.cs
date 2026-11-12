@@ -21,7 +21,7 @@ namespace Bit.Identity.IntegrationTest.TokenEndpoint.NewDeviceVerification;
 /// the device that was challenged for it.
 /// </summary>
 [SutProviderCustomize]
-public class NewDeviceVerificationTests
+public class NewDeviceVerificationLoginTests
 {
     private const string EnableNewDeviceVerificationKey = "globalSettings:enableNewDeviceVerification";
 

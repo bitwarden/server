@@ -25,7 +25,7 @@ namespace Bit.Identity.IntegrationTest.TokenEndpoint.DeviceLastActivity;
 /// have bucketed against an anonymous context. Post-fix, the snapshot must show the
 /// resolved User / Device populated immediately before the flag check fires.
 /// </summary>
-public class DevicesLastActivityDateBumpTests
+public class DeviceLastActivityLoginPersistenceTests
 {
     private readonly record struct ContextSnapshot(Guid? UserId, string? DeviceIdentifier);
 

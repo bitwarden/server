@@ -19,7 +19,7 @@ namespace Bit.Identity.IntegrationTest.TokenEndpoint.Grants.SendAccess;
 // method throws as expected.
 internal record AnUnknownAuthenticationMethod : SendAuthenticationMethod { }
 
-public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory _factory) : IClassFixture<IdentityApplicationFactory>
+public class SendAccessGrantTests(IdentityApplicationFactory _factory) : IClassFixture<IdentityApplicationFactory>
 {
     [Fact]
     public async Task SendAccessGrant_ValidNotAuthenticatedSend_ReturnsAccessToken()
@@ -37,7 +37,7 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
             });
         }).CreateClient();
 
-        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId);
+        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId);
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -77,7 +77,7 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
             });
         }).CreateClient();
 
-        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId);
+        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId);
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -107,7 +107,7 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
             });
         }).CreateClient();
 
-        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId);
+        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId);
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -145,7 +145,7 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
         var sendId = Guid.Empty;
         var client = _factory.CreateClient();
 
-        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId);
+        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId);
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -170,7 +170,7 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
             });
         }).CreateClient();
 
-        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId);
+        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId);
 
         // Act
         var error = await client.PostAsync("/connect/token", requestBody);
@@ -208,7 +208,7 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
             });
         }).CreateClient();
 
-        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId, "password123");
+        var requestBody = SendAccessTestHelpers.CreateTokenRequestBody(sendId, "password123");
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
