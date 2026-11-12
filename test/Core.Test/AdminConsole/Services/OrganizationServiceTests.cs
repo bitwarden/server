@@ -12,6 +12,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -2271,6 +2272,105 @@ public class OrganizationServiceTests
             .InviteUserAsync(organization.Id, invitor.UserId, systemUser: null, invite, externalId));
 
         Assert.Contains(exception.InnerExceptions, e => e.Message == "SMTP is down.");
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
+        InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]
+    public async Task InviteUser_StagedUserWithPrivilegedControls_ValidationRejects_ThrowsItsMessageWithoutSavingOrBuying(
+        Organization organization, OrganizationUserInvite invite, string externalId, OrganizationUser invitor,
+        OrganizationUser stagedUser, SutProvider<OrganizationService> sutProvider)
+    {
+        InviteUser_ArrangeStagedUserWithPrivilegedControls(organization, invite, stagedUser, sutProvider);
+        organization.Seats = 1;
+        organization.UseSecretsManager = false;
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
+            .Returns(MockPlans.Get(organization.PlanType));
+        var rejection = new PrivilegedControlsSeatLimitReachedError();
+        sutProvider.GetDependency<IValidatePrivilegedControlsSeatReservationQuery>()
+            .RunAsync(organization, 1, 1)
+            .Returns(rejection);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut
+            .InviteUserAsync(organization.Id, invitor.UserId, systemUser: null, invite, externalId));
+
+        Assert.Equal(rejection.Message, exception.Message);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateManyAsync(default(IEnumerable<OrganizationUser>)!);
+        await sutProvider.GetDependency<IStripePaymentService>()
+            .DidNotReceiveWithAnyArgs()
+            .AdjustSeatsAsync(default!, default!, default);
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionAsync(default!);
+        await sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default!, default);
+        await sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .SendInvitesAsync(default!);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default, default(IEnumerable<CollectionAccessSelection>));
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
+        InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]
+    public async Task InviteUser_StagedUserWithPrivilegedControls_ValidatesWithThePasswordManagerSeatsAboutToBeBought(
+        Organization organization, OrganizationUserInvite invite, string externalId, OrganizationUser invitor,
+        OrganizationUser stagedUser, SutProvider<OrganizationService> sutProvider)
+    {
+        InviteUser_ArrangeStagedUserWithPrivilegedControls(organization, invite, stagedUser, sutProvider);
+        organization.Seats = 1;
+        organization.UseSecretsManager = false;
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
+            .Returns(MockPlans.Get(organization.PlanType));
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1).Returns(new PrivilegedControlsSeatReservationResult());
+
+        await sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, systemUser: null, invite, externalId);
+
+        await sutProvider.GetDependency<IValidatePrivilegedControlsSeatReservationQuery>()
+            .Received(1)
+            .RunAsync(organization, 1, 1);
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
+        InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]
+    public async Task InviteUser_StagedUserWithPrivilegedControls_SpareSeats_ValidatesWithNoPasswordManagerSeatsAdded(
+        Organization organization, OrganizationUserInvite invite, string externalId, OrganizationUser invitor,
+        OrganizationUser stagedUser, SutProvider<OrganizationService> sutProvider)
+    {
+        InviteUser_ArrangeStagedUserWithPrivilegedControls(organization, invite, stagedUser, sutProvider);
+        organization.Seats = 10;
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1).Returns(new PrivilegedControlsSeatReservationResult());
+
+        await sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, systemUser: null, invite, externalId);
+
+        await sutProvider.GetDependency<IValidatePrivilegedControlsSeatReservationQuery>()
+            .Received(1)
+            .RunAsync(organization, 1, 0);
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
+        InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]
+    public async Task InviteUser_NoStagedUsersWithPrivilegedControls_DoesNotValidate(
+        Organization organization, OrganizationUserInvite invite, string externalId, OrganizationUser invitor,
+        OrganizationUser stagedUser, SutProvider<OrganizationService> sutProvider)
+    {
+        InviteUser_ArrangeStagedUserWithPrivilegedControls(organization, invite, stagedUser, sutProvider);
+        stagedUser.AccessPam = false;
+
+        await sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, systemUser: null, invite, externalId);
+
+        await sutProvider.GetDependency<IValidatePrivilegedControlsSeatReservationQuery>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default!, default, default);
     }
 
     /// <summary>
