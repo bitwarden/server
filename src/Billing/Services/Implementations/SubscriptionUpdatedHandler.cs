@@ -448,8 +448,9 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     {
         try
         {
-            // Only act on schedule-managed subscriptions (schedule transitions set ScheduleId)
-            if (subscription.ScheduleId == null)
+            // Only act on schedule-managed subscriptions (the event's copy still carries the schedule
+            // even when the schedule has released by the time the event is processed)
+            if (!HadScheduleWhenEventFired(parsedEvent))
             {
                 return;
             }
@@ -523,6 +524,14 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         }
     }
 
+    /// <summary>
+    /// The event's copy of the subscription is frozen when the price changed, so it still shows the
+    /// schedule when the event is processed after the schedule released (late delivery or a Stripe
+    /// retry). A fresh fetch of the subscription would not.
+    /// </summary>
+    private static bool HadScheduleWhenEventFired(Event parsedEvent) =>
+        parsedEvent.Data.Object is Subscription { ScheduleId: not null };
+
     private async Task HandleScheduleTriggeredBusinessMigrationAsync(
         Event parsedEvent,
         Subscription subscription,
@@ -535,7 +544,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 return;
             }
 
-            if (subscription.ScheduleId == null)
+            if (!HadScheduleWhenEventFired(parsedEvent))
             {
                 return;
             }
@@ -749,7 +758,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         // is annual, ResolveAnnualLatestPlanType returns null and the handler returns early.
         try
         {
-            if (subscription.ScheduleId == null)
+            if (!HadScheduleWhenEventFired(parsedEvent))
             {
                 return;
             }

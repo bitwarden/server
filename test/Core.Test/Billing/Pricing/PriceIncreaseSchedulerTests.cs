@@ -99,7 +99,7 @@ public class PriceIncreaseSchedulerTests
                 phase2.Items.Any(i => i.Price == "premium-new-seat" && i.Quantity == 1) &&
                 phase2.Discounts.Count == 1 &&
                 phase2.Discounts.Any(d => d.Coupon == CouponIDs.Milestone2SubscriptionDiscount) &&
-                phase2.EndDate != null),
+                phase2.EndDate == null),
             Arg.Is(ManagingSystems.PersonalPriceIncrease),
             Arg.Any<Dictionary<string, string>>());
     }
@@ -485,7 +485,7 @@ public class PriceIncreaseSchedulerTests
                 phase2.Items.Any(i => i.Price == familiesTarget.PasswordManager.StripePlanId && i.Quantity == 1) &&
                 phase2.Discounts.Count == 1 &&
                 phase2.Discounts.Any(d => d.Coupon == CouponIDs.Milestone3SubscriptionDiscount) &&
-                phase2.EndDate != null),
+                phase2.EndDate == null),
             Arg.Is(ManagingSystems.PersonalPriceIncrease),
             Arg.Any<Dictionary<string, string>>());
     }
@@ -654,7 +654,7 @@ public class PriceIncreaseSchedulerTests
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Items.Any(i => i.Price == familiesTarget.PasswordManager.StripePlanId && i.Quantity == 1) &&
                 phase2.Discounts == null &&
-                phase2.EndDate != null),
+                phase2.EndDate == null),
             Arg.Is(ManagingSystems.PersonalPriceIncrease),
             Arg.Any<Dictionary<string, string>>());
     }
@@ -1233,7 +1233,6 @@ public class PriceIncreaseSchedulerTests
         Assert.True(result);
 
         var expectedPhase2Start = periodStart + periodLength;
-        var expectedPhase2End = expectedPhase2Start + periodLength;
         await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
@@ -1241,7 +1240,7 @@ public class PriceIncreaseSchedulerTests
                 phase2.Items.Any(i => i.Price == target.PasswordManager.StripeSeatPlanId && i.Quantity == 10) &&
                 phase2.Items.Any(i => i.Price == target.PasswordManager.StripeStoragePlanId && i.Quantity == 2) &&
                 phase2.StartDate == expectedPhase2Start &&
-                phase2.EndDate == expectedPhase2End),
+                phase2.EndDate == null),
             Arg.Is(ManagingSystems.BusinessPriceIncrease),
             Arg.Any<Dictionary<string, string>>());
 
@@ -1463,7 +1462,6 @@ public class PriceIncreaseSchedulerTests
         Assert.True(result);
 
         var expectedPhase2Start = periodStart + periodLength;
-        var expectedPhase2End = expectedPhase2Start + periodLength;
         await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
@@ -1471,7 +1469,7 @@ public class PriceIncreaseSchedulerTests
                 phase2.Items.Any(i => i.Price == target.PasswordManager.StripeSeatPlanId && i.Quantity == 5) &&
                 phase2.Items.Any(i => i.Price == target.PasswordManager.StripeStoragePlanId && i.Quantity == 1) &&
                 phase2.StartDate == expectedPhase2Start &&
-                phase2.EndDate == expectedPhase2End),
+                phase2.EndDate == null),
             Arg.Is(ManagingSystems.BusinessPriceIncrease),
             Arg.Any<Dictionary<string, string>>());
 
