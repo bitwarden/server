@@ -48,6 +48,7 @@ public class SsoTestDataBuilder
     /// This UserIdentifier is a mock for the UserIdentifier we get from the External Identity Provider.
     /// </summary>
     private string? _userIdentifier;
+    private string? _manualLinkingToken;
     private Action<Organization>? _organizationConfig;
     private Action<User>? _userConfig;
     private Action<OrganizationUser>? _orgUserConfig;
@@ -157,6 +158,17 @@ public class SsoTestDataBuilder
     public SsoTestDataBuilder WithUserIdentifier(string userIdentifier)
     {
         _userIdentifier = userIdentifier;
+        return this;
+    }
+
+    /// <summary>
+    /// Makes the external authentication result carry a manual SSO linking identifier,
+    /// <c>{userId},{token}</c>, for the user that <see cref="WithUser"/> creates. The identifier is built
+    /// when the request arrives, because the user ID exists only after the user is saved.
+    /// </summary>
+    public SsoTestDataBuilder WithManualLinkingToken(string token)
+    {
+        _manualLinkingToken = token;
         return this;
     }
 
@@ -339,6 +351,9 @@ public class SsoTestDataBuilder
         var userEmail = _withNullEmail ? null : $"user_{Guid.NewGuid()}@test.com";
         var userName = "TestUser";
 
+        // The user row is saved after the host starts, so the authentication result reads it per request.
+        User? user = null;
+
         // 1. Configure mocked authentication service BEFORE accessing Services
         factory.SubstituteService<IAuthenticationService>(authService =>
         {
@@ -347,13 +362,13 @@ public class SsoTestDataBuilder
                 authService.AuthenticateAsync(
                         Arg.Any<HttpContext>(),
                         AuthenticationSchemes.SsoExternalCookie)
-                    .Returns(MockSuccessfulAuthResult.Build(
+                    .Returns(_ => MockSuccessfulAuthResult.Build(
                         authOrganizationId,
                         providerUserId,
                         userEmail,
                         userName,
                         acrValue: null,
-                        _userIdentifier));
+                        _manualLinkingToken is null ? _userIdentifier : $"{user!.Id},{_manualLinkingToken}"));
             }
             else
             {
@@ -515,7 +530,6 @@ public class SsoTestDataBuilder
         organization = await orgRepo.CreateAsync(organization);
 
         // 3. Create User with defaults (using pre-generated values)
-        User? user = null;
         if (_includeUser)
         {
             user = new User
