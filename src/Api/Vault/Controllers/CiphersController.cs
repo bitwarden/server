@@ -504,8 +504,7 @@ public class CiphersController : Controller
     }
 
     /// <summary>
-    /// Returns the number of organization-owned items for each cipher type. Used to warn admins how many existing
-    /// items will be hidden from member vaults when an item type restriction is activated.
+    /// Returns the number of organization-owned items for each cipher type.
     /// </summary>
     [HttpGet("organization-details/type-counts")]
     public async Task<Bit.HttpExtensions.ListResponseModel<OrganizationCipherTypeCountResponseModel>> GetOrganizationCipherTypeCounts(
