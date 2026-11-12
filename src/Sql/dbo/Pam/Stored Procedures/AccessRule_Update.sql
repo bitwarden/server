@@ -17,6 +17,8 @@ AS
 BEGIN
     SET NOCOUNT ON
 
+    DECLARE @Previous TABLE ([Enabled] BIT NOT NULL)
+
     UPDATE
         [dbo].[AccessRule]
     SET
@@ -33,6 +35,26 @@ BEGIN
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
         [LastEditedBy] = @LastEditedBy
+    OUTPUT
+        DELETED.[Enabled]
+    INTO @Previous
     WHERE
         [Id] = @Id
+
+    -- Members sync whether each collection is governed by an enabled rule, so toggling Enabled flips that state for
+    -- every collection the rule governs.
+    IF EXISTS (SELECT 1 FROM @Previous WHERE [Enabled] <> @Enabled)
+    BEGIN
+        DECLARE @CollectionIds AS [dbo].[GuidIdArray]
+
+        INSERT INTO @CollectionIds
+        SELECT
+            [Id]
+        FROM
+            [dbo].[Collection]
+        WHERE
+            [AccessRuleId] = @Id
+
+        EXEC [dbo].[User_BumpAccountRevisionDateByCollectionIds] @CollectionIds, @OrganizationId
+    END
 END

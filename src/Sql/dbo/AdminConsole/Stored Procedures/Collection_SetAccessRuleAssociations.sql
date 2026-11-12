@@ -13,6 +13,12 @@ BEGIN
 
     DECLARE @RevisionDate DATETIME2(7) = SYSUTCDATETIME()
 
+    DECLARE @Changed TABLE (
+        [Id] UNIQUEIDENTIFIER NOT NULL,
+        [PreviousAccessRuleId] UNIQUEIDENTIFIER NULL,
+        [AccessRuleId] UNIQUEIDENTIFIER NULL
+    )
+
     BEGIN TRANSACTION
 
     UPDATE
@@ -20,6 +26,11 @@ BEGIN
     SET
         C.[AccessRuleId] = NULL,
         C.[RevisionDate] = @RevisionDate
+    OUTPUT
+        INSERTED.[Id],
+        DELETED.[AccessRuleId],
+        INSERTED.[AccessRuleId]
+    INTO @Changed
     FROM
         [dbo].[Collection] C
     INNER JOIN
@@ -33,12 +44,18 @@ BEGIN
     SET
         C.[AccessRuleId] = @AccessRuleId,
         C.[RevisionDate] = @RevisionDate
+    OUTPUT
+        INSERTED.[Id],
+        DELETED.[AccessRuleId],
+        INSERTED.[AccessRuleId]
+    INTO @Changed
     FROM
         [dbo].[Collection] C
     INNER JOIN
         @ToAssign T ON T.[Id] = C.[Id]
     WHERE
         C.[OrganizationId] = @OrganizationId
+        AND (C.[AccessRuleId] IS NULL OR C.[AccessRuleId] <> @AccessRuleId)
         -- The foreign key only proves the rule exists, not that it belongs to this organization. Without
         -- this the caller could govern its own collections with another organization's rule, handing that
         -- organization control of the conditions gating access to data it cannot see.
@@ -54,5 +71,24 @@ BEGIN
 
     COMMIT TRANSACTION
 
-    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
+    -- Members sync a collection's "governed by an enabled rule" state, so only collections where that state flipped
+    -- need their members to resync.
+    DECLARE @FlippedCollectionIds AS [dbo].[GuidIdArray]
+
+    INSERT INTO @FlippedCollectionIds
+    SELECT DISTINCT
+        CH.[Id]
+    FROM
+        @Changed CH
+    LEFT JOIN
+        [dbo].[AccessRule] PAR ON PAR.[Id] = CH.[PreviousAccessRuleId]
+    LEFT JOIN
+        [dbo].[AccessRule] AR ON AR.[Id] = CH.[AccessRuleId]
+    WHERE
+        ISNULL(PAR.[Enabled], 0) <> ISNULL(AR.[Enabled], 0)
+
+    IF EXISTS (SELECT 1 FROM @FlippedCollectionIds)
+    BEGIN
+        EXEC [dbo].[User_BumpAccountRevisionDateByCollectionIds] @FlippedCollectionIds, @OrganizationId
+    END
 END

@@ -5,8 +5,11 @@ BEGIN
     SET NOCOUNT ON
 
     DECLARE @OrganizationId UNIQUEIDENTIFIER
+    DECLARE @Enabled BIT
+    DECLARE @ClearedCollectionIds AS [dbo].[GuidIdArray]
 
-    SELECT @OrganizationId = [OrganizationId]
+    SELECT @OrganizationId = [OrganizationId],
+        @Enabled = [Enabled]
     FROM [dbo].[AccessRule]
     WHERE [Id] = @Id
 
@@ -21,6 +24,7 @@ BEGIN
     UPDATE [dbo].[Collection]
     SET [AccessRuleId] = NULL,
         [RevisionDate] = SYSUTCDATETIME()
+    OUTPUT INSERTED.[Id] INTO @ClearedCollectionIds
     WHERE [AccessRuleId] = @Id
 
     -- Detach the requests that pinned this rule, for the same reason: FK_AccessRequest_AccessRule is ON DELETE
@@ -34,5 +38,9 @@ BEGIN
     DELETE FROM [dbo].[AccessRule]
     WHERE [Id] = @Id
 
-    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
+    -- Only an enabled rule gated its collections, so only then do their members see a change.
+    IF @Enabled = 1 AND EXISTS (SELECT 1 FROM @ClearedCollectionIds)
+    BEGIN
+        EXEC [dbo].[User_BumpAccountRevisionDateByCollectionIds] @ClearedCollectionIds, @OrganizationId
+    END
 END
