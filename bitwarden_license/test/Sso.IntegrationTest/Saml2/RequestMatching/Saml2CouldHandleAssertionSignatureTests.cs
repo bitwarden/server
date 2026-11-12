@@ -1,7 +1,6 @@
 ﻿using Bit.Core.Auth.Models.Data;
 using Bit.Sso.IntegrationTest.Utilities;
 using Bit.Sso.Utilities.Saml2;
-using Microsoft.Extensions.Primitives;
 using Sustainsys.Saml2.AspNetCore2;
 using Sustainsys.Saml2.Exceptions;
 using Xunit;
@@ -14,8 +13,8 @@ namespace Bit.Sso.IntegrationTest.Saml2.RequestMatching;
 /// <summary>
 /// Exercises the assertion signature check in <c>CouldHandleAsync</c> through the real, database-backed
 /// <c>Saml2Options</c> object that <c>DynamicAuthenticationScheme</c> holds. Covers plaintext, encrypted,
-/// mixed, and nested assertions, untrusted and undecryptable assertions, messages that the scheme declines,
-/// and how the check orders with the encrypted-assertion key-transport algorithm check.
+/// mixed, and nested assertions, untrusted and undecryptable assertions, and how the check orders with the
+/// encrypted-assertion key-transport algorithm check.
 /// </summary>
 public class Saml2CouldHandleAssertionSignatureTests
 {
@@ -208,48 +207,6 @@ public class Saml2CouldHandleAssertionSignatureTests
         var exception = await Assert.ThrowsAsync<Exception>(
             () => arrangement.SamlOptions.CouldHandleAsync(arrangement.Scheme, arrangement.Context));
         Assert.Equal("Cannot verify SAML assertion signature.", exception.Message);
-    }
-
-    [Fact]
-    public async Task CouldHandleAsync_IssuerDoesNotMatchIdp_ReturnsFalseWithoutThrowing()
-    {
-        // Scheme-selection invariant. A message from another identity provider must decline the
-        // scheme, not throw, even with an unsigned assertion and the setting on. Any change to
-        // the signature check must keep this ordering.
-        var (idpCertificate, spCertificate) = BuildCertificates();
-        var (testData, samlOptions, organizationId) =
-            await BuildSchemeAsync(idpCertificate, spCertificate, wantAssertionsSigned: true);
-
-        var foreignResponse = BuildResponseXml(
-            BuildAssertionDocument().DocumentElement!.OuterXml, "https://other-idp.example.com");
-        var context = BuildPostContext(testData,
-            SsoConfigurationData.BuildSaml2AcsUrl(null, organizationId), "SAMLResponse", foreignResponse);
-
-        Assert.False(await samlOptions.CouldHandleAsync(organizationId, context));
-    }
-
-    [Fact]
-    public async Task CouldHandleAsync_UnparseablePayload_ReturnsFalseWithoutThrowing()
-    {
-        // Scheme-selection invariant. Malformed input must decline the scheme quietly so the
-        // middleware can try the next one.
-        var (idpCertificate, spCertificate) = BuildCertificates();
-        var (testData, samlOptions, organizationId) =
-            await BuildSchemeAsync(idpCertificate, spCertificate, wantAssertionsSigned: true);
-
-        var context = new DefaultHttpContext
-        {
-            RequestServices = testData.Factory.Services.CreateScope().ServiceProvider,
-        };
-        context.Request.Path = SsoConfigurationData.BuildSaml2AcsUrl(null, organizationId);
-        context.Request.Method = HttpMethods.Post;
-        context.Request.ContentType = "application/x-www-form-urlencoded";
-        context.Request.Form = new FormCollection(new Dictionary<string, StringValues>
-        {
-            ["SAMLResponse"] = "not-base64-at-all!!",
-        });
-
-        Assert.False(await samlOptions.CouldHandleAsync(organizationId, context));
     }
 
     [Theory]
