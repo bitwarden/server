@@ -19,7 +19,7 @@ using Xunit;
 
 namespace Bit.Api.IntegrationTest.Auth.SsoJitProvisionFinish;
 
-public class SsoJitProvisionFinishControllerKeyConnectorTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class SsoJitProvisionFinishKeyConnectorTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private const string _endpoint = "/sso-jit-provision-finish/key-connector";
     private const string _mockEncryptedString =
@@ -37,7 +37,7 @@ public class SsoJitProvisionFinishControllerKeyConnectorTests : IClassFixture<Ap
     private readonly IUserSignatureKeyPairRepository _userSignatureKeyPairRepository;
     private string _ownerEmail = null!;
 
-    public SsoJitProvisionFinishControllerKeyConnectorTests(ApiApplicationFactory factory)
+    public SsoJitProvisionFinishKeyConnectorTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         _factory.SubstituteService<IPushNotificationService>(_ => { });

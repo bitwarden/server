@@ -20,7 +20,7 @@ using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Api.IntegrationTest.Auth.SsoJitProvisionFinish;
 
-public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class SsoJitProvisionFinishPasswordTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private const string _endpoint = "/sso-jit-provision-finish/password";
     private const string _masterKeyWrappedUserKey =
@@ -40,7 +40,7 @@ public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApp
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IPasswordHasher<User> _passwordHasher;
 
-    public SsoJitProvisionFinishControllerPasswordTests(ApiApplicationFactory factory)
+    public SsoJitProvisionFinishPasswordTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         _factory.SubstituteService<IPushNotificationService>(_ => { });

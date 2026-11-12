@@ -18,7 +18,7 @@ namespace Bit.Api.IntegrationTest.Auth.WebAuthn;
 /// No Fido2NetLib mocking — FakeWebAuthnAuthenticator produces a genuine ECDSA-signed,
 /// CBOR-encoded attestation that the real Fido2NetLib library must independently verify.
 /// </summary>
-public class WebAuthnControllerTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class WebAuthnLoginCredentialTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private const string _rpId = "localhost";
     private const string _origin = "https://localhost:8080";
@@ -32,7 +32,7 @@ public class WebAuthnControllerTests : IClassFixture<ApiApplicationFactory>, IAs
 
     private string _email = null!;
 
-    public WebAuthnControllerTests(ApiApplicationFactory factory)
+    public WebAuthnLoginCredentialTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         _client = factory.CreateClient();

@@ -2,7 +2,7 @@
 using Bit.Core.Services;
 using Core.Auth.Enums;
 using Xunit;
-using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorIntegrationTestHelpers;
+using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorTestHelpers;
 
 namespace Bit.Api.IntegrationTest.Auth.Helpers;
 
