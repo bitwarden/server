@@ -223,6 +223,12 @@ public sealed class MailDeliveryOptions
             public string? SigningKey { get; set; }
 
             /// <summary>
+            /// The JWS signing algorithm used for jwt-bearer assertions. Only <c>RS256</c> is supported.
+            /// Unset is treated as <c>RS256</c>.
+            /// </summary>
+            public string? Algorithm { get; set; }
+
+            /// <summary>
             /// Jwt-bearer assertion claims, keyed by claim name (for example <c>sub</c> or <c>iss</c>), merged into
             /// the signed assertion and overriding any value otherwise derived automatically. The <c>iss</c> entry
             /// is used as a fallback when <see cref="SmtpOptions.ServiceAccountEmail"/> is unset.
