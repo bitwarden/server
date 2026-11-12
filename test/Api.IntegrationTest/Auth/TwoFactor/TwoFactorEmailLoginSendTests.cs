@@ -19,8 +19,10 @@ using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorTestHelpers;
 namespace Bit.Api.IntegrationTest.Auth.TwoFactor;
 
 /// <summary>
-/// Covers send-email-login, which emails a two-factor login code during login, with the real two-factor email
-/// service: each credential the request can carry, and how the request names its device.
+/// send-email-login emails a two-factor login code only after the request proves one credential: the master
+/// password, an SSO session token, or an approved auth request with its access code. The code goes to the
+/// two-factor email address and is bound to the device that the request names. When the header and the body name
+/// different devices, the header wins. A request that fails sends no email.
 /// Only the mail service is substituted, so tests read the emailed code from it. The API host shares the
 /// Identity host's persistent cache, so a login code emailed by the API can be redeemed against the Identity
 /// token endpoint, as it is in a deployed environment.

@@ -21,8 +21,10 @@ using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorTestHelpers;
 namespace Bit.Api.IntegrationTest.Auth.TwoFactor;
 
 /// <summary>
-/// Covers turning email two-factor on and off with the real two-factor email service: get-email, delete,
-/// send-email, and PUT email, including the binding of a setup code to the session's device.
+/// Email two-step login turns on only with a user verification token and the setup code that send-email emailed.
+/// The code is bound to the session's device, not to a device that a header names, and still works after the
+/// access token is refreshed. Turning the provider off needs the token that get-email returns for the same user
+/// and the email provider. A wrong, missing, or tampered value is rejected.
 /// Only the mail service is substituted, so tests read the emailed code from it. The API host shares the
 /// Identity host's persistent cache, so a login code emailed by the API can be redeemed against the Identity
 /// token endpoint, as it is in a deployed environment.

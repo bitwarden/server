@@ -14,7 +14,10 @@ using static Bit.Api.IntegrationTest.Auth.Helpers.AuthRequestAssertions;
 namespace Bit.Api.IntegrationTest.Auth.AuthRequests;
 
 /// <summary>
-/// Covers creating auth requests: the anonymous login-with-device request and the authenticated admin request.
+/// An anonymous login-with-device request must come from a known device of an existing account, must carry a
+/// device type header, and must not ask for admin approval. An unknown device and an unknown account get the
+/// same error. An authenticated admin request must ask for admin approval, and the user must belong to an
+/// organization.
 /// </summary>
 public class AuthRequestCreateTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
