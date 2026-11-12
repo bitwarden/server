@@ -12,9 +12,10 @@
 ///
 /// The client redirect handler disambiguates by matching organizationId against
 /// any stashed invite: match → fast-forward to MP entry (the user clicked an open
-/// invite link); no match → reuse the existing
-/// <c>ssoLoginRequiresInviteAcceptance</c> toast on /login (the user has no pending
-/// invite at all).
+/// invite link); no match → navigate to the client's <c>/sso-login-failed</c> full-page
+/// error (the user has no pending invite at all). That page shares its screen and
+/// <c>kind</c> with <see cref="SsoAuthnRequiresInviteAcceptanceException"/>, so the
+/// client does not distinguish the two cases to the user.
 /// </summary>
 public class SsoAuthnRequiresOrgMembershipException : Exception
 {
