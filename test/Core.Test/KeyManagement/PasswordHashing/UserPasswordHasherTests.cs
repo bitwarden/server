@@ -40,6 +40,15 @@ public class UserPasswordHasherTests
         Assert.Equal(PasswordVerificationResult.SuccessRehashNeeded, _sut.VerifyHashedPassword(new User(), stored, ClientHash));
     }
 
+    // As Identity's PasswordHasher<User>, which this replaces: a blank value still hashes.
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    public void HashPassword_BlankClientHash_Hashes(string clientHash)
+    {
+        Assert.False(string.IsNullOrEmpty(_sut.HashPassword(new User(), clientHash)));
+    }
+
     [Fact]
     public void VerifyHashedPassword_WrongClientHash_Fails()
     {

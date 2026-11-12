@@ -275,7 +275,7 @@
       "Bitwarden.Server.Sdk.PasswordHashing": {
         "type": "Transitive",
         "resolved": "0.1.0-alpha.1",
-        "contentHash": "5DDiFocgB6ZhqXZeZ0GS+aowifucwVYxOHlJpm5qWn7+wo3pzuC0bgcxStvRwOjE4WHRdhIXahViA1uCTDR+eg==",
+        "contentHash": "ciZ+oo/F2Jdeas050lfCYWmrDLCJ7VJ+2URpifDQnrNJXFq8nsD2eobbgKKbB3/tkaAMzMJ0U5QbD+qHhFZAxA==",
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.14",
           "Microsoft.Extensions.Identity.Core": "10.0.14"
