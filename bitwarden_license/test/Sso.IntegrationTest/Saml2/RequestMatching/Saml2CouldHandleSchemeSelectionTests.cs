@@ -9,10 +9,12 @@ using static Bit.Sso.IntegrationTest.Utilities.Saml2MessageBuilder;
 namespace Bit.Sso.IntegrationTest.Saml2.RequestMatching;
 
 /// <summary>
-/// Exercises the <c>scheme</c> query string shortcut in <c>CouldHandleAsync</c>, and requests that carry
-/// no SAML message, with the RSA 1.5 deprecation flag off and on.
+/// <c>CouldHandleAsync</c> decides if this scheme handles a request. A <c>scheme</c> query selects the scheme;
+/// with the RSA 1.5 deprecation flag on, only for a request with no SAML message. Otherwise the message must be
+/// readable and come from this scheme's identity provider. A declined request returns false, not an exception,
+/// so that the middleware can try the next scheme.
 /// </summary>
-public class Saml2CouldHandleSchemeQueryShortcutTests
+public class Saml2CouldHandleSchemeSelectionTests
 {
     [Fact]
     public async Task CouldHandleAsync_SchemeQueryAndUnsignedEnvelopeAndWantAssertionsSigned_ReturnsTrue()
@@ -90,6 +92,48 @@ public class Saml2CouldHandleSchemeQueryShortcutTests
         var (testData, samlOptions, organizationId) = await BuildSchemeAsync(
             idpCertificate, spCertificate, wantAssertionsSigned: true, rsa15DeprecationFlag: rsa15DeprecationFlag);
         var context = BuildNoMessageContext(testData, organizationId, method);
+
+        Assert.False(await samlOptions.CouldHandleAsync(organizationId, context));
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_IssuerDoesNotMatchIdp_ReturnsFalseWithoutThrowing()
+    {
+        // Scheme-selection invariant. A message from another identity provider must decline the
+        // scheme, not throw, even with an unsigned assertion and the setting on. Any change to
+        // the signature check must keep this ordering.
+        var (idpCertificate, spCertificate) = BuildCertificates();
+        var (testData, samlOptions, organizationId) =
+            await BuildSchemeAsync(idpCertificate, spCertificate, wantAssertionsSigned: true);
+
+        var foreignResponse = BuildResponseXml(
+            BuildAssertionDocument().DocumentElement!.OuterXml, "https://other-idp.example.com");
+        var context = BuildPostContext(testData,
+            SsoConfigurationData.BuildSaml2AcsUrl(null, organizationId), "SAMLResponse", foreignResponse);
+
+        Assert.False(await samlOptions.CouldHandleAsync(organizationId, context));
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_UnparseablePayload_ReturnsFalseWithoutThrowing()
+    {
+        // Scheme-selection invariant. Malformed input must decline the scheme quietly so the
+        // middleware can try the next one.
+        var (idpCertificate, spCertificate) = BuildCertificates();
+        var (testData, samlOptions, organizationId) =
+            await BuildSchemeAsync(idpCertificate, spCertificate, wantAssertionsSigned: true);
+
+        var context = new DefaultHttpContext
+        {
+            RequestServices = testData.Factory.Services.CreateScope().ServiceProvider,
+        };
+        context.Request.Path = SsoConfigurationData.BuildSaml2AcsUrl(null, organizationId);
+        context.Request.Method = HttpMethods.Post;
+        context.Request.ContentType = "application/x-www-form-urlencoded";
+        context.Request.Form = new FormCollection(new Dictionary<string, StringValues>
+        {
+            ["SAMLResponse"] = "not-base64-at-all!!",
+        });
 
         Assert.False(await samlOptions.CouldHandleAsync(organizationId, context));
     }

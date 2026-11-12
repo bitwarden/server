@@ -6,7 +6,9 @@ using Xunit;
 namespace Bit.Sso.IntegrationTest.ExternalCallback;
 
 /// <summary>
-/// <c>/Account/ExternalCallback</c> for a user who already has an SSO link to the organization.
+/// A user who already has an SSO link to the organization signs in through <c>/Account/ExternalCallback</c>
+/// with no new link and no new account, but only while the user still has an organization user row. A native
+/// client gets a page with status 200 that redirects, not a 302.
 /// </summary>
 public class ExternalCallbackReturningUserTests
 {

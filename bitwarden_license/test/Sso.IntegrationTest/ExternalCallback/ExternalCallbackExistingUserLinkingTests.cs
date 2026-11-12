@@ -11,8 +11,10 @@ using Xunit;
 namespace Bit.Sso.IntegrationTest.ExternalCallback;
 
 /// <summary>
-/// <c>/Account/ExternalCallback</c> for an existing Bitwarden user with no SSO link yet. The organization
-/// user status, and whether the user uses Key Connector, decide the outcome.
+/// An existing Bitwarden user with no SSO link signs in through <c>/Account/ExternalCallback</c> only when the
+/// organization user is Accepted or Confirmed. With no organization user or an Invited one, the user goes back
+/// to the web vault login page with an error code. A Key Connector user who is not yet a member, a Revoked
+/// organization user, and an unknown status each get an error.
 /// </summary>
 public class ExternalCallbackExistingUserLinkingTests
 {

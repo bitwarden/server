@@ -18,8 +18,9 @@ using AuthenticationSchemes = Bit.Core.Auth.IdentityServer.AuthenticationSchemes
 namespace Bit.Sso.IntegrationTest.ExternalCallback;
 
 /// <summary>
-/// <c>/Account/ExternalCallback</c> when the request carries a user identifier to link an existing account
-/// to SSO by hand.
+/// A request to <c>/Account/ExternalCallback</c> that carries a user identifier links an existing account to
+/// SSO by hand. The identifier must have the <c>userId,token</c> form and a valid token, and the identity
+/// provider must still send an email claim.
 /// </summary>
 public class ExternalCallbackManualLinkingTests(SsoApplicationFactory factory) : IClassFixture<SsoApplicationFactory>
 {

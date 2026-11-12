@@ -6,8 +6,10 @@ using static Bit.Sso.IntegrationTest.Utilities.Saml2MessageBuilder;
 namespace Bit.Sso.IntegrationTest.Saml2.RequestMatching;
 
 /// <summary>
-/// Exercises how the assertion signature check in <c>CouldHandleAsync</c> reads the <c>samlp:Status</c>
-/// of a <c>Response</c>. Only a readable error status excuses a response that carries no assertions.
+/// A response with no assertions passes the assertion signature check in <c>CouldHandleAsync</c> only when its
+/// <c>samlp:Status</c> has a readable error code. White space around the code is allowed. A success status or a
+/// status with no readable code throws. No status excuses an unsigned assertion, and neither does a missing
+/// status.
 /// </summary>
 public class Saml2CouldHandleStatusCodeTests
 {
