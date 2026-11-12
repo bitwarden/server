@@ -553,8 +553,8 @@ public class CiphersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
             RemoveCollections = false
         });
 
-        // Assert: the request is rejected and the cipher is not linked.
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        // Assert: the request is rejected the same way an unauthorized one is, and the cipher is not linked.
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
 
         var collectionIds = await collectionCipherRepository.GetCollectionIdsByCipherIdAsync(cipher.Id);
         Assert.DoesNotContain(defaultCollectionId, collectionIds);
