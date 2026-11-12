@@ -9,6 +9,7 @@ using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Infrastructure.Dapper.AdminConsole.Helpers;
@@ -109,6 +110,19 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
             }
 
             return ciphers.Values.ToList();
+        }
+    }
+
+    public async Task<IReadOnlyDictionary<CipherType, int>> GetCountsByTypeByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<CipherTypeCountRow>(
+                $"[{Schema}].[Cipher_ReadTypeCountsByOrganizationId]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToDictionary(r => r.Type, r => r.Count);
         }
     }
 
@@ -1083,5 +1097,11 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
     public class CipherWithCollections : Cipher
     {
         public DataTable CollectionIds { get; set; }
+    }
+
+    private sealed class CipherTypeCountRow
+    {
+        public CipherType Type { get; set; }
+        public int Count { get; set; }
     }
 }

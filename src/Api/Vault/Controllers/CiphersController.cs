@@ -59,6 +59,7 @@ public class CiphersController : Controller
     private readonly ICipherLeaseGate _cipherLeaseGate;
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IGetOrganizationCipherTypeCountsQuery _getOrganizationCipherTypeCountsQuery;
 
     public CiphersController(
         ICipherRepository cipherRepository,
@@ -76,7 +77,8 @@ public class CiphersController : Controller
         IUnarchiveCiphersCommand unarchiveCiphersCommand,
         ICipherLeaseGate cipherLeaseGate,
         IAuthorizationService authorizationService,
-        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
+        IGetOrganizationCipherTypeCountsQuery getOrganizationCipherTypeCountsQuery)
     {
         _cipherRepository = cipherRepository;
         _collectionCipherRepository = collectionCipherRepository;
@@ -94,6 +96,7 @@ public class CiphersController : Controller
         _cipherLeaseGate = cipherLeaseGate;
         _authorizationService = authorizationService;
         _featureService = featureService;
+        _getOrganizationCipherTypeCountsQuery = getOrganizationCipherTypeCountsQuery;
     }
 
     /// <summary>
@@ -498,6 +501,23 @@ public class CiphersController : Controller
             );
 
         return new ListResponseModel<CipherMiniDetailsResponseModel>(allOrganizationCipherResponses);
+    }
+
+    /// <summary>
+    /// Returns the number of organization-owned items for each cipher type. Used to warn admins how many existing
+    /// items will be hidden from member vaults when an item type restriction is activated.
+    /// </summary>
+    [HttpGet("organization-details/type-counts")]
+    public async Task<Bit.HttpExtensions.ListResponseModel<OrganizationCipherTypeCountResponseModel>> GetOrganizationCipherTypeCounts(
+        Guid organizationId)
+    {
+        await _authorizationService.AuthorizeOrThrowAsync(User, new OrganizationScope(organizationId),
+            CipherOrganizationOperations.ReadTypeCountsAsAdmin);
+
+        var counts = await _getOrganizationCipherTypeCountsQuery.GetCountsAsync(organizationId);
+
+        return new Bit.HttpExtensions.ListResponseModel<OrganizationCipherTypeCountResponseModel>(
+            counts.Select(kvp => new OrganizationCipherTypeCountResponseModel(kvp.Key, kvp.Value)));
     }
 
     [HttpGet("organization-details/logins")]

@@ -13,6 +13,7 @@ using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
+using Bit.Infrastructure.IntegrationTest.AdminConsole;
 using Xunit;
 using CipherType = Bit.Core.Vault.Enums.CipherType;
 
@@ -1986,5 +1987,85 @@ public class CipherRepositoryTests
         // Default-collection cipher is included (not excluded unlike ExcludingDefaultCollections)
         Assert.Contains(result, c => c.Id == loginInDefaultCollection.Id);
     }
-}
 
+    [DatabaseTheory, DatabaseData]
+    public async Task GetCountsByTypeByOrganizationIdAsync_CountsOrganizationOwnedCiphersPerType(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository,
+        ICipherRepository cipherRepository)
+    {
+        var user = await userRepository.CreateTestUserAsync();
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var otherOrganization = await organizationRepository.CreateTestOrganizationAsync();
+        var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+
+        var sharedCollection = await collectionRepository.CreateTestCollectionAsync(organization);
+        await collectionRepository.UpdateUsersAsync(sharedCollection.Id,
+        [
+            new CollectionAccessSelection { Id = orgUser.Id, ReadOnly = false, HidePasswords = false, Manage = true },
+        ]);
+        var defaultCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "My Items",
+            OrganizationId = organization.Id,
+            Type = CollectionType.DefaultUserCollection,
+        });
+
+        async Task<Cipher> CreateOrgCipher(
+            Guid organizationId, CipherType type, DateTime? deletedDate = null, params Guid[] collectionIds)
+        {
+            var cipher = new Cipher
+            {
+                Type = type,
+                OrganizationId = organizationId,
+                DeletedDate = deletedDate,
+                Data = "", // TODO: EF does not enforce this as NOT NULL
+            };
+            await cipherRepository.CreateAsync(cipher, collectionIds);
+            return cipher;
+        }
+
+        await CreateOrgCipher(organization.Id, CipherType.Card);
+        await CreateOrgCipher(organization.Id, CipherType.Card);
+        await CreateOrgCipher(organization.Id, CipherType.BankAccount);
+        // Trashed items can still be restored, so they are counted
+        await CreateOrgCipher(organization.Id, CipherType.Card, deletedDate: DateTime.UtcNow);
+        // Archived items are still hidden by a restriction, so they are counted
+        var archivedCipher = await CreateOrgCipher(organization.Id, CipherType.Card,
+            collectionIds: sharedCollection.Id);
+        await cipherRepository.ArchiveAsync([archivedCipher.Id], user.Id);
+        var archivedForUser = await cipherRepository.GetByIdAsync(archivedCipher.Id, user.Id);
+        Assert.NotNull(archivedForUser?.ArchivedDate);
+        // Items in a member's default "My Items" collection are counted
+        await CreateOrgCipher(organization.Id, CipherType.Card, collectionIds: defaultCollection.Id);
+        // Other organizations' items are excluded
+        await CreateOrgCipher(otherOrganization.Id, CipherType.Card);
+        // User-owned items are excluded
+        await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Card,
+            UserId = user.Id,
+            Data = "", // TODO: EF does not enforce this as NOT NULL
+        });
+
+        var counts = await cipherRepository.GetCountsByTypeByOrganizationIdAsync(organization.Id);
+
+        Assert.Equal(5, counts[CipherType.Card]);
+        Assert.Equal(1, counts[CipherType.BankAccount]);
+        Assert.Equal(2, counts.Count);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetCountsByTypeByOrganizationIdAsync_NoCiphers_ReturnsEmpty(
+        IOrganizationRepository organizationRepository,
+        ICipherRepository cipherRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+
+        var counts = await cipherRepository.GetCountsByTypeByOrganizationIdAsync(organization.Id);
+
+        Assert.Empty(counts);
+    }
+}
