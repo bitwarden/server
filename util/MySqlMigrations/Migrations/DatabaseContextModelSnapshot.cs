@@ -3337,6 +3337,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime?>("DeletedDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("Exclusions")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("Favorites")
                         .HasColumnType("longtext");
 

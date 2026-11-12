@@ -34,6 +34,10 @@ SELECT
             OR C.[Archives] IS NULL
         THEN NULL
         ELSE TRY_CONVERT(DATETIME2(7), JSON_VALUE(C.[Archives], CONCAT('$."', @UserId, '"')))
-    END [ArchivedDate]
+    END [ArchivedDate],
+    CASE
+        WHEN @UserId IS NULL THEN NULL
+        ELSE JSON_QUERY(C.[Exclusions], CONCAT('$."', @UserId, '"'))
+    END [ExcludedRiskCategories]
 FROM
     [dbo].[Cipher] C;
