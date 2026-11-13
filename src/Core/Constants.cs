@@ -139,6 +139,7 @@ public static partial class FeatureFlagKeys
     public const string PM43375CollectionsDecryptListFailures = "pm-43375-collections-decrypt-list-failures";
     public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
     public const string MembersTableV2 = "pm-37463-members-table-v2";
+    public const string OrganizationMembershipSdk = "pm-41568-org-memberships-v2";
     public const string GroupsTableV2 = "pm-43419-groups-table-v2";
 
     /* Architecture */
@@ -278,8 +279,12 @@ public static partial class FeatureFlagKeys
 
     /* Secrets Manager Team */
     public const string SecretsVersioning = "sm-1587-secrets-versioning";
+    public const string SmCli = "sm-2107-cli";
 
     /* Skunkworks Team */
+    public const string DesktopWebAuthnClientWindows = "pm-46060-desktop-webauthn-client-windows";
+    public const string DesktopWebAuthnClientMacOs = "pm-46059-desktop-webauthn-client-macos";
+    public const string DesktopWebAuthnClientLinux = "pm-46061-desktop-webauthn-client-linux";
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
     public const string WindowsNativeCredentialSync = "windows-native-credential-sync";
 

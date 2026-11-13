@@ -17,6 +17,13 @@ internal static class UserSeeder
         IPasswordHasher<User> passwordHasher,
         IManglerService manglerService)
     {
+        var hasPasswordOrHint = seed.Password is not null || seed.MasterPasswordHint is not null;
+        if (seed.UsesSsoAuth && hasPasswordOrHint)
+        {
+            throw new InvalidOperationException(
+                "UsesSsoAuth accounts have no master password, so Password and MasterPasswordHint must not be set.");
+        }
+
         // When keys are provided, caller owns email/key consistency - don't mangle
         var keys = seed.Keys;
         var mangledEmail = keys == null ? manglerService.Mangle(seed.Email) : seed.Email;
@@ -33,7 +40,7 @@ internal static class UserSeeder
             MasterPassword = null,
             MasterPasswordHint = seed.MasterPasswordHint,
             SecurityStamp = Guid.NewGuid().ToString(),
-            Key = keys.EncryptedUserKey,
+            Key = seed.UsesSsoAuth ? null : keys.EncryptedUserKey,
             PublicKey = keys.PublicKey,
             PrivateKey = keys.PrivateKey,
             Premium = seed.Premium,
@@ -66,7 +73,10 @@ internal static class UserSeeder
             user.SetTwoFactorProviders(seed.TwoFactorProviders);
         }
 
-        user.MasterPassword = passwordHasher.HashPassword(user, keys.MasterPasswordHash);
+        if (!seed.UsesSsoAuth)
+        {
+            user.MasterPassword = passwordHasher.HashPassword(user, keys.MasterPasswordHash);
+        }
 
         return (user, keys);
     }

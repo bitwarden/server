@@ -28,7 +28,7 @@ internal sealed class CreateShapedGroupsStep(int count, SeedPresetAccessShape ac
     public void Execute(SeederContext context)
     {
         var orgId = context.RequireOrgId();
-        var progress = context.GetProgress();
+        var progress = context.Progress;
         var random = new Random(seed);
 
         var everyoneRate = _shape.EveryoneGroupRate ?? 0;
