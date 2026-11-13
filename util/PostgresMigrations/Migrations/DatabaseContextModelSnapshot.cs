@@ -2449,6 +2449,12 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasIndex("OrganizationId", "OccurredDate", "Id")
                         .IsDescending(false, true, true);
 
+                    b.HasIndex("OrganizationId", "AccessRuleId", "OccurredDate", "Id")
+                        .IsDescending(false, false, true, true);
+
+                    b.HasIndex("OrganizationId", "CipherId", "OccurredDate", "Id")
+                        .IsDescending(false, false, true, true);
+
                     b.ToTable("AccessAuditEvent", (string)null);
                 });
 

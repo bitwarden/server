@@ -251,12 +251,16 @@ public class DatabaseContext : DbContext
             .OnDelete(DeleteBehavior.Cascade);
 
         // Mirrors the MSSQL schema, which carries the rationale: the subject ids are deliberately not foreign keys,
-        // and the first index is keyed (OrganizationId, OccurredDate, Id). MSSQL also covers both reads with INCLUDE
-        // columns, which has no EF equivalent to mirror here.
+        // and the first index is keyed (OrganizationId, OccurredDate, Id). MSSQL also covers the reads with INCLUDE
+        // columns and filters the two subject indexes to non-null subjects, which are not mirrored here.
         eAccessAuditEvent.Property(p => p.Id).ValueGeneratedNever();
         eAccessAuditEvent.HasIndex(p => new { p.OrganizationId, p.OccurredDate, p.Id })
             .IsDescending(false, true, true);
         eAccessAuditEvent.HasIndex(p => p.CorrelationId);
+        eAccessAuditEvent.HasIndex(p => new { p.OrganizationId, p.CipherId, p.OccurredDate, p.Id })
+            .IsDescending(false, false, true, true);
+        eAccessAuditEvent.HasIndex(p => new { p.OrganizationId, p.AccessRuleId, p.OccurredDate, p.Id })
+            .IsDescending(false, false, true, true);
 
         // PAM rotation mirrors the MSSQL keys, indexes and delete behavior. Organization cascades to configs, and a
         // config's jobs, attempts and timeout journal cascade with it. Everything else is NO ACTION, so a target system
