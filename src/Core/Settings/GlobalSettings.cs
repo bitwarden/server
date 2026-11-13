@@ -615,6 +615,7 @@ public class GlobalSettings : IGlobalSettings
         public int? AccessTokenLifetimeSeconds { get; set; }
     }
 
+#nullable enable
     /// <summary>
     /// A staged certificate that replaces the active certificate of its role. A cloud host loads it from blob storage
     /// or from the certificate store. A self-hosted host loads it from a file.
@@ -622,13 +623,13 @@ public class GlobalSettings : IGlobalSettings
     public class FutureCertificateSettings : ICertificateSettings
     {
         /// <inheritdoc/>
-        public string CertificateLocation { get; set; }
+        public string? CertificateLocation { get; set; }
         /// <inheritdoc/>
-        public string CertificateThumbprint { get; set; }
+        public string? CertificateThumbprint { get; set; }
         /// <inheritdoc/>
-        public string CertificatePassword { get; set; }
+        public string? CertificatePassword { get; set; }
         /// <inheritdoc/>
-        public string BlobName { get; set; }
+        public string? BlobName { get; set; }
         /// <summary>
         /// When true, the host loads this certificate, and startup stops if the certificate does not load.
         /// When false, the host ignores this slot. The default is false.
@@ -650,13 +651,13 @@ public class GlobalSettings : IGlobalSettings
     public class RetiredCertificateSettings : ICertificateSettings
     {
         /// <inheritdoc/>
-        public string CertificateLocation { get; set; }
+        public string? CertificateLocation { get; set; }
         /// <inheritdoc/>
-        public string CertificateThumbprint { get; set; }
+        public string? CertificateThumbprint { get; set; }
         /// <inheritdoc/>
-        public string CertificatePassword { get; set; }
+        public string? CertificatePassword { get; set; }
         /// <inheritdoc/>
-        public string BlobName { get; set; }
+        public string? BlobName { get; set; }
         /// <summary>
         /// When true, the host loads this certificate, and startup stops if the certificate does not load.
         /// When false, the host ignores this entry. The default is true.
@@ -677,13 +678,13 @@ public class GlobalSettings : IGlobalSettings
     public class SsoServerSettings : ICertificateSettings
     {
         /// <inheritdoc/>
-        public string CertificateLocation { get; set; }
+        public string? CertificateLocation { get; set; }
         /// <inheritdoc/>
-        public string CertificateThumbprint { get; set; }
+        public string? CertificateThumbprint { get; set; }
         /// <inheritdoc/>
-        public string CertificatePassword { get; set; }
+        public string? CertificatePassword { get; set; }
         /// <inheritdoc/>
-        public string BlobName { get; set; }
+        public string? BlobName { get; set; }
         /// <summary>
         /// The staged SSO signing certificate. When <see cref="FutureCertificateSettings.Enabled"/> is true,
         /// the host publishes the certificate key for OIDC token validation. The SAML metadata then lists the certificate
@@ -715,13 +716,13 @@ public class GlobalSettings : IGlobalSettings
     public class SsoServerEncryptionSettings : ICertificateSettings
     {
         /// <inheritdoc/>
-        public string CertificateLocation { get; set; }
+        public string? CertificateLocation { get; set; }
         /// <inheritdoc/>
-        public string CertificateThumbprint { get; set; }
+        public string? CertificateThumbprint { get; set; }
         /// <inheritdoc/>
-        public string CertificatePassword { get; set; }
+        public string? CertificatePassword { get; set; }
         /// <inheritdoc/>
-        public string BlobName { get; set; }
+        public string? BlobName { get; set; }
         /// <summary>
         /// The staged SSO encryption certificate. When <see cref="FutureCertificateSettings.Enabled"/> is true,
         /// the host decrypts SAML assertions with this certificate. The SAML metadata does not publish it.
@@ -736,7 +737,6 @@ public class GlobalSettings : IGlobalSettings
         public RetiredCertificateSettings[] DecryptionCertificates { get; set; } = [];
     }
 
-#nullable enable
     public class DataProtectionSettings
     {
         private readonly GlobalSettings _globalSettings;

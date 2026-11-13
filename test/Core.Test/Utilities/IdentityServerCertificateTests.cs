@@ -567,6 +567,23 @@ public class IdentityServerCertificateTests
         Assert.DoesNotContain($"{IdentityServerValidationPath}:0", exception.Message);
     }
 
+    [Fact]
+    public void Cloud_FutureActiveWithPasswordOnly_Throws_MessageHasPath()
+    {
+        var globalSettings = new GlobalSettings
+        {
+            SelfHosted = false,
+            IdentityServer = { FutureCertificate = { CertificatePassword = Password, Enabled = true, Active = true } },
+        };
+        globalSettings.Storage.ConnectionString = "UseDevelopmentStorage=true";
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            CoreHelpers.GetIdentityServerCertificate(globalSettings));
+
+        Assert.Contains(IdentityServerFuturePath, exception.Message);
+        Assert.DoesNotContain(Password, exception.ToString());
+    }
+
     [Theory]
     [InlineData(new byte[0])]
     [InlineData(new byte[] { 0x6E, 0x6F, 0x74, 0x20, 0x61, 0x20, 0x63, 0x65, 0x72, 0x74 })]

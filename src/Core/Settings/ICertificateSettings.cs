@@ -10,17 +10,17 @@ public interface ICertificateSettings
     /// <summary>
     /// The path of the certificate file. A self-hosted host uses this path. A cloud host does not.
     /// </summary>
-    string CertificateLocation { get; set; }
+    string? CertificateLocation { get; set; }
     /// <summary>
     /// The thumbprint of the certificate in the certificate store. A cloud host and a self-hosted host may use this value.
     /// </summary>
-    string CertificateThumbprint { get; set; }
+    string? CertificateThumbprint { get; set; }
     /// <summary>
     /// The password of the certificate file or the certificate blob. A cloud host and a self-hosted host use this value.
     /// </summary>
-    string CertificatePassword { get; set; }
+    string? CertificatePassword { get; set; }
     /// <summary>
     /// The name of the certificate blob in the "certificates" blob container. A cloud host uses this name. A self-hosted host does not.
     /// </summary>
-    string BlobName { get; set; }
+    string? BlobName { get; set; }
 }

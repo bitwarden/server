@@ -757,7 +757,8 @@ public static class CoreHelpers
         }
         else if (!globalSettings.SelfHosted &&
             SettingHasValue(globalSettings.Storage?.ConnectionString) &&
-            SettingHasValue(settings.CertificatePassword))
+            SettingHasValue(settings.CertificatePassword) &&
+            SettingHasValue(settings.BlobName))
         {
             return GetBlobCertificateAsync(globalSettings.Storage.ConnectionString, "certificates",
                 settings.BlobName, settings.CertificatePassword).GetAwaiter().GetResult();
