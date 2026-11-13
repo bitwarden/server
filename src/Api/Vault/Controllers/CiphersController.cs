@@ -326,9 +326,9 @@ public class CiphersController : Controller
         // The bulk witness authorizes only the ciphers that are not leasing-gated: lease state is
         // deliberately not consulted here, so a gated cipher yields the partial shape on a list read even
         // when the caller holds a valid lease. Secrets are only released through the single-cipher GET
-        // above. The self-loading overload is used deliberately so nothing extra is queried while the
-        // flag is off.
-        var fullAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(user.Id, ciphers);
+        // above. The mappings loaded above are reused; the gate loads the caller's collections only when
+        // one of these ciphers can be gated.
+        var fullAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(user.Id, ciphers, collectionCiphersGroupDict);
         var responses = VisibleToClient(ciphers, fullAccess)
             .Select(cipher => CipherDetailsResponseModel.From(
                 fullAccess, cipher, user, GetOrganizationAbility(cipher, organizationAbilities), _globalSettings,

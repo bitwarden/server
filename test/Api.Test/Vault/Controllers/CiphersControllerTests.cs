@@ -2601,7 +2601,8 @@ public class CiphersControllerTests
 
         // Authorize only the non-gated cipher.
         sutProvider.GetDependency<ICipherLeaseGate>()
-            .AuthorizeReadManyAsync(userId, Arg.Any<IEnumerable<Cipher>>())
+            .AuthorizeReadManyAsync(userId, Arg.Any<IEnumerable<Cipher>>(),
+                Arg.Any<IDictionary<Guid, IGrouping<Guid, CollectionCipher>>>())
             .Returns(FullCipherAccess.ForCipher(visible.Id));
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.Android);
 
@@ -2629,7 +2630,8 @@ public class CiphersControllerTests
             .Returns(Task.FromResult<ICollection<CipherDetails>>([visible, gated]));
 
         sutProvider.GetDependency<ICipherLeaseGate>()
-            .AuthorizeReadManyAsync(userId, Arg.Any<IEnumerable<Cipher>>())
+            .AuthorizeReadManyAsync(userId, Arg.Any<IEnumerable<Cipher>>(),
+                Arg.Any<IDictionary<Guid, IGrouping<Guid, CollectionCipher>>>())
             .Returns(FullCipherAccess.ForCipher(visible.Id));
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
         sutProvider.GetDependency<ICurrentContext>().ClientVersion
@@ -2640,6 +2642,41 @@ public class CiphersControllerTests
         Assert.Equal(2, result.Data.Count());
         Assert.Null(result.Data.Single(c => c.Id == gated.Id).Data);
         Assert.NotNull(result.Data.Single(c => c.Id == visible.Id).Data);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAll_PassesLoadedMappingsToTheGate(
+        Guid userId, User user, Guid organizationId, SutProvider<CiphersController> sutProvider)
+    {
+        user.Id = userId;
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        var cipher = new CipherDetails
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Type = CipherType.Login,
+            Data = "{}",
+        };
+        sutProvider.GetDependency<ICurrentContext>().Organizations
+            .Returns([new CurrentContextOrganization { Id = organizationId }]);
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(userId, Arg.Any<bool>())
+            .Returns(Task.FromResult<ICollection<CipherDetails>>([cipher]));
+        var collectionId = Guid.NewGuid();
+        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdAsync(userId)
+            .Returns([new CollectionCipher { CipherId = cipher.Id, CollectionId = collectionId }]);
+        var gate = sutProvider.GetDependency<ICipherLeaseGate>();
+        gate.AuthorizeReadManyAsync(userId, Arg.Any<IEnumerable<Cipher>>(),
+                Arg.Any<IDictionary<Guid, IGrouping<Guid, CollectionCipher>>>())
+            .Returns(FullCipherAccess.ForCipher(cipher.Id));
+
+        await sutProvider.Sut.GetAll();
+
+        await gate.Received(1).AuthorizeReadManyAsync(userId, Arg.Any<IEnumerable<Cipher>>(),
+            Arg.Is<IDictionary<Guid, IGrouping<Guid, CollectionCipher>>>(d =>
+                d.Count == 1 && d[cipher.Id].Single().CollectionId == collectionId));
+        await gate.DidNotReceive().AuthorizeReadManyAsync(userId, Arg.Any<IEnumerable<Cipher>>());
+        await sutProvider.GetDependency<ICollectionCipherRepository>().Received(1).GetManyByUserIdAsync(userId);
     }
 
     /// <summary>
