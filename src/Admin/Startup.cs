@@ -13,6 +13,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Admin.Controllers;
 using Bit.Admin.Services;
 using Bit.Core.Billing.Extensions;
+using Microsoft.AspNetCore.Rewrite;
+
 
 #if !OSS
 using Bit.Commercial.Core.Utilities;
@@ -81,7 +83,7 @@ public class Startup
         services.AddAdminUpstreamOidc(adminSettings);
         services.Configure<SecurityStampValidatorOptions>(options =>
         {
-            // This interval defines the maximum delay in access changes 
+            // This interval defines the maximum delay in access changes
             // being reflected in the application.
             options.ValidationInterval = TimeSpan.FromSeconds(30);
         });
@@ -153,6 +155,9 @@ public class Startup
 
         if (globalSettings.SelfHosted)
         {
+            app.UseRewriter(new RewriteOptions()
+            .AddRedirect("^(?!admin)(.*)", "/admin/$1")
+            .AddRedirect("^admin[^/].*", "/admin/$0"));
             app.UsePathBase("/admin");
             app.UseForwardedHeaders(globalSettings);
         }
