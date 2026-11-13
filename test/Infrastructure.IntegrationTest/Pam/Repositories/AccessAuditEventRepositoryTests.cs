@@ -505,6 +505,47 @@ public class AccessAuditEventRepositoryTests
         Assert.DoesNotContain(items, item => item.CipherId == oldCipherId);
     }
 
+    // A subject's context comes from its latest event inside the range, not its latest event overall.
+    [DatabaseTheory, DatabaseData]
+    public async Task ReadItems_TakesContextFromTheLatestEventInRange(
+        IOrganizationRepository organizationRepository,
+        IAccessAuditEventRepository accessAuditEventRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+        var cipherId = Guid.NewGuid();
+        var earlierCollectionId = Guid.NewGuid();
+        var inRangeCollectionId = Guid.NewGuid();
+        var laterCollectionId = Guid.NewGuid();
+        var ruleId = Guid.NewGuid();
+
+        await accessAuditEventRepository.CreateAsync(
+            BuildEvent(organization.Id, AccessAuditEventKind.LeaseActivated, AccessAuditEventPhase.Outcome, now.AddDays(-3))
+                with
+            { CipherId = cipherId, CollectionId = earlierCollectionId });
+        await accessAuditEventRepository.CreateAsync(
+            BuildEvent(organization.Id, AccessAuditEventKind.LeaseActivated, AccessAuditEventPhase.Outcome, now.AddDays(-1))
+                with
+            { CipherId = cipherId, CollectionId = inRangeCollectionId });
+        await accessAuditEventRepository.CreateAsync(
+            BuildEvent(organization.Id, AccessAuditEventKind.LeaseActivated, AccessAuditEventPhase.Outcome, now)
+                with
+            { CipherId = cipherId, CollectionId = laterCollectionId });
+        await accessAuditEventRepository.CreateAsync(
+            BuildEvent(organization.Id, AccessAuditEventKind.RuleUpdated, AccessAuditEventPhase.Outcome, now.AddDays(-1))
+                with
+            { AccessRuleId = ruleId, RuleName = "Production database" });
+        await accessAuditEventRepository.CreateAsync(
+            BuildEvent(organization.Id, AccessAuditEventKind.RuleUpdated, AccessAuditEventPhase.Outcome, now) with
+            { AccessRuleId = ruleId, RuleName = "Production database (paused)" });
+
+        var items = await accessAuditEventRepository.GetItemsByOrganizationIdAsync(
+            organization.Id, now.AddDays(-2), now.AddHours(-1));
+
+        Assert.Equal(inRangeCollectionId, Assert.Single(items, item => item.CipherId == cipherId).CollectionId);
+        Assert.Equal("Production database", Assert.Single(items, item => item.RuleId == ruleId).RuleName);
+    }
+
     [DatabaseTheory, DatabaseData]
     public async Task ReadItems_ScopesToOrganization(
         IOrganizationRepository organizationRepository,
