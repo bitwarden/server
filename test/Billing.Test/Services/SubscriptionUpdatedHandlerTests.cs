@@ -650,6 +650,243 @@ public class SubscriptionUpdatedHandlerTests
             .ListInvoicesAsync(Arg.Any<StripeInvoiceListOptions>());
     }
 
+    [Theory]
+    [InlineData("sub_current")]
+    [InlineData("sub_old")]
+    public async Task HandleAsync_UnpaidUserSubscription_OtherLiveSubscription_LinksItAndSetsCancellationWithoutDisablingPremium(string linkedSubscriptionId)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var subscriptionId = "sub_old";
+        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var previousSubscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Active
+        };
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Unpaid,
+            Metadata = new Dictionary<string, string> { { "userId", userId.ToString() } },
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd }
+                ]
+            },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        var user = new User { Id = userId, Premium = true, GatewaySubscriptionId = linkedSubscriptionId };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _userRepository.GetByIdAsync(userId).Returns(user);
+        var liveSubscription = new Subscription { Id = "sub_live" };
+        _stripeEventUtilityService.GetOtherLiveSubscriptionAsync(user, subscription).Returns(liveSubscription);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeEventUtilityService.Received(1).LinkUserSubscriptionAsync(user, liveSubscription);
+        await _userService.DidNotReceiveWithAnyArgs().DisablePremiumAsync(default, default);
+        await _userService.DidNotReceiveWithAnyArgs().UpdatePremiumExpirationAsync(default, default);
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            subscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(options => ((DateTime?)options.CancelAt).HasValue));
+    }
+
+    [Theory]
+    [InlineData("sub_current")]
+    [InlineData("sub_old")]
+    public async Task HandleAsync_IncompleteToIncompleteExpiredUserSubscription_OtherLiveSubscription_LinksItWithoutDisablingPremium(string linkedSubscriptionId)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var subscriptionId = "sub_old";
+        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var previousSubscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Incomplete
+        };
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.IncompleteExpired,
+            Metadata = new Dictionary<string, string> { { "userId", userId.ToString() } },
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd }
+                ]
+            },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCreate }
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        var user = new User { Id = userId, Premium = true, GatewaySubscriptionId = linkedSubscriptionId };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _userRepository.GetByIdAsync(userId).Returns(user);
+        var liveSubscription = new Subscription { Id = "sub_live" };
+        _stripeEventUtilityService.GetOtherLiveSubscriptionAsync(user, subscription).Returns(liveSubscription);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeEventUtilityService.Received(1).LinkUserSubscriptionAsync(user, liveSubscription);
+        await _userService.DidNotReceiveWithAnyArgs().DisablePremiumAsync(default, default);
+        await _userService.DidNotReceiveWithAnyArgs().UpdatePremiumExpirationAsync(default, default);
+    }
+
+    [Theory]
+    [InlineData(SubscriptionStatus.Active, SubscriptionStatus.Unpaid, BillingReasons.SubscriptionCycle)]
+    [InlineData(SubscriptionStatus.Incomplete, SubscriptionStatus.IncompleteExpired, BillingReasons.SubscriptionCreate)]
+    public async Task HandleAsync_OrganizationSubscriptionEnded_LinkedSubscriptionIsLive_KeepsOrganizationEnabled(
+        string previousStatus, string status, string billingReason)
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var subscriptionId = "sub_old";
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = status,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = DateTime.UtcNow.AddDays(30),
+                        Plan = new Plan { Id = "2023-enterprise-org-seat-annually" }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = billingReason }
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(new Subscription { Id = subscriptionId, Status = previousStatus })
+            }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            Enabled = true,
+            GatewaySubscriptionId = "sub_live",
+            PlanType = PlanType.EnterpriseAnnually2023
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new Enterprise2023Plan(true));
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        var liveSubscription = new Subscription { Id = "sub_live" };
+        _stripeEventUtilityService.GetLiveLinkedSubscriptionAsync(organization, subscription).Returns(liveSubscription);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _organizationDisableCommand.DidNotReceiveWithAnyArgs().DisableAsync(default, default);
+        await _organizationService.DidNotReceiveWithAnyArgs().UpdateExpirationDateAsync(default, default);
+    }
+
+    [Fact]
+    public async Task HandleAsync_ActiveOrganizationSubscription_LinkedSubscriptionIsAnotherLiveSubscription_DoesNotUpdateExpiration()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var subscription = new Subscription
+        {
+            Id = "sub_duplicate",
+            Status = SubscriptionStatus.Active,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = DateTime.UtcNow.AddDays(30),
+                        Plan = new Plan { Id = "2023-enterprise-org-seat-annually" }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } }
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(new Subscription { Id = "sub_duplicate", Status = SubscriptionStatus.Active })
+            }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            Enabled = true,
+            GatewaySubscriptionId = "sub_current",
+            PlanType = PlanType.EnterpriseAnnually2023
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new Enterprise2023Plan(true));
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(true);
+        _stripeEventUtilityService.GetLiveLinkedSubscriptionAsync(organization, subscription)
+            .Returns(new Subscription { Id = "sub_current" });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _organizationService.DidNotReceiveWithAnyArgs().UpdateExpirationDateAsync(default, default);
+        await _organizationSponsorshipRenewCommand.DidNotReceiveWithAnyArgs().UpdateExpirationDateAsync(default, default);
+        await _stripeEventUtilityService.DidNotReceiveWithAnyArgs().LinkUserSubscriptionAsync(default!, default!);
+    }
+
     [Fact]
     public async Task HandleAsync_IncompleteExpiredUserSubscription_OnlyUpdatesExpiration()
     {
@@ -1319,6 +1556,86 @@ public class SubscriptionUpdatedHandlerTests
             }
         };
         return (providerId, newSubscription, provider, parsedEvent);
+    }
+
+    [Fact]
+    public async Task HandleAsync_ActiveUserSubscription_LinkedSubscriptionIsAnotherLiveSubscription_DoesNotUpdateExpiration()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var subscription = new Subscription
+        {
+            Id = "sub_duplicate",
+            Status = SubscriptionStatus.Active,
+            Metadata = new Dictionary<string, string> { { "userId", userId.ToString() } },
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(30) }]
+            }
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(new Subscription { Id = "sub_duplicate", Status = SubscriptionStatus.Active })
+            }
+        };
+
+        var user = new User { Id = userId, Premium = true, GatewaySubscriptionId = "sub_current" };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _userRepository.GetByIdAsync(userId).Returns(user);
+        _stripeEventUtilityService.GetOtherLiveSubscriptionAsync(user, subscription)
+            .Returns(new Subscription { Id = "sub_current" });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _userService.DidNotReceiveWithAnyArgs().UpdatePremiumExpirationAsync(default, default);
+        await _stripeEventUtilityService.DidNotReceiveWithAnyArgs().LinkUserSubscriptionAsync(default!, default!);
+    }
+
+    [Fact]
+    public async Task HandleAsync_ActiveUserSubscription_LinkedToUser_DoesNotLookUpOtherSubscriptions()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
+        var subscription = new Subscription
+        {
+            Id = "sub_current",
+            Status = SubscriptionStatus.Active,
+            Metadata = new Dictionary<string, string> { { "userId", userId.ToString() } },
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd }]
+            }
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(new Subscription { Id = "sub_current", Status = SubscriptionStatus.Active })
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _userRepository.GetByIdAsync(userId)
+            .Returns(new User { Id = userId, Premium = true, GatewaySubscriptionId = "sub_current" });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeEventUtilityService.DidNotReceiveWithAnyArgs().GetOtherLiveSubscriptionAsync(default!, default!);
+        await _userService.Received(1).UpdatePremiumExpirationAsync(userId, currentPeriodEnd);
     }
 
     [Fact]

@@ -1,4 +1,6 @@
-﻿using Stripe;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Entities;
+using Stripe;
 using Transaction = Bit.Core.Entities.Transaction;
 namespace Bit.Billing.Services;
 
@@ -53,4 +55,32 @@ public interface IStripeEventUtilityService
     /// <param name="invoice">The invoice to be evaluated.</param>
     /// <returns>A boolean value indicating whether the invoice should be attempted to be paid.</returns>
     bool ShouldAttemptToPayInvoice(Invoice invoice);
+
+    /// <summary>
+    /// Finds another subscription for the user on the same Stripe customer as the specified subscription that still
+    /// grants Premium.
+    /// </summary>
+    /// <param name="user">The user named in the subscription's metadata.</param>
+    /// <param name="subscription">The subscription the event is about.</param>
+    /// <returns>
+    /// The user's linked subscription if it is another live subscription, otherwise the other live subscription with the
+    /// latest period end, or <c>null</c> when there is none.
+    /// </returns>
+    Task<Subscription?> GetOtherLiveSubscriptionAsync(User user, Subscription subscription);
+
+    /// <summary>
+    /// Gets the organization's linked subscription when it is not the specified subscription and still grants access.
+    /// </summary>
+    /// <param name="organization">The organization named in the subscription's metadata.</param>
+    /// <param name="subscription">The subscription the event is about.</param>
+    /// <returns>
+    /// The linked subscription, or <c>null</c> when it is the specified subscription, no longer grants access, or does
+    /// not exist.
+    /// </returns>
+    Task<Subscription?> GetLiveLinkedSubscriptionAsync(Organization organization, Subscription subscription);
+
+    /// <summary>
+    /// Links the user to the specified subscription and sets their Premium expiration to its current period end.
+    /// </summary>
+    Task LinkUserSubscriptionAsync(User user, Subscription subscription);
 }

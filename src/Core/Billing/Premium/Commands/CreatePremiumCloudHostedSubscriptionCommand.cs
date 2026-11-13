@@ -58,7 +58,8 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
     IPricingClient pricingClient,
     IHasPaymentMethodQuery hasPaymentMethodQuery,
     IUpdatePaymentMethodCommand updatePaymentMethodCommand,
-    ISubscriptionDiscountService subscriptionDiscountService)
+    ISubscriptionDiscountService subscriptionDiscountService,
+    IRestoreExistingPremiumSubscriptionCommand restoreExistingPremiumSubscriptionCommand)
     : BaseBillingCommand<CreatePremiumCloudHostedSubscriptionCommand>(logger), ICreatePremiumCloudHostedSubscriptionCommand
 {
     private static readonly List<string> _expand = ["tax"];
@@ -77,6 +78,17 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         if (user.Premium && !hasTerminalSubscription)
         {
             return new BadRequest("Already a premium user.");
+        }
+
+        var existingSubscription = await restoreExistingPremiumSubscriptionCommand.Run(user);
+        if (existingSubscription is { Status: SubscriptionStatus.Active or SubscriptionStatus.Trialing })
+        {
+            return new None();
+        }
+
+        if (existingSubscription != null)
+        {
+            return new BadRequest(RestoreExistingPremiumSubscriptionCommand.UnpaidSubscriptionMessage);
         }
 
         if (subscriptionPurchase.AdditionalStorageGb is < 0)
