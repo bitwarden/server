@@ -187,10 +187,66 @@ public class PostUserCommandTests
 
     [Theory]
     [BitAutoData]
+    public async Task PostUser_UserName_InvitesWithExternalName(SutProvider<PostUserCommand> sutProvider, string externalId, Guid organizationId, ICollection<OrganizationUserUserDetails> organizationUsers, Core.Entities.OrganizationUser newUser, Organization organization)
+    {
+        var userName = "Jane.Doe@tenant.onmicrosoft.com";
+        var scimUserRequestModel = new ScimUserRequestModel
+        {
+            ExternalId = externalId,
+            UserName = userName,
+            Emails = [new BaseScimUserModel.EmailModel("jane@example.com")],
+            Active = true,
+            Schemas = [ScimConstants.Scim2SchemaUser]
+        };
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(organizationId)
+            .Returns(organizationUsers);
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
+
+        sutProvider.GetDependency<IOrganizationService>()
+            .InviteUserAsync(organizationId, invitingUserId: null, EventSystemUser.SCIM,
+                Arg.Any<OrganizationUserInvite>(), externalId)
+            .Returns(newUser);
+
+        await sutProvider.Sut.PostUserAsync(organizationId, scimUserRequestModel);
+
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).InviteUserAsync(organizationId,
+            invitingUserId: null, EventSystemUser.SCIM,
+            Arg.Is<OrganizationUserInvite>(i =>
+                i.Emails.Single() == "jane@example.com" &&
+                i.ExternalName == userName),
+            externalId);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostUser_UserNameMatchesExistingMember_Throws(SutProvider<PostUserCommand> sutProvider, string externalId, Guid organizationId, List<BaseScimUserModel.EmailModel> emails, ICollection<OrganizationUserUserDetails> organizationUsers)
+    {
+        var scimUserRequestModel = new ScimUserRequestModel
+        {
+            ExternalId = externalId,
+            UserName = organizationUsers.First().ExternalName.ToUpperInvariant(),
+            Emails = emails,
+            Active = true,
+            Schemas = [ScimConstants.Scim2SchemaUser]
+        };
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(organizationId)
+            .Returns(organizationUsers);
+
+        await Assert.ThrowsAsync<ConflictException>(async () => await sutProvider.Sut.PostUserAsync(organizationId, scimUserRequestModel));
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task PostUser_InviteUsersAfterProvisioningDisabled_StagesUser(
         SutProvider<PostUserCommand> sutProvider,
         string email,
         string externalId,
+        string userName,
         Guid organizationId,
         ICollection<OrganizationUserUserDetails> organizationUsers,
         Core.Entities.OrganizationUser stagedUser,
@@ -200,6 +256,7 @@ public class PostUserCommandTests
         var scimUserRequestModel = new ScimUserRequestModel
         {
             ExternalId = externalId,
+            UserName = userName,
             Emails = [new BaseScimUserModel.EmailModel(email)],
             Active = true,
             Schemas = [ScimConstants.Scim2SchemaUser]
@@ -234,7 +291,8 @@ public class PostUserCommandTests
                 r.EventSystemUser == EventSystemUser.SCIM &&
                 r.Users.Count() == 1 &&
                 r.Users.Single().Email == expectedEmail &&
-                r.Users.Single().ExternalId == externalId));
+                r.Users.Single().ExternalId == externalId &&
+                r.Users.Single().ExternalName == userName));
         await sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs()
             .InviteUserAsync(default, default, default, default, default);
         await sutProvider.GetDependency<IInviteOrganizationUsersCommand>().DidNotReceiveWithAnyArgs()

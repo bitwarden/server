@@ -334,6 +334,48 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     }
 
     [Theory]
+    [InlineData(true, true)]
+    [InlineData(false, true)]
+    [InlineData(false, false)]
+    public async Task Post_UserNameDifferentFromEmail_IsReturnedAndFilterable(
+        bool isScimInviteUserOptimizationEnabled, bool inviteUsersAfterProvisioning)
+    {
+        var localFactory = new ScimApplicationFactory();
+        localFactory.SubstituteService((IFeatureService featureService)
+            => featureService.IsEnabled(FeatureFlagKeys.ScimInviteUserOptimization)
+                .Returns(isScimInviteUserOptimizationEnabled));
+        localFactory.ReinitializeDbForTests(localFactory.GetDatabaseContext());
+        SeedScimConnection(localFactory, inviteUsersAfterProvisioning);
+
+        var userName = "Jane.Doe@tenant.onmicrosoft.com";
+        var inputModel = new ScimUserRequestModel
+        {
+            UserName = userName,
+            DisplayName = "Jane Doe",
+            Emails = [new BaseScimUserModel.EmailModel("jane@example.com")],
+            ExternalId = "UE",
+            Active = true,
+            Schemas = [ScimConstants.Scim2SchemaUser]
+        };
+        var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+
+        var postContext = await localFactory.UsersPostAsync(ScimApplicationFactory.TestOrganizationId1, inputModel);
+
+        Assert.Equal(StatusCodes.Status201Created, postContext.Response.StatusCode);
+        var created = JsonSerializer.Deserialize<ScimUserResponseModel>(postContext.Response.Body, jsonOptions);
+        Assert.Equal(userName, created!.UserName);
+        Assert.Equal(userName, localFactory.GetDatabaseContext().OrganizationUsers.Single(ou => ou.Id == created.Id).ExternalName);
+
+        var listContext = await localFactory.UsersGetListAsync(ScimApplicationFactory.TestOrganizationId1,
+            "userName eq \"jane.doe@tenant.onmicrosoft.com\"", count: null, startIndex: null);
+
+        Assert.Equal(StatusCodes.Status200OK, listContext.Response.StatusCode);
+        var list = JsonSerializer.Deserialize<ScimListResponseModel<ScimUserResponseModel>>(listContext.Response.Body, jsonOptions);
+        Assert.Equal(1, list!.TotalResults);
+        Assert.Equal(created.Id, Assert.Single(list.Resources).Id);
+    }
+
+    [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData(" ")]
@@ -719,6 +761,67 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             Status = StatusCodes.Status409Conflict,
             Detail = "ExternalId already exists for another user.",
             Schemas = new List<string> { ScimConstants.Scim2SchemaError }
+        };
+
+        var context = await _factory.UsersPatchAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId, inputModel);
+
+        Assert.Equal(StatusCodes.Status409Conflict, context.Response.StatusCode);
+
+        var responseModel = JsonSerializer.Deserialize<ScimErrorResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
+    }
+
+    [Fact]
+    public async Task Patch_UserNameFromPath_Success()
+    {
+        var organizationUserId = ScimApplicationFactory.TestOrganizationUserId1;
+        var newUserName = "Jane.Doe@tenant.onmicrosoft.com";
+        var inputModel = new ScimPatchModel
+        {
+            Operations =
+            [
+                new ScimPatchModel.OperationModel
+                {
+                    Op = "Replace",
+                    Path = "userName",
+                    Value = JsonDocument.Parse($"\"{newUserName}\"").RootElement
+                },
+            ],
+            Schemas = []
+        };
+
+        var context = await _factory.UsersPatchAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId, inputModel);
+
+        Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
+
+        var getContext = await _factory.UsersGetAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId);
+        var responseModel = JsonSerializer.Deserialize<ScimUserResponseModel>(getContext.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        Assert.Equal(newUserName, responseModel!.UserName);
+    }
+
+    [Fact]
+    public async Task Patch_UserNameDuplicate_ThrowsConflict()
+    {
+        var organizationUserId = ScimApplicationFactory.TestOrganizationUserId1;
+        var inputModel = new ScimPatchModel
+        {
+            Operations =
+            [
+                new ScimPatchModel.OperationModel
+                {
+                    Op = "replace",
+                    Path = "userName",
+                    // TestOrganizationUserId2 has no stored userName, so it answers to its email
+                    Value = JsonDocument.Parse("\"user2@example.com\"").RootElement
+                },
+            ],
+            Schemas = []
+        };
+        var expectedResponse = new ScimErrorResponseModel
+        {
+            Status = StatusCodes.Status409Conflict,
+            Detail = "UserName already exists for another user.",
+            Schemas = [ScimConstants.Scim2SchemaError]
         };
 
         var context = await _factory.UsersPatchAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId, inputModel);

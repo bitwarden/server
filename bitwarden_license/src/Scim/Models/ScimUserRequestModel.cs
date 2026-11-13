@@ -24,6 +24,7 @@ public class ScimUserRequestModel : BaseScimUserModel
         return new OrganizationUserInvite
         {
             Emails = new[] { EmailForInvite(scimProvider) },
+            ExternalName = ExternalNameForInvite(),
 
             // Permissions cannot be set via SCIM so we use default values
             Type = OrganizationUserType.User,
@@ -49,7 +50,8 @@ public class ScimUserRequestModel : BaseScimUserModel
             [
                 new OrganizationUserInviteCommandModel(
                         email: email,
-                        externalId: ExternalIdForInvite()
+                        externalId: ExternalIdForInvite(),
+                        externalName: ExternalNameForInvite()
                     )
             ],
             organization: organization,
@@ -94,5 +96,20 @@ public class ScimUserRequestModel : BaseScimUserModel
         }
 
         return CoreHelpers.RandomString(15);
+    }
+
+    public string ExternalNameForInvite()
+    {
+        if (string.IsNullOrWhiteSpace(UserName))
+        {
+            return null;
+        }
+
+        if (UserName.Length > 300)
+        {
+            throw new BadRequestException("UserName cannot exceed 300 characters.");
+        }
+
+        return UserName;
     }
 }

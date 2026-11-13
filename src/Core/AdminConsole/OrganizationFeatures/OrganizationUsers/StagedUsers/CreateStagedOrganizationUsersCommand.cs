@@ -36,6 +36,7 @@ public class CreateStagedOrganizationUsersCommand(
                 Status = OrganizationUserStatusType.Staged,
                 // StatusNew is intentionally left null - it is only populated by the revoke flow
                 ExternalId = s.ExternalId,
+                ExternalName = s.ExternalName,
                 CreationDate = creationDate,
                 RevisionDate = creationDate,
             }).ToList();

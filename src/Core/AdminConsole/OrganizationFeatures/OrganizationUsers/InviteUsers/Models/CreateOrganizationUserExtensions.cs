@@ -20,6 +20,7 @@ public static class CreateOrganizationUserExtensions
             Status = OrganizationUserStatusType.Invited,
             AccessSecretsManager = organizationUserInvite.AccessSecretsManager,
             ExternalId = string.IsNullOrWhiteSpace(organizationUserInvite.ExternalId) ? null : organizationUserInvite.ExternalId,
+            ExternalName = string.IsNullOrWhiteSpace(organizationUserInvite.ExternalName) ? null : organizationUserInvite.ExternalName,
             CreationDate = performedAt.UtcDateTime,
             RevisionDate = performedAt.UtcDateTime
         };

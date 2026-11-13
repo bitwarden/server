@@ -16,6 +16,7 @@ using Bit.Core.Services;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
 using Bit.Scim.Users.Interfaces;
+using Bit.Scim.Utilities;
 using static Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Errors.ErrorMapper;
 
 namespace Bit.Scim.Users;
@@ -55,6 +56,7 @@ public class PostUserCommand(
     {
         var email = model.ToOrganizationUserInvite(scimProvider).Emails.Single();
         var externalId = model.ExternalIdForInvite();
+        var externalName = model.ExternalNameForInvite();
 
         if (string.IsNullOrWhiteSpace(email) || !model.Active)
         {
@@ -62,7 +64,8 @@ public class PostUserCommand(
         }
 
         var orgUsers = await organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
-        if (orgUsers.Any(ou => ou.Email?.ToLowerInvariant() == email || ou.ExternalId == externalId))
+        if (orgUsers.Any(ou => ou.Email?.ToLowerInvariant() == email || ou.ExternalId == externalId ||
+                               (externalName != null && ou.HasScimUserName(externalName))))
         {
             throw new ConflictException();
         }
@@ -76,7 +79,7 @@ public class PostUserCommand(
         var result = await createStagedOrganizationUsersCommand.RunAsync(new CreateStagedOrganizationUsersRequest
         {
             Organization = organization,
-            Users = [new StagedOrganizationUserRequest { Email = email, ExternalId = externalId }],
+            Users = [new StagedOrganizationUserRequest { Email = email, ExternalId = externalId, ExternalName = externalName }],
             EventSystemUser = EventSystemUser.SCIM
         });
 
@@ -112,9 +115,11 @@ public class PostUserCommand(
         var orgUsers = await organizationUserRepository
             .GetManyDetailsByOrganizationAsync(request.Organization.Id);
 
+        var invite = request.Invites.First();
         if (orgUsers.Any(existingUser =>
-                request.Invites.First().Email.Equals(existingUser.Email, StringComparison.OrdinalIgnoreCase) ||
-                request.Invites.First().ExternalId.Equals(existingUser.ExternalId, StringComparison.OrdinalIgnoreCase)))
+                invite.Email.Equals(existingUser.Email, StringComparison.OrdinalIgnoreCase) ||
+                invite.ExternalId.Equals(existingUser.ExternalId, StringComparison.OrdinalIgnoreCase) ||
+                (invite.ExternalName != null && existingUser.HasScimUserName(invite.ExternalName))))
         {
             throw new ConflictException("User already exists.");
         }
@@ -160,6 +165,11 @@ public class PostUserCommand(
 
         var orgUserByExternalId = orgUsers.FirstOrDefault(ou => ou.ExternalId == externalId);
         if (orgUserByExternalId != null)
+        {
+            throw new ConflictException();
+        }
+
+        if (invite.ExternalName != null && orgUsers.Any(ou => ou.HasScimUserName(invite.ExternalName)))
         {
             throw new ConflictException();
         }
