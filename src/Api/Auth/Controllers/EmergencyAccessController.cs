@@ -95,25 +95,11 @@ public class EmergencyAccessController : Controller
         await _emergencyAccessService.SaveAsync(model.ToEmergencyAccess(emergencyAccess), user);
     }
 
-    [HttpPost("{id}")]
-    [Obsolete("This endpoint is deprecated. Use PUT /{id} instead.")]
-    public async Task Post(Guid id, [FromBody] EmergencyAccessUpdateRequestModel model)
-    {
-        await Put(id, model);
-    }
-
     [HttpDelete("{id}")]
     public async Task Delete(Guid id)
     {
         var userId = _userService.GetProperUserId(User);
         await _emergencyAccessService.DeleteAsync(id, userId.Value);
-    }
-
-    [HttpPost("{id}/delete")]
-    [Obsolete("This endpoint is deprecated. Use DELETE /{id} instead.")]
-    public async Task PostDelete(Guid id)
-    {
-        await Delete(id);
     }
 
     [HttpPost("invite")]
