@@ -4,7 +4,6 @@
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Response.TwoFactor;
-using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
@@ -518,21 +517,6 @@ public class TwoFactorController : Controller
         var user = await ValidateUserBySecretAsync(model);
         var response = new TwoFactorRecoverResponseModel(user);
         return response;
-    }
-
-    [Obsolete("Leaving this for backwards compatibility on clients")]
-    [HttpGet("get-device-verification-settings")]
-    public Task<DeviceVerificationResponseModel> GetDeviceVerificationSettings()
-    {
-        return Task.FromResult(new DeviceVerificationResponseModel(false, false));
-    }
-
-    [Obsolete("Leaving this for backwards compatibility on clients")]
-    [HttpPut("device-verification-settings")]
-    public Task<DeviceVerificationResponseModel> PutDeviceVerificationSettings(
-        [FromBody] DeviceVerificationRequestModel model)
-    {
-        return Task.FromResult(new DeviceVerificationResponseModel(false, false));
     }
 
     /// <summary>Verifies the principal user's secret (master password or OTP) and returns the user.</summary>
