@@ -1072,7 +1072,7 @@ public class CiphersController : Controller
 
         // This writes straight to the repository, so the service-level gate does not cover it. A caller who can
         // edit every cipher also reaches unassigned ones, so takes the "/admin" decision.
-        var ciphers = model.CipherIds.Select(id => new Cipher { Id = id });
+        var ciphers = model.CipherIds.Select(id => new Cipher { Id = id, OrganizationId = model.OrganizationId });
         if (await CanEditAllCiphersAsync(model.OrganizationId))
         {
             await _cipherLeaseGate.EnsureCanMutateManyAsAdminAsync(userId, model.OrganizationId, ciphers);

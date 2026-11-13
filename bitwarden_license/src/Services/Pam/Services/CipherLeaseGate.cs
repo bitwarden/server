@@ -121,6 +121,9 @@ public class CipherLeaseGate : ICipherLeaseGate
             return FullCipherAccess.ForCiphers(cipherList.Select(c => c.Id));
         }
 
+        collectionCiphersByCipher ??= (await _collectionCipherRepository.GetManyByUserIdAsync(userId))
+            .GroupBy(cc => cc.CipherId)
+            .ToDictionary(g => g.Key);
         return await AuthorizeReadManyAsync(userId, cipherList,
             await _collectionRepository.GetManyByUserIdAsync(userId), collectionCiphersByCipher);
     }

@@ -56,7 +56,8 @@ public interface ICipherLeaseGate
     /// conditions.
     /// </summary>
     /// <param name="collectionCiphersByCipher">
-    /// The caller's cipher-to-collection mappings. <c>null</c> is equivalent to empty.
+    /// The caller's cipher-to-collection mappings, or <c>null</c> when the caller has not loaded them, in which
+    /// case the gate loads them itself, under the same conditions.
     /// </param>
     Task<FullCipherAccess> AuthorizeReadManyAsync(
         Guid userId,
