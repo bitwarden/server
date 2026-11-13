@@ -48,33 +48,94 @@ BEGIN
     INNER JOIN [dbo].[AccessLease] L ON L.[AccessRequestId] = LV.[Id]
     WHERE L.[Action] <> 0 -- None (no early end)
 
-    -- Every request in scope that has ended. Of the extensions, only a denied one has a row: an applied one moves its
-    -- lease's end, and the client folds the rest away.
+    -- The filters, parsed once. Status values follow AccessRequestHistoryStatus.
+    DECLARE @StatusFilter TABLE ([Value] TINYINT PRIMARY KEY)
+    DECLARE @CollectionFilter TABLE ([Id] UNIQUEIDENTIFIER PRIMARY KEY)
+    DECLARE @RequesterFilter TABLE ([Id] UNIQUEIDENTIFIER PRIMARY KEY)
+
+    INSERT INTO @StatusFilter ([Value])
+    SELECT DISTINCT CAST([value] AS TINYINT) FROM OPENJSON(@Statuses)
+
+    INSERT INTO @CollectionFilter ([Id])
+    SELECT DISTINCT CAST([value] AS UNIQUEIDENTIFIER) FROM OPENJSON(@CollectionIds)
+
+    INSERT INTO @RequesterFilter ([Id])
+    SELECT DISTINCT CAST([value] AS UNIQUEIDENTIFIER) FROM OPENJSON(@RequesterIds)
+
+    -- Only Expired and Session ended need to know whether a request has a lease.
+    DECLARE @NeedLease BIT = IIF(EXISTS (SELECT 1 FROM @StatusFilter WHERE [Value] IN (3, 4)), 1, 0)
+
+    -- Revoked leases are few, so they are read from the lease side. A lease keeps its request's CollectionId and
+    -- RequesterId.
+    DECLARE @Revoked TABLE ([Id] UNIQUEIDENTIFIER PRIMARY KEY)
+
+    IF @Statuses IS NOT NULL
+    BEGIN
+        INSERT INTO @Revoked ([Id])
+        SELECT L.[AccessRequestId]
+        FROM [dbo].[AccessLease] L
+        WHERE L.[CollectionId] IN (SELECT [Id] FROM @ManageableCollectionIds)
+            AND L.[Action] = 2 -- Revoked
+        UNION
+        SELECT L.[AccessRequestId]
+        FROM [dbo].[AccessLease] L
+        WHERE L.[RequesterId] = @UserId
+            AND L.[Action] = 2 -- Revoked
+    END
+
+    -- Every request in scope that has ended, marked when it matches the filters. Of the extensions, only a denied one
+    -- has a row: an applied one moves its lease's end, and the client folds the rest away.
     CREATE TABLE #Ended
     (
         [Id] UNIQUEIDENTIFIER NOT NULL,
         [CollectionId] UNIQUEIDENTIFIER NOT NULL,
         [RequesterId] UNIQUEIDENTIFIER NOT NULL,
         [CreationDate] DATETIME2(7) NOT NULL,
-        [Action] TINYINT NOT NULL,
-        [Status] TINYINT NULL
+        [Match] BIT NOT NULL
     )
 
-    INSERT INTO #Ended ([Id], [CollectionId], [RequesterId], [CreationDate], [Action])
-    SELECT LR.[Id], LR.[CollectionId], LR.[RequesterId], LR.[CreationDate], LR.[Action]
-    FROM [dbo].[AccessRequest] LR
-    WHERE LR.[CollectionId] IN (SELECT [Id] FROM @ManageableCollectionIds)
-        AND LR.[CreationDate] >= @Since
-        AND (LR.[ExtensionOfLeaseId] IS NULL OR LR.[Action] = 2) -- Denied
-        AND NOT EXISTS (SELECT 1 FROM #Live LV WHERE LV.[Id] = LR.[Id])
-    UNION ALL
-    SELECT LR.[Id], LR.[CollectionId], LR.[RequesterId], LR.[CreationDate], LR.[Action]
-    FROM [dbo].[AccessRequest] LR
-    WHERE LR.[RequesterId] = @UserId
-        AND LR.[CollectionId] NOT IN (SELECT [Id] FROM @ManageableCollectionIds)
-        AND LR.[CreationDate] >= @Since
-        AND (LR.[ExtensionOfLeaseId] IS NULL OR LR.[Action] = 2) -- Denied
-        AND NOT EXISTS (SELECT 1 FROM #Live LV WHERE LV.[Id] = LR.[Id])
+    -- RECOMPILE lets SQL drop the joins of the filters that are not set, and the lease join when no status needs it.
+    INSERT INTO #Ended ([Id], [CollectionId], [RequesterId], [CreationDate], [Match])
+    SELECT
+        E.[Id],
+        E.[CollectionId],
+        E.[RequesterId],
+        E.[CreationDate],
+        IIF(
+            (@CollectionIds IS NULL OR FC.[Id] IS NOT NULL)
+            AND (@RequesterIds IS NULL OR FR.[Id] IS NOT NULL)
+            AND (@Statuses IS NULL OR FS.[Value] IS NOT NULL),
+            1, 0)
+    FROM
+    (
+        SELECT LR.[Id], LR.[CollectionId], LR.[RequesterId], LR.[CreationDate], LR.[Action]
+        FROM [dbo].[AccessRequest] LR
+        WHERE LR.[CollectionId] IN (SELECT [Id] FROM @ManageableCollectionIds)
+            AND LR.[CreationDate] >= @Since
+            AND (LR.[ExtensionOfLeaseId] IS NULL OR LR.[Action] = 2) -- Denied
+            AND NOT EXISTS (SELECT 1 FROM #Live LV WHERE LV.[Id] = LR.[Id])
+        UNION ALL
+        SELECT LR.[Id], LR.[CollectionId], LR.[RequesterId], LR.[CreationDate], LR.[Action]
+        FROM [dbo].[AccessRequest] LR
+        WHERE LR.[RequesterId] = @UserId
+            AND LR.[CollectionId] NOT IN (SELECT [Id] FROM @ManageableCollectionIds)
+            AND LR.[CreationDate] >= @Since
+            AND (LR.[ExtensionOfLeaseId] IS NULL OR LR.[Action] = 2) -- Denied
+            AND NOT EXISTS (SELECT 1 FROM #Live LV WHERE LV.[Id] = LR.[Id])
+    ) E
+    LEFT JOIN @CollectionFilter FC ON FC.[Id] = E.[CollectionId]
+    LEFT JOIN @RequesterFilter FR ON FR.[Id] = E.[RequesterId]
+    LEFT JOIN @Revoked RV ON RV.[Id] = E.[Id]
+    LEFT JOIN [dbo].[AccessLease] PL ON @NeedLease = 1 AND PL.[AccessRequestId] = E.[Id]
+    LEFT JOIN @StatusFilter FS ON FS.[Value] = CASE
+        WHEN E.[Action] = 2 THEN 0 -- Denied
+        WHEN E.[Action] = 3 THEN 2 -- Canceled
+        WHEN RV.[Id] IS NOT NULL THEN 1 -- Revoked
+        WHEN @NeedLease = 0 THEN NULL -- Expired or Session ended: not asked for
+        WHEN PL.[AccessRequestId] IS NULL THEN 3 -- Expired: unanswered, or approved and never started
+        ELSE 4 -- Session ended: ran to its end, or ended by its holder
+    END
+    OPTION (RECOMPILE)
 
     -- The filter options cover every ended row, so a filter never hides its own options.
     SELECT
@@ -86,38 +147,7 @@ BEGIN
 
     SELECT DISTINCT [CollectionId] FROM #Ended
 
-    -- The status needs the lease, so it is read only for a status filter. Values follow AccessRequestHistoryStatus.
-    IF @Statuses IS NOT NULL
-    BEGIN
-        UPDATE E
-        SET [Status] = CASE
-            WHEN E.[Action] = 2 THEN 0 -- Denied
-            WHEN E.[Action] = 3 THEN 2 -- Canceled
-            WHEN PL.[Id] IS NULL THEN 3 -- Expired: unanswered, or approved and never started
-            WHEN PL.[Action] = 2 THEN 1 -- Revoked
-            ELSE 4 -- Session ended: ran to its end, or ended by its holder
-        END
-        FROM #Ended E
-        LEFT JOIN [dbo].[AccessLease] PL ON PL.[AccessRequestId] = E.[Id]
-    END
-
-    IF @Statuses IS NOT NULL OR @CollectionIds IS NOT NULL OR @RequesterIds IS NOT NULL
-    BEGIN
-        DELETE FROM #Ended
-        WHERE NOT (
-            (@Statuses IS NULL OR [Status] IN (SELECT CAST([value] AS TINYINT) FROM OPENJSON(@Statuses)))
-            AND (
-                @CollectionIds IS NULL
-                OR [CollectionId] IN (SELECT CAST([value] AS UNIQUEIDENTIFIER) FROM OPENJSON(@CollectionIds))
-            )
-            AND (
-                @RequesterIds IS NULL
-                OR [RequesterId] IN (SELECT CAST([value] AS UNIQUEIDENTIFIER) FROM OPENJSON(@RequesterIds))
-            )
-        )
-    END
-
-    SELECT COUNT(*) FROM #Ended
+    SELECT COUNT(*) FROM #Ended WHERE [Match] = 1
 
     -- Two result sets (requests, decisions); materialized ids let both share the same rows.
     DECLARE @Page TABLE ([Id] UNIQUEIDENTIFIER PRIMARY KEY)
@@ -125,6 +155,7 @@ BEGIN
     INSERT INTO @Page ([Id])
     SELECT [Id]
     FROM #Ended
+    WHERE [Match] = 1
     ORDER BY [CreationDate] DESC, [Id] DESC
     OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY
 
