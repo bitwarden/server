@@ -39,6 +39,11 @@ public static class Constants
     public const string DenyLegacyUserMinimumVersion = "2025.6.0";
     public const string PamPartialCipherMinimumVersion = "2026.11.1";
 
+    // TODO: PM-35389 Replace with the first client release that contains the tolerant restricted item types parser.
+    // Placeholder is deliberately high: until it is set, older clients get null and fall back to Card-only,
+    // which is the safe direction. This must be a real release before the flag is turned on.
+    public const string PM35389RestrictedItemTypesDataMinimumVersion = "2026.12.0";
+
     /// <summary>
     /// Domain suffixes for Bitwarden cloud-hosted environments.
     /// </summary>
