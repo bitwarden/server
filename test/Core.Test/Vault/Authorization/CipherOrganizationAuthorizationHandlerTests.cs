@@ -89,6 +89,21 @@ public class CipherOrganizationAuthorizationHandlerTests
         Assert.False(context.HasSucceeded);
     }
 
+    [Theory, CurrentContextOrganizationCustomize(Type = OrganizationUserType.Custom), BitAutoData]
+    public async Task ReadAnyAsAdmin_CustomWithManagePolicies_Failure(
+        CurrentContextOrganization organization,
+        SutProvider<CipherOrganizationAuthorizationHandler> sutProvider)
+    {
+        organization.Permissions = new Core.Models.Data.Permissions { ManagePolicies = true };
+        ArrangeMember(sutProvider, organization);
+
+        var context = ReadAnyAsAdminContext(organization.Id);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
     [Theory, BitAutoData]
     public async Task ReadAnyAsAdmin_ProviderUser_Success(
         Guid userId,
@@ -124,6 +139,133 @@ public class CipherOrganizationAuthorizationHandlerTests
 
         Assert.False(context.HasSucceeded);
     }
+
+    [Theory, CurrentContextOrganizationCustomize(Type = OrganizationUserType.Custom)]
+    [BitAutoData(true, false, false)]
+    [BitAutoData(false, true, false)]
+    [BitAutoData(false, false, true)]
+    public async Task ReadTypeCountsAsAdmin_CustomWithManagePoliciesOrCipherListingPermission_Success(
+        bool managePolicies,
+        bool accessImportExport,
+        bool accessReports,
+        CurrentContextOrganization organization,
+        SutProvider<CipherOrganizationAuthorizationHandler> sutProvider)
+    {
+        organization.Permissions = new Core.Models.Data.Permissions
+        {
+            ManagePolicies = managePolicies,
+            AccessImportExport = accessImportExport,
+            AccessReports = accessReports,
+        };
+        ArrangeMember(sutProvider, organization);
+
+        var context = ReadTypeCountsAsAdminContext(organization.Id);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, CurrentContextOrganizationCustomize]
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    public async Task ReadTypeCountsAsAdmin_OwnerOrAdmin_Success(
+        OrganizationUserType userType,
+        CurrentContextOrganization organization,
+        SutProvider<CipherOrganizationAuthorizationHandler> sutProvider)
+    {
+        organization.Type = userType;
+        ArrangeMember(sutProvider, organization);
+
+        var context = ReadTypeCountsAsAdminContext(organization.Id);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, CurrentContextOrganizationCustomize(Type = OrganizationUserType.Custom), BitAutoData]
+    public async Task ReadTypeCountsAsAdmin_CustomWithEditAnyCollection_Success(
+        CurrentContextOrganization organization,
+        SutProvider<CipherOrganizationAuthorizationHandler> sutProvider)
+    {
+        organization.Permissions = new Core.Models.Data.Permissions { EditAnyCollection = true };
+        ArrangeMember(sutProvider, organization);
+
+        var context = ReadTypeCountsAsAdminContext(organization.Id);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, CurrentContextOrganizationCustomize(Type = OrganizationUserType.Custom)]
+    [BitAutoData(true, false, false)]
+    [BitAutoData(false, true, false)]
+    [BitAutoData(false, false, true)]
+    public async Task ReadTypeCountsAsAdmin_CustomWithoutRelevantPermissions_Failure(
+        bool deleteAnyCollection,
+        bool manageUsers,
+        bool manageGroups,
+        CurrentContextOrganization organization,
+        SutProvider<CipherOrganizationAuthorizationHandler> sutProvider)
+    {
+        organization.Permissions = new Core.Models.Data.Permissions
+        {
+            DeleteAnyCollection = deleteAnyCollection,
+            ManageUsers = manageUsers,
+            ManageGroups = manageGroups,
+        };
+        ArrangeMember(sutProvider, organization);
+
+        var context = ReadTypeCountsAsAdminContext(organization.Id);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ReadTypeCountsAsAdmin_ProviderUser_Success(
+        Guid userId,
+        Guid organizationId,
+        SutProvider<CipherOrganizationAuthorizationHandler> sutProvider)
+    {
+        var currentContext = sutProvider.GetDependency<ICurrentContext>();
+        currentContext.UserId.Returns(userId);
+        currentContext.GetOrganization(organizationId).Returns((CurrentContextOrganization)null);
+        currentContext.ProviderUserForOrgAsync(organizationId).Returns(true);
+
+        var context = ReadTypeCountsAsAdminContext(organizationId);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ReadTypeCountsAsAdmin_NotMemberOrProvider_Failure(
+        Guid userId,
+        Guid organizationId,
+        SutProvider<CipherOrganizationAuthorizationHandler> sutProvider)
+    {
+        var currentContext = sutProvider.GetDependency<ICurrentContext>();
+        currentContext.UserId.Returns(userId);
+        currentContext.GetOrganization(organizationId).Returns((CurrentContextOrganization)null);
+        currentContext.ProviderUserForOrgAsync(organizationId).Returns(false);
+
+        var context = ReadTypeCountsAsAdminContext(organizationId);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
+    private static AuthorizationHandlerContext ReadTypeCountsAsAdminContext(Guid organizationId) =>
+        new(
+            [CipherOrganizationOperations.ReadTypeCountsAsAdmin],
+            new ClaimsPrincipal(),
+            new OrganizationScope(organizationId));
 
     private static void ArrangeMember(
         SutProvider<CipherOrganizationAuthorizationHandler> sutProvider, CurrentContextOrganization organization)

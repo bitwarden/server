@@ -15,6 +15,12 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId);
     Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true);
     Task<ICollection<Cipher>> GetManyByOrganizationIdAsync(Guid organizationId);
+    /// <summary>
+    /// Counts the organization-owned ciphers grouped by type. Matches the population returned by
+    /// <see cref="GetManyByOrganizationIdAsync"/>, so trashed (soft-deleted) items are included.
+    /// Types with no ciphers are omitted.
+    /// </summary>
+    Task<IReadOnlyDictionary<Enums.CipherType, int>> GetCountsByTypeByOrganizationIdAsync(Guid organizationId);
     Task<ICollection<CipherOrganizationDetails>> GetManyUnassignedOrganizationDetailsByOrganizationIdAsync(Guid organizationId);
     Task CreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds);
     Task CreateAsync(CipherDetails cipher);
