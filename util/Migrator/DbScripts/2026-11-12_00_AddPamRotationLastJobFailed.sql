@@ -70,3 +70,18 @@ FROM
 INNER JOIN
     [dbo].[PamTargetSystem] T ON T.[Id] = C.[TargetSystemId]
 GO
+
+-- Backs the newest-job lookup the view performs. Job history is never purged, so without it the organization
+-- list read degrades as rotations accumulate.
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE [name] = 'IX_PamRotationJob_RotationConfigId_CreationDate'
+        AND [object_id] = OBJECT_ID('[dbo].[PamRotationJob]')
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_PamRotationJob_RotationConfigId_CreationDate]
+        ON [dbo].[PamRotationJob] ([RotationConfigId] ASC, [CreationDate] DESC, [Id] DESC)
+        INCLUDE ([Action], [ExpirationDate]);
+END
+GO

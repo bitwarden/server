@@ -78,9 +78,7 @@ public class PamRotationConfigResponseModel : ResponseModel
     public bool HasActiveJob { get; set; }
 
     /// <summary>
-    /// Whether the newest job ended badly: it reported Failed, or it is unresolved and the sweep already recorded its
-    /// timeout. Lets a list read resolve the Failed status without fetching each config's job history. Mutually
-    /// exclusive with <see cref="HasActiveJob"/>.
+    /// Gets or sets whether the last job ended badly.
     /// </summary>
     public bool LastJobFailed { get; set; }
 

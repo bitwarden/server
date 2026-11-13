@@ -15,9 +15,7 @@ public class PamRotationConfigDetails : PamRotationConfig
     public bool HasActiveJob { get; set; }
 
     /// <summary>
-    /// Whether the newest job ended badly: <see cref="PamRotationJobAction.Failed"/>, or unresolved with its timeout
-    /// already recorded by the sweep. Lets a list read tell Failed apart without fetching each config's history.
-    /// Mutually exclusive with <see cref="HasActiveJob"/>, which holds an unswept job active.
+    /// Gets or sets whether the last job ended badly.
     /// </summary>
     public bool LastJobFailed { get; set; }
 

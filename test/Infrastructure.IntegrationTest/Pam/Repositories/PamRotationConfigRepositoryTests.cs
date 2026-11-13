@@ -360,7 +360,7 @@ public class PamRotationConfigRepositoryTests
         Assert.False(afterRetry!.LastJobFailed);
     }
 
-    // A timeout is derived, so it only counts as failed once the sweep has journalled it - the same moment
+    // A timeout is derived, so it only counts as failed once the sweep has journalled it, the same moment
     // HasActiveJob releases the config.
     [DatabaseTheory, DatabaseData]
     public async Task GetDetailsByIdAsync_ProjectsLastJobFailed_OnceTimeoutIsSwept(

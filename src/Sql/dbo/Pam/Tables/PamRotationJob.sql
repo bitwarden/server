@@ -27,6 +27,13 @@ CREATE NONCLUSTERED INDEX [IX_PamRotationJob_Action_ExpirationDate]
     ON [dbo].[PamRotationJob] ([Action] ASC, [ExpirationDate] ASC);
 GO
 
+-- Backs the newest-job lookup in PamRotationConfigDetailsView. Job history is never purged, so without it the
+-- organization list read degrades as rotations accumulate. Also serves PamRotationJob_ReadManyByConfigId.
+CREATE NONCLUSTERED INDEX [IX_PamRotationJob_RotationConfigId_CreationDate]
+    ON [dbo].[PamRotationJob] ([RotationConfigId] ASC, [CreationDate] DESC, [Id] DESC)
+    INCLUDE ([Action], [ExpirationDate]);
+GO
+
 -- The release sweep (PamRotationJob_UpdateManyReleaseExpiredLeases): claimed jobs by claimant, joined to access
 -- connector heartbeat.
 CREATE NONCLUSTERED INDEX [IX_PamRotationJob_ClaimedByAccessConnectorId_Action]
