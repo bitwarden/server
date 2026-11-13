@@ -126,6 +126,25 @@ public class GetUsersListQueryTests
         AssertHelper.AssertPropertyEqual(expectedTotalResults, result.totalResults);
     }
 
+    [Theory]
+    [BitAutoData("active eq true")]
+    [BitAutoData("userName pr")]
+    [BitAutoData("userName eq \"user@example.com\" and active eq true")]
+    [BitAutoData("displayName eq \"Test\" or userName eq \"user@example.com\"")]
+    [BitAutoData("emails[type eq \"work\"].value eq \"user@example.com\"")]
+    public async Task GetUsersList_UnsupportedFilter_ThrowsInvalidFilter(string filter, SutProvider<GetUsersListQuery> sutProvider, Guid organizationId)
+    {
+        var exception = await Assert.ThrowsAsync<ScimInvalidFilterException>(() =>
+            sutProvider.Sut.GetUsersListAsync(organizationId, new GetUsersQueryParamModel { Filter = filter }));
+
+        Assert.False(string.IsNullOrWhiteSpace(exception.Message));
+
+        // The repository should never be queried for an unsupported filter.
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceive()
+            .GetManyDetailsByOrganizationAsync(Arg.Any<Guid>());
+    }
+
     private IList<OrganizationUserUserDetails> SetUsersOrganizationId(IList<OrganizationUserUserDetails> organizationUserUserDetails, Guid organizationId)
     {
         return organizationUserUserDetails.Select(ouud =>

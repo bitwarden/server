@@ -29,13 +29,21 @@ public class GetGroupsListQuery : IGetGroupsListQuery
 
         if (!string.IsNullOrWhiteSpace(filter))
         {
-            if (filter.StartsWith("displayName eq "))
+            if (!ScimFilterHelper.TryParseEqualityFilter(filter, out var attribute, out var value))
             {
-                nameFilter = filter.Substring(15).Trim('"');
+                throw new ScimInvalidFilterException(ScimFilterHelper.GetUnsupportedFilterMessage(filter));
             }
-            else if (filter.StartsWith("externalId eq "))
+
+            switch (attribute)
             {
-                externalIdFilter = filter.Substring(14).Trim('"');
+                case "displayname":
+                    nameFilter = value;
+                    break;
+                case "externalid":
+                    externalIdFilter = value;
+                    break;
+                default:
+                    throw new ScimInvalidFilterException(ScimFilterHelper.GetUnsupportedFilterMessage(filter));
             }
         }
 
