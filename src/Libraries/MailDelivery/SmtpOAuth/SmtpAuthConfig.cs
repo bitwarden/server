@@ -44,9 +44,28 @@ internal sealed record CustomOAuthConfig : SmtpAuthConfig
     public required string Scope { get; init; }
     public required string GrantType { get; init; }
 
+    // Used only when GrantType is JwtBearerHandler.GrantType; unused for client_credentials.
+    public required string SigningKey { get; init; }
+    public required IReadOnlyDictionary<string, string> Claims { get; init; }
+
     // Overrides the generated record ToString, which prints every property, to keep the client
-    // secret out of logs.
+    // secret and signing key out of logs.
     public override string ToString() =>
         $"{nameof(CustomOAuthConfig)} {{ TokenEndpoint = {TokenEndpoint}, OutboundMailbox = {OutboundMailbox}, " +
-        $"ClientId = {ClientId}, ClientSecret = [redacted], Scope = {Scope}, GrantType = {GrantType} }}";
+        $"ClientId = {ClientId}, ClientSecret = [redacted], Scope = {Scope}, GrantType = {GrantType}, " +
+        $"SigningKey = [redacted], Claims = [redacted] }}";
+}
+
+internal sealed record GoogleOAuthConfig : SmtpAuthConfig
+{
+    public required string TokenEndpoint { get; init; }
+    public required string OutboundMailbox { get; init; }
+    public required string SigningKey { get; init; }
+    public required IReadOnlyDictionary<string, string> Claims { get; init; }
+
+    // Overrides the generated record ToString, which prints every property, to keep the
+    // signing key and claims out of logs.
+    public override string ToString() =>
+        $"{nameof(GoogleOAuthConfig)} {{ TokenEndpoint = {TokenEndpoint}, OutboundMailbox = {OutboundMailbox}, " +
+        $"SigningKey = [redacted], Claims = [redacted] }}";
 }

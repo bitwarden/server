@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Platform.Mail.Delivery;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Bit.MailDelivery.Test.SmtpOAuth;
 
@@ -272,8 +273,6 @@ public class SmtpOAuthOptionsSetupTests
     [Theory]
     [InlineData(SmtpAuthType.MicrosoftOAuth, "urn:ietf:params:oauth:grant-type:jwt-bearer")]
     [InlineData(SmtpAuthType.MicrosoftOAuth, "password")]
-    [InlineData(SmtpAuthType.CustomOAuth, "urn:ietf:params:oauth:grant-type:jwt-bearer")]
-    [InlineData(SmtpAuthType.CustomOAuth, "password")]
     public void Validate_UnsupportedGrantType_FailsWithGrantTypeMessage(SmtpAuthType authType, string grantType)
     {
         var options = new MailDeliveryOptions();
@@ -291,6 +290,218 @@ public class SmtpOAuthOptionsSetupTests
         Assert.Contains(
             $"Grant type '{grantType}' is not supported for AuthType {authType}; only " +
             $"'{ClientCredentialsHandler.GrantType}' is supported.",
+            result.Failures!);
+    }
+
+    [Fact]
+    public void Validate_CustomOAuthUnsupportedGrantTypeNotClientCredentialsOrJwtBearer_FailsWithBothSupportedValuesNamed()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
+        options.Smtp.OAuth.Scope = "custom-scope";
+        options.Smtp.OAuth.ClientId = "client-id";
+        options.Smtp.OAuth.ClientSecret = "client-secret";
+        options.Smtp.OAuth.GrantType = "password";
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(
+            $"Grant type 'password' is not supported for AuthType CustomOAuth; only " +
+            $"'{ClientCredentialsHandler.GrantType}' or '{JwtBearerHandler.GrantType}' is supported.",
+            result.Failures!);
+    }
+
+    [Fact]
+    public void Validate_CustomOAuthJwtBearerWithAllRequiredValues_ReturnsSuccess()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
+        options.Smtp.OAuth.Scope = "custom-scope";
+        options.Smtp.OAuth.GrantType = JwtBearerHandler.GrantType;
+        options.Smtp.OAuth.SigningKey = "-----BEGIN PRIVATE KEY-----fake-----END PRIVATE KEY-----";
+        options.Smtp.OAuth.Claims["iss"] = "service-account@example.com";
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public void Validate_CustomOAuthJwtBearerWithShorthandKeys_FallsBackAndReturnsSuccess()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
+        options.Smtp.OAuth.Scope = "custom-scope";
+        options.Smtp.OAuth.GrantType = JwtBearerHandler.GrantType;
+        options.Smtp.ServiceAccountPrivateKey = "-----BEGIN PRIVATE KEY-----fake-----END PRIVATE KEY-----";
+        options.Smtp.ServiceAccountEmail = "service-account@example.com";
+
+        _sut.PostConfigure(name: null, options);
+        var result = _sut.Validate(name: null, options);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(options.Smtp.ServiceAccountPrivateKey, options.Smtp.OAuth.SigningKey);
+        Assert.Equal(options.Smtp.ServiceAccountEmail, options.Smtp.OAuth.Claims["iss"]);
+    }
+
+    [Fact]
+    public void Validate_CustomOAuthJwtBearerMissingSigningKey_FailsNamingBothKeys()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
+        options.Smtp.OAuth.Scope = "custom-scope";
+        options.Smtp.OAuth.GrantType = JwtBearerHandler.GrantType;
+        options.Smtp.OAuth.Claims["iss"] = "service-account@example.com";
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(
+            "Smtp:ServiceAccountPrivateKey or Smtp:OAuth:SigningKey",
+            Assert.Single(result.Failures!));
+    }
+
+    [Fact]
+    public void Validate_CustomOAuthJwtBearerMissingIssuerClaim_FailsNamingBothKeys()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
+        options.Smtp.OAuth.Scope = "custom-scope";
+        options.Smtp.OAuth.GrantType = JwtBearerHandler.GrantType;
+        options.Smtp.OAuth.SigningKey = "-----BEGIN PRIVATE KEY-----fake-----END PRIVATE KEY-----";
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(
+            "Smtp:ServiceAccountEmail or Smtp:OAuth:Claims:iss",
+            Assert.Single(result.Failures!));
+    }
+
+    [Fact]
+    public void Validate_CustomOAuthJwtBearerDoesNotRequireClientIdOrClientSecret()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
+        options.Smtp.OAuth.Scope = "custom-scope";
+        options.Smtp.OAuth.GrantType = JwtBearerHandler.GrantType;
+        options.Smtp.OAuth.SigningKey = "-----BEGIN PRIVATE KEY-----fake-----END PRIVATE KEY-----";
+        options.Smtp.OAuth.Claims["iss"] = "service-account@example.com";
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.True(result.Succeeded);
+        Assert.Null(options.Smtp.OAuth.ClientId);
+        Assert.Null(options.Smtp.OAuth.ClientSecret);
+    }
+
+    [Fact]
+    public void Validate_MicrosoftOAuthJwtBearer_StillFails()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.MicrosoftOAuth;
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.OAuth.TokenEndpoint = "https://login.microsoftonline.com/test-tenant/oauth2/v2.0/token";
+        options.Smtp.OAuth.ClientId = "client-id";
+        options.Smtp.OAuth.ClientSecret = "client-secret";
+        options.Smtp.OAuth.GrantType = JwtBearerHandler.GrantType;
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(
+            $"Grant type '{JwtBearerHandler.GrantType}' is not supported for AuthType MicrosoftOAuth; only " +
+            $"'{ClientCredentialsHandler.GrantType}' is supported.",
+            result.Failures!);
+    }
+
+    [Fact]
+    public void Validate_CustomOAuthJwtBearerAlgorithmUnset_ReturnsSuccess()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
+        options.Smtp.OAuth.Scope = "custom-scope";
+        options.Smtp.OAuth.GrantType = JwtBearerHandler.GrantType;
+        options.Smtp.OAuth.SigningKey = "-----BEGIN PRIVATE KEY-----fake-----END PRIVATE KEY-----";
+        options.Smtp.OAuth.Claims["iss"] = "service-account@example.com";
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public void Validate_CustomOAuthJwtBearerAlgorithmRS256_ReturnsSuccess()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
+        options.Smtp.OAuth.Scope = "custom-scope";
+        options.Smtp.OAuth.GrantType = JwtBearerHandler.GrantType;
+        options.Smtp.OAuth.SigningKey = "-----BEGIN PRIVATE KEY-----fake-----END PRIVATE KEY-----";
+        options.Smtp.OAuth.Claims["iss"] = "service-account@example.com";
+        options.Smtp.OAuth.Algorithm = SecurityAlgorithms.RsaSha256;
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public void Validate_CustomOAuthJwtBearerUnsupportedAlgorithm_FailsNamingValueAndRS256()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
+        options.Smtp.OAuth.Scope = "custom-scope";
+        options.Smtp.OAuth.GrantType = JwtBearerHandler.GrantType;
+        options.Smtp.OAuth.SigningKey = "-----BEGIN PRIVATE KEY-----fake-----END PRIVATE KEY-----";
+        options.Smtp.OAuth.Claims["iss"] = "service-account@example.com";
+        options.Smtp.OAuth.Algorithm = "ES256";
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(
+            "Algorithm 'ES256' is not supported for AuthType CustomOAuth; only 'RS256' is supported.",
+            result.Failures!);
+    }
+
+    [Fact]
+    public void Validate_CustomOAuthJwtBearerAlgorithmWrongCase_Fails()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.CustomOAuth;
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.OAuth.TokenEndpoint = "https://example.com/token";
+        options.Smtp.OAuth.Scope = "custom-scope";
+        options.Smtp.OAuth.GrantType = JwtBearerHandler.GrantType;
+        options.Smtp.OAuth.SigningKey = "-----BEGIN PRIVATE KEY-----fake-----END PRIVATE KEY-----";
+        options.Smtp.OAuth.Claims["iss"] = "service-account@example.com";
+        options.Smtp.OAuth.Algorithm = "rs256";
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(
+            "Algorithm 'rs256' is not supported for AuthType CustomOAuth; only 'RS256' is supported.",
             result.Failures!);
     }
 
@@ -507,5 +718,224 @@ public class SmtpOAuthOptionsSetupTests
         var customOAuthConfig = Assert.IsType<CustomOAuthConfig>(authConfig);
         Assert.Equal("explicit-client-id", customOAuthConfig.ClientId);
         Assert.Equal("explicit-client-secret", customOAuthConfig.ClientSecret);
+    }
+
+    [Fact]
+    public void PostConfigure_GoogleOAuthWithShorthandServiceAccountValues_DerivesDefaultsAndFallsBackToShorthand()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.GoogleOAuth;
+        options.Smtp.ServiceAccountEmail = "service-account@example.com";
+        options.Smtp.ServiceAccountPrivateKey = "-----BEGIN PRIVATE KEY-----fake-----END PRIVATE KEY-----";
+
+        _sut.PostConfigure(name: null, options);
+
+        Assert.Equal("https://oauth2.googleapis.com/token", options.Smtp.OAuth.TokenEndpoint);
+        Assert.Equal(JwtBearerHandler.GrantType, options.Smtp.OAuth.GrantType);
+        Assert.Equal(options.Smtp.ServiceAccountPrivateKey, options.Smtp.OAuth.SigningKey);
+        Assert.Equal("service-account@example.com", options.Smtp.OAuth.Claims["iss"]);
+        Assert.Equal("https://mail.google.com/", options.Smtp.OAuth.Claims["scope"]);
+        Assert.Equal("https://oauth2.googleapis.com/token", options.Smtp.OAuth.Claims["aud"]);
+    }
+
+    [Fact]
+    public void PostConfigure_GoogleOAuth_DoesNotSetSubClaim()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.GoogleOAuth;
+        options.Smtp.ServiceAccountEmail = "service-account@example.com";
+        options.Smtp.ServiceAccountPrivateKey = "-----BEGIN PRIVATE KEY-----fake-----END PRIVATE KEY-----";
+
+        _sut.PostConfigure(name: null, options);
+
+        Assert.False(options.Smtp.OAuth.Claims.ContainsKey("sub"));
+    }
+
+    [Fact]
+    public void PostConfigure_GoogleOAuthWithExplicitValues_KeepsExplicitValuesOverDerivedDefaults()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.GoogleOAuth;
+        options.Smtp.ServiceAccountEmail = "service-account@example.com";
+        options.Smtp.ServiceAccountPrivateKey = "-----BEGIN PRIVATE KEY-----fake-----END PRIVATE KEY-----";
+        options.Smtp.OAuth.TokenEndpoint = "https://explicit.example.com/token";
+        options.Smtp.OAuth.GrantType = "explicit_grant";
+        options.Smtp.OAuth.SigningKey = "-----BEGIN PRIVATE KEY-----explicit-----END PRIVATE KEY-----";
+        options.Smtp.OAuth.Claims["iss"] = "explicit-issuer@example.com";
+        options.Smtp.OAuth.Claims["scope"] = "explicit-scope";
+        options.Smtp.OAuth.Claims["aud"] = "explicit-aud";
+
+        _sut.PostConfigure(name: null, options);
+
+        Assert.Equal("https://explicit.example.com/token", options.Smtp.OAuth.TokenEndpoint);
+        Assert.Equal("explicit_grant", options.Smtp.OAuth.GrantType);
+        Assert.Equal("-----BEGIN PRIVATE KEY-----explicit-----END PRIVATE KEY-----", options.Smtp.OAuth.SigningKey);
+        Assert.Equal("explicit-issuer@example.com", options.Smtp.OAuth.Claims["iss"]);
+        Assert.Equal("explicit-scope", options.Smtp.OAuth.Claims["scope"]);
+        Assert.Equal("explicit-aud", options.Smtp.OAuth.Claims["aud"]);
+    }
+
+    [Fact]
+    public void Validate_GoogleOAuthWithAllRequiredValues_ReturnsSuccess()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.GoogleOAuth;
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.OAuth.TokenEndpoint = "https://oauth2.googleapis.com/token";
+        options.Smtp.OAuth.GrantType = JwtBearerHandler.GrantType;
+        options.Smtp.OAuth.SigningKey = "-----BEGIN PRIVATE KEY-----fake-----END PRIVATE KEY-----";
+        options.Smtp.OAuth.Claims["iss"] = "service-account@example.com";
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public void Validate_GoogleOAuthAlgorithmRS256_ReturnsSuccess()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.GoogleOAuth;
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.OAuth.TokenEndpoint = "https://oauth2.googleapis.com/token";
+        options.Smtp.OAuth.GrantType = JwtBearerHandler.GrantType;
+        options.Smtp.OAuth.SigningKey = "-----BEGIN PRIVATE KEY-----fake-----END PRIVATE KEY-----";
+        options.Smtp.OAuth.Claims["iss"] = "service-account@example.com";
+        options.Smtp.OAuth.Algorithm = SecurityAlgorithms.RsaSha256;
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public void Validate_GoogleOAuthMissingOutboundMailbox_FailsWithOutboundMailboxMessage()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.GoogleOAuth;
+        options.Smtp.OAuth.TokenEndpoint = "https://oauth2.googleapis.com/token";
+        options.Smtp.OAuth.GrantType = JwtBearerHandler.GrantType;
+        options.Smtp.OAuth.SigningKey = "-----BEGIN PRIVATE KEY-----fake-----END PRIVATE KEY-----";
+        options.Smtp.OAuth.Claims["iss"] = "service-account@example.com";
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(
+            "Smtp:OutboundMailbox (the sending mailbox) is required when Smtp:AuthType is GoogleOAuth.",
+            result.Failures!);
+    }
+
+    [Fact]
+    public void Validate_GoogleOAuthMissingSigningKey_FailsNamingBothKeys()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.GoogleOAuth;
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.OAuth.GrantType = JwtBearerHandler.GrantType;
+        options.Smtp.OAuth.Claims["iss"] = "service-account@example.com";
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(
+            "Smtp:ServiceAccountPrivateKey or Smtp:OAuth:SigningKey",
+            Assert.Single(result.Failures!));
+    }
+
+    [Fact]
+    public void Validate_GoogleOAuthMissingIssuerClaim_FailsNamingBothKeys()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.GoogleOAuth;
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.OAuth.GrantType = JwtBearerHandler.GrantType;
+        options.Smtp.OAuth.SigningKey = "-----BEGIN PRIVATE KEY-----fake-----END PRIVATE KEY-----";
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(
+            "Smtp:ServiceAccountEmail or Smtp:OAuth:Claims:iss",
+            Assert.Single(result.Failures!));
+    }
+
+    [Fact]
+    public void Validate_GoogleOAuthUnsupportedGrantType_FailsWithGrantTypeMessage()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.GoogleOAuth;
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.OAuth.SigningKey = "-----BEGIN PRIVATE KEY-----fake-----END PRIVATE KEY-----";
+        options.Smtp.OAuth.Claims["iss"] = "service-account@example.com";
+        options.Smtp.OAuth.GrantType = ClientCredentialsHandler.GrantType;
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(
+            $"Grant type '{ClientCredentialsHandler.GrantType}' is not supported for AuthType GoogleOAuth; only " +
+            $"'{JwtBearerHandler.GrantType}' is supported.",
+            result.Failures!);
+    }
+
+    [Fact]
+    public void Validate_GoogleOAuthUnsupportedAlgorithm_FailsNamingValueAndRS256()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.GoogleOAuth;
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.OAuth.GrantType = JwtBearerHandler.GrantType;
+        options.Smtp.OAuth.SigningKey = "-----BEGIN PRIVATE KEY-----fake-----END PRIVATE KEY-----";
+        options.Smtp.OAuth.Claims["iss"] = "service-account@example.com";
+        options.Smtp.OAuth.Algorithm = "ES256";
+
+        var result = _sut.Validate(name: null, options);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(
+            "Algorithm 'ES256' is not supported for AuthType GoogleOAuth; only 'RS256' is supported.",
+            result.Failures!);
+    }
+
+    [Fact]
+    public void BuildAuthConfig_GoogleOAuth_ReturnsGoogleOAuthConfigFromShorthandValues()
+    {
+        var options = new MailDeliveryOptions();
+        options.Smtp.AuthType = SmtpAuthType.GoogleOAuth;
+        options.Smtp.OutboundMailbox = "sender@example.com";
+        options.Smtp.ServiceAccountEmail = "service-account@example.com";
+        options.Smtp.ServiceAccountPrivateKey = "-----BEGIN PRIVATE KEY-----fake-----END PRIVATE KEY-----";
+
+        _sut.PostConfigure(name: null, options);
+        var result = _sut.Validate(name: null, options);
+        var authConfig = SmtpOAuthOptionsSetup.BuildAuthConfig(options.Smtp);
+
+        Assert.True(result.Succeeded);
+        var googleOAuthConfig = Assert.IsType<GoogleOAuthConfig>(authConfig);
+        Assert.Equal("https://oauth2.googleapis.com/token", googleOAuthConfig.TokenEndpoint);
+        Assert.Equal("sender@example.com", googleOAuthConfig.OutboundMailbox);
+        Assert.Equal(options.Smtp.ServiceAccountPrivateKey, googleOAuthConfig.SigningKey);
+        Assert.Equal("service-account@example.com", googleOAuthConfig.Claims["iss"]);
+        Assert.Equal("https://mail.google.com/", googleOAuthConfig.Claims["scope"]);
+        Assert.Equal("https://oauth2.googleapis.com/token", googleOAuthConfig.Claims["aud"]);
+    }
+
+    [Fact]
+    public void GoogleOAuthConfig_ToString_RedactsSigningKeyAndClaims()
+    {
+        var config = new GoogleOAuthConfig
+        {
+            TokenEndpoint = "https://oauth2.googleapis.com/token",
+            OutboundMailbox = "sender@example.com",
+            SigningKey = "-----BEGIN PRIVATE KEY-----fake-----END PRIVATE KEY-----",
+            Claims = new Dictionary<string, string> { ["iss"] = "service-account@example.com" },
+        };
+
+        var result = config.ToString();
+
+        Assert.DoesNotContain(config.SigningKey, result);
+        Assert.DoesNotContain("service-account@example.com", result);
+        Assert.Contains("[redacted]", result);
     }
 }

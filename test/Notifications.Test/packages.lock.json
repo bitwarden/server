@@ -2077,6 +2077,7 @@
         "dependencies": {
           "AWSSDK.SimpleEmail": "[4.0.2.5, 4.0.2.5]",
           "MailKit": "[4.18.2, 4.18.2]",
+          "Microsoft.IdentityModel.JsonWebTokens": "[8.23.0, 8.23.0]",
           "SendGrid": "[9.29.3, 9.29.3]"
         }
       },

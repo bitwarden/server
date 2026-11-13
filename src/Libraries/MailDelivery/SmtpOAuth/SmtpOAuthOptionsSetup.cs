@@ -1,18 +1,22 @@
 ﻿using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Bit.Core.Platform.Mail.Delivery;
 
-// Derives per-provider defaults and validates required OAuth fields for MicrosoftOAuth and
-// CustomOAuth. Operates only on the already-bound MailDeliveryOptions instance: no IConfiguration
-// dependency, per LIBRARY.md's "host owns binding" rule. PostConfigure derives defaults before
-// validation runs; Validate fails fast with an actionable message, then builds the matching
-// SmtpAuthConfig now that its required fields are known to be present.
-// PostConfigure, Validate, and BuildAuthConfig dispatch through switch expressions, so a new
-// SmtpAuthType fails the build (CS8509) until it is handled here.
+// Derives per-provider defaults and validates required OAuth fields for MicrosoftOAuth,
+// CustomOAuth, and GoogleOAuth. Operates only on the already-bound MailDeliveryOptions instance:
+// no IConfiguration dependency, per LIBRARY.md's "host owns binding" rule. PostConfigure derives
+// defaults before validation runs; Validate fails fast with an actionable message, then builds the
+// matching SmtpAuthConfig now that its required fields are known to be present. PostConfigure,
+// Validate, and BuildAuthConfig dispatch through switch expressions, so a new SmtpAuthType fails
+// the build (CS8509) until it is handled here.
 internal sealed class SmtpOAuthOptionsSetup :
     IPostConfigureOptions<MailDeliveryOptions>,
     IValidateOptions<MailDeliveryOptions>
 {
+    private const string IssuerClaimName = "iss";
+    private const string GoogleTokenEndpoint = "https://oauth2.googleapis.com/token";
+
     public void PostConfigure(string? name, MailDeliveryOptions options)
     {
         Action<MailDeliveryOptions.SmtpOptions> deriveDefaults = options.Smtp.AuthType switch
@@ -20,6 +24,7 @@ internal sealed class SmtpOAuthOptionsSetup :
             SmtpAuthType.Password => DeriveNoDefaults,
             SmtpAuthType.MicrosoftOAuth => DeriveMicrosoftDefaults,
             SmtpAuthType.CustomOAuth => DeriveCustomDefaults,
+            SmtpAuthType.GoogleOAuth => DeriveGoogleDefaults,
         };
         deriveDefaults(options.Smtp);
     }
@@ -31,6 +36,7 @@ internal sealed class SmtpOAuthOptionsSetup :
             SmtpAuthType.Password => [],
             SmtpAuthType.MicrosoftOAuth => MicrosoftErrors(options.Smtp),
             SmtpAuthType.CustomOAuth => CustomErrors(options.Smtp),
+            SmtpAuthType.GoogleOAuth => GoogleErrors(options.Smtp),
         };
         if (errors.Count > 0)
         {
@@ -71,6 +77,15 @@ internal sealed class SmtpOAuthOptionsSetup :
             ClientSecret = smtp.OAuth.ClientSecret!,
             Scope = smtp.OAuth.Scope!,
             GrantType = smtp.OAuth.GrantType!,
+            SigningKey = smtp.OAuth.SigningKey!,
+            Claims = smtp.OAuth.Claims,
+        },
+        SmtpAuthType.GoogleOAuth => new GoogleOAuthConfig
+        {
+            TokenEndpoint = smtp.OAuth.TokenEndpoint!,
+            OutboundMailbox = smtp.OutboundMailbox!,
+            SigningKey = smtp.OAuth.SigningKey!,
+            Claims = smtp.OAuth.Claims,
         },
     };
 
@@ -96,6 +111,28 @@ internal sealed class SmtpOAuthOptionsSetup :
         smtp.OAuth.ClientId = OrFallback(smtp.OAuth.ClientId, smtp.ClientId);
         smtp.OAuth.ClientSecret = OrFallback(smtp.OAuth.ClientSecret, smtp.ClientSecret);
         smtp.OAuth.GrantType = OrFallback(smtp.OAuth.GrantType, ClientCredentialsHandler.GrantType);
+        DeriveJwtBearerSigningDefaults(smtp);
+    }
+
+    // https://developers.google.com/identity/protocols/oauth2/service-account
+    private static void DeriveGoogleDefaults(MailDeliveryOptions.SmtpOptions smtp)
+    {
+        smtp.OAuth.TokenEndpoint = OrFallback(smtp.OAuth.TokenEndpoint, GoogleTokenEndpoint);
+        smtp.OAuth.GrantType = OrFallback(smtp.OAuth.GrantType, JwtBearerHandler.GrantType);
+        DeriveJwtBearerSigningDefaults(smtp);
+        smtp.OAuth.Claims.TryAdd("scope", "https://mail.google.com/");
+        smtp.OAuth.Claims.TryAdd("aud", smtp.OAuth.TokenEndpoint!);
+    }
+
+    // Shared between CustomOAuth and GoogleOAuth's jwt-bearer defaults.
+    private static void DeriveJwtBearerSigningDefaults(MailDeliveryOptions.SmtpOptions smtp)
+    {
+        smtp.OAuth.SigningKey = OrFallback(smtp.OAuth.SigningKey, smtp.ServiceAccountPrivateKey);
+        if (string.IsNullOrWhiteSpace(smtp.OAuth.Claims.GetValueOrDefault(IssuerClaimName)) &&
+            !string.IsNullOrWhiteSpace(smtp.ServiceAccountEmail))
+        {
+            smtp.OAuth.Claims[IssuerClaimName] = smtp.ServiceAccountEmail;
+        }
     }
 
     private static List<string> MicrosoftErrors(MailDeliveryOptions.SmtpOptions smtp)
@@ -121,19 +158,41 @@ internal sealed class SmtpOAuthOptionsSetup :
         {
             errors.Add("Smtp:OAuth:Scope is required when Smtp:AuthType is CustomOAuth.");
         }
-        AddClientCredentialErrors(smtp, errors);
-        AddGrantTypeErrors(smtp, errors);
+        if (smtp.OAuth.GrantType == JwtBearerHandler.GrantType)
+        {
+            AddOutboundMailboxError(smtp, errors);
+            AddJwtBearerErrors(smtp, errors);
+        }
+        else
+        {
+            AddClientCredentialErrors(smtp, errors);
+        }
+        AddCustomGrantTypeErrors(smtp, errors);
+        return errors;
+    }
+
+    private static List<string> GoogleErrors(MailDeliveryOptions.SmtpOptions smtp)
+    {
+        var errors = new List<string>();
+        AddOutboundMailboxError(smtp, errors);
+        AddJwtBearerErrors(smtp, errors);
+        AddGoogleGrantTypeErrors(smtp, errors);
         return errors;
     }
 
     private static string? OrFallback(string? value, string? fallback) => string.IsNullOrWhiteSpace(value) ? fallback : value;
 
-    private static void AddClientCredentialErrors(MailDeliveryOptions.SmtpOptions smtp, List<string> errors)
+    private static void AddOutboundMailboxError(MailDeliveryOptions.SmtpOptions smtp, List<string> errors)
     {
         if (string.IsNullOrWhiteSpace(smtp.OutboundMailbox))
         {
             errors.Add($"Smtp:OutboundMailbox (the sending mailbox) is required when Smtp:AuthType is {smtp.AuthType}.");
         }
+    }
+
+    private static void AddClientCredentialErrors(MailDeliveryOptions.SmtpOptions smtp, List<string> errors)
+    {
+        AddOutboundMailboxError(smtp, errors);
         if (string.IsNullOrWhiteSpace(smtp.OAuth.ClientId))
         {
             errors.Add($"Smtp:ClientId or Smtp:OAuth:ClientId is required when Smtp:AuthType is {smtp.AuthType}.");
@@ -141,6 +200,35 @@ internal sealed class SmtpOAuthOptionsSetup :
         if (string.IsNullOrWhiteSpace(smtp.OAuth.ClientSecret))
         {
             errors.Add($"Smtp:ClientSecret or Smtp:OAuth:ClientSecret is required when Smtp:AuthType is {smtp.AuthType}.");
+        }
+    }
+
+    private static void AddJwtBearerErrors(MailDeliveryOptions.SmtpOptions smtp, List<string> errors)
+    {
+        if (string.IsNullOrWhiteSpace(smtp.OAuth.SigningKey))
+        {
+            errors.Add(
+                $"Smtp:ServiceAccountPrivateKey or Smtp:OAuth:SigningKey is required when Smtp:AuthType is {smtp.AuthType} and the grant type is '{JwtBearerHandler.GrantType}'.");
+        }
+        if (string.IsNullOrWhiteSpace(smtp.OAuth.Claims.GetValueOrDefault(IssuerClaimName)))
+        {
+            errors.Add(
+                $"Smtp:ServiceAccountEmail or Smtp:OAuth:Claims:{IssuerClaimName} is required when Smtp:AuthType is {smtp.AuthType} and the grant type is '{JwtBearerHandler.GrantType}'.");
+        }
+        AddAlgorithmErrors(smtp, errors);
+    }
+
+    private static void AddAlgorithmErrors(MailDeliveryOptions.SmtpOptions smtp, List<string> errors)
+    {
+        if (string.IsNullOrWhiteSpace(smtp.OAuth.Algorithm))
+        {
+            return;
+        }
+
+        if (!string.Equals(smtp.OAuth.Algorithm, SecurityAlgorithms.RsaSha256, StringComparison.Ordinal))
+        {
+            errors.Add(
+                $"Algorithm '{smtp.OAuth.Algorithm}' is not supported for AuthType {smtp.AuthType}; only '{SecurityAlgorithms.RsaSha256}' is supported.");
         }
     }
 
@@ -155,6 +243,35 @@ internal sealed class SmtpOAuthOptionsSetup :
         {
             errors.Add(
                 $"Grant type '{smtp.OAuth.GrantType}' is not supported for AuthType {smtp.AuthType}; only '{ClientCredentialsHandler.GrantType}' is supported.");
+        }
+    }
+
+    private static void AddCustomGrantTypeErrors(MailDeliveryOptions.SmtpOptions smtp, List<string> errors)
+    {
+        if (string.IsNullOrWhiteSpace(smtp.OAuth.GrantType))
+        {
+            return;
+        }
+
+        if (smtp.OAuth.GrantType != ClientCredentialsHandler.GrantType &&
+            smtp.OAuth.GrantType != JwtBearerHandler.GrantType)
+        {
+            errors.Add(
+                $"Grant type '{smtp.OAuth.GrantType}' is not supported for AuthType {smtp.AuthType}; only '{ClientCredentialsHandler.GrantType}' or '{JwtBearerHandler.GrantType}' is supported.");
+        }
+    }
+
+    private static void AddGoogleGrantTypeErrors(MailDeliveryOptions.SmtpOptions smtp, List<string> errors)
+    {
+        if (string.IsNullOrWhiteSpace(smtp.OAuth.GrantType))
+        {
+            return;
+        }
+
+        if (smtp.OAuth.GrantType != JwtBearerHandler.GrantType)
+        {
+            errors.Add(
+                $"Grant type '{smtp.OAuth.GrantType}' is not supported for AuthType {smtp.AuthType}; only '{JwtBearerHandler.GrantType}' is supported.");
         }
     }
 }

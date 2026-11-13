@@ -20,6 +20,11 @@ public enum SmtpAuthType
     /// Microsoft Entra OAuth 2.0 client-credentials authentication for Microsoft 365 SMTP.
     /// </summary>
     MicrosoftOAuth,
+
+    /// <summary>
+    /// Google Workspace service-account authentication for Gmail SMTP, using the OAuth 2.0 jwt-bearer grant.
+    /// </summary>
+    GoogleOAuth,
 }
 
 /// <summary>
@@ -129,9 +134,10 @@ public sealed class MailDeliveryOptions
         public string? Password { get; set; }
 
         /// <summary>
-        /// OAuth-mode mailbox identity sent as the XOAUTH2 user to <see cref="SmtpAuthType.MicrosoftOAuth"/> and
-        /// <see cref="SmtpAuthType.CustomOAuth"/> servers. Distinct from <see cref="Username"/>, which is the
-        /// Basic-auth credential; this is not a reuse of <see cref="Username"/> for OAuth mailbox identity.
+        /// OAuth-mode mailbox identity sent as the XOAUTH2 user to <see cref="SmtpAuthType.MicrosoftOAuth"/>,
+        /// <see cref="SmtpAuthType.CustomOAuth"/>, and <see cref="SmtpAuthType.GoogleOAuth"/> servers. Distinct
+        /// from <see cref="Username"/>, which is the Basic-auth credential; this is not a reuse of
+        /// <see cref="Username"/> for OAuth mailbox identity.
         /// </summary>
         public string? OutboundMailbox { get; set; }
 
@@ -167,6 +173,18 @@ public sealed class MailDeliveryOptions
         public string? ClientSecret { get; set; }
 
         /// <summary>
+        /// Google service-account email address used for jwt-bearer authentication. Checked first;
+        /// when unset, falls back to the <c>iss</c> entry of <see cref="OAuthOptions.Claims"/>.
+        /// </summary>
+        public string? ServiceAccountEmail { get; set; }
+
+        /// <summary>
+        /// Google service-account RSA private key (PEM-encoded) used to sign jwt-bearer assertions.
+        /// Checked first; when unset, falls back to <see cref="OAuthOptions.SigningKey"/>.
+        /// </summary>
+        public string? ServiceAccountPrivateKey { get; set; }
+
+        /// <summary>
         /// OAuth settings used when <see cref="AuthType"/> is not <see cref="SmtpAuthType.Password"/>.
         /// </summary>
         public OAuthOptions OAuth { get; set; } = new();
@@ -178,13 +196,17 @@ public sealed class MailDeliveryOptions
         {
             /// <summary>
             /// The OAuth token endpoint URL. For <see cref="SmtpAuthType.MicrosoftOAuth"/>, this can be
-            /// omitted in favor of <see cref="SmtpOptions.TenantId"/>, from which it is derived.
+            /// omitted in favor of <see cref="SmtpOptions.TenantId"/>, from which it is derived. For
+            /// <see cref="SmtpAuthType.GoogleOAuth"/>, this defaults to <c>https://oauth2.googleapis.com/token</c>.
             /// </summary>
             public string? TokenEndpoint { get; set; }
 
             /// <summary>
-            /// The OAuth grant type. Defaults to <c>client_credentials</c> when unset, which is the only
-            /// supported value.
+            /// The OAuth grant type. Defaults to <c>client_credentials</c> when unset, except for
+            /// <see cref="SmtpAuthType.GoogleOAuth"/>, which defaults to and accepts only
+            /// <c>urn:ietf:params:oauth:grant-type:jwt-bearer</c>. <see cref="SmtpAuthType.CustomOAuth"/> also
+            /// accepts the jwt-bearer grant; <see cref="SmtpAuthType.MicrosoftOAuth"/> accepts only
+            /// <c>client_credentials</c>.
             /// </summary>
             public string? GrantType { get; set; }
 
@@ -203,6 +225,25 @@ public sealed class MailDeliveryOptions
             /// <see cref="SmtpAuthType.MicrosoftOAuth"/> when unset.
             /// </summary>
             public string? Scope { get; set; }
+
+            /// <summary>
+            /// RSA private key (PEM-encoded) used to sign jwt-bearer assertions. Falls back to
+            /// <see cref="SmtpOptions.ServiceAccountPrivateKey"/> when unset.
+            /// </summary>
+            public string? SigningKey { get; set; }
+
+            /// <summary>
+            /// The JWS signing algorithm used for jwt-bearer assertions. Only <c>RS256</c> is supported.
+            /// Unset is treated as <c>RS256</c>.
+            /// </summary>
+            public string? Algorithm { get; set; }
+
+            /// <summary>
+            /// Jwt-bearer assertion claims, keyed by claim name (for example <c>sub</c> or <c>iss</c>), merged into
+            /// the signed assertion and overriding any value otherwise derived automatically. The <c>iss</c> entry
+            /// is used as a fallback when <see cref="SmtpOptions.ServiceAccountEmail"/> is unset.
+            /// </summary>
+            public Dictionary<string, string> Claims { get; set; } = new();
         }
     }
 
