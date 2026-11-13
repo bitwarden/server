@@ -45,10 +45,23 @@ public interface ICipherLeaseGate
 
     /// <summary>
     /// Self-loading variant of the bulk member decision, for callers that have not already loaded the
-    /// caller's collections and mappings. Loads them once — but only when the flag is on, so the flag-off
-    /// path stays query-free.
+    /// caller's collections and mappings. Loads them once, and only when the flag is on and one of
+    /// <paramref name="ciphers"/> belongs to an organization in which an access rule can gate.
     /// </summary>
     Task<FullCipherAccess> AuthorizeReadManyAsync(Guid userId, IEnumerable<Cipher> ciphers);
+
+    /// <summary>
+    /// Variant of the self-loading bulk member decision for callers that have already loaded the caller's
+    /// cipher-to-collection mappings, so only the caller's collections are loaded, and under the same
+    /// conditions.
+    /// </summary>
+    /// <param name="collectionCiphersByCipher">
+    /// The caller's cipher-to-collection mappings. <c>null</c> is equivalent to empty.
+    /// </param>
+    Task<FullCipherAccess> AuthorizeReadManyAsync(
+        Guid userId,
+        IEnumerable<Cipher> ciphers,
+        IDictionary<Guid, IGrouping<Guid, CollectionCipher>>? collectionCiphersByCipher);
 
     /// <summary>
     /// Read decision for a <em>write-return</em>: the response echoing back a cipher the caller has just

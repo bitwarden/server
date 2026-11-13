@@ -28,6 +28,9 @@ public class CipherLeaseGateBypassCustomization : ICustomization
         gate.AuthorizeReadAsync(Arg.Any<Guid>(), Arg.Any<Cipher>()).Returns(unrestricted);
         gate.AuthorizeReadManyAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Cipher>>()).Returns(unrestricted);
         gate.AuthorizeReadManyAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Cipher>>(),
+                Arg.Any<IDictionary<Guid, IGrouping<Guid, CollectionCipher>>>())
+            .Returns(unrestricted);
+        gate.AuthorizeReadManyAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Cipher>>(),
                 Arg.Any<IEnumerable<CollectionDetails>>(),
                 Arg.Any<IDictionary<Guid, IGrouping<Guid, CollectionCipher>>>())
             .Returns(unrestricted);
