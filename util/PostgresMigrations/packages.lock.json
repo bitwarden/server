@@ -249,8 +249,8 @@
       },
       "DuoUniversal": {
         "type": "Transitive",
-        "resolved": "1.3.1",
-        "contentHash": "BZUJplORCBO1PVDFT5v7HDYAlpgHAkay5N9vzRpJ/sBm+GU44pxNlo7v95Ym0tvUeKy0WWWv/iE4FjErYoZUHQ==",
+        "resolved": "1.5.0",
+        "contentHash": "v2EvTDvv3UK6OMYQ86+ePZKa8+nL0pRsYVJXJiPYEdacmCWBYpC48dPgEKPpKqsuTl/1i6WzTDKG+r8I454JGA==",
         "dependencies": {
           "Microsoft.IdentityModel.JsonWebTokens": "6.34.0"
         }
@@ -1517,7 +1517,7 @@
           "Data": "[0.0.1, )",
           "DnsClient": "[1.8.0, 1.8.0]",
           "Duende.IdentityServer": "[7.4.6, 7.4.6]",
-          "DuoUniversal": "[1.3.1, 1.3.1]",
+          "DuoUniversal": "[1.5.0, 1.5.0]",
           "ExceptionHandling": "[0.0.1, )",
           "Fido2.AspNet": "[4.0.1, 4.0.1]",
           "Handlebars.Net": "[2.1.6, 2.1.6]",
