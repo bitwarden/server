@@ -279,4 +279,257 @@ public class OrganizationUserTests
     {
         Assert.Equal(expected, orgUser.GetPriorActiveOrganizationUserStatusType());
     }
+
+    [Fact]
+    public void Invite_Staged_MovesToInvited()
+    {
+        var orgUser = OrganizationUser.CreateStaged(Guid.NewGuid(), "staged@example.com", "external-id",
+            OrganizationUserType.User);
+
+        orgUser.Invite();
+
+        Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
+        Assert.Equal("staged@example.com", orgUser.Email);
+        Assert.Null(orgUser.UserId);
+        Assert.Null(orgUser.Key);
+    }
+
+    [Fact]
+    public void Accept_Invited_MovesToAccepted()
+    {
+        var userId = Guid.NewGuid();
+        var orgUser = OrganizationUser.CreateInvited(Guid.NewGuid(), "invitee@example.com", OrganizationUserType.User);
+        orgUser.InviteReminderDueDate = DateTime.UtcNow;
+        orgUser.InviteRemindersSentCount = 1;
+
+        orgUser.Accept(userId);
+
+        Assert.Equal(OrganizationUserStatusType.Accepted, orgUser.Status);
+        Assert.Equal(userId, orgUser.UserId);
+        Assert.Null(orgUser.Email);
+        Assert.Null(orgUser.Key);
+        Assert.Null(orgUser.InviteReminderDueDate);
+        Assert.Null(orgUser.InviteRemindersSentCount);
+    }
+
+    [Fact]
+    public void Confirm_Accepted_MovesToConfirmed()
+    {
+        var userId = Guid.NewGuid();
+        var orgUser = OrganizationUser.CreateAccepted(Guid.NewGuid(), userId, OrganizationUserType.User);
+
+        orgUser.Confirm("org-key");
+
+        Assert.Equal(OrganizationUserStatusType.Confirmed, orgUser.Status);
+        Assert.Equal("org-key", orgUser.Key);
+        Assert.Equal(userId, orgUser.UserId);
+        Assert.Null(orgUser.Email);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    public void Confirm_InvalidKey_Throws(string? key)
+    {
+        var orgUser = OrganizationUser.CreateAccepted(Guid.NewGuid(), Guid.NewGuid(), OrganizationUserType.User);
+
+        Assert.ThrowsAny<ArgumentException>(() => orgUser.Confirm(key!));
+        Assert.Equal(OrganizationUserStatusType.Accepted, orgUser.Status);
+    }
+
+    [Theory]
+    [InlineData(OrganizationUserStatusType.Invited, OrganizationUserStatusTypeNew.Invited)]
+    [InlineData(OrganizationUserStatusType.Accepted, OrganizationUserStatusTypeNew.Accepted)]
+    [InlineData(OrganizationUserStatusType.Confirmed, OrganizationUserStatusTypeNew.Confirmed)]
+    [InlineData(OrganizationUserStatusType.Staged, OrganizationUserStatusTypeNew.Staged)]
+    public void Revoke_ActiveStatus_MovesToRevokedAndSnapshotsStatus(
+        OrganizationUserStatusType status,
+        OrganizationUserStatusTypeNew expectedStatusNew)
+    {
+        var orgUser = new OrganizationUser { Status = status };
+
+        orgUser.Revoke(RevocationReason.Manual);
+
+        Assert.Equal(OrganizationUserStatusType.Revoked, orgUser.Status);
+        Assert.Equal(expectedStatusNew, orgUser.StatusNew);
+        Assert.Equal(RevocationReason.Manual, orgUser.RevocationReason);
+    }
+
+    [Fact]
+    public void Revoke_KeepsInviteReminders()
+    {
+        var dueDate = DateTime.UtcNow;
+        var orgUser = OrganizationUser.CreateInvited(Guid.NewGuid(), "invitee@example.com", OrganizationUserType.User);
+        orgUser.InviteReminderDueDate = dueDate;
+        orgUser.InviteRemindersSentCount = 1;
+
+        orgUser.Revoke(RevocationReason.Manual);
+
+        Assert.Equal(dueDate, orgUser.InviteReminderDueDate);
+        Assert.Equal((byte)1, orgUser.InviteRemindersSentCount);
+    }
+
+    [Fact]
+    public void Revoke_AlreadyRevoked_ThrowsAndPreservesSnapshot()
+    {
+        var orgUser = new OrganizationUser
+        {
+            Status = OrganizationUserStatusType.Revoked,
+            StatusNew = OrganizationUserStatusTypeNew.Confirmed,
+            RevocationReason = RevocationReason.Manual,
+        };
+
+        Assert.Throws<InvalidOperationException>(() => orgUser.Revoke(RevocationReason.SingleOrgPolicyNonCompliance));
+        Assert.Equal(OrganizationUserStatusTypeNew.Confirmed, orgUser.StatusNew);
+        Assert.Equal(RevocationReason.Manual, orgUser.RevocationReason);
+    }
+
+    [Theory]
+    [InlineData(OrganizationUserStatusTypeNew.Invited, OrganizationUserStatusType.Invited)]
+    [InlineData(OrganizationUserStatusTypeNew.Accepted, OrganizationUserStatusType.Accepted)]
+    [InlineData(OrganizationUserStatusTypeNew.Confirmed, OrganizationUserStatusType.Confirmed)]
+    [InlineData(OrganizationUserStatusTypeNew.Staged, OrganizationUserStatusType.Staged)]
+    public void Restore_Revoked_MovesToStatusNewAndClearsRevocation(
+        OrganizationUserStatusTypeNew statusNew,
+        OrganizationUserStatusType expected)
+    {
+        var orgUser = new OrganizationUser
+        {
+            Status = OrganizationUserStatusType.Revoked,
+            StatusNew = statusNew,
+            RevocationReason = RevocationReason.Manual,
+        };
+
+        orgUser.Restore();
+
+        Assert.Equal(expected, orgUser.Status);
+        Assert.Null(orgUser.StatusNew);
+        Assert.Null(orgUser.RevocationReason);
+    }
+
+    [Fact]
+    public void Restore_RevokedWithoutStatusNew_InfersStatusFromArrangement()
+    {
+        var orgUser = new OrganizationUser
+        {
+            Status = OrganizationUserStatusType.Revoked,
+            UserId = Guid.NewGuid(),
+            Key = "org-key",
+            StatusNew = null,
+            RevocationReason = RevocationReason.Unknown,
+        };
+
+        orgUser.Restore();
+
+        Assert.Equal(OrganizationUserStatusType.Confirmed, orgUser.Status);
+        Assert.Null(orgUser.RevocationReason);
+    }
+
+    public static TheoryData<OrganizationUser, OrganizationUserStatusType> TransitionedArrangements()
+    {
+        var invited = OrganizationUser.CreateStaged(Guid.NewGuid(), "staged@example.com", "external-id",
+            OrganizationUserType.User);
+        invited.Invite();
+
+        var accepted = OrganizationUser.CreateInvited(Guid.NewGuid(), "invitee@example.com", OrganizationUserType.User);
+        accepted.Accept(Guid.NewGuid());
+
+        var confirmed = OrganizationUser.CreateAccepted(Guid.NewGuid(), Guid.NewGuid(), OrganizationUserType.User);
+        confirmed.Confirm("org-key");
+
+        var restored = OrganizationUser.CreateConfirmed(Guid.NewGuid(), Guid.NewGuid(), "org-key",
+            OrganizationUserType.User);
+        restored.Revoke(RevocationReason.Manual);
+        restored.Restore();
+
+        return new()
+        {
+            { invited, OrganizationUserStatusType.Invited },
+            { accepted, OrganizationUserStatusType.Accepted },
+            { confirmed, OrganizationUserStatusType.Confirmed },
+            { restored, OrganizationUserStatusType.Confirmed },
+        };
+    }
+
+    /// <summary>
+    /// Restore without a StatusNew snapshot infers status from the row's shape, so transitioned rows must round-trip.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(TransitionedArrangements))]
+    public void GetPriorActiveOrganizationUserStatusType_TransitionedArrangement_ResolvesToCurrentStatus(
+        OrganizationUser orgUser,
+        OrganizationUserStatusType expected)
+    {
+        Assert.Equal(expected, orgUser.GetPriorActiveOrganizationUserStatusType());
+    }
+
+    [Theory]
+    [InlineData(OrganizationUserStatusType.Invited)]
+    [InlineData(OrganizationUserStatusType.Accepted)]
+    [InlineData(OrganizationUserStatusType.Confirmed)]
+    [InlineData(OrganizationUserStatusType.Staged)]
+    public void GetPriorActiveOrganizationUserStatusType_AfterRevoke_ResolvesToPreRevokeStatus(
+        OrganizationUserStatusType status)
+    {
+        var orgUser = new OrganizationUser { Status = status };
+
+        orgUser.Revoke(RevocationReason.Manual);
+
+        Assert.Equal(status, orgUser.GetPriorActiveOrganizationUserStatusType());
+    }
+
+    [Theory]
+    [InlineData(OrganizationUserStatusType.Invited)]
+    [InlineData(OrganizationUserStatusType.Accepted)]
+    [InlineData(OrganizationUserStatusType.Confirmed)]
+    [InlineData(OrganizationUserStatusType.Revoked)]
+    public void Invite_NotStaged_Throws(OrganizationUserStatusType status)
+    {
+        var orgUser = new OrganizationUser { Status = status };
+
+        Assert.Throws<InvalidOperationException>(() => orgUser.Invite());
+        Assert.Equal(status, orgUser.Status);
+    }
+
+    [Theory]
+    [InlineData(OrganizationUserStatusType.Accepted)]
+    [InlineData(OrganizationUserStatusType.Confirmed)]
+    [InlineData(OrganizationUserStatusType.Staged)]
+    [InlineData(OrganizationUserStatusType.Revoked)]
+    public void Accept_NotInvited_Throws(OrganizationUserStatusType status)
+    {
+        var orgUser = new OrganizationUser { Status = status };
+
+        Assert.Throws<InvalidOperationException>(() => orgUser.Accept(Guid.NewGuid()));
+        Assert.Equal(status, orgUser.Status);
+        Assert.Null(orgUser.UserId);
+    }
+
+    [Theory]
+    [InlineData(OrganizationUserStatusType.Invited)]
+    [InlineData(OrganizationUserStatusType.Confirmed)]
+    [InlineData(OrganizationUserStatusType.Staged)]
+    [InlineData(OrganizationUserStatusType.Revoked)]
+    public void Confirm_NotAccepted_Throws(OrganizationUserStatusType status)
+    {
+        var orgUser = new OrganizationUser { Status = status };
+
+        Assert.Throws<InvalidOperationException>(() => orgUser.Confirm("org-key"));
+        Assert.Equal(status, orgUser.Status);
+        Assert.Null(orgUser.Key);
+    }
+
+    [Theory]
+    [InlineData(OrganizationUserStatusType.Invited)]
+    [InlineData(OrganizationUserStatusType.Accepted)]
+    [InlineData(OrganizationUserStatusType.Confirmed)]
+    [InlineData(OrganizationUserStatusType.Staged)]
+    public void Restore_NotRevoked_Throws(OrganizationUserStatusType status)
+    {
+        var orgUser = new OrganizationUser { Status = status };
+
+        Assert.Throws<InvalidOperationException>(() => orgUser.Restore());
+        Assert.Equal(status, orgUser.Status);
+    }
 }
