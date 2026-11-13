@@ -9,7 +9,7 @@ namespace Bit.Core.Auth.Repositories;
 public interface ITwoFactorRememberTokenRepository
 {
     /// <summary>
-    /// Reads the row for one remembered device, or null if the device has never been remembered.
+    /// Reads the row for the 2FA remember token issued to one device, or null if none has ever been issued for it.
     /// </summary>
     Task<TwoFactorRememberToken?> GetByUserIdDeviceIdAsync(Guid userId, Guid deviceId);
 
@@ -21,7 +21,7 @@ public interface ITwoFactorRememberTokenRepository
     Task<TwoFactorRememberToken> UpsertAsync(TwoFactorRememberToken token);
 
     /// <summary>
-    /// Rotates the <c>Stamp</c> on every row for this user, invalidating all of their remember
+    /// Rotates the <c>Stamp</c> on every row for this user, invalidating all of their 2FA remember
     /// tokens at once. Rows are kept.
     /// </summary>
     /// <remarks>

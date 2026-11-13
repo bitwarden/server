@@ -9,6 +9,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
@@ -41,6 +42,7 @@ public class EmergencyAccessService : IEmergencyAccessService
     private readonly IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> _dataProtectorTokenizer;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IRevokeTwoFactorRememberTokensCommand _revokeTwoFactorRememberTokensCommand;
 
     public EmergencyAccessService(
         IEmergencyAccessRepository emergencyAccessRepository,
@@ -55,7 +57,8 @@ public class EmergencyAccessService : IEmergencyAccessService
         GlobalSettings globalSettings,
         IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> dataProtectorTokenizer,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
-        IPolicyRequirementQuery policyRequirementQuery)
+        IPolicyRequirementQuery policyRequirementQuery,
+        IRevokeTwoFactorRememberTokensCommand revokeTwoFactorRememberTokensCommand)
     {
         _emergencyAccessRepository = emergencyAccessRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -70,6 +73,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         _dataProtectorTokenizer = dataProtectorTokenizer;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _policyRequirementQuery = policyRequirementQuery;
+        _revokeTwoFactorRememberTokensCommand = revokeTwoFactorRememberTokensCommand;
     }
 
     public async Task<Entities.EmergencyAccess> InviteAsync(User grantorUser, string emergencyContactEmail, EmergencyAccessType accessType, int waitTime)
@@ -402,6 +406,11 @@ public class EmergencyAccessService : IEmergencyAccessService
         // Disable New Device Verification since it will otherwise block logins
         grantor.VerifyDevices = false;
 
+        // Takeover removes the grantor's 2FA, so their 2FA remember tokens must stop being honored too.
+        // The changes above are only in memory until the save below. Revoking first means a failed revoke
+        // persists nothing, so the stored grantor (including their 2FA) is unchanged and the takeover can be retried.
+        await _revokeTwoFactorRememberTokensCommand.RevokeAllForUserAsync(grantor.Id);
+
         await _userRepository.ReplaceAsync(grantor);
 
         // Remove grantor from all organizations unless Owner
@@ -437,6 +446,12 @@ public class EmergencyAccessService : IEmergencyAccessService
         grantor.SetTwoFactorProviders([]);
         // Disable New Device Verification since it will otherwise block logins
         grantor.VerifyDevices = false;
+
+        // Takeover removes the grantor's 2FA, so their 2FA remember tokens must stop being honored too.
+        // The changes above are only in memory until the save below. Revoking first means a failed revoke
+        // persists nothing, so the stored grantor (including their 2FA) is unchanged and the takeover can be retried.
+        await _revokeTwoFactorRememberTokensCommand.RevokeAllForUserAsync(grantor.Id);
+
         await _userRepository.ReplaceAsync(grantor);
 
         // Remove grantor from all organizations unless Owner

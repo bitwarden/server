@@ -1,14 +1,19 @@
 ﻿using System.Text;
 using System.Text.Json;
+using Bit.Api.IntegrationTest.Factories;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.Test.Common.Fakes;
 using Core.Auth.Enums;
 using NSubstitute;
+using Xunit;
 
 namespace Bit.Api.IntegrationTest.Auth.Helpers;
 
@@ -111,6 +116,65 @@ internal static class TwoFactorIntegrationTestHelpers
         var user = (await userRepository.GetByEmailAsync(userEmail))!;
         user.Premium = true;
         await userRepository.UpsertAsync(user);
+    }
+
+    // ---------------------------------------------------------------------
+    // 2FA remember tokens
+    // ---------------------------------------------------------------------
+
+    /// <summary>
+    /// Gives the user a device with a <see cref="TwoFactorRememberToken"/> row carrying the given stamp, as a
+    /// completed "don't ask again on this device" login would. Returns the device.
+    /// </summary>
+    public static async Task<Device> SeedTwoFactorRememberTokenAsync(
+        ApiApplicationFactory factory, string userEmail, string stamp)
+    {
+        var user = (await factory.GetService<IUserRepository>().GetByEmailAsync(userEmail))!;
+        var device = await factory.GetService<IDeviceRepository>().CreateAsync(new Device
+        {
+            UserId = user.Id,
+            Name = "chrome-test",
+            Type = DeviceType.ChromeBrowser,
+            Identifier = Guid.NewGuid().ToString(),
+            Active = true,
+            LastActivityDate = DateTime.UtcNow,
+        });
+        await factory.GetService<ITwoFactorRememberTokenRepository>().UpsertAsync(new TwoFactorRememberToken
+        {
+            UserId = user.Id,
+            DeviceId = device.Id,
+            Stamp = stamp,
+            ExpirationDate = DateTime.UtcNow.AddDays(30),
+        });
+        return device;
+    }
+
+    /// <summary>
+    /// Asserts that the device's <see cref="TwoFactorRememberToken"/> row no longer carries the stamp it was
+    /// seeded with, which is what stops its 2FA remember tokens from being honored.
+    /// </summary>
+    public static async Task AssertTwoFactorRememberTokenRotatedAsync(
+        ApiApplicationFactory factory, string userEmail, Device device, string originalStamp)
+    {
+        var user = (await factory.GetService<IUserRepository>().GetByEmailAsync(userEmail))!;
+        var row = await factory.GetService<ITwoFactorRememberTokenRepository>()
+            .GetByUserIdDeviceIdAsync(user.Id, device.Id);
+        Assert.NotNull(row);
+        Assert.NotEqual(originalStamp, row.Stamp);
+    }
+
+    /// <summary>
+    /// Asserts that the device's <see cref="TwoFactorRememberToken"/> row still carries the stamp it was seeded
+    /// with, so its 2FA remember token is still honored.
+    /// </summary>
+    public static async Task AssertTwoFactorRememberTokenUnchangedAsync(
+        ApiApplicationFactory factory, string userEmail, Device device, string originalStamp)
+    {
+        var user = (await factory.GetService<IUserRepository>().GetByEmailAsync(userEmail))!;
+        var row = await factory.GetService<ITwoFactorRememberTokenRepository>()
+            .GetByUserIdDeviceIdAsync(user.Id, device.Id);
+        Assert.NotNull(row);
+        Assert.Equal(originalStamp, row.Stamp);
     }
 
     // ---------------------------------------------------------------------

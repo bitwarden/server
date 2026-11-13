@@ -12,6 +12,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Services;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
@@ -266,6 +267,83 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task DisableTwoFactorProviderAsync_TwoFactorAuthNoLongerEnabled_RevokesTwoFactorRememberTokens(
+        SutProvider<UserService> sutProvider, User user)
+    {
+        // Arrange
+        user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+        {
+            [TwoFactorProviderType.Email] = new() { Enabled = true }
+        });
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
+            .Returns(new RequireTwoFactorPolicyRequirement([]));
+
+        // Act
+        await sutProvider.Sut.DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
+
+        // Assert
+        await sutProvider.GetDependency<IRevokeTwoFactorRememberTokensCommand>()
+            .Received(1)
+            .RevokeAllForUserAsync(user.Id);
+    }
+
+    /// <summary>
+    /// Removing a provider such that 2FA is no longer enabled revokes the 2FA remember tokens before
+    /// anything is saved. If revocation fails, the removal is not persisted, so the user can simply
+    /// retry instead of being left with 2FA disabled and 2FA remember tokens that would still validate
+    /// upon re-enabling 2FA.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task DisableTwoFactorProviderAsync_TwoFactorAuthNoLongerEnabled_RememberTokenRevocationFails_DoesNotSaveRemoval(
+        SutProvider<UserService> sutProvider, User user)
+    {
+        // Arrange
+        user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+        {
+            [TwoFactorProviderType.Email] = new() { Enabled = true }
+        });
+        sutProvider.GetDependency<IRevokeTwoFactorRememberTokensCommand>()
+            .RevokeAllForUserAsync(user.Id)
+            .Returns(Task.FromException(new InvalidOperationException("database unavailable")));
+
+        // Act
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => sutProvider.Sut.DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Email));
+
+        // Assert
+        await sutProvider.GetDependency<IUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default!);
+        await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RevokeNonCompliantOrganizationUsersAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DisableTwoFactorProviderAsync_OtherProvidersRemain_DoesNotRevoke(
+        SutProvider<UserService> sutProvider, User user)
+    {
+        // Arrange
+        user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+        {
+            [TwoFactorProviderType.Email] = new() { Enabled = true },
+            [TwoFactorProviderType.Authenticator] = new() { Enabled = true }
+        });
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user)
+            .Returns(true);
+
+        // Act
+        await sutProvider.Sut.DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
+
+        // Assert
+        await sutProvider.GetDependency<IRevokeTwoFactorRememberTokensCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RevokeAllForUserAsync(default);
+    }
+
+    [Theory, BitAutoData]
     public async Task DisableTwoFactorProviderAsync_WhenOrganizationHas2FAPolicyEnabled_DisablingAllProviders_RevokesUserAndSendsEmail(
         SutProvider<UserService> sutProvider, User user,
         Organization organization1, Guid organizationUserId1,
@@ -466,6 +544,67 @@ public class UserServiceTests
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
             .LogUserEventAsync(user.Id, EventType.User_Recovered2fa);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RecoverTwoFactorAsync_CorrectCode_RevokesTwoFactorRememberTokens(
+        User user, SutProvider<UserService> sutProvider)
+    {
+        // Arrange
+        var recoveryCode = "1234";
+        user.TwoFactorRecoveryCode = recoveryCode;
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
+            .Returns(new RequireTwoFactorPolicyRequirement([]));
+
+        // Act
+        await sutProvider.Sut.RecoverTwoFactorAsync(user, recoveryCode);
+
+        // Assert
+        await sutProvider.GetDependency<IRevokeTwoFactorRememberTokensCommand>()
+            .Received(1)
+            .RevokeAllForUserAsync(user.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RecoverTwoFactorAsync_IncorrectCode_DoesNotRevoke(
+        User user, SutProvider<UserService> sutProvider)
+    {
+        // Arrange
+        user.TwoFactorRecoveryCode = "4567";
+
+        // Act
+        await sutProvider.Sut.RecoverTwoFactorAsync(user, "1234");
+
+        // Assert
+        await sutProvider.GetDependency<IRevokeTwoFactorRememberTokensCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RevokeAllForUserAsync(default);
+    }
+
+    /// <summary>
+    /// Revocation runs before the save that consumes the recovery code. If it ran after, a failure
+    /// would commit the teardown and lose the revocation permanently: the user's next login carries
+    /// no recovery code, so this method is never reached again.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task RecoverTwoFactorAsync_RevocationFails_DoesNotConsumeRecoveryCode(
+        User user, SutProvider<UserService> sutProvider)
+    {
+        // Arrange
+        var recoveryCode = "1234";
+        user.TwoFactorRecoveryCode = recoveryCode;
+        sutProvider.GetDependency<IRevokeTwoFactorRememberTokensCommand>()
+            .RevokeAllForUserAsync(user.Id)
+            .Returns(Task.FromException(new InvalidOperationException("database unavailable")));
+
+        // Act
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => sutProvider.Sut.RecoverTwoFactorAsync(user, recoveryCode));
+
+        // Assert
+        Assert.Equal(recoveryCode, user.TwoFactorRecoveryCode);
+        Assert.NotNull(user.TwoFactorProviders);
     }
 
     [Theory, BitAutoData]
