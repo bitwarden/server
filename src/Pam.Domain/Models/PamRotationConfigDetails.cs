@@ -14,8 +14,13 @@ public class PamRotationConfigDetails : PamRotationConfig
     /// </summary>
     public bool HasActiveJob { get; set; }
 
+    /// <summary>
+    /// Gets or sets whether the last job ended badly.
+    /// </summary>
+    public bool LastJobFailed { get; set; }
+
     public static PamRotationConfigDetails From(PamRotationConfig config, string targetSystemName,
-        PamTargetSystemMethod targetSystemMethod, bool hasActiveJob) => new()
+        PamTargetSystemMethod targetSystemMethod, bool hasActiveJob, bool lastJobFailed = false) => new()
         {
             Id = config.Id,
             OrganizationId = config.OrganizationId,
@@ -33,5 +38,6 @@ public class PamRotationConfigDetails : PamRotationConfig
             TargetSystemName = targetSystemName,
             TargetSystemMethod = targetSystemMethod,
             HasActiveJob = hasActiveJob,
+            LastJobFailed = lastJobFailed,
         };
 }

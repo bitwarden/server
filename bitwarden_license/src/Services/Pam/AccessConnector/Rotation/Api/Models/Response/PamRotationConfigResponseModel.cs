@@ -28,6 +28,7 @@ public class PamRotationConfigResponseModel : ResponseModel
         Enabled = config.Enabled;
         LastRotationAt = config.LastRotationDate.AsUtc();
         HasActiveJob = config.HasActiveJob;
+        LastJobFailed = config.LastJobFailed;
         AwaitingManualRotation = awaitingManualRotation;
         CreationDate = config.CreationDate.AsUtc();
         RevisionDate = config.RevisionDate.AsUtc();
@@ -75,6 +76,11 @@ public class PamRotationConfigResponseModel : ResponseModel
     /// <c>has_active_job</c>).
     /// </summary>
     public bool HasActiveJob { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the last job ended badly.
+    /// </summary>
+    public bool LastJobFailed { get; set; }
 
     /// <summary>
     /// An enabled manual-target config that has come due (spec <c>awaiting_manual_rotation</c>). An operator rotates
