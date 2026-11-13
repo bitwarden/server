@@ -45,13 +45,27 @@ GO
 --
 -- [Id] is the third key column because [OccurredDate] is not unique: an action's Attempt and Outcome share a
 -- timestamp, and a page boundary landing among them cannot be resumed without a tiebreaker. The INCLUDE covers the
--- collapse, the page read's filters, and AccessAuditEvent_ReadItemsByOrganizationId, so a filtered page tests each
--- candidate inside the index instead of opening the row. It rides here rather than on a second index, which would
--- cost every insert, and it has no EF equivalent to mirror onto the other three databases.
+-- collapse and the page read's filters, so a filtered page tests each candidate inside the index instead of opening
+-- the row, and AccessAuditEvent_ReadItemsByOrganizationId finds the subjects in range here. The INCLUDE has no EF
+-- equivalent to mirror onto the other three databases.
 CREATE NONCLUSTERED INDEX [IX_AccessAuditEvent_OrganizationId_OccurredDate_Id]
     ON [dbo].[AccessAuditEvent] ([OrganizationId] ASC, [OccurredDate] DESC, [Id] DESC)
     INCLUDE ([CorrelationId], [Phase], [CipherId], [CollectionId], [AccessRuleId], [RuleName],
         [Kind], [ActorId], [RequesterId]);
+GO
+
+-- One per subject column, so AccessAuditEvent_ReadItemsByOrganizationId reaches a subject's most recent event in
+-- range with one seek. Filtered to the events that name the subject: most name a cipher, few name a rule.
+CREATE NONCLUSTERED INDEX [IX_AccessAuditEvent_OrganizationId_CipherId_OccurredDate_Id]
+    ON [dbo].[AccessAuditEvent] ([OrganizationId] ASC, [CipherId] ASC, [OccurredDate] DESC, [Id] DESC)
+    INCLUDE ([CollectionId])
+    WHERE [CipherId] IS NOT NULL;
+GO
+
+CREATE NONCLUSTERED INDEX [IX_AccessAuditEvent_OrganizationId_AccessRuleId_OccurredDate_Id]
+    ON [dbo].[AccessAuditEvent] ([OrganizationId] ASC, [AccessRuleId] ASC, [OccurredDate] DESC, [Id] DESC)
+    INCLUDE ([RuleName])
+    WHERE [AccessRuleId] IS NOT NULL;
 GO
 
 CREATE NONCLUSTERED INDEX [IX_AccessAuditEvent_CorrelationId]
