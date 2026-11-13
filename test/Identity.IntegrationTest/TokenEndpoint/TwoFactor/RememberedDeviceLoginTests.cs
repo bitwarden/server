@@ -2,7 +2,6 @@
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Auth.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
@@ -11,6 +10,7 @@ using Bit.Core.Services;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.Helpers;
 using Xunit;
+using static Bit.Identity.IntegrationTest.Helpers.TwoFactorLoginTestHelpers;
 
 namespace Bit.Identity.IntegrationTest.TokenEndpoint.TwoFactor;
 
@@ -58,18 +58,6 @@ public class RememberedDeviceLoginTests
         await userService.GetUserByIdAsync(user.Id);
 
         return (factory, user);
-    }
-
-    /// <summary>
-    /// Issues a real email two-factor login code bound to the device and returns it, as the factory's mail
-    /// substitute captured it.
-    /// </summary>
-    private static async Task<string> EmailLoginCodeAsync(
-        IdentityApplicationFactory factory, string email, string deviceIdentifier)
-    {
-        var user = await factory.GetService<IUserRepository>().GetByEmailAsync(email);
-        await factory.GetService<ITwoFactorEmailService>().SendTwoFactorLoginEmailAsync(user, deviceIdentifier);
-        return factory.TwoFactorEmailCodes[email];
     }
 
     /// <summary>
