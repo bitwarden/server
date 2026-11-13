@@ -4,6 +4,7 @@
 using System.Net;
 using System.Reflection;
 using System.Security.Claims;
+using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
@@ -63,6 +64,7 @@ using Bit.Infrastructure.EntityFramework;
 using Bit.SharedWeb.Play;
 using DnsClient;
 using Duende.IdentityModel;
+using Duende.IdentityServer.Models;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -80,6 +82,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using StackExchange.Redis;
 using Swashbuckle.AspNetCore.SwaggerGen;
@@ -502,12 +505,126 @@ public static class ServiceCollectionExtensions
     public static IIdentityServerBuilder AddIdentityServerCertificate(
         this IIdentityServerBuilder identityServerBuilder, IWebHostEnvironment env, GlobalSettings globalSettings)
     {
-        var certificate = CoreHelpers.GetIdentityServerCertificate(globalSettings);
-        if (certificate != null)
+        return AddSigningCertificateSet(identityServerBuilder, env, globalSettings,
+            GetIdentitySigningCertificates(new IdentityCertificates(globalSettings)),
+            CertificateRole.IdentitySigning);
+    }
+
+    /// <summary>
+    /// Registers the loaded SSO signing certificates: the active certificate signs, and the staged and validation
+    /// certificates are published for token validation. With no active certificate, a Development host uses a
+    /// developer signing key.
+    /// </summary>
+    /// <exception cref="Exception">The host is not a Development host and has no active certificate.</exception>
+    public static IIdentityServerBuilder AddSsoSigningCertificate(
+        this IIdentityServerBuilder identityServerBuilder, IWebHostEnvironment env, GlobalSettings globalSettings,
+        SigningCertificateSet certificates)
+    {
+        return AddSigningCertificateSet(identityServerBuilder, env, globalSettings, certificates,
+            CertificateRole.SsoSigning);
+    }
+
+    /// <summary>
+    /// Gets the SSO signing certificates. An SSO active source uses only the SSO slots. With no SSO active source,
+    /// a self-hosted or Development host uses the Identity signing certificates from <paramref name="identity"/> and
+    /// the SSO slots. A cloud host that is not a Development host must have an SSO active source.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">A cloud host has no SSO active source, or a configured
+    /// certificate did not load, or a configured certificate does not have an RSA key.</exception>
+    public static SigningCertificateSet GetSsoSigningCertificates(IWebHostEnvironment env,
+        GlobalSettings globalSettings, IdentityCertificates identity)
+    {
+        const string ssoServerPath = "globalSettings:ssoServer";
+        var ssoServer = globalSettings.SsoServer;
+        var sso = SsoCertificateSlots.Load(env, globalSettings, ssoServer, ssoServer.FutureCertificate,
+            ssoServer.ValidationCertificates, ssoServerPath, $"{ssoServerPath}:validationCertificates", CertificateRole.SsoSigning);
+        if (!sso.IsFallback)
         {
-            identityServerBuilder.AddSigningCredential(certificate);
+            return new SigningCertificateSet(sso.Active, sso.Staged, sso.Retired, IsFallback: false);
         }
-        else if (env.IsDevelopment() && !string.IsNullOrEmpty(globalSettings.DevelopmentDirectory))
+
+        return new SigningCertificateSet(identity.Active, [.. identity.Staged, .. sso.Staged],
+            [.. identity.Validation, .. sso.Retired], IsFallback: true);
+    }
+
+    /// <summary>
+    /// Logs one entry for each certificate role: the role, the source, and the thumbprint of each active, staged,
+    /// and retired certificate. Logs one warning for each role whose root has a password but no location,
+    /// thumbprint, or blob name. Logs one warning for each role whose future slot is active but not enabled.
+    /// The log names only setting paths, roles, sources, and thumbprints.
+    /// </summary>
+    public static void LogCertificateSources(ILogger logger, IEnumerable<CertificateSourceReport> reports,
+        GlobalSettings globalSettings)
+    {
+        foreach (var report in reports)
+        {
+            var (source, root, future, settingPath) = GetRoleSettings(report.Role, globalSettings);
+            var role = Bit.Core.Enums.EnumExtensions.GetDisplayName(report.Role);
+            logger.LogInformation(Constants.BypassFiltersEventId,
+                "{Role} certificate source: {Source}. Active thumbprint: {ActiveThumbprint}. " +
+                "Staged thumbprints: {StagedThumbprints}. " +
+                "Retired (validation or decryption) thumbprints: {RetiredThumbprints}.",
+                role, report.IsFallback ? "Identity fallback" : source,
+                report.Active?.Thumbprint ?? "none", Thumbprints(report.Staged), Thumbprints(report.Retired));
+
+            if (CoreHelpers.SettingHasValue(root.CertificatePassword) &&
+                !CoreHelpers.SettingHasValue(root.CertificateLocation) &&
+                !CoreHelpers.SettingHasValue(root.CertificateThumbprint) &&
+                !CoreHelpers.SettingHasValue(root.BlobName))
+            {
+                logger.LogWarning(Constants.BypassFiltersEventId,
+                    "{SettingPath} has a certificate password, but no certificate location, thumbprint, or blob " +
+                    "name. The {Role} role does not load a certificate from this section.",
+                    settingPath, role);
+            }
+
+            if (future.Active && !future.Enabled)
+            {
+                logger.LogWarning(Constants.BypassFiltersEventId,
+                    "{SettingPath}:futureCertificate has active set to true and enabled set to false. " +
+                    "The host ignores this slot. No promotion happened for the {Role} role.",
+                    settingPath, role);
+            }
+        }
+    }
+
+    private static string Thumbprints(IReadOnlyList<X509Certificate2> certificates) =>
+        certificates.Count == 0 ? "none" : string.Join(", ", certificates.Select(certificate => certificate.Thumbprint));
+
+    private static (string Source, ICertificateSettings Root, GlobalSettings.FutureCertificateSettings Future,
+        string SettingPath) GetRoleSettings(CertificateRole role, GlobalSettings globalSettings) => role switch
+        {
+            CertificateRole.IdentitySigning => ("IdentityServer", globalSettings.IdentityServer,
+                globalSettings.IdentityServer.FutureCertificate, "globalSettings:identityServer"),
+            CertificateRole.SsoSigning => ("SsoServer", globalSettings.SsoServer,
+                globalSettings.SsoServer.FutureCertificate, "globalSettings:ssoServer"),
+            CertificateRole.SsoEncryption => ("SsoServer", globalSettings.SsoServer.Encryption,
+                globalSettings.SsoServer.Encryption.FutureCertificate, "globalSettings:ssoServer:encryption"),
+            _ => throw new ArgumentOutOfRangeException(nameof(role), role, "The certificate role is not known."),
+        };
+
+    private static IIdentityServerBuilder AddSigningCertificateSet(IIdentityServerBuilder identityServerBuilder,
+        IWebHostEnvironment env, GlobalSettings globalSettings, SigningCertificateSet certificates, CertificateRole role)
+    {
+        identityServerBuilder.Services.AddSingleton(new CertificateSourceReport(role, certificates.Active,
+            certificates.Staged, certificates.Validation, certificates.IsFallback));
+
+        if (certificates.Active != null)
+        {
+            AddSigningCertificates(identityServerBuilder, certificates.Active,
+                certificates.Staged.Concat(certificates.Validation));
+        }
+        else
+        {
+            AddDeveloperSigningCredential(identityServerBuilder, env, globalSettings);
+        }
+        return identityServerBuilder;
+    }
+
+    private static void AddDeveloperSigningCredential(IIdentityServerBuilder identityServerBuilder,
+        IWebHostEnvironment env, GlobalSettings globalSettings)
+    {
+        if (env.IsDevelopment() && !string.IsNullOrEmpty(globalSettings.DevelopmentDirectory))
         {
             var developerSigningKeyPath = Path.Combine(globalSettings.DevelopmentDirectory, "signingkey.jwk");
             identityServerBuilder.AddDeveloperSigningCredential(true, developerSigningKeyPath);
@@ -519,6 +636,29 @@ public static class ServiceCollectionExtensions
         else
         {
             throw new Exception("No identity certificate to use.");
+        }
+    }
+
+    private static SigningCertificateSet GetIdentitySigningCertificates(IdentityCertificates identity) =>
+        new(identity.Active, identity.Staged, identity.Validation, IsFallback: false);
+
+    private static IIdentityServerBuilder AddSigningCertificates(IIdentityServerBuilder identityServerBuilder,
+        X509Certificate2 active, IEnumerable<X509Certificate2> published)
+    {
+        identityServerBuilder.AddSigningCredential(active);
+
+        var validationKeys = published
+            .DistinctBy(certificate => certificate.Thumbprint)
+            .Where(certificate => certificate.Thumbprint != active.Thumbprint)
+            .Select(certificate => new SecurityKeyInfo
+            {
+                Key = new X509SecurityKey(certificate) { KeyId = certificate.Thumbprint + SecurityAlgorithms.RsaSha256 },
+                SigningAlgorithm = SecurityAlgorithms.RsaSha256,
+            })
+            .ToArray();
+        if (validationKeys.Length > 0)
+        {
+            identityServerBuilder.AddValidationKey(validationKeys);
         }
         return identityServerBuilder;
     }

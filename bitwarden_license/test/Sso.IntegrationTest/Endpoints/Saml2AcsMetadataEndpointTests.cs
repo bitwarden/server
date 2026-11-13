@@ -54,8 +54,8 @@ public class Saml2AcsMetadataEndpointTests(SsoApplicationFactory factory) : ICla
     [Fact]
     public async Task Metadata_ForSaml2Org_AddsEncryptionMethodsToExactlyOneKeyDescriptor()
     {
-        // This test app registers exactly one Service Provider (SP) certificate:
-        // SamlEnvironment.SpSigningCertificate. Because of this, the Sustainsys library creates
+        // This test app registers exactly one Service Provider (SP) certificate: the one entry in
+        // SamlEnvironment.ServiceCertificates. Because of this, the Sustainsys library creates
         // exactly one KeyDescriptor element, with no "use" attribute.
         // This test confirms that OnMetadataCreated adds the algorithms to that
         // descriptor. This test also confirms that OnMetadataCreated does not add the algorithms

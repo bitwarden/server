@@ -627,26 +627,141 @@ public static class CoreHelpers
             (!globalSettings.SelfHosted && origin == "https://bitwarden.com");
     }
 
+    /// <summary>
+    /// Gets the Identity active certificate. An enabled and active future slot replaces the root. Returns null when
+    /// the root has no source that loads.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The future slot is enabled and active, and its certificate did
+    /// not load. Or the certificate does not have an RSA key.</exception>
     public static X509Certificate2? GetIdentityServerCertificate(GlobalSettings globalSettings)
     {
-        if (globalSettings.SelfHosted &&
-            SettingHasValue(globalSettings.IdentityServer.CertificatePassword)
-            && File.Exists(globalSettings.IdentityServer.CertificateLocation))
+        var identityServer = globalSettings.IdentityServer;
+        return GetActiveCertificate(globalSettings, identityServer, identityServer.FutureCertificate,
+            "globalSettings:identityServer", required: false);
+    }
+
+    public static bool HasActiveSource(ICertificateSettings root, GlobalSettings.FutureCertificateSettings future)
+    {
+        return SettingHasValue(root.CertificateLocation) ||
+            SettingHasValue(root.CertificateThumbprint) ||
+            SettingHasValue(root.BlobName) ||
+            (future.Enabled && future.Active);
+    }
+
+    /// <summary>
+    /// Gets the active certificate of a role. An enabled and active future slot replaces the root. When
+    /// <paramref name="required"/> is false, returns null when the root has no source that loads.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">A required certificate did not load. Or the certificate does
+    /// not have an RSA key.</exception>
+    public static X509Certificate2? GetActiveCertificate(GlobalSettings globalSettings, ICertificateSettings root,
+        GlobalSettings.FutureCertificateSettings future, string rootPath, bool required)
+    {
+        if (future.Enabled && future.Active)
         {
-            return GetCertificate(globalSettings.IdentityServer.CertificateLocation,
-                globalSettings.IdentityServer.CertificatePassword);
+            return LoadRequiredCertificate(globalSettings, future, $"{rootPath}:futureCertificate");
         }
-        else if (SettingHasValue(globalSettings.IdentityServer.CertificateThumbprint))
+
+        if (required)
+        {
+            return LoadRequiredCertificate(globalSettings, root, rootPath);
+        }
+
+        var certificate = LoadCertificate(globalSettings, root);
+        return certificate == null ? null : RequireRsaKey(certificate, rootPath);
+    }
+
+    /// <summary>
+    /// Gets the staged certificate of a role. Returns null when the future slot is not enabled, or is active.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The staged certificate did not load. Or the certificate does
+    /// not have an RSA key.</exception>
+    public static X509Certificate2? GetStagedCertificate(GlobalSettings globalSettings,
+        GlobalSettings.FutureCertificateSettings future, string futurePath)
+    {
+        if (!future.Enabled || future.Active)
+        {
+            return null;
+        }
+
+        return LoadRequiredCertificate(globalSettings, future, futurePath);
+    }
+
+    /// <summary>
+    /// Gets the certificates of the enabled entries in a retired list, in the configured order.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The certificate of an enabled entry did not load. Or the
+    /// certificate does not have an RSA key. The message names the configured index of the entry.</exception>
+    public static IReadOnlyList<X509Certificate2> GetRetiredCertificates(GlobalSettings globalSettings,
+        IEnumerable<GlobalSettings.RetiredCertificateSettings> retired, string listPath)
+    {
+        return retired
+            .Index()
+            .Where(entry => entry.Item.Enabled)
+            .Select(entry => LoadRequiredCertificate(globalSettings, entry.Item, $"{listPath}:{entry.Index}"))
+            .ToArray();
+    }
+
+    private static X509Certificate2 LoadRequiredCertificate(GlobalSettings globalSettings,
+        ICertificateSettings settings, string settingPath)
+    {
+        X509Certificate2? certificate;
+        try
+        {
+            certificate = LoadCertificate(globalSettings, settings);
+        }
+        catch (Exception ex)
+        {
+            throw CertificateNotLoaded(settingPath, ex);
+        }
+
+        return RequireRsaKey(certificate ?? throw CertificateNotLoaded(settingPath, null), settingPath);
+    }
+
+    private static X509Certificate2 RequireRsaKey(X509Certificate2 certificate, string settingPath)
+    {
+        using (var rsa = certificate.GetRSAPublicKey())
+        {
+            if (rsa != null)
+            {
+                return certificate;
+            }
+        }
+
+        var thumbprint = certificate.Thumbprint;
+        certificate.Dispose();
+        throw new InvalidOperationException(
+            $"The certificate for {settingPath} with thumbprint {thumbprint} does not have an RSA key. " +
+            "Each Identity signing, SSO signing, and SSO encryption certificate must have an RSA key. " +
+            "The host signs tokens with RS256, signs SAML messages with RSA-SHA, " +
+            "and decrypts SAML assertions with RSA-OAEP.");
+    }
+
+    private static InvalidOperationException CertificateNotLoaded(string settingPath, Exception? innerException) =>
+        new($"The certificate for {settingPath} did not load. " +
+            "Check that the file, thumbprint, or blob exists and that the password is correct.", innerException);
+
+    private static X509Certificate2? LoadCertificate(GlobalSettings globalSettings, ICertificateSettings settings)
+    {
+        if (globalSettings.SelfHosted &&
+            SettingHasValue(settings.CertificatePassword)
+            && File.Exists(settings.CertificateLocation))
+        {
+            return GetCertificate(settings.CertificateLocation,
+                settings.CertificatePassword);
+        }
+        else if (SettingHasValue(settings.CertificateThumbprint))
         {
             return GetCertificate(
-                globalSettings.IdentityServer.CertificateThumbprint);
+                settings.CertificateThumbprint);
         }
         else if (!globalSettings.SelfHosted &&
             SettingHasValue(globalSettings.Storage?.ConnectionString) &&
-            SettingHasValue(globalSettings.IdentityServer.CertificatePassword))
+            SettingHasValue(settings.CertificatePassword) &&
+            SettingHasValue(settings.BlobName))
         {
             return GetBlobCertificateAsync(globalSettings.Storage.ConnectionString, "certificates",
-                "identity.pfx", globalSettings.IdentityServer.CertificatePassword).GetAwaiter().GetResult();
+                settings.BlobName, settings.CertificatePassword).GetAwaiter().GetResult();
         }
         return null;
     }

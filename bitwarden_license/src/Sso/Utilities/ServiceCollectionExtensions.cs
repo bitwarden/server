@@ -20,15 +20,22 @@ namespace Bit.Sso.Utilities;
 
 public static class ServiceCollectionExtensions
 {
+    /// <summary>
+    /// Registers the SSO services. The SAML service certificates and the SSO encryption source report use the loaded
+    /// <paramref name="signingCertificates"/> and <paramref name="encryptionCertificates"/>.
+    /// </summary>
     public static IServiceCollection AddSsoServices(this IServiceCollection services,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings, SigningCertificateSet signingCertificates,
+        EncryptionCertificateSet encryptionCertificates)
     {
         // SAML SP Configuration
-        var samlEnvironment = new SamlEnvironment
+        services.TryAddSingleton(new SamlEnvironment
         {
-            SpSigningCertificate = CoreHelpers.GetIdentityServerCertificate(globalSettings),
-        };
-        services.AddSingleton(s => samlEnvironment);
+            ServiceCertificates = Saml2ServiceCertificates.Build(signingCertificates, encryptionCertificates),
+        });
+        services.AddSingleton(new CertificateSourceReport(CertificateRole.SsoEncryption,
+            encryptionCertificates.Active, encryptionCertificates.Staged, encryptionCertificates.Decryption,
+            encryptionCertificates.IsFallback));
 
         services.AddSingleton<Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider,
             DynamicAuthenticationSchemeProvider>();
@@ -86,7 +93,7 @@ public static class ServiceCollectionExtensions
     }
 
     public static IIdentityServerBuilder AddSsoIdentityServerServices(this IServiceCollection services,
-        IWebHostEnvironment env, GlobalSettings globalSettings)
+        IWebHostEnvironment env, GlobalSettings globalSettings, SigningCertificateSet signingCertificates)
     {
         services.AddTransient<IDiscoveryResponseGenerator, DiscoveryResponseGenerator>();
 
@@ -119,7 +126,7 @@ public static class ServiceCollectionExtensions
                 new IdentityResources.OpenId(),
                 new IdentityResources.Profile()
             })
-            .AddIdentityServerCertificate(env, globalSettings);
+            .AddSsoSigningCertificate(env, globalSettings, signingCertificates);
 
         // PM-23572
         // Register named FusionCache for SSO authorization code grants.

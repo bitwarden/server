@@ -314,8 +314,8 @@ public class SsoTestDataBuilder
     }
 
     /// <summary>
-    /// Replaces the host's <see cref="SamlEnvironment"/> object. This method sets
-    /// <c>SpSigningCertificate</c> to a non-null value.
+    /// Replaces the host's <see cref="SamlEnvironment"/> object. This method adds the certificate
+    /// to <c>ServiceCertificates</c> as one entry with <c>Use = Both</c> and <c>Status = Current</c>.
     /// Without this method, <c>DynamicAuthenticationSchemeProvider.GetSaml2AuthenticationScheme</c>
     /// never adds a Service Provider (SP) certificate. Without this method, the published SP
     /// metadata has no <c>KeyDescriptor</c> elements.
@@ -390,7 +390,8 @@ public class SsoTestDataBuilder
         // 1.b Replace SamlEnvironment with a version that has a test SP signing certificate, if the test requests it
         if (_samlSigningCertificate != null)
         {
-            var samlEnvironment = new SamlEnvironment { SpSigningCertificate = _samlSigningCertificate };
+            var samlEnvironment = new SamlEnvironment();
+            samlEnvironment.ServiceCertificates.Add(_samlSigningCertificate);
             factory.ConfigureServices(services =>
             {
                 services.RemoveAll<SamlEnvironment>();
