@@ -33,7 +33,7 @@ public static class ServiceCollectionExtensions
         {
             ServiceCertificates = Saml2ServiceCertificates.Build(signingCertificates, encryptionCertificates),
         });
-        services.AddSingleton(new CertificateSourceReport(CertificateSourceReport.SsoEncryption,
+        services.AddSingleton(new CertificateSourceReport(CertificateRole.SsoEncryption,
             encryptionCertificates.Active, encryptionCertificates.Staged, encryptionCertificates.Decryption,
             encryptionCertificates.IsFallback));
 

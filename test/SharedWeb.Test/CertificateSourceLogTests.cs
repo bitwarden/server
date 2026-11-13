@@ -1,5 +1,6 @@
 ﻿using System.Security.Cryptography.X509Certificates;
 using Bit.Core;
+using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.SharedWeb.Utilities;
 using Bit.Test.Common.Helpers;
@@ -13,10 +14,10 @@ public class CertificateSourceLogTests
     private const string Password = "Distinctive-Password-7f3c";
 
     [Theory]
-    [InlineData(CertificateSourceReport.IdentitySigning, "IdentityServer")]
-    [InlineData(CertificateSourceReport.SsoSigning, "SsoServer")]
-    [InlineData(CertificateSourceReport.SsoEncryption, "SsoServer")]
-    public void LogCertificateSources_LogsRoleSourceAndEachThumbprint(string role, string source)
+    [InlineData(CertificateRole.IdentitySigning, "IdentityServer")]
+    [InlineData(CertificateRole.SsoSigning, "SsoServer")]
+    [InlineData(CertificateRole.SsoEncryption, "SsoServer")]
+    public void LogCertificateSources_LogsRoleSourceAndEachThumbprint(CertificateRole role, string source)
     {
         using var active = TestCertificates.Create("CN=Bitwarden Test Active");
         using var staged = TestCertificates.Create("CN=Bitwarden Test Staged");
@@ -31,7 +32,7 @@ public class CertificateSourceLogTests
         var entry = Assert.Single(logger.Collector.GetSnapshot());
         Assert.Equal(LogLevel.Information, entry.Level);
         Assert.Equal(Constants.BypassFiltersEventId, entry.Id.Id);
-        Assert.Equal(role, Value(entry, "Role"));
+        Assert.Equal(role.GetDisplayName(), Value(entry, "Role"));
         Assert.Equal(source, Value(entry, "Source"));
         Assert.Equal(active.Thumbprint, Value(entry, "ActiveThumbprint"));
         Assert.Equal(staged.Thumbprint, Value(entry, "StagedThumbprints"));
@@ -43,9 +44,9 @@ public class CertificateSourceLogTests
     }
 
     [Theory]
-    [InlineData(CertificateSourceReport.SsoSigning)]
-    [InlineData(CertificateSourceReport.SsoEncryption)]
-    public void LogCertificateSources_Fallback_LogsIdentityFallbackSource(string role)
+    [InlineData(CertificateRole.SsoSigning)]
+    [InlineData(CertificateRole.SsoEncryption)]
+    public void LogCertificateSources_Fallback_LogsIdentityFallbackSource(CertificateRole role)
     {
         using var active = TestCertificates.Create();
         var logger = new FakeLogger();
@@ -64,7 +65,7 @@ public class CertificateSourceLogTests
         var logger = new FakeLogger();
 
         ServiceCollectionExtensions.LogCertificateSources(logger,
-            [new CertificateSourceReport(CertificateSourceReport.IdentitySigning, null, [], [], IsFallback: false)],
+            [new CertificateSourceReport(CertificateRole.IdentitySigning, null, [], [], IsFallback: false)],
             new GlobalSettings());
 
         var entry = Assert.Single(logger.Collector.GetSnapshot());
@@ -81,22 +82,22 @@ public class CertificateSourceLogTests
 
         ServiceCollectionExtensions.LogCertificateSources(logger,
             [
-                new CertificateSourceReport(CertificateSourceReport.SsoSigning, null, [], [], IsFallback: false),
-                new CertificateSourceReport(CertificateSourceReport.SsoEncryption, null, [], [], IsFallback: false),
+                new CertificateSourceReport(CertificateRole.SsoSigning, null, [], [], IsFallback: false),
+                new CertificateSourceReport(CertificateRole.SsoEncryption, null, [], [], IsFallback: false),
             ],
             new GlobalSettings());
 
         var entries = logger.Collector.GetSnapshot();
         Assert.Equal(2, entries.Count);
-        Assert.Contains(CertificateSourceReport.SsoSigning, entries[0].Message);
-        Assert.Contains(CertificateSourceReport.SsoEncryption, entries[1].Message);
+        Assert.Contains("SSO signing", entries[0].Message);
+        Assert.Contains("SSO encryption", entries[1].Message);
     }
 
     [Theory]
-    [InlineData(CertificateSourceReport.IdentitySigning, "globalSettings:identityServer")]
-    [InlineData(CertificateSourceReport.SsoSigning, "globalSettings:ssoServer")]
-    [InlineData(CertificateSourceReport.SsoEncryption, "globalSettings:ssoServer:encryption")]
-    public void LogCertificateSources_PasswordWithNoLocationThumbprintOrBlobName_LogsWarning(string role,
+    [InlineData(CertificateRole.IdentitySigning, "globalSettings:identityServer")]
+    [InlineData(CertificateRole.SsoSigning, "globalSettings:ssoServer")]
+    [InlineData(CertificateRole.SsoEncryption, "globalSettings:ssoServer:encryption")]
+    public void LogCertificateSources_PasswordWithNoLocationThumbprintOrBlobName_LogsWarning(CertificateRole role,
         string settingPath)
     {
         var globalSettings = CleanSettings();
@@ -112,10 +113,10 @@ public class CertificateSourceLogTests
     }
 
     [Theory]
-    [InlineData(CertificateSourceReport.IdentitySigning, "globalSettings:identityServer")]
-    [InlineData(CertificateSourceReport.SsoSigning, "globalSettings:ssoServer")]
-    [InlineData(CertificateSourceReport.SsoEncryption, "globalSettings:ssoServer:encryption")]
-    public void LogCertificateSources_ActiveButNotEnabled_LogsWarning(string role, string settingPath)
+    [InlineData(CertificateRole.IdentitySigning, "globalSettings:identityServer")]
+    [InlineData(CertificateRole.SsoSigning, "globalSettings:ssoServer")]
+    [InlineData(CertificateRole.SsoEncryption, "globalSettings:ssoServer:encryption")]
+    public void LogCertificateSources_ActiveButNotEnabled_LogsWarning(CertificateRole role, string settingPath)
     {
         var globalSettings = CleanSettings();
         var future = Future(globalSettings, role);
@@ -130,16 +131,16 @@ public class CertificateSourceLogTests
     }
 
     [Theory]
-    [InlineData(CertificateSourceReport.IdentitySigning, "location")]
-    [InlineData(CertificateSourceReport.IdentitySigning, "thumbprint")]
-    [InlineData(CertificateSourceReport.IdentitySigning, "blobName")]
-    [InlineData(CertificateSourceReport.SsoSigning, "location")]
-    [InlineData(CertificateSourceReport.SsoSigning, "thumbprint")]
-    [InlineData(CertificateSourceReport.SsoSigning, "blobName")]
-    [InlineData(CertificateSourceReport.SsoEncryption, "location")]
-    [InlineData(CertificateSourceReport.SsoEncryption, "thumbprint")]
-    [InlineData(CertificateSourceReport.SsoEncryption, "blobName")]
-    public void LogCertificateSources_CleanConfiguration_LogsNoWarning(string role, string rootSource)
+    [InlineData(CertificateRole.IdentitySigning, "location")]
+    [InlineData(CertificateRole.IdentitySigning, "thumbprint")]
+    [InlineData(CertificateRole.IdentitySigning, "blobName")]
+    [InlineData(CertificateRole.SsoSigning, "location")]
+    [InlineData(CertificateRole.SsoSigning, "thumbprint")]
+    [InlineData(CertificateRole.SsoSigning, "blobName")]
+    [InlineData(CertificateRole.SsoEncryption, "location")]
+    [InlineData(CertificateRole.SsoEncryption, "thumbprint")]
+    [InlineData(CertificateRole.SsoEncryption, "blobName")]
+    public void LogCertificateSources_CleanConfiguration_LogsNoWarning(CertificateRole role, string rootSource)
     {
         var globalSettings = CleanSettings();
         var root = Root(globalSettings, role);
@@ -174,7 +175,7 @@ public class CertificateSourceLogTests
         globalSettings.SsoServer.Encryption.FutureCertificate.Active = true;
         var logger = new FakeLogger();
 
-        ServiceCollectionExtensions.LogCertificateSources(logger, [Report(CertificateSourceReport.IdentitySigning)],
+        ServiceCollectionExtensions.LogCertificateSources(logger, [Report(CertificateRole.IdentitySigning)],
             globalSettings);
 
         Assert.DoesNotContain(logger.Collector.GetSnapshot(), entry => entry.Level != LogLevel.Information);
@@ -189,7 +190,7 @@ public class CertificateSourceLogTests
         using var certificate = TestCertificates.Create($"CN={subject}");
         var globalSettings = CleanSettings();
         globalSettings.IdentityServer.CertificatePassword = Password;
-        foreach (var role in new[] { CertificateSourceReport.SsoSigning, CertificateSourceReport.SsoEncryption })
+        foreach (var role in new[] { CertificateRole.SsoSigning, CertificateRole.SsoEncryption })
         {
             var future = Future(globalSettings, role);
             future.CertificateLocation = location;
@@ -204,10 +205,10 @@ public class CertificateSourceLogTests
 
         ServiceCollectionExtensions.LogCertificateSources(logger,
             [
-                new CertificateSourceReport(CertificateSourceReport.IdentitySigning, certificate, [certificate],
+                new CertificateSourceReport(CertificateRole.IdentitySigning, certificate, [certificate],
                     [certificate], IsFallback: false),
-                new CertificateSourceReport(CertificateSourceReport.SsoSigning, certificate, [], [], IsFallback: false),
-                new CertificateSourceReport(CertificateSourceReport.SsoEncryption, certificate, [], [],
+                new CertificateSourceReport(CertificateRole.SsoSigning, certificate, [], [], IsFallback: false),
+                new CertificateSourceReport(CertificateRole.SsoEncryption, certificate, [], [],
                     IsFallback: true),
             ],
             globalSettings);
@@ -231,7 +232,7 @@ public class CertificateSourceLogTests
     private static string? Value(FakeLogRecord entry, string key) =>
         Assert.Single(entry.StructuredState ?? [], pair => pair.Key == key).Value;
 
-    private static CertificateSourceReport Report(string role) =>
+    private static CertificateSourceReport Report(CertificateRole role) =>
         new(role, null, Array.Empty<X509Certificate2>(), Array.Empty<X509Certificate2>(), IsFallback: false);
 
     private static GlobalSettings CleanSettings() => new()
@@ -245,18 +246,18 @@ public class CertificateSourceLogTests
         },
     };
 
-    private static ICertificateSettings Root(GlobalSettings globalSettings, string role) => role switch
+    private static ICertificateSettings Root(GlobalSettings globalSettings, CertificateRole role) => role switch
     {
-        CertificateSourceReport.IdentitySigning => globalSettings.IdentityServer,
-        CertificateSourceReport.SsoSigning => globalSettings.SsoServer,
+        CertificateRole.IdentitySigning => globalSettings.IdentityServer,
+        CertificateRole.SsoSigning => globalSettings.SsoServer,
         _ => globalSettings.SsoServer.Encryption,
     };
 
-    private static GlobalSettings.FutureCertificateSettings Future(GlobalSettings globalSettings, string role) =>
+    private static GlobalSettings.FutureCertificateSettings Future(GlobalSettings globalSettings, CertificateRole role) =>
         role switch
         {
-            CertificateSourceReport.IdentitySigning => globalSettings.IdentityServer.FutureCertificate,
-            CertificateSourceReport.SsoSigning => globalSettings.SsoServer.FutureCertificate,
+            CertificateRole.IdentitySigning => globalSettings.IdentityServer.FutureCertificate,
+            CertificateRole.SsoSigning => globalSettings.SsoServer.FutureCertificate,
             _ => globalSettings.SsoServer.Encryption.FutureCertificate,
         };
 }

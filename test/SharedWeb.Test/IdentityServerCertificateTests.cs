@@ -313,7 +313,7 @@ public class IdentityServerCertificateTests : IClassFixture<IdentityServerCertif
         using var provider = BuildProvider("Production", globalSettings);
 
         var report = Assert.Single(provider.GetServices<CertificateSourceReport>());
-        Assert.Equal(CertificateSourceReport.IdentitySigning, report.Role);
+        Assert.Equal(CertificateRole.IdentitySigning, report.Role);
         Assert.Equal(active.Thumbprint, report.Active?.Thumbprint);
         Assert.Equal(staged.Thumbprint, Assert.Single(report.Staged).Thumbprint);
         Assert.Equal(retired.Thumbprint, Assert.Single(report.Retired).Thumbprint);
@@ -326,7 +326,7 @@ public class IdentityServerCertificateTests : IClassFixture<IdentityServerCertif
         using var provider = BuildProvider("Development", NoCertificateSettings());
 
         var report = Assert.Single(provider.GetServices<CertificateSourceReport>());
-        Assert.Equal(CertificateSourceReport.IdentitySigning, report.Role);
+        Assert.Equal(CertificateRole.IdentitySigning, report.Role);
         Assert.Null(report.Active);
     }
 

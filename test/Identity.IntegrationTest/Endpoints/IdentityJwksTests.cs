@@ -2,7 +2,6 @@
 using Bit.Core.Test.Auth.AutoFixture;
 using Bit.IntegrationTestCommon;
 using Bit.IntegrationTestCommon.Factories;
-using Bit.SharedWeb.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Xunit;
@@ -132,7 +131,7 @@ public class IdentityJwksTests
 
         // Assert
         var entry = Assert.Single(StartupTestHelpers.GetCertificateSourceEntries(logs));
-        Assert.Equal(CertificateSourceReport.IdentitySigning, entry.Values["Role"]);
+        Assert.Equal("Identity signing", entry.Values["Role"]);
         Assert.Equal("IdentityServer", entry.Values["Source"]);
         Assert.Equal(active.Thumbprint, entry.Values["ActiveThumbprint"]);
         Assert.Equal(staged.Thumbprint, entry.Values["StagedThumbprints"]);

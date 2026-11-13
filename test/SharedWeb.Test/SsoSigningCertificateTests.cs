@@ -293,7 +293,7 @@ public class SsoSigningCertificateTests : IClassFixture<IdentityServerCertificat
         using var provider = BuildProvider("Production", globalSettings);
 
         var report = Assert.Single(provider.GetServices<CertificateSourceReport>());
-        Assert.Equal(CertificateSourceReport.SsoSigning, report.Role);
+        Assert.Equal(CertificateRole.SsoSigning, report.Role);
         Assert.Equal(fallback ? identity.Thumbprint : sso.Thumbprint, report.Active?.Thumbprint);
         Assert.Equal(ssoStaged.Thumbprint, Assert.Single(report.Staged).Thumbprint);
         Assert.Equal(ssoRetired.Thumbprint, Assert.Single(report.Retired).Thumbprint);

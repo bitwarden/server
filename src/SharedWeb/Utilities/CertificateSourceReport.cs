@@ -9,22 +9,8 @@ namespace Bit.SharedWeb.Utilities;
 /// its own.
 /// </summary>
 public sealed record CertificateSourceReport(
-    string Role,
+    CertificateRole Role,
     X509Certificate2? Active,
     IReadOnlyList<X509Certificate2> Staged,
     IReadOnlyList<X509Certificate2> Retired,
-    bool IsFallback)
-{
-    /// <summary>
-    /// The role that signs the Identity host tokens.
-    /// </summary>
-    public const string IdentitySigning = "Identity signing";
-    /// <summary>
-    /// The role that signs the SSO host OIDC tokens, the SAML requests, and the SAML metadata.
-    /// </summary>
-    public const string SsoSigning = "SSO signing";
-    /// <summary>
-    /// The role that decrypts the SAML assertions of the SSO host.
-    /// </summary>
-    public const string SsoEncryption = "SSO encryption";
-}
+    bool IsFallback);

@@ -245,7 +245,7 @@ public class SsoCertificateTests
         // Assert
         Assert.Equal(ssoCertificate.Thumbprint, samlSigning.Thumbprint);
         Assert.Same(samlSigning, tokenSigning);
-        Assert.Same(samlSigning, GetReport(factory, CertificateSourceReport.SsoSigning).Active);
+        Assert.Same(samlSigning, GetReport(factory, CertificateRole.SsoSigning).Active);
     }
 
     [Fact]
@@ -260,8 +260,8 @@ public class SsoCertificateTests
         }
 
         // Act
-        var encryption = GetReport(factory, CertificateSourceReport.SsoEncryption);
-        var signing = GetReport(factory, CertificateSourceReport.SsoSigning);
+        var encryption = GetReport(factory, CertificateRole.SsoEncryption);
+        var signing = GetReport(factory, CertificateRole.SsoSigning);
         var samlEntry = Assert.Single(factory.GetService<SamlEnvironment>().ServiceCertificates);
         var tokenSigning = await GetTokenSigningCertificateAsync(factory);
 
@@ -637,8 +637,8 @@ public class SsoCertificateTests
         // Assert
         Assert.Equal(
             [
-                (CertificateSourceReport.SsoEncryption, "SsoServer", encryption.Thumbprint),
-                (CertificateSourceReport.SsoSigning, "SsoServer", signing.Thumbprint),
+                ("SSO encryption", "SsoServer", encryption.Thumbprint),
+                ("SSO signing", "SsoServer", signing.Thumbprint),
             ],
             StartupTestHelpers.GetCertificateSourceEntries(logs)
                 .Select(entry => (entry.Values["Role"], entry.Values["Source"], entry.Values["ActiveThumbprint"]))
@@ -671,9 +671,9 @@ public class SsoCertificateTests
         // Assert
         Assert.Equal(
             [
-                (CertificateSourceReport.SsoEncryption, "Identity fallback", identity.Thumbprint,
+                ("SSO encryption", "Identity fallback", identity.Thumbprint,
                     encryptionStaged.Thumbprint, decryption.Thumbprint),
-                (CertificateSourceReport.SsoSigning, "Identity fallback", identity.Thumbprint,
+                ("SSO signing", "Identity fallback", identity.Thumbprint,
                     signingStaged.Thumbprint, "none"),
             ],
             StartupTestHelpers.GetCertificateSourceEntries(logs)
@@ -732,7 +732,7 @@ public class SsoCertificateTests
         return Assert.IsType<X509SecurityKey>(credential.Key).Certificate;
     }
 
-    private static CertificateSourceReport GetReport(SsoApplicationFactory factory, string role) =>
+    private static CertificateSourceReport GetReport(SsoApplicationFactory factory, CertificateRole role) =>
         Assert.Single(factory.Services.GetServices<CertificateSourceReport>(), report => report.Role == role);
 
     private static async Task<string> GetMetadataAsync(Dictionary<string, string?> configuration)

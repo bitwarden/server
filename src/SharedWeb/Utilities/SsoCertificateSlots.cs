@@ -1,4 +1,5 @@
 ﻿using System.Security.Cryptography.X509Certificates;
+using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Hosting;
@@ -26,19 +27,19 @@ public sealed record SsoCertificateSlots(
     /// <param name="retired">The retired list of the role.</param>
     /// <param name="rootPath">The setting path of <paramref name="root"/>.</param>
     /// <param name="retiredPath">The setting path of <paramref name="retired"/>.</param>
-    /// <param name="role">The role name in the error message, for example "SSO signing".</param>
+    /// <param name="role">The certificate role. The error message names it.</param>
     /// <exception cref="InvalidOperationException">A cloud host that is not a Development host has no active source,
     /// or a configured certificate did not load, or a configured certificate does not have an RSA key.</exception>
     public static SsoCertificateSlots Load(IWebHostEnvironment env, GlobalSettings globalSettings,
         ICertificateSettings root, GlobalSettings.FutureCertificateSettings future,
         IEnumerable<GlobalSettings.RetiredCertificateSettings> retired, string rootPath, string retiredPath,
-        string role)
+        CertificateRole role)
     {
         var hasActiveSource = CoreHelpers.HasActiveSource(root, future);
         if (!hasActiveSource && !globalSettings.SelfHosted && !env.IsDevelopment())
         {
             throw new InvalidOperationException(
-                $"No {role} certificate is configured. A cloud host must set {rootPath}.");
+                $"No {role.GetDisplayName()} certificate is configured. A cloud host must set {rootPath}.");
         }
 
         var staged = CoreHelpers.GetStagedCertificate(globalSettings, future, $"{rootPath}:futureCertificate");

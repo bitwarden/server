@@ -1,4 +1,5 @@
 ﻿using System.Security.Cryptography.X509Certificates;
+using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.SharedWeb.Utilities;
 using Sustainsys.Saml2;
@@ -27,7 +28,7 @@ public static class Saml2ServiceCertificates
         var encryption = globalSettings.SsoServer.Encryption;
         var sso = SsoCertificateSlots.Load(env, globalSettings, encryption, encryption.FutureCertificate,
             encryption.DecryptionCertificates, encryptionPath, $"{encryptionPath}:decryptionCertificates",
-            "SSO encryption");
+            CertificateRole.SsoEncryption);
         if (!sso.IsFallback)
         {
             return new EncryptionCertificateSet(sso.Active, sso.Staged, sso.Retired, IsFallback: false);
@@ -102,9 +103,9 @@ public static class Saml2ServiceCertificates
         {
             var role = use switch
             {
-                CertificateUse.Signing => "SSO signing",
-                CertificateUse.Encryption => "SSO encryption",
-                _ => "SSO signing and SSO encryption",
+                CertificateUse.Signing => CertificateRole.SsoSigning.GetDisplayName(),
+                CertificateUse.Encryption => CertificateRole.SsoEncryption.GetDisplayName(),
+                _ => $"{CertificateRole.SsoSigning.GetDisplayName()} and {CertificateRole.SsoEncryption.GetDisplayName()}",
             };
             throw new InvalidOperationException(
                 $"The SAML library rejected the {role} certificate with thumbprint {certificate.Thumbprint}. " +
