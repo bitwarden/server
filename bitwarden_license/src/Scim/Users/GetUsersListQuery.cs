@@ -5,6 +5,7 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Scim.Models;
 using Bit.Scim.Users.Interfaces;
+using Bit.Scim.Utilities;
 
 namespace Bit.Scim.Users;
 
@@ -19,60 +20,36 @@ public class GetUsersListQuery : IGetUsersListQuery
 
     public async Task<(IEnumerable<OrganizationUserUserDetails> userList, int totalResults)> GetUsersListAsync(Guid organizationId, GetUsersQueryParamModel userQueryParams)
     {
-        string emailFilter = null;
-        string usernameFilter = null;
-        string externalIdFilter = null;
-
         int count = userQueryParams.Count;
         int startIndex = userQueryParams.StartIndex;
         string filter = userQueryParams.Filter;
 
+        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
+
+        IEnumerable<OrganizationUserUserDetails> filtered;
         if (!string.IsNullOrWhiteSpace(filter))
         {
-            var filterLower = filter.ToLowerInvariant();
-            if (filterLower.StartsWith("username eq "))
-            {
-                usernameFilter = filterLower.Substring(12).Trim('"');
-                if (usernameFilter.Contains("@"))
+            var predicate = ScimFilterParser.TryGetPredicate<OrganizationUserUserDetails>(filter,
+                new Dictionary<string, (Func<OrganizationUserUserDetails, string> Selector, StringComparison Comparison)>
                 {
-                    emailFilter = usernameFilter;
-                }
-            }
-            else if (filterLower.StartsWith("externalid eq "))
-            {
-                externalIdFilter = filter.Substring(14).Trim('"');
-            }
+                    ["username"] = (ou => ou.Email, StringComparison.OrdinalIgnoreCase),
+                    ["externalid"] = (ou => ou.ExternalId, StringComparison.Ordinal)
+                });
+
+            filtered = predicate != null
+                ? orgUsers.Where(predicate)
+                : Enumerable.Empty<OrganizationUserUserDetails>();
+        }
+        else
+        {
+            filtered = orgUsers.AsEnumerable();
         }
 
-        var userList = new List<OrganizationUserUserDetails>();
-        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
-        var totalResults = 0;
-        if (!string.IsNullOrWhiteSpace(emailFilter))
-        {
-            var orgUser = orgUsers.FirstOrDefault(ou => ou.Email.ToLowerInvariant() == emailFilter);
-            if (orgUser != null)
-            {
-                userList.Add(orgUser);
-            }
-            totalResults = userList.Count;
-        }
-        else if (!string.IsNullOrWhiteSpace(externalIdFilter))
-        {
-            var orgUser = orgUsers.FirstOrDefault(ou => ou.ExternalId == externalIdFilter);
-            if (orgUser != null)
-            {
-                userList.Add(orgUser);
-            }
-            totalResults = userList.Count;
-        }
-        else if (string.IsNullOrWhiteSpace(filter))
-        {
-            userList = orgUsers.OrderBy(ou => ou.Email)
-                .Skip(startIndex - 1)
-                .Take(count)
-                .ToList();
-            totalResults = orgUsers.Count;
-        }
+        var totalResults = filtered.Count();
+        var userList = filtered.OrderBy(ou => ou.Email)
+            .Skip(startIndex - 1)
+            .Take(count)
+            .ToList();
 
         return (userList, totalResults);
     }

@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Scim.Groups.Interfaces;
 using Bit.Scim.Models;
+using Bit.Scim.Utilities;
 
 namespace Bit.Scim.Groups;
 
@@ -20,54 +21,36 @@ public class GetGroupsListQuery : IGetGroupsListQuery
     public async Task<(IEnumerable<Group> groupList, int totalResults)> GetGroupsListAsync(
         Guid organizationId, GetGroupsQueryParamModel groupQueryParams)
     {
-        string nameFilter = null;
-        string externalIdFilter = null;
-
         int count = groupQueryParams.Count;
         int startIndex = groupQueryParams.StartIndex;
         string filter = groupQueryParams.Filter;
 
+        var groups = await _groupRepository.GetManyByOrganizationIdAsync(organizationId);
+
+        IEnumerable<Group> filtered;
         if (!string.IsNullOrWhiteSpace(filter))
         {
-            if (filter.StartsWith("displayName eq "))
-            {
-                nameFilter = filter.Substring(15).Trim('"');
-            }
-            else if (filter.StartsWith("externalId eq "))
-            {
-                externalIdFilter = filter.Substring(14).Trim('"');
-            }
+            var predicate = ScimFilterParser.TryGetPredicate<Group>(filter,
+                new Dictionary<string, (Func<Group, string> Selector, StringComparison Comparison)>
+                {
+                    ["displayname"] = (g => g.Name, StringComparison.OrdinalIgnoreCase),
+                    ["externalid"] = (g => g.ExternalId, StringComparison.Ordinal)
+                });
+
+            filtered = predicate != null
+                ? groups.Where(predicate)
+                : Enumerable.Empty<Group>();
+        }
+        else
+        {
+            filtered = groups.AsEnumerable();
         }
 
-        var groupList = new List<Group>();
-        var groups = await _groupRepository.GetManyByOrganizationIdAsync(organizationId);
-        var totalResults = 0;
-        if (!string.IsNullOrWhiteSpace(nameFilter))
-        {
-            var group = groups.FirstOrDefault(g => g.Name == nameFilter);
-            if (group != null)
-            {
-                groupList.Add(group);
-            }
-            totalResults = groupList.Count;
-        }
-        else if (!string.IsNullOrWhiteSpace(externalIdFilter))
-        {
-            var group = groups.FirstOrDefault(ou => ou.ExternalId == externalIdFilter);
-            if (group != null)
-            {
-                groupList.Add(group);
-            }
-            totalResults = groupList.Count;
-        }
-        else if (string.IsNullOrWhiteSpace(filter))
-        {
-            groupList = groups.OrderBy(g => g.Name)
-                .Skip(startIndex - 1)
-                .Take(count)
-                .ToList();
-            totalResults = groups.Count;
-        }
+        var totalResults = filtered.Count();
+        var groupList = filtered.OrderBy(g => g.Name)
+            .Skip(startIndex - 1)
+            .Take(count)
+            .ToList();
 
         return (groupList, totalResults);
     }
