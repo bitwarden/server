@@ -532,13 +532,6 @@ public class AccountsController : Controller
         return response;
     }
 
-    [HttpPost("profile")]
-    [Obsolete("This endpoint is deprecated. Use PUT /profile instead.")]
-    public async Task<ProfileResponseModel> PostProfile([FromBody] UpdateProfileRequestModel model)
-    {
-        return await PutProfile(model);
-    }
-
     [HttpPut("avatar")]
     public async Task<ProfileResponseModel> PutAvatar([FromBody] UpdateAvatarRequestModel model)
     {
@@ -556,13 +549,6 @@ public class AccountsController : Controller
 
         var response = new ProfileResponseModel(user, accountKeys, null, null, null, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsClaimingActiveUser);
         return response;
-    }
-
-    [HttpPost("avatar")]
-    [Obsolete("This endpoint is deprecated. Use PUT /avatar instead.")]
-    public async Task<ProfileResponseModel> PostAvatar([FromBody] UpdateAvatarRequestModel model)
-    {
-        return await PutAvatar(model);
     }
 
     [HttpGet("revision-date")]
@@ -670,13 +656,6 @@ public class AccountsController : Controller
         }
 
         throw new BadRequestException(ModelState);
-    }
-
-    [HttpPost("delete")]
-    [Obsolete("This endpoint is deprecated. Use DELETE / instead.")]
-    public async Task PostDelete([FromBody] SecretVerificationRequestModel model)
-    {
-        await Delete(model);
     }
 
     [AllowAnonymous]
