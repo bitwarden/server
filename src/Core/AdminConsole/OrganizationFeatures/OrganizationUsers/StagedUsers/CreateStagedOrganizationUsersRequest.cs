@@ -10,6 +10,7 @@ public record StagedOrganizationUserRequest
 {
     public required string Email { get; init; }
     public required string ExternalId { get; init; }
+    public string? ExternalName { get; init; }
 }
 
 /// <summary>

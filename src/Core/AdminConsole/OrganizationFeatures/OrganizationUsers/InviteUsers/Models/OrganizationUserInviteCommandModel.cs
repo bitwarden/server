@@ -14,10 +14,11 @@ public class OrganizationUserInviteCommandModel
     public OrganizationUserType Type { get; private init; }
     public Permissions Permissions { get; private init; }
     public string ExternalId { get; private init; }
+    public string? ExternalName { get; private init; }
     public bool AccessSecretsManager { get; private init; }
     public Guid[] Groups { get; private init; }
 
-    public OrganizationUserInviteCommandModel(string email, string externalId) :
+    public OrganizationUserInviteCommandModel(string email, string externalId, string? externalName = null) :
         this(
             email: email,
             assignedCollections: [],
@@ -27,6 +28,7 @@ public class OrganizationUserInviteCommandModel
             externalId: externalId,
             false)
     {
+        ExternalName = externalName;
     }
 
     public OrganizationUserInviteCommandModel(OrganizationUserInviteCommandModel invite, bool accessSecretsManager) :
@@ -38,7 +40,7 @@ public class OrganizationUserInviteCommandModel
             invite.ExternalId,
             accessSecretsManager)
     {
-
+        ExternalName = invite.ExternalName;
     }
 
     public OrganizationUserInviteCommandModel(string email,

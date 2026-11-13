@@ -23,4 +23,5 @@ public static class PatchPaths
     public const string Members = "members";
     public const string DisplayName = "displayname";
     public const string ExternalId = "externalid";
+    public const string UserName = "username";
 }

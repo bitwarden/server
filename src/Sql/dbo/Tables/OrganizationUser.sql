@@ -18,6 +18,7 @@
     [V2UpgradeToken]                VARCHAR (MAX)       NULL,
     [InviteReminderDueDate]         DATETIME2(7)        NULL,
     [InviteRemindersSentCount]      TINYINT             NULL,
+    [ExternalName]                  NVARCHAR (300)      NULL,
     CONSTRAINT [PK_OrganizationUser] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_OrganizationUser_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE,
     CONSTRAINT [FK_OrganizationUser_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])

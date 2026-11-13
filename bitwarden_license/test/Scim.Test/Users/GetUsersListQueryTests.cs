@@ -38,6 +38,8 @@ public class GetUsersListQueryTests
     {
         organizationUserUserDetails = SetUsersOrganizationId(organizationUserUserDetails, organizationId);
         organizationUserUserDetails.First().Email = email;
+        // Members provisioned before userName was stored answer to their email
+        organizationUserUserDetails.First().ExternalName = null;
         string filter = $"userName eq {email}";
 
         var expectedUserList = organizationUserUserDetails
@@ -76,6 +78,45 @@ public class GetUsersListQueryTests
 
         AssertHelper.AssertPropertyEqual(expectedUserList, result.userList);
         AssertHelper.AssertPropertyEqual(expectedTotalResults, result.totalResults);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetUsersList_FilterUserName_MatchesExternalNameIgnoringCase(SutProvider<GetUsersListQuery> sutProvider, Guid organizationId, IList<OrganizationUserUserDetails> organizationUserUserDetails)
+    {
+        organizationUserUserDetails = SetUsersOrganizationId(organizationUserUserDetails, organizationId);
+        var expected = organizationUserUserDetails.First();
+        expected.ExternalName = "Jane.Doe@tenant.onmicrosoft.com";
+        expected.Email = "jane@example.com";
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(organizationId)
+            .Returns(organizationUserUserDetails);
+
+        var result = await sutProvider.Sut.GetUsersListAsync(organizationId,
+            new GetUsersQueryParamModel { Filter = "userName eq \"jane.doe@TENANT.onmicrosoft.com\"" });
+
+        Assert.Equal(expected, Assert.Single(result.userList));
+        Assert.Equal(1, result.totalResults);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetUsersList_FilterUserName_IgnoresEmailWhenExternalNameIsSet(SutProvider<GetUsersListQuery> sutProvider, Guid organizationId, IList<OrganizationUserUserDetails> organizationUserUserDetails)
+    {
+        organizationUserUserDetails = SetUsersOrganizationId(organizationUserUserDetails, organizationId);
+        organizationUserUserDetails.First().ExternalName = "jane.doe@tenant.onmicrosoft.com";
+        organizationUserUserDetails.First().Email = "jane@example.com";
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(organizationId)
+            .Returns(organizationUserUserDetails);
+
+        var result = await sutProvider.Sut.GetUsersListAsync(organizationId,
+            new GetUsersQueryParamModel { Filter = "userName eq \"jane@example.com\"" });
+
+        Assert.Empty(result.userList);
+        Assert.Equal(0, result.totalResults);
     }
 
     [Theory]

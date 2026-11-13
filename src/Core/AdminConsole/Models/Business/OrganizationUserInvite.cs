@@ -14,6 +14,7 @@ public class OrganizationUserInvite
     public Permissions Permissions { get; set; }
     public IEnumerable<CollectionAccessSelection> Collections { get; set; }
     public IEnumerable<Guid> Groups { get; set; }
+    public string ExternalName { get; set; }
 
     public OrganizationUserInvite() { }
 

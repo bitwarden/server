@@ -477,6 +477,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                         Status = ou.Status,
                         Type = ou.Type,
                         ExternalId = ou.ExternalId,
+                        ExternalName = ou.ExternalName,
                         SsoExternalId = ou.User.SsoUsers
                             .Where(su => su.OrganizationId == ou.OrganizationId)
                             .Select(su => su.ExternalId)
