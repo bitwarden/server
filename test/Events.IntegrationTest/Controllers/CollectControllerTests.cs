@@ -26,10 +26,7 @@ public class CollectControllerTests : IAsyncLifetime
         var (accessToken, _) = await _factory.LoginWithNewAccount(_ownerEmail);
         _client = _factory.CreateAuthedClient(accessToken);
 
-        // Get the user ID
-        var userRepository = _factory.GetService<IUserRepository>();
-        var user = await userRepository.GetByEmailAsync(_ownerEmail);
-        _ownerId = user!.Id;
+        _ownerId = await _factory.GetUserIdAsync(_ownerEmail);
     }
 
     public Task DisposeAsync()

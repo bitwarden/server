@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
+using Bit.Core.Repositories;
 using Bit.IntegrationTestCommon;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.Constants;
@@ -23,9 +24,18 @@ public class EventsApplicationFactory : WebApplicationFactoryBase<Startup>
     {
         TestDatabase = db;
 
+        // Identity owns the database so that it builds the Entity Framework model, which is cached for the whole
+        // process. The model keeps the data protector of whichever service builds it first, and Events' protector
+        // throws when used, so Identity couldn't save users if Events built it.
+        ManagesDatabase = false;
         _identityApplicationFactory = new IdentityApplicationFactory();
         _identityApplicationFactory.TestDatabase = TestDatabase;
-        _identityApplicationFactory.ManagesDatabase = false;
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        _identityApplicationFactory.Dispose();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -47,7 +57,8 @@ public class EventsApplicationFactory : WebApplicationFactoryBase<Startup>
     public async Task<(string Token, string RefreshToken)> LoginWithNewAccount(string email = "integration-test@bitwarden.com", string masterPasswordHash = "master_password_hash")
     {
         // This might be the first action in a test and since it forwards to the Identity server, we need to ensure that
-        // this server is initialized since it's responsible for seeding the database.
+        // Identity is initialized first since it's responsible for seeding the database.
+        Assert.NotNull(_identityApplicationFactory.Services);
         Assert.NotNull(Services);
 
         await _identityApplicationFactory.RegisterNewIdentityFactoryUserAsync(
@@ -66,5 +77,16 @@ public class EventsApplicationFactory : WebApplicationFactoryBase<Startup>
             });
 
         return await _identityApplicationFactory.TokenFromPasswordAsync(email, masterPasswordHash);
+    }
+
+    /// <summary>
+    /// Gets the id of a user registered through <see cref="LoginWithNewAccount"/>. Users are read through Identity
+    /// because Events does not support Data Protection, which reading a user requires.
+    /// </summary>
+    public async Task<Guid> GetUserIdAsync(string email)
+    {
+        var user = await _identityApplicationFactory.GetService<IUserRepository>().GetByEmailAsync(email);
+        Assert.NotNull(user);
+        return user.Id;
     }
 }
