@@ -5,6 +5,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Trash.Interfaces;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -16,6 +17,7 @@ namespace Bit.Api.SecretsManager.Controllers;
 public class TrashController : Controller
 {
     private readonly ICurrentContext _currentContext;
+    private readonly ISecretsManagerAccessQuery _secretsManagerAccessQuery;
     private readonly ISecretRepository _secretRepository;
     private readonly IEmptyTrashCommand _emptyTrashCommand;
     private readonly IRestoreTrashCommand _restoreTrashCommand;
@@ -24,6 +26,7 @@ public class TrashController : Controller
 
     public TrashController(
         ICurrentContext currentContext,
+        ISecretsManagerAccessQuery secretsManagerAccessQuery,
         ISecretRepository secretRepository,
         IEmptyTrashCommand emptyTrashCommand,
         IRestoreTrashCommand restoreTrashCommand,
@@ -31,6 +34,7 @@ public class TrashController : Controller
         IEventService eventService)
     {
         _currentContext = currentContext;
+        _secretsManagerAccessQuery = secretsManagerAccessQuery;
         _secretRepository = secretRepository;
         _emptyTrashCommand = emptyTrashCommand;
         _restoreTrashCommand = restoreTrashCommand;
@@ -41,7 +45,7 @@ public class TrashController : Controller
     [HttpGet("secrets/{organizationId}/trash")]
     public async Task<SecretWithProjectsListResponseModel> ListByOrganizationAsync(Guid organizationId)
     {
-        if (!_currentContext.AccessSecretsManager(organizationId))
+        if (!await _secretsManagerAccessQuery.HasAccessAsync(organizationId))
         {
             throw new NotFoundException();
         }
@@ -58,7 +62,7 @@ public class TrashController : Controller
     [HttpPost("secrets/{organizationId}/trash/empty")]
     public async Task EmptyTrashAsync(Guid organizationId, [FromBody] List<Guid> ids)
     {
-        if (!_currentContext.AccessSecretsManager(organizationId))
+        if (!await _secretsManagerAccessQuery.HasAccessAsync(organizationId))
         {
             throw new NotFoundException();
         }
@@ -76,7 +80,7 @@ public class TrashController : Controller
     [HttpPost("secrets/{organizationId}/trash/restore")]
     public async Task RestoreTrashAsync(Guid organizationId, [FromBody] List<Guid> ids)
     {
-        if (!_currentContext.AccessSecretsManager(organizationId))
+        if (!await _secretsManagerAccessQuery.HasAccessAsync(organizationId))
         {
             throw new NotFoundException();
         }

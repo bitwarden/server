@@ -10,6 +10,15 @@ namespace Bit.Core.AdminConsole.AbilitiesCache;
 public static class ExtendedOrganizationAbilityCacheConstants
 {
     public const string CacheName = "OrganizationAbilities";
+
+    /// <summary>
+    /// Version segment prefixed to every cache key. Cached <see cref="OrganizationAbility"/> entries are
+    /// System.Text.Json documents in the shared L2 cache, so a property added to the model is read back as
+    /// <c>false</c> from any entry written before the property existed. Bump this whenever a new property's
+    /// default would wrongly take access away (for example <see cref="OrganizationAbility.UseSecretsManager"/>),
+    /// so that a new build never reads entries written by an older one, including during a rolling deploy.
+    /// </summary>
+    public const string KeyVersion = "v2";
 }
 
 public class ExtendedOrganizationAbilityCacheService(
@@ -17,10 +26,12 @@ public class ExtendedOrganizationAbilityCacheService(
     IOrganizationRepository organizationRepository)
     : IOrganizationAbilityCacheService
 {
+    private static string CacheKey(Guid organizationId) => $"{KeyVersion}:{organizationId}";
+
     public async Task<OrganizationAbility?> GetOrganizationAbilityAsync(Guid orgId, CancellationToken cancellationToken = default)
     {
         return await cache.GetOrSetAsync<OrganizationAbility?>(
-            orgId.ToString(),
+            CacheKey(orgId),
             async (_, _) => await organizationRepository.GetAbilityAsync(orgId),
             token: cancellationToken);
     }
@@ -36,11 +47,11 @@ public class ExtendedOrganizationAbilityCacheService(
 
     public async Task UpsertOrganizationAbilityAsync(Organization organization, CancellationToken cancellationToken = default)
     {
-        await cache.SetAsync<OrganizationAbility?>(organization.Id.ToString(), new OrganizationAbility(organization), token: cancellationToken);
+        await cache.SetAsync<OrganizationAbility?>(CacheKey(organization.Id), new OrganizationAbility(organization), token: cancellationToken);
     }
 
     public async Task DeleteOrganizationAbilityAsync(Guid organizationId, CancellationToken cancellationToken = default)
     {
-        await cache.RemoveAsync(organizationId.ToString(), token: cancellationToken);
+        await cache.RemoveAsync(CacheKey(organizationId), token: cancellationToken);
     }
 }

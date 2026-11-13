@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using Bit.Api.SecretsManager.Models.Response;
-using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Queries.Interfaces;
@@ -13,20 +12,20 @@ namespace Bit.Api.SecretsManager.Controllers;
 [Authorize("secrets")]
 public class CountsController : Controller
 {
-    private readonly ICurrentContext _currentContext;
+    private readonly ISecretsManagerAccessQuery _secretsManagerAccessQuery;
     private readonly IAccessClientQuery _accessClientQuery;
     private readonly IProjectRepository _projectRepository;
     private readonly ISecretRepository _secretRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
 
     public CountsController(
-        ICurrentContext currentContext,
+        ISecretsManagerAccessQuery secretsManagerAccessQuery,
         IAccessClientQuery accessClientQuery,
         IProjectRepository projectRepository,
         ISecretRepository secretRepository,
         IServiceAccountRepository serviceAccountRepository)
     {
-        _currentContext = currentContext;
+        _secretsManagerAccessQuery = secretsManagerAccessQuery;
         _accessClientQuery = accessClientQuery;
         _projectRepository = projectRepository;
         _secretRepository = secretRepository;
@@ -103,7 +102,7 @@ public class CountsController : Controller
 
     private async Task<(AccessClientType, Guid)> GetAccessClientAsync(Guid organizationId)
     {
-        if (!_currentContext.AccessSecretsManager(organizationId))
+        if (!await _secretsManagerAccessQuery.HasAccessAsync(organizationId))
         {
             throw new NotFoundException();
         }
