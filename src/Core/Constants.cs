@@ -37,6 +37,7 @@ public static class Constants
     // TODO: PM-34798 Update with actual version once the feature is implemented
     public const string PM32009NewItemTypeMinimumVersion = "2026.2.0";
     public const string DenyLegacyUserMinimumVersion = "2025.6.0";
+    public const string PamPartialCipherMinimumVersion = "2026.11.1";
 
     /// <summary>
     /// Domain suffixes for Bitwarden cloud-hosted environments.
@@ -132,15 +133,13 @@ public static partial class FeatureFlagKeys
 {
     /* Admin Console Team */
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
-    public const string BulkAutoConfirmOnLogin = "pm-35803-browser-auto-confirm-log-in";
     public const string GenerateInviteLink = "pm-32497-generate-invite-link";
     public const string InviteLinkAutoConfirm = "pm-34429-invite-link-auto-confirm";
-    public const string InviteLinkNotification = "pm-39601-invite-link-notification";
     public const string AutoReinviteUsers = "pm-39473-auto-reinvite-users";
-    public const string PM35153CollectionSdkDecryption = "pm-35153-collection-sdk-decryption";
     public const string PM43375CollectionsDecryptListFailures = "pm-43375-collections-decrypt-list-failures";
     public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
     public const string MembersTableV2 = "pm-37463-members-table-v2";
+    public const string OrganizationMembershipSdk = "pm-41568-org-memberships-v2";
     public const string GroupsTableV2 = "pm-43419-groups-table-v2";
 
     /* Architecture */
@@ -164,11 +163,13 @@ public static partial class FeatureFlagKeys
     public const string PM35092AuthSalesAssistedTrials = "pm-35092-auth-sales-assisted-trials";
     public const string PM27060_PasswordPreloginFromSdk = "pm-27060-password-prelogin-from-sdk";
     public const string PM42982_WantAssertionsSigned = "pm-42982-want-assertions-signed";
+    public const string PM42283_Rsa15Deprecation = "pm-42283-rsa-1-5-deprecation";
     public const string PM44303_EmergencyAccessSdkApi = "pm-44303-emergency-access-sdk-api";
 
     /* Autofill Team */
     public const string NotificationRefresh = "notification-refresh";
     public const string FillAssistTargetingRules = "fill-assist-targeting-rules";
+    public const string FillAssistRuleFallback = "fill-assist-rule-fallback";
     public const string NotificationUndeterminedCipherScenarioLogic = "undetermined-cipher-scenario-logic";
     public const string EnableAutofillTriage = "enable-autofill-triage";
     public const string PM39071_DefaultPasswordManagerPrompt = "pm-39071-default-password-manager-prompt";
@@ -193,6 +194,7 @@ public static partial class FeatureFlagKeys
     public const string PM38333_AnnualBillingSavings = "pm-38333-annual-billing-savings";
     public const string PM38728_SendInvoicePriceMigration = "pm-38728-send-invoice-price-migration";
     public const string PM39883_Pam_Billing_Support = "pm-39883-pam-billing-support";
+    public const string PM42214_FeatureBasedUpgradePaths = "pm-42214-feature-based-upgrade-paths";
 
     /* Key Management Team */
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
@@ -277,8 +279,12 @@ public static partial class FeatureFlagKeys
 
     /* Secrets Manager Team */
     public const string SecretsVersioning = "sm-1587-secrets-versioning";
+    public const string SmCli = "sm-2107-cli";
 
     /* Skunkworks Team */
+    public const string DesktopWebAuthnClientWindows = "pm-46060-desktop-webauthn-client-windows";
+    public const string DesktopWebAuthnClientMacOs = "pm-46059-desktop-webauthn-client-macos";
+    public const string DesktopWebAuthnClientLinux = "pm-46061-desktop-webauthn-client-linux";
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
     public const string WindowsNativeCredentialSync = "windows-native-credential-sync";
 
@@ -303,6 +309,12 @@ public static partial class FeatureFlagKeys
     /* PAM */
     public const string Pam = "pm-37044-pam-v-0";
     public const string PamAccessConnector = "pm-42354-rotation-daemon";
+
+    /// <summary>
+    /// Sends leasing-gated ciphers to browser extensions in the partial shape. Clients older than
+    /// <see cref="Constants.PamPartialCipherMinimumVersion"/> never receive it, whatever the flag says.
+    /// </summary>
+    public const string PamBrowserPartialCiphers = "pam-121-browser-partial-ciphers";
 
     /// <summary>
     /// Kill switch for the PAM SQL audit trail. Turning it on stops the writes and withdraws the read endpoint.

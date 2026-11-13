@@ -12,22 +12,24 @@ namespace Bit.Core.Billing.Organizations.Commands;
 public interface IAutoscalePrivilegedControlsSeatsCommand
 {
     /// <summary>
-    /// Adds Privileged Controls seats when the seats in use plus <paramref name="seatsToAdd"/> exceed the seats the
-    /// organization has bought. Nothing changes when the bought seats already cover that total. When a limit is set
-    /// and the total equals it, the organization's Owners are emailed.
+    /// Adds Privileged Controls seats when the seats in use plus <paramref name="seatsRequested"/> exceed the seats
+    /// the organization has bought. Nothing changes when the bought seats already cover that total. When a limit is
+    /// set and the total equals it, the organization's Owners are emailed. On a trial the seats are raised on the
+    /// organization only, with no change to Stripe.
     /// </summary>
     /// <param name="organization">The organization that already has Privileged Controls.</param>
-    /// <param name="seatsToAdd">
-    /// The number of users about to be granted Privileged Controls access who do not already occupy a seat.
+    /// <param name="seatsRequested">
+    /// The number of members about to start using a Privileged Controls seat. Not the new total and not the
+    /// shortfall: the command buys only what free seats don't cover.
     /// </param>
     /// <returns>
     /// A successful result, or a failed result carrying the autoscale limit when the total would pass it.
     /// </returns>
     /// <exception cref="BadRequestException">
-    /// Thrown on a self-hosted instance, when <paramref name="seatsToAdd"/> is below 1, when the organization does
-    /// not have Privileged Controls or has no subscription, or when the seat change or
-    /// subscription update is rejected.
+    /// Thrown on a self-hosted instance, when <paramref name="seatsRequested"/> is below 1, when the organization
+    /// does not have Privileged Controls, when seats must be added within the limit and it has no subscription, or
+    /// when the seat change or subscription update is rejected.
     /// </exception>
     /// <exception cref="ConflictException">Thrown when the organization's subscription is in a state that prevents the change.</exception>
-    Task<AutoscalePrivilegedControlsSeatsResult> Run(OrganizationEntity organization, int seatsToAdd);
+    Task<AutoscalePrivilegedControlsSeatsResult> RunAsync(OrganizationEntity organization, int seatsRequested);
 }

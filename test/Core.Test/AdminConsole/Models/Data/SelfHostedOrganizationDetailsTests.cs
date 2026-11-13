@@ -327,6 +327,29 @@ public class SelfHostedOrganizationDetailsTests
         Assert.True(string.IsNullOrEmpty(exception));
     }
 
+    [Theory]
+    [BitAutoData]
+    [OrganizationLicenseCustomize]
+    public void ValidateForOrganization_PamSeatsBelowMembersWithAccess_Success(List<OrganizationUser> orgUsers,
+        List<Policy> policies, SsoConfig ssoConfig, List<OrganizationConnection<ScimConfig>> scimConnections, OrganizationLicense license)
+    {
+        // Existing grants stay when a license lowers Privileged Controls seats; new grants are blocked instead.
+        var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
+        orgUsers.ForEach(ou =>
+        {
+            ou.Status = OrganizationUserStatusType.Confirmed;
+            ou.AccessPam = true;
+        });
+        orgDetails.UsePam = true;
+        orgLicense.UsePam = true;
+        orgLicense.PamSeats = orgUsers.Count - 1;
+
+        var result = orgDetails.CanUseLicense(license, false, out var exception);
+
+        Assert.True(result);
+        Assert.True(string.IsNullOrEmpty(exception));
+    }
+
     private (SelfHostedOrganizationDetails organization, OrganizationLicense license) GetOrganizationAndLicense(List<OrganizationUser> orgUsers,
         List<Policy> policies, SsoConfig ssoConfig, List<OrganizationConnection<ScimConfig>> scimConnections, OrganizationLicense license)
     {

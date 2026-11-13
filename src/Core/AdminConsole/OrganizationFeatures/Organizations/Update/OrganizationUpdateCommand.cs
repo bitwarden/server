@@ -4,13 +4,12 @@ using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Update;
 
 public class OrganizationUpdateCommand(
-    IOrganizationService organizationService,
+    IReplaceOrganizationAndUpdateCacheCommand replaceOrganizationAndUpdateCacheCommand,
     IOrganizationRepository organizationRepository,
     IGlobalSettings globalSettings,
     IOrganizationBillingService organizationBillingService
@@ -53,7 +52,7 @@ public class OrganizationUpdateCommand(
 
         organization.BackfillPublicPrivateKeys(request.Keys);
 
-        await organizationService.ReplaceAndUpdateCacheAsync(organization, EventType.Organization_Updated);
+        await replaceOrganizationAndUpdateCacheCommand.RunAsync(organization, EventType.Organization_Updated);
 
         // Update billing information in Stripe if required
         await UpdateBillingAsync(organization, originalName, originalBillingEmail);
@@ -69,7 +68,7 @@ public class OrganizationUpdateCommand(
     private async Task<Organization> UpdateSelfHostedAsync(Organization organization, OrganizationUpdateRequest request)
     {
         organization.BackfillPublicPrivateKeys(request.Keys);
-        await organizationService.ReplaceAndUpdateCacheAsync(organization, EventType.Organization_Updated);
+        await replaceOrganizationAndUpdateCacheCommand.RunAsync(organization, EventType.Organization_Updated);
         return organization;
     }
 

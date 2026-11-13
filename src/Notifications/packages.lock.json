@@ -59,11 +59,11 @@
       },
       "Microsoft.AspNetCore.Authentication.JwtBearer": {
         "type": "Direct",
-        "requested": "[10.0.8, 10.0.8]",
-        "resolved": "10.0.8",
-        "contentHash": "oGnE+X/SN6jdqao9WOkOIfyZ5+a0AtluJWy1Mxndq+kcWG6sx5k6l6tucu8/wJ7o9fHfLgVCzm/c4v/KVgVk6w==",
+        "requested": "[10.0.14, 10.0.14]",
+        "resolved": "10.0.14",
+        "contentHash": "DaTs32NtRkTabidrvhLhcXpa+Uguw0rN5FaX8Q1HmzbYtcI72iSauYlN4WmqbrXp6QQoB8fmZlHk5/bjiMTY7A==",
         "dependencies": {
-          "Microsoft.IdentityModel.Protocols.OpenIdConnect": "8.0.1"
+          "Microsoft.IdentityModel.Protocols.OpenIdConnect": "8.19.2"
         }
       },
       "Microsoft.AspNetCore.SignalR.Protocols.MessagePack": {
@@ -77,11 +77,11 @@
       },
       "Microsoft.AspNetCore.SignalR.StackExchangeRedis": {
         "type": "Direct",
-        "requested": "[10.0.10, 10.0.10]",
-        "resolved": "10.0.10",
-        "contentHash": "mC/dQrt0Etdc9B1hdNy7KDO/E43FfhzHgMajw6Lupryp8XL7B7/3aEN3Zqfagz7LKTbDZadfMvT+XG8flLkKJA==",
+        "requested": "[10.0.14, 10.0.14]",
+        "resolved": "10.0.14",
+        "contentHash": "GO/fLS1/9UWayuLackhLraVdhxfPa/X+s74sNMu2zYhrQzMgYtIfJajjLDTssmBgFxVDja/2Hw6TwIRbk9PLUQ==",
         "dependencies": {
-          "MessagePack": "2.5.302",
+          "MessagePack": "2.5.303",
           "StackExchange.Redis": "2.7.27"
         }
       },

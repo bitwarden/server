@@ -253,22 +253,48 @@ public class EventServiceTests
 
         await sutProvider.Sut.LogOrganizationUserEventAsync(orgUser, eventType, eventSystemUser, date);
 
+        var eventMessage = new EventMessage()
+        {
+            IpAddress = ipAddress,
+            OrganizationId = orgUser.OrganizationId,
+            UserId = orgUser.UserId,
+            OrganizationUserId = orgUser.Id,
+            ProviderId = providerId,
+            Type = eventType,
+            ActingUserId = actingUserId,
+            Date = date,
+            SystemUser = eventSystemUser
+        };
+
+        if (eventSystemUser is EventSystemUser.SCIM or EventSystemUser.ScheduledJob)
+        {
+            eventMessage.DeviceType = DeviceType.Server;
+        }
+
         var expected = new List<IEvent>() {
-            new EventMessage()
-            {
-                IpAddress = ipAddress,
-                OrganizationId = orgUser.OrganizationId,
-                UserId = orgUser.UserId,
-                OrganizationUserId = orgUser.Id,
-                ProviderId = providerId,
-                Type = eventType,
-                ActingUserId = actingUserId,
-                Date = date,
-                SystemUser = eventSystemUser
-            }
+            eventMessage
         };
 
         await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateManyAsync(Arg.Is(AssertHelper.AssertPropertyEqual<IEvent>(expected, new[] { "IdempotencyId" })));
+    }
+
+    [Theory]
+    [BitAutoData(EventSystemUser.SCIM)]
+    [BitAutoData(EventSystemUser.ScheduledJob)]
+    public async Task LogOrganizationUserEvent_WithDevicelessSystemUser_ReportsServerDevice(EventSystemUser eventSystemUser,
+        OrganizationUser orgUser, EventType eventType, SutProvider<EventService> sutProvider)
+    {
+        var orgAbilities = new Dictionary<Guid, OrganizationAbility>()
+        {
+            {orgUser.OrganizationId, new OrganizationAbility() { UseEvents = true, Enabled = true } }
+        };
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(orgAbilities);
+
+        await sutProvider.Sut.LogOrganizationUserEventAsync(orgUser, eventType, eventSystemUser);
+
+        await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
+            events.Single().DeviceType == DeviceType.Server &&
+            events.Single().SystemUser == eventSystemUser));
     }
 
     [Theory, BitAutoData]
