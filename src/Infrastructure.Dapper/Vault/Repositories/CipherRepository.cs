@@ -635,6 +635,19 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
+    public async Task<ICollection<Guid>> GetManyDeletedIdsBeforeAsync(DateTime deletedDateBefore)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<Guid>(
+                $"[{Schema}].[Cipher_ReadIdsDeletedBefore]",
+                new { DeletedDateBefore = deletedDateBefore },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
     public async Task DeleteDeletedAsync(DateTime deletedDateBefore)
     {
         using (var connection = new SqlConnection(ConnectionString))

@@ -44,6 +44,10 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId);
     Task<DateTime> RestoreByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
     Task DeleteDeletedAsync(DateTime deletedDateBefore);
+    /// <summary>
+    /// Loads the IDs of soft-deleted ciphers whose deletion date is before the given date.
+    /// </summary>
+    Task<ICollection<Guid>> GetManyDeletedIdsBeforeAsync(DateTime deletedDateBefore);
 
     /// <summary>
     /// Low-level query to get all cipher permissions for a user in an organization. DOES NOT consider the user's

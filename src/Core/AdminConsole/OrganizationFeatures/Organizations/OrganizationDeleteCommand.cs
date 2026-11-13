@@ -23,6 +23,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
     private readonly ICipherService _cipherService;
     private readonly ISubscriberService _subscriberService;
     private readonly ISendFileStorageService _sendFileStorageService;
+    private readonly IItemSendCleanupService _itemSendCleanupService;
     private readonly ILogger<OrganizationDeleteCommand> _logger;
 
     public OrganizationDeleteCommand(
@@ -32,6 +33,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
         ICipherService cipherService,
         ISubscriberService subscriberService,
         ISendFileStorageService sendFileStorageService,
+        IItemSendCleanupService itemSendCleanupService,
         ILogger<OrganizationDeleteCommand> logger)
     {
         _organizationAbilityCacheService = organizationAbilityCacheService;
@@ -40,6 +42,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
         _cipherService = cipherService;
         _subscriberService = subscriberService;
         _sendFileStorageService = sendFileStorageService;
+        _itemSendCleanupService = itemSendCleanupService;
         _logger = logger;
     }
 
@@ -65,6 +68,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
 
         await _sendFileStorageService.DeleteFilesForOrganizationAsync(organization.Id);
         await _cipherService.DeleteAttachmentsForOrganizationAsync(organization.Id);
+        await _itemSendCleanupService.DeleteItemSendsForOrganizationAsync(organization.Id);
         await _organizationRepository.DeleteAndCreateDeleteTasksAsync(organization, [OrganizationDeleteTaskType.EventsCleanup]);
         await _organizationAbilityCacheService.DeleteOrganizationAbilityAsync(organization.Id);
     }

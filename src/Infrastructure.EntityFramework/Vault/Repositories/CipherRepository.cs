@@ -312,6 +312,18 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
 
     }
 
+    public async Task<ICollection<Guid>> GetManyDeletedIdsBeforeAsync(DateTime deletedDateBefore)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            return await dbContext.Ciphers
+                .Where(c => c.DeletedDate < deletedDateBefore)
+                .Select(c => c.Id)
+                .ToListAsync();
+        }
+    }
+
     public async Task DeleteDeletedAsync(DateTime deletedDateBefore)
     {
         using (var scope = ServiceScopeFactory.CreateScope())

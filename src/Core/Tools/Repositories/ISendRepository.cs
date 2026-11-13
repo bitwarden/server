@@ -97,4 +97,17 @@ public interface ISendRepository : IRepository<Send, Guid>
     /// <param name="ids">The IDs of the <see cref="Send"/>ss to load</param>
     /// <returns></returns>
     Task<ICollection<Send>> GetManyByIdsAsync(IEnumerable<Guid> ids);
+
+    /// <summary>
+    /// Loads item-type <see cref="Send"/>s, regardless of owner, whose data references any of the given vault items.
+    /// </summary>
+    /// <param name="itemIds">
+    /// Identifies the vault items (ciphers) the <see cref="Send"/>s may share.
+    /// </param>
+    /// <returns>
+    /// A task that completes once the <see cref="Send"/>s have been loaded.
+    /// The task's result contains the loaded item-type <see cref="Send"/>s. Candidates are matched on the
+    /// item id appearing in the <see cref="Send.Data"/> JSON, so callers must confirm the metadata item id.
+    /// </returns>
+    Task<ICollection<Send>> GetManyItemSendsByItemIdsAsync(IEnumerable<Guid> itemIds);
 }

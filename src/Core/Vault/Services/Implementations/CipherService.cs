@@ -12,6 +12,7 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Authorization.Permissions;
 using Bit.Core.Vault.Entities;
@@ -45,6 +46,7 @@ public class CipherService : ICipherService
     private readonly IPricingClient _pricingClient;
     private readonly ICipherLeaseGate _cipherLeaseGate;
     private readonly IPartialCipherWriteGuard _partialCipherWriteGuard;
+    private readonly IItemSendCleanupService _itemSendCleanupService;
 
     public CipherService(
         ICipherRepository cipherRepository,
@@ -65,7 +67,8 @@ public class CipherService : ICipherService
         IOrganizationAbilityCacheService organizationAbilityCacheService,
         IPricingClient pricingClient,
         ICipherLeaseGate cipherLeaseGate,
-        IPartialCipherWriteGuard partialCipherWriteGuard)
+        IPartialCipherWriteGuard partialCipherWriteGuard,
+        IItemSendCleanupService itemSendCleanupService)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -86,6 +89,7 @@ public class CipherService : ICipherService
         _pricingClient = pricingClient;
         _cipherLeaseGate = cipherLeaseGate;
         _partialCipherWriteGuard = partialCipherWriteGuard;
+        _itemSendCleanupService = itemSendCleanupService;
     }
 
     public async Task SaveAsync(Cipher cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
@@ -464,6 +468,7 @@ public class CipherService : ICipherService
 
         await _cipherRepository.DeleteAsync(cipherDetails);
         await _attachmentStorageService.DeleteAttachmentsForCipherAsync(cipherDetails.Id);
+        await _itemSendCleanupService.DeleteItemSendsForCiphersAsync([cipherDetails.Id]);
         await _eventService.LogCipherEventAsync(cipherDetails, EventType.Cipher_Deleted);
 
         // push
@@ -496,6 +501,8 @@ public class CipherService : ICipherService
         {
             await _attachmentStorageService.DeleteAttachmentsForCipherAsync(cipher.Id);
         }
+
+        await _itemSendCleanupService.DeleteItemSendsForCiphersAsync(deletingCiphers.Select(c => c.Id));
 
         var events = deletingCiphers.Select(c =>
             new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Deleted, null));
@@ -535,32 +542,32 @@ public class CipherService : ICipherService
             throw new NotFoundException();
         }
 
-
         await DeleteAttachmentsForOrganizationAsync(organizationId, excludeDefaultUserCollectionCiphers: true);
 
+        // We need to get the IDs of the ciphers about to be purged before they
+        // are gone so that we can use them to delete associated item Sends
+        var purgedCipherIds = (await GetOrganizationCiphersAsync(organizationId, excludeDefaultUserCollectionCiphers: true))
+            .Select(c => c.Id)
+            .ToList();
         await _cipherRepository.DeleteByOrganizationIdAsync(organizationId);
+        await _itemSendCleanupService.DeleteItemSendsForCiphersAsync(purgedCipherIds);
 
         await _eventService.LogOrganizationEventAsync(org, EventType.Organization_PurgedVault);
     }
 
+    public async Task PurgeUserVaultAsync(Guid userId)
+    {
+        var personalCipherIds = (await _cipherRepository.GetManyByUserIdAsync(userId, withOrganizations: false))
+            .Select(c => c.Id)
+            .ToList();
+
+        await _cipherRepository.DeleteByUserIdAsync(userId);
+        await _itemSendCleanupService.DeleteItemSendsForCiphersAsync(personalCipherIds);
+    }
+
     public async Task DeleteAttachmentsForOrganizationAsync(Guid organizationId, bool excludeDefaultUserCollectionCiphers = false)
     {
-        var ciphers = await _cipherRepository.GetManyByOrganizationIdAsync(organizationId);
-
-        if (excludeDefaultUserCollectionCiphers)
-        {
-            var defaultCollectionIds = (await _collectionRepository.GetManyByOrganizationIdAsync(organizationId))
-                .Where(c => c.Type == CollectionType.DefaultUserCollection)
-                .Select(c => c.Id)
-                .ToHashSet();
-
-            var cipherIdsInDefaultCollection = (await _collectionCipherRepository.GetManyByOrganizationIdAsync(organizationId))
-                .Where(cc => defaultCollectionIds.Contains(cc.CollectionId))
-                .Select(cc => cc.CipherId)
-                .ToHashSet();
-
-            ciphers = ciphers.Where(c => !cipherIdsInDefaultCollection.Contains(c.Id)).ToList();
-        }
+        var ciphers = await GetOrganizationCiphersAsync(organizationId, excludeDefaultUserCollectionCiphers);
 
         var cipherIdsWithAttachments = ciphers.Where(c => c.GetAttachments()?.Count > 0).Select(c => c.Id);
 
@@ -970,6 +977,32 @@ public class CipherService : ICipherService
 
             await ValidateChangeInCollectionsAsync(cipher, newCollectionIds, userId, targetContainsDefault);
         }
+    }
+
+    /// <summary>
+    /// Loads the organization's ciphers. When <paramref name="excludeDefaultUserCollectionCiphers" /> is set,
+    /// ciphers in any member's default collection are left out, matching what an organization purge removes.
+    /// </summary>
+    private async Task<ICollection<Cipher>> GetOrganizationCiphersAsync(Guid organizationId, bool excludeDefaultUserCollectionCiphers)
+    {
+        var ciphers = await _cipherRepository.GetManyByOrganizationIdAsync(organizationId);
+
+        if (!excludeDefaultUserCollectionCiphers)
+        {
+            return ciphers;
+        }
+
+        var defaultCollectionIds = (await _collectionRepository.GetManyByOrganizationIdAsync(organizationId))
+            .Where(c => c.Type == CollectionType.DefaultUserCollection)
+            .Select(c => c.Id)
+            .ToHashSet();
+
+        var cipherIdsInDefaultCollection = (await _collectionCipherRepository.GetManyByOrganizationIdAsync(organizationId))
+            .Where(cc => defaultCollectionIds.Contains(cc.CollectionId))
+            .Select(cc => cc.CipherId)
+            .ToHashSet();
+
+        return ciphers.Where(c => !cipherIdsInDefaultCollection.Contains(c.Id)).ToList();
     }
 
     /// <summary>

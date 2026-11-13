@@ -228,6 +228,20 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
         return results.Where(UnprotectData).ToList();
     }
 
+    /// <inheritdoc />
+    public async Task<ICollection<Send>> GetManyItemSendsByItemIdsAsync(IEnumerable<Guid> itemIds)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<Send>(
+            $"[{Schema}].[Send_ReadByItemIds]",
+            new { ItemIds = itemIds.ToGuidIdArrayTVP() },
+            commandType: CommandType.StoredProcedure);
+
+        // Not decrypted here: the caller only deletes these Sends, so a Send whose Emails cannot be
+        // unprotected must still be removed along with the item.
+        return results.ToList();
+    }
+
     private async Task ProtectDataAndSaveAsync(Send send, Func<Task> saveTask)
     {
         if (send == null)
