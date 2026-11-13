@@ -19,6 +19,7 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
+using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
@@ -1312,6 +1313,130 @@ public class CipherServiceTests
         await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventAsync(cipherDetails, EventType.Cipher_Deleted);
         await sutProvider.GetDependency<ICipherSyncPushService>().Received(1)
             .PushSyncCipherDeleteAsync(cipherDetails, null);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteAsync_WithPersonalCipherOwner_CleansUpItemSendsForCipher(
+        Guid deletingUserId, CipherDetails cipherDetails, SutProvider<CipherService> sutProvider)
+    {
+        cipherDetails.UserId = deletingUserId;
+        cipherDetails.OrganizationId = null;
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(deletingUserId)
+            .Returns(new User
+            {
+                Id = deletingUserId,
+            });
+
+        await sutProvider.Sut.DeleteAsync(cipherDetails, deletingUserId);
+
+        await sutProvider.GetDependency<IItemSendCleanupService>().Received(1)
+            .DeleteItemSendsForCiphersAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(new[] { cipherDetails.Id })));
+    }
+
+    [Theory]
+    [OrganizationCipherCustomize]
+    [BitAutoData]
+    public async Task DeleteManyAsync_WithOrgAdminOverride_CleansUpItemSendsForEachCipher(
+        Guid deletingUserId, List<Cipher> ciphers, Guid organizationId, SutProvider<CipherService> sutProvider)
+    {
+        var cipherIds = ciphers.Select(c => c.Id).ToArray();
+        foreach (var cipher in ciphers)
+        {
+            cipher.OrganizationId = organizationId;
+        }
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(ciphers);
+
+        await sutProvider.Sut.DeleteManyAsync(cipherIds, deletingUserId, organizationId, true);
+
+        await sutProvider.GetDependency<IItemSendCleanupService>().Received(1)
+            .DeleteItemSendsForCiphersAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(cipherIds)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SoftDeleteAsync_DoesNotCleanUpItemSends(
+        Guid deletingUserId, CipherDetails cipherDetails, SutProvider<CipherService> sutProvider)
+    {
+        cipherDetails.UserId = deletingUserId;
+        cipherDetails.OrganizationId = null;
+        cipherDetails.DeletedDate = null;
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(deletingUserId)
+            .Returns(new User
+            {
+                Id = deletingUserId,
+            });
+
+        await sutProvider.Sut.SoftDeleteAsync(cipherDetails, deletingUserId);
+
+        await sutProvider.GetDependency<IItemSendCleanupService>().DidNotReceiveWithAnyArgs().DeleteItemSendsForCiphersAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PurgeAsync_WithOrganizationId_CleansUpItemSendsOnlyForPurgedCiphers(
+        Organization org, List<Cipher> ciphers, SutProvider<CipherService> sutProvider)
+    {
+        foreach (var cipher in ciphers)
+        {
+            cipher.OrganizationId = org.Id;
+        }
+        // The first cipher sits in a default user collection, which the purge leaves in place.
+        var defaultCollection = new Collection { Id = Guid.NewGuid(), OrganizationId = org.Id, Type = CollectionType.DefaultUserCollection };
+        var retainedCipher = ciphers[0];
+        var purgedCiphers = ciphers.Skip(1).ToList();
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(org.Id)
+            .Returns(org);
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByOrganizationIdAsync(org.Id)
+            .Returns(ciphers);
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(org.Id)
+            .Returns(new List<Collection> { defaultCollection });
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetManyByOrganizationIdAsync(org.Id)
+            .Returns(new List<CollectionCipher>
+            {
+                new CollectionCipher { CollectionId = defaultCollection.Id, CipherId = retainedCipher.Id },
+            });
+
+        await sutProvider.Sut.PurgeAsync(org.Id);
+
+        await sutProvider.GetDependency<IItemSendCleanupService>().Received(1)
+            .DeleteItemSendsForCiphersAsync(Arg.Is<IEnumerable<Guid>>(ids =>
+                ids.SequenceEqual(purgedCiphers.Select(c => c.Id))));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PurgeUserVaultAsync_DeletesPersonalCiphersAndCleansUpTheirItemSends(
+        Guid userId, List<CipherDetails> ciphers, SutProvider<CipherService> sutProvider)
+    {
+        foreach (var cipher in ciphers)
+        {
+            cipher.UserId = userId;
+            cipher.OrganizationId = null;
+        }
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(userId, withOrganizations: false)
+            .Returns(ciphers);
+
+        await sutProvider.Sut.PurgeUserVaultAsync(userId);
+
+        await sutProvider.GetDependency<ICipherRepository>().Received(1).DeleteByUserIdAsync(userId);
+        await sutProvider.GetDependency<IItemSendCleanupService>().Received(1)
+            .DeleteItemSendsForCiphersAsync(Arg.Is<IEnumerable<Guid>>(ids =>
+                ids.SequenceEqual(ciphers.Select(c => c.Id))));
     }
 
 

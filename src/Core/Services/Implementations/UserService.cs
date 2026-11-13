@@ -73,6 +73,7 @@ public class UserService : UserManager<User>, IUserService
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
     private readonly ISubscriberService _subscriberService;
     private readonly ISendFileStorageService _sendFileStorageService;
+    private readonly IItemSendCleanupService _itemSendCleanupService;
     private readonly IUserVerificationOtpStore _userVerificationOtpStore;
 
     public UserService(
@@ -107,7 +108,8 @@ public class UserService : UserManager<User>, IUserService
         IHasPremiumAccessQuery hasPremiumAccessQuery,
         ISubscriberService subscriberService,
         ISendFileStorageService sendFileStorageService,
-        IUserVerificationOtpStore userVerificationOtpStore)
+        IUserVerificationOtpStore userVerificationOtpStore,
+        IItemSendCleanupService itemSendCleanupService)
         : base(
               store,
               optionsAccessor,
@@ -146,6 +148,7 @@ public class UserService : UserManager<User>, IUserService
         _subscriberService = subscriberService;
         _sendFileStorageService = sendFileStorageService;
         _userVerificationOtpStore = userVerificationOtpStore;
+        _itemSendCleanupService = itemSendCleanupService;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -250,6 +253,7 @@ public class UserService : UserManager<User>, IUserService
                         await _sendFileStorageService.DeleteFilesForUserAsync(user.Id);
                         // This is a right-to-erasure flow, so the organization's event logs have to
                         // be purged from storage too, not just its database rows.
+                        await _itemSendCleanupService.DeleteItemSendsForOrganizationAsync(org.Id);
                         await _organizationRepository.DeleteAndCreateDeleteTasksAsync(
                             org, [OrganizationDeleteTaskType.EventsCleanup]);
                         deletedOrg = true;
@@ -919,13 +923,7 @@ public class UserService : UserManager<User>, IUserService
 
     public async Task<bool> CanAccessPremium(User user)
     {
-        var userId = user.GetUserId();
-        if (!userId.HasValue)
-        {
-            return false;
-        }
-
-        return user.Premium || await _hasPremiumAccessQuery.HasPremiumFromOrganizationAsync(userId.Value);
+        return await PremiumAccessHelper.CanAccessPremiumAsync(user, _hasPremiumAccessQuery);
     }
 
     public async Task<bool> HasPremiumFromOrganization(User user)

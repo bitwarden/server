@@ -1510,7 +1510,7 @@ public class CiphersController : Controller
             {
                 throw new BadRequestException(new CannotPurgeClaimedAccountError().Message);
             }
-            await _cipherRepository.DeleteByUserIdAsync(user.Id);
+            await _cipherService.PurgeUserVaultAsync(user.Id);
         }
         else
         {

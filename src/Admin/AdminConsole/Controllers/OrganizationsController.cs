@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.Tools.Services;
 using System.Net;
 using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
@@ -71,6 +72,7 @@ public class OrganizationsController : Controller
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IRemoveOrganizationFromProviderCommand _removeOrganizationFromProviderCommand;
     private readonly IProviderBillingService _providerBillingService;
+    private readonly IItemSendCleanupService _itemSendCleanupService;
     private readonly IOrganizationInitiateDeleteCommand _organizationInitiateDeleteCommand;
     private readonly IPricingClient _pricingClient;
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
@@ -106,6 +108,7 @@ public class OrganizationsController : Controller
         IProviderOrganizationRepository providerOrganizationRepository,
         IRemoveOrganizationFromProviderCommand removeOrganizationFromProviderCommand,
         IProviderBillingService providerBillingService,
+        IItemSendCleanupService itemSendCleanupService,
         IOrganizationInitiateDeleteCommand organizationInitiateDeleteCommand,
         IPricingClient pricingClient,
         IResendOrganizationInviteCommand resendOrganizationInviteCommand,
@@ -140,6 +143,7 @@ public class OrganizationsController : Controller
         _providerOrganizationRepository = providerOrganizationRepository;
         _removeOrganizationFromProviderCommand = removeOrganizationFromProviderCommand;
         _providerBillingService = providerBillingService;
+        _itemSendCleanupService = itemSendCleanupService;
         _organizationInitiateDeleteCommand = organizationInitiateDeleteCommand;
         _pricingClient = pricingClient;
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
@@ -685,6 +689,8 @@ public class OrganizationsController : Controller
                     -organization.Seats ?? 0);
             }
         }
+
+        await _itemSendCleanupService.DeleteItemSendsForOrganizationAsync(organization.Id);
 
         // Enqueue the event-log cleanup in the same transaction as the delete. This is an
         // established organization, so its events must be purged from storage for GDPR.
