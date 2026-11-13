@@ -207,35 +207,19 @@ public class TwoFactorYubiKeyUpdateRequestModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (string.IsNullOrWhiteSpace(Key1) && string.IsNullOrWhiteSpace(Key2) && string.IsNullOrWhiteSpace(Key3) &&
-            string.IsNullOrWhiteSpace(Key4) && string.IsNullOrWhiteSpace(Key5))
+        string[] keys = [Key1, Key2, Key3, Key4, Key5];
+
+        if (keys.All(string.IsNullOrWhiteSpace))
         {
-            yield return new ValidationResult("A key is required.", new string[] { nameof(Key1) });
+            yield return new ValidationResult("A key is required.", [nameof(Key1)]);
         }
 
-        if (!string.IsNullOrWhiteSpace(Key1) && Key1.Length < 12)
+        for (var i = 0; i < keys.Length; i++)
         {
-            yield return new ValidationResult("Key 1 in invalid.", new string[] { nameof(Key1) });
-        }
-
-        if (!string.IsNullOrWhiteSpace(Key2) && Key2.Length < 12)
-        {
-            yield return new ValidationResult("Key 2 in invalid.", new string[] { nameof(Key2) });
-        }
-
-        if (!string.IsNullOrWhiteSpace(Key3) && Key3.Length < 12)
-        {
-            yield return new ValidationResult("Key 3 in invalid.", new string[] { nameof(Key3) });
-        }
-
-        if (!string.IsNullOrWhiteSpace(Key4) && Key4.Length < 12)
-        {
-            yield return new ValidationResult("Key 4 in invalid.", new string[] { nameof(Key4) });
-        }
-
-        if (!string.IsNullOrWhiteSpace(Key5) && Key5.Length < 12)
-        {
-            yield return new ValidationResult("Key 5 in invalid.", new string[] { nameof(Key5) });
+            if (!string.IsNullOrWhiteSpace(keys[i]) && keys[i].Length < 12)
+            {
+                yield return new ValidationResult($"Key {i + 1} is invalid.", [$"Key{i + 1}"]);
+            }
         }
     }
 }
