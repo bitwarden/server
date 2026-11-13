@@ -7,7 +7,8 @@ using Sustainsys.Saml2.Configuration;
 namespace Bit.Sso.Utilities.Saml2;
 
 /// <summary>
-/// Builds the SAML service provider certificates of the SSO host, one time, at startup.
+/// Gets the SSO encryption certificates, and builds the SAML service provider certificates of the SSO host
+/// from the signing and encryption certificates.
 /// </summary>
 public static class Saml2ServiceCertificates
 {
