@@ -193,6 +193,8 @@ public static partial class FeatureFlagKeys
     public const string PM35215_BusinessPlanPriceMigration = "pm-35215-business-plan-price-migration";
     public const string PM38333_AnnualBillingSavings = "pm-38333-annual-billing-savings";
     public const string PM38728_SendInvoicePriceMigration = "pm-38728-send-invoice-price-migration";
+    public const string PM46168_ReconcilePremium = "pm-46168-reconcile-premium";
+    public const string PM46168_ReconcilePremiumApply = "pm-46168-reconcile-premium-apply";
     public const string PM39883_Pam_Billing_Support = "pm-39883-pam-billing-support";
     public const string PM42214_FeatureBasedUpgradePaths = "pm-42214-feature-based-upgrade-paths";
 

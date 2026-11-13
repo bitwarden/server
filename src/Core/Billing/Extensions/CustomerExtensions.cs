@@ -27,4 +27,33 @@ public static class CustomerExtensions
         => customer.Metadata != null &&
            customer.Metadata.TryGetValue(StripeConstants.MetadataKeys.InvoiceApproved, out var value) &&
            int.TryParse(value, out var invoiceApproved) && invoiceApproved == 1;
+
+    public static string GetRegion(this Customer customer)
+    {
+        const string defaultRegion = Core.Constants.CountryAbbreviations.UnitedStates;
+
+        if (customer.Metadata == null)
+        {
+            return defaultRegion;
+        }
+
+        if (customer.Metadata.TryGetValue(StripeConstants.MetadataKeys.Region, out var value))
+        {
+            return value;
+        }
+
+        var incorrectlyCasedRegionKey = customer.Metadata.Keys
+            .FirstOrDefault(key => key.Equals(StripeConstants.MetadataKeys.Region, StringComparison.OrdinalIgnoreCase));
+
+        if (incorrectlyCasedRegionKey is null)
+        {
+            return defaultRegion;
+        }
+
+        _ = customer.Metadata.TryGetValue(incorrectlyCasedRegionKey, out var regionValue);
+
+        return !string.IsNullOrWhiteSpace(regionValue)
+            ? regionValue
+            : defaultRegion;
+    }
 }
