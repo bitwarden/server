@@ -1,4 +1,6 @@
-﻿namespace Bit.AppHost.Configuration;
+﻿using Bit.AppHost.Configuration.Databases;
+
+namespace Bit.AppHost.Configuration;
 
 /// <summary>
 /// The AppHost settings bound from configuration. Property names are the configuration keys; a <c>required</c>
@@ -32,9 +34,10 @@ internal sealed record AppHostSettings
     internal Dictionary<string, AdditionalProjectSettings> AdditionalProjects { get; init; } = [];
 
     /// <summary>
-    /// The SQL Server container.
+    /// One section per database engine, each saying whether the AppHost runs it, uses an external instance or
+    /// ignores it.
     /// </summary>
-    internal required DatabaseSettings Database { get; init; }
+    internal required EngineLineup Databases { get; init; }
 
     /// <summary>
     /// File names of the PowerShell scripts in <see cref="WorkingDirectory"/>.
@@ -95,32 +98,6 @@ internal sealed record AdditionalProjectSettings
 }
 
 /// <summary>
-/// Settings for the SQL Server container.
-/// </summary>
-internal sealed record DatabaseSettings
-{
-    /// <summary>
-    /// Full image reference, such as <c>mssql/server:2025-latest</c>.
-    /// </summary>
-    internal required string Image { get; init; }
-
-    /// <summary>
-    /// Host port the container publishes.
-    /// </summary>
-    internal required int Port { get; init; }
-
-    /// <summary>
-    /// The <c>sa</c> password in cloud mode.
-    /// </summary>
-    internal required string Password { get; init; }
-
-    /// <summary>
-    /// The <c>sa</c> password in self-hosted mode.
-    /// </summary>
-    internal required string SelfHostPassword { get; init; }
-}
-
-/// <summary>
 /// File names of the PowerShell scripts the AppHost runs.
 /// </summary>
 internal sealed record ScriptSettings
@@ -147,9 +124,9 @@ internal sealed record ScriptSettings
 internal abstract record ContainerImageSettings
 {
     /// <summary>
-    /// Image reference in <c>name[:tag]</c> form.
+    /// Image reference in <c>name[:tag]</c> form. Each subtype decides whether its key is required.
     /// </summary>
-    internal required string Image { get; init; }
+    internal abstract string Image { get; init; }
 
     /// <summary>
     /// Splits <see cref="Image"/> into name and tag, defaulting the tag to <c>latest</c>.
@@ -167,6 +144,11 @@ internal abstract record ContainerImageSettings
 internal sealed record ContainerSettings : ContainerImageSettings
 {
     /// <summary>
+    /// Image reference in <c>name[:tag]</c> form; the key is required.
+    /// </summary>
+    internal override required string Image { get; init; }
+
+    /// <summary>
     /// Host port the container publishes.
     /// </summary>
     internal required int Port { get; init; }
@@ -177,6 +159,11 @@ internal sealed record ContainerSettings : ContainerImageSettings
 /// </summary>
 internal sealed record MailCatcherSettings : ContainerImageSettings
 {
+    /// <summary>
+    /// Image reference in <c>name[:tag]</c> form; the key is required.
+    /// </summary>
+    internal override required string Image { get; init; }
+
     /// <summary>
     /// Host port the Bitwarden services send SMTP mail to.
     /// </summary>

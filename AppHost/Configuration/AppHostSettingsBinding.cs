@@ -1,5 +1,7 @@
-﻿using System.Reflection;
+﻿using System.Globalization;
+using System.Reflection;
 using System.Runtime.CompilerServices;
+using Bit.AppHost.Configuration.Databases;
 using Microsoft.Extensions.Configuration;
 
 namespace Bit.AppHost.Configuration;
@@ -14,14 +16,48 @@ internal static class AppHostSettingsBinding
         /// <summary>
         /// The bound settings. Each read binds the configuration again, so read it once per method.
         /// </summary>
-        /// <exception cref="InvalidOperationException">A required key is missing or a value cannot be converted.</exception>
+        /// <exception cref="InvalidOperationException">
+        /// A required key is missing, a value cannot be converted, or a database rule is broken.
+        /// </exception>
         internal AppHostSettings Settings
         {
             get
             {
-                RequireKeys(builder.Configuration, typeof(AppHostSettings), prefix: null);
+                var configuration = builder.Configuration;
+                RequireKeys(configuration, typeof(AppHostSettings), prefix: null);
                 // The settings properties are internal, and the binder skips non-public properties by default.
-                return builder.Configuration.Get<AppHostSettings>(options => options.BindNonPublicProperties = true)!;
+                var settings = configuration.Get<AppHostSettings>(options => options.BindNonPublicProperties = true)!;
+                ThrowIfDatabaseKeysNotMoved(configuration, settings.Databases.MsSql);
+                settings.Databases.Validate();
+                return settings;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The exception for a configuration key that is absent, or empty where a value is needed.
+    /// </summary>
+    internal static InvalidOperationException MissingConfiguration(string key) =>
+        new($"Missing required configuration: {key}");
+
+    /// <summary>
+    /// Throws when <c>Database:Port</c> or <c>Database:Image</c> holds a value other than its
+    /// <c>Databases:MsSql</c> replacement. The old password keys have no replacement and are not checked.
+    /// </summary>
+    private static void ThrowIfDatabaseKeysNotMoved(IConfiguration configuration, ServerEngineSettings msSql)
+    {
+        foreach (var (name, current) in new[]
+                 {
+                     (nameof(ServerEngineSettings.Port), msSql.Port.ToString(CultureInfo.InvariantCulture)),
+                     (nameof(ServerEngineSettings.Image), msSql.Image)
+                 })
+        {
+            var old = configuration[$"Database:{name}"];
+            if (!string.IsNullOrWhiteSpace(old) && old != current)
+            {
+                throw new InvalidOperationException(
+                    $"Database:{name} is {old}, but the AppHost now reads Databases:MsSql:{name}, which is " +
+                    $"{current}. Move the value to the new key (see README).");
             }
         }
     }
@@ -43,7 +79,7 @@ internal static class AppHostSettingsBinding
             {
                 if (property.IsDefined(typeof(RequiredMemberAttribute)))
                 {
-                    throw new InvalidOperationException($"Missing required configuration: {key}");
+                    throw MissingConfiguration(key);
                 }
 
                 continue;
@@ -60,7 +96,7 @@ internal static class AppHostSettingsBinding
                 {
                     if (!configuration.GetSection(entryKey).Exists())
                     {
-                        throw new InvalidOperationException($"Missing required configuration: {entryKey}");
+                        throw MissingConfiguration(entryKey);
                     }
 
                     RequireKeys(configuration, valueType, entryKey);

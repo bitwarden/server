@@ -5,16 +5,13 @@ using Microsoft.Extensions.Configuration;
 var builder = DistributedApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile(Path.Combine(builder.AppHostDirectory, "appsettings.local.json"), optional: true);
 var secretsSetup = builder.ConfigureSecrets();
-var db = builder.AddSqlServerDatabaseResource();
-builder.ConfigureDatabaseMigrations()
-    .WaitFor(db)
-    .ExcludeFromManifest()
-    .WaitForCompletion(secretsSetup);
+var databases = builder.ConfigureDatabases();
+builder.ConfigureDatabaseMigrations(databases, secretsSetup);
 var azurite = builder.ConfigureAzurite();
 var mail = builder.ConfigureMailCatcher();
 builder.ConfigureRedis();
 builder.ConfigureIdp();
-var services = builder.ConfigureMonolithServices(db, secretsSetup, mail, azurite);
+var services = builder.ConfigureMonolithServices(databases, secretsSetup, mail, azurite);
 
 builder.ConfigureWebFrontend(services[MonolithService.Api]);
 
