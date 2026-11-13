@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MimeKit;
+using NSubstitute;
 using Rnwood.SmtpServer;
 using Rnwood.SmtpServer.Extensions.Auth;
 using Xunit.Abstractions;
@@ -103,7 +104,8 @@ public class MailKitSmtpMailDeliveryServiceIntegrationTests
 
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
             options,
-            NullLogger<MailKitSmtpMailDeliveryService>.Instance
+            NullLogger<MailKitSmtpMailDeliveryService>.Instance,
+            Substitute.For<ISmtpCredentialProvider>()
         );
 
         await Assert.ThrowsAsync<SslHandshakeException>(
@@ -136,7 +138,8 @@ public class MailKitSmtpMailDeliveryServiceIntegrationTests
 
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
             options,
-            NullLogger<MailKitSmtpMailDeliveryService>.Instance
+            NullLogger<MailKitSmtpMailDeliveryService>.Instance,
+            Substitute.For<ISmtpCredentialProvider>()
         );
 
         var tcs = new TaskCompletionSource();
@@ -180,7 +183,8 @@ public class MailKitSmtpMailDeliveryServiceIntegrationTests
 
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
             options,
-            NullLogger<MailKitSmtpMailDeliveryService>.Instance
+            NullLogger<MailKitSmtpMailDeliveryService>.Instance,
+            Substitute.For<ISmtpCredentialProvider>()
         );
 
         var received = new TaskCompletionSource<MimeMessage>();
@@ -226,7 +230,8 @@ public class MailKitSmtpMailDeliveryServiceIntegrationTests
 
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
             options,
-            NullLogger<MailKitSmtpMailDeliveryService>.Instance
+            NullLogger<MailKitSmtpMailDeliveryService>.Instance,
+            Substitute.For<ISmtpCredentialProvider>()
         );
 
         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
@@ -261,7 +266,8 @@ public class MailKitSmtpMailDeliveryServiceIntegrationTests
 
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
             options,
-            NullLogger<MailKitSmtpMailDeliveryService>.Instance
+            NullLogger<MailKitSmtpMailDeliveryService>.Instance,
+            Substitute.For<ISmtpCredentialProvider>()
         );
 
         var tcs = new TaskCompletionSource();
@@ -327,7 +333,8 @@ public class MailKitSmtpMailDeliveryServiceIntegrationTests
 
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
             options,
-            NullLogger<MailKitSmtpMailDeliveryService>.Instance
+            NullLogger<MailKitSmtpMailDeliveryService>.Instance,
+            Substitute.For<ISmtpCredentialProvider>()
         );
 
         var tcs = new TaskCompletionSource();

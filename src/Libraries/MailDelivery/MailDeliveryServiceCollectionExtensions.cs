@@ -27,6 +27,10 @@ public static class MailDeliveryServiceCollectionExtensions
         services.TryAddSingleton<NoopMailDeliveryService>();
         services.TryAddSingleton<IMailDeliveryService>(ResolveMailDeliveryService);
 
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddHttpClient(OAuthHandler.HttpClientName);
+        services.TryAddSingleton<ISmtpCredentialProvider, SmtpCredentialProvider>();
+
         return services;
     }
 
@@ -45,9 +49,9 @@ public static class MailDeliveryServiceCollectionExtensions
     /// </para>
     /// <para>
     /// The placeholder values <c>SECRET</c> and <c>REPLACE</c> (case-insensitive) are treated as unset for the SMTP
-    /// host, username, and password, the SendGrid API key, and the Amazon access key secret. This runs as a
-    /// post-configure step, so it also applies to values set by any other configuration of
-    /// <see cref="MailDeliveryOptions"/>.
+    /// host, username, password, client secret, and OAuth client secret, the SendGrid API key, and the Amazon
+    /// access key secret. This runs as a post-configure step, so it also applies to values set by any other
+    /// configuration of <see cref="MailDeliveryOptions"/>.
     /// </para>
     /// </remarks>
     public static IServiceCollection ConfigureMailDeliveryOptionsFromGlobalSettings(this IServiceCollection services)
@@ -79,6 +83,8 @@ public static class MailDeliveryServiceCollectionExtensions
         options.Smtp.Host = ValueOrNull(options.Smtp.Host);
         options.Smtp.Username = ValueOrNull(options.Smtp.Username);
         options.Smtp.Password = ValueOrNull(options.Smtp.Password);
+        options.Smtp.ClientSecret = ValueOrNull(options.Smtp.ClientSecret);
+        options.Smtp.OAuth.ClientSecret = ValueOrNull(options.Smtp.OAuth.ClientSecret);
         options.SendGridApiKey = ValueOrNull(options.SendGridApiKey);
         options.Amazon.AccessKeySecret = ValueOrNull(options.Amazon.AccessKeySecret);
     }

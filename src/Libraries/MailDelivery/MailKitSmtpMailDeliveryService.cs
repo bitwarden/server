@@ -15,10 +15,12 @@ internal class MailKitSmtpMailDeliveryService : IMailDeliveryService
     private readonly ILogger<MailKitSmtpMailDeliveryService> _logger;
     private readonly string? _replyDomain;
     private readonly string _replyEmail;
+    private readonly ISmtpCredentialProvider _credentialProvider;
 
     public MailKitSmtpMailDeliveryService(
         IOptions<MailDeliveryOptions> options,
-        ILogger<MailKitSmtpMailDeliveryService> logger)
+        ILogger<MailKitSmtpMailDeliveryService> logger,
+        ISmtpCredentialProvider credentialProvider)
     {
         var settings = options.Value;
         if (settings.Smtp.Host == null)
@@ -43,6 +45,7 @@ internal class MailKitSmtpMailDeliveryService : IMailDeliveryService
         _smtpHost = settings.Smtp.Host;
         _siteName = settings.SiteName;
         _logger = logger;
+        _credentialProvider = credentialProvider;
     }
 
     public async Task SendEmailAsync(Models.Mail.MailMessage message)
@@ -110,13 +113,31 @@ internal class MailKitSmtpMailDeliveryService : IMailDeliveryService
                 );
             }
 
-            if (!string.IsNullOrWhiteSpace(_smtp.Username) && !string.IsNullOrWhiteSpace(_smtp.Password))
+            if (_smtp.AuthType == SmtpAuthType.Password)
             {
-                await client.AuthenticateAsync(
-                    _smtp.Username,
-                    _smtp.Password,
-                    cancellationToken
-                );
+                if (!string.IsNullOrWhiteSpace(_smtp.Username) && !string.IsNullOrWhiteSpace(_smtp.Password))
+                {
+                    await client.AuthenticateAsync(
+                        _smtp.Username,
+                        _smtp.Password,
+                        cancellationToken
+                    );
+                }
+            }
+            else
+            {
+                var credentials = await _credentialProvider.GetCredentialsAsync(cancellationToken);
+                try
+                {
+                    await client.AuthenticateAsync(credentials, cancellationToken);
+                }
+                catch (MailKit.Security.AuthenticationException)
+                {
+                    await _credentialProvider.InvalidateAsync(credentials, cancellationToken);
+                    var retryCredentials = await _credentialProvider.GetCredentialsAsync(cancellationToken);
+                    // A second failure propagates to the caller.
+                    await client.AuthenticateAsync(retryCredentials, cancellationToken);
+                }
             }
 
             await client.SendAsync(mimeMessage, cancellationToken);
