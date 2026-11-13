@@ -3901,7 +3901,8 @@ public class CiphersControllerTests
                 new() { Id = collectionId, OrganizationId = organizationId, ReadOnly = false },
             });
         sutProvider.GetDependency<ICipherLeaseGate>()
-            .EnsureCanMutateManyAsync(userId, Arg.Is<IEnumerable<Cipher>>(c => c.Single().Id == cipherId))
+            .EnsureCanMutateManyAsync(userId, Arg.Is<IEnumerable<Cipher>>(c =>
+                c.Single().Id == cipherId && c.Single().OrganizationId == organizationId))
             .ThrowsAsync(new NotFoundException());
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostBulkCollections(

@@ -1218,6 +1218,25 @@ public class CipherLeaseGateTests
     }
 
     [Fact]
+    public async Task AuthorizeReadManyAsync_WithNullMappings_LoadsMappingsAndWithholdsGated()
+    {
+        var (sutProvider, userId, gatedCipherId) = Setup();
+        var plainCipherId = Guid.NewGuid();
+        CallerGates(sutProvider, userId, gatedCipherId);
+
+        var access = await sutProvider.Sut.AuthorizeReadManyAsync(userId,
+            [
+                new Cipher { Id = gatedCipherId, OrganizationId = _organizationId },
+                new Cipher { Id = plainCipherId, OrganizationId = _organizationId },
+            ],
+            collectionCiphersByCipher: null);
+
+        Assert.False(access.Authorizes(gatedCipherId));
+        Assert.True(access.Authorizes(plainCipherId));
+        await sutProvider.GetDependency<ICollectionCipherRepository>().Received(1).GetManyByUserIdAsync(userId);
+    }
+
+    [Fact]
     public async Task AuthorizeReadManyAsync_WithMappings_OrganizationWithoutPam_LoadsNothing()
     {
         var (sutProvider, userId, cipherId) = Setup();
