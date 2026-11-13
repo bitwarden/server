@@ -1,4 +1,6 @@
-﻿using Bit.Core.Auth.Identity;
+﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Services.Implementations;
@@ -117,6 +119,29 @@ public class ServerContextBuilderTests
         var context = builder.Build();
 
         Assert.False(context.TryGetContextByKind(ContextKind.Of("access-connector"), out _));
+    }
+
+    [Fact]
+    public async Task Build_OrganizationApiKeyToken_ReturnsOrganizationContext()
+    {
+        var orgId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        var currentContext = new CurrentContext(
+            Substitute.For<IProviderOrganizationRepository>(),
+            Substitute.For<IProviderUserRepository>());
+        await currentContext.SetContextAsync(new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim("client_id", $"organization.{orgId}"),
+            new Claim("client_sub", orgId.ToString()),
+            new Claim("client_type", IdentityClientType.Organization.ToString()),
+        ])));
+
+        var builder = new ServerContextBuilder(BuildAccessor(currentContext));
+
+        var context = builder.Build();
+
+        Assert.True(context.TryGetContextByKind(ContextKind.Of("organization"), out var org));
+        Assert.Equal(orgId.ToString(), org.Key);
+        Assert.False(context.TryGetContextByKind(ContextKind.Default, out _));
     }
 
     [Fact]
