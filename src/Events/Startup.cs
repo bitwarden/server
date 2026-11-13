@@ -7,6 +7,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Duende.IdentityModel;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace Bit.Events;
 
@@ -31,7 +32,7 @@ public class Startup
         var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
 
         // Data Protection
-        services.AddCustomDataProtectionServices(Environment, globalSettings);
+        services.AddSingleton<IDataProtectionProvider, ThrowingDataProtectionProvider>();
 
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
@@ -60,8 +61,8 @@ public class Startup
 
         services.ApplyServerCompatibilityLayer();
 
-        // Mvc
-        services.AddMvc(config =>
+        // Controllers
+        services.AddControllers(config =>
         {
             config.Filters.Add(new LoggingExceptionHandlerFilterAttribute());
         });
