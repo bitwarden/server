@@ -5,6 +5,7 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Scim.Models;
 using Bit.Scim.Users.Interfaces;
+using Bit.Scim.Utilities;
 
 namespace Bit.Scim.Users;
 
@@ -19,7 +20,6 @@ public class GetUsersListQuery : IGetUsersListQuery
 
     public async Task<(IEnumerable<OrganizationUserUserDetails> userList, int totalResults)> GetUsersListAsync(Guid organizationId, GetUsersQueryParamModel userQueryParams)
     {
-        string emailFilter = null;
         string usernameFilter = null;
         string externalIdFilter = null;
 
@@ -32,11 +32,7 @@ public class GetUsersListQuery : IGetUsersListQuery
             var filterLower = filter.ToLowerInvariant();
             if (filterLower.StartsWith("username eq "))
             {
-                usernameFilter = filterLower.Substring(12).Trim('"');
-                if (usernameFilter.Contains("@"))
-                {
-                    emailFilter = usernameFilter;
-                }
+                usernameFilter = filter.Substring(12).Trim('"');
             }
             else if (filterLower.StartsWith("externalid eq "))
             {
@@ -47,9 +43,9 @@ public class GetUsersListQuery : IGetUsersListQuery
         var userList = new List<OrganizationUserUserDetails>();
         var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
         var totalResults = 0;
-        if (!string.IsNullOrWhiteSpace(emailFilter))
+        if (!string.IsNullOrWhiteSpace(usernameFilter))
         {
-            var orgUser = orgUsers.FirstOrDefault(ou => ou.Email.ToLowerInvariant() == emailFilter);
+            var orgUser = orgUsers.FirstOrDefault(ou => ou.HasScimUserName(usernameFilter));
             if (orgUser != null)
             {
                 userList.Add(orgUser);

@@ -64,6 +64,12 @@ public class PatchUserCommand : IPatchUserCommand
                     await HandleExternalIdOperationAsync(orgUser, newExternalId);
                     operationHandled = true;
                 }
+                // UserName from path
+                else if (operation.Path?.ToLowerInvariant() == PatchPaths.UserName)
+                {
+                    await HandleUserNameOperationAsync(orgUser, operation.Value.GetString());
+                    operationHandled = true;
+                }
                 // Value object with no path — check for each supported property independently
                 else if (string.IsNullOrWhiteSpace(operation.Path))
                 {
@@ -85,6 +91,11 @@ public class PatchUserCommand : IPatchUserCommand
                     {
                         var newExternalId = externalIdProperty.GetString();
                         await HandleExternalIdOperationAsync(orgUser, newExternalId);
+                        operationHandled = true;
+                    }
+                    if (operation.Value.TryGetProperty("userName", out var userNameProperty))
+                    {
+                        await HandleUserNameOperationAsync(orgUser, userNameProperty.GetString());
                         operationHandled = true;
                     }
                 }
@@ -134,6 +145,29 @@ public class PatchUserCommand : IPatchUserCommand
         }
 
         orgUser.ExternalId = newExternalId;
+        await _organizationUserRepository.ReplaceAsync(orgUser);
+    }
+
+    private async Task HandleUserNameOperationAsync(Core.Entities.OrganizationUser orgUser, string? newUserName)
+    {
+        if (string.IsNullOrWhiteSpace(newUserName))
+        {
+            newUserName = null;
+        }
+        else if (newUserName.Length > 300)
+        {
+            throw new BadRequestException("UserName cannot exceed 300 characters.");
+        }
+        else
+        {
+            var existingUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgUser.OrganizationId);
+            if (existingUsers.Any(u => u.Id != orgUser.Id && u.HasScimUserName(newUserName)))
+            {
+                throw new ConflictException("UserName already exists for another user.");
+            }
+        }
+
+        orgUser.ExternalName = newUserName;
         await _organizationUserRepository.ReplaceAsync(orgUser);
     }
 }

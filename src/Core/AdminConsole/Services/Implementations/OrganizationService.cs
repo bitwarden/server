@@ -627,6 +627,7 @@ public class OrganizationService : IOrganizationService
                         Status = OrganizationUserStatusType.Invited,
                         AccessSecretsManager = invite.AccessSecretsManager,
                         ExternalId = externalId,
+                        ExternalName = invite.ExternalName,
                         CreationDate = DateTime.UtcNow,
                         RevisionDate = DateTime.UtcNow,
                     };

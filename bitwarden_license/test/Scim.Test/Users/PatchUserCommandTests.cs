@@ -355,6 +355,101 @@ public class PatchUserCommandTests
 
     [Theory]
     [BitAutoData]
+    public async Task PatchUser_UserNameFromPath_Success(SutProvider<PatchUserCommand> sutProvider, OrganizationUser organizationUser)
+    {
+        var newUserName = "jane.doe@tenant.onmicrosoft.com";
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(organizationUser.OrganizationId)
+            .Returns(new List<OrganizationUserUserDetails>());
+
+        await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id,
+            ReplaceModel(path: "userName", value: $"\"{newUserName}\""));
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
+            Arg.Is<OrganizationUser>(ou => ou.ExternalName == newUserName));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchUser_UserNameFromValue_Success(SutProvider<PatchUserCommand> sutProvider, OrganizationUser organizationUser)
+    {
+        var newUserName = "jane.doe@tenant.onmicrosoft.com";
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(organizationUser.OrganizationId)
+            .Returns(new List<OrganizationUserUserDetails>());
+
+        await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id,
+            ReplaceModel(path: null, value: $"{{\"userName\":\"{newUserName}\"}}"));
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
+            Arg.Is<OrganizationUser>(ou => ou.ExternalName == newUserName));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchUser_UserNameMatchesAnotherMembersEmail_ThrowsConflict(SutProvider<PatchUserCommand> sutProvider, OrganizationUser organizationUser, OrganizationUserUserDetails existingUser)
+    {
+        // A member provisioned before userName was stored answers to their email
+        existingUser.ExternalName = null;
+        existingUser.Email = "taken@example.com";
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(organizationUser.OrganizationId)
+            .Returns(new List<OrganizationUserUserDetails> { existingUser });
+
+        await Assert.ThrowsAsync<ConflictException>(async () =>
+            await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id,
+                ReplaceModel(path: "userName", value: "\"TAKEN@example.com\"")));
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchUser_UserNameTooLong_ThrowsBadRequest(SutProvider<PatchUserCommand> sutProvider, OrganizationUser organizationUser)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+
+        await Assert.ThrowsAsync<BadRequestException>(async () =>
+            await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id,
+                ReplaceModel(path: "userName", value: $"\"{new string('a', 301)}\"")));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchUser_UserNameEmpty_ClearsExternalName(SutProvider<PatchUserCommand> sutProvider, OrganizationUser organizationUser)
+    {
+        organizationUser.ExternalName = "jane.doe@tenant.onmicrosoft.com";
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+
+        await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id,
+            ReplaceModel(path: "userName", value: "\"\""));
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
+            Arg.Is<OrganizationUser>(ou => ou.ExternalName == null));
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task PatchUser_UnsupportedOperation_LogsWarningAndSucceeds(SutProvider<PatchUserCommand> sutProvider, OrganizationUser organizationUser)
     {
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -465,4 +560,10 @@ public class PatchUserCommandTests
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
             Arg.Is<OrganizationUser>(ou => ou.ExternalId == newExternalId && ou.Status != OrganizationUserStatusType.Revoked));
     }
+
+    private static ScimPatchModel ReplaceModel(string? path, string value) => new()
+    {
+        Operations = [new ScimPatchModel.OperationModel { Op = "replace", Path = path, Value = JsonDocument.Parse(value).RootElement }],
+        Schemas = [ScimConstants.Scim2SchemaUser]
+    };
 }
