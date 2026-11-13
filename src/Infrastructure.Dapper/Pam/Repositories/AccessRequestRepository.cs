@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Text.Json;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
 using Bit.Pam.Entities;
@@ -107,7 +108,41 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
         return results.Select(row => row.Derive(now)).ToList();
     }
 
-    public async Task<ICollection<AccessRequestDetails>> GetManyInboxHistoryByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime since, DateTime now)
+    public async Task<AccessRequestHistoryPage> GetHistoryPageAsync(AccessRequestHistoryFilter filter)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        using var results = await connection.QueryMultipleAsync(
+            $"[{Schema}].[AccessRequest_ReadHistoryPage]",
+            new
+            {
+                ManageableCollectionIds = filter.ManageableCollectionIds.ToGuidIdArrayTVP(),
+                filter.UserId,
+                filter.Since,
+                filter.Now,
+                filter.Skip,
+                filter.Take,
+                Statuses = JsonList(filter.Statuses.Select(status => (byte)status)),
+                CollectionIds = JsonList(filter.CollectionIds),
+                RequesterIds = JsonList(filter.RequesterIds),
+            },
+            commandType: CommandType.StoredProcedure);
+
+        var requesters = (await results.ReadAsync<AccessRequestHistoryRequester>()).ToList();
+        var collectionIds = (await results.ReadAsync<Guid>()).ToList();
+        var total = await results.ReadSingleAsync<int>();
+        var requests = await ReadDetailsWithDecisionsAsync(results, filter.Now);
+
+        return new AccessRequestHistoryPage
+        {
+            Requests = requests,
+            Total = total,
+            Requesters = requesters,
+            CollectionIds = collectionIds,
+        };
+    }
+
+    public async Task<ICollection<AccessRequestDetails>> GetManyInboxApprovedByCollectionIdsAsync(
+        IEnumerable<Guid> collectionIds, DateTime now)
     {
         var ids = collectionIds.ToList();
         if (ids.Count == 0)
@@ -117,8 +152,8 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
 
         await using var connection = new SqlConnection(ConnectionString);
         using var results = await connection.QueryMultipleAsync(
-            $"[{Schema}].[AccessRequest_ReadInboxHistoryByCollectionIds]",
-            new { CollectionIds = ids.ToGuidIdArrayTVP(), Since = since, Now = now },
+            $"[{Schema}].[AccessRequest_ReadInboxApprovedByCollectionIds]",
+            new { CollectionIds = ids.ToGuidIdArrayTVP(), Now = now },
             commandType: CommandType.StoredProcedure);
 
         return await ReadDetailsWithDecisionsAsync(results, now);
@@ -202,6 +237,12 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
             commandType: CommandType.StoredProcedure);
 
         return (AccessLeaseExtendOutcome)result;
+    }
+
+    private static string? JsonList<T>(IEnumerable<T> values)
+    {
+        var selected = values.ToList();
+        return selected.Count == 0 ? null : JsonSerializer.Serialize(selected);
     }
 
     /// <summary>

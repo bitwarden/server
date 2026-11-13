@@ -45,20 +45,19 @@ public class LeaseEndpointsTests
     }
 
     [Fact]
-    public void MapPamEndpoints_RegistersTheFiveLeaseRoutes_InTheInternalDoc()
+    public void MapPamEndpoints_RegistersTheFourLeaseRoutes_InTheInternalDoc()
     {
         var endpoints = MaterializeEndpoints()
             .Where(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("Leases"))
             .ToList();
 
-        Assert.Equal(5, endpoints.Count);
+        Assert.Equal(4, endpoints.Count);
         Assert.All(endpoints, endpoint =>
             Assert.Equal("internal", endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>()?.EndpointGroupName));
     }
 
     [Theory]
     [InlineData("Pam_Leases_GetActive", "GET", "leases/active")]
-    [InlineData("Pam_Leases_GetHistory", "GET", "leases/history")]
     [InlineData("Pam_Leases_GetMine", "GET", "leases/mine")]
     [InlineData("Pam_Leases_Revoke", "POST", "leases/{id:guid}/revoke")]
     [InlineData("Pam_Leases_Extend", "POST", "leases/{id:guid}/extend")]
@@ -87,7 +86,6 @@ public class LeaseEndpointsTests
 
     [Theory]
     [InlineData(nameof(LeaseEndpointsHandler.GetActive), typeof(Task<ListResponseModel<AccessLeaseResponseModel>>))]
-    [InlineData(nameof(LeaseEndpointsHandler.GetHistory), typeof(Task<ListResponseModel<AccessLeaseResponseModel>>))]
     [InlineData(nameof(LeaseEndpointsHandler.GetMine), typeof(Task<ListResponseModel<AccessLeaseResponseModel>>))]
     [InlineData(nameof(LeaseEndpointsHandler.Revoke), typeof(Task))]
     [InlineData(nameof(LeaseEndpointsHandler.Extend), typeof(Task<AccessRequestDetailsResponseModel>))]

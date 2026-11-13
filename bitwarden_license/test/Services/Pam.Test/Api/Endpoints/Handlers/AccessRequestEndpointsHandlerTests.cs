@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
@@ -38,15 +39,49 @@ public class AccessRequestEndpointsHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetHistory_ReturnsMappedHistoryRows(Guid userId, AccessRequestDetails row)
+    public async Task GetApproved_ReturnsMappedApprovedRows(Guid userId, AccessRequestDetails row)
     {
         var sutProvider = Setup(userId);
         row.Status = AccessRequestStatus.Approved;
-        sutProvider.GetDependency<IListInboxHistoryQuery>().GetHistoryAsync(userId, _now).Returns([row]);
+        sutProvider.GetDependency<IListInboxRequestsQuery>().GetApprovedAsync(userId, _now).Returns([row]);
 
-        var result = await sutProvider.Sut.GetHistory(_user);
+        var result = await sutProvider.Sut.GetApproved(_user);
 
-        Assert.Single(result.Data);
+        Assert.Equal(row.Id, Assert.Single(result.Data).Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetHistory_ReturnsTheMappedPage(Guid userId, AccessRequestDetails row,
+        AccessRequestHistoryRequester requester, Guid collectionId)
+    {
+        var sutProvider = Setup(userId);
+        row.Status = AccessRequestStatus.Denied;
+        var page = new AccessRequestHistoryPage
+        {
+            Requests = [row],
+            Total = 51,
+            Requesters = [requester],
+            CollectionIds = [collectionId],
+        };
+        sutProvider.GetDependency<IListInboxHistoryQuery>()
+            .GetHistoryAsync(userId, _now, Arg.Is<AccessRequestHistoryQueryOptions>(o => o.Page == 2 && o.PageSize == 25))
+            .Returns(page);
+
+        var result = await sutProvider.Sut.GetHistory(_user, new AccessRequestHistoryRequestModel { Page = 2 });
+
+        Assert.Equal(row.Id, Assert.Single(result.Data).Id);
+        Assert.Equal(51, result.Total);
+        Assert.Equal(requester.Email, Assert.Single(result.Requesters).Email);
+        Assert.Equal([collectionId], result.CollectionIds);
+    }
+
+    [Fact]
+    public async Task GetHistory_UnknownStatus_ThrowsBadRequest()
+    {
+        var sutProvider = Setup(Guid.NewGuid());
+
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.GetHistory(_user, new AccessRequestHistoryRequestModel { Status = ["pending"] }));
     }
 
     [Theory, BitAutoData]

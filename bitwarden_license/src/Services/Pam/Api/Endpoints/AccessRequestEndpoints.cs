@@ -17,7 +17,12 @@ internal static class AccessRequestEndpoints
         group.MapGet("inbox", (AccessRequestEndpointsHandler handler, ClaimsPrincipal user) => handler.GetInbox(user))
             .WithName("Pam_AccessRequests_GetInbox");
 
-        group.MapGet("history", (AccessRequestEndpointsHandler handler, ClaimsPrincipal user) => handler.GetHistory(user))
+        group.MapGet("approved", (AccessRequestEndpointsHandler handler, ClaimsPrincipal user) => handler.GetApproved(user))
+            .WithName("Pam_AccessRequests_GetApproved");
+
+        group.MapGet("history",
+                (AccessRequestEndpointsHandler handler, ClaimsPrincipal user,
+                    [AsParameters] AccessRequestHistoryRequestModel model) => handler.GetHistory(user, model))
             .WithName("Pam_AccessRequests_GetHistory");
 
         group.MapGet("mine", (AccessRequestEndpointsHandler handler, ClaimsPrincipal user) => handler.GetMine(user))

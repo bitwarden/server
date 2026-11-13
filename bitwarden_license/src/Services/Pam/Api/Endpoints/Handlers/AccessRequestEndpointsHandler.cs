@@ -28,12 +28,21 @@ public class AccessRequestEndpointsHandler(
             requests.Select(r => new AccessRequestDetailsResponseModel(r)));
     }
 
-    public async Task<ListResponseModel<AccessRequestDetailsResponseModel>> GetHistory(ClaimsPrincipal user)
+    public async Task<ListResponseModel<AccessRequestDetailsResponseModel>> GetApproved(ClaimsPrincipal user)
     {
         var userId = userService.GetProperUserId(user)!.Value;
-        var history = await listInboxHistoryQuery.GetHistoryAsync(userId, timeProvider.GetUtcNow().UtcDateTime);
+        var requests = await listInboxRequestsQuery.GetApprovedAsync(userId, timeProvider.GetUtcNow().UtcDateTime);
         return new ListResponseModel<AccessRequestDetailsResponseModel>(
-            history.Select(r => new AccessRequestDetailsResponseModel(r)));
+            requests.Select(r => new AccessRequestDetailsResponseModel(r)));
+    }
+
+    public async Task<AccessRequestHistoryPageResponseModel> GetHistory(ClaimsPrincipal user,
+        AccessRequestHistoryRequestModel model)
+    {
+        var options = model.ToQueryOptions();
+        var userId = userService.GetProperUserId(user)!.Value;
+        var page = await listInboxHistoryQuery.GetHistoryAsync(userId, timeProvider.GetUtcNow().UtcDateTime, options);
+        return new AccessRequestHistoryPageResponseModel(page);
     }
 
     public async Task<ListResponseModel<AccessRequestDetailsResponseModel>> GetMine(ClaimsPrincipal user)

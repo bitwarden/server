@@ -14,7 +14,6 @@ public class LeaseEndpointsHandler(
     IUserService userService,
     TimeProvider timeProvider,
     IListActiveLeasesQuery listActiveLeasesQuery,
-    IListLeaseHistoryQuery listLeaseHistoryQuery,
     IAccessLeaseRepository accessLeaseRepository,
     IRevokeAccessLeaseCommand revokeAccessLeaseCommand,
     IRequestLeaseExtensionCommand requestLeaseExtensionCommand)
@@ -24,15 +23,6 @@ public class LeaseEndpointsHandler(
         var userId = userService.GetProperUserId(user)!.Value;
         var now = timeProvider.GetUtcNow().UtcDateTime;
         var leases = await listActiveLeasesQuery.GetActiveAsync(userId, now);
-        return new ListResponseModel<AccessLeaseResponseModel>(
-            leases.Select(l => new AccessLeaseResponseModel(l, now)));
-    }
-
-    public async Task<ListResponseModel<AccessLeaseResponseModel>> GetHistory(ClaimsPrincipal user)
-    {
-        var userId = userService.GetProperUserId(user)!.Value;
-        var now = timeProvider.GetUtcNow().UtcDateTime;
-        var leases = await listLeaseHistoryQuery.GetHistoryAsync(userId, now);
         return new ListResponseModel<AccessLeaseResponseModel>(
             leases.Select(l => new AccessLeaseResponseModel(l, now)));
     }
