@@ -245,7 +245,7 @@ public class ConfirmOrganizationInviteLinkCommandTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<ConfirmSeatAddFailed>(result.AsError);
+        Assert.IsType<SeatAddFailedError>(result.AsError);
         AssertNoMembershipWritten(sutProvider);
     }
 
@@ -272,7 +272,7 @@ public class ConfirmOrganizationInviteLinkCommandTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<ConfirmOrganizationHasNoAvailableSeats>(result.AsError);
+        Assert.IsType<OrganizationHasNoAvailableSeatsError>(result.AsError);
         await sutProvider.GetDependency<IOrganizationService>()
             .DidNotReceiveWithAnyArgs()
             .AutoAddSeatsAsync(Arg.Any<Organization>(), Arg.Any<int>());

@@ -60,7 +60,7 @@ public class ConfirmOrganizationInviteLinkValidator(
 
         if (!link.SupportsConfirmation)
         {
-            return new ConfirmInviteLinkConfirmationNotSupported();
+            return new InviteLinkConfirmationNotSupportedError();
         }
 
         var existingOrganizationUser = await ResolveExistingOrganizationUserAsync(organization, user);
@@ -121,27 +121,27 @@ public class ConfirmOrganizationInviteLinkValidator(
     }
 
     /// <summary>
-    /// Translates a shared invite link or policy error into the link-confirm validation-problem variant so the
+    /// Translates a shared invite link or policy error into its coded invite link error so the
     /// endpoint always returns the RFC 7807 shape. A new error must be mapped here rather than silently falling back
     /// to a plain 400.
     /// </summary>
     private static Error ToConfirmValidationError(Error error) =>
         error switch
         {
-            InviteLinkNotFound => error,
-            InviteLinkNotAvailable => new ConfirmInviteLinkNotAvailable(),
-            EmailDomainNotAllowed e => new ConfirmEmailDomainNotAllowed(e.OrgName),
-            EmailNotVerified => new ConfirmEmailNotVerified(),
-            OrganizationAccessRevoked e => new ConfirmOrganizationAccessRevoked(e.OrgName),
-            AlreadyOrganizationMember e => new ConfirmAlreadyOrganizationMember(e.OrgName),
-            CannotBeAdminOfMultipleFreeOrganizations => new ConfirmOnlyOneFreeOrganizationAdminAllowed(),
-            OtherOrganizationDoesNotAllowOtherMembership e => new ConfirmOtherOrganizationDoesNotAllowOtherMembership(e.Email),
-            UserCannotBelongToAnotherOrganization e => new ConfirmUserCannotBelongToAnotherOrganization(e.Email),
-            ProviderUsersCannotJoin => new ConfirmProviderUsersCannotAcceptInviteLink(),
-            UserIsAMemberOfAnotherOrganization => new ConfirmUserIsAMemberOfAnotherOrganization(),
-            UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => new ConfirmUserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy(),
-            TwoFactorRequiredForMembership => new ConfirmTwoFactorRequiredForMembership(),
-            ResetPasswordKeyRequired => new ConfirmResetPasswordKeyRequired(),
+            InviteLinkNotFound => new InviteLinkNotFoundError(),
+            InviteLinkNotAvailable => new InviteLinkNotAvailableError(),
+            EmailDomainNotAllowed e => new EmailDomainNotAllowedError(e.OrgName),
+            EmailNotVerified => new EmailNotVerifiedError(),
+            OrganizationAccessRevoked e => new OrganizationAccessRevokedError(e.OrgName),
+            AlreadyOrganizationMember e => new AlreadyOrganizationMemberError(e.OrgName),
+            CannotBeAdminOfMultipleFreeOrganizations => new OnlyOneFreeOrganizationAdminAllowedError(),
+            OtherOrganizationDoesNotAllowOtherMembership e => new AutoConfirmPolicyViolationOtherOrgError(e.Email),
+            UserCannotBelongToAnotherOrganization e => new AutoConfirmPolicyViolationTargetOrgError(e.Email),
+            ProviderUsersCannotJoin => new ProviderUsersCannotJoinError(),
+            UserIsAMemberOfAnotherOrganization => new MemberOfAnotherOrganizationError(),
+            UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => new SingleOrganizationPolicyError(),
+            TwoFactorRequiredForMembership => new TwoFactorRequiredForMembershipError(),
+            ResetPasswordKeyRequired => new ResetPasswordKeyRequiredError(),
             _ => throw new UnreachableException($"Unmapped invite link error: {error.GetType().Name}")
         };
 }

@@ -197,7 +197,7 @@ public class ConfirmOrganizationInviteLinkCommand(
         var occupiedSeatCount = (await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)).Total;
         if (!OrganizationSeatAvailability.HasAvailableSeats(organization, occupiedSeatCount))
         {
-            return new ConfirmOrganizationHasNoAvailableSeats(organization.DisplayName());
+            return new OrganizationHasNoAvailableSeatsError(organization.DisplayName());
         }
 
         return await TryExpandSeatsAsync(organization, occupiedSeatCount);
@@ -223,7 +223,7 @@ public class ConfirmOrganizationInviteLinkCommand(
             // Known business failures (no payment method, autoscale cap, etc.) map to a 400.
             // Infrastructure failures propagate so they surface as 5xx with a correlation id.
             logger.LogWarning(ex, "Could not auto-add seat while confirming invite link for organization {OrganizationId}", organization.Id);
-            return new ConfirmSeatAddFailed();
+            return new SeatAddFailedError();
         }
     }
 

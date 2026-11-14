@@ -26,13 +26,13 @@ public class ConfirmOrganizationInviteLinkValidatorTests
 {
     public static IEnumerable<object[]> JoinRequirementsErrors() =>
     [
-        [new CannotBeAdminOfMultipleFreeOrganizations(), typeof(ConfirmOnlyOneFreeOrganizationAdminAllowed)],
-        [new OtherOrganizationDoesNotAllowOtherMembership("user@example.com"), typeof(ConfirmOtherOrganizationDoesNotAllowOtherMembership)],
-        [new UserCannotBelongToAnotherOrganization("user@example.com"), typeof(ConfirmUserCannotBelongToAnotherOrganization)],
-        [new ProviderUsersCannotJoin(), typeof(ConfirmProviderUsersCannotAcceptInviteLink)],
-        [new UserIsAMemberOfAnotherOrganization(), typeof(ConfirmUserIsAMemberOfAnotherOrganization)],
-        [new UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy(), typeof(ConfirmUserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy)],
-        [new TwoFactorRequiredForMembership(), typeof(ConfirmTwoFactorRequiredForMembership)],
+        [new CannotBeAdminOfMultipleFreeOrganizations(), typeof(OnlyOneFreeOrganizationAdminAllowedError)],
+        [new OtherOrganizationDoesNotAllowOtherMembership("user@example.com"), typeof(AutoConfirmPolicyViolationOtherOrgError)],
+        [new UserCannotBelongToAnotherOrganization("user@example.com"), typeof(AutoConfirmPolicyViolationTargetOrgError)],
+        [new ProviderUsersCannotJoin(), typeof(ProviderUsersCannotJoinError)],
+        [new UserIsAMemberOfAnotherOrganization(), typeof(MemberOfAnotherOrganizationError)],
+        [new UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy(), typeof(SingleOrganizationPolicyError)],
+        [new TwoFactorRequiredForMembership(), typeof(TwoFactorRequiredForMembershipError)],
     ];
 
     [Theory, BitAutoData]
@@ -51,7 +51,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        var error = Assert.IsType<ConfirmInviteLinkConfirmationNotSupported>(result.AsError);
+        var error = Assert.IsType<InviteLinkConfirmationNotSupportedError>(result.AsError);
         Assert.IsAssignableFrom<IValidationError>(error);
 
         // The check must short-circuit before the membership is resolved so no membership can be mutated.
@@ -85,7 +85,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        var error = Assert.IsType<ConfirmInviteLinkNotAvailable>(result.AsError);
+        var error = Assert.IsType<InviteLinkNotAvailableError>(result.AsError);
         Assert.IsAssignableFrom<IValidationError>(error);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -119,7 +119,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<ConfirmOrganizationAccessRevoked>(result.AsError);
+        Assert.IsType<OrganizationAccessRevokedError>(result.AsError);
     }
 
     [Theory]
@@ -176,7 +176,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<ConfirmResetPasswordKeyRequired>(result.AsError);
+        Assert.IsType<ResetPasswordKeyRequiredError>(result.AsError);
     }
 
     [Theory, BitAutoData]
