@@ -21,7 +21,9 @@ internal static class NgrokResource
         {
             var rawToken = builder.Settings.NgrokAuthToken;
             if (string.IsNullOrWhiteSpace(rawToken))
+            {
                 return;
+            }
 
             var authToken = builder.AddParameter("ngrok-auth-token", rawToken, secret: true);
             builder.AddNgrok("billing-webhook-ngrok-endpoint", endpointPort: _endpointPort)
