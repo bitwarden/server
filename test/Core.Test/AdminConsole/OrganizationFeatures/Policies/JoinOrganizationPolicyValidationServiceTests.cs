@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -308,7 +307,7 @@ public class JoinOrganizationPolicyValidationServiceTests
             organizationId, user, OrganizationUserType.User, policyEnforcer, resetPasswordKey: null);
 
         // Assert
-        Assert.False(result.IsError);
+        Assert.False(result.ResetPasswordKeyMissing);
         Assert.False(result.AutoEnrollEnabled);
     }
 
@@ -325,12 +324,12 @@ public class JoinOrganizationPolicyValidationServiceTests
             organizationId, user, OrganizationUserType.User, policyEnforcer, resetPasswordKey: null);
 
         // Assert
-        Assert.False(result.IsError);
+        Assert.False(result.ResetPasswordKeyMissing);
         Assert.False(result.AutoEnrollEnabled);
     }
 
     [Theory, BitAutoData]
-    public void ValidateAccountRecoveryPolicy_WithAutoEnrollAndMissingKey_ReturnsError(
+    public void ValidateAccountRecoveryPolicy_WithAutoEnrollAndMissingKey_ReportsMissingKey(
         Guid organizationId, User user, SutProvider<JoinOrganizationPolicyValidationService> sutProvider)
     {
         // Arrange
@@ -342,12 +341,12 @@ public class JoinOrganizationPolicyValidationServiceTests
             organizationId, user, OrganizationUserType.User, policyEnforcer, resetPasswordKey: null);
 
         // Assert
-        Assert.IsType<ResetPasswordKeyRequired>(result.Error);
+        Assert.True(result.ResetPasswordKeyMissing);
         Assert.True(result.AutoEnrollEnabled);
     }
 
     [Theory, BitAutoData]
-    public void ValidateAccountRecoveryPolicy_WithAutoEnrollAndValidKey_ReturnsAutoEnrollWithoutError(
+    public void ValidateAccountRecoveryPolicy_WithAutoEnrollAndValidKey_ReturnsAutoEnrollWithKeyPresent(
         Guid organizationId, User user, SutProvider<JoinOrganizationPolicyValidationService> sutProvider)
     {
         // Arrange
@@ -360,7 +359,7 @@ public class JoinOrganizationPolicyValidationServiceTests
 
         // Assert
         // The caller relies on AutoEnrollEnabled to enroll the user once they join.
-        Assert.False(result.IsError);
+        Assert.False(result.ResetPasswordKeyMissing);
         Assert.True(result.AutoEnrollEnabled);
     }
 
@@ -378,7 +377,7 @@ public class JoinOrganizationPolicyValidationServiceTests
             organizationId, user, OrganizationUserType.User, resetPasswordKey: null);
 
         // Assert
-        Assert.IsType<ResetPasswordKeyRequired>(result.Error);
+        Assert.True(result.ResetPasswordKeyMissing);
         await sutProvider.GetDependency<IPreAccessEnforcerQuery>().Received(1).RunAsync(organizationId);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()

@@ -13,7 +13,6 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
 using Bitwarden.Server.Sdk.Features;
 using NSubstitute;
@@ -95,10 +94,8 @@ public class OrganizationUsersControllerGetInviteTests : IClassFixture<ApiApplic
         Assert.Equal(_validEncryptedKey, result.Invite);
     }
 
-    // TODO: The exact messages asserted below only matter because the client parses them.
-    // TODO: Remove these message assertions with PM-40926 once we are returning stable error codes.
     [Fact]
-    public async Task GetInvite_WhenJoinerIsAlreadyAdminOfAFreeOrganization_ReturnsInviteLinkFreeAdminLimitMessage()
+    public async Task GetInvite_WhenJoinerIsAlreadyAdminOfAFreeOrganization_ReturnsFreeAdminLimitError()
     {
         // Arrange
         var code = await CreateInviteLinkAsync(["example.com"]);
@@ -113,11 +110,12 @@ public class OrganizationUsersControllerGetInviteTests : IClassFixture<ApiApplic
             "/organizations/users/invite-link/invite", BuildRequest(_organization.Id, code));
 
         // Assert
-        await AssertBadRequestWithMessageAsync(response, "You can only be an admin of 1 free organization vault.");
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "organizationId", "only_one_free_organization_admin_allowed");
     }
 
     [Fact]
-    public async Task GetInvite_WhenProviderUserJoinsAutoConfirmOrganization_ReturnsInviteLinkProviderUserMessage()
+    public async Task GetInvite_WhenProviderUserJoinsAutoConfirmOrganization_ReturnsProviderUsersCannotJoinError()
     {
         // Arrange
         var code = await CreateInviteLinkAsync(["example.com"]);
@@ -131,7 +129,22 @@ public class OrganizationUsersControllerGetInviteTests : IClassFixture<ApiApplic
             "/organizations/users/invite-link/invite", BuildRequest(_organization.Id, code));
 
         // Assert
-        await AssertBadRequestWithMessageAsync(response, "Provider users cannot join organization vaults via invite link.");
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "code", "provider_users_cannot_join");
+    }
+
+    [Fact]
+    public async Task GetInvite_WithWrongCode_ReturnsNotFoundProblem()
+    {
+        // Arrange
+        var (joinerClient, _) = await CreateJoinerClientAsync();
+
+        // Act
+        var response = await joinerClient.PostAsJsonAsync(
+            "/organizations/users/invite-link/invite", BuildRequest(_organization.Id, Guid.NewGuid()));
+
+        // Assert
+        await ValidationProblemAssertions.AssertNotFoundProblemAsync(response, "code", "invite_link_not_found");
     }
 
     private async Task<Guid> CreateInviteLinkAsync(string[] allowedDomains)
@@ -217,14 +230,6 @@ public class OrganizationUsersControllerGetInviteTests : IClassFixture<ApiApplic
             Status = ProviderUserStatusType.Confirmed,
             Key = Guid.NewGuid().ToString(),
         });
-    }
-
-    private static async Task AssertBadRequestWithMessageAsync(HttpResponseMessage response, string expectedMessage)
-    {
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        var error = await response.Content.ReadFromJsonAsync<ErrorResponseModel>();
-        Assert.NotNull(error);
-        Assert.Equal(expectedMessage, error.Message);
     }
 
     private static GetOrganizationInviteRequestModel BuildRequest(Guid organizationId, Guid code) =>

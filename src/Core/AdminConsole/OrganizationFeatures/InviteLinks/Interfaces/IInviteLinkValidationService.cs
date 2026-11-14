@@ -1,6 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PreAccess;
-using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 
@@ -25,7 +24,7 @@ public interface IInviteLinkValidationService
     /// <param name="organization">The organization the invite link belongs to, or <c>null</c> if it does not exist.</param>
     /// <param name="user">The authenticated user using the invite link.</param>
     /// <returns><c>null</c> when allowed, otherwise the error explaining why.</returns>
-    Error? ValidateEligibility(
+    InviteLinkValidationError? ValidateEligibility(
         OrganizationInviteLink? inviteLink,
         Guid code,
         Organization? organization,
@@ -56,7 +55,7 @@ public interface IInviteLinkValidationService
     /// </summary>
     /// <param name="organization">The organization being joined.</param>
     /// <param name="existingOrganizationUser">The user's existing membership, or <c>null</c> if new.</param>
-    Task<Error?> ValidateSeatAvailabilityAsync(
+    Task<InviteLinkValidationError?> ValidateSeatAvailabilityAsync(
         Organization organization,
         OrganizationUser? existingOrganizationUser);
 }

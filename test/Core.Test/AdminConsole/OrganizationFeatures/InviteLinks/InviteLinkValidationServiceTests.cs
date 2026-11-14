@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Diagnostics;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
@@ -62,7 +63,7 @@ public class InviteLinkValidationServiceTests
             user);
 
         // Assert
-        Assert.IsType<InviteLinkNotFound>(error);
+        Assert.IsType<InviteLinkNotFoundError>(error);
     }
 
     [Theory, BitAutoData]
@@ -83,7 +84,7 @@ public class InviteLinkValidationServiceTests
             user);
 
         // Assert
-        Assert.IsType<InviteLinkNotFound>(error);
+        Assert.IsType<InviteLinkNotFoundError>(error);
     }
 
     [Theory, BitAutoData]
@@ -104,7 +105,7 @@ public class InviteLinkValidationServiceTests
             user);
 
         // Assert
-        Assert.IsType<InviteLinkNotFound>(error);
+        Assert.IsType<InviteLinkNotFoundError>(error);
     }
 
     [Theory, BitAutoData]
@@ -126,7 +127,7 @@ public class InviteLinkValidationServiceTests
             user);
 
         // Assert
-        Assert.IsType<InviteLinkNotFound>(error);
+        Assert.IsType<InviteLinkNotFoundError>(error);
     }
 
     [Theory, BitAutoData]
@@ -148,7 +149,7 @@ public class InviteLinkValidationServiceTests
             user);
 
         // Assert
-        Assert.IsType<InviteLinkNotAvailable>(error);
+        Assert.IsType<InviteLinkNotAvailableError>(error);
     }
 
     [Theory, BitAutoData]
@@ -170,7 +171,7 @@ public class InviteLinkValidationServiceTests
             user);
 
         // Assert
-        Assert.IsType<EmailDomainNotAllowed>(error);
+        Assert.IsType<EmailDomainNotAllowedError>(error);
     }
 
     [Theory]
@@ -229,7 +230,7 @@ public class InviteLinkValidationServiceTests
             user);
 
         // Assert
-        Assert.IsType<EmailNotVerified>(error);
+        Assert.IsType<EmailNotVerifiedError>(error);
     }
 
     [Theory, BitAutoData]
@@ -277,7 +278,7 @@ public class InviteLinkValidationServiceTests
             user);
 
         // Assert
-        Assert.IsType<EmailDomainNotAllowed>(error);
+        Assert.IsType<EmailDomainNotAllowedError>(error);
     }
 
     [Theory, BitAutoData]
@@ -336,54 +337,41 @@ public class InviteLinkValidationServiceTests
                 policyEnforcer);
     }
 
-    [Theory, BitAutoData]
-    public async Task ValidateJoinRequirementsAsync_WhenFreeAdminLimitReached_ReturnsError(
-        Organization organization,
-        User user,
-        SutProvider<InviteLinkValidationService> sutProvider)
+    public enum JoinRequirementCheck
     {
-        // Arrange
-        SetupAllChecksPass(user, [], sutProvider);
-
-        sutProvider.GetDependency<IOrganizationUserValidationService>()
-            .ValidateFreeOrgAdminLimitAsync(
-                Arg.Any<Guid?>(),
-                Arg.Any<PlanType>(),
-                Arg.Any<OrganizationUserType>(),
-                Arg.Any<OrganizationUserType>())
-            .Returns(new CannotBeAdminOfMultipleFreeOrganizations());
-
-        // Act
-        var result = await sutProvider.Sut.ValidateJoinRequirementsAsync(
-            organization,
-            user,
-            OrganizationUserType.Admin,
-            Substitute.For<IPreAccessPolicyEnforcer>());
-
-        // Assert
-        Assert.IsType<CannotBeAdminOfMultipleFreeOrganizations>(result.Error);
-        Assert.False(result.AutoConfirmPolicyEnabled);
+        FreeAdminLimit,
+        AutoConfirmPolicy,
+        SingleOrganizationPolicy,
+        TwoFactorPolicy
     }
 
-    [Theory, BitAutoData]
-    public async Task ValidateJoinRequirementsAsync_WhenAutoConfirmPolicyFails_ReturnsError(
+    private const string JoiningUserEmail = "member@example.com";
+
+    public static IEnumerable<object[]> SharedJoinRequirementErrors() =>
+    [
+        [JoinRequirementCheck.FreeAdminLimit, new CannotBeAdminOfMultipleFreeOrganizations(), new OnlyOneFreeOrganizationAdminAllowedError()],
+        [JoinRequirementCheck.AutoConfirmPolicy, new ProviderUsersCannotJoin(), new ProviderUsersCannotJoinError()],
+        [JoinRequirementCheck.AutoConfirmPolicy, new OtherOrganizationDoesNotAllowOtherMembership(JoiningUserEmail), new AutoConfirmPolicyViolationOtherOrgError(JoiningUserEmail)],
+        [JoinRequirementCheck.AutoConfirmPolicy, new UserCannotBelongToAnotherOrganization(JoiningUserEmail), new AutoConfirmPolicyViolationTargetOrgError(JoiningUserEmail)],
+        [JoinRequirementCheck.SingleOrganizationPolicy, new UserIsAMemberOfAnotherOrganization(), new MemberOfAnotherOrganizationError()],
+        [JoinRequirementCheck.SingleOrganizationPolicy, new UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy(), new SingleOrganizationPolicyError()],
+        [JoinRequirementCheck.TwoFactorPolicy, new TwoFactorRequiredForMembership(), new TwoFactorRequiredForMembershipError()]
+    ];
+
+    [Theory]
+    [BitMemberAutoData(nameof(SharedJoinRequirementErrors))]
+    public async Task ValidateJoinRequirementsAsync_WhenAJoinRequirementFails_ReturnsTheMatchingCodedError(
+        JoinRequirementCheck failingCheck,
+        Error sharedError,
+        InviteLinkValidationError expectedError,
         Organization organization,
         User user,
         SutProvider<InviteLinkValidationService> sutProvider)
     {
         // Arrange
+        user.Email = JoiningUserEmail;
         SetupAllChecksPass(user, [], sutProvider);
-
-        sutProvider.GetDependency<IJoinOrganizationPolicyValidationService>()
-            .ValidateAutomaticUserConfirmationPolicyAsync(
-                Arg.Any<Guid>(),
-                Arg.Any<User>(),
-                Arg.Any<OrganizationUserType>(),
-                Arg.Any<IPreAccessPolicyEnforcer>(),
-                Arg.Any<ICollection<OrganizationUser>>())
-            .Returns(new AutomaticUserConfirmationPolicyValidationResult(
-                new UserCannotBelongToAnotherOrganization(user.Email),
-                AutoConfirmPolicyEnabled: true));
+        SetupFailingJoinRequirement(failingCheck, sharedError, sutProvider);
 
         // Act
         var result = await sutProvider.Sut.ValidateJoinRequirementsAsync(
@@ -393,65 +381,99 @@ public class InviteLinkValidationServiceTests
             Substitute.For<IPreAccessPolicyEnforcer>());
 
         // Assert
-        Assert.IsType<UserCannotBelongToAnotherOrganization>(result.Error);
+        Assert.Equal(expectedError, result.Error);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateJoinRequirementsAsync_WhenAutoConfirmPolicyFails_ReportsTheAutoConfirmPolicyIsEnabled(
+        Organization organization,
+        User user,
+        SutProvider<InviteLinkValidationService> sutProvider)
+    {
+        // Arrange
+        SetupAllChecksPass(user, [], sutProvider);
+        SetupFailingJoinRequirement(JoinRequirementCheck.AutoConfirmPolicy, new ProviderUsersCannotJoin(), sutProvider);
+
+        // Act
+        var result = await sutProvider.Sut.ValidateJoinRequirementsAsync(
+            organization,
+            user,
+            OrganizationUserType.User,
+            Substitute.For<IPreAccessPolicyEnforcer>());
+
+        // Assert
         Assert.True(result.AutoConfirmPolicyEnabled);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateJoinRequirementsAsync_WhenSingleOrgPolicyFails_ReturnsError(
+    public async Task ValidateJoinRequirementsAsync_WhenAJoinRequirementFailsWithAnUnknownError_Throws(
         Organization organization,
         User user,
         SutProvider<InviteLinkValidationService> sutProvider)
     {
         // Arrange
         SetupAllChecksPass(user, [], sutProvider);
+        SetupFailingJoinRequirement(JoinRequirementCheck.TwoFactorPolicy, new UnrecognizedJoinRequirementError(), sutProvider);
 
-        sutProvider.GetDependency<IJoinOrganizationPolicyValidationService>()
-            .ValidateSingleOrganizationPolicyAsync(
-                Arg.Any<Guid>(),
-                Arg.Any<User>(),
-                Arg.Any<OrganizationUserType>(),
-                Arg.Any<IPreAccessPolicyEnforcer>(),
-                Arg.Any<ICollection<OrganizationUser>>())
-            .Returns(new UserIsAMemberOfAnotherOrganization());
-
-        // Act
-        var result = await sutProvider.Sut.ValidateJoinRequirementsAsync(
+        // Act & Assert
+        await Assert.ThrowsAsync<UnreachableException>(() => sutProvider.Sut.ValidateJoinRequirementsAsync(
             organization,
             user,
             OrganizationUserType.User,
-            Substitute.For<IPreAccessPolicyEnforcer>());
-
-        // Assert
-        Assert.IsType<UserIsAMemberOfAnotherOrganization>(result.Error);
+            Substitute.For<IPreAccessPolicyEnforcer>()));
     }
 
-    [Theory, BitAutoData]
-    public async Task ValidateJoinRequirementsAsync_WhenTwoFactorPolicyFails_ReturnsError(
-        Organization organization,
-        User user,
+    private record UnrecognizedJoinRequirementError() : BadRequestError("Unrecognized join requirement error.");
+
+    // Makes one join requirement return the given error while the others pass.
+    private static void SetupFailingJoinRequirement(
+        JoinRequirementCheck failingCheck,
+        Error error,
         SutProvider<InviteLinkValidationService> sutProvider)
     {
-        // Arrange
-        SetupAllChecksPass(user, [], sutProvider);
+        var joinOrganizationPolicyValidationService = sutProvider.GetDependency<IJoinOrganizationPolicyValidationService>();
 
-        sutProvider.GetDependency<IJoinOrganizationPolicyValidationService>()
-            .ValidateTwoFactorAuthenticationPolicyAsync(
-                Arg.Any<Guid>(),
-                Arg.Any<User>(),
-                Arg.Any<OrganizationUserType>(),
-                Arg.Any<IPreAccessPolicyEnforcer>())
-            .Returns(new TwoFactorRequiredForMembership());
-
-        // Act
-        var result = await sutProvider.Sut.ValidateJoinRequirementsAsync(
-            organization,
-            user,
-            OrganizationUserType.User,
-            Substitute.For<IPreAccessPolicyEnforcer>());
-
-        // Assert
-        Assert.IsType<TwoFactorRequiredForMembership>(result.Error);
+        switch (failingCheck)
+        {
+            case JoinRequirementCheck.FreeAdminLimit:
+                sutProvider.GetDependency<IOrganizationUserValidationService>()
+                    .ValidateFreeOrgAdminLimitAsync(
+                        Arg.Any<Guid?>(),
+                        Arg.Any<PlanType>(),
+                        Arg.Any<OrganizationUserType>(),
+                        Arg.Any<OrganizationUserType>())
+                    .Returns(error);
+                break;
+            case JoinRequirementCheck.AutoConfirmPolicy:
+                joinOrganizationPolicyValidationService
+                    .ValidateAutomaticUserConfirmationPolicyAsync(
+                        Arg.Any<Guid>(),
+                        Arg.Any<User>(),
+                        Arg.Any<OrganizationUserType>(),
+                        Arg.Any<IPreAccessPolicyEnforcer>(),
+                        Arg.Any<ICollection<OrganizationUser>>())
+                    .Returns(new AutomaticUserConfirmationPolicyValidationResult(error, AutoConfirmPolicyEnabled: true));
+                break;
+            case JoinRequirementCheck.SingleOrganizationPolicy:
+                joinOrganizationPolicyValidationService
+                    .ValidateSingleOrganizationPolicyAsync(
+                        Arg.Any<Guid>(),
+                        Arg.Any<User>(),
+                        Arg.Any<OrganizationUserType>(),
+                        Arg.Any<IPreAccessPolicyEnforcer>(),
+                        Arg.Any<ICollection<OrganizationUser>>())
+                    .Returns(error);
+                break;
+            case JoinRequirementCheck.TwoFactorPolicy:
+                joinOrganizationPolicyValidationService
+                    .ValidateTwoFactorAuthenticationPolicyAsync(
+                        Arg.Any<Guid>(),
+                        Arg.Any<User>(),
+                        Arg.Any<OrganizationUserType>(),
+                        Arg.Any<IPreAccessPolicyEnforcer>())
+                    .Returns(error);
+                break;
+        }
     }
 
     [Theory, BitAutoData]
@@ -510,7 +532,7 @@ public class InviteLinkValidationServiceTests
         var result = await sutProvider.Sut.ValidateSeatAvailabilityAsync(organization, existingOrganizationUser: null);
 
         // Assert
-        var error = Assert.IsType<OrganizationHasNoAvailableSeats>(result);
+        var error = Assert.IsType<OrganizationHasNoAvailableSeatsError>(result);
         Assert.Equal(organization.DisplayName(), error.OrgName);
     }
 
@@ -528,7 +550,7 @@ public class InviteLinkValidationServiceTests
         var result = await sutProvider.Sut.ValidateSeatAvailabilityAsync(organization, existingOrganizationUser);
 
         // Assert
-        var error = Assert.IsType<OrganizationHasNoAvailableSeats>(result);
+        var error = Assert.IsType<OrganizationHasNoAvailableSeatsError>(result);
         Assert.Equal(organization.DisplayName(), error.OrgName);
     }
 

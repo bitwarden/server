@@ -16,6 +16,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 /// </summary>
 public interface IAcceptInviteLinkMembershipValidator
 {
-    Task<CommandResult<AcceptInviteLinkMembershipValidationResult>> ValidateAsync(
+    Task<Result<AcceptInviteLinkMembershipValidationResult, InviteLinkValidationError>> ValidateAsync(
         AcceptInviteLinkMembershipValidationRequest request);
 }

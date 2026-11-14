@@ -160,6 +160,18 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
         Assert.Equal(resetPasswordKey, organizationUser.ResetPasswordKey);
     }
 
+    [Fact]
+    public async Task AcceptInviteLink_WithWrongCode_ReturnsNotFoundProblem()
+    {
+        var (_, joinerClient) = await RegisterAndLoginJoinerAsync();
+
+        var response = await joinerClient.PostAsJsonAsync(
+            "/organizations/users/invite-link/accept",
+            new AcceptOrganizationInviteLinkRequestModel { OrganizationId = _organization.Id, Code = Guid.NewGuid() });
+
+        await ValidationProblemAssertions.AssertNotFoundProblemAsync(response, "code", "invite_link_not_found");
+    }
+
     // A user without two-step login must not be able to accept an invite link into an organization that
     // enforces the Require Two-Factor Authentication policy, mirroring the normal invite accept flow.
     [Fact]
@@ -174,7 +186,8 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
             "/organizations/users/invite-link/accept",
             new AcceptOrganizationInviteLinkRequestModel { OrganizationId = created.OrganizationId, Code = created.Code });
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "organizationId", "two_factor_required_for_membership");
         await AssertNotMemberAsync(joinerEmail);
     }
 
@@ -193,7 +206,8 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
             "/organizations/users/invite-link/accept",
             new AcceptOrganizationInviteLinkRequestModel { OrganizationId = created.OrganizationId, Code = created.Code });
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "organizationId", "member_of_another_organization");
         await AssertNotMemberAsync(joinerEmail);
     }
 
@@ -212,7 +226,8 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
             "/organizations/users/invite-link/accept",
             new AcceptOrganizationInviteLinkRequestModel { OrganizationId = created.OrganizationId, Code = created.Code });
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "organizationId", "auto_confirm_policy_violation_target_org");
         await AssertNotMemberAsync(joinerEmail);
     }
 
@@ -242,7 +257,8 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
 
         var response = await AcceptAsync(joinerClient, created);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "organizationId", "single_organization_policy");
         await AssertNotMemberAsync(joinerEmail);
     }
 
@@ -271,7 +287,8 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
 
         var response = await AcceptAsync(joinerClient, created);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "organizationId", "auto_confirm_policy_violation_other_org");
         await AssertNotMemberAsync(joinerEmail);
     }
 
@@ -317,7 +334,8 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
 
         var response = await AcceptAsync(joinerClient, created);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "organizationId", "two_factor_required_for_membership");
         await AssertStillInvitedAsync(joinerEmail);
     }
 
@@ -351,7 +369,8 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
 
         var response = await AcceptAsync(joinerClient, created);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "organizationId", "member_of_another_organization");
         await AssertStillInvitedAsync(joinerEmail);
     }
 
@@ -368,7 +387,8 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
 
         var response = await AcceptAsync(joinerClient, created);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "organizationId", "auto_confirm_policy_violation_target_org");
         await AssertStillInvitedAsync(joinerEmail);
     }
 
@@ -425,7 +445,8 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
 
         var response = await AcceptAsync(joinerClient, created);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "organizationId", "two_factor_required_for_membership");
         await AssertStillStagedAsync(joinerEmail);
     }
 
@@ -490,7 +511,8 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
 
         var response = await AcceptAsync(joinerClient, created);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "organizationId", "member_of_another_organization");
         await AssertStillStagedAsync(joinerEmail);
     }
 
@@ -507,7 +529,8 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
 
         var response = await AcceptAsync(joinerClient, created);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "organizationId", "auto_confirm_policy_violation_target_org");
         await AssertStillStagedAsync(joinerEmail);
     }
 

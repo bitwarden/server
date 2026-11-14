@@ -1,9 +1,10 @@
-﻿using Bit.Core.AdminConsole.Utilities.v2.Validation;
+﻿using Bit.Core.AdminConsole.Utilities.v2.Results;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 
 /// <summary>
-/// Validates that a user is eligible to retrieve the invite for an invite link.
+/// Validates that a user is eligible to retrieve the invite for an invite link. Returns the request on success, or a
+/// coded <see cref="InviteLinkValidationError"/>.
 /// </summary>
 /// <remarks>
 /// The following are validated, in this order:
@@ -16,13 +17,13 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 ///     otherwise <see cref="InviteLinkRules.ValidateAcceptMembershipStatus"/>.</item>
 ///     <item><see cref="IInviteLinkValidationService.ValidateSeatAvailabilityAsync"/>.</item>
 ///     <item><see cref="IInviteLinkValidationService.ValidateJoinRequirementsAsync"/>. Shared errors that have an invite
-///     link equivalent are returned as that equivalent, matching the accept endpoint.</item>
+///     link equivalent are returned as their coded equivalent.</item>
 /// </list>
 /// The caller supplies the invite link, organization, and existing membership. The reset password key is left to the
 /// accept and confirm endpoints.
 /// </remarks>
 public interface IGetOrganizationInviteValidator
 {
-    Task<ValidationResult<OrganizationInviteLinkValidationRequest>> ValidateAsync(
+    Task<Result<OrganizationInviteLinkValidationRequest, InviteLinkValidationError>> ValidateAsync(
         OrganizationInviteLinkValidationRequest request);
 }

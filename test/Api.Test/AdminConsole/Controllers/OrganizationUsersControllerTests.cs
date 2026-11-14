@@ -30,6 +30,7 @@ using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Bit.HttpExtensions;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Authorization;
@@ -847,7 +848,7 @@ public class OrganizationUsersControllerTests
 
         sutProvider.GetDependency<IConfirmOrganizationInviteLinkCommand>()
             .ConfirmAsync(Arg.Any<ConfirmOrganizationInviteLinkRequest>())
-            .Returns(new CommandResult(new None()));
+            .Returns(new None());
 
         // Act
         var result = await sutProvider.Sut.ConfirmInviteLink(model);
@@ -865,7 +866,7 @@ public class OrganizationUsersControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task ConfirmInviteLink_WhenCommandReturnsError_ReturnsBadRequest(
+    public async Task ConfirmInviteLink_WhenCommandReturnsError_ReturnsValidationProblem(
         User user,
         ConfirmOrganizationInviteLinkRequestModel model,
         SutProvider<OrganizationUsersController> sutProvider)
@@ -877,13 +878,129 @@ public class OrganizationUsersControllerTests
 
         sutProvider.GetDependency<IConfirmOrganizationInviteLinkCommand>()
             .ConfirmAsync(Arg.Any<ConfirmOrganizationInviteLinkRequest>())
-            .Returns(new CommandResult(new EmailDomainNotAllowed(string.Empty)));
+            .Returns(new EmailDomainNotAllowedError("Acme"));
 
         // Act
         var result = await sutProvider.Sut.ConfirmInviteLink(model);
 
         // Assert
-        Assert.IsType<BadRequest<ErrorResponseModel>>(result);
+        var problem = Assert.IsType<BitwardenValidationProblemResult>(result);
+        Assert.Equal(StatusCodes.Status400BadRequest, problem.StatusCode);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmInviteLink_WhenInviteLinkNotFound_Returns404ValidationProblem(
+        User user,
+        ConfirmOrganizationInviteLinkRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        sutProvider.GetDependency<IConfirmOrganizationInviteLinkCommand>()
+            .ConfirmAsync(Arg.Any<ConfirmOrganizationInviteLinkRequest>())
+            .Returns(new InviteLinkNotFoundError());
+
+        // Act
+        var result = await sutProvider.Sut.ConfirmInviteLink(model);
+
+        // Assert
+        var problem = Assert.IsType<BitwardenValidationProblemResult>(result);
+        Assert.Equal(StatusCodes.Status404NotFound, problem.StatusCode);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AcceptInviteLink_WhenCommandReturnsError_ReturnsValidationProblem(
+        User user,
+        AcceptOrganizationInviteLinkRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        sutProvider.GetDependency<IAcceptOrganizationInviteLinkCommand>()
+            .AcceptAsync(Arg.Any<AcceptOrganizationInviteLinkRequest>())
+            .Returns(new EmailDomainNotAllowedError("Acme"));
+
+        // Act
+        var result = await sutProvider.Sut.AcceptInviteLink(model);
+
+        // Assert
+        var problem = Assert.IsType<BitwardenValidationProblemResult>(result);
+        Assert.Equal(StatusCodes.Status400BadRequest, problem.StatusCode);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AcceptInviteLink_WhenInviteLinkNotFound_Returns404ValidationProblem(
+        User user,
+        AcceptOrganizationInviteLinkRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        sutProvider.GetDependency<IAcceptOrganizationInviteLinkCommand>()
+            .AcceptAsync(Arg.Any<AcceptOrganizationInviteLinkRequest>())
+            .Returns(new InviteLinkNotFoundError());
+
+        // Act
+        var result = await sutProvider.Sut.AcceptInviteLink(model);
+
+        // Assert
+        var problem = Assert.IsType<BitwardenValidationProblemResult>(result);
+        Assert.Equal(StatusCodes.Status404NotFound, problem.StatusCode);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetInvite_WhenQueryReturnsError_ReturnsValidationProblem(
+        User user,
+        GetOrganizationInviteRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        sutProvider.GetDependency<IGetOrganizationInviteQuery>()
+            .GetInviteAsync(Arg.Any<GetOrganizationInviteRequest>())
+            .Returns(new EmailDomainNotAllowedError("Acme"));
+
+        // Act
+        var result = await sutProvider.Sut.GetInvite(model);
+
+        // Assert
+        var problem = Assert.IsType<BitwardenValidationProblemResult>(result);
+        Assert.Equal(StatusCodes.Status400BadRequest, problem.StatusCode);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetInvite_WhenInviteLinkNotFound_Returns404ValidationProblem(
+        User user,
+        GetOrganizationInviteRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        sutProvider.GetDependency<IGetOrganizationInviteQuery>()
+            .GetInviteAsync(Arg.Any<GetOrganizationInviteRequest>())
+            .Returns(new InviteLinkNotFoundError());
+
+        // Act
+        var result = await sutProvider.Sut.GetInvite(model);
+
+        // Assert
+        var problem = Assert.IsType<BitwardenValidationProblemResult>(result);
+        Assert.Equal(StatusCodes.Status404NotFound, problem.StatusCode);
     }
 
     [Theory, BitAutoData]
