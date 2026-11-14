@@ -29,9 +29,6 @@ public record OrganizationAccessRevoked(string OrgName)
 public record AlreadyOrganizationMember(string OrgName)
     : BadRequestError($"You're already a member of {OrgName}.");
 
-public record ResetPasswordKeyRequired()
-    : BadRequestError("Master Password reset is required, but not provided.");
-
 public record OrganizationHasNoAvailableSeats(string OrgName)
     : BadRequestError($"The {OrgName} vault has no available seats.");
 

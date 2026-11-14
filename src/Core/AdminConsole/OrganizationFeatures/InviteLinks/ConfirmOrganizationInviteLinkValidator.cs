@@ -92,9 +92,9 @@ public class ConfirmOrganizationInviteLinkValidator(
             policyEnforcer,
             request.ResetPasswordKey);
 
-        if (accountRecoveryResult.IsError)
+        if (accountRecoveryResult.ResetPasswordKeyMissing)
         {
-            return ToConfirmValidationError(accountRecoveryResult.Error!);
+            return new ResetPasswordKeyRequiredError();
         }
 
         return new ConfirmOrganizationInviteLinkValidationResult
@@ -141,7 +141,6 @@ public class ConfirmOrganizationInviteLinkValidator(
             UserIsAMemberOfAnotherOrganization => new MemberOfAnotherOrganizationError(),
             UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => new SingleOrganizationPolicyError(),
             TwoFactorRequiredForMembership => new TwoFactorRequiredForMembershipError(),
-            ResetPasswordKeyRequired => new ResetPasswordKeyRequiredError(),
             _ => throw new UnreachableException($"Unmapped invite link error: {error.GetType().Name}")
         };
 }

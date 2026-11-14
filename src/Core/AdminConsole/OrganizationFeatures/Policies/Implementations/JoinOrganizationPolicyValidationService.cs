@@ -124,11 +124,10 @@ public class JoinOrganizationPolicyValidationService(
         var autoEnrollEnabled = decision.IsEnforced
             && decision.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled;
 
-        var error = autoEnrollEnabled && !OrganizationUser.IsValidResetPasswordKey(resetPasswordKey)
-            ? new ResetPasswordKeyRequired()
-            : null;
+        var resetPasswordKeyMissing = autoEnrollEnabled
+            && !OrganizationUser.IsValidResetPasswordKey(resetPasswordKey);
 
-        return new AccountRecoveryPolicyValidationResult(error, autoEnrollEnabled);
+        return new AccountRecoveryPolicyValidationResult(resetPasswordKeyMissing, autoEnrollEnabled);
     }
 
     private static bool IsMemberOfAnotherOrganization(

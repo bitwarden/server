@@ -77,9 +77,9 @@ public class AcceptInviteLinkMembershipValidator(
             policyEnforcer,
             request.ResetPasswordKey);
 
-        if (accountRecoveryResult.IsError)
+        if (accountRecoveryResult.ResetPasswordKeyMissing)
         {
-            return accountRecoveryResult.Error!;
+            return new ResetPasswordKeyRequiredError();
         }
 
         return new AcceptInviteLinkMembershipValidationResult

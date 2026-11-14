@@ -143,14 +143,14 @@ public class AcceptInviteLinkMembershipValidatorTests
                 Arg.Any<OrganizationUserType>(),
                 Arg.Any<IPreAccessPolicyEnforcer>(),
                 Arg.Any<string?>())
-            .Returns(new AccountRecoveryPolicyValidationResult(new ResetPasswordKeyRequired(), AutoEnrollEnabled: true));
+            .Returns(new AccountRecoveryPolicyValidationResult(ResetPasswordKeyMissing: true, AutoEnrollEnabled: true));
 
         // Act
         var result = await sutProvider.Sut.ValidateAsync(BuildRequest(inviteLink, user));
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<ResetPasswordKeyRequired>(result.AsError);
+        Assert.IsType<ResetPasswordKeyRequiredError>(result.AsError);
     }
 
     [Theory, BitAutoData]
@@ -178,7 +178,7 @@ public class AcceptInviteLinkMembershipValidatorTests
                 Arg.Any<OrganizationUserType>(),
                 Arg.Any<IPreAccessPolicyEnforcer>(),
                 Arg.Any<string?>())
-            .Returns(new AccountRecoveryPolicyValidationResult(null, AutoEnrollEnabled: true));
+            .Returns(new AccountRecoveryPolicyValidationResult(ResetPasswordKeyMissing: false, AutoEnrollEnabled: true));
 
         // Act
         var result = await sutProvider.Sut.ValidateAsync(BuildRequest(inviteLink, user));
@@ -244,6 +244,6 @@ public class AcceptInviteLinkMembershipValidatorTests
                 Arg.Any<OrganizationUserType>(),
                 Arg.Any<IPreAccessPolicyEnforcer>(),
                 Arg.Any<string?>())
-            .Returns(new AccountRecoveryPolicyValidationResult(null, AutoEnrollEnabled: false));
+            .Returns(new AccountRecoveryPolicyValidationResult(ResetPasswordKeyMissing: false, AutoEnrollEnabled: false));
     }
 }
