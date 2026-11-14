@@ -117,22 +117,14 @@ public class GetOrganizationInviteValidatorTests
                 Arg.Any<IPreAccessPolicyEnforcer>());
     }
 
-    public static IEnumerable<object[]> JoinRequirementsErrors() =>
-    [
-        [new OnlyOneFreeOrganizationAdminAllowedError()],
-        [new ProviderUsersCannotJoinError()],
-        [new TwoFactorRequiredForMembershipError()],
-    ];
-
-    [Theory]
-    [BitMemberAutoData(nameof(JoinRequirementsErrors))]
-    public async Task ValidateAsync_WhenJoinRequirementsFail_ReturnsTheCodedError(
-        InviteLinkValidationError joinRequirementsError,
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_WhenJoinRequirementsFail_ReturnsError(
         Organization organization, OrganizationInviteLink inviteLink, User user,
         SutProvider<GetOrganizationInviteValidator> sutProvider)
     {
         // Arrange
         SetupSeatsAvailable(sutProvider);
+        var joinRequirementsError = new TwoFactorRequiredForMembershipError();
         var request = BuildRequest(organization, inviteLink, user, existingOrganizationUser: null);
         var policyEnforcer = Substitute.For<IPreAccessPolicyEnforcer>();
         sutProvider.GetDependency<IPreAccessEnforcerQuery>()

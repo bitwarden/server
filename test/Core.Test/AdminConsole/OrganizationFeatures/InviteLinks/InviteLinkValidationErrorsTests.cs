@@ -9,6 +9,9 @@ public class InviteLinkValidationErrorsTests
     private const string OrgName = "Acme";
     private const string Email = "user@example.com";
 
+    // The type codes and property names are a public contract: the SDK maps each code to a typed error that
+    // clients localize. Changing or removing one breaks released clients, so add new codes rather than editing
+    // these rows.
     public static IEnumerable<object[]> Errors() =>
     [
         [new InviteLinkNotFoundError(), "invite_link_not_found", "code", "Invite link not found.", true],

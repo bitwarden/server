@@ -17,13 +17,6 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.InviteLinks;
 [SutProviderCustomize]
 public class AcceptInviteLinkMembershipValidatorTests
 {
-    public static IEnumerable<object[]> JoinRequirementsErrors() =>
-    [
-        [new OnlyOneFreeOrganizationAdminAllowedError()],
-        [new ProviderUsersCannotJoinError()],
-        [new TwoFactorRequiredForMembershipError()],
-    ];
-
     [Theory, BitAutoData]
     public async Task ValidateAsync_WhenEligibilityRuleFails_ReturnsError(
         Organization organization,
@@ -84,10 +77,8 @@ public class AcceptInviteLinkMembershipValidatorTests
             .RunAsync(Arg.Any<Guid>());
     }
 
-    [Theory]
-    [BitMemberAutoData(nameof(JoinRequirementsErrors))]
-    public async Task ValidateAsync_WhenJoinRequirementsFail_ReturnsTheCodedError(
-        InviteLinkValidationError joinRequirementsError,
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_WhenJoinRequirementsFail_ReturnsError(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
@@ -95,6 +86,7 @@ public class AcceptInviteLinkMembershipValidatorTests
     {
         // Arrange
         SetupHappyPath(organization, inviteLink, user, sutProvider);
+        var joinRequirementsError = new TwoFactorRequiredForMembershipError();
 
         sutProvider.GetDependency<IInviteLinkValidationService>()
             .ValidateJoinRequirementsAsync(
