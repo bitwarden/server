@@ -1,4 +1,5 @@
 ﻿using OneOf;
+using OneOf.Types;
 
 namespace Bit.Core.AdminConsole.Utilities.v2.Results;
 
@@ -18,4 +19,15 @@ public class Result<T, TError>(OneOf<TError, T> result) : OneOfBase<TError, T>(r
 
     public static implicit operator Result<T, TError>(T value) => new(value);
     public static implicit operator Result<T, TError>(TError error) => new(error);
+}
+
+/// <summary>
+/// Represents the result of an operation where success returns no value (void).
+/// See <see cref="Result{T, TError}"/> for more information.
+/// </summary>
+/// <typeparam name="TError">The type of the error.</typeparam>
+public class Result<TError>(OneOf<TError, None> result) : Result<None, TError>(result) where TError : Error
+{
+    public static implicit operator Result<TError>(None none) => new(none);
+    public static implicit operator Result<TError>(TError error) => new(error);
 }

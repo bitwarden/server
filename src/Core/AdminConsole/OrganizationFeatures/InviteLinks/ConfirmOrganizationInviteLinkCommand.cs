@@ -45,7 +45,7 @@ public class ConfirmOrganizationInviteLinkCommand(
     ILogger<ConfirmOrganizationInviteLinkCommand> logger)
     : IConfirmOrganizationInviteLinkCommand
 {
-    public async Task<Result<None, InviteLinkValidationError>> ConfirmAsync(ConfirmOrganizationInviteLinkRequest request)
+    public async Task<Result<InviteLinkValidationError>> ConfirmAsync(ConfirmOrganizationInviteLinkRequest request)
     {
         var user = request.User;
 

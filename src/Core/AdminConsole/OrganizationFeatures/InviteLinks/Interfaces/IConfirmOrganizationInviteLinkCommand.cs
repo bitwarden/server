@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Utilities.v2.Results;
-using OneOf.Types;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 
@@ -12,5 +11,5 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 /// </summary>
 public interface IConfirmOrganizationInviteLinkCommand
 {
-    Task<Result<None, InviteLinkValidationError>> ConfirmAsync(ConfirmOrganizationInviteLinkRequest request);
+    Task<Result<InviteLinkValidationError>> ConfirmAsync(ConfirmOrganizationInviteLinkRequest request);
 }
