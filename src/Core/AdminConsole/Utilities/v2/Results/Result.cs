@@ -4,7 +4,7 @@ namespace Bit.Core.AdminConsole.Utilities.v2.Results;
 
 /// <summary>
 /// Represents the result of an operation whose failure is a specific, typed error.
-/// This is a <see cref="OneOf{TError, T}"/> type that contains a <typeparamref name="TError"/> if the command execution failed, or the result of the command if it succeeded.
+/// This is a <see cref="OneOf{TError, T}"/> type that contains a <typeparamref name="TError"/> if the operation failed, or its result if it succeeded.
 /// Use this instead of <see cref="CommandResult{T}"/> when callers need the concrete error type.
 /// </summary>
 /// <typeparam name="T">The type of the successful result.</typeparam>
