@@ -21,8 +21,7 @@ internal static class DatabaseMigrationResources
         /// </summary>
         /// <param name="databases">The containers a migration waits for before it runs.</param>
         /// <param name="secretsSetup">The secrets setup every migration waits to finish.</param>
-        /// <returns>The migrations that start with the AppHost; the explicit-start ones are left out.</returns>
-        internal IReadOnlyList<IResourceBuilder<ExecutableResource>> ConfigureDatabaseMigrations(
+        internal void ConfigureDatabaseMigrations(
             DatabaseContainers databases, IResourceBuilder<ExecutableResource> secretsSetup)
         {
             var settings = builder.Settings;
@@ -56,7 +55,6 @@ internal static class DatabaseMigrationResources
                 targets.Add((ResourceName(Engine.Sqlite), Engine.Sqlite.MigrationSwitch, null, AutoStart: true));
             }
 
-            var autoStarted = new List<IResourceBuilder<ExecutableResource>>();
             foreach (var (name, migrationSwitch, container, autoStart) in targets)
             {
                 string[] args = migrationSwitch is null
@@ -72,17 +70,11 @@ internal static class DatabaseMigrationResources
                     migration.WaitFor(container);
                 }
 
-                if (autoStart)
-                {
-                    autoStarted.Add(migration);
-                }
-                else
+                if (!autoStart)
                 {
                     migration.WithExplicitStart();
                 }
             }
-
-            return autoStarted;
         }
     }
 
