@@ -1,4 +1,4 @@
-using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Xunit;
 

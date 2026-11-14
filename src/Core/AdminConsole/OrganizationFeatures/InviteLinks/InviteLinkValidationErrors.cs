@@ -1,9 +1,9 @@
-using Bit.Core.AdminConsole.Utilities.v2;
+﻿using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 
-// The three user invite-link endpoints (validate/accept, invite, confirm) surface failures as RFC 7807
+// The three user invite-link endpoints (accept, invite, confirm) surface failures as RFC 7807
 // problems with a stable, client-localizable Type code. Each error below implements IValidationError so the
 // API layer routes it through BitwardenValidationProblem, and carries its own message, property name and
 // HTTP status. StatusCode is declared virtual on the base record so a derived override is visible through

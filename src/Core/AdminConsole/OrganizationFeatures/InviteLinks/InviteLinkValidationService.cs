@@ -47,7 +47,7 @@ public class InviteLinkValidationService(
             return new InviteLinkNotAvailableError();
         }
 
-        // Order matters: the client starts email verification on EmailNotVerified, so reject disallowed domains
+        // Order matters: the client starts email verification on EmailNotVerifiedError, so reject disallowed domains
         // first. Otherwise the user would verify their email only to be rejected afterwards.
         if (!InviteLinkDomainValidator.IsEmailDomainAllowed(user.Email, inviteLink.GetAllowedDomains()))
         {

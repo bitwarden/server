@@ -13,7 +13,6 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
 using Bitwarden.Server.Sdk.Features;
 using NSubstitute;

@@ -1,4 +1,4 @@
-using Bit.Core.AdminConsole.Utilities.v2;
+﻿using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Xunit;
 
