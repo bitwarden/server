@@ -18,12 +18,12 @@ public static class InviteLinkRules
     /// <param name="organization">The organization the user is joining.</param>
     /// <param name="existingOrganizationUser">The user's existing membership, or <c>null</c> if they have none.</param>
     /// <returns><c>null</c> when allowed, otherwise the error explaining why.</returns>
-    public static Error? ValidateAcceptMembershipStatus(Organization organization, OrganizationUser? existingOrganizationUser) =>
+    public static InviteLinkValidationError? ValidateAcceptMembershipStatus(Organization organization, OrganizationUser? existingOrganizationUser) =>
         existingOrganizationUser?.Status switch
         {
-            OrganizationUserStatusType.Revoked => new OrganizationAccessRevoked(organization.DisplayName()),
+            OrganizationUserStatusType.Revoked => new OrganizationAccessRevokedError(organization.DisplayName()),
             OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed =>
-                new AlreadyOrganizationMember(organization.DisplayName()),
+                new AlreadyOrganizationMemberError(organization.DisplayName()),
             _ => null
         };
 
@@ -34,11 +34,11 @@ public static class InviteLinkRules
     /// <param name="organization">The organization the user is joining.</param>
     /// <param name="existingOrganizationUser">The user's existing membership, or <c>null</c> if they have none.</param>
     /// <returns><c>null</c> when allowed, otherwise the error explaining why.</returns>
-    public static Error? ValidateConfirmMembershipStatus(Organization organization, OrganizationUser? existingOrganizationUser) =>
+    public static InviteLinkValidationError? ValidateConfirmMembershipStatus(Organization organization, OrganizationUser? existingOrganizationUser) =>
         existingOrganizationUser switch
         {
-            { RevocationReason: not null } => new OrganizationAccessRevoked(organization.DisplayName()),
-            { Status: OrganizationUserStatusType.Confirmed } => new AlreadyOrganizationMember(organization.DisplayName()),
+            { RevocationReason: not null } => new OrganizationAccessRevokedError(organization.DisplayName()),
+            { Status: OrganizationUserStatusType.Confirmed } => new AlreadyOrganizationMemberError(organization.DisplayName()),
             _ => null
         };
 }

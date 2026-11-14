@@ -112,8 +112,6 @@ public class AcceptInviteLinkMembershipValidator(
     private static Error ToAcceptValidationError(Error error) =>
         error switch
         {
-            CannotBeAdminOfMultipleFreeOrganizations => new OnlyOneFreeOrganizationAdminAllowed(),
-            ProviderUsersCannotJoin => new ProviderUsersCannotAcceptInviteLink(),
             _ => error
         };
 }

@@ -30,7 +30,7 @@ public class InviteLinkRulesTests
         var error = InviteLinkRules.ValidateAcceptMembershipStatus(organization, existingOrganizationUser);
 
         // Assert
-        Assert.IsType<OrganizationAccessRevoked>(error);
+        Assert.IsType<OrganizationAccessRevokedError>(error);
     }
 
     [Theory]
@@ -46,7 +46,7 @@ public class InviteLinkRulesTests
         var error = InviteLinkRules.ValidateAcceptMembershipStatus(organization, existingOrganizationUser);
 
         // Assert
-        Assert.IsType<AlreadyOrganizationMember>(error);
+        Assert.IsType<AlreadyOrganizationMemberError>(error);
     }
 
     [Theory, BitAutoData]
@@ -84,7 +84,7 @@ public class InviteLinkRulesTests
         var error = InviteLinkRules.ValidateConfirmMembershipStatus(organization, existingOrganizationUser);
 
         // Assert
-        Assert.IsType<OrganizationAccessRevoked>(error);
+        Assert.IsType<OrganizationAccessRevokedError>(error);
     }
 
     [Theory, BitAutoData]
@@ -99,7 +99,7 @@ public class InviteLinkRulesTests
         var error = InviteLinkRules.ValidateConfirmMembershipStatus(organization, existingOrganizationUser);
 
         // Assert
-        Assert.IsType<AlreadyOrganizationMember>(error);
+        Assert.IsType<AlreadyOrganizationMemberError>(error);
     }
 
     // Confirm promotes an Accepted membership (e.g. an SSO JIT user replaying the confirm link).

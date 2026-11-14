@@ -70,8 +70,6 @@ public class GetOrganizationInviteValidator(
     private static Error ToGetInviteValidationError(Error error) =>
         error switch
         {
-            CannotBeAdminOfMultipleFreeOrganizations => new OnlyOneFreeOrganizationAdminAllowed(),
-            ProviderUsersCannotJoin => new ProviderUsersCannotAcceptInviteLink(),
             _ => error
         };
 

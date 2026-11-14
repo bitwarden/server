@@ -26,13 +26,13 @@ public class ConfirmOrganizationInviteLinkValidatorTests
 {
     public static IEnumerable<object[]> JoinRequirementsErrors() =>
     [
-        [new CannotBeAdminOfMultipleFreeOrganizations(), typeof(OnlyOneFreeOrganizationAdminAllowedError)],
-        [new OtherOrganizationDoesNotAllowOtherMembership("user@example.com"), typeof(AutoConfirmPolicyViolationOtherOrgError)],
-        [new UserCannotBelongToAnotherOrganization("user@example.com"), typeof(AutoConfirmPolicyViolationTargetOrgError)],
-        [new ProviderUsersCannotJoin(), typeof(ProviderUsersCannotJoinError)],
-        [new UserIsAMemberOfAnotherOrganization(), typeof(MemberOfAnotherOrganizationError)],
-        [new UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy(), typeof(SingleOrganizationPolicyError)],
-        [new TwoFactorRequiredForMembership(), typeof(TwoFactorRequiredForMembershipError)],
+        [new OnlyOneFreeOrganizationAdminAllowedError()],
+        [new AutoConfirmPolicyViolationOtherOrgError("user@example.com")],
+        [new AutoConfirmPolicyViolationTargetOrgError("user@example.com")],
+        [new ProviderUsersCannotJoinError()],
+        [new MemberOfAnotherOrganizationError()],
+        [new SingleOrganizationPolicyError()],
+        [new TwoFactorRequiredForMembershipError()],
     ];
 
     [Theory, BitAutoData]
@@ -78,7 +78,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
                 Guid.Parse(inviteLink.Code),
                 organization,
                 user)
-            .Returns(new InviteLinkNotAvailable());
+            .Returns(new InviteLinkNotAvailableError());
 
         // Act
         var result = await sutProvider.Sut.ValidateAsync(BuildRequest(inviteLink, user));
@@ -125,8 +125,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     [Theory]
     [BitMemberAutoData(nameof(JoinRequirementsErrors))]
     public async Task ValidateAsync_WhenJoinRequirementsFail_ReturnsMappedValidationError(
-        Error joinRequirementsError,
-        Type expectedErrorType,
+        InviteLinkValidationError joinRequirementsError,
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
@@ -148,7 +147,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType(expectedErrorType, result.AsError);
+        Assert.Equal(joinRequirementsError, result.AsError);
         Assert.IsAssignableFrom<IValidationError>(result.AsError);
     }
 

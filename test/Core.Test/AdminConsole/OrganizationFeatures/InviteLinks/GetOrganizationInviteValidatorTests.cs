@@ -34,14 +34,14 @@ public class GetOrganizationInviteValidatorTests
                 request.Code,
                 organization,
                 user)
-            .Returns(new EmailDomainNotAllowed(organization.Name));
+            .Returns(new EmailDomainNotAllowedError(organization.Name));
 
         // Act
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<EmailDomainNotAllowed>(result.AsError);
+        Assert.IsType<EmailDomainNotAllowedError>(result.AsError);
     }
 
     [Theory, BitAutoData]
@@ -60,7 +60,7 @@ public class GetOrganizationInviteValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<AlreadyOrganizationMember>(result.AsError);
+        Assert.IsType<AlreadyOrganizationMemberError>(result.AsError);
         await sutProvider.GetDependency<IInviteLinkValidationService>()
             .DidNotReceiveWithAnyArgs()
             .ValidateSeatAvailabilityAsync(Arg.Any<Organization>(), Arg.Any<OrganizationUser?>());
@@ -104,14 +104,14 @@ public class GetOrganizationInviteValidatorTests
         var request = BuildRequest(organization, inviteLink, user, existingOrganizationUser: null);
         sutProvider.GetDependency<IInviteLinkValidationService>()
             .ValidateSeatAvailabilityAsync(organization, null)
-            .Returns(new OrganizationHasNoAvailableSeats(organization.DisplayName()));
+            .Returns(new OrganizationHasNoAvailableSeatsError(organization.DisplayName()));
 
         // Act
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<OrganizationHasNoAvailableSeats>(result.AsError);
+        Assert.IsType<OrganizationHasNoAvailableSeatsError>(result.AsError);
         await sutProvider.GetDependency<IInviteLinkValidationService>()
             .DidNotReceiveWithAnyArgs()
             .ValidateJoinRequirementsAsync(
@@ -123,16 +123,15 @@ public class GetOrganizationInviteValidatorTests
 
     public static IEnumerable<object[]> JoinRequirementsErrors() =>
     [
-        [new CannotBeAdminOfMultipleFreeOrganizations(), typeof(OnlyOneFreeOrganizationAdminAllowed)],
-        [new ProviderUsersCannotJoin(), typeof(ProviderUsersCannotAcceptInviteLink)],
-        [new TwoFactorRequiredForMembership(), typeof(TwoFactorRequiredForMembership)],
+        [new OnlyOneFreeOrganizationAdminAllowedError()],
+        [new ProviderUsersCannotJoinError()],
+        [new TwoFactorRequiredForMembershipError()],
     ];
 
     [Theory]
     [BitMemberAutoData(nameof(JoinRequirementsErrors))]
-    public async Task ValidateAsync_WhenJoinRequirementsFail_ReturnsInviteLinkError(
-        Error joinRequirementsError,
-        Type expectedErrorType,
+    public async Task ValidateAsync_WhenJoinRequirementsFail_ReturnsTheCodedError(
+        InviteLinkValidationError joinRequirementsError,
         Organization organization, OrganizationInviteLink inviteLink, User user,
         SutProvider<GetOrganizationInviteValidator> sutProvider)
     {
@@ -156,13 +155,13 @@ public class GetOrganizationInviteValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType(expectedErrorType, result.AsError);
+        Assert.Equal(joinRequirementsError, result.AsError);
     }
 
     private static void SetupSeatsAvailable(SutProvider<GetOrganizationInviteValidator> sutProvider) =>
         sutProvider.GetDependency<IInviteLinkValidationService>()
             .ValidateSeatAvailabilityAsync(Arg.Any<Organization>(), Arg.Any<OrganizationUser?>())
-            .Returns((Error?)null);
+            .Returns((InviteLinkValidationError?)null);
 
     private static void SetupJoinRequirementsPass(SutProvider<GetOrganizationInviteValidator> sutProvider) =>
         sutProvider.GetDependency<IInviteLinkValidationService>()

@@ -128,12 +128,7 @@ public class ConfirmOrganizationInviteLinkValidator(
     private static Error ToConfirmValidationError(Error error) =>
         error switch
         {
-            InviteLinkNotFound => new InviteLinkNotFoundError(),
-            InviteLinkNotAvailable => new InviteLinkNotAvailableError(),
-            EmailDomainNotAllowed e => new EmailDomainNotAllowedError(e.OrgName),
-            EmailNotVerified => new EmailNotVerifiedError(),
-            OrganizationAccessRevoked e => new OrganizationAccessRevokedError(e.OrgName),
-            AlreadyOrganizationMember e => new AlreadyOrganizationMemberError(e.OrgName),
+            InviteLinkValidationError => error,
             CannotBeAdminOfMultipleFreeOrganizations => new OnlyOneFreeOrganizationAdminAllowedError(),
             OtherOrganizationDoesNotAllowOtherMembership e => new AutoConfirmPolicyViolationOtherOrgError(e.Email),
             UserCannotBelongToAnotherOrganization e => new AutoConfirmPolicyViolationTargetOrgError(e.Email),

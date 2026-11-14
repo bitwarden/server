@@ -23,9 +23,9 @@ public class AcceptInviteLinkMembershipValidatorTests
 {
     public static IEnumerable<object[]> JoinRequirementsErrors() =>
     [
-        [new CannotBeAdminOfMultipleFreeOrganizations(), typeof(OnlyOneFreeOrganizationAdminAllowed)],
-        [new ProviderUsersCannotJoin(), typeof(ProviderUsersCannotAcceptInviteLink)],
-        [new TwoFactorRequiredForMembership(), typeof(TwoFactorRequiredForMembership)],
+        [new OnlyOneFreeOrganizationAdminAllowedError()],
+        [new ProviderUsersCannotJoinError()],
+        [new TwoFactorRequiredForMembershipError()],
     ];
 
     [Theory, BitAutoData]
@@ -43,14 +43,14 @@ public class AcceptInviteLinkMembershipValidatorTests
                 Guid.Parse(inviteLink.Code),
                 organization,
                 user)
-            .Returns(new EmailDomainNotAllowed(organization.Name));
+            .Returns(new EmailDomainNotAllowedError(organization.Name));
 
         // Act
         var result = await sutProvider.Sut.ValidateAsync(BuildRequest(inviteLink, user));
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<EmailDomainNotAllowed>(result.AsError);
+        Assert.IsType<EmailDomainNotAllowedError>(result.AsError);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
@@ -81,7 +81,7 @@ public class AcceptInviteLinkMembershipValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<OrganizationAccessRevoked>(result.AsError);
+        Assert.IsType<OrganizationAccessRevokedError>(result.AsError);
 
         await sutProvider.GetDependency<IPreAccessEnforcerQuery>()
             .DidNotReceiveWithAnyArgs()
@@ -90,9 +90,8 @@ public class AcceptInviteLinkMembershipValidatorTests
 
     [Theory]
     [BitMemberAutoData(nameof(JoinRequirementsErrors))]
-    public async Task ValidateAsync_WhenJoinRequirementsFail_ReturnsAcceptError(
-        Error joinRequirementsError,
-        Type expectedErrorType,
+    public async Task ValidateAsync_WhenJoinRequirementsFail_ReturnsTheCodedError(
+        InviteLinkValidationError joinRequirementsError,
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
@@ -114,7 +113,7 @@ public class AcceptInviteLinkMembershipValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType(expectedErrorType, result.AsError);
+        Assert.Equal(joinRequirementsError, result.AsError);
 
         sutProvider.GetDependency<IJoinOrganizationPolicyValidationService>()
             .DidNotReceiveWithAnyArgs()
