@@ -33,16 +33,9 @@ public static class ValidationProblemAssertions
     /// </summary>
     public static async Task AssertNotFoundProblemAsync(HttpResponseMessage response, string propertyName, string code)
     {
-        var body = await response.Content.ReadAsStringAsync();
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        await AssertValidationProblemAsync(response, HttpStatusCode.NotFound, propertyName, code);
 
-        using var problem = JsonDocument.Parse(body);
+        using var problem = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.Equal("not_found", problem.RootElement.GetProperty("type").GetString());
-        var errorCode = problem.RootElement
-            .GetProperty("errors")
-            .GetProperty(propertyName)[0]
-            .GetProperty("type")
-            .GetString();
-        Assert.Equal(code, errorCode);
     }
 }

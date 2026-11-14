@@ -56,6 +56,18 @@ public class ValidationErrorTypedResultsExtensionsTests
         var result = TypedResults.BitwardenValidationProblem(new MemberNotClaimedError());
 
         Assert.Equal(StatusCodes.Status400BadRequest, result.StatusCode);
+        Assert.Equal("validation_error", result.ProblemDetails.Type);
+        Assert.Equal("One or more validation errors occurred.", result.ProblemDetails.Title);
+    }
+
+    [Fact]
+    public void BitwardenValidationProblem_WithNameValidationError_Returns400()
+    {
+        var result = TypedResults.BitwardenValidationProblem(new NameChangeMemberNotClaimedError());
+
+        Assert.Equal(StatusCodes.Status400BadRequest, result.StatusCode);
+        Assert.Equal("validation_error", result.ProblemDetails.Type);
+        Assert.Equal("One or more validation errors occurred.", result.ProblemDetails.Title);
     }
 
     private sealed record TestValidationError(string PropertyName, string Message, string Type) : IValidationError;
