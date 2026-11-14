@@ -1,4 +1,4 @@
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 
 /// <summary>
 /// The result of <see cref="IJoinOrganizationPolicyValidationService.ValidateAccountRecoveryPolicyAsync(Guid, Bit.Core.Entities.User, Bit.Core.Enums.OrganizationUserType, string?)"/>.
