@@ -10,4 +10,9 @@ public interface IValidationError
     string PropertyName { get; }
     string Message { get; }
     string Type { get; }
+
+    /// <summary>
+    /// The HTTP status code the API layer responds with. Defaults to 400 Bad Request.
+    /// </summary>
+    int StatusCode => 400;
 }
