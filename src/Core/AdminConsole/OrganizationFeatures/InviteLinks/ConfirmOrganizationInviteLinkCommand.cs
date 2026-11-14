@@ -4,7 +4,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserRes
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Utilities;
-using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Billing.Organizations;
 using Bit.Core.Billing.Organizations.Commands;
@@ -46,7 +45,7 @@ public class ConfirmOrganizationInviteLinkCommand(
     ILogger<ConfirmOrganizationInviteLinkCommand> logger)
     : IConfirmOrganizationInviteLinkCommand
 {
-    public async Task<CommandResult> ConfirmAsync(ConfirmOrganizationInviteLinkRequest request)
+    public async Task<Result<None, InviteLinkValidationError>> ConfirmAsync(ConfirmOrganizationInviteLinkRequest request)
     {
         var user = request.User;
 
@@ -99,7 +98,7 @@ public class ConfirmOrganizationInviteLinkCommand(
         await pushNotificationService.PushSyncOrgKeysAsync(user.Id);
     }
 
-    private async Task<CommandResult<OrganizationUser>> AddUserToOrganizationAsync(ConfirmOrganizationInviteLinkRequest request,
+    private async Task<Result<OrganizationUser, InviteLinkValidationError>> AddUserToOrganizationAsync(ConfirmOrganizationInviteLinkRequest request,
         OrganizationUser? existingOrganizationUser, User user, Organization organization)
     {
         if (existingOrganizationUser is not null)
@@ -117,7 +116,7 @@ public class ConfirmOrganizationInviteLinkCommand(
     /// expanded first when needed. Persisting via <c>ReplaceAsync</c> bumps the user's account revision date
     /// so their other devices sync.
     /// </summary>
-    private async Task<CommandResult<OrganizationUser>> ConfirmExistingMembershipAsync(
+    private async Task<Result<OrganizationUser, InviteLinkValidationError>> ConfirmExistingMembershipAsync(
         Organization organization, OrganizationUser existingOrganizationUser, User user, string orgUserKey)
     {
         PrivilegedControlsSeatReservationResult? privilegedControlsSeatReservation = null;
@@ -161,7 +160,7 @@ public class ConfirmOrganizationInviteLinkCommand(
     /// status with the org key, expanding the organization's seats first so a billing or persistence failure
     /// leaves no orphaned seat.
     /// </summary>
-    private async Task<CommandResult<OrganizationUser>> CreateConfirmedMembershipAsync(
+    private async Task<Result<OrganizationUser, InviteLinkValidationError>> CreateConfirmedMembershipAsync(
         Organization organization, User user, string orgUserKey)
     {
         var seatReservationError = await ReserveSeatAsync(organization);
@@ -192,7 +191,7 @@ public class ConfirmOrganizationInviteLinkCommand(
     /// billing or persistence failure leaves no orphaned seat. Seat availability is checked here rather than in the
     /// validator so it is as close as possible to the write.
     /// </summary>
-    private async Task<Error?> ReserveSeatAsync(Organization organization)
+    private async Task<InviteLinkValidationError?> ReserveSeatAsync(Organization organization)
     {
         var occupiedSeatCount = (await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)).Total;
         if (!OrganizationSeatAvailability.HasAvailableSeats(organization, occupiedSeatCount))
@@ -206,7 +205,7 @@ public class ConfirmOrganizationInviteLinkCommand(
     /// <summary>
     /// Only auto-adds when the organization is already at capacity.
     /// </summary>
-    private async Task<Error?> TryExpandSeatsAsync(Organization organization, int occupiedSeatCount)
+    private async Task<InviteLinkValidationError?> TryExpandSeatsAsync(Organization organization, int occupiedSeatCount)
     {
         if (!organization.Seats.HasValue || occupiedSeatCount < organization.Seats.Value)
         {

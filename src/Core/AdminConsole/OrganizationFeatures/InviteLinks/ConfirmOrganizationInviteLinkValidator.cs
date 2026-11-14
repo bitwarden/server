@@ -1,14 +1,8 @@
-﻿using System.Diagnostics;
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PreAccess;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -34,7 +28,7 @@ public class ConfirmOrganizationInviteLinkValidator(
     IJoinOrganizationPolicyValidationService joinOrganizationPolicyValidationService)
     : IConfirmOrganizationInviteLinkValidator
 {
-    public async Task<CommandResult<ConfirmOrganizationInviteLinkValidationResult>> ValidateAsync(
+    public async Task<Result<ConfirmOrganizationInviteLinkValidationResult, InviteLinkValidationError>> ValidateAsync(
         ConfirmOrganizationInviteLinkValidationRequest request)
     {
         var user = request.User;
@@ -51,7 +45,7 @@ public class ConfirmOrganizationInviteLinkValidator(
             user);
         if (eligibilityError is not null)
         {
-            return ToConfirmValidationError(eligibilityError);
+            return eligibilityError;
         }
 
         // ValidateEligibility guarantees the invite link and organization exist.
@@ -68,7 +62,7 @@ public class ConfirmOrganizationInviteLinkValidator(
         var membershipStatusError = InviteLinkRules.ValidateConfirmMembershipStatus(organization, existingOrganizationUser);
         if (membershipStatusError is not null)
         {
-            return ToConfirmValidationError(membershipStatusError);
+            return membershipStatusError;
         }
 
         var proposedRole = existingOrganizationUser?.Type ?? OrganizationUserType.User;
@@ -82,7 +76,7 @@ public class ConfirmOrganizationInviteLinkValidator(
 
         if (joinRequirementsResult.IsError)
         {
-            return ToConfirmValidationError(joinRequirementsResult.Error!);
+            return joinRequirementsResult.Error!;
         }
 
         var accountRecoveryResult = joinOrganizationPolicyValidationService.ValidateAccountRecoveryPolicy(
@@ -119,23 +113,4 @@ public class ConfirmOrganizationInviteLinkValidator(
 
         return await organizationUserRepository.GetByOrganizationEmailAsync(organization.Id, user.Email);
     }
-
-    /// <summary>
-    /// Translates a shared invite link or policy error into its coded invite link error so the
-    /// endpoint always returns the RFC 7807 shape. A new error must be mapped here rather than silently falling back
-    /// to a plain 400.
-    /// </summary>
-    private static Error ToConfirmValidationError(Error error) =>
-        error switch
-        {
-            InviteLinkValidationError => error,
-            CannotBeAdminOfMultipleFreeOrganizations => new OnlyOneFreeOrganizationAdminAllowedError(),
-            OtherOrganizationDoesNotAllowOtherMembership e => new AutoConfirmPolicyViolationOtherOrgError(e.Email),
-            UserCannotBelongToAnotherOrganization e => new AutoConfirmPolicyViolationTargetOrgError(e.Email),
-            ProviderUsersCannotJoin => new ProviderUsersCannotJoinError(),
-            UserIsAMemberOfAnotherOrganization => new MemberOfAnotherOrganizationError(),
-            UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => new SingleOrganizationPolicyError(),
-            TwoFactorRequiredForMembership => new TwoFactorRequiredForMembershipError(),
-            _ => throw new UnreachableException($"Unmapped invite link error: {error.GetType().Name}")
-        };
 }

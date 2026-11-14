@@ -45,7 +45,7 @@ public class AcceptOrganizationInviteLinkCommandTests
 
         sutProvider.GetDependency<IAcceptInviteLinkMembershipValidator>()
             .ValidateAsync(Arg.Any<AcceptInviteLinkMembershipValidationRequest>())
-            .Returns(new TwoFactorRequiredForMembership());
+            .Returns(new TwoFactorRequiredForMembershipError());
 
         var request = new AcceptOrganizationInviteLinkRequest
         {
@@ -59,7 +59,7 @@ public class AcceptOrganizationInviteLinkCommandTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<TwoFactorRequiredForMembership>(result.AsError);
+        Assert.IsType<TwoFactorRequiredForMembershipError>(result.AsError);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .CreateAsync(Arg.Any<OrganizationUser>());
@@ -240,7 +240,7 @@ public class AcceptOrganizationInviteLinkCommandTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<OrganizationHasNoAvailableSeats>(result.AsError);
+        Assert.IsType<OrganizationHasNoAvailableSeatsError>(result.AsError);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .ReplaceAsync(Arg.Any<OrganizationUser>());
@@ -429,7 +429,7 @@ public class AcceptOrganizationInviteLinkCommandTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<OrganizationHasNoAvailableSeats>(result.AsError);
+        Assert.IsType<OrganizationHasNoAvailableSeatsError>(result.AsError);
         await sutProvider.GetDependency<IOrganizationService>()
             .DidNotReceiveWithAnyArgs()
             .AutoAddSeatsAsync(Arg.Any<Organization>(), Arg.Any<int>());
@@ -446,7 +446,7 @@ public class AcceptOrganizationInviteLinkCommandTests
 
     [Theory]
     [BitMemberAutoData(nameof(SeatExpansionFailures))]
-    public async Task AcceptAsync_WithAutoAddSeats_BusinessFailure_ReturnsSeatAddFailed(
+    public async Task AcceptAsync_WithAutoAddSeats_BusinessFailure_ReturnsSeatAddFailedError(
         Exception businessFailure,
         Organization organization,
         OrganizationInviteLink inviteLink,
@@ -483,7 +483,7 @@ public class AcceptOrganizationInviteLinkCommandTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<SeatAddFailed>(result.AsError);
+        Assert.IsType<SeatAddFailedError>(result.AsError);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .CreateAsync(Arg.Any<OrganizationUser>());

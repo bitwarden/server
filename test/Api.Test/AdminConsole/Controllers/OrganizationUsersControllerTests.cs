@@ -30,6 +30,7 @@ using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Bit.HttpExtensions;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Authorization;
@@ -847,7 +848,7 @@ public class OrganizationUsersControllerTests
 
         sutProvider.GetDependency<IConfirmOrganizationInviteLinkCommand>()
             .ConfirmAsync(Arg.Any<ConfirmOrganizationInviteLinkRequest>())
-            .Returns(new CommandResult(new None()));
+            .Returns(new None());
 
         // Act
         var result = await sutProvider.Sut.ConfirmInviteLink(model);
@@ -865,7 +866,7 @@ public class OrganizationUsersControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task ConfirmInviteLink_WhenCommandReturnsError_ReturnsBadRequest(
+    public async Task ConfirmInviteLink_WhenCommandReturnsError_ReturnsValidationProblem(
         User user,
         ConfirmOrganizationInviteLinkRequestModel model,
         SutProvider<OrganizationUsersController> sutProvider)
@@ -877,13 +878,14 @@ public class OrganizationUsersControllerTests
 
         sutProvider.GetDependency<IConfirmOrganizationInviteLinkCommand>()
             .ConfirmAsync(Arg.Any<ConfirmOrganizationInviteLinkRequest>())
-            .Returns(new CommandResult(new EmailDomainNotAllowed(string.Empty)));
+            .Returns(new EmailDomainNotAllowedError("Acme"));
 
         // Act
         var result = await sutProvider.Sut.ConfirmInviteLink(model);
 
         // Assert
-        Assert.IsType<BadRequest<ErrorResponseModel>>(result);
+        var problem = Assert.IsType<BitwardenValidationProblemResult>(result);
+        Assert.Equal(StatusCodes.Status400BadRequest, problem.StatusCode);
     }
 
     [Theory, BitAutoData]

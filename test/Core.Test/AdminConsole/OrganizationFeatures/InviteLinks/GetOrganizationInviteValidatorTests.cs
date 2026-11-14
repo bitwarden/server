@@ -75,7 +75,7 @@ public class GetOrganizationInviteValidatorTests
 
     // Confirm promotes an Accepted membership, so the same membership that blocks an accept link is allowed here.
     [Theory, BitAutoData]
-    public async Task ValidateAsync_WithConfirmationLinkAndAcceptedMembership_ReturnsValidRequest(
+    public async Task ValidateAsync_WithConfirmationLinkAndAcceptedMembership_Succeeds(
         Organization organization, OrganizationInviteLink inviteLink, User user, OrganizationUser existingOrganizationUser,
         SutProvider<GetOrganizationInviteValidator> sutProvider)
     {
@@ -91,7 +91,7 @@ public class GetOrganizationInviteValidatorTests
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         // Assert
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Theory, BitAutoData]

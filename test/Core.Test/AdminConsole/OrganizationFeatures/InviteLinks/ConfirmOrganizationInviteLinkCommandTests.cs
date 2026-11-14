@@ -49,14 +49,14 @@ public class ConfirmOrganizationInviteLinkCommandTests
         // Arrange
         sutProvider.GetDependency<IConfirmOrganizationInviteLinkValidator>()
             .ValidateAsync(Arg.Any<ConfirmOrganizationInviteLinkValidationRequest>())
-            .Returns(new InviteLinkNotFound());
+            .Returns(new InviteLinkNotFoundError());
 
         // Act
         var result = await sutProvider.Sut.ConfirmAsync(request);
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<InviteLinkNotFound>(result.AsError);
+        Assert.IsType<InviteLinkNotFoundError>(result.AsError);
         await sutProvider.GetDependency<IOrganizationService>()
             .DidNotReceiveWithAnyArgs()
             .AutoAddSeatsAsync(Arg.Any<Organization>(), Arg.Any<int>());

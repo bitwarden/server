@@ -1,11 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PreAccess;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -25,7 +22,7 @@ public class AcceptInviteLinkMembershipValidator(
     IJoinOrganizationPolicyValidationService joinOrganizationPolicyValidationService)
     : IAcceptInviteLinkMembershipValidator
 {
-    public async Task<CommandResult<AcceptInviteLinkMembershipValidationResult>> ValidateAsync(
+    public async Task<Result<AcceptInviteLinkMembershipValidationResult, InviteLinkValidationError>> ValidateAsync(
         AcceptInviteLinkMembershipValidationRequest request)
     {
         var user = request.User;
@@ -67,7 +64,7 @@ public class AcceptInviteLinkMembershipValidator(
 
         if (joinRequirementsResult.IsError)
         {
-            return ToAcceptValidationError(joinRequirementsResult.Error!);
+            return joinRequirementsResult.Error!;
         }
 
         var accountRecoveryResult = joinOrganizationPolicyValidationService.ValidateAccountRecoveryPolicy(
@@ -105,13 +102,4 @@ public class AcceptInviteLinkMembershipValidator(
 
         return await organizationUserRepository.GetByOrganizationEmailAsync(organization.Id, user.Email);
     }
-
-    /// <summary>
-    /// Keeps the accept endpoint's existing error messages for shared errors that have an invite link equivalent.
-    /// </summary>
-    private static Error ToAcceptValidationError(Error error) =>
-        error switch
-        {
-            _ => error
-        };
 }
