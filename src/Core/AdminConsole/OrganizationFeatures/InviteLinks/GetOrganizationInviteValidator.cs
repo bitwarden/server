@@ -57,7 +57,6 @@ public class GetOrganizationInviteValidator(
         return request;
     }
 
-
     /// <summary>
     /// The existing membership must allow the step the link leads to: confirming, or accepting.
     /// </summary>

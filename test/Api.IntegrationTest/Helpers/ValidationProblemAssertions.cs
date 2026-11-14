@@ -26,4 +26,23 @@ public static class ValidationProblemAssertions
             .GetString();
         Assert.Equal(code, errorCode);
     }
+
+    /// <summary>
+    /// Asserts that the response is a 404 RFC 7807 problem with the top-level type <c>not_found</c>, whose first
+    /// error for <paramref name="propertyName"/> carries the given <paramref name="code"/> as its type.
+    /// </summary>
+    public static async Task AssertNotFoundProblemAsync(HttpResponseMessage response, string propertyName, string code)
+    {
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+        using var problem = JsonDocument.Parse(body);
+        Assert.Equal("not_found", problem.RootElement.GetProperty("type").GetString());
+        var errorCode = problem.RootElement
+            .GetProperty("errors")
+            .GetProperty(propertyName)[0]
+            .GetProperty("type")
+            .GetString();
+        Assert.Equal(code, errorCode);
+    }
 }

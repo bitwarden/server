@@ -87,14 +87,14 @@ public class OrganizationUsersControllerConfirmInviteLinkTests : IClassFixture<A
     }
 
     [Fact]
-    public async Task ConfirmInviteLink_WithUnknownCode_ReturnsNotFound()
+    public async Task ConfirmInviteLink_WithUnknownCode_ReturnsNotFoundProblem()
     {
         var (joinerClient, _) = await CreateJoinerClientAsync();
 
         var response = await joinerClient.PostAsJsonAsync(
             "/organizations/users/invite-link/confirm", BuildConfirmRequest(_organization.Id, Guid.NewGuid()));
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        await ValidationProblemAssertions.AssertNotFoundProblemAsync(response, "code", "invite_link_not_found");
     }
 
     [Fact]

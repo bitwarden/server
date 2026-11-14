@@ -134,6 +134,20 @@ public class OrganizationUsersControllerGetInviteTests : IClassFixture<ApiApplic
             response, HttpStatusCode.BadRequest, "code", "provider_users_cannot_join");
     }
 
+    [Fact]
+    public async Task GetInvite_WithWrongCode_ReturnsNotFoundProblem()
+    {
+        // Arrange
+        var (joinerClient, _) = await CreateJoinerClientAsync();
+
+        // Act
+        var response = await joinerClient.PostAsJsonAsync(
+            "/organizations/users/invite-link/invite", BuildRequest(_organization.Id, Guid.NewGuid()));
+
+        // Assert
+        await ValidationProblemAssertions.AssertNotFoundProblemAsync(response, "code", "invite_link_not_found");
+    }
+
     private async Task<Guid> CreateInviteLinkAsync(string[] allowedDomains)
     {
         var createRequest = new CreateOrganizationInviteLinkRequestModel
