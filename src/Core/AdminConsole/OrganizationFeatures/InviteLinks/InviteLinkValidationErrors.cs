@@ -5,22 +5,20 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 
 // The three user invite-link endpoints (accept, invite, confirm) surface failures as RFC 7807
 // problems with a stable, client-localizable Type code. Each error below implements IValidationError so the
-// API layer routes it through BitwardenValidationProblem, and carries its own message, property name and
-// HTTP status. StatusCode is declared virtual on the base record so a derived override is visible through
-// IValidationError. The plain records in Errors.cs remain for the admin endpoints.
+// API layer routes it through BitwardenValidationProblem, and carries its own message and property name.
+// InviteLinkNotFoundError is also marked INotFoundError, which the API layer renders as a 404. The plain
+// records in Errors.cs remain for the admin endpoints.
 public abstract record InviteLinkValidationError(string Message) : Error(Message), IValidationError
 {
     public abstract string PropertyName { get; }
     public abstract string Type { get; }
-    public virtual int StatusCode => 400;
 }
 
 public sealed record InviteLinkNotFoundError()
-    : InviteLinkValidationError("Invite link not found.")
+    : InviteLinkValidationError("Invite link not found."), INotFoundError
 {
     public override string PropertyName => "code";
     public override string Type => "invite_link_not_found";
-    public override int StatusCode => 404;
 }
 
 public sealed record InviteLinkNotAvailableError()

@@ -72,11 +72,10 @@ public class ValidationErrorTypedResultsExtensionsTests
 
     private sealed record TestValidationError(string PropertyName, string Message, string Type) : IValidationError;
 
-    private sealed record TestNotFoundValidationError : IValidationError
+    private sealed record TestNotFoundValidationError : IValidationError, INotFoundError
     {
         public string PropertyName => "resource";
         public string Message => "Not found";
         public string Type => "notFound";
-        public int StatusCode => 404;
     }
 }

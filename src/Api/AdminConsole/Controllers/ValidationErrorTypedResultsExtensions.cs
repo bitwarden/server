@@ -8,8 +8,8 @@ public static class ValidationErrorTypedResultsExtensions
     extension(TypedResults)
     {
         /// <summary>
-        /// Produces an RFC 7807 problem response (400 Bad Request unless the error sets
-        /// <see cref="IValidationError.StatusCode"/>) keyed by
+        /// Produces an RFC 7807 problem response (404 Not Found if the error is an
+        /// <see cref="INotFoundError"/>, otherwise 400 Bad Request) keyed by
         /// <see cref="IValidationError.PropertyName"/>, with the error's
         /// <see cref="IValidationError.Type"/> as the i18n code and
         /// <see cref="IValidationError.Message"/> as the human-readable detail.
@@ -26,7 +26,9 @@ public static class ValidationErrorTypedResultsExtensions
                         [new BitwardenTypedResultsExtensions.ErrorCode(validationError.Type, validationError.Message)]
                     }
                 },
-                statusCode: validationError.StatusCode);
+                statusCode: validationError is INotFoundError
+                    ? StatusCodes.Status404NotFound
+                    : StatusCodes.Status400BadRequest);
         }
     }
 }

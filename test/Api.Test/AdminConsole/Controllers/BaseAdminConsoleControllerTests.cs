@@ -64,10 +64,9 @@ public class BaseAdminConsoleControllerTests
         public string Type => "badRequestCode";
     }
 
-    private sealed record NotFoundValidationError() : CommandError("Not found"), IValidationError
+    private sealed record NotFoundValidationError() : CommandError("Not found"), IValidationError, INotFoundError
     {
         public string PropertyName => "resource";
         public string Type => "notFoundCode";
-        public int StatusCode => 404;
     }
 }
