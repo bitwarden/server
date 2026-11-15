@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
 using Bit.Core.Auth.Models.Data;
-using Bit.Sso.IntegrationTest.Utilities;
+using Bit.Sso.IntegrationTest.Helpers;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Net.Http.Headers;
 using Sustainsys.Saml2;

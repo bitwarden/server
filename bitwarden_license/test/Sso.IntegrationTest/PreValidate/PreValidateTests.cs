@@ -2,7 +2,7 @@
 using System.Net.Sockets;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
-using Bit.Sso.IntegrationTest.Utilities;
+using Bit.Sso.IntegrationTest.Helpers;
 using Xunit;
 
 namespace Bit.Sso.IntegrationTest.PreValidate;

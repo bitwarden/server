@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.IntegrationTestCommon.Factories;
-using Bit.Sso.IntegrationTest.Utilities;
+using Bit.Sso.IntegrationTest.Helpers;
 using Bit.Test.Common.Helpers;
 using Xunit;
 

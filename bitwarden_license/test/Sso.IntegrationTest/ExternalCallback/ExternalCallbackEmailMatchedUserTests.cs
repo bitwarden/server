@@ -3,7 +3,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Sso.IntegrationTest.Utilities;
+using Bit.Sso.IntegrationTest.Helpers;
 using Microsoft.AspNetCore.Mvc.Testing;
 using NSubstitute;
 using Xunit;
