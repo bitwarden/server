@@ -145,6 +145,28 @@ curl -X POST http://localhost:5000/seed \
   }'
 ```
 
+### Seeding an SDK Test Vector
+
+`TestVectorUserScene` loads one of the SDK's committed user test vectors (`sdk-internal/test-vectors/users/*.json`)
+as it is. Its `arguments` are the vector file itself. The account and vault are already encrypted, so nothing is
+generated or re-encrypted: the seeded account unlocks with the vector's password and decrypts to the vault the vector
+records.
+
+- Only what a server holds is read: wrapped keys, public keys, the master password authentication hash, and the
+  encrypted ciphers and folders. The plaintext the vector records for its own assertions is ignored.
+- Each seeding gets a fresh user id, fresh item ids and a mangled email, so a vector can be seeded any number of times.
+  The master password salt stays the vector's email. The result maps the vector's ids to the seeded ones: `userId`,
+  `email`, `cipherIds` and `folderIds`.
+- Master-password vectors only, V1 and V2. Sends, organizations, and the trusted-device and Key Connector vectors are
+  not seeded.
+
+```bash
+curl -X POST http://localhost:5000/seed \
+  -H "Content-Type: application/json" \
+  -H "X-Play-Id: test-run-123" \
+  -d "{\"template\": \"TestVectorUserScene\", \"arguments\": $(cat test-vectors/users/v2-pbkdf2-blob.json)}"
+```
+
 ### Seeding a PAM Access Rule
 
 `OrganizationAccessRuleScene` creates a PAM access rule in an existing organization and makes it govern the given
