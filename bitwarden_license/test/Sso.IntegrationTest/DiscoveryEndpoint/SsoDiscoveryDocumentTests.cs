@@ -10,11 +10,11 @@ namespace Bit.Sso.IntegrationTest.DiscoveryEndpoint;
 /// The OpenID Connect discovery document at <c>/.well-known/openid-configuration</c> must match the checked-in
 /// <c>openid-configuration.json</c> exactly, so that every change to the document that clients read is deliberate.
 /// </summary>
-public class SsoConfigurationTests : IClassFixture<SsoApplicationFactory>
+public class SsoDiscoveryDocumentTests : IClassFixture<SsoApplicationFactory>
 {
     private readonly SsoApplicationFactory _factory;
 
-    public SsoConfigurationTests(SsoApplicationFactory factory)
+    public SsoDiscoveryDocumentTests(SsoApplicationFactory factory)
     {
         _factory = factory;
     }
