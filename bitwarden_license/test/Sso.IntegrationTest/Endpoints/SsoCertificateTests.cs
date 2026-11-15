@@ -84,17 +84,17 @@ public class SsoCertificateTests
         using var arrangement = await Saml2AcsPostHarness.ArrangeAsync(
             string.Empty, idpCertificate: idpCertificate, selfHosted: true,
             configuration: CertificateTestConfiguration.SelfHosted(certificate));
-        var login = await Saml2SpInitiatedLogin.StartAsync(arrangement);
+        var login = await Saml2SpInitiatedLoginSteps.StartAsync(arrangement);
         var assertion = Saml2AcsPostHarness.EncryptAssertion(
-            Saml2SpInitiatedLogin.BuildSignedAssertion(login, idpCertificate), certificate);
+            Saml2SpInitiatedLoginSteps.BuildSignedAssertion(login, idpCertificate), certificate);
         var responseXml = Saml2AcsPostHarness.BuildResponseXml(
             assertion, includeSuccessStatus: true, inResponseTo: login.RequestId);
 
         // Act
-        using var response = await Saml2SpInitiatedLogin.PostAcsAsync(arrangement, login, responseXml);
+        using var response = await Saml2SpInitiatedLoginSteps.PostAcsAsync(arrangement, login, responseXml);
 
         // Assert
-        await Saml2SpInitiatedLogin.AssertSucceededAsync(response);
+        await Saml2SpInitiatedLoginSteps.AssertSucceededAsync(response);
     }
 
     [Fact]
@@ -130,7 +130,7 @@ public class SsoCertificateTests
             configuration: CertificateTestConfiguration.SelfHosted(certificate));
 
         // Act
-        var login = await Saml2SpInitiatedLogin.StartAsync(arrangement);
+        var login = await Saml2SpInitiatedLoginSteps.StartAsync(arrangement);
 
         // Assert
         Assert.True(IsSignedBy(login.AuthnRequest, certificate));
@@ -146,14 +146,14 @@ public class SsoCertificateTests
         using var arrangement = await Saml2AcsPostHarness.ArrangeAsync(
             string.Empty, idpCertificate: idpCertificate, selfHosted: true,
             configuration: CertificateTestConfiguration.SelfHosted(certificate));
-        var login = await Saml2SpInitiatedLogin.StartAsync(arrangement);
+        var login = await Saml2SpInitiatedLoginSteps.StartAsync(arrangement);
         var assertion = Saml2AcsPostHarness.EncryptAssertion(
-            Saml2SpInitiatedLogin.BuildSignedAssertion(login, idpCertificate), otherCertificate);
+            Saml2SpInitiatedLoginSteps.BuildSignedAssertion(login, idpCertificate), otherCertificate);
         var responseXml = Saml2AcsPostHarness.BuildResponseXml(
             assertion, includeSuccessStatus: true, inResponseTo: login.RequestId);
 
         // Act
-        using var response = await Saml2SpInitiatedLogin.PostAcsAsync(arrangement, login, responseXml);
+        using var response = await Saml2SpInitiatedLoginSteps.PostAcsAsync(arrangement, login, responseXml);
 
         // Assert
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
@@ -492,7 +492,7 @@ public class SsoCertificateTests
 
         // Assert
         Assert.Equal([Key("encryption", encryption)], KeyDescriptors(metadata).Where(key => key.Use != "signing"));
-        await Saml2SpInitiatedLogin.AssertSucceededAsync(response);
+        await Saml2SpInitiatedLoginSteps.AssertSucceededAsync(response);
     }
 
     [Fact]
@@ -511,7 +511,7 @@ public class SsoCertificateTests
         using var response = await PostEncryptedAssertionAsync(arrangement, idpCertificate, stagedEncryption);
 
         // Assert
-        await Saml2SpInitiatedLogin.AssertSucceededAsync(response);
+        await Saml2SpInitiatedLoginSteps.AssertSucceededAsync(response);
     }
 
     [Fact]
@@ -530,7 +530,7 @@ public class SsoCertificateTests
 
         // Assert
         Assert.Equal([Key(null, identity)], KeyDescriptors(metadata).Where(key => key.Use != "signing"));
-        await Saml2SpInitiatedLogin.AssertSucceededAsync(response);
+        await Saml2SpInitiatedLoginSteps.AssertSucceededAsync(response);
     }
 
     [Fact]
@@ -549,7 +549,7 @@ public class SsoCertificateTests
         using var response = await PostEncryptedAssertionAsync(arrangement, idpCertificate, decryption);
 
         // Assert
-        await Saml2SpInitiatedLogin.AssertSucceededAsync(response);
+        await Saml2SpInitiatedLoginSteps.AssertSucceededAsync(response);
     }
 
     [Fact]
@@ -571,7 +571,7 @@ public class SsoCertificateTests
 
         // Assert
         Assert.Equal([Key("encryption", outgoing)], KeyDescriptors(metadata).Where(key => key.Use != "signing"));
-        await Saml2SpInitiatedLogin.AssertSucceededAsync(response);
+        await Saml2SpInitiatedLoginSteps.AssertSucceededAsync(response);
     }
 
     [Fact]
@@ -775,12 +775,12 @@ public class SsoCertificateTests
     private static async Task<HttpResponseMessage> PostEncryptedAssertionAsync(Saml2AcsArrangement arrangement,
         X509Certificate2 idpCertificate, X509Certificate2 encryptionCertificate)
     {
-        var login = await Saml2SpInitiatedLogin.StartAsync(arrangement);
+        var login = await Saml2SpInitiatedLoginSteps.StartAsync(arrangement);
         var assertion = Saml2AcsPostHarness.EncryptAssertion(
-            Saml2SpInitiatedLogin.BuildSignedAssertion(login, idpCertificate), encryptionCertificate);
+            Saml2SpInitiatedLoginSteps.BuildSignedAssertion(login, idpCertificate), encryptionCertificate);
         var responseXml = Saml2AcsPostHarness.BuildResponseXml(
             assertion, includeSuccessStatus: true, inResponseTo: login.RequestId);
-        return await Saml2SpInitiatedLogin.PostAcsAsync(arrangement, login, responseXml);
+        return await Saml2SpInitiatedLoginSteps.PostAcsAsync(arrangement, login, responseXml);
     }
 
     private static async Task<string> StoreOidcIdentityAuthorizationCodeAsync(SsoApplicationFactory factory,
