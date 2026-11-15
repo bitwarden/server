@@ -99,7 +99,7 @@ src/Libraries/Subscriptions.User @bitwarden/team-billing-dev
 test/Libraries/Subscriptions.User.Test @bitwarden/team-billing-dev
 **/Billing @bitwarden/team-billing-dev
 test/Billing.IntegrationTest @bitwarden/team-billing-dev
-**/AppHost @bitwarden/team-billing-dev @bitwarden/dept-architecture # joint ownership
+**/AppHost @bitwarden/team-billing-dev @bitwarden/tech-leads # joint ownership
 src/Admin/Controllers/ToolsController.cs @bitwarden/team-billing-dev
 src/Admin/Views/Tools @bitwarden/team-billing-dev
 
