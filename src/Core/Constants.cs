@@ -133,15 +133,13 @@ public static partial class FeatureFlagKeys
 {
     /* Admin Console Team */
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
-    public const string BulkAutoConfirmOnLogin = "pm-35803-browser-auto-confirm-log-in";
     public const string GenerateInviteLink = "pm-32497-generate-invite-link";
     public const string InviteLinkAutoConfirm = "pm-34429-invite-link-auto-confirm";
-    public const string InviteLinkNotification = "pm-39601-invite-link-notification";
     public const string AutoReinviteUsers = "pm-39473-auto-reinvite-users";
-    public const string PM35153CollectionSdkDecryption = "pm-35153-collection-sdk-decryption";
     public const string PM43375CollectionsDecryptListFailures = "pm-43375-collections-decrypt-list-failures";
     public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
     public const string MembersTableV2 = "pm-37463-members-table-v2";
+    public const string OrganizationMembershipSdk = "pm-41568-org-memberships-v2";
     public const string GroupsTableV2 = "pm-43419-groups-table-v2";
 
     /* Architecture */
@@ -196,6 +194,7 @@ public static partial class FeatureFlagKeys
     public const string PM38333_AnnualBillingSavings = "pm-38333-annual-billing-savings";
     public const string PM38728_SendInvoicePriceMigration = "pm-38728-send-invoice-price-migration";
     public const string PM39883_Pam_Billing_Support = "pm-39883-pam-billing-support";
+    public const string PM42214_FeatureBasedUpgradePaths = "pm-42214-feature-based-upgrade-paths";
 
     /* Key Management Team */
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
@@ -280,8 +279,12 @@ public static partial class FeatureFlagKeys
 
     /* Secrets Manager Team */
     public const string SecretsVersioning = "sm-1587-secrets-versioning";
+    public const string SmCli = "sm-2107-cli";
 
     /* Skunkworks Team */
+    public const string DesktopWebAuthnClientWindows = "pm-46060-desktop-webauthn-client-windows";
+    public const string DesktopWebAuthnClientMacOs = "pm-46059-desktop-webauthn-client-macos";
+    public const string DesktopWebAuthnClientLinux = "pm-46061-desktop-webauthn-client-linux";
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
     public const string WindowsNativeCredentialSync = "windows-native-credential-sync";
 

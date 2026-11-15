@@ -14,21 +14,24 @@ namespace Bit.Seeder.Pipeline;
 /// </summary>
 public static class AttachmentStorageServiceCollectionExtensions
 {
-    public static IServiceCollection AddAttachmentStorageService(this IServiceCollection services, GlobalSettings globalSettings)
+    extension(IServiceCollection services)
     {
-        if (CoreHelpers.SettingHasValue(globalSettings.Attachment.ConnectionString))
+        public IServiceCollection AddAttachmentStorageService(GlobalSettings globalSettings)
         {
-            services.TryAddSingleton<IAttachmentStorageService, AzureAttachmentStorageService>();
-        }
-        else if (CoreHelpers.SettingHasValue(globalSettings.Attachment.BaseDirectory))
-        {
-            services.TryAddSingleton<IAttachmentStorageService, LocalAttachmentStorageService>();
-        }
-        else
-        {
-            services.TryAddSingleton<IAttachmentStorageService, NoopAttachmentStorageService>();
-        }
+            if (CoreHelpers.SettingHasValue(globalSettings.Attachment.ConnectionString))
+            {
+                services.TryAddSingleton<IAttachmentStorageService, AzureAttachmentStorageService>();
+            }
+            else if (CoreHelpers.SettingHasValue(globalSettings.Attachment.BaseDirectory))
+            {
+                services.TryAddSingleton<IAttachmentStorageService, LocalAttachmentStorageService>();
+            }
+            else
+            {
+                services.TryAddSingleton<IAttachmentStorageService, NoopAttachmentStorageService>();
+            }
 
-        return services;
+            return services;
+        }
     }
 }

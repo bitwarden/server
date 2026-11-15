@@ -30,7 +30,7 @@ internal sealed class CreateCollectionsStep : IStep
         var orgId = context.RequireOrgId();
         var orgKey = context.RequireOrgKey();
         var hardenedOrgUserIds = context.Registry.HardenedOrgUserIds;
-        var progress = context.GetProgress();
+        var progress = context.Progress;
 
         List<Collection> collections;
 

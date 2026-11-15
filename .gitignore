@@ -248,3 +248,4 @@ bitwarden_license/src/Sso/Sso.zip
 CLAUDE.local.md
 AppHost/appsettings.local.json
 .worktrees/
+.playwright-mcp/
