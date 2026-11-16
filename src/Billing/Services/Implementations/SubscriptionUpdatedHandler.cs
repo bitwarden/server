@@ -112,18 +112,18 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
         var currentPeriodEnd = subscription.GetCurrentPeriodEnd();
         var clearOrgBillingAutomationExemption = false;
-        var lookUpOtherSubscription = subscription.Id != subscriber.GatewaySubscriptionId ||
-                                      SubscriptionWentUnpaid(parsedEvent, subscription) ||
-                                      SubscriptionWentIncompleteExpired(parsedEvent, subscription);
+        var wentUnpaid = SubscriptionWentUnpaid(parsedEvent, subscription);
+        var wentIncompleteExpired = SubscriptionWentIncompleteExpired(parsedEvent, subscription);
+        var lookUpOtherSubscription = subscription.Id != subscriber.GatewaySubscriptionId || wentUnpaid || wentIncompleteExpired;
         var otherLiveSubscription = (subscriber, lookUpOtherSubscription) switch
         {
-            (User user, true) => await _stripeEventUtilityService.GetOtherLiveSubscriptionAsync(user, subscription),
-            (Organization organization, true) => await _stripeEventUtilityService.GetLiveLinkedSubscriptionAsync(organization, subscription),
+            (User user, true) => await _stripeEventUtilityService.FindOtherLiveSubscriptionForUserAsync(user, subscription),
+            (Organization organization, true) => await _stripeEventUtilityService.FindOtherLiveSubscriptionForOrganizationAsync(organization, subscription),
             _ => null
         };
         var linkedToOtherSubscription = false;
 
-        if (SubscriptionWentUnpaid(parsedEvent, subscription))
+        if (wentUnpaid)
         {
             if (SkipUnpaidBillingAutomationsForExemptOrganization(subscriber))
             {
@@ -138,7 +138,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 await SetSubscriptionToCancelAsync(subscription);
             }
         }
-        else if (SubscriptionWentIncompleteExpired(parsedEvent, subscription))
+        else if (wentIncompleteExpired)
         {
             // Subscription is already terminal in Stripe; any attempt to
             // schedule a cancel would be rejected and 500 the webhook,

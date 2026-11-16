@@ -696,7 +696,7 @@ public class SubscriptionUpdatedHandlerTests
             .Returns(subscription);
         _userRepository.GetByIdAsync(userId).Returns(user);
         var liveSubscription = new Subscription { Id = "sub_live" };
-        _stripeEventUtilityService.GetOtherLiveSubscriptionAsync(user, subscription).Returns(liveSubscription);
+        _stripeEventUtilityService.FindOtherLiveSubscriptionForUserAsync(user, subscription).Returns(liveSubscription);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -756,7 +756,7 @@ public class SubscriptionUpdatedHandlerTests
             .Returns(subscription);
         _userRepository.GetByIdAsync(userId).Returns(user);
         var liveSubscription = new Subscription { Id = "sub_live" };
-        _stripeEventUtilityService.GetOtherLiveSubscriptionAsync(user, subscription).Returns(liveSubscription);
+        _stripeEventUtilityService.FindOtherLiveSubscriptionForUserAsync(user, subscription).Returns(liveSubscription);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -819,7 +819,7 @@ public class SubscriptionUpdatedHandlerTests
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new Enterprise2023Plan(true));
         _pricingClient.ListPlans().Returns(MockPlans.Plans);
         var liveSubscription = new Subscription { Id = "sub_live" };
-        _stripeEventUtilityService.GetLiveLinkedSubscriptionAsync(organization, subscription).Returns(liveSubscription);
+        _stripeEventUtilityService.FindOtherLiveSubscriptionForOrganizationAsync(organization, subscription).Returns(liveSubscription);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -875,7 +875,7 @@ public class SubscriptionUpdatedHandlerTests
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new Enterprise2023Plan(true));
         _pricingClient.ListPlans().Returns(MockPlans.Plans);
         _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(true);
-        _stripeEventUtilityService.GetLiveLinkedSubscriptionAsync(organization, subscription)
+        _stripeEventUtilityService.FindOtherLiveSubscriptionForOrganizationAsync(organization, subscription)
             .Returns(new Subscription { Id = "sub_current" });
 
         // Act
@@ -1588,7 +1588,7 @@ public class SubscriptionUpdatedHandlerTests
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
         _userRepository.GetByIdAsync(userId).Returns(user);
-        _stripeEventUtilityService.GetOtherLiveSubscriptionAsync(user, subscription)
+        _stripeEventUtilityService.FindOtherLiveSubscriptionForUserAsync(user, subscription)
             .Returns(new Subscription { Id = "sub_current" });
 
         // Act
@@ -1634,7 +1634,7 @@ public class SubscriptionUpdatedHandlerTests
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        await _stripeEventUtilityService.DidNotReceiveWithAnyArgs().GetOtherLiveSubscriptionAsync(default!, default!);
+        await _stripeEventUtilityService.DidNotReceiveWithAnyArgs().FindOtherLiveSubscriptionForUserAsync(default!, default!);
         await _userService.Received(1).UpdatePremiumExpirationAsync(userId, currentPeriodEnd);
     }
 

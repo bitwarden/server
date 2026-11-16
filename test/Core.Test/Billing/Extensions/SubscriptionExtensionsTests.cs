@@ -15,9 +15,9 @@ public class SubscriptionExtensionsTests
     [InlineData(StripeConstants.SubscriptionStatus.Unpaid, false)]
     [InlineData(StripeConstants.SubscriptionStatus.Canceled, false)]
     [InlineData(StripeConstants.SubscriptionStatus.IncompleteExpired, false)]
-    public void GrantsAccess_ReturnsWhetherStatusGrantsAccess(string status, bool expected)
+    public void HasLiveStatus_ReturnsWhetherStatusIsLive(string status, bool expected)
     {
-        Assert.Equal(expected, new Subscription { Status = status }.GrantsAccess());
+        Assert.Equal(expected, new Subscription { Status = status }.HasLiveStatus());
     }
 
     [Fact]

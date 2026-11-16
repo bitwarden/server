@@ -94,7 +94,7 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
 
             var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
             if (organization != null &&
-                await _stripeEventUtilityService.GetLiveLinkedSubscriptionAsync(organization, subscription) != null)
+                await _stripeEventUtilityService.FindOtherLiveSubscriptionForOrganizationAsync(organization, subscription) != null)
             {
                 return;
             }
@@ -117,7 +117,7 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
             var subscriber = await _userRepository.GetByIdAsync(userId.Value);
             var otherLiveSubscription = subscriber == null
                 ? null
-                : await _stripeEventUtilityService.GetOtherLiveSubscriptionAsync(subscriber, subscription);
+                : await _stripeEventUtilityService.FindOtherLiveSubscriptionForUserAsync(subscriber, subscription);
 
             if (subscriber != null && otherLiveSubscription != null)
             {

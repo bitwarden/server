@@ -268,7 +268,7 @@ public class StripeEventUtilityService : IStripeEventUtilityService
             Parent.SubscriptionDetails: not null
         };
 
-    public async Task<Subscription> GetOtherLiveSubscriptionAsync(User user, Subscription subscription)
+    public async Task<Subscription> FindOtherLiveSubscriptionForUserAsync(User user, Subscription subscription)
     {
         var subscriptions = await _stripeFacade.ListSubscriptions(new SubscriptionListOptions
         {
@@ -276,26 +276,29 @@ public class StripeEventUtilityService : IStripeEventUtilityService
             Limit = 100
         });
 
-        var live = subscriptions.Data
-            .Where(other => other.Id != subscription.Id &&
-                            other.GrantsAccess() &&
-                            GetIdsFromMetadata(other.Metadata).Item2 == user.Id)
+        var otherLiveSubscriptions = subscriptions.Data
+            .Where(other =>
+            {
+                var (_, otherUserId, _) = GetIdsFromMetadata(other.Metadata);
+                return other.Id != subscription.Id && other.HasLiveStatus() && otherUserId == user.Id;
+            })
             .ToList();
 
-        var otherLive = live.FirstOrDefault(other => other.Id == user.GatewaySubscriptionId) ??
-                        live.MaxBy(other => other.GetCurrentPeriodEnd());
+        var otherLiveSubscription =
+            otherLiveSubscriptions.FirstOrDefault(other => other.Id == user.GatewaySubscriptionId) ??
+            otherLiveSubscriptions.MaxBy(other => other.GetCurrentPeriodEnd());
 
-        if (otherLive != null)
+        if (otherLiveSubscription != null)
         {
             _logger.LogInformation(
                 "User ({UserId}) has another live subscription ({OtherSubscriptionId}) besides subscription ({SubscriptionId})",
-                user.Id, otherLive.Id, subscription.Id);
+                user.Id, otherLiveSubscription.Id, subscription.Id);
         }
 
-        return otherLive;
+        return otherLiveSubscription;
     }
 
-    public async Task<Subscription> GetLiveLinkedSubscriptionAsync(Organization organization, Subscription subscription)
+    public async Task<Subscription> FindOtherLiveSubscriptionForOrganizationAsync(Organization organization, Subscription subscription)
     {
         // An organization's subscriptions can differ in plan and seats, so only its linked one keeps it enabled.
         if (string.IsNullOrEmpty(organization.GatewaySubscriptionId) || organization.GatewaySubscriptionId == subscription.Id)
@@ -313,7 +316,7 @@ public class StripeEventUtilityService : IStripeEventUtilityService
             return null;
         }
 
-        if (!linked.GrantsAccess())
+        if (!linked.HasLiveStatus())
         {
             return null;
         }

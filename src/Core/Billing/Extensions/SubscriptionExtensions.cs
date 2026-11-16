@@ -6,7 +6,7 @@ namespace Bit.Core.Billing.Extensions;
 
 public static class SubscriptionExtensions
 {
-    public static bool GrantsAccess(this Subscription subscription) =>
+    public static bool HasLiveStatus(this Subscription subscription) =>
         subscription.Status is StripeConstants.SubscriptionStatus.Active
             or StripeConstants.SubscriptionStatus.Trialing
             or StripeConstants.SubscriptionStatus.PastDue;

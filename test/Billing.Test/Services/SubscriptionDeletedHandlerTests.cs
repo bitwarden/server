@@ -160,7 +160,7 @@ public class SubscriptionDeletedHandlerTests
             .Returns(Tuple.Create<Guid?, Guid?, Guid?>(organizationId, null, null));
         _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
         var liveSubscription = new Subscription { Id = "sub_current" };
-        _stripeEventUtilityService.GetLiveLinkedSubscriptionAsync(organization, subscription).Returns(liveSubscription);
+        _stripeEventUtilityService.FindOtherLiveSubscriptionForOrganizationAsync(organization, subscription).Returns(liveSubscription);
 
         // Act
         await _sut.HandleAsync(stripeEvent);
@@ -232,7 +232,7 @@ public class SubscriptionDeletedHandlerTests
             .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
         _userRepository.GetByIdAsync(userId).Returns(user);
         var liveSubscription = new Subscription { Id = "sub_current" };
-        _stripeEventUtilityService.GetOtherLiveSubscriptionAsync(user, subscription).Returns(liveSubscription);
+        _stripeEventUtilityService.FindOtherLiveSubscriptionForUserAsync(user, subscription).Returns(liveSubscription);
 
         // Act
         await _sut.HandleAsync(stripeEvent);
@@ -266,7 +266,7 @@ public class SubscriptionDeletedHandlerTests
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
         _userRepository.GetByIdAsync(userId).Returns(user);
-        _stripeEventUtilityService.GetOtherLiveSubscriptionAsync(user, subscription).ThrowsAsync(new StripeException("unavailable"));
+        _stripeEventUtilityService.FindOtherLiveSubscriptionForUserAsync(user, subscription).ThrowsAsync(new StripeException("unavailable"));
 
         // Act & Assert
         await Assert.ThrowsAsync<StripeException>(() => _sut.HandleAsync(stripeEvent));
@@ -296,7 +296,7 @@ public class SubscriptionDeletedHandlerTests
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(Tuple.Create<Guid?, Guid?, Guid?>(organizationId, null, null));
         _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
-        _stripeEventUtilityService.GetLiveLinkedSubscriptionAsync(organization, subscription)
+        _stripeEventUtilityService.FindOtherLiveSubscriptionForOrganizationAsync(organization, subscription)
             .ThrowsAsync(new StripeException("unavailable"));
 
         // Act & Assert
