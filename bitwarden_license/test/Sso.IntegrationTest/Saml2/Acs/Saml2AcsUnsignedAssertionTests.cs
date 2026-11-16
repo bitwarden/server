@@ -1,11 +1,11 @@
 ﻿using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
-using Bit.Sso.IntegrationTest.Utilities;
+using Bit.Sso.IntegrationTest.Helpers;
 using Sustainsys.Saml2;
 using Xunit;
 
-namespace Bit.Sso.IntegrationTest.Endpoints;
+namespace Bit.Sso.IntegrationTest.Saml2.Acs;
 
 /// <summary>
 /// Posts an unsigned SAML response to the assertion consumer service (ACS) URL through the whole

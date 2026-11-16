@@ -11,7 +11,7 @@ using Bit.Core.Platform.Mail.Delivery;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
-using Bit.Sso.IntegrationTest.Utilities;
+using Bit.Sso.IntegrationTest.Helpers;
 using Bit.Sso.Utilities;
 using Bit.Sso.Utilities.Saml2;
 using Microsoft.AspNetCore.Authentication;
@@ -21,7 +21,7 @@ using NSubstitute;
 using Sustainsys.Saml2.AspNetCore2;
 using Xunit;
 
-namespace Bit.Sso.IntegrationTest.Endpoints;
+namespace Bit.Sso.IntegrationTest.Saml2.Acs;
 
 /// <summary>
 /// Uses a <c>Saml2Options</c> object.

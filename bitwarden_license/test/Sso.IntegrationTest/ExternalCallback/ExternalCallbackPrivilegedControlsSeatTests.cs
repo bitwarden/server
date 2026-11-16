@@ -15,14 +15,14 @@ using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Utilities;
-using Bit.Sso.IntegrationTest.Utilities;
+using Bit.Sso.IntegrationTest.Helpers;
 using Microsoft.AspNetCore.Mvc.Testing;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Stripe;
 using Xunit;
 
-namespace Bit.Sso.IntegrationTest.Controllers;
+namespace Bit.Sso.IntegrationTest.ExternalCallback;
 
 /// <summary>
 /// When an SSO sign-in moves a Staged member that has Privileged Controls access to Invited, the member starts
@@ -38,7 +38,7 @@ namespace Bit.Sso.IntegrationTest.Controllers;
 /// <see cref="FeatureFlagKeys.PM39883_Pam_Billing_Support"/>. On cloud with the flag on, a reservation can autoscale
 /// seats. With the flag off, the seat count is a hard limit and nothing autoscales.
 /// </remarks>
-public class AccountControllerExternalCallbackPrivilegedControlsSeatTests
+public class ExternalCallbackPrivilegedControlsSeatTests
 {
     private const string _billingSupportFlagSetting =
         $"globalSettings:launchDarkly:flagValues:{FeatureFlagKeys.PM39883_Pam_Billing_Support}";

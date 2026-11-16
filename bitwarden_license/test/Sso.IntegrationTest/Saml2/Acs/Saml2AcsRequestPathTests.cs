@@ -1,11 +1,11 @@
 ﻿using System.Net;
 using System.Text.Json;
-using Bit.Sso.IntegrationTest.Utilities;
+using Bit.Sso.IntegrationTest.Helpers;
 using Bit.Sso.Utilities.Saml2;
 using Xunit;
 using EncryptedXml = System.Security.Cryptography.Xml.EncryptedXml;
 
-namespace Bit.Sso.IntegrationTest.Endpoints;
+namespace Bit.Sso.IntegrationTest.Saml2.Acs;
 
 /// <summary>
 /// Sends real HTTP <c>POST</c> requests to the assertion consumer service (ACS) URL.
