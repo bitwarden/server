@@ -19,8 +19,11 @@ CREATE TABLE [dbo].[AccessRequest] (
 );
 GO
 
-CREATE NONCLUSTERED INDEX [IX_AccessRequest_RequesterId_CipherId_Action]
-    ON [dbo].[AccessRequest] ([RequesterId] ASC, [CipherId] ASC, [Action] ASC);
+-- Supports the requester's open and approved request lookups per cipher; [NotAfter] lets the clock check seek.
+-- The INCLUDE settles the extension filter and the CreationDate ordering before any clustered lookup.
+CREATE NONCLUSTERED INDEX [IX_AccessRequest_RequesterId_CipherId_Action_NotAfter]
+    ON [dbo].[AccessRequest] ([RequesterId] ASC, [CipherId] ASC, [Action] ASC, [NotAfter] ASC)
+    INCLUDE ([ExtensionOfLeaseId], [CreationDate]);
 GO
 
 CREATE NONCLUSTERED INDEX [IX_AccessRequest_OrganizationId_Action]

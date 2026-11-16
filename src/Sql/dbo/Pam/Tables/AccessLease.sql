@@ -11,18 +11,24 @@ CREATE TABLE [dbo].[AccessLease] (
     [RevokedDate]       DATETIME2 (7)       NULL,
     [RevokedBy]         UNIQUEIDENTIFIER    NULL,
     [CreationDate]      DATETIME2 (7)       NOT NULL,
+    [SweptDate]         DATETIME2 (7)       NULL,
     CONSTRAINT [PK_AccessLease] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_AccessLease_AccessRequest] FOREIGN KEY ([AccessRequestId]) REFERENCES [dbo].[AccessRequest] ([Id]),
     CONSTRAINT [FK_AccessLease_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE
 );
 GO
 
-CREATE NONCLUSTERED INDEX [IX_AccessLease_RequesterId_CipherId_Action]
-    ON [dbo].[AccessLease] ([RequesterId] ASC, [CipherId] ASC, [Action] ASC);
+-- Supports the requester's live-lease reads; [NotAfter] lets the clock check seek past expired history.
+-- The INCLUDE covers the row so no clustered lookup follows.
+CREATE NONCLUSTERED INDEX [IX_AccessLease_RequesterId_Action_NotAfter]
+    ON [dbo].[AccessLease] ([RequesterId] ASC, [Action] ASC, [NotAfter] ASC)
+    INCLUDE ([AccessRequestId], [OrganizationId], [CollectionId], [CipherId], [NotBefore], [RevokedDate], [RevokedBy], [CreationDate], [SweptDate]);
 GO
 
-CREATE NONCLUSTERED INDEX [IX_AccessLease_NotAfter_Action]
-    ON [dbo].[AccessLease] ([NotAfter] ASC, [Action] ASC);
+-- Supports the expiry sweep; leading on [SweptDate] seeks straight to the unswept rows, so the read doesn't
+-- grow with the lease history already swept.
+CREATE NONCLUSTERED INDEX [IX_AccessLease_SweptDate_Action_NotAfter]
+    ON [dbo].[AccessLease] ([SweptDate] ASC, [Action] ASC, [NotAfter] ASC);
 GO
 
 -- Supports the governance lease lists filtered by the caller's manageable collection ids.
