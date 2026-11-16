@@ -21,8 +21,8 @@ BEGIN
     INSERT INTO #Live ([Id])
     SELECT LR.[Id]
     FROM [dbo].[AccessRequest] LR
-    WHERE LR.[CollectionId] IN (SELECT [Id] FROM @ManageableCollectionIds)
-        AND LR.[Action] IN (0, 1) -- None (open), Approved
+    INNER JOIN @ManageableCollectionIds MC ON MC.[Id] = LR.[CollectionId]
+    WHERE LR.[Action] IN (0, 1) -- None (open), Approved
         AND LR.[NotAfter] > @Now
     UNION
     SELECT LR.[Id]
@@ -74,8 +74,8 @@ BEGIN
         INSERT INTO @Revoked ([Id])
         SELECT L.[AccessRequestId]
         FROM [dbo].[AccessLease] L
-        WHERE L.[CollectionId] IN (SELECT [Id] FROM @ManageableCollectionIds)
-            AND L.[Action] = 2 -- Revoked
+        INNER JOIN @ManageableCollectionIds MC ON MC.[Id] = L.[CollectionId]
+        WHERE L.[Action] = 2 -- Revoked
         UNION
         SELECT L.[AccessRequestId]
         FROM [dbo].[AccessLease] L
@@ -110,6 +110,7 @@ BEGIN
     (
         SELECT LR.[Id], LR.[CollectionId], LR.[RequesterId], LR.[CreationDate], LR.[Action]
         FROM [dbo].[AccessRequest] LR
+        -- IN, not a join on the TVP: a join gets a parallel plan here that uses more CPU.
         WHERE LR.[CollectionId] IN (SELECT [Id] FROM @ManageableCollectionIds)
             AND LR.[CreationDate] >= @Since
             AND (LR.[ExtensionOfLeaseId] IS NULL OR LR.[Action] = 2) -- Denied
