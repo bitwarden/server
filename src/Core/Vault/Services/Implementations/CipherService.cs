@@ -757,6 +757,18 @@ public class CipherService : ICipherService
         {
             throw new BadRequestException("Cipher must belong to an organization.");
         }
+
+        // Another member's personal cipher may not be shared, even by an admin.
+        var unsharedDefaultCollectionIds = await GetUnsharedDefaultCollectionIdsAsync(cipher);
+        if (unsharedDefaultCollectionIds.Count > 0)
+        {
+            var ownedDefaultCollectionIds = await GetOwnedDefaultCollectionIdsAsync(savingUserId);
+            if (unsharedDefaultCollectionIds.Any(id => !ownedDefaultCollectionIds.Contains(id)))
+            {
+                throw new NotFoundException();
+            }
+        }
+
         await ValidateChangeInCollectionsAsync(cipher, collectionIds, savingUserId);
 
         cipher.RevisionDate = DateTime.UtcNow;
@@ -915,12 +927,8 @@ public class CipherService : ICipherService
 
     public async Task ValidateBulkCollectionAssignmentAsync(IEnumerable<Guid> collectionIds, IEnumerable<Guid> cipherIds, Guid userId, bool removeCollections = false)
     {
-        // A default ("My Items") collection is personal to its owner. Loaded at most once per request,
-        // and only when some default collection is actually implicated.
-        var ownedDefaultCollectionIds = (await _collectionRepository.GetManyByUserIdAsync(userId))
-                .Where(c => c.Type == CollectionType.DefaultUserCollection)
-                .Select(c => c.Id)
-                .ToHashSet();
+        // A default ("My Items") collection is personal to its owner. Loaded once per request.
+        var ownedDefaultCollectionIds = await GetOwnedDefaultCollectionIdsAsync(userId);
 
         var newCollectionIds = collectionIds.ToList();
 
@@ -950,20 +958,11 @@ public class CipherService : ICipherService
                 throw new NotFoundException();
             }
 
-            // Adding collections shares the cipher. A cipher that lives only in another member's default
-            // collection is personal to them and may not be shared; once it is also in a shared collection
-            // it is already shared and may be assigned to other collections.
+            // Adding collections shares the cipher, which is not allowed for another member's personal cipher.
             if (!removeCollections && cipher.OrganizationId.HasValue)
             {
-                var cipherCollections = await _collectionRepository.GetManyByManyIdsAsync(
-                    await _collectionCipherRepository.GetCollectionIdsByCipherIdAsync(cipher.Id));
-                var alreadyShared = cipherCollections.Any(c => c.Type != CollectionType.DefaultUserCollection);
-                var foreignDefaultCollectionIds = cipherCollections
-                    .Where(c => c.Type == CollectionType.DefaultUserCollection)
-                    .Select(c => c.Id)
-                    .ToList();
-
-                if (!alreadyShared && foreignDefaultCollectionIds.Any(id => !ownedDefaultCollectionIds.Contains(id)))
+                var unsharedDefaultCollectionIds = await GetUnsharedDefaultCollectionIdsAsync(cipher);
+                if (unsharedDefaultCollectionIds.Any(id => !ownedDefaultCollectionIds.Contains(id)))
                 {
                     throw new NotFoundException();
                 }
@@ -1204,6 +1203,33 @@ public class CipherService : ICipherService
         var requirement = await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId);
 
         return requirement.IgnoreStorageLimitsOnMigration(organization.Id);
+    }
+
+    private async Task<HashSet<Guid>> GetOwnedDefaultCollectionIdsAsync(Guid userId)
+    {
+        return (await _collectionRepository.GetManyByUserIdAsync(userId))
+            .Where(c => c.Type == CollectionType.DefaultUserCollection)
+            .Select(c => c.Id)
+            .ToHashSet();
+    }
+
+    // A cipher that lives only in default ("My Items") collections is personal to their owners. Returns those
+    // default collection ids, or an empty list once the cipher is also in a shared collection (it is then
+    // already shared and may be assigned to other collections).
+    private async Task<List<Guid>> GetUnsharedDefaultCollectionIdsAsync(Cipher cipher)
+    {
+        var cipherCollections = await _collectionRepository.GetManyByManyIdsAsync(
+            await _collectionCipherRepository.GetCollectionIdsByCipherIdAsync(cipher.Id));
+
+        if (cipherCollections.Any(c => c.Type != CollectionType.DefaultUserCollection))
+        {
+            return [];
+        }
+
+        return cipherCollections
+            .Where(c => c.Type == CollectionType.DefaultUserCollection)
+            .Select(c => c.Id)
+            .ToList();
     }
 
     // Validates collection changes for a cipher:

@@ -27,6 +27,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Sso\Sso.csproj" />
     <ProjectReference Include="..\..\..\test\Common\Common.csproj" />
+    <ProjectReference Include="..\..\..\test\Core.Test\Core.Test.csproj" />
     <ProjectReference Include="..\..\..\test\IntegrationTestCommon\IntegrationTestCommon.csproj" />
   </ItemGroup>
   <ItemGroup>

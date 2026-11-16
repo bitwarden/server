@@ -33,7 +33,7 @@ internal sealed class GeneratePersonalCiphersStep(
         }
 
         var generator = context.RequireGenerator();
-        var progress = context.GetProgress();
+        var progress = context.Progress;
 
         var userDigests = context.Registry.UserDigests;
         var typeDistribution = typeDist ?? CipherTypeDistributions.Realistic;
