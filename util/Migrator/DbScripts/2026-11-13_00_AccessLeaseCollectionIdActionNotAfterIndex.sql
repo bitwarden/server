@@ -1,8 +1,8 @@
--- Replaces IX_AccessLease_CollectionId_Action with a covering index keyed on [NotAfter], so the
--- governance lease lists seek past naturally expired leases instead of reading every lease stored.
+-- Replaces IX_AccessLease_CollectionId_Action with a covering index keyed on [NotAfter], so the active
+-- lease list seeks past naturally expired leases and neither governance list needs a clustered lookup.
 IF NOT EXISTS (
     SELECT
-        NULL
+        1
     FROM
         sys.indexes
     WHERE
@@ -18,7 +18,7 @@ GO
 
 IF EXISTS (
     SELECT
-        NULL
+        1
     FROM
         sys.indexes
     WHERE
