@@ -2,27 +2,40 @@
 -- Approvals tab no longer reads the whole history. AccessRequest_ReadInboxHistoryByCollectionIds stays for servers
 -- that still call it during the deploy.
 
--- The history page reads its rows from this index alone, without a lookup per row.
-IF EXISTS (
-    SELECT
-        NULL
-    FROM
-        sys.indexes
-    WHERE
-        [name] = 'IX_AccessRequest_CollectionId_CreationDate'
-        AND object_id = OBJECT_ID('[dbo].[AccessRequest]')
+-- The history page reads its rows from this index alone, without a lookup per row. A re-run leaves it as it is.
+IF NOT EXISTS (
+    SELECT 1
+    FROM [sys].[index_columns] IC
+    INNER JOIN [sys].[columns] C
+        ON C.[object_id] = IC.[object_id]
+        AND C.[column_id] = IC.[column_id]
+    INNER JOIN [sys].[indexes] I
+        ON I.[object_id] = IC.[object_id]
+        AND I.[index_id] = IC.[index_id]
+    WHERE I.[name] = 'IX_AccessRequest_CollectionId_CreationDate'
+        AND I.[object_id] = OBJECT_ID('[dbo].[AccessRequest]')
+        AND C.[name] = 'ExtensionOfLeaseId'
+        AND IC.[is_included_column] = 1
 )
 BEGIN
-    CREATE NONCLUSTERED INDEX [IX_AccessRequest_CollectionId_CreationDate]
-    ON [dbo].[AccessRequest] ([CollectionId] ASC, [CreationDate] ASC)
-    INCLUDE ([Action], [NotAfter], [RequesterId], [ExtensionOfLeaseId])
-    WITH (DROP_EXISTING = ON);
-END
-ELSE
-BEGIN
-    CREATE NONCLUSTERED INDEX [IX_AccessRequest_CollectionId_CreationDate]
-    ON [dbo].[AccessRequest] ([CollectionId] ASC, [CreationDate] ASC)
-    INCLUDE ([Action], [NotAfter], [RequesterId], [ExtensionOfLeaseId]);
+    IF EXISTS (
+        SELECT 1
+        FROM [sys].[indexes]
+        WHERE [name] = 'IX_AccessRequest_CollectionId_CreationDate'
+            AND [object_id] = OBJECT_ID('[dbo].[AccessRequest]')
+    )
+    BEGIN
+        CREATE NONCLUSTERED INDEX [IX_AccessRequest_CollectionId_CreationDate]
+            ON [dbo].[AccessRequest] ([CollectionId] ASC, [CreationDate] ASC)
+            INCLUDE ([Action], [NotAfter], [RequesterId], [ExtensionOfLeaseId])
+            WITH (DROP_EXISTING = ON);
+    END
+    ELSE
+    BEGIN
+        CREATE NONCLUSTERED INDEX [IX_AccessRequest_CollectionId_CreationDate]
+            ON [dbo].[AccessRequest] ([CollectionId] ASC, [CreationDate] ASC)
+            INCLUDE ([Action], [NotAfter], [RequesterId], [ExtensionOfLeaseId]);
+    END
 END
 GO
 
