@@ -47,6 +47,7 @@ public class SsoTestDataBuilder
     /// This UserIdentifier is a mock for the UserIdentifier we get from the External Identity Provider.
     /// </summary>
     private string? _userIdentifier;
+    private string? _manualLinkingToken;
     private Action<Organization>? _organizationConfig;
     private Action<User>? _userConfig;
     private Action<OrganizationUser>? _orgUserConfig;
@@ -65,7 +66,6 @@ public class SsoTestDataBuilder
     private bool _isSelfHosted = false;
     private bool _isSelfHostedEnvironment = false;
     private bool _includeProviderUserId = true;
-    private bool _useNonExistentOrgInAuth = false;
     private bool _isNativeClient = false;
     private bool _mockAutoscaleSuccess = false;
     private bool _mockAutoscalePartialFailure = false;
@@ -159,6 +159,17 @@ public class SsoTestDataBuilder
         return this;
     }
 
+    /// <summary>
+    /// Makes the external authentication result carry a manual SSO linking identifier,
+    /// <c>{userId},{token}</c>, for the user that <see cref="WithUser"/> creates. The identifier is built
+    /// when the request arrives, because the user ID exists only after the user is saved.
+    /// </summary>
+    public SsoTestDataBuilder WithManualLinkingToken(string token)
+    {
+        _manualLinkingToken = token;
+        return this;
+    }
+
     public SsoTestDataBuilder OmitProviderUserId()
     {
         _includeProviderUserId = false;
@@ -179,16 +190,6 @@ public class SsoTestDataBuilder
     public SsoTestDataBuilder WithSelfHostedEnvironment()
     {
         _isSelfHostedEnvironment = true;
-        return this;
-    }
-
-    /// <summary>
-    /// Causes the auth result to use a different (non-existent) organization ID than what is seeded
-    /// in the database. This simulates the "organization not found" scenario.
-    /// </summary>
-    public SsoTestDataBuilder WithNonExistentOrganizationInAuth()
-    {
-        _useNonExistentOrgInAuth = true;
         return this;
     }
 
@@ -332,11 +333,12 @@ public class SsoTestDataBuilder
 
         // Pre-generate IDs and values needed for auth mock (before accessing Services)
         var organizationId = Guid.NewGuid();
-        // Use a different org ID in auth if testing "organization not found" scenario
-        var authOrganizationId = _useNonExistentOrgInAuth ? Guid.NewGuid() : organizationId;
         var providerUserId = _includeProviderUserId ? Guid.NewGuid().ToString() : "";
         var userEmail = _withNullEmail ? null : $"user_{Guid.NewGuid()}@test.com";
         var userName = "TestUser";
+
+        // The user row is saved after the host starts, so the authentication result reads it per request.
+        User? user = null;
 
         // 1. Configure mocked authentication service BEFORE accessing Services
         factory.SubstituteService<IAuthenticationService>(authService =>
@@ -346,20 +348,20 @@ public class SsoTestDataBuilder
                 authService.AuthenticateAsync(
                         Arg.Any<HttpContext>(),
                         AuthenticationSchemes.SsoExternalCookie)
-                    .Returns(MockSuccessfulAuthResult.Build(
-                        authOrganizationId,
+                    .Returns(_ => MockSuccessfulAuthResult.Build(
+                        organizationId,
                         providerUserId,
                         userEmail,
                         userName,
                         acrValue: null,
-                        _userIdentifier));
+                        _manualLinkingToken is null ? _userIdentifier : $"{user!.Id},{_manualLinkingToken}"));
             }
             else
             {
                 authService.AuthenticateAsync(
                         Arg.Any<HttpContext>(),
                         AuthenticationSchemes.SsoExternalCookie)
-                    .Returns(AuthenticateResult.Fail("External authentication error"));
+                    .Returns(AuthenticateResult.Fail("simulated external authentication failure"));
             }
         });
 
@@ -514,7 +516,6 @@ public class SsoTestDataBuilder
         organization = await orgRepo.CreateAsync(organization);
 
         // 3. Create User with defaults (using pre-generated values)
-        User? user = null;
         if (_includeUser)
         {
             user = new User
@@ -599,7 +600,7 @@ public class SsoTestDataBuilder
         {
             ssoConfig = new SsoConfig
             {
-                OrganizationId = authOrganizationId,
+                OrganizationId = organizationId,
                 Enabled = true
             };
             ssoConfig.SetData(new SsoConfigurationData());

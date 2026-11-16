@@ -19,24 +19,9 @@ public class ExternalCallbackRequestValidationTests(SsoApplicationFactory factor
     private readonly SsoApplicationFactory _factory = factory;
 
     /*
-    * Test to verify the /Account/ExternalCallback endpoint exists and is reachable.
-    */
-    [Fact]
-    public async Task ExternalCallback_EndpointExists_ReturnsExpectedStatusCode()
-    {
-        // Arrange
-        var client = _factory.CreateClient();
-
-        // Act - Verify the endpoint is accessible (even if it fails due to missing auth)
-        var response = await client.GetAsync("/Account/ExternalCallback");
-
-        // Assert - The endpoint should exist and return 500 (not 404) due to missing authentication
-        Assert.NotEqual(HttpStatusCode.NotFound, response.StatusCode);
-    }
-
-    /*
     * Test to verify calling /Account/ExternalCallback without an authentication cookie
-    * results in an error as expected.
+    * results in an error as expected. A missing route returns 404, so this test also
+    * proves that the route exists.
     */
     [Fact]
     public async Task ExternalCallback_WithNoAuthenticationCookie_ReturnsError()
@@ -51,6 +36,7 @@ public class ExternalCallbackRequestValidationTests(SsoApplicationFactory factor
         Assert.False(response.IsSuccessStatusCode);
         // The endpoint will throw an exception when authentication fails
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Contains("External authentication error", await response.Content.ReadAsStringAsync());
     }
 
     /*
@@ -70,7 +56,8 @@ public class ExternalCallbackRequestValidationTests(SsoApplicationFactory factor
         var response = await client.GetAsync("/Account/ExternalCallback");
 
         // Assert
-        Assert.False(response.IsSuccessStatusCode);
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Contains("External authentication error", await response.Content.ReadAsStringAsync());
     }
 
     /*
@@ -228,32 +215,6 @@ public class ExternalCallbackRequestValidationTests(SsoApplicationFactory factor
         // Assert - Should fail because provider is not a valid organization GUID
         var stringResponse = await response.Content.ReadAsStringAsync();
         Assert.Contains($"SSO provider, {invalidScheme} is not an organization id", stringResponse);
-        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
-    }
-
-    /*
-    * Test to verify /Account/ExternalCallback returns error when the organization ID
-    * in the auth result does not match any organization in the database.
-    * NOTE: This code path is unreachable because the SsoConfig must exist to proceed, but there is a circular dependency:
-    * - SsoConfig cannot exist without a valid Organization but the test is testing that an Organization cannot be found.
-    */
-    [Fact(Skip = "This code path is unreachable because the SsoConfig must exist to proceed. But the SsoConfig cannot exist without a valid Organization.")]
-    public async Task ExternalCallback_WithNonExistentOrganization_ReturnsError()
-    {
-        // Arrange
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithNonExistentOrganizationInAuth()
-            .BuildAsync();
-
-        var client = testData.Factory.CreateClient();
-
-        // Act
-        var response = await client.GetAsync("/Account/ExternalCallback");
-
-        // Assert - Should fail because organization cannot be found by the ID in auth result
-        var stringResponse = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Could not find organization", stringResponse);
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
     }
 }
