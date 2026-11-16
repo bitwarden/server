@@ -327,11 +327,8 @@ public class RestoreOrganizationUserCommand(
             && u.AccessPam
             && PrivilegedControlsSeatOccupancy.OccupiesSeat(u.GetPriorActiveOrganizationUserStatusType()));
 
-        if (organization.UsePam)
-        {
-            await ValidatePrivilegedControlsSeatsOrThrowAsync(organization, privilegedControlsSeatsRequested,
-                Math.Max(0, newSeatsRequired));
-        }
+        await ValidatePrivilegedControlsSeatsOrThrowAsync(organization, privilegedControlsSeatsRequested,
+            Math.Max(0, newSeatsRequired));
 
         await organizationService.AutoAddSeatsAsync(organization, newSeatsRequired);
 

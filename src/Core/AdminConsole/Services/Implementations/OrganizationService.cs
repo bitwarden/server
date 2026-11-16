@@ -717,14 +717,11 @@ public class OrganizationService : IOrganizationService
             : 0;
         var initialPrivilegedControlsSeats = organization.PamSeats;
 
-        if (privilegedControlsSeatsToReserve > 0)
+        var validationError = await _validatePrivilegedControlsSeatReservationQuery.RunAsync(
+            organization, privilegedControlsSeatsToReserve, Math.Max(0, newSeatsRequired));
+        if (validationError != null)
         {
-            var validationError = await _validatePrivilegedControlsSeatReservationQuery.RunAsync(
-                organization, privilegedControlsSeatsToReserve, Math.Max(0, newSeatsRequired));
-            if (validationError != null)
-            {
-                throw new BadRequestException(validationError.Message);
-            }
+            throw new BadRequestException(validationError.Message);
         }
 
         // Staged rows whose promotion has actually committed, and so must be put back if the batch fails.

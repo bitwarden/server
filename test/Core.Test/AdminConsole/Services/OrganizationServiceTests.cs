@@ -2356,23 +2356,6 @@ public class OrganizationServiceTests
             .RunAsync(organization, 1, 0);
     }
 
-    [Theory]
-    [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
-        InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]
-    public async Task InviteUser_NoStagedUsersWithPrivilegedControls_DoesNotValidate(
-        Organization organization, OrganizationUserInvite invite, string externalId, OrganizationUser invitor,
-        OrganizationUser stagedUser, SutProvider<OrganizationService> sutProvider)
-    {
-        InviteUser_ArrangeStagedUserWithPrivilegedControls(organization, invite, stagedUser, sutProvider);
-        stagedUser.AccessPam = false;
-
-        await sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, systemUser: null, invite, externalId);
-
-        await sutProvider.GetDependency<IValidatePrivilegedControlsSeatReservationQuery>()
-            .DidNotReceiveWithAnyArgs()
-            .RunAsync(default!, default, default);
-    }
-
     /// <summary>
     /// Arranges a single-email invite that promotes a staged member who was already given Privileged Controls access,
     /// in an organization that uses Privileged Controls.
