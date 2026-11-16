@@ -1,5 +1,4 @@
 ﻿using Bit.Core;
-using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
@@ -43,14 +42,16 @@ public class HandleAccessGrantEndedCommand : IHandleAccessGrantEndedCommand
         }
 
         var config = await _configRepository.GetByCipherIdAsync(cipherId);
-        if (config is null || !config.RotateOnAccessEnd)
+        if (config is null)
         {
             return;
         }
 
-        // Dropped while paused; the spec's DeferAccessEndWhileUnavailable latch is not implemented.
-        if (!config.Enabled)
+        // Dropped while paused, pending access end included; the spec's DeferAccessEndWhileUnavailable is not
+        // implemented.
+        if (!config.RotateOnAccessEnd || !config.Enabled)
         {
+            await _configRepository.DeletePendingAccessEndAsync(config.Id);
             return;
         }
 
@@ -64,28 +65,18 @@ public class HandleAccessGrantEndedCommand : IHandleAccessGrantEndedCommand
         {
             // OfferAsync re-checks can_offer and no-ops when it does not hold.
             await _offerRotationCommand.OfferAsync(config.Id, PamRotationSource.AccessEnd);
+            // Cleared only once the offer returns, so the rotation sweep retries one that throws.
+            await _configRepository.DeletePendingAccessEndAsync(config.Id);
             return;
         }
 
-        // A manual target has no access connector to offer a job to, so its rotation is pulled due now.
+        // A manual target has no access connector to offer a job to, so its rotation is pulled due now. False means
+        // nothing was pending, for example because a concurrent call already raised it.
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        var toPersist = new PamRotationConfig
+        if (!await _configRepository.RaiseManualObligationOnAccessEndAsync(config.Id, now))
         {
-            Id = config.Id,
-            OrganizationId = config.OrganizationId,
-            CipherId = config.CipherId,
-            TargetSystemId = config.TargetSystemId,
-            SealedData = config.SealedData,
-            WrappedKey = config.WrappedKey,
-            ScheduleCron = config.ScheduleCron,
-            RotateOnAccessEnd = config.RotateOnAccessEnd,
-            NextRotationDate = now,
-            Enabled = config.Enabled,
-            LastRotationDate = config.LastRotationDate,
-            CreationDate = config.CreationDate,
-            RevisionDate = now,
-        };
-        await _configRepository.ReplaceAsync(toPersist);
+            return;
+        }
 
         // Machinery event: single Outcome-phase, no human actor.
         var audit = new AccessAuditEventData

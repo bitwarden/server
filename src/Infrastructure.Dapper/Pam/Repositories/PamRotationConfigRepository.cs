@@ -65,6 +65,37 @@ public class PamRotationConfigRepository : Repository<PamRotationConfig, Guid>, 
         return results.ToList();
     }
 
+    public async Task<ICollection<PamRotationConfig>> GetManyPendingAccessEndAsync(DateTime createdBefore)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<PamRotationConfig>(
+            $"[{Schema}].[PamRotationConfig_ReadManyPendingAccessEnd]",
+            new { CreatedBefore = createdBefore },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToList();
+    }
+
+    public async Task DeletePendingAccessEndAsync(Guid configId)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.ExecuteAsync(
+            $"[{Schema}].[PamPendingAccessEnd_DeleteByRotationConfigId]",
+            new { RotationConfigId = configId },
+            commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task<bool> RaiseManualObligationOnAccessEndAsync(Guid configId, DateTime now)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        var outcome = await connection.ExecuteScalarAsync<int>(
+            $"[{Schema}].[PamRotationConfig_UpdateManualObligationOnAccessEnd]",
+            new { Id = configId, Now = now },
+            commandType: CommandType.StoredProcedure);
+
+        return outcome == 1;
+    }
+
     public async Task<bool> AnyByTargetSystemAsync(Guid targetSystemId)
     {
         await using var connection = new SqlConnection(ConnectionString);

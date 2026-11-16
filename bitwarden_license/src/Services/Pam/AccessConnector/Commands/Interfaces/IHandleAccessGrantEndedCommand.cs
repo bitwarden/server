@@ -5,7 +5,8 @@ public interface IHandleAccessGrantEndedCommand
     /// <summary>
     /// Reacts to a lease on <paramref name="cipherId"/> ending. Gated on
     /// <see cref="Bit.Core.FeatureFlagKeys.PamAccessConnector"/>; for an enabled config that opts in, offers an
-    /// access-end job on an automatic target or pulls a manual target's rotation due.
+    /// access-end job on an automatic target or pulls a manual target's rotation due. Clears the config's pending
+    /// access ends when it completes, so the rotation sweep retries a call that throws.
     /// </summary>
     Task HandleAsync(Guid cipherId);
 }

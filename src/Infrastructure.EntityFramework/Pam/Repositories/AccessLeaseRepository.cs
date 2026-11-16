@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using CoreEntity = Bit.Pam.Entities.AccessLease;
 using EfDecision = Bit.Infrastructure.EntityFramework.Pam.Models.AccessDecision;
 using EfModel = Bit.Infrastructure.EntityFramework.Pam.Models.AccessLease;
+using EfPendingAccessEnd = Bit.Infrastructure.EntityFramework.Pam.Models.PamPendingAccessEnd;
 
 #nullable enable
 
@@ -237,6 +238,23 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
             decisionEntity.CreationDate = now;
 
             await dbContext.AccessDecisions.AddAsync(decisionEntity);
+
+            // The access-end trigger runs after commit; this row lets the rotation sweep retry it if it fails.
+            var configId = await dbContext.PamRotationConfigs
+                .Where(c => c.RotateOnAccessEnd && c.Enabled
+                    && dbContext.AccessLeases.Any(l => l.Id == lease.Id && l.CipherId == c.CipherId))
+                .Select(c => (Guid?)c.Id)
+                .FirstOrDefaultAsync();
+            if (configId is not null)
+            {
+                await dbContext.PamPendingAccessEnds.AddAsync(new EfPendingAccessEnd
+                {
+                    AccessLeaseId = lease.Id,
+                    RotationConfigId = configId.Value,
+                    CreationDate = now,
+                });
+            }
+
             await dbContext.SaveChangesAsync();
         }
 
@@ -269,13 +287,35 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         foreach (var candidate in candidates)
         {
             var id = candidate.Id;
+            var cipherId = candidate.CipherId;
+            await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
             var claimed = await dbContext.AccessLeases
                 .Where(l => l.Id == id && l.Action == AccessLeaseAction.None && l.SweptDate == null)
                 .ExecuteUpdateAsync(s => s.SetProperty(l => l.SweptDate, now));
             if (claimed == 1)
             {
+                // The caller runs the access-end trigger after this commits; this row lets the rotation sweep retry it
+                // if it fails.
+                var configId = await dbContext.PamRotationConfigs
+                    .Where(c => c.CipherId == cipherId && c.RotateOnAccessEnd && c.Enabled)
+                    .Select(c => (Guid?)c.Id)
+                    .FirstOrDefaultAsync();
+                if (configId is not null)
+                {
+                    await dbContext.PamPendingAccessEnds.AddAsync(new EfPendingAccessEnd
+                    {
+                        AccessLeaseId = id,
+                        RotationConfigId = configId.Value,
+                        CreationDate = now,
+                    });
+                    await dbContext.SaveChangesAsync();
+                }
+
                 swept.Add(candidate);
             }
+
+            await transaction.CommitAsync();
         }
 
         return swept;
