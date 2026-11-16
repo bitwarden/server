@@ -10,7 +10,7 @@ using Microsoft.Net.Http.Headers;
 using Sustainsys.Saml2;
 using Xunit;
 
-namespace Bit.Sso.IntegrationTest.Endpoints;
+namespace Bit.Sso.IntegrationTest.Flows.Saml2SpInitiatedLogin;
 
 /// <summary>
 /// Checks that a login that starts at the service provider (SP) succeeds, with the PM42283_Rsa15Deprecation
