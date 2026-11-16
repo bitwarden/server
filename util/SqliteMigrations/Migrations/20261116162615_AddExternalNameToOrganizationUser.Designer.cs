@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20261111175748_AddExternalNameToOrganizationUser")]
+    [Migration("20261116162615_AddExternalNameToOrganizationUser")]
     partial class AddExternalNameToOrganizationUser
     {
         /// <inheritdoc />

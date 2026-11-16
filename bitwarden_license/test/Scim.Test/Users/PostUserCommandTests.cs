@@ -242,6 +242,25 @@ public class PostUserCommandTests
 
     [Theory]
     [BitAutoData]
+    public async Task PostUser_UserNameTooLong_ThrowsBadRequest(SutProvider<PostUserCommand> sutProvider, string externalId, Guid organizationId)
+    {
+        var scimUserRequestModel = new ScimUserRequestModel
+        {
+            ExternalId = externalId,
+            UserName = new string('a', 301),
+            Emails = [new BaseScimUserModel.EmailModel("jane@example.com")],
+            Active = true,
+            Schemas = [ScimConstants.Scim2SchemaUser]
+        };
+
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.PostUserAsync(organizationId, scimUserRequestModel));
+
+        await sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs()
+            .InviteUserAsync(default, default, default, default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task PostUser_InviteUsersAfterProvisioningDisabled_StagesUser(
         SutProvider<PostUserCommand> sutProvider,
         string email,
