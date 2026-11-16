@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Services;
-using Bit.Sso.IntegrationTest.Utilities;
+using Bit.Sso.IntegrationTest.Helpers;
 using Microsoft.AspNetCore.Mvc.Testing;
 using NSubstitute;
 using Xunit;
