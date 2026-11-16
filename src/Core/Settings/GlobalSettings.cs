@@ -589,6 +589,43 @@ public class GlobalSettings : IGlobalSettings
         /// each client keeps its built-in default. Must be greater than 0 if set.
         /// </summary>
         public int? AccessTokenLifetimeSeconds { get; set; }
+
+        /// <summary>
+        /// Pre-registered third-party OIDC "Login with Bitwarden" partner clients (e.g. agentic bot
+        /// integrations). Each entry becomes an authorization-code + PKCE client restricted to identity
+        /// scopes (openid/profile/email) with consent required. There is deliberately no self-service /
+        /// dynamic client registration; partners are vetted and added here by operators.
+        /// </summary>
+        public OpenIdConnectPartnerSettings[] OpenIdConnectPartners { get; set; } = [];
+
+        public class OpenIdConnectPartnerSettings
+        {
+            /// <summary>
+            /// The client's identifier. The <c>partner.</c> prefix is added automatically if omitted, so a
+            /// value of <c>acme</c> resolves as client_id <c>partner.acme</c>.
+            /// </summary>
+            public string ClientId { get; set; }
+
+            /// <summary>Human-readable name shown to the user on the consent screen.</summary>
+            public string Name { get; set; }
+
+            /// <summary>Base64 SHA-256 hash of the client secret (never the plaintext secret).</summary>
+            public string ClientSecretHash { get; set; }
+
+            /// <summary>
+            /// Exact redirect URIs allowed for this client. For the agent-access flow these are the web
+            /// vault broker callback(s) (e.g. <c>https://vault.bitwarden.com/oauth/complete</c>).
+            /// </summary>
+            public string[] RedirectUris { get; set; } = [];
+
+            /// <summary>
+            /// Allow-list of agent loopback redirect URIs the web vault broker may forward the agent-access
+            /// PSK to (via the URL fragment). Validated against the <c>agent_redirect_uri</c> on the authorize
+            /// request so the PSK can only be delivered to an operator-vetted destination. Loopback entries
+            /// (<c>127.0.0.1</c>/<c>::1</c>) match any port per RFC 8252; non-loopback entries match exactly.
+            /// </summary>
+            public string[] AgentRedirectUris { get; set; } = [];
+        }
     }
 
 #nullable enable

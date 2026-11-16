@@ -3,6 +3,7 @@
 
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
+using Bit.Api.Auth.Models.Response;
 using Bit.Api.Models.Response;
 using Bit.Api.Tools.Models.Response;
 using Bit.Core.AdminConsole.Entities;
@@ -48,7 +49,8 @@ public class SyncResponseModel() : ResponseModel("sync")
         IEnumerable<WebAuthnCredential> webAuthnCredentials,
         IEnumerable<Policy> policiesNew = null,
         IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetailsNew = null,
-        FullCipherAccess fullCipherAccess = null)
+        FullCipherAccess fullCipherAccess = null,
+        IEnumerable<AgentConnection> agentConnections = null)
         : this()
     {
         Profile = new ProfileResponseModel(user, userAccountKeysData, organizationUserDetails, providerUserDetails,
@@ -66,6 +68,8 @@ public class SyncResponseModel() : ResponseModel("sync")
         Policies = policies?.Select(p => new PolicyResponseModel(p)) ?? new List<PolicyResponseModel>();
         PoliciesNew = policiesNew?.Select(p => new PolicyResponseModel(p));
         Sends = sends.Select(s => new SendResponseModel(s));
+        AgentConnections = agentConnections?.Select(c => new AgentConnectionResponseModel(c))
+            ?? new List<AgentConnectionResponseModel>();
         var webAuthnPrfOptions = webAuthnCredentials
             .Where(c => c.GetPrfStatus() == WebAuthnPrfStatus.Enabled)
             .Select(c => new WebAuthnPrfDecryptionOption(
@@ -131,5 +135,11 @@ public class SyncResponseModel() : ResponseModel("sync")
     /// </summary>
     public IEnumerable<PolicyResponseModel> PoliciesNew { get; set; }
     public IEnumerable<SendResponseModel> Sends { get; set; }
+
+    /// <summary>
+    /// The user's agent-access connections. Each carries the user-key-encrypted PSK for an authorized
+    /// "Login with Bitwarden" partner; clients decrypt locally.
+    /// </summary>
+    public IEnumerable<AgentConnectionResponseModel> AgentConnections { get; set; }
     public UserDecryptionResponseModel UserDecryption { get; set; }
 }

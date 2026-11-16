@@ -107,6 +107,9 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             || clientId.StartsWith("organization")
             || clientId.StartsWith("installation")
             || clientId.StartsWith("internal")
+            // "Login with Bitwarden" partner authorization_code logins are identity-only: they must skip the
+            // 2FA/device/decryption-options user-login pipeline and carry no vault claims.
+            || clientId.StartsWith(OpenIdConnectPartner.ClientIdPrefix)
             || context.Result.ValidatedRequest.Client.AllowedScopes.Contains(ApiScopes.ApiSecrets)
             || context.Result.ValidatedRequest.Client.AllowedScopes.Contains(ApiScopes.ApiPamCredentialRotation))
         {

@@ -166,6 +166,7 @@ public static partial class FeatureFlagKeys
     public const string PM42982_WantAssertionsSigned = "pm-42982-want-assertions-signed";
     public const string PM42283_Rsa15Deprecation = "pm-42283-rsa-1-5-deprecation";
     public const string PM44303_EmergencyAccessSdkApi = "pm-44303-emergency-access-sdk-api";
+    public const string OpenIdConnectProvider = "pm-oidc-provider-agent-access";
 
     /* Autofill Team */
     public const string NotificationRefresh = "notification-refresh";
