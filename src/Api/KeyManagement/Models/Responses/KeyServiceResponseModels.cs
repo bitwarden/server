@@ -42,7 +42,7 @@ public record PublicKeyAttributes(
 public record OwnKeyAttributes(
     KeyOwnerResponseModel Owner,
     string KeyPurpose,
-    string KeyId,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? KeyId,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? SealedByKeyId,
     DateTime CreatedAt,
     string Data)

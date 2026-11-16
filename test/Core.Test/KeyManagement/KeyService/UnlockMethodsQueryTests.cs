@@ -6,6 +6,7 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.KeyService;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
@@ -54,6 +55,20 @@ public class UnlockMethodsQueryTests
         Assert.Equal("pbkdf2", kdf.GetProperty("type").GetString());
         Assert.Equal(600000, kdf.GetProperty("iterations").GetInt32());
         Assert.False(kdf.TryGetProperty("memory", out _));
+    }
+
+    [Theory, BitAutoData]
+    public async Task MasterPassword_ReturnsUpgradeToken(SutProvider<UnlockMethodsQuery> sutProvider, User user)
+    {
+        ArrangeMasterPassword(user);
+        user.V2UpgradeToken = new V2UpgradeTokenData { WrappedUserKey1 = "key1", WrappedUserKey2 = "key2" }.ToJson();
+
+        var methods = await sutProvider.Sut.Run(user, [UnlockMethodKinds.MasterPassword]);
+
+        using var data = JsonDocument.Parse(Assert.Single(methods).Data);
+        var token = data.RootElement.GetProperty("v2UpgradeToken");
+        Assert.Equal("key1", token.GetProperty("wrappedUserKey1").GetString());
+        Assert.Equal("key2", token.GetProperty("wrappedUserKey2").GetString());
     }
 
     [Theory, BitAutoData]
@@ -133,5 +148,6 @@ public class UnlockMethodsQueryTests
         user.MasterPassword = "hash";
         user.UsesKeyConnector = false;
         user.UserKeyId = RootKeyId;
+        user.V2UpgradeToken = null;
     }
 }

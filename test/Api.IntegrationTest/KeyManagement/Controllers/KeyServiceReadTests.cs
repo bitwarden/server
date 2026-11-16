@@ -83,16 +83,23 @@ public class KeyServiceReadTests : IClassFixture<ApiApplicationFactory>, IAsyncL
     }
 
     [Fact]
-    public async Task OwnKeys_ReturnsKeyAndMarker()
+    public async Task OwnKeys_ReturnsKeysKdfAndMarker()
     {
         var data = await GetDataAsync("/v1/keys/own");
 
         var keys = data.EnumerateArray().ToList();
-        Assert.Equal(["private-key", "symmetric-key"], keys.Select(key => key.GetProperty("type").GetString()));
-        Assert.All(keys, key =>
-            Assert.Equal(RootKeyId, key.GetProperty("attributes").GetProperty("sealedByKeyId").GetString()));
+        Assert.Equal(["private-key", "kdf", "symmetric-key"],
+            keys.Select(key => key.GetProperty("type").GetString()));
+        Assert.Equal(RootKeyId, keys[0].GetProperty("attributes").GetProperty("sealedByKeyId").GetString());
         Assert.Equal("00000000000000000000000000000000",
-            keys[1].GetProperty("attributes").GetProperty("keyId").GetString());
+            keys[2].GetProperty("attributes").GetProperty("keyId").GetString());
+
+        // KDF settings have no key id and aren't sealed.
+        var kdf = keys[1].GetProperty("attributes");
+        Assert.False(kdf.TryGetProperty("keyId", out _));
+        Assert.False(kdf.TryGetProperty("sealedByKeyId", out _));
+        using var kdfData = JsonDocument.Parse(kdf.GetProperty("data").GetString()!);
+        Assert.Equal("pbkdf2", kdfData.RootElement.GetProperty("type").GetString());
     }
 
     [Fact]

@@ -35,6 +35,8 @@ public static class KeyResourceTypes
     public const string PrivateKey = "private-key";
     public const string SigningKey = "signing-key";
     public const string SymmetricKey = "symmetric-key";
+    public const string SecurityState = "security-state";
+    public const string Kdf = "kdf";
     public const string UnlockMethod = "unlock-method";
 }
 

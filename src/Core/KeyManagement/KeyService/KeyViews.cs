@@ -12,14 +12,15 @@ public record PublicKeyView(
     string Data);
 
 /// <summary>
-/// A key its owner reads: a private key, a signing key, or a symmetric key of the root history.
+/// A key its owner reads: a private key, a signing key, or a symmetric key of the root history. Also the
+/// account's security state, named by the signing key's id, and its KDF settings, which have no key id.
 /// </summary>
 public record OwnKeyView(
     Guid Id,
     string Type,
     KeyOwner Owner,
     string KeyPurpose,
-    string KeyId,
+    string? KeyId,
     string? SealedByKeyId,
     DateTime CreatedAt,
     string Data);
@@ -50,7 +51,7 @@ public record UnlockMethodView(
 /// </summary>
 public record KeyFilter(IReadOnlyCollection<string>? KeyPurposes, IReadOnlyCollection<string>? KeyIds)
 {
-    public bool Matches(string keyPurpose, string keyId) =>
+    public bool Matches(string keyPurpose, string? keyId) =>
         (KeyPurposes is null || KeyPurposes.Contains(keyPurpose)) &&
-        (KeyIds is null || KeyIds.Contains(keyId));
+        (KeyIds is null || (keyId is not null && KeyIds.Contains(keyId)));
 }

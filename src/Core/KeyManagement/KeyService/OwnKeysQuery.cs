@@ -41,6 +41,17 @@ public class OwnKeysQuery(
             keys.Add(signingKey);
         }
 
+        // The security state is signed by the signing key, so it names that key's id.
+        if (signingKey is not null && user.SecurityState is not null)
+        {
+            keys.Add(new(user.Id, KeyResourceTypes.SecurityState, owner, KeyPurposes.UserSigningRoot,
+                signingKey.KeyId, null, createdAt, KeyData.SecurityState(user.SecurityState)));
+        }
+
+        // Every account has KDF settings, also without a master password, e.g. TDE or Key Connector users.
+        keys.Add(new(user.Id, KeyResourceTypes.Kdf, owner, KeyPurposes.UserEncryptionRoot, null, null,
+            user.LastKdfChangeDate ?? user.CreationDate, KeyData.KdfSettings(user)));
+
         // Only the current root is stored, so the history reads back to the first root only while the user
         // has never rotated: then the current root is the first. Without its id, there is no history.
         if (rootKeyId is not null && user.LastKeyRotationDate is null)

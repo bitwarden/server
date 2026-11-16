@@ -2,6 +2,7 @@
 using System.Text.Json.Serialization;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Data;
 
 namespace Bit.Core.KeyManagement.KeyService;
 
@@ -45,10 +46,28 @@ public static class KeyData
         Serialize(new { type = "legacy-compat-signing-key-envelope", wrappedKey, publicKey = verifyingKey });
 
     /// <summary>
-    /// The encryption root sealed by the master password, with the KDF and salt that derive it.
+    /// The account's signed security state: <c>{"securityState":"2.hFgd..."}</c>.
+    /// </summary>
+    public static string SecurityState(string securityState) => Serialize(new { securityState });
+
+    /// <summary>
+    /// The account's KDF settings: <c>{"type":"argon2id","iterations":3,"memory":64,"parallelism":4}</c>.
+    /// </summary>
+    public static string KdfSettings(User user) => Serialize(Kdf(user));
+
+    /// <summary>
+    /// The encryption root sealed by the master password, with the KDF and salt that derive it, and the V2
+    /// upgrade token when the last rotation upgraded the account from V1.
     /// </summary>
     public static string MasterPassword(User user) =>
-        Serialize(new { type = "raw", wrappedKey = user.Key, kdf = Kdf(user), salt = user.GetMasterPasswordSalt() });
+        Serialize(new
+        {
+            type = "raw",
+            wrappedKey = user.Key,
+            kdf = Kdf(user),
+            salt = user.GetMasterPasswordSalt(),
+            v2UpgradeToken = V2UpgradeToken(user),
+        });
 
     /// <summary>
     /// The encryption root sealed by the Key Connector key.
@@ -73,6 +92,9 @@ public static class KeyData
         KdfType.PBKDF2_SHA256 => new { type = Pbkdf2, iterations = user.KdfIterations },
         _ => throw new InvalidOperationException($"Unknown KDF {user.Kdf}."),
     };
+
+    // Stored as JSON; written as {"wrappedUserKey1":"...","wrappedUserKey2":"..."}.
+    private static V2UpgradeTokenData? V2UpgradeToken(User user) => V2UpgradeTokenData.FromJson(user.V2UpgradeToken);
 
     private static string Serialize(object value) => JsonSerializer.Serialize(value, _options);
 }
