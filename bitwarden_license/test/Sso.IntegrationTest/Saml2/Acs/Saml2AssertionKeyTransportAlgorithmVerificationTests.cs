@@ -11,7 +11,7 @@ using Bit.Core.Platform.Mail.Delivery;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
-using Bit.Sso.IntegrationTest.Utilities;
+using Bit.Sso.IntegrationTest.Helpers;
 using Bit.Sso.Utilities;
 using Bit.Sso.Utilities.Saml2;
 using Microsoft.AspNetCore.Authentication;
