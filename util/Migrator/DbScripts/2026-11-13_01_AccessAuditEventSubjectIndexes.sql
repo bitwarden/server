@@ -2,7 +2,7 @@
 -- in range instead of ranking every event in range.
 IF NOT EXISTS (
     SELECT
-        NULL
+        1
     FROM
         sys.indexes
     WHERE
@@ -19,7 +19,7 @@ GO
 
 IF NOT EXISTS (
     SELECT
-        NULL
+        1
     FROM
         sys.indexes
     WHERE

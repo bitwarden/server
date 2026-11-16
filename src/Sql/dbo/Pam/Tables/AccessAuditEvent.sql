@@ -56,6 +56,8 @@ GO
 
 -- One per subject column, so AccessAuditEvent_ReadItemsByOrganizationId reaches a subject's most recent event in
 -- range with one seek. Filtered to the events that name the subject: most name a cipher, few name a rule.
+-- Each INCLUDE is the one column the procedure reads from that seek: return another column per subject and it
+-- must be added here too, or every subject costs a key lookup.
 CREATE NONCLUSTERED INDEX [IX_AccessAuditEvent_OrganizationId_CipherId_OccurredDate_Id]
     ON [dbo].[AccessAuditEvent] ([OrganizationId] ASC, [CipherId] ASC, [OccurredDate] DESC, [Id] DESC)
     INCLUDE ([CollectionId])
