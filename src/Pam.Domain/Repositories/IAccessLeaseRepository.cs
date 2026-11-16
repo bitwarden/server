@@ -62,14 +62,16 @@ public interface IAccessLeaseRepository
     /// <summary>
     /// Atomically ends a running lease with <paramref name="endAction"/> (Revoked or Cancelled) and records
     /// <paramref name="auditDecision"/> against the lease's originating request. Guarded so a lease that has
-    /// already ended or whose window has lapsed is left untouched.
+    /// already ended or whose window has lapsed is left untouched. An ended lease on a cipher whose enabled config
+    /// rotates on access end also records a pending access end (see
+    /// <see cref="IPamRotationConfigRepository.GetManyPendingAccessEndAsync"/>).
     /// </summary>
     Task RevokeAsync(AccessLease lease, AccessLeaseAction endAction, AccessDecision auditDecision, DateTime now);
 
     /// <summary>
     /// Returns each lease whose window closed on its own after <paramref name="since"/> and that no earlier sweep
     /// returned. A lease that closed before <paramref name="since"/> is never returned, so pass a window far longer
-    /// than any sweep outage.
+    /// than any sweep outage. Records pending access ends as <see cref="RevokeAsync"/> does.
     /// </summary>
     Task<IReadOnlyList<PamExpiredLease>> ExpireDueAsync(DateTime now, DateTime since);
 }
