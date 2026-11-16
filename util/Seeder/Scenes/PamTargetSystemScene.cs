@@ -3,6 +3,7 @@ using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Repositories;
+using Bit.Seeder.Extensions;
 using Bit.Seeder.Services;
 
 namespace Bit.Seeder.Scenes;
@@ -32,10 +33,7 @@ public class PamTargetSystemScene(
 
     public async Task<SceneResult<Result>> SeedAsync(Request request)
     {
-        if (await organizationRepository.GetByIdAsync(request.OrganizationId) == null)
-        {
-            throw new InvalidOperationException($"Organization {request.OrganizationId} not found.");
-        }
+        await organizationRepository.GetOrganizationOrThrowAsync(request.OrganizationId);
 
         var target = await targetSystemRepository.CreateAsync(new PamTargetSystem
         {
