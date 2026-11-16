@@ -583,7 +583,8 @@ public class CipherService : ICipherService
 
         await _cipherRepository.MoveAsync(cipherIds, destinationFolderId, movingUserId);
         // push
-        await _pushService.PushSyncCiphersAsync(movingUserId);
+        var cipherIdList = cipherIds as IReadOnlyCollection<Guid> ?? cipherIds.ToList();
+        await _cipherSyncPushService.PushSyncCipherUserFieldsAsync(movingUserId, cipherIdList, false);
     }
 
     public async Task SaveFolderAsync(Folder folder)

@@ -1,11 +1,9 @@
 ﻿using Bit.Core.Entities;
-using Bit.Core.Enums;
-using Bit.Core.Models;
-using Bit.Core.Platform.Push;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
 using Bit.Core.Vault.Commands;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
+using Bit.Core.Vault.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -44,8 +42,8 @@ public class ArchiveCiphersCommandTest
                 ? true
                 : ids.All(id => cipherList.Contains(cipher))),
             user.Id);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(pushNotificationsCalls)
-            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == user.Id));
+        await sutProvider.GetDependency<ICipherSyncPushService>().Received(pushNotificationsCalls)
+            .PushSyncCipherUserFieldsAsync(user.Id, Arg.Any<IReadOnlyCollection<CipherDetails>>(), true);
     }
 
     [Theory]
@@ -75,5 +73,32 @@ public class ArchiveCiphersCommandTest
         var archivedCipher = Assert.Single(result);
         Assert.Equal(repoRevisionDate, archivedCipher.RevisionDate);
         Assert.Equal(repoRevisionDate, archivedCipher.ArchivedDate);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ArchiveManyAsync_PushesUserFieldsForArchivedCiphers(
+        SutProvider<ArchiveCiphersCommand> sutProvider,
+        CipherDetails cipher,
+        User user)
+    {
+        cipher.ArchivedDate = null;
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id)
+            .Returns(new List<CipherDetails> { cipher });
+
+        var repoRevisionDate = DateTime.UtcNow;
+        sutProvider.GetDependency<ICipherRepository>()
+            .ArchiveAsync(Arg.Any<IEnumerable<Guid>>(), user.Id)
+            .Returns(repoRevisionDate);
+
+        await sutProvider.Sut.ArchiveManyAsync([cipher.Id], user.Id);
+
+        await sutProvider.GetDependency<ICipherSyncPushService>().Received(1)
+            .PushSyncCipherUserFieldsAsync(user.Id,
+                Arg.Is<IReadOnlyCollection<CipherDetails>>(c =>
+                    c.Count == 1 && c.Single().Id == cipher.Id && c.Single().ArchivedDate == repoRevisionDate),
+                true);
     }
 }
