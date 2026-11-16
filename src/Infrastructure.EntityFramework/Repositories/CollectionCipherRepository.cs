@@ -71,6 +71,7 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
             var dbContext = GetDatabaseContext(scope);
             var data = await new CollectionCipherReadByUserIdQuery(userId)
                 .Run(dbContext)
+                .Distinct()
                 .ToArrayAsync();
             return data;
         }

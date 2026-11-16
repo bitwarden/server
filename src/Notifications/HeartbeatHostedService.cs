@@ -1,7 +1,6 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using Bit.Core.Settings;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Bit.Notifications;
@@ -10,19 +9,16 @@ public class HeartbeatHostedService : IHostedService, IDisposable
 {
     private readonly ILogger _logger;
     private readonly IHubContext<NotificationsHub> _hubContext;
-    private readonly GlobalSettings _globalSettings;
 
     private Task _executingTask;
     private CancellationTokenSource _cts;
 
     public HeartbeatHostedService(
         ILogger<HeartbeatHostedService> logger,
-        IHubContext<NotificationsHub> hubContext,
-        GlobalSettings globalSettings)
+        IHubContext<NotificationsHub> hubContext)
     {
         _logger = logger;
         _hubContext = hubContext;
-        _globalSettings = globalSettings;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)

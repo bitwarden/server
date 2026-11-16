@@ -10,7 +10,9 @@ public record UserSeedResult(
     string? Password,
     bool Premium,
     int CiphersCount,
-    int FoldersCount)
+    int FoldersCount,
+    string? GatewayCustomerId = null,
+    string? GatewaySubscriptionId = null)
 {
     internal static UserSeedResult From(PipelineExecutionResult result) =>
         new(result.UserId!.Value,
@@ -19,5 +21,7 @@ public record UserSeedResult(
             result.Password,
             result.Premium,
             result.CiphersCount,
-            result.FoldersCount);
+            result.FoldersCount,
+            result.GatewayCustomerId,
+            result.GatewaySubscriptionId);
 }

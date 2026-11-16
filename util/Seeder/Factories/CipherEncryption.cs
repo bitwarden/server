@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
+using Bit.Core.Vault.Models.Data;
 using Bit.RustSDK;
 using Bit.Seeder.Attributes;
 using Bit.Seeder.Enums;
@@ -47,7 +48,7 @@ internal static class CipherEncryption
         Guid? organizationId,
         Guid? userId)
     {
-        var dataJson = JsonSerializer.Serialize(data, _serverJsonOptions);
+        var dataJson = data is CipherLoginData ? SerializeLoginData(data) : JsonSerializer.Serialize(data, _serverJsonOptions);
 
         return new Cipher
         {
@@ -61,5 +62,13 @@ internal static class CipherEncryption
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow
         };
+    }
+
+    // The CipherLoginData.Uri getter echoes Uris[0], so only the serialized node can drop it, as CipherRequestModel does
+    private static string SerializeLoginData(object data)
+    {
+        var node = JsonSerializer.SerializeToNode(data, _serverJsonOptions)!.AsObject();
+        node.Remove(nameof(CipherLoginData.Uri));
+        return node.ToJsonString(_serverJsonOptions);
     }
 }

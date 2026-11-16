@@ -5,6 +5,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
@@ -14,22 +15,25 @@ public class ResendOrganizationInviteCommand : IResendOrganizationInviteCommand
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
+    private readonly IEventService _eventService;
     private readonly ILogger<ResendOrganizationInviteCommand> _logger;
 
     public ResendOrganizationInviteCommand(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
         ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
+        IEventService eventService,
         ILogger<ResendOrganizationInviteCommand> logger)
     {
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
         _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
+        _eventService = eventService;
         _logger = logger;
     }
 
     public async Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId,
-        bool initOrganization = false)
+        bool initOrganization = false, EventSystemUser? systemUser = null)
     {
         var organizationUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
         if (organizationUser == null || organizationUser.OrganizationId != organizationId ||
@@ -46,6 +50,20 @@ public class ResendOrganizationInviteCommand : IResendOrganizationInviteCommand
             throw new BadRequestException("Organization invalid.");
         }
         await SendInviteAsync(organizationUser, organization, initOrganization, invitingUserId);
+        await LogReinvitedEventAsync(organizationUser, systemUser);
+    }
+
+    private async Task LogReinvitedEventAsync(OrganizationUser organizationUser, EventSystemUser? systemUser)
+    {
+        if (systemUser.HasValue)
+        {
+            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Reinvited,
+                systemUser.Value);
+        }
+        else
+        {
+            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Reinvited);
+        }
     }
 
     private async Task SendInviteAsync(OrganizationUser organizationUser, Organization organization,

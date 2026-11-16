@@ -81,6 +81,10 @@ public class RecoverAccountAuthorizationHandler(
         {
             OrganizationUserType.Owner => currentContextOrganization.Type is OrganizationUserType.Owner,
             OrganizationUserType.Admin => currentContextOrganization.Type is OrganizationUserType.Owner or OrganizationUserType.Admin,
+            OrganizationUserType.Custom => currentContextOrganization is
+            { Type: OrganizationUserType.Owner or OrganizationUserType.Admin }
+                || (currentContextOrganization is { Type: OrganizationUserType.Custom, Permissions.ManageResetPassword: true }
+                    && currentContextOrganization.Permissions.Includes(targetOrganizationUser.GetPermissions())),
             _ => currentContextOrganization is
             { Type: OrganizationUserType.Owner or OrganizationUserType.Admin }
                 or { Type: OrganizationUserType.Custom, Permissions.ManageResetPassword: true }

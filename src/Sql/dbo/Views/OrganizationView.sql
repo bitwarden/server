@@ -70,6 +70,7 @@ SELECT
     [UsePam],
     [PamSeats],
     [MaxAutoscalePamSeats],
-    [PamSeatMinimum]
+    [PamSeatMinimum],
+    [OrganizationKeyId]
 FROM
     [dbo].[Organization]

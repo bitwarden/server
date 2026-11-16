@@ -16,7 +16,7 @@
     },
     "Admin": {
       "commandName": "Project",
-      "applicationUrl": "http://localhost:62911/",
+      "applicationUrl": "https://localhost:5001;http://localhost:62911",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }

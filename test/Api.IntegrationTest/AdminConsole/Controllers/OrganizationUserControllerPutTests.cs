@@ -4,17 +4,20 @@ using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Request;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bitwarden.Server.Sdk.Features;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
@@ -32,7 +35,8 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
     public OrganizationUserControllerPutTests(ApiApplicationFactory factory)
     {
         _factory = factory;
-        _factory.SubstituteService<IFeatureService>(_ => { });
+        _factory.SubstituteService<IFeatureService>(featureService =>
+            featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(true));
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
@@ -415,6 +419,32 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         await AssertAccessPamAsync(admin, true);
+    }
+
+    [Fact]
+    public async Task Put_GrantingPrivilegedControlsAtSeatLimit_ReturnsBadRequestAndDoesNotGrant()
+    {
+        await SetUsePamAsync(true);
+        _organization.PamSeats = 1;
+        _organization.MaxAutoscalePamSeats = 1;
+        _organization.GatewaySubscriptionId = "sub_integration_test";
+        await _factory.GetService<IOrganizationRepository>().ReplaceAsync(_organization);
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var (_, seatHolder) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id,
+            OrganizationUserType.User);
+        await GrantPamAsync(seatHolder);
+        var (_, member) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id,
+            OrganizationUserType.User);
+
+        var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{member.Id}",
+            UpdateRequest(accessPam: true));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains(new PrivilegedControlsSeatLimitReachedError().Message, await response.Content.ReadAsStringAsync());
+        await AssertAccessPamAsync(member, false);
+        var reloadedOrganization = await _factory.GetService<IOrganizationRepository>().GetByIdAsync(_organization.Id);
+        Assert.Equal(1, reloadedOrganization!.PamSeats);
     }
 
     [Fact]

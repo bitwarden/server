@@ -19,13 +19,15 @@ internal static class SeederServiceFactory
         ServiceCollectionExtension.ConfigureServices(services, enableMangling: options.EnableMangling);
         var provider = services.BuildServiceProvider();
         var scope = provider.CreateScope();
-        return new SeederServiceScope(provider, scope);
+        return new SeederServiceScope(provider, scope, options.DisableDataProtection);
     }
 }
 
 internal record SeederServiceOptions
 {
     internal required bool EnableMangling { get; init; }
+
+    internal required bool DisableDataProtection { get; init; }
 }
 
 internal sealed class SeederServiceScope : IDisposable
@@ -42,7 +44,9 @@ internal sealed class SeederServiceScope : IDisposable
 
     internal IAttachmentStorageService AttachmentStorageService { get; }
 
-    internal Func<IStripeBillingInitializer> BillingInitializer { get; }
+    internal Func<IOrganizationStripeBillingService> OrganizationStripeBillingService { get; }
+
+    internal Func<IUserStripeBillingService> UserStripeBillingService { get; }
 
     internal ISeederLicenseSigner LicenseSigner { get; }
 
@@ -51,17 +55,22 @@ internal sealed class SeederServiceScope : IDisposable
     internal SeederDependencies ToDependencies()
         => new(Db, Mapper, PasswordHasher, Mangler, LicensingService, AttachmentStorageService, LicenseSigner, LoggerFactory)
         {
-            BillingInitializer = BillingInitializer,
+            OrganizationStripeBillingService = OrganizationStripeBillingService,
+            UserStripeBillingService = UserStripeBillingService,
+            DisableDataProtection = _disableDataProtection,
         };
 
     private readonly ServiceProvider _provider;
 
     private readonly IServiceScope _scope;
 
-    internal SeederServiceScope(ServiceProvider provider, IServiceScope scope)
+    private readonly bool _disableDataProtection;
+
+    internal SeederServiceScope(ServiceProvider provider, IServiceScope scope, bool disableDataProtection)
     {
         _provider = provider;
         _scope = scope;
+        _disableDataProtection = disableDataProtection;
         var sp = scope.ServiceProvider;
         Db = sp.GetRequiredService<DatabaseContext>();
         Mapper = sp.GetRequiredService<IMapper>();
@@ -74,7 +83,8 @@ internal sealed class SeederServiceScope : IDisposable
         // that actually opt into Stripe billing, not on every command. Closes over the scope, not the root
         // provider: the billing graph is scoped and transient throughout, and capturing it on the root
         // provider would outlive the DbContext it depends on.
-        BillingInitializer = () => sp.GetRequiredService<IStripeBillingInitializer>();
+        OrganizationStripeBillingService = () => sp.GetRequiredService<IOrganizationStripeBillingService>();
+        UserStripeBillingService = () => sp.GetRequiredService<IUserStripeBillingService>();
         LicenseSigner = sp.GetRequiredService<ISeederLicenseSigner>();
         LoggerFactory = sp.GetRequiredService<ILoggerFactory>();
     }

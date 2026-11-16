@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Licenses;
@@ -9,7 +10,6 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 
@@ -25,18 +25,18 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
 {
     private readonly ILicensingService _licensingService;
     private readonly IGlobalSettings _globalSettings;
-    private readonly IOrganizationService _organizationService;
+    private readonly IReplaceOrganizationAndUpdateCacheCommand _replaceOrganizationAndUpdateCacheCommand;
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public UpdateOrganizationLicenseCommand(
         ILicensingService licensingService,
         IGlobalSettings globalSettings,
-        IOrganizationService organizationService,
+        IReplaceOrganizationAndUpdateCacheCommand replaceOrganizationAndUpdateCacheCommand,
         Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
         _licensingService = licensingService;
         _globalSettings = globalSettings;
-        _organizationService = organizationService;
+        _replaceOrganizationAndUpdateCacheCommand = replaceOrganizationAndUpdateCacheCommand;
         _featureService = featureService;
     }
 
@@ -53,6 +53,7 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
         // If the license has a Token (claims-based), extract all properties from claims BEFORE validation
         // This ensures that CanUseLicense validation has access to the correct values from claims
         // Otherwise, fall back to using the properties already on the license object (backward compatibility)
+        // PamSeats is the one exception: it postdates the legacy hash, so an unsigned value is discarded (PM-44602).
         if (claimsPrincipal != null)
         {
             license.Name = claimsPrincipal.GetValue<string>(OrganizationLicenseConstants.Name);
@@ -92,6 +93,7 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
             license.UseMyItems = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseMyItems);
             license.UseInviteLinks = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseInviteLinks);
             license.UsePam = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UsePam);
+            license.PamSeats = claimsPrincipal.GetValue<int?>(OrganizationLicenseConstants.PamSeats);
             license.MaxStorageGb = claimsPrincipal.GetValue<short?>(OrganizationLicenseConstants.MaxStorageGb);
             license.InstallationId = claimsPrincipal.GetValue<Guid>(OrganizationLicenseConstants.InstallationId);
             license.LicenseType = claimsPrincipal.GetValue<LicenseType>(OrganizationLicenseConstants.LicenseType);
@@ -101,6 +103,10 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
             license.Trial = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.Trial);
             license.LimitCollectionCreationDeletion = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.LimitCollectionCreationDeletion);
             license.AllowAdminAccessToAllCollectionItems = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.AllowAdminAccessToAllCollectionItems);
+        }
+        else
+        {
+            license.PamSeats = null;
         }
 
         var useSharedFolderTerminology = _featureService.IsEnabled(FeatureFlagKeys.VFO1Foundation);
@@ -130,6 +136,6 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
 
         organization.UpdateFromLicense(license, _featureService);
 
-        await _organizationService.ReplaceAndUpdateCacheAsync(organization);
+        await _replaceOrganizationAndUpdateCacheCommand.RunAsync(organization);
     }
 }

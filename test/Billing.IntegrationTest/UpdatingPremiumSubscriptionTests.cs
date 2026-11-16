@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Json;
 using System.Text.Json.Nodes;
+using Bit.Core.Billing.Constants;
 using Bit.Test.Common.Helpers;
 
 namespace Bit.Billing.IntegrationTest;
@@ -44,57 +45,56 @@ public class UpdatingPremiumSubscriptionTests(StripeTestsFixture fixture) : ICla
         Assert.Contains("userId", metadata.Keys);
     }
 
+    private const string UpgradePreviewRoute =
+        "/account/billing/subscription/upgrade/preview?targetProductTierType=Families&country=US&postalCode=43432";
+
     [BillingFact]
-    public async Task UpgradePreview_ToFamiliesPlan_ReturnsTheProratedPricing()
+    public async Task UpgradePreview_ToFamiliesPlan_ReturnsTheFamiliesCartWithTax()
     {
         var client = await fixture.PreparePremiumUserAsync("premium-upgrade-preview@example.com");
 
-        // Drives PreviewPremiumUpgradeProrationCommand, which fetches the
-        // existing premium subscription with Expand=customer to read
-        // subscription.Customer for tax + billing context.
-        var response = await client.PostAsJsonAsync(
-            "/billing/preview-invoice/premium/subscriptions/upgrade",
-            new
-            {
-                TargetProductTierType = "Families",
-                BillingAddress = new { Country = "US", PostalCode = "43432" },
-            });
+        var response = await client.GetAsync(UpgradePreviewRoute);
         await Assert.SuccessResponseAsync(response);
 
         var preview = (await response.Content.ReadFromJsonAsync<JsonObject>())!;
-        Assert.NotNull(preview["newPlanProratedAmount"]);
-        Assert.NotNull(preview["credit"]);
+        Assert.Equal("families", preview["planTier"]!.GetValue<string>());
+        Assert.Equal("annually", preview["cadence"]!.GetValue<string>());
+        // An upgrade mid-term is projected as a proration (credit for the unused Premium seat against
+        // the prorated Families charge), not as a full-price seats line.
+        var proration = Assert.Single(preview["passwordManager"]!["prorations"]!.AsArray());
+        Assert.Equal(StripeConstants.PurchasableReferences.PasswordManagerSeat, proration!["reference"]!.GetValue<string>());
+        var credit = proration["credit"]!.GetValue<decimal>();
+        var charge = proration["charge"]!.GetValue<decimal>();
+        Assert.True(credit > 0m);
+        Assert.True(charge > credit);
+        Assert.Equal(charge - credit, proration["total"]!.GetValue<decimal>());
+        var total = preview["total"]!.GetValue<decimal>();
+        var estimatedTax = preview["estimatedTax"]!.GetValue<decimal>();
+        Assert.Equal(charge - credit + estimatedTax, total);
+        Assert.Equal(total, preview["amountDue"]!.GetValue<decimal>());
     }
 
     [BillingFact]
-    public async Task UpgradePreview_WithCustomerLevelCoupon_ReturnsProratedPricing()
+    public async Task UpgradePreview_WithCustomerLevelCoupon_ReducesTheTotal()
     {
-        // Drives PreviewPremiumUpgradeProrationCommand with a customer-level
-        // discount in the graph. The command's own expand list doesn't touch
-        // Customer.Discount directly — it hands the customer to Stripe's invoice
-        // preview endpoint, which applies any active customer discount server-side.
-        // Guards against a future regression where the command starts reading
-        // Customer.Discount.Source.Coupon without the corresponding expand
-        // (the class of bug the SDK bump introduced in PreviewOrganizationTaxCommand).
         const string email = "premium-upgrade-preview-customer-coupon@example.com";
         var client = await fixture.PreparePremiumUserAsync(email);
+
+        var baselineResponse = await client.GetAsync(UpgradePreviewRoute);
+        await Assert.SuccessResponseAsync(baselineResponse);
+        var baseline = (await baselineResponse.Content.ReadFromJsonAsync<JsonObject>())!;
+        var baselineTotal = baseline["total"]!.GetValue<decimal>();
 
         var customerId = await fixture.GetUserGatewayCustomerIdByEmailAsync(email);
         var couponId = $"cust_prem_upg_{Guid.NewGuid():N}";
         await fixture.SeedAndAttachCustomerCouponAsync(customerId, couponId, percentOff: 25);
 
-        var response = await client.PostAsJsonAsync(
-            "/billing/preview-invoice/premium/subscriptions/upgrade",
-            new
-            {
-                TargetProductTierType = "Families",
-                BillingAddress = new { Country = "US", PostalCode = "43432" },
-            });
-        await Assert.SuccessResponseAsync(response);
+        var discountedResponse = await client.GetAsync(UpgradePreviewRoute);
+        await Assert.SuccessResponseAsync(discountedResponse);
+        var discounted = (await discountedResponse.Content.ReadFromJsonAsync<JsonObject>())!;
+        var discountedTotal = discounted["total"]!.GetValue<decimal>();
 
-        var preview = (await response.Content.ReadFromJsonAsync<JsonObject>())!;
-        Assert.NotNull(preview["newPlanProratedAmount"]);
-        Assert.NotNull(preview["credit"]);
+        Assert.True(discountedTotal < baselineTotal,
+            $"Expected discounted total ({discountedTotal}) to be less than baseline ({baselineTotal})");
     }
-
 }

@@ -1,18 +1,15 @@
 ﻿namespace Bit.Pam.Enums;
 
 /// <summary>
-/// Whether a failed rotation attempt left the target system's password changed, reported alongside a failure so an
-/// operator can tell whether the vault credential now disagrees with the target.
+/// Whether a failed rotation attempt changed the target system's password, so an operator can tell whether the vault
+/// credential is now wrong.
 /// </summary>
 public enum PamRotationSyncState : byte
 {
-    /// <summary>The target's password is unchanged; the vault credential is still correct.</summary>
     TargetUnchanged = 0,
 
-    /// <summary>The target's password changed but the write to the cipher did not complete; the vault credential is now
-    /// wrong.</summary>
+    /// <summary>The target's password changed but the cipher write did not complete.</summary>
     TargetUpdated = 1,
 
-    /// <summary>The access connector could not determine whether the target's password changed.</summary>
     Indeterminate = 2,
 }

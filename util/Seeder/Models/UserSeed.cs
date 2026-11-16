@@ -50,7 +50,9 @@ internal record UserSeed
     /// PBKDF2 only; Argon2 cannot be seeded. Defaults to 5,000 for speed — production default is
     /// 600,000. Use that for realistic e2e runs.
     /// </summary>
-    public int KdfIterations { get; init; } = 5_000;
+    public int KdfIterations { get; init; } = DefaultKdfIterations;
+
+    public const int DefaultKdfIterations = 5_000;
 
     /// <summary>
     /// Spreads bulk callers across the SDK's pre-generated RSA keypair pool.
@@ -104,6 +106,11 @@ internal record UserSeed
     /// the factory still writes a master password, so this is not a faithful key-connector account.
     /// </summary>
     public bool UsesKeyConnector { get; init; }
+
+    /// <summary>
+    /// No password hash and a null <see cref="User.Key"/>. The keypair is still written.
+    /// </summary>
+    public bool UsesSsoAuth { get; init; }
 
     /// <summary>
     /// Serialized via <see cref="User.SetTwoFactorProviders"/>. Provider metadata (TOTP secrets,

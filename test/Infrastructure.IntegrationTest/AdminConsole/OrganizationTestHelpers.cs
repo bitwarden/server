@@ -77,6 +77,7 @@ public static class OrganizationTestHelpers
             LicenseKey = $"license-{id}",
             PublicKey = "test-public-key",
             PrivateKey = "test-private-key",
+            OrganizationKeyId = id.ToString("N"),
             TwoFactorProviders = null,
             ExpirationDate = DateTime.UtcNow.AddYears(1),
             MaxAutoscaleSeats = 200,

@@ -7,8 +7,6 @@ internal sealed class SecureNoteDataGenerator(int seed)
 {
     private static readonly ThreadLocal<Faker> _threadFaker = new(() => new Faker());
 
-    private readonly int _seed = seed;
-
     private static readonly string[] _noteCategories =
     [
         "API Keys & Secrets",
@@ -36,7 +34,7 @@ internal sealed class SecureNoteDataGenerator(int seed)
     {
         var category = _noteCategories[index % _noteCategories.Length];
         var seededFaker = _threadFaker.Value!;
-        seededFaker.Random = new Randomizer(_seed + index);
+        seededFaker.Random = new Randomizer(ItemSeedMixer.Mix(seed, index));
         return (GenerateNoteName(category, seededFaker), GenerateNoteContent(category, seededFaker));
     }
 

@@ -16,6 +16,8 @@
     [StatusNew]                     SMALLINT            NULL,
     [AccessPam]                     BIT                 NOT NULL CONSTRAINT [DF_OrganizationUser_Pam] DEFAULT (0),
     [V2UpgradeToken]                VARCHAR (MAX)       NULL,
+    [InviteReminderDueDate]         DATETIME2(7)        NULL,
+    [InviteRemindersSentCount]      TINYINT             NULL,
     CONSTRAINT [PK_OrganizationUser] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_OrganizationUser_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE,
     CONSTRAINT [FK_OrganizationUser_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
@@ -44,5 +46,13 @@ CREATE NONCLUSTERED INDEX [IX_OrganizationUser_UserId_Status_Filtered]
     ON [dbo].[OrganizationUser] ([UserId])
     INCLUDE ([Id], [OrganizationId])
     WHERE [Status] = 2; -- Confirmed
+
+GO
+
+CREATE NONCLUSTERED INDEX [IX_OrganizationUser_InviteReminders_Filtered]
+    ON [dbo].[OrganizationUser]([InviteReminderDueDate] ASC)
+    INCLUDE ([OrganizationId], [Email], [InviteRemindersSentCount])
+    WHERE [Status] = 0 -- 0 = Invited
+        AND [InviteReminderDueDate] IS NOT NULL;
 
 GO

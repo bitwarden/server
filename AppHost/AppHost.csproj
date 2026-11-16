@@ -24,6 +24,8 @@
     <PackageReference Include="Aspire.Hosting.Azure.Storage" Version="[13.3.4]" />
     <PackageReference Include="Aspire.Hosting.JavaScript" Version="[13.3.4]" />
     <PackageReference Include="Aspire.Hosting.SqlServer" Version="[13.3.4]" />
+    <!-- Temporary: remove when Aspire is upgraded to 13.6.5, which fixes this advisory. -->
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-4g86-54fm-h9h8" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(EnableNgrokCommunityPlugin)' == 'true'">

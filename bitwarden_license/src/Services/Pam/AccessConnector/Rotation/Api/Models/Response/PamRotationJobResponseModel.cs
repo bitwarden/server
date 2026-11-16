@@ -1,10 +1,28 @@
 ﻿using Bit.Pam.Enums;
+using Bit.Pam.Models;
+using Bit.Services.Pam.Api.Models.Response;
 
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 
 /// <summary>One offer of rotation work for a config, with its attempts.</summary>
 public class PamRotationJobResponseModel
 {
+    public PamRotationJobResponseModel(PamRotationJobDetails job)
+    {
+        ArgumentNullException.ThrowIfNull(job);
+
+        Id = job.Id;
+        RotationConfigId = job.RotationConfigId;
+        Source = job.Source;
+        Status = job.Status;
+        ClaimedByAccessConnectorId = job.ClaimedByAccessConnectorId;
+        ClaimedAt = job.ClaimedDate.AsUtc();
+        CreationDate = job.CreationDate.AsUtc();
+        NextClaimableAt = job.NextClaimableDate.AsUtc();
+        ExpiresAt = job.ExpirationDate.AsUtc();
+        Attempts = job.Attempts.Select(attempt => new PamRotationAttemptResponseModel(attempt)).ToList();
+    }
+
     public Guid Id { get; set; }
 
     public Guid RotationConfigId { get; set; }

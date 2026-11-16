@@ -80,7 +80,12 @@ public class SendRequestModelTests
             {
                 EncryptionVersion = SendEncryptionType.V1,
                 Data = "{ \"name\": \"ENCRYPTED_VALUE\" }",
-                Metadata = new SendItemMetadataModel { ItemId = Guid.NewGuid() },
+                Metadata = new SendItemMetadataModel
+                {
+                    ItemId = Guid.NewGuid(),
+                    CreationDate = DateTime.UtcNow,
+                    RevisionDate = DateTime.UtcNow,
+                },
             },
             Type = SendType.Item,
         };
@@ -103,6 +108,10 @@ public class SendRequestModelTests
     public void ToSend_Item_StoresMetadata()
     {
         var itemId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        var encryptedFolderName = "encrypted_folder_name";
+        var encryptedCollectionName = "encrypted_collection_name";
+        var encryptedOrgName = "encrypted_org_name";
         var sendRequest = new SendRequestModel
         {
             AuthType = AuthType.Email,
@@ -114,7 +123,15 @@ public class SendRequestModelTests
             {
                 EncryptionVersion = SendEncryptionType.V1,
                 Data = "sealed_blob",
-                Metadata = new SendItemMetadataModel { ItemId = itemId },
+                Metadata = new SendItemMetadataModel
+                {
+                    ItemId = itemId,
+                    CreationDate = now,
+                    RevisionDate = now,
+                    FolderName = encryptedFolderName,
+                    CollectionNames = [encryptedCollectionName],
+                    OrganizationName = encryptedOrgName,
+                },
             },
             Type = SendType.Item,
         };
@@ -123,6 +140,12 @@ public class SendRequestModelTests
 
         var sendItemData = JsonSerializer.Deserialize<SendItemData>(send.Data);
         Assert.Equal(itemId, sendItemData.Metadata?.ItemId);
+        Assert.Equal(now, sendItemData.Metadata?.CreationDate);
+        Assert.Equal(now, sendItemData.Metadata?.RevisionDate);
+        Assert.Equal(encryptedFolderName, sendItemData.Metadata?.FolderName);
+        Assert.Single(sendItemData.Metadata.CollectionNames);
+        Assert.Equal(encryptedCollectionName, sendItemData.Metadata.CollectionNames[0]);
+        Assert.Equal(encryptedOrgName, sendItemData.Metadata.OrganizationName);
     }
 
     [Fact]

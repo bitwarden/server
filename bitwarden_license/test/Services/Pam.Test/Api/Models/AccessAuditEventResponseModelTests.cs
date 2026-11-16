@@ -54,7 +54,6 @@ public class AccessAuditEventResponseModelTests
         Assert.Equal(auditEvent.RuleName, model.RuleName);
     }
 
-    // Stored timestamps with an unspecified kind are marked UTC.
     [Fact]
     public void Constructor_MarksTimestampsAsUtc()
     {
@@ -73,7 +72,6 @@ public class AccessAuditEventResponseModelTests
         Assert.Equal(9, model.OccurredAt.Hour);
     }
 
-    // No actor means a system event.
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -89,7 +87,6 @@ public class AccessAuditEventResponseModelTests
         Assert.Equal(!hasActor, model.Automated);
     }
 
-    // An attempt with no outcome is incomplete.
     [Theory]
     [InlineData(AccessAuditEventPhase.Attempt, true)]
     [InlineData(AccessAuditEventPhase.Outcome, false)]
@@ -111,7 +108,6 @@ public class AccessAuditEventResponseModelTests
         Assert.Throws<ArgumentNullException>(() => new AccessAuditEventResponseModel(null!));
     }
 
-    // Every domain kind must have a wire name.
     [Fact]
     public void KindNames_CoverEveryDomainKind()
     {

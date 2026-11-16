@@ -123,6 +123,21 @@ public class OrganizationLicenseTests
         }
     }
 
+    [Fact]
+    public void OrganizationLicense_PamSeats_DoesNotAffectHashOrSignatureData()
+    {
+        var license = CreateDeterministicOrganizationLicense(15);
+        var originalHashData = license.GetDataBytes(forHash: true);
+        var originalSignatureData = license.GetDataBytes(forHash: false);
+        var originalHash = license.ComputeHash();
+
+        license.PamSeats = 25;
+
+        Assert.Equal(originalHashData, license.GetDataBytes(forHash: true));
+        Assert.Equal(originalSignatureData, license.GetDataBytes(forHash: false));
+        Assert.Equal(originalHash, license.ComputeHash());
+    }
+
     /// <summary>
     /// Validates that the OrganizationLicense version remains frozen at version 15.
     /// License versions should no longer be incremented. Use the JWT Token property to add new claims instead.
@@ -377,6 +392,108 @@ If you believe you need to change the version for a valid reason, please discuss
     }
 
     /// <summary>
+    /// Licenses issued before the PamSeats claim existed must keep validating, whatever
+    /// seat count the self-hosted organization holds (PM-33980 pattern).
+    /// </summary>
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public void OrganizationLicense_VerifyData_PassesWhenPamSeatsClaimAbsent(bool organizationHasPamSeats)
+    {
+        var organization = CreateDeterministicOrganization();
+        organization.PamSeats = organizationHasPamSeats ? 25 : null;
+
+        var installationId = new Guid("78900000-0000-0000-0000-000000000123");
+
+        var claims = BuildBaseVerifyDataClaims(organization, installationId);
+        var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        var license = new OrganizationLicense { Token = "non-empty", Expires = DateTime.MaxValue };
+
+        var globalSettings = Substitute.For<IGlobalSettings>();
+        globalSettings.Installation.Returns(new GlobalSettings.InstallationSettings
+        {
+            Id = installationId
+        });
+
+        Assert.True(license.VerifyData(organization, claimsPrincipal, globalSettings));
+    }
+
+    [Fact]
+    public void OrganizationLicense_VerifyData_PassesWhenPamSeatsClaimPresentAndMatches()
+    {
+        var organization = CreateDeterministicOrganization();
+        organization.PamSeats = 25;
+
+        var installationId = new Guid("78900000-0000-0000-0000-000000000123");
+
+        var claims = BuildBaseVerifyDataClaims(organization, installationId);
+        claims.Add(new Claim(nameof(OrganizationLicense.PamSeats), "25"));
+        var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        var license = new OrganizationLicense { Token = "non-empty", Expires = DateTime.MaxValue };
+
+        var globalSettings = Substitute.For<IGlobalSettings>();
+        globalSettings.Installation.Returns(new GlobalSettings.InstallationSettings
+        {
+            Id = installationId
+        });
+
+        Assert.True(license.VerifyData(organization, claimsPrincipal, globalSettings));
+    }
+
+    [Fact]
+    public void OrganizationLicense_VerifyData_FailsWhenPamSeatsClaimPresentAndMismatches()
+    {
+        var organization = CreateDeterministicOrganization();
+        organization.PamSeats = 10;
+
+        var installationId = new Guid("78900000-0000-0000-0000-000000000123");
+
+        var claims = BuildBaseVerifyDataClaims(organization, installationId);
+        claims.Add(new Claim(nameof(OrganizationLicense.PamSeats), "25"));
+        var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        var license = new OrganizationLicense { Token = "non-empty", Expires = DateTime.MaxValue };
+
+        var globalSettings = Substitute.For<IGlobalSettings>();
+        globalSettings.Installation.Returns(new GlobalSettings.InstallationSettings
+        {
+            Id = installationId
+        });
+
+        Assert.False(license.VerifyData(organization, claimsPrincipal, globalSettings));
+    }
+
+    /// <summary>
+    /// A self-hosted server on a version before PamSeats existed stores a license whose token carries
+    /// the claim but never copies it to the organization. After upgrading, the nightly check must not
+    /// disable that organization: the next license upload or sync applies the value.
+    /// </summary>
+    [Fact]
+    public void OrganizationLicense_VerifyData_PassesWhenPamSeatsClaimPresentAndOrganizationPamSeatsNull()
+    {
+        var organization = CreateDeterministicOrganization();
+        organization.PamSeats = null;
+
+        var installationId = new Guid("78900000-0000-0000-0000-000000000123");
+
+        var claims = BuildBaseVerifyDataClaims(organization, installationId);
+        claims.Add(new Claim(nameof(OrganizationLicense.PamSeats), "25"));
+        var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        var license = new OrganizationLicense { Token = "non-empty", Expires = DateTime.MaxValue };
+
+        var globalSettings = Substitute.For<IGlobalSettings>();
+        globalSettings.Installation.Returns(new GlobalSettings.InstallationSettings
+        {
+            Id = installationId
+        });
+
+        Assert.True(license.VerifyData(organization, claimsPrincipal, globalSettings));
+    }
+
+    /// <summary>
     /// Regression guard (PM-37474 / PM-33980): pre-existing self-host licenses lack the
     /// UseRiskInsights claim. VerifyData must skip the comparison when the claim is absent,
     /// regardless of the org's DB value, so those licenses are not invalidated.
@@ -493,9 +610,8 @@ If you believe you need to change the version for a valid reason, please discuss
     }
 
     /// <summary>
-    /// Builds the base set of claims that VerifyData checks, excluding the conditionally-guarded
-    /// claims (UseMyItems, UseInviteLinks, UseRiskInsights). Callers can add or omit those claims
-    /// to test specific scenarios.
+    /// Builds the claims VerifyData compares unconditionally. Every claim VerifyData guards with a HasClaim check is
+    /// omitted; tests add the ones they are exercising.
     /// </summary>
     private static List<Claim> BuildBaseVerifyDataClaims(Organization organization, Guid installationId)
     {

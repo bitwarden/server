@@ -83,15 +83,17 @@ if (requirement.DisableSend)
 
 `BasePolicyRequirementFactory` implements `Enforce()` and returns `true` if the policy should be enforced against this user. It filters out users who are exempt by default:
 
-| Property          | Default exempt       | Meaning                                                                                |
-| ----------------- | -------------------- | -------------------------------------------------------------------------------------- |
-| `ExemptRoles`     | `Owner`, `Admin`     | These roles are not subject to enforcement.                                            |
-| `ExemptStatuses`  | `Invited`, `Revoked` | Users with these membership statuses are not subject to enforcement.                   |
-| `ExemptProviders` | `true`               | Users who are also provider users for the organization are not subject to enforcement. |
+| Property          | Default exempt                   | Meaning                                                                                |
+| ----------------- | -------------------------------- | -------------------------------------------------------------------------------------- |
+| `ExemptRoles`     | `Owner`, `Admin`                 | These roles are not subject to enforcement.                                            |
+| `ExemptStatuses`  | `Invited`, `Revoked`, `Staged`   | Users with these membership statuses are not subject to enforcement.                   |
+| `ExemptProviders` | `true`                           | Users who are also provider users for the organization are not subject to enforcement. |
 
 Concrete factories override these properties when the defaults are not appropriate for their policy.
 
 > **Warning:** Take care when removing `Invited` or `Revoked` from `ExemptStatuses`. An invited user has not yet accepted membership and may never do so. A revoked user may also never have accepted — a user can be revoked from any status, including `Invited`. Policies should only be enforced against either status in specific, intentional scenarios. Check with the Admin Console team if you are unsure.
+
+> **Note:** Policy requirements are never enforced against `Staged` users. `IPolicyRequirementQuery` never returns `Staged` memberships, so removing `Staged` from `ExemptStatuses` has no effect.
 
 ### Combining — `Create(IEnumerable<PolicyDetails>)`
 

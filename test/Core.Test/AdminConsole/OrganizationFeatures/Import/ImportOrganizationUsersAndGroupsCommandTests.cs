@@ -1,8 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.Import;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
-using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;

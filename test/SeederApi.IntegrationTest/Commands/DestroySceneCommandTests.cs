@@ -2,7 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
+using Bit.Infrastructure.EntityFramework.Providers.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.SeederApi.Commands;
 using Microsoft.Data.Sqlite;

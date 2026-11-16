@@ -17,32 +17,28 @@ BEGIN
             AND O.[Id] = C.[OrganizationId]
             AND O.[Enabled] = 1
     ),
-    UserPermissions AS (
-        SELECT DISTINCT
-            CC.[CipherId],
-            CASE WHEN CC.[CollectionId] IS NULL THEN 0 ELSE 1 END as [Read],
-            CASE WHEN CU.[HidePasswords] = 0 THEN 1 ELSE 0 END as [ViewPassword],
-            CASE WHEN CU.[ReadOnly] = 0 THEN 1 ELSE 0 END as [Edit],
-            COALESCE(CU.[Manage], 0) as [Manage]
-        FROM [dbo].[CollectionCipher] CC
-        INNER JOIN [dbo].[CollectionUser] CU ON
-            CU.[CollectionId] = CC.[CollectionId]
-            AND CU.[OrganizationUserId] = (
-                SELECT [Id] FROM [OrganizationUser]
-                WHERE [UserId] = @UserId
-                AND [OrganizationId] = @OrganizationId
-            )
-    ),
-    GroupPermissions AS (
-        SELECT DISTINCT
-            CC.[CipherId],
-            CASE WHEN CC.[CollectionId] IS NULL THEN 0 ELSE 1 END as [Read],
-            CASE WHEN CG.[HidePasswords] = 0 THEN 1 ELSE 0 END as [ViewPassword],
-            CASE WHEN CG.[ReadOnly] = 0 THEN 1 ELSE 0 END as [Edit],
-            COALESCE(CG.[Manage], 0) as [Manage]
-        FROM [dbo].[CollectionCipher] CC
-        INNER JOIN [dbo].[CollectionGroup] CG ON
-            CG.[CollectionId] = CC.[CollectionId]
+    CollectionAccess AS (
+        SELECT
+            CU.[CollectionId],
+            CU.[ReadOnly],
+            CU.[HidePasswords],
+            CU.[Manage]
+        FROM [dbo].[CollectionUser] CU
+        WHERE CU.[OrganizationUserId] = (
+            SELECT [Id] FROM [OrganizationUser]
+            WHERE [UserId] = @UserId
+            AND [OrganizationId] = @OrganizationId
+        )
+
+        UNION ALL
+
+        -- A direct grant on a collection takes precedence over the user's group grants on it
+        SELECT
+            CG.[CollectionId],
+            CG.[ReadOnly],
+            CG.[HidePasswords],
+            CG.[Manage]
+        FROM [dbo].[CollectionGroup] CG
         INNER JOIN [dbo].[GroupUser] GU ON
             GU.[GroupId] = CG.[GroupId]
             AND GU.[OrganizationUserId] = (
@@ -52,25 +48,39 @@ BEGIN
             )
         WHERE NOT EXISTS (
             SELECT 1
-            FROM UserPermissions UP
-            WHERE UP.[CipherId] = CC.[CipherId]
+            FROM [dbo].[CollectionUser] CU
+            WHERE CU.[CollectionId] = CG.[CollectionId]
+            AND CU.[OrganizationUserId] = GU.[OrganizationUserId]
         )
     ),
-    CombinedPermissions AS (
-        SELECT CipherId, [Read], ViewPassword, Edit, Manage
-        FROM UserPermissions
-        UNION ALL
-        SELECT CipherId, [Read], ViewPassword, Edit, Manage
-        FROM GroupPermissions
+    CollectionPermissions AS (
+        -- Rank orders a grant by Manage, then Edit, then ViewPassword, so the highest permission level wins
+        SELECT
+            [CollectionId],
+            MAX(
+                CASE WHEN [Manage] = 1 THEN 4 ELSE 0 END
+                + CASE WHEN [ReadOnly] = 0 THEN 2 ELSE 0 END
+                + CASE WHEN [HidePasswords] = 0 THEN 1 ELSE 0 END
+            ) [Rank]
+        FROM CollectionAccess
+        GROUP BY [CollectionId]
+    ),
+    CipherPermissions AS (
+        SELECT
+            CC.[CipherId],
+            MAX(CP.[Rank]) [Rank]
+        FROM CollectionPermissions CP
+        INNER JOIN [dbo].[CollectionCipher] CC ON CC.[CollectionId] = CP.[CollectionId]
+        GROUP BY CC.[CipherId]
     )
     SELECT
         C.[Id],
         C.[OrganizationId],
-        ISNULL(MAX(P.[Read]), 0) as [Read],
-        ISNULL(MAX(P.[ViewPassword]), 0) as [ViewPassword],
-        ISNULL(MAX(P.[Edit]), 0) as [Edit],
-        ISNULL(MAX(P.[Manage]), 0) as [Manage]
+        -- Read is any rank; ViewPassword (1), Edit (2) and Manage (4) are the parts of the highest rank
+        CASE WHEN P.[Rank] IS NULL THEN 0 ELSE 1 END as [Read],
+        ISNULL(P.[Rank] % 2, 0) as [ViewPassword],
+        ISNULL((P.[Rank] / 2) % 2, 0) as [Edit],
+        ISNULL(P.[Rank] / 4, 0) as [Manage]
     FROM BaseCiphers C
-    LEFT JOIN CombinedPermissions P ON P.CipherId = C.[Id]
-    GROUP BY C.[Id], C.[OrganizationId]
+    LEFT JOIN CipherPermissions P ON P.CipherId = C.[Id]
 END

@@ -20,11 +20,6 @@ public static class CollectionTerminology
     public static string Plural(IFeatureService featureService) =>
         Plural(featureService.IsEnabled(FeatureFlagKeys.VFO1Foundation));
 
-    /// <inheritdoc cref="Plural(IFeatureService)"/>
-    [Obsolete("Use the Bitwarden.Server.Sdk.Features.IFeatureService overload instead", DiagnosticId = "BWA0002")]
-    public static string Plural(Bit.Core.Services.IFeatureService featureService) =>
-        Plural(featureService.IsEnabled(FeatureFlagKeys.VFO1Foundation));
-
     /// <summary>
     /// Returns "shared folders" when <paramref name="useSharedFolderTerminology"/> is <c>true</c>,
     /// otherwise "collections". Use this overload for callers (e.g. models) that do not have access to

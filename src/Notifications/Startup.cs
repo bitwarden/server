@@ -1,17 +1,17 @@
 ﻿using System.Globalization;
 using Azure.Storage.Queues;
-using Bit.Core.Auth.IdentityServer;
-using Bit.Core.Settings;
-using Bit.Core.Utilities;
-using Bit.SharedWeb.Utilities;
-using Duende.IdentityModel;
+using Bitwarden.Server.Sdk.Environment;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Bit.Notifications;
 
 public class Startup
 {
+    private const string NotificationsSettingsSection = "globalSettings:notifications";
+
     public Startup(IWebHostEnvironment env, IConfiguration configuration)
     {
         CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
@@ -28,21 +28,28 @@ public class Startup
         services.AddOptions();
 
         // Settings
-        var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
+        services.AddGlobalSettingsBridge();
+        services.AddCors();
+        services.AddOptions<NotificationsSettings>()
+            .Bind(Configuration.GetSection(NotificationsSettingsSection))
+            .Configure(settings =>
+                settings.InstallationId = Configuration.GetValue<Guid>("globalSettings:installation:id"));
 
         // Identity
-        services.AddIdentityAuthenticationServices(globalSettings, Environment, config =>
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IConfigureOptions<JwtBearerOptions>, ConfigureJwtBearerOptions>());
+        services.AddAuthorization(config =>
         {
             config.AddPolicy("Application", policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external");
-                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.Api);
+                policy.RequireClaim("amr", "Application", "external");
+                policy.RequireClaim("scope", "api");
             });
             config.AddPolicy("Internal", policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.Internal);
+                policy.RequireClaim("scope", "internal");
             });
         });
 
@@ -50,50 +57,46 @@ public class Startup
         var signalRServerBuilder = services.AddSignalR().AddMessagePackProtocol(options =>
         {
             options.SerializerOptions = MessagePack.MessagePackSerializerOptions.Standard
-                .WithResolver(MessagePack.Resolvers.ContractlessStandardResolver.Instance);
+                .WithResolver(MessagePack.Resolvers.CompositeResolver.Create(
+                    JsonElementResolver.Instance,
+                    MessagePack.Resolvers.ContractlessStandardResolver.Instance));
         });
-        if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.RedisConnectionString))
+        // The backplane is chosen while services are registered, before options can be resolved, so bind the
+        // settings directly here.
+        var redisConnectionString = Configuration.GetSection(NotificationsSettingsSection)
+            .Get<NotificationsSettings>()?.RedisConnectionString;
+        if (!string.IsNullOrWhiteSpace(redisConnectionString))
         {
-            signalRServerBuilder.AddStackExchangeRedis(globalSettings.Notifications.RedisConnectionString,
+            signalRServerBuilder.AddStackExchangeRedis(redisConnectionString,
                 options =>
                 {
                     options.Configuration.ChannelPrefix = "Notifications";
                 });
         }
         services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
-        services.AddSingleton<ConnectionCounter>();
         services.AddSingleton<HubHelpers>();
-
-        // Mvc
-        services.AddMvc();
 
         services.TryAddSingleton(TimeProvider.System);
         services.AddHostedService<HeartbeatHostedService>();
         services.TryAddKeyedSingleton<QueueClient>("notifications", (sp, _) =>
             new QueueClient(
-                sp.GetRequiredService<GlobalSettings>().Notifications.ConnectionString,
+                sp.GetRequiredService<IOptions<NotificationsSettings>>().Value.ConnectionString,
                 "notifications"));
         services.AddHostedService<AzureQueueHostedService>();
-        if (!globalSettings.SelfHosted)
-        {
-            // Hosted Services
-            Jobs.JobsHostedService.AddJobsServices(services);
-            services.AddHostedService<Jobs.JobsHostedService>();
-        }
     }
 
     public void Configure(
         IApplicationBuilder app,
         IWebHostEnvironment env,
-        GlobalSettings globalSettings)
+        IBitwardenEnvironment environment)
     {
         // Add general security headers
-        app.UseMiddleware<SecurityHeadersMiddleware>();
+        app.UseSecurityHeaders();
 
         // Forwarding Headers
-        if (globalSettings.SelfHosted)
+        if (environment.SelfHosted)
         {
-            app.UseForwardedHeaders(globalSettings);
+            app.UseForwardedHeaders();
         }
 
         if (env.IsDevelopment())
@@ -105,11 +108,10 @@ public class Startup
         app.UseRouting();
 
         // Add Cors
-        app.UseCors(policy => policy.SetIsOriginAllowed(o => CoreHelpers.IsCorsOriginAllowed(o, globalSettings))
-            .AllowAnyMethod().AllowAnyHeader().AllowCredentials());
+        app.UseCors();
 
         // Add authentication to the request pipeline.
-        app.UseAuthentication();
+        app.UseBitwardenAuthentication();
         app.UseAuthorization();
 
         // Add endpoints to the request pipeline.
@@ -125,7 +127,12 @@ public class Startup
                 options.ApplicationMaxBufferSize = 2048;
                 options.TransportMaxBufferSize = 4096;
             });
-            endpoints.MapDefaultControllerRoute();
+            // Cloud receives notifications from the Azure queue, so only self-hosted serves /send.
+            if (environment.SelfHosted)
+            {
+                endpoints.MapSendEndpoint();
+            }
+            endpoints.MapInfoEndpoints();
             endpoints.MapVersionEndpoint();
         });
     }

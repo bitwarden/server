@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 
 namespace Bit.Seeder.Factories;
 
@@ -29,6 +30,38 @@ internal static class SsoConfigSeeder
             // dev/.env IDP_SP_ENTITY_ID wiring. Without it the SP entity id is the base …/saml2 and
             // the IdP rejects the AuthnRequest ("metadata not found").
             SpUniqueEntityId = true,
+        };
+
+        var ssoConfig = new SsoConfig
+        {
+            OrganizationId = organizationId,
+            Enabled = true,
+        };
+        ssoConfig.SetData(data);
+
+        return ssoConfig;
+    }
+
+    internal static SsoConfig CreateOidc(
+        Guid organizationId,
+        string authority,
+        string clientId,
+        string clientSecret,
+        string? metadataAddress = null,
+        OpenIdConnectRedirectBehavior redirectBehavior = OpenIdConnectRedirectBehavior.RedirectGet,
+        bool getClaimsFromUserInfoEndpoint = true,
+        MemberDecryptionType memberDecryptionType = MemberDecryptionType.MasterPassword)
+    {
+        var data = new SsoConfigurationData
+        {
+            ConfigType = SsoType.OpenIdConnect,
+            MemberDecryptionType = memberDecryptionType,
+            Authority = authority,
+            ClientId = clientId,
+            ClientSecret = clientSecret,
+            MetadataAddress = metadataAddress,
+            RedirectBehavior = redirectBehavior,
+            GetClaimsFromUserInfoEndpoint = getClaimsFromUserInfoEndpoint,
         };
 
         var ssoConfig = new SsoConfig

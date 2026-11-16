@@ -31,6 +31,7 @@ public class OrganizationLicenseClaimsFactoryTests
         organization.MaxStorageGb = 10;
         organization.SmSeats = 25;
         organization.SmServiceAccounts = 10;
+        organization.PamSeats = 10;
         organization.ExpirationDate = DateTime.UtcNow.AddYears(1); // Ensure org is not expired
 
         // Create a LicenseContext with a minimal SubscriptionInfo to trigger conditional claims
@@ -88,5 +89,28 @@ public class OrganizationLicenseClaimsFactoryTests
         Assert.True(
             !constantsWithoutClaims.Any(),
             $"\n{errorMessage}");
+    }
+
+    [Theory, BitAutoData]
+    public async Task GenerateClaims_PamSeatsSet_AddsPamSeatsClaim(Organization organization)
+    {
+        organization.PamSeats = 25;
+        var licenseContext = new LicenseContext { SubscriptionInfo = new SubscriptionInfo() };
+
+        var claims = await new OrganizationLicenseClaimsFactory().GenerateClaims(organization, licenseContext);
+
+        var claim = Assert.Single(claims, c => c.Type == OrganizationLicenseConstants.PamSeats);
+        Assert.Equal("25", claim.Value);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GenerateClaims_PamSeatsNull_OmitsPamSeatsClaim(Organization organization)
+    {
+        organization.PamSeats = null;
+        var licenseContext = new LicenseContext { SubscriptionInfo = new SubscriptionInfo() };
+
+        var claims = await new OrganizationLicenseClaimsFactory().GenerateClaims(organization, licenseContext);
+
+        Assert.DoesNotContain(claims, c => c.Type == OrganizationLicenseConstants.PamSeats);
     }
 }

@@ -71,7 +71,7 @@ public sealed class FooApplicationFactory : IAsyncDisposable
                 {
                     ["globalSettings:databaseProvider"] = "sqlite",
                     ["globalSettings:sqlite:connectionString"] = "Data Source=ignored.db",
-                    ["globalSettings:redis:connectionString"] = "",
+                    ["globalSettings:distributedCache:redis:connectionString"] = "",
                 });
             });
 

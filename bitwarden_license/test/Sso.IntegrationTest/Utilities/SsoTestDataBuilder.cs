@@ -5,19 +5,26 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Platform.Mail.Delivery;
+using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Sso.Models;
 using Bitwarden.License.Test.Sso.IntegrationTest.Utilities;
+using Bitwarden.Server.Sdk.Environment;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NSubstitute;
-using AuthenticationSchemes = Bit.Core.AuthenticationSchemes;
+using AuthenticationSchemes = Bit.Core.Auth.IdentityServer.AuthenticationSchemes;
 
 namespace Bit.Sso.IntegrationTest.Utilities;
 
@@ -47,6 +54,7 @@ public class SsoTestDataBuilder
     private Action<OrganizationUser>? _stagedOrgUserConfig;
     private Action<SsoConfig>? _ssoConfigConfig;
     private Action<SsoUser>? _ssoUserConfig;
+    private readonly Dictionary<string, string?> _configuration = new();
 
     private bool _includeUser = false;
     private bool _includeSsoUser = false;
@@ -56,14 +64,22 @@ public class SsoTestDataBuilder
     private bool _successfulAuth = true;
     private bool _withNullEmail = false;
     private bool _isSelfHosted = false;
+    private bool _isSelfHostedEnvironment = false;
     private bool _includeProviderUserId = true;
     private bool _useNonExistentOrgInAuth = false;
     private bool _isNativeClient = false;
     private bool _mockAutoscaleSuccess = false;
     private bool _mockAutoscalePartialFailure = false;
     private bool _mockSendOrganizationInvitesCommand = false;
+    private bool _mockStripeAdapter = false;
+    private bool _mockPricingClient = false;
+    private Action<IStripeAdapter>? _stripeAdapterConfig;
     private X509Certificate2? _samlSigningCertificate;
     private bool? _wantAssertionsSignedFlagEnabled;
+    private bool? _rsa15DeprecationFlagEnabled;
+    private int _rsa15DeprecationEmailCooldownInDays = 7;
+    private bool _mockMailer = false;
+    private IMailDeliveryService? _mailDeliveryService;
 
     public SsoTestDataBuilder WithOrganization(Action<Organization> configure)
     {
@@ -113,6 +129,19 @@ public class SsoTestDataBuilder
         return this;
     }
 
+    /// <summary>
+    /// Overrides a host configuration entry. The override is applied before the host starts, so it
+    /// also reaches values read while services are registered, which <see cref="AsSelfHosted"/>
+    /// does not.
+    /// </summary>
+    /// <param name="key">The fully qualified setting name, using <c>:</c> between sections.</param>
+    /// <param name="value">The value of the setting.</param>
+    public SsoTestDataBuilder WithConfiguration(string key, string? value)
+    {
+        _configuration[key] = value;
+        return this;
+    }
+
     public SsoTestDataBuilder WithFailedAuthentication()
     {
         _successfulAuth = false;
@@ -140,6 +169,17 @@ public class SsoTestDataBuilder
     public SsoTestDataBuilder AsSelfHosted()
     {
         _isSelfHosted = true;
+        return this;
+    }
+
+    /// <summary>
+    /// Substitutes <see cref="IBitwardenEnvironment"/> so that it reports a self-hosted instance.
+    /// Billing commands read self-hosted from <see cref="IBitwardenEnvironment"/>, not from
+    /// <see cref="IGlobalSettings"/>, so <see cref="AsSelfHosted"/> alone does not reach them.
+    /// </summary>
+    public SsoTestDataBuilder WithSelfHostedEnvironment()
+    {
+        _isSelfHostedEnvironment = true;
         return this;
     }
 
@@ -176,6 +216,48 @@ public class SsoTestDataBuilder
     }
 
     /// <summary>
+    /// Sets the <see cref="FeatureFlagKeys.PM42283_Rsa15Deprecation"/> feature flag for the test.
+    /// An unset flag is off.
+    /// </summary>
+    public SsoTestDataBuilder WithPM42283Rsa15DeprecationFlag(bool enabled = true)
+    {
+        _rsa15DeprecationFlagEnabled = enabled;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the minimum number of days between RSA 1.5 deprecation emails to one organization.
+    /// A value of 0 or less turns the email off.
+    /// </summary>
+    public SsoTestDataBuilder WithRsa15DeprecationEmailCooldownInDays(int days)
+    {
+        _rsa15DeprecationEmailCooldownInDays = days;
+        return this;
+    }
+
+    /// <summary>
+    /// Substitutes <see cref="IMailer"/> so a test can observe the emails that the host sends,
+    /// and no email is rendered or delivered. Also substitutes <see cref="IMailDeliveryService"/>
+    /// with a service that is not <see cref="NoopMailDeliveryService"/>, unless the test sets
+    /// a delivery service with <see cref="WithMailDeliveryService"/>.
+    /// </summary>
+    public SsoTestDataBuilder WithMockedMailer()
+    {
+        _mockMailer = true;
+        return this;
+    }
+
+    /// <summary>
+    /// Replaces the host's <see cref="IMailDeliveryService"/> with the given service. The real
+    /// <see cref="IMailer"/> still renders each email.
+    /// </summary>
+    public SsoTestDataBuilder WithMailDeliveryService(IMailDeliveryService deliveryService)
+    {
+        _mailDeliveryService = deliveryService;
+        return this;
+    }
+
+    /// <summary>
     /// Substitutes <see cref="ISendOrganizationInvitesCommand"/> so <c>SendInvitesAsync</c>
     /// no-ops instead of exercising the real mail pipeline. Use in tests that want to
     /// assert an invite was (or was not) issued, and to keep integration runs from
@@ -184,6 +266,27 @@ public class SsoTestDataBuilder
     public SsoTestDataBuilder WithMockedSendOrganizationInvitesCommand()
     {
         _mockSendOrganizationInvitesCommand = true;
+        return this;
+    }
+
+    /// <summary>
+    /// Substitutes <see cref="IPricingClient"/> so that it returns plans from <see cref="MockPlans"/>,
+    /// and no test calls the pricing service.
+    /// </summary>
+    public SsoTestDataBuilder WithMockedPricingClient()
+    {
+        _mockPricingClient = true;
+        return this;
+    }
+
+    /// <summary>
+    /// Substitutes <see cref="IStripeAdapter"/> so no test calls Stripe. The optional action
+    /// configures the substitute, for example to make a subscription lookup throw.
+    /// </summary>
+    public SsoTestDataBuilder WithMockedStripeAdapter(Action<IStripeAdapter>? configure = null)
+    {
+        _mockStripeAdapter = true;
+        _stripeAdapterConfig = configure;
         return this;
     }
 
@@ -243,7 +346,7 @@ public class SsoTestDataBuilder
             {
                 authService.AuthenticateAsync(
                         Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
+                        AuthenticationSchemes.SsoExternalCookie)
                     .Returns(MockSuccessfulAuthResult.Build(
                         authOrganizationId,
                         providerUserId,
@@ -256,16 +359,33 @@ public class SsoTestDataBuilder
             {
                 authService.AuthenticateAsync(
                         Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
+                        AuthenticationSchemes.SsoExternalCookie)
                     .Returns(AuthenticateResult.Fail("External authentication error"));
             }
         });
 
-        // 1.a Configure GlobalSettings for Self-Hosted and seat limit
+        // 1.a Configure GlobalSettings
         factory.SubstituteService<IGlobalSettings>(globalSettings =>
         {
             globalSettings.SelfHosted.Returns(_isSelfHosted);
+            globalSettings.Sso.Rsa15DeprecationEmailCooldownInDays = _rsa15DeprecationEmailCooldownInDays;
+            globalSettings.Sso.Rsa15DeprecationDate = new GlobalSettings.SsoSettings().Rsa15DeprecationDate;
         });
+
+        // 1.a.i Apply host configuration overrides requested by the test
+        foreach (var (key, value) in _configuration)
+        {
+            factory.UpdateConfiguration(key, value);
+        }
+
+        // 1.a.ii Configure IBitwardenEnvironment, if the test requests a self-hosted environment
+        if (_isSelfHostedEnvironment)
+        {
+            factory.SubstituteService<IBitwardenEnvironment>(environment =>
+            {
+                environment.SelfHosted.Returns(true);
+            });
+        }
 
         // 1.b Replace SamlEnvironment with a version that has a test SP signing certificate, if the test requests it
         if (_samlSigningCertificate != null)
@@ -300,6 +420,25 @@ public class SsoTestDataBuilder
             factory.SubstituteService<ISendOrganizationInvitesCommand>(_ => { });
         }
 
+        // 1.d.i Configure IStripeAdapter, if the test requests it
+        if (_mockStripeAdapter)
+        {
+            factory.SubstituteService<IStripeAdapter>(stripeAdapter => _stripeAdapterConfig?.Invoke(stripeAdapter));
+        }
+
+        // 1.d.ii Configure IPricingClient, if the test requests it
+        if (_mockPricingClient)
+        {
+            factory.SubstituteService<IPricingClient>(pricingClient =>
+            {
+                pricingClient.GetPlan(Arg.Any<PlanType>())
+                    .Returns(callInfo => MockPlans.Get(callInfo.Arg<PlanType>()));
+                pricingClient.GetPlanOrThrow(Arg.Any<PlanType>())
+                    .Returns(callInfo => MockPlans.Get(callInfo.Arg<PlanType>()));
+                pricingClient.ListPlans().Returns(MockPlans.Plans);
+            });
+        }
+
         // 1.e Configure IOrganizationService for autoscale-branch tests
         if (_mockAutoscaleSuccess)
         {
@@ -324,12 +463,34 @@ public class SsoTestDataBuilder
             });
         }
 
-        // 1.f Configure IFeatureService to reflect the PM42982_WantAssertionsSigned feature flag, if requested
-        if (_wantAssertionsSignedFlagEnabled is { } wantAssertionsSignedFlagEnabled)
+        // 1.f Configure IFeatureService to reflect the feature flag the test requests. An unset flag is off.
+        if (_wantAssertionsSignedFlagEnabled.HasValue || _rsa15DeprecationFlagEnabled.HasValue)
         {
             factory.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(svc =>
             {
-                svc.IsEnabled(FeatureFlagKeys.PM42982_WantAssertionsSigned).Returns(wantAssertionsSignedFlagEnabled);
+                svc.IsEnabled(FeatureFlagKeys.PM42982_WantAssertionsSigned)
+                    .Returns(_wantAssertionsSignedFlagEnabled ?? false);
+                svc.IsEnabled(FeatureFlagKeys.PM42283_Rsa15Deprecation)
+                    .Returns(_rsa15DeprecationFlagEnabled ?? false);
+            });
+        }
+
+        // 1.g Configure IMailer or IMailDeliveryService, if the test requests it
+        if (_mockMailer)
+        {
+            factory.SubstituteService<IMailer>(_ => { });
+            if (_mailDeliveryService is null)
+            {
+                factory.SubstituteService<IMailDeliveryService>(_ => { });
+            }
+        }
+
+        if (_mailDeliveryService is { } mailDeliveryService)
+        {
+            factory.ConfigureServices(services =>
+            {
+                services.RemoveAll<IMailDeliveryService>();
+                services.AddSingleton(mailDeliveryService);
             });
         }
 

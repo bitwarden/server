@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
@@ -20,7 +21,10 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bitwarden.Server.Sdk.Features;
+using OrganizationPlan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 
@@ -45,7 +49,11 @@ public class CloudOrganizationSignUpCommand(
     ICollectionRepository collectionRepository,
     IDeviceRepository deviceRepository,
     IPricingClient pricingClient,
-    IPolicyRequirementQuery policyRequirementQuery) : ICloudOrganizationSignUpCommand
+    IPolicyRequirementQuery policyRequirementQuery,
+    ICreateOrganizationSubscriptionCommand createOrganizationSubscriptionCommand,
+    IGlobalSettings globalSettings,
+    IFeatureService featureService
+) : ICloudOrganizationSignUpCommand
 {
     public async Task<SignUpOrganizationResponse> SignUpOrganizationAsync(OrganizationSignup signup)
     {
@@ -64,11 +72,60 @@ public class CloudOrganizationSignUpCommand(
             ValidateSecretsManagerPlan(plan, signup);
         }
 
+        if (signup.UsePrivilegedControls && featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support))
+        {
+            ValidatePrivilegedControlsSeats(plan, signup);
+        }
+
         if (!signup.IsFromProvider)
         {
             await ValidateSignUpPoliciesAsync(signup.Owner.Id);
         }
 
+        var organization = CreateOrganization(signup, plan);
+
+        if (signup.UseSecretsManager)
+        {
+            organization.SmSeats = plan.SecretsManager.BaseSeats + signup.AdditionalSmSeats.GetValueOrDefault();
+            organization.SmServiceAccounts = plan.SecretsManager.BaseServiceAccount +
+                                             signup.AdditionalServiceAccounts.GetValueOrDefault();
+        }
+
+        if (plan.Type == PlanType.Free && !signup.IsFromProvider)
+        {
+            var adminCount =
+                await organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id);
+            if (adminCount > 0)
+            {
+                throw new BadRequestException(new FreeOrgAdminLimitError().Message);
+            }
+        }
+        else if (plan.Type != PlanType.Free)
+        {
+            var sale = OrganizationSale.From(organization, signup);
+
+            // PAM purchase provision through the new subscription command (flagged);
+            // every other paid signup stays on the legacy Finalize until that path is migrated.
+            var usePrivilegedControls = signup.UsePrivilegedControls &&
+                                        featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support);
+            if (usePrivilegedControls)
+            {
+                var purchase = BuildPrivilegedControlsPurchase(sale, signup);
+                await createOrganizationSubscriptionCommand.Run(organization, purchase);
+            }
+            else
+            {
+                await organizationBillingService.Finalize(sale);
+            }
+        }
+
+        var ownerId = signup.IsFromProvider ? default : signup.Owner.Id;
+        var returnValue = await SignUpAsync(organization, ownerId, signup.OwnerKey, signup.CollectionName, true);
+        return new SignUpOrganizationResponse(returnValue.organization, returnValue.organizationUser);
+    }
+
+    private static Organization CreateOrganization(OrganizationSignup signup, OrganizationPlan plan)
+    {
         var organization = new Organization
         {
             // Pre-generate the org id so that we can save it with the Stripe subscription
@@ -110,32 +167,7 @@ public class CloudOrganizationSignUpCommand(
             UseSecretsManager = signup.UseSecretsManager,
             UseOrganizationDomains = plan.HasOrganizationDomains,
         };
-
-        if (signup.UseSecretsManager)
-        {
-            organization.SmSeats = plan.SecretsManager.BaseSeats + signup.AdditionalSmSeats.GetValueOrDefault();
-            organization.SmServiceAccounts = plan.SecretsManager.BaseServiceAccount +
-                                             signup.AdditionalServiceAccounts.GetValueOrDefault();
-        }
-
-        if (plan.Type == PlanType.Free && !signup.IsFromProvider)
-        {
-            var adminCount =
-                await organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id);
-            if (adminCount > 0)
-            {
-                throw new BadRequestException(new FreeOrgAdminLimitError().Message);
-            }
-        }
-        else if (plan.Type != PlanType.Free)
-        {
-            var sale = OrganizationSale.From(organization, signup);
-            await organizationBillingService.Finalize(sale);
-        }
-
-        var ownerId = signup.IsFromProvider ? default : signup.Owner.Id;
-        var returnValue = await SignUpAsync(organization, ownerId, signup.OwnerKey, signup.CollectionName, true);
-        return new SignUpOrganizationResponse(returnValue.organization, returnValue.organizationUser);
+        return organization;
     }
 
     public void ValidatePasswordManagerPlan(Plan plan, OrganizationUpgrade upgrade)
@@ -218,6 +250,57 @@ public class CloudOrganizationSignUpCommand(
             case true when plan.SecretsManager.MaxAdditionalSeats.HasValue &&
                            upgrade.AdditionalSmSeats > plan.SecretsManager.MaxAdditionalSeats.Value:
                 throw new BadRequestException(new PlanMaxAdditionalUsersExceededError(plan.SecretsManager.MaxAdditionalSeats.GetValueOrDefault(0)).Message);
+        }
+    }
+
+    private OrganizationSubscriptionCreation BuildPrivilegedControlsPurchase(
+        OrganizationSale sale, OrganizationSignup signup)
+    {
+        var passwordManager = sale.SubscriptionSetup.PasswordManagerOptions;
+        var secretsManager = sale.SubscriptionSetup.SecretsManagerOptions;
+
+        return new OrganizationSubscriptionCreation
+        {
+            PlanType = signup.Plan,
+            PasswordManager = new OrganizationSubscriptionCreation.PasswordManagerPurchase
+            {
+                Seats = passwordManager.Seats,
+                Storage = passwordManager.Storage,
+                PremiumAccess = passwordManager.PremiumAccess ?? false
+            },
+            SecretsManager = secretsManager == null
+                ? null
+                : new OrganizationSubscriptionCreation.SecretsManagerPurchase
+                {
+                    Seats = secretsManager.Seats,
+                    ServiceAccounts = secretsManager.ServiceAccounts
+                },
+            PrivilegedControls = new OrganizationSubscriptionCreation.PrivilegedControlsPurchase
+            {
+                Seats = signup.PamSeats!.Value
+            },
+            CustomerSetup = sale.CustomerSetup,
+            IsFromSecretsManagerTrial = signup.IsFromSecretsManagerTrial,
+            Trial = new OrganizationSubscriptionCreation.TrialSetup
+            {
+                Length = signup.SkipTrial ? 0 : signup.TrialLength,
+                InitiationPath = signup.InitiationPath
+            },
+            Owner = signup.Owner,
+            CloudRegion = globalSettings.BaseServiceUri.CloudRegion
+        };
+    }
+
+    private static void ValidatePrivilegedControlsSeats(Plan plan, OrganizationSignup signup)
+    {
+        if (signup.PamSeats is null)
+        {
+            throw new BadRequestException("Privileged Controls seats are required.");
+        }
+
+        if (signup.PamSeats > plan.PasswordManager.BaseSeats + signup.AdditionalSeats)
+        {
+            throw new BadRequestException(new PrivilegedControlsSeatsMustNotExceedPasswordManagerSeatsError().Message);
         }
     }
 

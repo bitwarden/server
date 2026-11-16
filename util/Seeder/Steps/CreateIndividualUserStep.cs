@@ -12,8 +12,8 @@ internal sealed class CreateIndividualUserStep(
 {
     public void Execute(SeederContext context)
     {
-        var kdfIterations = context.GetKdfIterations();
-        var password = context.GetPassword();
+        var kdfIterations = context.KdfIterations;
+        var password = context.Password;
 
         var (userEntity, keys) = UserSeeder.Create(
             new UserSeed
@@ -26,8 +26,8 @@ internal sealed class CreateIndividualUserStep(
                 KdfIterations = kdfIterations,
                 CreationDate = creationDate
             },
-            context.GetPasswordHasher(),
-            context.GetMangler());
+            context.PasswordHasher,
+            context.Mangler);
 
         context.Users.Add(userEntity);
         context.Owner = userEntity;

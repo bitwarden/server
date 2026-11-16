@@ -324,7 +324,7 @@ public class AccessRuleWriteValidatorTests
     {
         var sutProvider = SetupSutProvider(rule);
         collection.OrganizationId = rule.OrganizationId;
-        collection.AccessRuleId = rule.Id;   // already governed by the rule under update
+        collection.AccessRuleId = rule.Id;
         sutProvider.GetDependency<ICollectionRepository>()
             .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new List<Collection> { collection });
@@ -334,10 +334,7 @@ public class AccessRuleWriteValidatorTests
         Assert.Equal([collection.Id], result);
     }
 
-    /// <summary>
-    /// Sets up a rule that passes the field-level checks, with the conditions validator and the sibling lookup
-    /// stubbed to succeed, so each test only has to arrange the check it is exercising.
-    /// </summary>
+    /// <summary>Arranges a rule that passes every check, so each test sets up only the one it exercises.</summary>
     private static SutProvider<AccessRuleWriteValidator> SetupSutProvider(AccessRule rule)
     {
         var sutProvider = new SutProvider<AccessRuleWriteValidator>().Create();

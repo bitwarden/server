@@ -150,7 +150,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             { "globalSettings:postgreSql:connectionString", "Host=localhost;Username=test;Password=test;Database=test" },
 
             // Clear the redis connection string for distributed caching, forcing an in-memory implementation
-            { "globalSettings:redis:connectionString", "" },
+            { "globalSettings:distributedCache:redis:connectionString", "" },
 
             // Clear Storage
             { "globalSettings:attachment:connectionString", null },
@@ -165,7 +165,6 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             // Email Verification
             { "globalSettings:enableEmailVerification", "true" },
             { "globalSettings:disableUserRegistration", "false" },
-            { "globalSettings:launchDarkly:flagValues:email-verification", "true" },
 
             // New Device Verification
             { "globalSettings:disableEmailNewDevice", "false" },

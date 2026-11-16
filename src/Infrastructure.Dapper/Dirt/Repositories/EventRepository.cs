@@ -261,6 +261,10 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
         eventsTable.Columns.Add(domainNameColumn);
         var sendIdColumn = new DataColumn(nameof(e.SendId), typeof(Guid));
         eventsTable.Columns.Add(sendIdColumn);
+        var accessRequestIdColumn = new DataColumn(nameof(e.AccessRequestId), typeof(Guid));
+        eventsTable.Columns.Add(accessRequestIdColumn);
+        var accessLeaseIdColumn = new DataColumn(nameof(e.AccessLeaseId), typeof(Guid));
+        eventsTable.Columns.Add(accessLeaseIdColumn);
 
         foreach (DataColumn col in eventsTable.Columns)
         {
@@ -297,6 +301,8 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
             row[grantedServiceAccountIdColumn] = ev.GrantedServiceAccountId.HasValue ? ev.GrantedServiceAccountId.Value : DBNull.Value;
             row[domainNameColumn] = ev.DomainName != null ? (object)ev.DomainName : DBNull.Value;
             row[sendIdColumn] = ev.SendId.HasValue ? ev.SendId.Value : DBNull.Value;
+            row[accessRequestIdColumn] = ev.AccessRequestId.HasValue ? ev.AccessRequestId.Value : DBNull.Value;
+            row[accessLeaseIdColumn] = ev.AccessLeaseId.HasValue ? ev.AccessLeaseId.Value : DBNull.Value;
             eventsTable.Rows.Add(row);
         }
 

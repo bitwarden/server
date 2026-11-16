@@ -7,6 +7,7 @@ using Bit.Core.Models.Data.Organizations.OrganizationSponsorships;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -124,6 +125,42 @@ public class CloudSyncSponsorshipsCommandTests : FamiliesForEnterpriseTestsBase
 
         // Only one sponsorship was new so it should only send one
         Assert.Single(toEmailSponsorships);
+    }
+
+    [Theory]
+    [BitAutoData("Gov")]
+    [BitAutoData("gov")]
+    public async Task SyncOrganization_GovRegion_SyncsExistingButDoesNotCreateNew(string cloudRegion,
+        SutProvider<CloudSyncSponsorshipsCommand> sutProvider, Organization sponsoringOrganization,
+        OrganizationSponsorship existingSponsorship, OrganizationSponsorship newSponsorship)
+    {
+        sponsoringOrganization.Enabled = true;
+        sponsoringOrganization.PlanType = PlanType.EnterpriseAnnually;
+
+        existingSponsorship.ToDelete = false;
+        newSponsorship.ToDelete = false;
+
+        sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri.CloudRegion.Returns(cloudRegion);
+        sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+            .GetManyBySponsoringOrganizationAsync(sponsoringOrganization.Id)
+            .Returns(new List<OrganizationSponsorship>
+            {
+                existingSponsorship,
+            });
+
+        var (syncData, toEmailSponsorships) = await sutProvider.Sut.SyncOrganization(sponsoringOrganization, new[]
+        {
+            new OrganizationSponsorshipData(existingSponsorship),
+            new OrganizationSponsorshipData(newSponsorship),
+        });
+
+        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+            .Received(1)
+            .UpsertManyAsync(Arg.Is<IEnumerable<OrganizationSponsorship>>(sponsorships =>
+                sponsorships.Count() == 1 && sponsorships.First().Id == existingSponsorship.Id));
+
+        Assert.Empty(toEmailSponsorships);
+        Assert.Single(syncData.SponsorshipsBatch);
     }
 
     [Theory]

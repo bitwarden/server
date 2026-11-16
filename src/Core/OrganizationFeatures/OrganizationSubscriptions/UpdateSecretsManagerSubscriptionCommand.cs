@@ -1,8 +1,8 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
@@ -30,9 +30,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     private readonly ILogger<UpdateSecretsManagerSubscriptionCommand> _logger;
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IGlobalSettings _globalSettings;
-    private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
-    private readonly IEventService _eventService;
+    private readonly IReplaceOrganizationAndUpdateCacheCommand _replaceOrganizationAndUpdateCacheCommand;
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand;
     private readonly IStripeAdapter _stripeAdapter;
@@ -44,9 +42,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         ILogger<UpdateSecretsManagerSubscriptionCommand> logger,
         IServiceAccountRepository serviceAccountRepository,
         IGlobalSettings globalSettings,
-        IOrganizationRepository organizationRepository,
-        IOrganizationAbilityCacheService organizationAbilityCacheService,
-        IEventService eventService,
+        IReplaceOrganizationAndUpdateCacheCommand replaceOrganizationAndUpdateCacheCommand,
         IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
         Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         IStripeAdapter stripeAdapter)
@@ -57,9 +53,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         _logger = logger;
         _serviceAccountRepository = serviceAccountRepository;
         _globalSettings = globalSettings;
-        _organizationRepository = organizationRepository;
-        _organizationAbilityCacheService = organizationAbilityCacheService;
-        _eventService = eventService;
+        _replaceOrganizationAndUpdateCacheCommand = replaceOrganizationAndUpdateCacheCommand;
         _updateOrganizationSubscriptionCommand = updateOrganizationSubscriptionCommand;
         _featureService = featureService;
         _stripeAdapter = stripeAdapter;
@@ -156,7 +150,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         organization.MaxAutoscaleSmSeats = update.MaxAutoscaleSmSeats;
         organization.MaxAutoscaleSmServiceAccounts = update.MaxAutoscaleSmServiceAccounts;
 
-        await ReplaceAndUpdateCacheAsync(organization);
+        await _replaceOrganizationAndUpdateCacheCommand.RunAsync(organization);
     }
 
     private async Task SendSeatLimitEmailAsync(Organization organization)
@@ -435,19 +429,6 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
                 $"Your plan has a machine account limit of {plan.SecretsManager.MaxServiceAccounts}, ",
                 $"but you have specified a max autoscale count of {update.MaxAutoscaleSmServiceAccounts}.",
                 "Reduce your max autoscale count."));
-        }
-    }
-
-    // TODO: This is a temporary duplication of OrganizationService.ReplaceAndUpdateCache to avoid a circular dependency.
-    // TODO: This should no longer be necessary when user-related methods are extracted from OrganizationService: see PM-1880
-    private async Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null)
-    {
-        await _organizationRepository.ReplaceAsync(org);
-        await _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(org);
-
-        if (orgEvent.HasValue)
-        {
-            await _eventService.LogOrganizationEventAsync(org, orgEvent.Value);
         }
     }
 

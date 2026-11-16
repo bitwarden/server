@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Auth.Identity;
-using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -12,7 +11,7 @@ namespace Bit.Subscriptions.User.Test;
 public class UserSubscriptionEndpointsTests
 {
     [Fact]
-    public void MapUserSubscriptionEndpoints_AppliesAuthorizationFeatureGateAndTags()
+    public void MapUserSubscriptionEndpoints_AppliesAuthorizationAndTags()
     {
         var app = WebApplication.CreateBuilder().Build();
 
@@ -27,11 +26,6 @@ public class UserSubscriptionEndpointsTests
         var authorize = endpoint.Metadata.GetMetadata<AuthorizeAttribute>();
         Assert.NotNull(authorize);
         Assert.Equal(Policies.Application, authorize!.Policy);
-
-        // Feature gate: IFeatureMetadata (Bitwarden.Server.Sdk.Features) exposes a FeatureCheck
-        // delegate, not a flag-name string — presence guards against a dropped RequireFeature.
-        var feature = endpoint.Metadata.GetMetadata<IFeatureMetadata>();
-        Assert.NotNull(feature);
 
         var tags = endpoint.Metadata.GetMetadata<ITagsMetadata>();
         Assert.NotNull(tags);
@@ -63,7 +57,6 @@ public class UserSubscriptionEndpointsTests
         var authorize = endpoint.Metadata.GetMetadata<AuthorizeAttribute>();
         Assert.NotNull(authorize);
         Assert.Equal(Policies.Application, authorize!.Policy);
-        Assert.NotNull(endpoint.Metadata.GetMetadata<IFeatureMetadata>());
         Assert.Contains("UserSubscriptions", endpoint.Metadata.GetMetadata<ITagsMetadata>()!.Tags);
         Assert.Equal("internal", endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>()!.EndpointGroupName);
     }
@@ -96,7 +89,6 @@ public class UserSubscriptionEndpointsTests
         var authorize = endpoint.Metadata.GetMetadata<AuthorizeAttribute>();
         Assert.NotNull(authorize);
         Assert.Equal(Policies.Application, authorize!.Policy);
-        Assert.NotNull(endpoint.Metadata.GetMetadata<IFeatureMetadata>());
     }
 
     private static RouteEndpoint MapAndFindEndpoint(string endpointName)
@@ -116,7 +108,6 @@ public class UserSubscriptionEndpointsTests
         var authorize = endpoint.Metadata.GetMetadata<AuthorizeAttribute>();
         Assert.NotNull(authorize);
         Assert.Equal(Policies.Application, authorize!.Policy);
-        Assert.NotNull(endpoint.Metadata.GetMetadata<IFeatureMetadata>());
         Assert.Contains("UserSubscriptions", endpoint.Metadata.GetMetadata<ITagsMetadata>()!.Tags);
         Assert.Equal("internal", endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>()!.EndpointGroupName);
     }

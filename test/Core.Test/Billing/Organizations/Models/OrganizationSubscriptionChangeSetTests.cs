@@ -156,6 +156,28 @@ public class OrganizationSubscriptionChangeSetBuilderTests
     }
 
     [Fact]
+    public void RemovePrivilegedControlsSeats_RemovesPrivilegedControlsSeatItem()
+    {
+        var plan = GetPlan(PlanType.EnterpriseAnnually);
+        var changeSet = OrganizationSubscriptionChangeSet.Builder(plan)
+            .RemovePrivilegedControlsSeats()
+            .Build();
+
+        var change = Assert.Single(changeSet.Changes);
+        Assert.Equal(plan.PrivilegedControls.StripeSeatPlanId, change.AsT2.PriceId);
+    }
+
+    [Fact]
+    public void RemovePrivilegedControlsSeats_SetsChargeImmediately()
+    {
+        var changeSet = OrganizationSubscriptionChangeSet.Builder(GetPlan(PlanType.EnterpriseAnnually))
+            .RemovePrivilegedControlsSeats()
+            .Build();
+
+        Assert.True(changeSet.ChargeImmediately);
+    }
+
+    [Fact]
     public void EstablishSponsorship_SetsChargeImmediately()
     {
         var plan = GetPlan(PlanType.FamiliesAnnually);

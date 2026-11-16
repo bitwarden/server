@@ -5,6 +5,8 @@ using Bit.Core.Platform.Mail.Enqueuing;
 using Bit.Core.Services.Mail;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
@@ -107,8 +109,19 @@ public class DomainClaimedEmailRenderTest
             SiteName = "Bitwarden"
         };
 
-        var mailDeliveryLogger = Substitute.For<ILogger<MailKitSmtpMailDeliveryService>>();
-        var mailDeliveryService = new MailKitSmtpMailDeliveryService(globalSettings, mailDeliveryLogger);
+        var mailDeliveryService = new ServiceCollection()
+            .AddLogging()
+            .AddSingleton(Substitute.For<IHostEnvironment>())
+            .Configure<MailDeliveryOptions>(options =>
+            {
+                options.SiteName = globalSettings.SiteName;
+                options.ReplyToEmail = globalSettings.Mail.ReplyToEmail;
+                options.Smtp.Host = globalSettings.Mail.Smtp.Host;
+                options.Smtp.Port = globalSettings.Mail.Smtp.Port;
+            })
+            .AddMailDelivery()
+            .BuildServiceProvider()
+            .GetRequiredService<IMailDeliveryService>();
         var mailEnqueuingService = new BlockingMailEnqueuingService();
         var distributedCache = Substitute.For<IDistributedCache>();
         var logger = Substitute.For<ILogger<HandlebarsMailService>>();

@@ -1,11 +1,11 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
-using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
@@ -73,6 +73,32 @@ public class AcceptOrgUserCommandTests
         await sutProvider.GetDependency<IPushAutoConfirmNotificationCommand>()
             .Received(1)
             .PushAsync(user.Id, orgUser.OrganizationId);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task AcceptOrgUser_ClearsInviteReminders(
+        SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+    {
+        // Arrange
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+        orgUser.InviteReminderDueDate = DateTime.UtcNow;
+        orgUser.InviteRemindersSentCount = 2;
+
+        sutProvider.GetDependency<IAcceptOrganizationMembershipValidator>()
+            .ValidateAsync(Arg.Any<AcceptOrganizationMembershipValidationRequest>())
+            .Returns(Task.FromResult(Valid(new AcceptOrganizationMembershipValidationResult())));
+
+        // Act
+        await sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService);
+
+        // Assert - the saved row has no reminder schedule
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
+            Arg.Is<OrganizationUser>(ou =>
+                ou.Id == orgUser.Id &&
+                ou.InviteReminderDueDate == null &&
+                ou.InviteRemindersSentCount == null));
     }
 
     [Theory]

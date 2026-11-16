@@ -79,7 +79,7 @@ public class AccessRequestEndpointsHandlerTests
     {
         var sutProvider = Setup(userId);
         details.Status = AccessRequestStatus.Approved;
-        // No produced lease: the request keeps its own status, which the response model passes through verbatim.
+        // Without a produced lease, the response model passes the request's status through.
         details.ProducedLeaseId = null;
         sutProvider.GetDependency<IGetAccessRequestDetailsQuery>()
             .GetDetailsAsync(userId, requestId, _now).Returns(details);

@@ -6,7 +6,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements
 
 /// <summary>
 /// Policy requirements for the Send Controls policy.
-/// Supersedes DisableSend and SendOptions when the pm-31885-send-controls feature flag is active.
+/// Supersedes DisableSend and SendOptions
 /// </summary>
 public class SendControlsPolicyRequirement : IPolicyRequirement
 {

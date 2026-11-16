@@ -11,7 +11,7 @@ namespace Bit.Infrastructure.IntegrationTest.Pam.Repositories;
 
 public class AccessRequestExtensionRepositoryTests
 {
-    /// <summary>Comment the command records on the automatic Deny for an already-ended parent lease.</summary>
+    /// <summary>Recorded on the automatic Deny when the parent lease has ended.</summary>
     private const string _leaseEndedComment = "The lease being extended has ended";
 
     [DatabaseTheory, DatabaseData]
@@ -35,15 +35,12 @@ public class AccessRequestExtensionRepositoryTests
 
         Assert.Equal(AccessLeaseExtendOutcome.Extended, outcome);
 
-        // The parent lease's end is pushed out in place; no new lease is minted.
         var updatedLease = await accessLeaseRepository.GetByIdAsync(lease.Id);
         Assert.NotNull(updatedLease);
-        // Timestamps round-trip within a couple of milliseconds rather than exactly: Dapper binds DateTime as
-        // DbType.DateTime (3.33 ms) on the MSSQL path, and the EF providers store microseconds.
+        // Lax, since Dapper binds DateTime as DbType.DateTime (3.33 ms) on MSSQL and EF providers store microseconds.
         Assert.Equal(newNotAfter, updatedLease!.NotAfter, LaxDateTimeComparer.Default);
         Assert.Equal(AccessLeaseAction.None, updatedLease.Action);
 
-        // The extension is recorded as an approved request pointing at the parent lease.
         Assert.Equal(1, await accessRequestRepository.CountExtensionsByLeaseIdAsync(lease.Id));
 
         // An approved extension produces no lease of its own, so it must not surface as a startable approval.
@@ -70,7 +67,6 @@ public class AccessRequestExtensionRepositoryTests
         Assert.Equal(AccessLeaseExtendOutcome.Extended, await accessRequestRepository.CreateApprovedExtensionAsync(
             BuildExtension(lease, firstNotAfter, now), BuildAutoDecision(now), now, _leaseEndedComment));
 
-        // A lease may be extended exactly once, so a second extension is rejected and nothing is written.
         var rejected = await accessRequestRepository.CreateApprovedExtensionAsync(
             BuildExtension(lease, firstNotAfter.AddHours(1), now), BuildAutoDecision(now), now, _leaseEndedComment);
 
@@ -94,7 +90,6 @@ public class AccessRequestExtensionRepositoryTests
 
         var lease = await CreateActiveLeaseAsync(
             accessRequestRepository, accessLeaseRepository, organization.Id, collection.Id, requesterId, now);
-        // Revoke the lease so it is no longer active.
         await accessLeaseRepository.RevokeAsync(lease, AccessLeaseAction.Revoked, BuildHumanDecision(lease.AccessRequestId, now), now);
 
         var newNotAfter = lease.NotAfter.AddHours(1);
@@ -104,7 +99,6 @@ public class AccessRequestExtensionRepositoryTests
 
         Assert.Equal(AccessLeaseExtendOutcome.LeaseNotActive, outcome);
 
-        // The refusal is recorded, not dropped: the request exists, denied, with an automatic verdict naming why.
         var denied = await accessRequestRepository.GetDetailsByIdAsync(extension.Id, now);
         Assert.NotNull(denied);
         Assert.Equal(AccessRequestStatus.Denied, denied!.Status);
@@ -117,7 +111,6 @@ public class AccessRequestExtensionRepositoryTests
         Assert.Equal(_leaseEndedComment, decision.Comment);
         Assert.Null(decision.ApproverId);
 
-        // Nothing was extended: the parent lease's window is untouched.
         var untouched = await accessLeaseRepository.GetByIdAsync(lease.Id);
         Assert.NotNull(untouched);
         Assert.Equal(lease.NotAfter, untouched!.NotAfter, LaxDateTimeComparer.Default);
@@ -139,7 +132,6 @@ public class AccessRequestExtensionRepositoryTests
         var leaseB = await CreateActiveLeaseAsync(
             accessRequestRepository, accessLeaseRepository, organization.Id, collection.Id, Guid.NewGuid(), now);
 
-        // Extend only leaseA (a lease may be extended once); the count is scoped to its own lease.
         await accessRequestRepository.CreateApprovedExtensionAsync(
             BuildExtension(leaseA, leaseA.NotAfter.AddHours(1), now), BuildAutoDecision(now), now, _leaseEndedComment);
 
@@ -209,7 +201,6 @@ public class AccessRequestExtensionRepositoryTests
             await accessLeaseRepository.CreateFromApprovedRequestAsync(
                 BuildLeaseFor(extension, duringExtension), duringExtension, false));
 
-        // No second lease for the credential, and the parent is untouched.
         Assert.Null(await accessLeaseRepository.GetByAccessRequestIdAsync(extension.Id));
         var parent = await accessLeaseRepository.GetByIdAsync(lease.Id);
         Assert.NotNull(parent);
@@ -234,7 +225,7 @@ public class AccessRequestExtensionRepositoryTests
         Assert.Equal(AccessLeaseExtendOutcome.Extended,
             await accessRequestRepository.CreateApprovedExtensionAsync(extension, BuildAutoDecision(now), now, _leaseEndedComment));
 
-        // Revoking the parent clears the singleton guard, so this proves the refusal is the extension predicate.
+        // Revoking the parent clears the singleton guard, so only the extension predicate can refuse.
         var duringExtension = lease.NotAfter.AddMinutes(1);
         await accessLeaseRepository.RevokeAsync(
             lease, AccessLeaseAction.Revoked, BuildHumanDecision(lease.AccessRequestId, duringExtension),

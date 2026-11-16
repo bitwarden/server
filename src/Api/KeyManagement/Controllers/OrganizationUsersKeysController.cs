@@ -1,6 +1,5 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.KeyManagement.Models.Requests;
-using Bit.Api.KeyManagement.Models.Requirements;
 using Bit.Api.KeyManagement.Models.Responses;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -11,6 +10,7 @@ using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.Repositories;
 using Bit.HttpExtensions;
 using Bit.OrganizationAuthorization;
+using Bit.OrganizationKeys.Requirements;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

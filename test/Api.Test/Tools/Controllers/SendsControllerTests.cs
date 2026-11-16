@@ -139,7 +139,7 @@ public class SendsControllerTests : IDisposable
     {
         send.Type = SendType.Item;
         var itemData = new SendItemData("Test Send", "Notes", SendEncryptionType.V1, "{ encrypted_field: \"ENCRYPTED_STRING\" }",
-            new SendItemMetadata { ItemId = Guid.NewGuid() });
+            new SendItemMetadata { ItemId = Guid.NewGuid(), CreationDate = DateTime.UtcNow, RevisionDate = DateTime.UtcNow });
         send.Data = JsonSerializer.Serialize(itemData);
         _sendOwnerQuery.Get(sendId, Arg.Any<ClaimsPrincipal>()).Returns(send);
         _featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing).Returns(false);
@@ -153,7 +153,7 @@ public class SendsControllerTests : IDisposable
         _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
         send1.Type = SendType.Item;
         var itemData = new SendItemData("Test Send", "Notes", SendEncryptionType.V1, "{ encrypted_field: \"ENCRYPTED_STRING\" }",
-            new SendItemMetadata { ItemId = Guid.NewGuid() });
+            new SendItemMetadata { ItemId = Guid.NewGuid(), CreationDate = DateTime.UtcNow, RevisionDate = DateTime.UtcNow });
         send1.Data = JsonSerializer.Serialize(itemData);
         send2.Type = SendType.Text;
         var textData = new SendTextData("Test Send", "Notes", "Sample text", false);
@@ -451,7 +451,7 @@ public class SendsControllerTests : IDisposable
         {
             Type = SendType.Item,
             Key = "key",
-            Data = new SendDataModel { EncryptionVersion = SendEncryptionType.V1, Data = "{ \"name\": \"ENCRYPTED_VALUE\" }", Metadata = new SendItemMetadataModel { ItemId = Guid.NewGuid() } },
+            Data = new SendDataModel { EncryptionVersion = SendEncryptionType.V1, Data = "{ \"name\": \"ENCRYPTED_VALUE\" }", Metadata = new SendItemMetadataModel { ItemId = Guid.NewGuid(), CreationDate = DateTime.UtcNow, RevisionDate = DateTime.UtcNow } },
             DeletionDate = DateTime.UtcNow.AddDays(7)
         };
 
@@ -477,7 +477,7 @@ public class SendsControllerTests : IDisposable
         {
             Type = SendType.Item,
             Key = "key",
-            Data = new SendDataModel { EncryptionVersion = SendEncryptionType.V1, Data = "{ \"name\": \"ENCRYPTED_VALUE\" }", Metadata = new SendItemMetadataModel { ItemId = Guid.NewGuid() } },
+            Data = new SendDataModel { EncryptionVersion = SendEncryptionType.V1, Data = "{ \"name\": \"ENCRYPTED_VALUE\" }", Metadata = new SendItemMetadataModel { ItemId = Guid.NewGuid(), CreationDate = DateTime.UtcNow, RevisionDate = DateTime.UtcNow } },
             DeletionDate = DateTime.UtcNow.AddDays(7)
         };
 
@@ -1134,7 +1134,7 @@ public class SendsControllerTests : IDisposable
             Id = sendId,
             Type = SendType.Item,
             Data = JsonSerializer.Serialize(new SendItemData("Test Send", "Notes", SendEncryptionType.V1, "{ encrypted_field: \"ENCRYPTED_STRING\" }",
-            new SendItemMetadata { ItemId = Guid.NewGuid() })),
+            new SendItemMetadata { ItemId = Guid.NewGuid(), CreationDate = DateTime.UtcNow, RevisionDate = DateTime.UtcNow })),
             DeletionDate = DateTime.UtcNow.AddDays(7),
             ExpirationDate = null,
             Disabled = false,
@@ -1649,6 +1649,44 @@ public class SendsControllerTests : IDisposable
             userId,
             Arg.Any<Guid>(),
             EventType.Send_Accessed_Text,
+            Arg.Any<IReadOnlyDictionary<Guid, SendAccessEventOrgContext>>());
+    }
+
+    [Fact]
+    public async Task AccessUsingAuth_ItemSend_LogsSendAccessedItem()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing).Returns(true);
+        var sendId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.Item,
+            Data = JsonSerializer.Serialize(new SendItemData
+            {
+                Data = "ENCRYPTED_DATA",
+                EncryptionVersion = SendEncryptionType.V1,
+                Metadata = new SendItemMetadata
+                {
+                    ItemId = Guid.NewGuid(),
+                }
+            }),
+            AuthType = AuthType.Email,
+            Emails = "recipient@bitwarden.com",
+            HideEmail = true,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+        };
+
+        _sut.ControllerContext = CreateControllerContextWithUser(CreateUserWithSendIdClaim(sendId));
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        await _sut.AccessUsingAuth();
+
+        await _eventService.Received(1).LogSendEventAsync(
+            userId,
+            Arg.Any<Guid>(),
+            EventType.Send_Accessed_Item,
             Arg.Any<IReadOnlyDictionary<Guid, SendAccessEventOrgContext>>());
     }
 

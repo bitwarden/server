@@ -8,6 +8,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 
@@ -16,7 +17,8 @@ public class CreateSponsorshipCommand(
     IOrganizationSponsorshipRepository organizationSponsorshipRepository,
     IUserService userService,
     IOrganizationService organizationService,
-    IOrganizationRepository organizationRepository) : ICreateSponsorshipCommand
+    IOrganizationRepository organizationRepository,
+    IGlobalSettings globalSettings) : ICreateSponsorshipCommand
 {
     public async Task<OrganizationSponsorship> CreateSponsorshipAsync(
         Organization sponsoringOrganization,
@@ -27,6 +29,12 @@ public class CreateSponsorshipCommand(
         bool isAdminInitiated,
         string notes)
     {
+        if (Enum.TryParse<CloudRegion>(globalSettings.BaseServiceUri.CloudRegion, ignoreCase: true, out var cloudRegion) &&
+            cloudRegion == CloudRegion.Gov)
+        {
+            throw new BadRequestException("Families sponsorships are not available in this region.");
+        }
+
         var sponsoringUser = await userService.GetUserByIdAsync(sponsoringMember.UserId!.Value);
 
         if (sponsoringUser == null || string.Equals(sponsoringUser.Email, sponsoredEmail, StringComparison.InvariantCultureIgnoreCase))

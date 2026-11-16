@@ -281,6 +281,34 @@ public class GetOrganizationWarningsQueryTests
     }
 
     [Theory, BitAutoData]
+    public async Task Run_Has_InactiveSubscriptionWarning_Resubscribe_IncompleteExpired(
+        Organization organization,
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
+    {
+        organization.Enabled = false;
+        organization.ExemptFromBillingAutomation = false;
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.SequenceEqual(_requiredExpansions)
+            ))
+            .Returns(new Subscription
+            {
+                Customer = new Customer(),
+                Status = SubscriptionStatus.IncompleteExpired
+            });
+
+        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
+
+        var response = await sutProvider.Sut.Run(organization);
+
+        Assert.True(response is
+        {
+            InactiveSubscription.Resolution: "resubscribe"
+        });
+    }
+
+    [Theory, BitAutoData]
     public async Task Run_Has_InactiveSubscriptionWarning_ContactOwner(
         Organization organization,
         SutProvider<GetOrganizationWarningsQuery> sutProvider)

@@ -178,7 +178,9 @@ public class NewDeviceVerificationOtpStoreTests
         var distributedCache = new MemoryDistributedCache(
             new OptionsWrapper<MemoryDistributedCacheOptions>(new MemoryDistributedCacheOptions()));
         var otpTokenProvider = new OtpTokenProvider<DefaultOtpTokenProviderOptions>(
-            distributedCache, new OptionsWrapper<DefaultOtpTokenProviderOptions>(new DefaultOtpTokenProviderOptions()));
+            distributedCache,
+            new OptionsWrapper<DefaultOtpTokenProviderOptions>(new DefaultOtpTokenProviderOptions()),
+            TimeProvider.System);
 
         var sutProvider = new SutProvider<NewDeviceVerificationOtpStore>().Create();
         return sutProvider

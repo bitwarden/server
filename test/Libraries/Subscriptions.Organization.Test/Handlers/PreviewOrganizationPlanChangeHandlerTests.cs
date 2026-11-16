@@ -2,7 +2,7 @@
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Invoicing.InvoicePreviews.Models;
-using Bit.Subscriptions.Organization.Commands;
+using Bit.Subscriptions.Organization.Commands.InvoicePreviews;
 using Bit.Subscriptions.Organization.Handlers;
 using Bit.Subscriptions.Organization.Models.Requests;
 using NSubstitute;

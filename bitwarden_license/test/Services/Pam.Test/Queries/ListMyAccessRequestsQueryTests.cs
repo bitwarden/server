@@ -43,7 +43,7 @@ public class ListMyAccessRequestsQueryTests
     [Theory, BitAutoData]
     public async Task GetMineAsync_DoesNotWindowAwayLiveRows_LeavingThatToTheRead(Guid userId)
     {
-        // The live-row exemption belongs to the read; this query hands down one `since` and never post-filters.
+        // The query hands down one `since` and never post-filters.
         var sutProvider = Setup();
         var aged = new AccessRequestDetails
         {

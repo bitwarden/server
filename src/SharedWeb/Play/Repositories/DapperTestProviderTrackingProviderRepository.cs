@@ -1,12 +1,12 @@
 ﻿using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Infrastructure.Dapper.AdminConsole.Repositories;
+using Bit.Infrastructure.Dapper.Providers.Repositories;
 using Provider = Bit.Core.AdminConsole.Entities.Provider.Provider;
 
 namespace Bit.SharedWeb.Play.Repositories;
 
 /// <summary>
-/// Dapper decorator around the <see cref="Bit.Infrastructure.Dapper.AdminConsole.Repositories.ProviderRepository"/> that tracks
+/// Dapper decorator around the <see cref="ProviderRepository"/> that tracks
 /// created Providers for seeding.
 /// </summary>
 public class DapperTestProviderTrackingProviderRepository : ProviderRepository

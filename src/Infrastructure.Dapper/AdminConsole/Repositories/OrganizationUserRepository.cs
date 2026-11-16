@@ -662,6 +662,43 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             commandType: CommandType.StoredProcedure);
     }
 
+    public async Task StartInviteReminderSequencesAsync(IEnumerable<Guid> organizationUserIds, DateTime dueDate)
+    {
+        var parameters = new DynamicParameters(new
+        {
+            OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP()
+        });
+        // Use DATETIME2(7). Dapper's default DATETIME rounds the date to approximately 3 ms.
+        parameters.Add("@DueDate", dueDate, DbType.DateTime2, null, 7);
+
+        await using var connection = new SqlConnection(ConnectionString);
+
+        await connection.ExecuteAsync(
+            "[dbo].[OrganizationUser_UpdateManyStartInviteReminderSequences]",
+            parameters,
+            commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task<ICollection<OrganizationUserInviteReminder>> ClaimInviteReminderSequencesAsync(DateTime now,
+        DateTime oldestDueDate, DateTime nextDueDate, int batchSize)
+    {
+        var parameters = new DynamicParameters(new { BatchSize = batchSize });
+        // Use DATETIME2(7). Dapper's default DATETIME rounds the dates to approximately 3 ms.
+        // This moves the limits of the claim.
+        parameters.Add("@Now", now, DbType.DateTime2, null, 7);
+        parameters.Add("@OldestDueDate", oldestDueDate, DbType.DateTime2, null, 7);
+        parameters.Add("@NextDueDate", nextDueDate, DbType.DateTime2, null, 7);
+
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var results = await connection.QueryAsync<OrganizationUserInviteReminder>(
+            "[dbo].[OrganizationUser_UpdateManyClaimInviteReminderSequences]",
+            parameters,
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToList();
+    }
+
     public async Task<IEnumerable<OrganizationUserUserDetails>> GetManyDetailsByRoleAsync(Guid organizationId, OrganizationUserType role)
     {
         using (var connection = new SqlConnection(ConnectionString))

@@ -2,11 +2,13 @@
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using CoreEntity = Bit.Pam.Entities.AccessLease;
 using EfDecision = Bit.Infrastructure.EntityFramework.Pam.Models.AccessDecision;
+using EfLeaseExpirySweep = Bit.Infrastructure.EntityFramework.Pam.Models.PamLeaseExpirySweep;
 using EfModel = Bit.Infrastructure.EntityFramework.Pam.Models.AccessLease;
 
 #nullable enable
@@ -15,9 +17,6 @@ namespace Bit.Infrastructure.EntityFramework.Pam.Repositories;
 
 public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAccessLeaseRepository
 {
-    // Bounds CreateFromApprovedRequestAsync's retry of provider serialization failures.
-    private const int MaxMintAttempts = 3;
-
     public AccessLeaseRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, context => context.AccessLeases)
     { }
@@ -141,21 +140,9 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
     /// Retried on a fresh transaction after a provider serialization failure; bounded retries propagate on exhaustion.
     /// Applies only under <paramref name="enforceSingleActiveLease"/>; see <see cref="MintFromApprovedRequestAsync"/>.
     /// </remarks>
-    public async Task<AccessLeaseMintOutcome> CreateFromApprovedRequestAsync(CoreEntity lease, DateTime now,
+    public Task<AccessLeaseMintOutcome> CreateFromApprovedRequestAsync(CoreEntity lease, DateTime now,
         bool enforceSingleActiveLease)
-    {
-        for (var attempt = 1; ; attempt++)
-        {
-            try
-            {
-                return await MintFromApprovedRequestAsync(lease, now, enforceSingleActiveLease);
-            }
-            catch (Exception e) when (attempt < MaxMintAttempts && IsSerializationFailure(e))
-            {
-                // The aborted transaction committed nothing, so the next attempt starts from a fresh scope.
-            }
-        }
-    }
+        => SerializableRetry.RunAsync(() => MintFromApprovedRequestAsync(lease, now, enforceSingleActiveLease));
 
     private async Task<AccessLeaseMintOutcome> MintFromApprovedRequestAsync(CoreEntity lease, DateTime now,
         bool enforceSingleActiveLease)
@@ -285,22 +272,51 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         await transaction.CommitAsync();
     }
 
-    /// <summary>
-    /// True when the provider refused the transaction because it could not serialize it against a concurrent one:
-    /// PostgreSQL's SSI aborting it at commit, or a deadlock victim elsewhere. The transaction is already gone in
-    /// every case, so the only recovery is to run the whole attempt again.
-    /// </summary>
-    private static bool IsSerializationFailure(Exception e) => e switch
+    public async Task<IReadOnlyList<PamExpiredLease>> ExpireDueAsync(DateTime now, DateTime since)
     {
-        Npgsql.PostgresException pg => pg.SqlState is "40001" or "40P01",
-        MySqlConnector.MySqlException my => my.ErrorCode is MySqlConnector.MySqlErrorCode.LockDeadlock
-            or MySqlConnector.MySqlErrorCode.LockWaitTimeout,
-        Microsoft.Data.SqlClient.SqlException ms => ms.Errors
-            .Cast<Microsoft.Data.SqlClient.SqlError>()
-            .Any(error => error.Number is 1205),
-        Microsoft.Data.Sqlite.SqliteException lite => lite.SqliteErrorCode is 5 or 6,
-        _ => e.InnerException is not null && IsSerializationFailure(e.InnerException),
-    };
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        // Expiry is derived, not stored; PamLeaseExpirySweep's journal decides which run owns a lease.
+        // No stronger isolation needed; a losing sweep's SaveChanges fails on the journal's primary key.
+        var due = await dbContext.AccessLeases
+            .Where(l => l.Action == AccessLeaseAction.None && l.NotAfter <= now && l.NotAfter > since &&
+                !dbContext.PamLeaseExpirySweeps.Any(s => s.AccessLeaseId == l.Id))
+            .Select(l => new PamExpiredLease
+            {
+                Id = l.Id,
+                OrganizationId = l.OrganizationId,
+                CollectionId = l.CollectionId,
+                CipherId = l.CipherId,
+                RequesterId = l.RequesterId,
+                NotBefore = l.NotBefore,
+                NotAfter = l.NotAfter,
+            })
+            .ToListAsync();
+
+        if (due.Count > 0)
+        {
+            dbContext.PamLeaseExpirySweeps.AddRange(due.Select(l =>
+                new EfLeaseExpirySweep { AccessLeaseId = l.Id, SweptDate = now }));
+            try
+            {
+                await dbContext.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                // A concurrent sweep journaled some of these first. Report nothing; the next run picks up the rest.
+                var dueIds = due.Select(l => l.Id).ToList();
+                if (await dbContext.PamLeaseExpirySweeps.AnyAsync(s => dueIds.Contains(s.AccessLeaseId)))
+                {
+                    return [];
+                }
+
+                throw;
+            }
+        }
+
+        return due;
+    }
 
     /// <summary>
     /// True when the write failed because a duplicate key was inserted -- here, the unique

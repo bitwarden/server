@@ -524,6 +524,31 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     }
 
     [Fact]
+    public async Task Reinvite_InvitedMember_LogsReinvitedEventForPublicApi()
+    {
+        var orgUser = new OrganizationUser
+        {
+            OrganizationId = _organization.Id,
+            Email = $"integration-test{Guid.NewGuid()}@bitwarden.com",
+            Type = OrganizationUserType.User,
+            Status = OrganizationUserStatusType.Invited
+        };
+        await _factory.GetService<IOrganizationUserRepository>().CreateAsync(orgUser);
+
+        var response = await _client.PostAsync($"/public/members/{orgUser.Id}/reinvite", null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var events = await _factory.GetService<IEventRepository>().GetManyByOrganizationAsync(
+            _organization.Id, DateTime.UtcNow.AddMinutes(-5), DateTime.UtcNow.AddMinutes(1),
+            new PageOptions { PageSize = 100 });
+        Assert.Contains(events.Data, e =>
+            e.Type == EventType.OrganizationUser_Reinvited &&
+            e.OrganizationUserId == orgUser.Id &&
+            e.SystemUser == EventSystemUser.PublicApi);
+    }
+
+    [Fact]
     public async Task Revoke_Member_Success()
     {
         var (_, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(

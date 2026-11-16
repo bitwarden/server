@@ -1,15 +1,14 @@
 ﻿using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Core.Auth.Enums;
-using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;
 
@@ -18,83 +17,112 @@ namespace Bit.Core.Test.Auth.Services;
 [SutProviderCustomize]
 public class TwoFactorEmailServiceTests
 {
+    private const string TokenProviderName = "TwoFactorEmail";
+    private const string LoginPurpose = "LoginCode";
+    private const string SetupPurpose = "SetupCode";
+    private const string DeviceIdentifier = "device-identifier";
+    private const string Token = "123456";
+
+    /// <summary>
+    /// A login code is issued under the login purpose, bound to the requesting device, and emailed to the user's
+    /// two-factor address.
+    /// </summary>
     [Theory, BitAutoData]
-    public async Task SendTwoFactorEmailAsync_Success(SutProvider<TwoFactorEmailService> sutProvider, User user)
+    public async Task SendTwoFactorLoginEmailAsync_Success(SutProvider<TwoFactorEmailService> sutProvider, User user)
     {
         var email = user.Email.ToLowerInvariant();
-        var token = "thisisatokentocompare";
-        var IpAddress = "1.1.1.1";
+        var ipAddress = "1.1.1.1";
         var deviceType = DeviceType.Android;
 
         var context = sutProvider.GetDependency<ICurrentContext>();
         context.DeviceType = deviceType;
-        context.IpAddress = IpAddress;
+        context.IpAddress = ipAddress;
 
-        var userTwoFactorTokenProvider = Substitute.For<IUserTwoFactorTokenProvider<User>>();
-        userTwoFactorTokenProvider
-            .CanGenerateTwoFactorTokenAsync(Arg.Any<UserManager<User>>(), user)
-            .Returns(Task.FromResult(true));
-        userTwoFactorTokenProvider
-            .GenerateAsync("TwoFactor", Arg.Any<UserManager<User>>(), user)
-            .Returns(Task.FromResult(token));
+        EnrollInEmailTwoFactor(user, email);
+        sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
+            .GenerateTokenAsync(TokenProviderName, LoginPurpose, UniqueIdentifier(user), DeviceIdentifier)
+            .Returns(Token);
 
-        var userManager = sutProvider.GetDependency<UserManager<User>>();
-        userManager.RegisterTokenProvider(CoreHelpers.CustomProviderName(TwoFactorProviderType.Email), userTwoFactorTokenProvider);
-
-        user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
-        {
-            [TwoFactorProviderType.Email] = new TwoFactorProvider
-            {
-                MetaData = new Dictionary<string, object> { ["Email"] = email },
-                Enabled = true
-            }
-        });
-        await sutProvider.Sut.SendTwoFactorEmailAsync(user);
+        await sutProvider.Sut.SendTwoFactorLoginEmailAsync(user, DeviceIdentifier);
 
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
-            .SendTwoFactorEmailAsync(email, user.Email, token, IpAddress, deviceType.ToString(),
+            .SendTwoFactorEmailAsync(email, user.Email, Token, ipAddress, deviceType.ToString(),
                 TwoFactorEmailPurpose.Login);
     }
 
+    /// <summary>
+    /// A login code needs a device to bind to; without one nothing is issued or emailed.
+    /// </summary>
+    [Theory]
+    [BitAutoData((string)null)]
+    [BitAutoData("")]
+    [BitAutoData(" ")]
+    public async Task SendTwoFactorLoginEmailAsync_NoDeviceIdentifier_ThrowsAndIssuesNoCode(
+        string deviceIdentifier, SutProvider<TwoFactorEmailService> sutProvider, User user)
+    {
+        EnrollInEmailTwoFactor(user, user.Email);
+
+        await Assert.ThrowsAnyAsync<ArgumentException>(
+            () => sutProvider.Sut.SendTwoFactorLoginEmailAsync(user, deviceIdentifier));
+
+        await sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
+            .DidNotReceiveWithAnyArgs()
+            .GenerateTokenAsync(default, default, default, default);
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceiveWithAnyArgs()
+            .SendTwoFactorEmailAsync(default, default, default, default, default, default);
+    }
+
+    /// <summary>
+    /// A setup code is issued under the setup purpose, separate from login codes, bound to the requesting device,
+    /// and emailed to the address being set up.
+    /// </summary>
     [Theory, BitAutoData]
     public async Task SendTwoFactorSetupEmailAsync_Success(SutProvider<TwoFactorEmailService> sutProvider, User user)
     {
         var email = user.Email.ToLowerInvariant();
-        var token = "thisisatokentocompare";
-        var IpAddress = "1.1.1.1";
+        var ipAddress = "1.1.1.1";
         var deviceType = DeviceType.Android;
 
         var context = sutProvider.GetDependency<ICurrentContext>();
         context.DeviceType = deviceType;
-        context.IpAddress = IpAddress;
+        context.IpAddress = ipAddress;
 
-        var userTwoFactorTokenProvider = Substitute.For<IUserTwoFactorTokenProvider<User>>();
-        userTwoFactorTokenProvider
-            .CanGenerateTwoFactorTokenAsync(Arg.Any<UserManager<User>>(), user)
-            .Returns(Task.FromResult(true));
-        userTwoFactorTokenProvider
-            .GenerateAsync("TwoFactor", Arg.Any<UserManager<User>>(), user)
-            .Returns(Task.FromResult(token));
+        EnrollInEmailTwoFactor(user, email);
+        sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
+            .GenerateTokenAsync(TokenProviderName, SetupPurpose, UniqueIdentifier(user), DeviceIdentifier)
+            .Returns(Token);
 
-        var userManager = sutProvider.GetDependency<UserManager<User>>();
-        userManager.RegisterTokenProvider(CoreHelpers.CustomProviderName(TwoFactorProviderType.Email), userTwoFactorTokenProvider);
-
-        user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
-        {
-            [TwoFactorProviderType.Email] = new TwoFactorProvider
-            {
-                MetaData = new Dictionary<string, object> { ["Email"] = email },
-                Enabled = true
-            }
-        });
-
-        await sutProvider.Sut.SendTwoFactorSetupEmailAsync(user);
+        await sutProvider.Sut.SendTwoFactorSetupEmailAsync(user, DeviceIdentifier);
 
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
-            .SendTwoFactorEmailAsync(email, user.Email, token, IpAddress, deviceType.ToString(),
+            .SendTwoFactorEmailAsync(email, user.Email, Token, ipAddress, deviceType.ToString(),
                 TwoFactorEmailPurpose.Setup);
+    }
+
+    /// <summary>
+    /// A setup code needs a device to bind to; without one nothing is issued or emailed.
+    /// </summary>
+    [Theory]
+    [BitAutoData((string)null)]
+    [BitAutoData("")]
+    [BitAutoData(" ")]
+    public async Task SendTwoFactorSetupEmailAsync_NoDeviceIdentifier_ThrowsAndIssuesNoCode(
+        string deviceIdentifier, SutProvider<TwoFactorEmailService> sutProvider, User user)
+    {
+        EnrollInEmailTwoFactor(user, user.Email);
+
+        await Assert.ThrowsAnyAsync<ArgumentException>(
+            () => sutProvider.Sut.SendTwoFactorSetupEmailAsync(user, deviceIdentifier));
+
+        await sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
+            .DidNotReceiveWithAnyArgs()
+            .GenerateTokenAsync(default, default, default, default);
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceiveWithAnyArgs()
+            .SendTwoFactorEmailAsync(default, default, default, default, default, default);
     }
 
     [Theory, BitAutoData]
@@ -172,16 +200,24 @@ public class TwoFactorEmailServiceTests
             await sutProvider.Sut.GetPendingNewDeviceVerificationDeviceIdentifierAsync(user));
     }
 
+    /// <summary>
+    /// A user without an email two-factor provider gets no code.
+    /// </summary>
     [Theory, BitAutoData]
-    public async Task SendTwoFactorEmailAsync_ExceptionBecauseNoProviderOnUser(SutProvider<TwoFactorEmailService> sutProvider, User user)
+    public async Task SendTwoFactorLoginEmailAsync_ExceptionBecauseNoProviderOnUser(SutProvider<TwoFactorEmailService> sutProvider, User user)
     {
         user.TwoFactorProviders = null;
 
-        await Assert.ThrowsAsync<ArgumentNullException>("No email.", () => sutProvider.Sut.SendTwoFactorEmailAsync(user));
+        await Assert.ThrowsAsync<ArgumentNullException>("No email.",
+            () => sutProvider.Sut.SendTwoFactorLoginEmailAsync(user, DeviceIdentifier));
+        await AssertNoCodeIssuedAsync(sutProvider);
     }
 
+    /// <summary>
+    /// A user whose email two-factor provider has no metadata gets no code.
+    /// </summary>
     [Theory, BitAutoData]
-    public async Task SendTwoFactorEmailAsync_ExceptionBecauseNoProviderMetadataOnUser(SutProvider<TwoFactorEmailService> sutProvider, User user)
+    public async Task SendTwoFactorLoginEmailAsync_ExceptionBecauseNoProviderMetadataOnUser(SutProvider<TwoFactorEmailService> sutProvider, User user)
     {
         user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
         {
@@ -192,11 +228,16 @@ public class TwoFactorEmailServiceTests
             }
         });
 
-        await Assert.ThrowsAsync<ArgumentNullException>("No email.", () => sutProvider.Sut.SendTwoFactorEmailAsync(user));
+        await Assert.ThrowsAsync<ArgumentNullException>("No email.",
+            () => sutProvider.Sut.SendTwoFactorLoginEmailAsync(user, DeviceIdentifier));
+        await AssertNoCodeIssuedAsync(sutProvider);
     }
 
+    /// <summary>
+    /// A user whose email two-factor provider has no email address gets no code.
+    /// </summary>
     [Theory, BitAutoData]
-    public async Task SendTwoFactorEmailAsync_ExceptionBecauseNoProviderEmailMetadataOnUser(SutProvider<TwoFactorEmailService> sutProvider, User user)
+    public async Task SendTwoFactorLoginEmailAsync_ExceptionBecauseNoProviderEmailMetadataOnUser(SutProvider<TwoFactorEmailService> sutProvider, User user)
     {
         user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
         {
@@ -207,7 +248,22 @@ public class TwoFactorEmailServiceTests
             }
         });
 
-        await Assert.ThrowsAsync<ArgumentNullException>("No email.", () => sutProvider.Sut.SendTwoFactorEmailAsync(user));
+        await Assert.ThrowsAsync<ArgumentNullException>("No email.",
+            () => sutProvider.Sut.SendTwoFactorLoginEmailAsync(user, DeviceIdentifier));
+        await AssertNoCodeIssuedAsync(sutProvider);
+    }
+
+    /// <summary>
+    /// A blank two-factor email address counts as no address, so no code is issued for it.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task SendTwoFactorLoginEmailAsync_ExceptionBecauseBlankProviderEmailOnUser(SutProvider<TwoFactorEmailService> sutProvider, User user)
+    {
+        EnrollInEmailTwoFactor(user, " ");
+
+        await Assert.ThrowsAsync<ArgumentNullException>("No email.",
+            () => sutProvider.Sut.SendTwoFactorLoginEmailAsync(user, DeviceIdentifier));
+        await AssertNoCodeIssuedAsync(sutProvider);
     }
 
     [Theory, BitAutoData]
@@ -217,70 +273,162 @@ public class TwoFactorEmailServiceTests
             () => sutProvider.Sut.SendNewDeviceVerificationEmailAsync(null, "device-identifier"));
     }
 
+    /// <summary>
+    /// The email names the requesting client's device type.
+    /// </summary>
     [Theory]
     [BitAutoData(DeviceType.UnknownBrowser, "Unknown Browser")]
     [BitAutoData(DeviceType.Android, "Android")]
-    public async Task SendTwoFactorEmailAsync_DeviceMatches(DeviceType deviceType, string deviceTypeName,
+    public async Task SendTwoFactorLoginEmailAsync_DeviceMatches(DeviceType deviceType, string deviceTypeName,
         SutProvider<TwoFactorEmailService> sutProvider,
         User user)
     {
-        var email = user.Email.ToLowerInvariant();
-        var token = "thisisatokentocompare";
-        var IpAddress = "1.1.1.1";
-
         var context = sutProvider.GetDependency<ICurrentContext>();
         context.DeviceType = deviceType;
-        context.IpAddress = IpAddress;
+        context.IpAddress = "1.1.1.1";
 
-        var userTwoFactorTokenProvider = Substitute.For<IUserTwoFactorTokenProvider<User>>();
-        userTwoFactorTokenProvider
-            .CanGenerateTwoFactorTokenAsync(Arg.Any<UserManager<User>>(), user)
-            .Returns(Task.FromResult(true));
-        userTwoFactorTokenProvider
-            .GenerateAsync("TwoFactor", Arg.Any<UserManager<User>>(), user)
-            .Returns(Task.FromResult(token));
+        EnrollInEmailTwoFactor(user, user.Email.ToLowerInvariant());
 
-        var userManager = sutProvider.GetDependency<UserManager<User>>();
-        userManager.RegisterTokenProvider(CoreHelpers.CustomProviderName(TwoFactorProviderType.Email), userTwoFactorTokenProvider);
-
-        user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
-        {
-            [TwoFactorProviderType.Email] = new TwoFactorProvider
-            {
-                MetaData = new Dictionary<string, object> { ["Email"] = email },
-                Enabled = true
-            }
-        });
-
-        await sutProvider.Sut.SendTwoFactorEmailAsync(user);
+        await sutProvider.Sut.SendTwoFactorLoginEmailAsync(user, DeviceIdentifier);
 
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
             .SendTwoFactorEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), deviceTypeName, TwoFactorEmailPurpose.Login);
     }
 
+    /// <summary>
+    /// With no known device type, the email names an unknown browser.
+    /// </summary>
     [Theory, BitAutoData]
-    public async Task SendTwoFactorEmailAsync_NullDeviceTypeShouldSendUnkownBrowserType(SutProvider<TwoFactorEmailService> sutProvider, User user)
+    public async Task SendTwoFactorLoginEmailAsync_NullDeviceTypeShouldSendUnkownBrowserType(SutProvider<TwoFactorEmailService> sutProvider, User user)
     {
-        var email = user.Email.ToLowerInvariant();
-        var token = "thisisatokentocompare";
-        var IpAddress = "1.1.1.1";
+        sutProvider.GetDependency<ICurrentContext>().DeviceType = null;
+        EnrollInEmailTwoFactor(user, user.Email.ToLowerInvariant());
 
-        var userTwoFactorTokenProvider = Substitute.For<IUserTwoFactorTokenProvider<User>>();
-        userTwoFactorTokenProvider
-            .CanGenerateTwoFactorTokenAsync(Arg.Any<UserManager<User>>(), user)
-            .Returns(Task.FromResult(true));
-        userTwoFactorTokenProvider
-            .GenerateAsync("TwoFactor", Arg.Any<UserManager<User>>(), user)
-            .Returns(Task.FromResult(token));
+        await sutProvider.Sut.SendTwoFactorLoginEmailAsync(user, DeviceIdentifier);
 
-        var context = Substitute.For<ICurrentContext>();
-        context.DeviceType = null;
-        context.IpAddress = IpAddress;
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendTwoFactorEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), "Unknown Browser", Arg.Any<TwoFactorEmailPurpose>());
+    }
 
-        var userManager = sutProvider.GetDependency<UserManager<User>>();
-        userManager.RegisterTokenProvider(CoreHelpers.CustomProviderName(TwoFactorProviderType.Email), userTwoFactorTokenProvider);
+    /// <summary>
+    /// A login code is verified under the login purpose against the device submitting it, and the provider's
+    /// answer is returned.
+    /// </summary>
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task VerifyTwoFactorLoginTokenAsync_ReturnsProviderResultForLoginPurposeAndDevice(
+        bool providerResult, SutProvider<TwoFactorEmailService> sutProvider, User user)
+    {
+        sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
+            .ValidateTokenAsync(Token, TokenProviderName, LoginPurpose, UniqueIdentifier(user), DeviceIdentifier)
+            .Returns(providerResult);
 
+        Assert.Equal(providerResult, await sutProvider.Sut.VerifyTwoFactorLoginTokenAsync(user, DeviceIdentifier, Token));
+    }
+
+    /// <summary>
+    /// A login code never verifies without a device, and the provider is not asked.
+    /// </summary>
+    [Theory]
+    [BitAutoData((string)null)]
+    [BitAutoData("")]
+    [BitAutoData(" ")]
+    public async Task VerifyTwoFactorLoginTokenAsync_NoDeviceIdentifier_FalseWithoutCheckingCode(
+        string deviceIdentifier, SutProvider<TwoFactorEmailService> sutProvider, User user)
+    {
+        Assert.False(await sutProvider.Sut.VerifyTwoFactorLoginTokenAsync(user, deviceIdentifier, Token));
+
+        await sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
+            .DidNotReceiveWithAnyArgs()
+            .ValidateTokenAsync(default, default, default, default, default);
+    }
+
+    /// <summary>
+    /// A blank login code never verifies, and the provider is not asked.
+    /// </summary>
+    [Theory]
+    [BitAutoData((string)null)]
+    [BitAutoData("")]
+    public async Task VerifyTwoFactorLoginTokenAsync_NoToken_FalseWithoutCheckingCode(
+        string token, SutProvider<TwoFactorEmailService> sutProvider, User user)
+    {
+        Assert.False(await sutProvider.Sut.VerifyTwoFactorLoginTokenAsync(user, DeviceIdentifier, token));
+
+        await sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
+            .DidNotReceiveWithAnyArgs()
+            .ValidateTokenAsync(default, default, default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task VerifyTwoFactorLoginTokenAsync_NullUser_Throws(SutProvider<TwoFactorEmailService> sutProvider)
+    {
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => sutProvider.Sut.VerifyTwoFactorLoginTokenAsync(null, DeviceIdentifier, Token));
+    }
+
+    /// <summary>
+    /// A setup code is verified under the setup purpose against the submitting device, and the provider's answer
+    /// is returned.
+    /// </summary>
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task VerifyTwoFactorSetupTokenAsync_ReturnsProviderResultForSetupPurposeAndDevice(
+        bool providerResult, SutProvider<TwoFactorEmailService> sutProvider, User user)
+    {
+        sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
+            .ValidateTokenAsync(Token, TokenProviderName, SetupPurpose, UniqueIdentifier(user), DeviceIdentifier)
+            .Returns(providerResult);
+
+        Assert.Equal(providerResult,
+            await sutProvider.Sut.VerifyTwoFactorSetupTokenAsync(user, DeviceIdentifier, Token));
+    }
+
+    /// <summary>
+    /// A setup code never verifies without a device, and the provider is not asked.
+    /// </summary>
+    [Theory]
+    [BitAutoData((string)null)]
+    [BitAutoData("")]
+    [BitAutoData(" ")]
+    public async Task VerifyTwoFactorSetupTokenAsync_NoDeviceIdentifier_FalseWithoutCheckingCode(
+        string deviceIdentifier, SutProvider<TwoFactorEmailService> sutProvider, User user)
+    {
+        Assert.False(await sutProvider.Sut.VerifyTwoFactorSetupTokenAsync(user, deviceIdentifier, Token));
+
+        await sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
+            .DidNotReceiveWithAnyArgs()
+            .ValidateTokenAsync(default, default, default, default, default);
+    }
+
+    /// <summary>
+    /// A blank setup code never verifies, and the provider is not asked.
+    /// </summary>
+    [Theory]
+    [BitAutoData((string)null)]
+    [BitAutoData("")]
+    public async Task VerifyTwoFactorSetupTokenAsync_NoToken_FalseWithoutCheckingCode(
+        string token, SutProvider<TwoFactorEmailService> sutProvider, User user)
+    {
+        Assert.False(await sutProvider.Sut.VerifyTwoFactorSetupTokenAsync(user, DeviceIdentifier, token));
+
+        await sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
+            .DidNotReceiveWithAnyArgs()
+            .ValidateTokenAsync(default, default, default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task VerifyTwoFactorSetupTokenAsync_NullUser_Throws(SutProvider<TwoFactorEmailService> sutProvider)
+    {
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => sutProvider.Sut.VerifyTwoFactorSetupTokenAsync(null, DeviceIdentifier, Token));
+    }
+
+    private static void EnrollInEmailTwoFactor(User user, string email)
+    {
         user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
         {
             [TwoFactorProviderType.Email] = new TwoFactorProvider
@@ -289,11 +437,14 @@ public class TwoFactorEmailServiceTests
                 Enabled = true
             }
         });
+    }
 
-        await sutProvider.Sut.SendTwoFactorEmailAsync(user);
+    private static string UniqueIdentifier(User user) => $"{user.Id}_{user.SecurityStamp}";
 
-        await sutProvider.GetDependency<IMailService>()
-            .Received(1)
-            .SendTwoFactorEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), "Unknown Browser", Arg.Any<TwoFactorEmailPurpose>());
+    private static async Task AssertNoCodeIssuedAsync(SutProvider<TwoFactorEmailService> sutProvider)
+    {
+        await sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
+            .DidNotReceiveWithAnyArgs()
+            .GenerateTokenAsync(default, default, default, default);
     }
 }

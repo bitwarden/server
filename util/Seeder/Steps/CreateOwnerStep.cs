@@ -14,12 +14,12 @@ internal sealed class CreateOwnerStep : IStep
     public void Execute(SeederContext context)
     {
         var org = context.RequireOrganization();
-        var password = context.GetPassword();
-        var kdfIterations = context.GetKdfIterations();
-        var emailOverride = context.GetOwnerEmailOverride();
+        var password = context.Password;
+        var kdfIterations = context.KdfIterations;
+        var emailOverride = context.OwnerEmailOverride;
         var ownerEmail = !string.IsNullOrWhiteSpace(emailOverride)
-            ? context.GetMangler().Mangle(emailOverride)
-            : context.GetMangler().Mangle($"owner@{context.RequireDomain()}");
+            ? context.Mangler.Mangle(emailOverride)
+            : context.Mangler.Mangle($"owner@{context.RequireDomain()}");
         var userKeys = RustSdkService.GenerateUserKeys(ownerEmail, password, kdfIterations, poolIndex: 0);
         var (owner, _) = UserSeeder.Create(
             new UserSeed
@@ -29,8 +29,8 @@ internal sealed class CreateOwnerStep : IStep
                 Password = password,
                 KdfIterations = kdfIterations
             },
-            context.GetPasswordHasher(),
-            context.GetMangler());
+            context.PasswordHasher,
+            context.Mangler);
 
         var ownerOrgKey = RustSdkService.GenerateUserOrganizationKey(owner.PublicKey!, context.RequireOrgKey());
         var ownerOrgUser = org.CreateOrganizationUserWithKey(

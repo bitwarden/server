@@ -6,6 +6,9 @@ using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.Billing.Organizations;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -112,6 +115,40 @@ public class ConfirmOrganizationInviteLinkCommandTests
             .LogOrganizationUserEventAsync(
                 Arg.Is<OrganizationUser>(ou => ou.Id == existingOrganizationUser.Id),
                 EventType.OrganizationUser_InviteLinkConfirmed);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmAsync_WithExistingMembership_ClearsInviteReminders(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser existingOrganizationUser,
+        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
+    {
+        // Arrange
+        SetupHappyPath(organization, inviteLink, user, existingOrganizationUser, sutProvider);
+        existingOrganizationUser.Status = OrganizationUserStatusType.Invited;
+        existingOrganizationUser.InviteReminderDueDate = DateTime.UtcNow;
+        existingOrganizationUser.InviteRemindersSentCount = 2;
+        organization.Seats = 2;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Users = 2, Sponsored = 0 });
+
+        var request = BuildRequest(inviteLink, user);
+
+        // Act
+        var result = await sutProvider.Sut.ConfirmAsync(request);
+
+        // Assert - the saved row has no reminder schedule
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou =>
+                ou.Id == existingOrganizationUser.Id &&
+                ou.InviteReminderDueDate == null &&
+                ou.InviteRemindersSentCount == null));
     }
 
     [Theory, BitAutoData]
@@ -285,31 +322,110 @@ public class ConfirmOrganizationInviteLinkCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ConfirmAsync_WhenAutoEnrollEnabledAndKeyMissing_ReturnsResetPasswordKeyRequired(
+    public async Task ConfirmAsync_StagedMemberWithPrivilegedControls_AtLimit_JoinsWithoutPrivilegedControls(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
-        OrganizationUser existingOrganizationUser,
+        OrganizationUser stagedOrganizationUser,
         SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
     {
-        // Arrange
-        SetupHappyPath(organization, inviteLink, user, existingOrganizationUser, sutProvider);
-        SetupAutoEnrollPolicy(organization, user, sutProvider);
-        var request = BuildRequest(inviteLink, user) with { ResetPasswordKey = null };
+        SetupHappyPath(organization, inviteLink, user, stagedOrganizationUser, sutProvider);
+        SetupStagedMembership(user, stagedOrganizationUser);
+        stagedOrganizationUser.AccessPam = true;
+        var memberEmail = stagedOrganizationUser.Email!;
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(new PrivilegedControlsSeatReservationResult(new PrivilegedControlsSeatLimitReachedError()));
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var sendSeatNeededEmailCommand = sutProvider.GetDependency<ISendPrivilegedControlsSeatNeededEmailCommand>();
 
-        // Act
-        var result = await sutProvider.Sut.ConfirmAsync(request);
+        var result = await sutProvider.Sut.ConfirmAsync(BuildRequest(inviteLink, user));
 
-        // Assert
-        Assert.True(result.IsError);
-        Assert.IsType<ConfirmResetPasswordKeyRequired>(result.AsError);
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .ReplaceAsync(Arg.Any<OrganizationUser>());
+        Assert.True(result.IsSuccess);
+        Received.InOrder(() =>
+        {
+            organizationUserRepository.ReplaceAsync(Arg.Is<OrganizationUser>(ou =>
+                ou.Id == stagedOrganizationUser.Id &&
+                ou.Status == OrganizationUserStatusType.Confirmed &&
+                !ou.AccessPam));
+            sendSeatNeededEmailCommand.RunAsync(organization, memberEmail);
+        });
     }
 
     [Theory, BitAutoData]
-    public async Task ConfirmAsync_WhenAutoEnrollEnabledWithValidKey_EnrollsUser(
+    public async Task ConfirmAsync_StagedMemberWithPrivilegedControls_ReservationFailed_JoinsWithoutPrivilegedControlsOrEmail(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser stagedOrganizationUser,
+        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
+    {
+        SetupHappyPath(organization, inviteLink, user, stagedOrganizationUser, sutProvider);
+        SetupStagedMembership(user, stagedOrganizationUser);
+        stagedOrganizationUser.AccessPam = true;
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, 1)
+            .Returns(new PrivilegedControlsSeatReservationResult(
+                new PrivilegedControlsSeatReservationUnexpectedError(), new TimeoutException("Stripe is unreachable.")));
+
+        var result = await sutProvider.Sut.ConfirmAsync(BuildRequest(inviteLink, user));
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou => ou.Id == stagedOrganizationUser.Id && !ou.AccessPam));
+        await sutProvider.GetDependency<ISendPrivilegedControlsSeatNeededEmailCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default!, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmAsync_StagedMemberWithPrivilegedControls_SeatAvailable_JoinsWithPrivilegedControls(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser stagedOrganizationUser,
+        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
+    {
+        SetupHappyPath(organization, inviteLink, user, stagedOrganizationUser, sutProvider);
+        SetupStagedMembership(user, stagedOrganizationUser);
+        stagedOrganizationUser.AccessPam = true;
+
+        var result = await sutProvider.Sut.ConfirmAsync(BuildRequest(inviteLink, user));
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>().Received(1).RunAsync(organization, 1);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou =>
+                ou.Id == stagedOrganizationUser.Id &&
+                ou.Status == OrganizationUserStatusType.Confirmed &&
+                ou.AccessPam));
+        await sutProvider.GetDependency<ISendPrivilegedControlsSeatNeededEmailCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default!, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmAsync_NotStaged_DoesNotReservePrivilegedControlsSeat(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser existingOrganizationUser,
+        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
+    {
+        SetupHappyPath(organization, inviteLink, user, existingOrganizationUser, sutProvider);
+
+        var result = await sutProvider.Sut.ConfirmAsync(BuildRequest(inviteLink, user));
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default!, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmAsync_WhenAutoEnrollEnabled_EnrollsUser(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
@@ -317,8 +433,8 @@ public class ConfirmOrganizationInviteLinkCommandTests
         SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
     {
         // Arrange
-        SetupHappyPath(organization, inviteLink, user, existingOrganizationUser, sutProvider);
-        SetupAutoEnrollPolicy(organization, user, sutProvider);
+        SetupHappyPath(organization, inviteLink, user, existingOrganizationUser, sutProvider,
+            accountRecoveryAutoEnrollEnabled: true);
         var request = BuildRequest(inviteLink, user) with { ResetPasswordKey = "2.validresetpasswordkey" };
 
         // Act
@@ -329,6 +445,27 @@ public class ConfirmOrganizationInviteLinkCommandTests
         await sutProvider.GetDependency<IUpdateUserResetPasswordEnrollmentCommand>()
             .Received(1)
             .UpdateUserResetPasswordEnrollmentAsync(organization.Id, user.Id, request.ResetPasswordKey, user.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmAsync_WhenAutoEnrollDisabled_DoesNotEnrollUser(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser existingOrganizationUser,
+        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
+    {
+        // Arrange
+        SetupHappyPath(organization, inviteLink, user, existingOrganizationUser, sutProvider);
+
+        // Act
+        var result = await sutProvider.Sut.ConfirmAsync(BuildRequest(inviteLink, user));
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IUpdateUserResetPasswordEnrollmentCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateUserResetPasswordEnrollmentAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Guid?>());
     }
 
     [Theory, BitAutoData]
@@ -417,7 +554,8 @@ public class ConfirmOrganizationInviteLinkCommandTests
         OrganizationInviteLink inviteLink,
         User user,
         OrganizationUser? existingOrganizationUser,
-        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
+        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider,
+        bool accountRecoveryAutoEnrollEnabled = false)
     {
         if (existingOrganizationUser is not null)
         {
@@ -426,7 +564,8 @@ public class ConfirmOrganizationInviteLinkCommandTests
             existingOrganizationUser.Status = OrganizationUserStatusType.Accepted;
         }
 
-        SetupValidatedConfirmation(organization, inviteLink, user, existingOrganizationUser, sutProvider);
+        SetupValidatedConfirmation(organization, inviteLink, user, existingOrganizationUser, sutProvider,
+            accountRecoveryAutoEnrollEnabled);
     }
 
     // Stubs a successful validation that resolves to the given membership, leaving the membership untouched.
@@ -435,7 +574,8 @@ public class ConfirmOrganizationInviteLinkCommandTests
         OrganizationInviteLink inviteLink,
         User user,
         OrganizationUser? existingOrganizationUser,
-        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
+        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider,
+        bool accountRecoveryAutoEnrollEnabled = false)
     {
         inviteLink.OrganizationId = organization.Id;
         inviteLink.Code = Guid.NewGuid().ToString();
@@ -444,18 +584,18 @@ public class ConfirmOrganizationInviteLinkCommandTests
             .ValidateAsync(Arg.Any<ConfirmOrganizationInviteLinkValidationRequest>())
             .Returns(new ConfirmOrganizationInviteLinkValidationResult
             {
-                InviteLink = inviteLink,
                 Organization = organization,
                 ExistingOrganizationUser = existingOrganizationUser,
+                AccountRecoveryAutoEnrollEnabled = accountRecoveryAutoEnrollEnabled,
             });
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
             .Returns(new OrganizationSeatCounts { Users = 0, Sponsored = 0 });
 
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<ResetPasswordPolicyRequirement>(user.Id)
-            .Returns(new ResetPasswordPolicyRequirement([]));
+        sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .RunAsync(organization, Arg.Any<int>())
+            .Returns(new PrivilegedControlsSeatReservationResult());
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(user.Id)
@@ -485,25 +625,6 @@ public class ConfirmOrganizationInviteLinkCommandTests
         stagedOrganizationUser.Status = OrganizationUserStatusType.Staged;
         stagedOrganizationUser.Email = user.Email;
         stagedOrganizationUser.UserId = null;
-    }
-
-    private static void SetupAutoEnrollPolicy(
-        Organization organization,
-        User user,
-        SutProvider<ConfirmOrganizationInviteLinkCommand> sutProvider)
-    {
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<ResetPasswordPolicyRequirement>(user.Id)
-            .Returns(new ResetPasswordPolicyRequirement(
-            [
-                new PolicyDetails
-                {
-                    OrganizationId = organization.Id,
-                    PolicyType = PolicyType.ResetPassword,
-                    OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
-                    PolicyData = "{\"autoEnrollEnabled\": true}"
-                }
-            ]));
     }
 
     private static void SetupDataOwnershipPolicy(

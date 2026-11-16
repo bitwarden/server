@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Commands;
@@ -8,7 +9,6 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
-using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -22,7 +22,7 @@ namespace Bit.Core.Test.Billing.Organizations.Commands;
 public class UpgradeOrganizationPlanVNextCommandTests
 {
     private readonly IOrganizationBillingService _organizationBillingService = Substitute.For<IOrganizationBillingService>();
-    private readonly IOrganizationService _organizationService = Substitute.For<IOrganizationService>();
+    private readonly IReplaceOrganizationAndUpdateCacheCommand _replaceOrganizationAndUpdateCacheCommand = Substitute.For<IReplaceOrganizationAndUpdateCacheCommand>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IPriceIncreaseScheduler _priceIncreaseScheduler = Substitute.For<IPriceIncreaseScheduler>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
@@ -34,7 +34,7 @@ public class UpgradeOrganizationPlanVNextCommandTests
         _command = new UpgradeOrganizationPlanVNextCommand(
             Substitute.For<ILogger<UpgradeOrganizationPlanVNextCommand>>(),
             _organizationBillingService,
-            _organizationService,
+            _replaceOrganizationAndUpdateCacheCommand,
             _pricingClient,
             _priceIncreaseScheduler,
             _stripeAdapter,
@@ -101,7 +101,7 @@ public class UpgradeOrganizationPlanVNextCommandTests
 
         Assert.True(result.IsT0);
         await _organizationBillingService.Received(1).Finalize(Arg.Any<OrganizationSale>());
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(organization, null);
+        await _replaceOrganizationAndUpdateCacheCommand.Received(1).RunAsync(organization, null);
         Assert.Equal(targetPlan.Name, organization.Plan);
         Assert.Equal(targetPlan.Type, organization.PlanType);
         Assert.Equal(targetPlan.PasswordManager.BaseStorageGb, organization.MaxStorageGb);
@@ -191,7 +191,7 @@ public class UpgradeOrganizationPlanVNextCommandTests
             Arg.Is<OrganizationSubscriptionChangeSet>(cs =>
                 cs.Changes.Count >= 1 &&
                 cs.ChargeImmediately));
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(organization, null);
+        await _replaceOrganizationAndUpdateCacheCommand.Received(1).RunAsync(organization, null);
         Assert.Equal(targetPlan.Name, organization.Plan);
         Assert.Equal(targetPlan.Type, organization.PlanType);
     }
@@ -420,7 +420,7 @@ public class UpgradeOrganizationPlanVNextCommandTests
 
         // Result is mapped through — BadRequest becomes T1
         Assert.True(result.IsT1);
-        await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>(), Arg.Any<EventType?>());
+        await _replaceOrganizationAndUpdateCacheCommand.DidNotReceive().RunAsync(Arg.Any<Organization>(), Arg.Any<EventType?>());
     }
 
     [Fact]
@@ -565,8 +565,8 @@ public class UpgradeOrganizationPlanVNextCommandTests
         Assert.True(result.IsT3);
         await _updateOrganizationSubscriptionCommand.DidNotReceiveWithAnyArgs()
             .Run(Arg.Any<Organization>(), Arg.Any<OrganizationSubscriptionChangeSet>());
-        await _organizationService.DidNotReceive()
-            .ReplaceAndUpdateCacheAsync(Arg.Any<Organization>(), Arg.Any<EventType?>());
+        await _replaceOrganizationAndUpdateCacheCommand.DidNotReceive()
+            .RunAsync(Arg.Any<Organization>(), Arg.Any<EventType?>());
     }
 
     private void SetupSubscriptionCommandSuccess()

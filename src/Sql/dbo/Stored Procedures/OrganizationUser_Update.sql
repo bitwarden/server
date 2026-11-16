@@ -15,7 +15,9 @@
     @RevocationReason TINYINT = NULL,
     @StatusNew SMALLINT = NULL,
     @AccessPam BIT = 0,
-    @V2UpgradeToken VARCHAR(MAX) = NULL
+    @V2UpgradeToken VARCHAR(MAX) = NULL,
+    @InviteReminderDueDate DATETIME2(7) = NULL,
+    @InviteRemindersSentCount TINYINT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -38,7 +40,9 @@ BEGIN
         [RevocationReason] = @RevocationReason,
         [StatusNew] = @StatusNew,
         [AccessPam] = @AccessPam,
-        [V2UpgradeToken] = @V2UpgradeToken
+        [V2UpgradeToken] = @V2UpgradeToken,
+        [InviteReminderDueDate] = @InviteReminderDueDate,
+        [InviteRemindersSentCount] = @InviteRemindersSentCount
     WHERE
         [Id] = @Id
 

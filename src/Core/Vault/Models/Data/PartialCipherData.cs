@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Reflection;
 using System.Text.Json;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Enums;
@@ -27,6 +28,15 @@ public class PartialCipherData
     public string Name { get; set; }
 
     public IEnumerable<CipherLoginData.CipherLoginUriData> Uris { get; set; }
+
+    /// <summary>
+    /// The top-level <c>Data</c> keys a partial keeps, case-insensitive: the properties above, plus <c>Uri</c>, the
+    /// legacy alias of <c>Uris[0]</c> that a full login blob also carries.
+    /// </summary>
+    public static readonly IReadOnlySet<string> KeptKeys = new HashSet<string>(
+        typeof(PartialCipherData).GetProperties(BindingFlags.Public | BindingFlags.Instance).Select(p => p.Name)
+            .Append(nameof(CipherLoginData.Uri)),
+        StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Reduces a cipher's JSON <c>Data</c> blob to the fields allowed under credential leasing.

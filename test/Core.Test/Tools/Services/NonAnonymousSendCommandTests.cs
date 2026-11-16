@@ -530,46 +530,6 @@ public class NonAnonymousSendCommandTests
     }
 
     [Fact]
-    public async Task SaveFileSendAsync_UserHasUnconfirmedEmail_ThrowsBadRequest()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var send = new Send
-        {
-            Id = Guid.NewGuid(),
-            Type = SendType.File,
-            UserId = userId
-        };
-        var fileData = new SendFileData();
-        var fileLength = 1024L; // 1KB
-
-        // Configure validation service to pass storage check
-        _sendValidationService.StorageRemainingForSendAsync(send).Returns(10240L); // 10KB remaining
-
-        // Configure validation service to throw when checking user can save
-        _sendValidationService.When(x => x.ValidateUserCanSaveAsync(userId, send))
-            .Throw(new BadRequestException("You must confirm your email before creating a Send."));
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            _nonAnonymousSendCommand.SaveFileSendAsync(send, fileData, fileLength));
-
-        Assert.Contains("confirm your email", exception.Message);
-
-        // Verify storage validation was called
-        await _sendValidationService.Received(1).StorageRemainingForSendAsync(send);
-
-        // Verify SaveSendAsync attempted to be called, triggering email validation
-        await _sendValidationService.Received(1).ValidateUserCanSaveAsync(userId, send);
-
-        // Verify no repository or notification methods were called after validation failed
-        await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
-        await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
-        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
-        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
-    }
-
-    [Fact]
     public async Task SaveFileSendAsync_UserCanAccessPremium_HasNoStorage_ThrowsBadRequest()
     {
         // Arrange
@@ -1534,6 +1494,7 @@ public class NonAnonymousSendCommandTests
         yield return new object[] { SendType.File, AuthType.None, EventType.Send_Created_File };
         yield return new object[] { SendType.File, AuthType.Email, EventType.Send_Created_File_WithEmailVerification };
         yield return new object[] { SendType.File, AuthType.Password, EventType.Send_Created_File_WithPasswordProtection };
+        yield return new object[] { SendType.Item, AuthType.Email, EventType.Send_Created_Item };
     }
 
     [Theory]
@@ -1580,6 +1541,7 @@ public class NonAnonymousSendCommandTests
     [Theory]
     [InlineData(SendType.Text, EventType.Send_Edited_Text)]
     [InlineData(SendType.File, EventType.Send_Edited_File)]
+    [InlineData(SendType.Item, EventType.Send_Edited_Item)]
     public async Task SaveSendAsync_ExistingSend_LogsExpectedEventType(
         SendType sendType, EventType expectedEventType)
     {
@@ -1722,6 +1684,7 @@ public class NonAnonymousSendCommandTests
     [Theory]
     [InlineData(SendType.Text, EventType.Send_Deleted_Text)]
     [InlineData(SendType.File, EventType.Send_Deleted_File)]
+    [InlineData(SendType.Item, EventType.Send_Deleted_Item)]
     public async Task DeleteSendAsync_LogsExpectedEventType(
         SendType sendType, EventType expectedEventType)
     {

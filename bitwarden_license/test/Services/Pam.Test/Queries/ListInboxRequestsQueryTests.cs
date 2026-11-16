@@ -41,7 +41,7 @@ public class ListInboxRequestsQueryTests
         var result = await sutProvider.Sut.GetPendingAsync(userId, _now);
 
         Assert.Single(result);
-        // The caller's clock is forwarded unchanged: the same instant filters the read and stamps the statuses.
+        // The caller's clock is forwarded unchanged, so one instant filters the read and stamps the statuses.
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1)
             .GetManyInboxPendingByCollectionIdsAsync(manageable, _now);
     }

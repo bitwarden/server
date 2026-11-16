@@ -343,9 +343,9 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                         Id = g.Key.Id,
                         OrganizationId = g.Key.OrganizationId,
                         Read = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Read))),
-                        ViewPassword = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.ViewPassword))),
-                        Edit = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Edit))),
-                        Manage = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Manage))),
+                        ViewPassword = (HighestRank(g) & PermissionRank.ViewPassword) != 0,
+                        Edit = (HighestRank(g) & PermissionRank.Edit) != 0,
+                        Manage = (HighestRank(g) & PermissionRank.Manage) != 0,
                     }).ToList();
             }
             else
@@ -353,14 +353,21 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                 var groupByQuery = from p in query
                                    group p by new { p.Id, p.OrganizationId }
                     into g
+                                   select new
+                                   {
+                                       g.Key,
+                                       Rank = g.Max(c => (c.Manage ? PermissionRank.Manage : 0) + (c.Edit ? PermissionRank.Edit : 0) + (c.ViewPassword ? PermissionRank.ViewPassword : 0)),
+                                       Read = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Read))),
+                                   }
+                                   into ranked
                                    select new OrganizationCipherPermission
                                    {
-                                       Id = g.Key.Id,
-                                       OrganizationId = g.Key.OrganizationId,
-                                       Read = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Read))),
-                                       ViewPassword = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.ViewPassword))),
-                                       Edit = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Edit))),
-                                       Manage = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Manage))),
+                                       Id = ranked.Key.Id,
+                                       OrganizationId = ranked.Key.OrganizationId,
+                                       Read = ranked.Read,
+                                       ViewPassword = (ranked.Rank & PermissionRank.ViewPassword) != 0,
+                                       Edit = (ranked.Rank & PermissionRank.Edit) != 0,
+                                       Manage = (ranked.Rank & PermissionRank.Manage) != 0,
                                    };
                 permissions = await groupByQuery.ToListAsync();
             }
@@ -414,16 +421,25 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
+    private static int HighestRank(IEnumerable<OrganizationCipherPermission> grants) =>
+        grants.Max(c => (c.Manage ? PermissionRank.Manage : 0) + (c.Edit ? PermissionRank.Edit : 0) + (c.ViewPassword ? PermissionRank.ViewPassword : 0));
+
     public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             var userCipherDetails = new UserCipherDetailsQuery(userId);
-            var data = await userCipherDetails.Run(dbContext).FirstOrDefaultAsync(c => c.Id == id);
-            return data;
+            var data = await userCipherDetails.Run(dbContext).Where(c => c.Id == id).ToListAsync();
+            return MostPrivileged(data);
         }
     }
+
+    private static CipherDetails MostPrivileged(IEnumerable<CipherDetails> ciphers) =>
+        ciphers.OrderByDescending(c => c.Manage)
+            .ThenByDescending(c => c.Edit)
+            .ThenByDescending(c => c.ViewPassword)
+            .FirstOrDefault();
 
     public async Task<ICollection<CipherOrganizationDetails>> GetManyOrganizationDetailsByOrganizationIdAsync(
         Guid organizationId)
@@ -508,10 +524,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             var ciphers = await cipherDetailsView.ToListAsync();
 
             return ciphers.GroupBy(c => c.Id)
-                .Select(g => g.OrderByDescending(c => c.Manage)
-                    .ThenByDescending(c => c.Edit)
-                    .ThenByDescending(c => c.ViewPassword)
-                    .First())
+                .Select(MostPrivileged)
                 .ToList();
         }
     }
