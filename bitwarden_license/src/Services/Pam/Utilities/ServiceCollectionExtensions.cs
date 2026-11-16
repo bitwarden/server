@@ -73,7 +73,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRevokeAccessLeaseCommand, RevokeAccessLeaseCommand>();
 
         services.AddScoped<IApproverCollectionAccessQuery, ApproverCollectionAccessQuery>();
-        services.AddScoped<ISingleActiveLeaseEvaluator, SingleActiveLeaseEvaluator>();
 
         // Side channels the commands emit through.
         services.AddScoped<IApproverInboxNotifier, ApproverInboxNotifier>();
