@@ -59,7 +59,11 @@ public static class TokenEndpointTestHelpers
         return ((int)deviceType).ToString(CultureInfo.InvariantCulture);
     }
 
-    private static void ReinitializeDbForTests(IdentityApplicationFactory factory)
+    /// <summary>
+    /// Removes the users, organizations, organization users, and policies that earlier tests created in a shared
+    /// factory.
+    /// </summary>
+    public static void ReinitializeDbForTests(IdentityApplicationFactory factory)
     {
         var databaseContext = factory.GetDatabaseContext();
         databaseContext.Policies.RemoveRange(databaseContext.Policies);

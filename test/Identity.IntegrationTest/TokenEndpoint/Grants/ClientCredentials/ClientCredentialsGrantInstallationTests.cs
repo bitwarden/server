@@ -62,9 +62,9 @@ public class ClientCredentialsGrantInstallationTests : IClassFixture<IdentityApp
         var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "grant_type", "client_credentials" },
-            { "client_id", "organization.bad_guid_zz&" },
+            { "client_id", "installation.bad_guid_zz&" },
             { "client_secret", "something" },
-            { "scope", "api.organization" },
+            { "scope", "api.push" },
         }));
 
         Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);

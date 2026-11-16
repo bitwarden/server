@@ -530,10 +530,10 @@
       },
       "Microsoft.AspNetCore.Authentication.JwtBearer": {
         "type": "Transitive",
-        "resolved": "10.0.8",
-        "contentHash": "oGnE+X/SN6jdqao9WOkOIfyZ5+a0AtluJWy1Mxndq+kcWG6sx5k6l6tucu8/wJ7o9fHfLgVCzm/c4v/KVgVk6w==",
+        "resolved": "10.0.14",
+        "contentHash": "DaTs32NtRkTabidrvhLhcXpa+Uguw0rN5FaX8Q1HmzbYtcI72iSauYlN4WmqbrXp6QQoB8fmZlHk5/bjiMTY7A==",
         "dependencies": {
-          "Microsoft.IdentityModel.Protocols.OpenIdConnect": "8.0.1"
+          "Microsoft.IdentityModel.Protocols.OpenIdConnect": "8.19.2"
         }
       },
       "Microsoft.AspNetCore.Authentication.OpenIdConnect": {
@@ -1142,12 +1142,12 @@
       },
       "Microsoft.Extensions.Identity.Stores": {
         "type": "Transitive",
-        "resolved": "10.0.8",
-        "contentHash": "xVbg4qLWyjKSJVxtL56PQPlHu/URpWPKufhfOj61+tkCmNs6DIgnGxG8BAO/fAfacoBDDYg+p1zBjFzzj/EQog==",
+        "resolved": "10.0.14",
+        "contentHash": "z1y+CfHeLFWcyvNjAKAMW0pLspmVaXM/FgKS1CyFZeKuC/RWnm8aUiZQkvAMzeRpQgvjHugsy2faN9eD6XWiKw==",
         "dependencies": {
-          "Microsoft.Extensions.Caching.Abstractions": "10.0.8",
-          "Microsoft.Extensions.Identity.Core": "10.0.8",
-          "Microsoft.Extensions.Logging": "10.0.8"
+          "Microsoft.Extensions.Caching.Abstractions": "10.0.14",
+          "Microsoft.Extensions.Identity.Core": "10.0.14",
+          "Microsoft.Extensions.Logging": "10.0.14"
         }
       },
       "Microsoft.Extensions.Logging": {
@@ -1953,7 +1953,7 @@
           "Handlebars.Net": "[2.1.6, 2.1.6]",
           "MailDelivery": "[0.0.1, )",
           "MailKit": "[4.18.2, 4.18.2]",
-          "Microsoft.AspNetCore.Authentication.JwtBearer": "[10.0.8, 10.0.8]",
+          "Microsoft.AspNetCore.Authentication.JwtBearer": "[10.0.14, 10.0.14]",
           "Microsoft.AspNetCore.DataProtection": "[10.0.14, 10.0.14]",
           "Microsoft.Azure.Cosmos": "[3.52.0, 3.52.0]",
           "Microsoft.Azure.NotificationHubs": "[4.2.0, 4.2.0]",
@@ -1967,7 +1967,7 @@
           "Microsoft.Extensions.Caching.StackExchangeRedis": "[10.0.14, 10.0.14]",
           "Microsoft.Extensions.Configuration.EnvironmentVariables": "[10.0.14, 10.0.14]",
           "Microsoft.Extensions.Configuration.UserSecrets": "[10.0.14, 10.0.14]",
-          "Microsoft.Extensions.Identity.Stores": "[10.0.8, 10.0.8]",
+          "Microsoft.Extensions.Identity.Stores": "[10.0.14, 10.0.14]",
           "Newtonsoft.Json": "[13.0.3, 13.0.3]",
           "OneOf": "[3.0.271, 3.0.271]",
           "Otp.NET": "[1.4.0, 1.4.0]",
@@ -2109,7 +2109,7 @@
           "Clients": "[0.0.1, )",
           "GlobalSettingsBridge": "[0.0.1, )",
           "MessagePack": "[3.1.12, 3.1.12]",
-          "Microsoft.AspNetCore.Authentication.JwtBearer": "[10.0.8, 10.0.8]",
+          "Microsoft.AspNetCore.Authentication.JwtBearer": "[10.0.14, 10.0.14]",
           "Microsoft.AspNetCore.SignalR.Protocols.MessagePack": "[10.0.10, 10.0.10]",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[10.0.14, 10.0.14]",
           "Microsoft.IdentityModel.Protocols.OpenIdConnect": "[8.23.0, 8.23.0]",

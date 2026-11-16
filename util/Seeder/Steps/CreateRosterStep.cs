@@ -17,15 +17,15 @@ internal sealed class CreateRosterStep(string fixtureName) : IStep
         var orgKey = context.RequireOrgKey();
         var orgId = context.RequireOrgId();
         var domain = context.RequireDomain();
-        var roster = context.GetSeedReader().Read<SeedRoster>($"rosters.{fixtureName}");
-        var kdfIterations = context.GetKdfIterations();
+        var roster = context.SeedReader.Read<SeedRoster>($"rosters.{fixtureName}");
+        var kdfIterations = context.KdfIterations;
 
         // Phase 1: Create users — build emailPrefix → orgUserId lookup
         var userLookup = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
         var emailPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var emails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        var ownerEmailOverride = context.GetOwnerEmailOverride();
+        var ownerEmailOverride = context.OwnerEmailOverride;
 
         var rosterIndex = 0;
         foreach (var rosterUser in roster.Users)
@@ -60,8 +60,8 @@ internal sealed class CreateRosterStep(string fixtureName) : IStep
                     "Check the roster's email overrides for collisions.");
             }
 
-            var mangledEmail = context.GetMangler().Mangle(email);
-            var password = context.GetPassword();
+            var mangledEmail = context.Mangler.Mangle(email);
+            var password = context.Password;
             var userKeys = RustSdkService.GenerateUserKeys(mangledEmail, password, kdfIterations, (uint)rosterIndex++);
             var (user, _) = UserSeeder.Create(
                 new UserSeed
@@ -72,8 +72,8 @@ internal sealed class CreateRosterStep(string fixtureName) : IStep
                     Password = password,
                     KdfIterations = kdfIterations
                 },
-                context.GetPasswordHasher(),
-                context.GetMangler());
+                context.PasswordHasher,
+                context.Mangler);
             var userOrgKey = RustSdkService.GenerateUserOrganizationKey(user.PublicKey!, orgKey);
             var orgUser = org.CreateOrganizationUserWithKey(
                 user, orgUserType, OrganizationUserStatusType.Confirmed, userOrgKey);

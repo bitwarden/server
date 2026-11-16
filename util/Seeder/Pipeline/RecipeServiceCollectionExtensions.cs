@@ -7,14 +7,16 @@ namespace Bit.Seeder.Pipeline;
 /// </summary>
 public static class RecipeServiceCollectionExtensions
 {
-    /// <summary>
-    /// Creates a new <see cref="RecipeBuilder"/> for registering steps as keyed services.
-    /// </summary>
-    /// <param name="services">The service collection to register steps in</param>
-    /// <param name="recipeName">Unique name used as the keyed service key</param>
-    /// <returns>A new RecipeBuilder for fluent step registration</returns>
-    public static RecipeBuilder AddRecipe(this IServiceCollection services, string recipeName)
+    extension(IServiceCollection services)
     {
-        return new RecipeBuilder(recipeName, services);
+        /// <summary>
+        /// Creates a new <see cref="RecipeBuilder"/> for registering steps as keyed services.
+        /// </summary>
+        /// <param name="recipeName">Unique name used as the keyed service key</param>
+        /// <returns>A new RecipeBuilder for fluent step registration</returns>
+        public RecipeBuilder AddRecipe(string recipeName)
+        {
+            return new RecipeBuilder(recipeName, services);
+        }
     }
 }

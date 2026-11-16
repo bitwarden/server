@@ -8,13 +8,11 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Test.Auth.AutoFixture;
-using Bit.Identity.IdentityServer;
-using Bit.Identity.IdentityServer.RequestValidators;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Bit.Test.Common.Helpers;
-using NSubstitute;
 using Xunit;
+using static Bit.Identity.IntegrationTest.Helpers.TokenEndpointTestHelpers;
+using static Bit.Identity.IntegrationTest.Helpers.TokenResponseAssertions;
 
 namespace Bit.Identity.IntegrationTest.TokenEndpoint.Grants.RefreshToken;
 
@@ -25,30 +23,12 @@ namespace Bit.Identity.IntegrationTest.TokenEndpoint.Grants.RefreshToken;
 /// </summary>
 public class RefreshTokenGrantTests : IClassFixture<IdentityApplicationFactory>
 {
-    private static readonly KeysRequestModel TEST_ACCOUNT_KEYS = new KeysRequestModel
-    {
-        AccountKeys = null,
-        PublicKey = "public-key",
-        EncryptedPrivateKey = "encrypted-private-key",
-    };
-
-    private const int SecondsInMinute = 60;
-    private const int MinutesInHour = 60;
-    private const int SecondsInHour = SecondsInMinute * MinutesInHour;
     private readonly IdentityApplicationFactory _factory;
 
     public RefreshTokenGrantTests(IdentityApplicationFactory factory)
     {
         _factory = factory;
-
-        // Bypass client version gating to isolate refresh-token grant behavior.
-        _factory.SubstituteService<IClientVersionValidator>(svc =>
-        {
-            svc.Validate(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
-                .Returns(true);
-        });
-
-        ReinitializeDbForTests(_factory);
+        InitializeSharedFactory(_factory);
     }
 
     [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
@@ -281,62 +261,5 @@ public class RefreshTokenGrantTests : IClassFixture<IdentityApplicationFactory>
         return claim.ValueKind == JsonValueKind.Array
             ? claim.EnumerateArray().Any(element => element.GetString() == value)
             : claim.GetString() == value;
-    }
-
-    private static async Task<JsonDocument> AssertDefaultTokenBodyAsync(HttpContext httpContext, string expectedScope = "api offline_access", int expectedExpiresIn = SecondsInHour * 1)
-    {
-        var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(httpContext);
-        var root = body.RootElement;
-
-        Assert.Equal(JsonValueKind.Object, root.ValueKind);
-        AssertAccessTokenExists(root);
-        AssertExpiresIn(root, expectedExpiresIn);
-        AssertTokenType(root);
-        AssertScope(root, expectedScope);
-        return body;
-    }
-
-    private static void AssertTokenType(JsonElement tokenResponse)
-    {
-        var tokenTypeProperty = AssertHelper.AssertJsonProperty(tokenResponse, "token_type", JsonValueKind.String).GetString();
-        Assert.Equal("Bearer", tokenTypeProperty);
-    }
-
-    private static int AssertExpiresIn(JsonElement tokenResponse, int expectedExpiresIn = 3600)
-    {
-        var expiresIn = AssertHelper.AssertJsonProperty(tokenResponse, "expires_in", JsonValueKind.Number).GetInt32();
-        Assert.Equal(expectedExpiresIn, expiresIn);
-        return expiresIn;
-    }
-
-    private static string AssertAccessTokenExists(JsonElement tokenResponse)
-    {
-        return AssertHelper.AssertJsonProperty(tokenResponse, "access_token", JsonValueKind.String).GetString();
-    }
-
-    private static string AssertRefreshTokenExists(JsonElement tokenResponse)
-    {
-        return AssertHelper.AssertJsonProperty(tokenResponse, "refresh_token", JsonValueKind.String).GetString();
-    }
-
-    private static string AssertScopeExists(JsonElement tokenResponse)
-    {
-        return AssertHelper.AssertJsonProperty(tokenResponse, "scope", JsonValueKind.String).GetString();
-    }
-
-    private static void AssertScope(JsonElement tokenResponse, string expectedScope)
-    {
-        var actualScope = AssertScopeExists(tokenResponse);
-        Assert.Equal(expectedScope, actualScope);
-    }
-
-    private void ReinitializeDbForTests(IdentityApplicationFactory factory)
-    {
-        var databaseContext = factory.GetDatabaseContext();
-        databaseContext.Policies.RemoveRange(databaseContext.Policies);
-        databaseContext.OrganizationUsers.RemoveRange(databaseContext.OrganizationUsers);
-        databaseContext.Organizations.RemoveRange(databaseContext.Organizations);
-        databaseContext.Users.RemoveRange(databaseContext.Users);
-        databaseContext.SaveChanges();
     }
 }

@@ -30,6 +30,10 @@ public class PasswordGrantAuthRequestTests
         // Ensure device is known b/c auth requests aren't allowed for unknown devices.
         await AddKnownDevice(localFactory, user.Id);
 
+        // The access code differs from the master password, so the login succeeds only through the
+        // auth request check.
+        const string accessCode = "auth_request_access_code";
+
         // Create valid auth request and tie it to the user
         var authRequest = CreateAuthRequest(r =>
         {
@@ -39,7 +43,7 @@ public class PasswordGrantAuthRequestTests
             r.Type = AuthRequestType.AuthenticateAndUnlock; // authN request
             r.AuthenticationDate = null; // not used for authN yet
             r.UserId = user.Id;  // connect request to user
-            r.AccessCode = DefaultPassword; // matches the password
+            r.AccessCode = accessCode; // differs from the master password
         });
 
         var authRequestRepository = localFactory.GetService<IAuthRequestRepository>();
@@ -59,7 +63,7 @@ public class PasswordGrantAuthRequestTests
                 { "deviceName", DefaultDeviceName },
                 { "grant_type", "password" },
                 { "username", DefaultUsername },
-                { "password", DefaultPassword },
+                { "password", accessCode },
                 { "AuthRequest", authRequest.Id.ToString().ToLowerInvariant() }
             }));
 

@@ -1,15 +1,10 @@
-﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
-using Bit.Core.Enums;
-using Bit.Core.Test.Auth.AutoFixture;
+﻿using Bit.Core.Enums;
 using Bit.IntegrationTestCommon.Factories;
-using Bit.Test.Common.AutoFixture.Attributes;
-using Microsoft.EntityFrameworkCore;
 using Xunit;
 using static Bit.Identity.IntegrationTest.Helpers.TokenEndpointTestHelpers;
 
 namespace Bit.Identity.IntegrationTest.Middleware;
 
-[SutProviderCustomize]
 public class RateLimitTests : IClassFixture<IdentityApplicationFactory>
 {
     private readonly IdentityApplicationFactory _factory;
@@ -20,26 +15,19 @@ public class RateLimitTests : IClassFixture<IdentityApplicationFactory>
         InitializeSharedFactory(_factory);
     }
 
-    [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
-    public async Task TokenEndpoint_TooQuickInOneSecond_BlockRequest(
-        RegisterFinishRequestModel requestModel)
+    [Fact]
+    public async Task TokenEndpoint_TooQuickInOneSecond_BlockRequest()
     {
-        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
-        const int AmountInOneSecondAllowed = 10;
+        // The configured IP rate limit rules allow 5 requests per second to any endpoint and 10 requests per
+        // minute to POST /connect/token. Sending 11 token requests at once from one IP exceeds both rules.
+        const int TokenRequestsPerMinuteAllowed = 10;
 
-        // The rule we are testing is 10 requests in 1 second
-        requestModel.Email = "test+ratelimiting@email.com";
+        // Rate limiting runs before login, so the requests do not need an existing user.
+        const string Email = "test+ratelimiting@email.com";
 
-        var localFactory = new IdentityApplicationFactory();
-        var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
+        var tasks = new Task<HttpContext>[TokenRequestsPerMinuteAllowed + 1];
 
-        var database = localFactory.GetDatabaseContext();
-        user = await database.Users
-            .FirstAsync(u => u.Email == user.Email);
-
-        var tasks = new Task<HttpContext>[AmountInOneSecondAllowed + 1];
-
-        for (var i = 0; i < AmountInOneSecondAllowed + 1; i++)
+        for (var i = 0; i < TokenRequestsPerMinuteAllowed + 1; i++)
         {
             // Queue all the amount of calls allowed plus 1
             tasks[i] = MakeRequest();
@@ -60,7 +48,7 @@ public class RateLimitTests : IClassFixture<IdentityApplicationFactory>
                 { "deviceIdentifier", IdentityApplicationFactory.DefaultDeviceIdentifier },
                 { "deviceName", "firefox" },
                 { "grant_type", "password" },
-                { "username", user.Email},
+                { "username", Email },
                 { "password", "master_password_hash" },
             }), context => context.SetIp("1.1.1.2"));
         }
