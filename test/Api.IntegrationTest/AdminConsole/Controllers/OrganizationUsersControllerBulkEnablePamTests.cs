@@ -35,7 +35,7 @@ public class OrganizationUsersControllerBulkEnablePamTests
 
     private Organization _organization = null!;
     private string _ownerEmail = null!;
-    private GlobalSettings _globalSettings = null!;
+    private GlobalSettings? _globalSettings;
     private IStripeAdapter _stripeAdapter = null!;
 
     public OrganizationUsersControllerBulkEnablePamTests(ApiApplicationFactory apiFactory)
@@ -45,9 +45,10 @@ public class OrganizationUsersControllerBulkEnablePamTests
         _factory.SubstituteService<IFeatureService>(featureService =>
             featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(true));
         // Billing reads self-hosted from the environment, which is fixed at startup, so it follows the settings flag
-        // the tests flip instead.
+        // the tests flip instead. It reads the field rather than the factory because the host reads self-hosted while
+        // it starts, and resolving from the factory then would start another host.
         _factory.SubstituteService<IBitwardenEnvironment>(environment =>
-            environment.SelfHosted.Returns(_ => _factory.GetService<GlobalSettings>().SelfHosted));
+            environment.SelfHosted.Returns(_ => _globalSettings?.SelfHosted ?? false));
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
