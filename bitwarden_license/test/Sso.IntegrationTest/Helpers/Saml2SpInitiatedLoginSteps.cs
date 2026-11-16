@@ -9,7 +9,7 @@ using Microsoft.Net.Http.Headers;
 using Sustainsys.Saml2;
 using Xunit;
 
-namespace Bit.Sso.IntegrationTest.Utilities;
+namespace Bit.Sso.IntegrationTest.Helpers;
 
 /// <summary>
 /// Starts a login at the service provider (SP) on the Saml2 handler of a harness organization, and posts

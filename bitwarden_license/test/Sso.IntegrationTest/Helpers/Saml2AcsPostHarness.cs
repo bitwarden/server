@@ -18,7 +18,7 @@ using KeyInfo = System.Security.Cryptography.Xml.KeyInfo;
 using KeyInfoEncryptedKey = System.Security.Cryptography.Xml.KeyInfoEncryptedKey;
 using KeyInfoRetrievalMethod = System.Security.Cryptography.Xml.KeyInfoRetrievalMethod;
 
-namespace Bit.Sso.IntegrationTest.Utilities;
+namespace Bit.Sso.IntegrationTest.Helpers;
 
 /// <summary>
 /// Builds a real, database-backed SAML organization and posts forged responses to its assertion

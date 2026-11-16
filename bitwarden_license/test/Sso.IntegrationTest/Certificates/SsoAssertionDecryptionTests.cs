@@ -2,10 +2,10 @@
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using Bit.IntegrationTestCommon;
-using Bit.Sso.IntegrationTest.Utilities;
+using Bit.Sso.IntegrationTest.Helpers;
 using Bit.Test.Common.Helpers;
 using Xunit;
-using static Bit.Sso.IntegrationTest.Utilities.SsoCertificateTestHelpers;
+using static Bit.Sso.IntegrationTest.Helpers.SsoCertificateTestHelpers;
 
 namespace Bit.Sso.IntegrationTest.Certificates;
 

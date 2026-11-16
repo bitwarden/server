@@ -4,7 +4,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using Bit.Core.Settings;
 using Bit.IntegrationTestCommon;
-using Bit.Sso.IntegrationTest.Utilities;
+using Bit.Sso.IntegrationTest.Helpers;
 using Bit.Test.Common.Helpers;
 using Duende.IdentityModel;
 using Duende.IdentityServer.Models;

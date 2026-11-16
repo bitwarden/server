@@ -2,7 +2,7 @@
 using Azure.Storage.Blobs;
 using Bit.IntegrationTestCommon;
 using Bit.SharedWeb.Utilities;
-using Bit.Sso.IntegrationTest.Utilities;
+using Bit.Sso.IntegrationTest.Helpers;
 using Bit.Sso.Models;
 using Bit.Test.Common.Helpers;
 using DotNet.Testcontainers.Builders;

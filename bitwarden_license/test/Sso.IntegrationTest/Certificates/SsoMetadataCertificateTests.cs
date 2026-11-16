@@ -5,11 +5,11 @@ using System.Xml;
 using System.Xml.Linq;
 using Bit.Core.Auth.Enums;
 using Bit.IntegrationTestCommon;
-using Bit.Sso.IntegrationTest.Utilities;
+using Bit.Sso.IntegrationTest.Helpers;
 using Bit.Test.Common.Helpers;
 using Sustainsys.Saml2;
 using Xunit;
-using static Bit.Sso.IntegrationTest.Utilities.SsoCertificateTestHelpers;
+using static Bit.Sso.IntegrationTest.Helpers.SsoCertificateTestHelpers;
 
 namespace Bit.Sso.IntegrationTest.Certificates;
 

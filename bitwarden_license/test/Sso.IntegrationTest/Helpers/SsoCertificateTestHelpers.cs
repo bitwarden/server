@@ -6,7 +6,7 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Utilities;
 using Xunit;
 
-namespace Bit.Sso.IntegrationTest.Utilities;
+namespace Bit.Sso.IntegrationTest.Helpers;
 
 /// <summary>
 /// Arrange and read helpers that the certificate integration tests share: SAML metadata retrieval and parsing.
