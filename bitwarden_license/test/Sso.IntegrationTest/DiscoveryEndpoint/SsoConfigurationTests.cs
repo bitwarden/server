@@ -4,8 +4,12 @@ using Bit.Sso.IntegrationTest.Utilities;
 using Bit.Test.Common.Helpers;
 using Xunit;
 
-namespace Bit.Sso.IntegrationTest.Endpoints;
+namespace Bit.Sso.IntegrationTest.DiscoveryEndpoint;
 
+/// <summary>
+/// The OpenID Connect discovery document at <c>/.well-known/openid-configuration</c> must match the checked-in
+/// <c>openid-configuration.json</c> exactly, so that every change to the document that clients read is deliberate.
+/// </summary>
 public class SsoConfigurationTests : IClassFixture<SsoApplicationFactory>
 {
     private readonly SsoApplicationFactory _factory;
