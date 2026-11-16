@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -10,9 +11,10 @@ namespace Bit.Api.AdminConsole.Authorization.Collections;
 public class CollectionAuthorizationService(
     ICurrentContext currentContext,
     ICollectionRepository collectionRepository,
-    IOrganizationAbilityCacheService organizationAbilityCacheService) : ICollectionAuthorizationService
+    IOrganizationAbilityCacheService organizationAbilityCacheService,
+    IProviderRepository providerRepository) : ICollectionAuthorizationService
 {
-    // Collection ID and its details, or null if the collection was not found.
+    // A null value means the collection was not found.
     private readonly Dictionary<Guid, CollectionAdminDetails?> _detailsByCollectionId = new();
 
     public async Task<bool> AuthorizeUpdateAsync(Guid organizationId, Guid collectionId) =>
@@ -28,9 +30,7 @@ public class CollectionAuthorizationService(
             excludeDefaultCollections: true);
 
     /// <summary>
-    /// Returns the subset of <paramref name="collectionIds"/> that the caller is authorized to operate on.
-    /// Organization-wide rules are applied first. If none apply to the caller then each collection is
-    /// checked on its own.
+    /// Returns the subset of <paramref name="collectionIds"/> that the caller can operate on.
     /// </summary>
     private async Task<IReadOnlySet<Guid>> AuthorizeAsync(
         Guid organizationId,
@@ -58,10 +58,10 @@ public class CollectionAuthorizationService(
         var organization = currentContext.GetOrganization(organizationId);
         if (organization is null)
         {
-            // A non-member has no organization permissions, so only a provider user can be authorized.
-            return await currentContext.ProviderUserForOrgAsync(organizationId)
+            // A non-member can only be authorized as a provider user.
+            return await IsManagingProviderUserAsync(organizationId)
                 ? requestedCollectionIds
-                : new HashSet<Guid>();
+                : [];
         }
 
         var organizationAbility = await organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
@@ -75,13 +75,21 @@ public class CollectionAuthorizationService(
             .ToHashSet();
 
         if (authorizedCollectionIds.Count < requestedCollectionIds.Count &&
-            await currentContext.ProviderUserForOrgAsync(organizationId))
+            await IsManagingProviderUserAsync(organizationId))
         {
             return requestedCollectionIds;
         }
 
         return authorizedCollectionIds;
     }
+
+    /// <summary>
+    /// Returns true if the caller is a user of the organization's provider and that provider can manage collections.
+    /// </summary>
+    private async Task<bool> IsManagingProviderUserAsync(Guid organizationId) =>
+        await currentContext.ProviderUserForOrgAsync(organizationId) &&
+        CollectionRules.ManagingProvider.CanManageCollections(
+            await providerRepository.GetByOrganizationIdAsync(organizationId));
 
     private async Task EnsureCollectionDetailsCachedAsync(IReadOnlyCollection<Guid> collectionIds)
     {

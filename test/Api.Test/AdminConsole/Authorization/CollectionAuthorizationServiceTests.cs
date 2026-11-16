@@ -1,5 +1,8 @@
 ﻿using Bit.Api.AdminConsole.Authorization.Collections;
 using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -30,8 +33,11 @@ public class CollectionAuthorizationServiceTests
         Assert.Empty(await sutProvider.Sut.AuthorizeModifyGroupAccessAsync(organizationId, [collectionId]));
     }
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData(ProviderType.Msp)]
+    [BitAutoData(ProviderType.BusinessUnit)]
     public async Task AllOperations_WhenProviderUser_Success(
+        ProviderType providerType,
         SutProvider<CollectionAuthorizationService> sutProvider,
         Guid organizationId,
         Guid collectionId,
@@ -40,11 +46,83 @@ public class CollectionAuthorizationServiceTests
         SetupCollections(sutProvider, Details(organizationId, collectionId));
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organizationId).Returns((CurrentContextOrganization?)null);
-        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(organizationId).Returns(true);
+        SetupProviderUser(sutProvider, organizationId, providerType, enabled: true);
 
         Assert.True(await sutProvider.Sut.AuthorizeUpdateAsync(organizationId, collectionId));
         Assert.Equal(Expected(collectionId), await sutProvider.Sut.AuthorizeModifyUserAccessAsync(organizationId, [collectionId]));
         Assert.Equal(Expected(collectionId), await sutProvider.Sut.AuthorizeModifyGroupAccessAsync(organizationId, [collectionId]));
+    }
+
+    [Theory]
+    [BitAutoData(ProviderType.Reseller, true)]
+    [BitAutoData(ProviderType.Msp, false)]
+    [BitAutoData(ProviderType.BusinessUnit, false)]
+    public async Task AllOperations_WhenProviderUserOfResellerOrDisabledProvider_NoSuccess(
+        ProviderType providerType,
+        bool providerEnabled,
+        SutProvider<CollectionAuthorizationService> sutProvider,
+        Guid organizationId,
+        Guid collectionId,
+        Guid userId)
+    {
+        SetupCollections(sutProvider, Details(organizationId, collectionId));
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organizationId).Returns((CurrentContextOrganization?)null);
+        SetupProviderUser(sutProvider, organizationId, providerType, providerEnabled);
+
+        Assert.False(await sutProvider.Sut.AuthorizeUpdateAsync(organizationId, collectionId));
+        Assert.Empty(await sutProvider.Sut.AuthorizeModifyUserAccessAsync(organizationId, [collectionId]));
+        Assert.Empty(await sutProvider.Sut.AuthorizeModifyGroupAccessAsync(organizationId, [collectionId]));
+    }
+
+    [Theory]
+    [BitAutoData(ProviderType.Msp)]
+    [BitAutoData(ProviderType.BusinessUnit)]
+    public async Task AllOperations_WhenMemberIsAlsoProviderUser_Success(
+        ProviderType providerType,
+        SutProvider<CollectionAuthorizationService> sutProvider,
+        Guid organizationId,
+        Guid collectionId,
+        CurrentContextOrganization organization,
+        Guid userId)
+    {
+        organization.Type = OrganizationUserType.User;
+        organization.Permissions = new Permissions();
+
+        SetupCollections(sutProvider, Details(organizationId, collectionId));
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organizationId).Returns(organization);
+        SetupProviderUser(sutProvider, organizationId, providerType, enabled: true);
+
+        Assert.True(await sutProvider.Sut.AuthorizeUpdateAsync(organizationId, collectionId));
+        Assert.Equal(Expected(collectionId), await sutProvider.Sut.AuthorizeModifyUserAccessAsync(organizationId, [collectionId]));
+        Assert.Equal(Expected(collectionId), await sutProvider.Sut.AuthorizeModifyGroupAccessAsync(organizationId, [collectionId]));
+    }
+
+    [Theory]
+    [BitAutoData(ProviderType.Reseller, true)]
+    [BitAutoData(ProviderType.Msp, false)]
+    [BitAutoData(ProviderType.BusinessUnit, false)]
+    public async Task AllOperations_WhenMemberIsAlsoProviderUserOfResellerOrDisabledProvider_NoSuccess(
+        ProviderType providerType,
+        bool providerEnabled,
+        SutProvider<CollectionAuthorizationService> sutProvider,
+        Guid organizationId,
+        Guid collectionId,
+        CurrentContextOrganization organization,
+        Guid userId)
+    {
+        organization.Type = OrganizationUserType.User;
+        organization.Permissions = new Permissions();
+
+        SetupCollections(sutProvider, Details(organizationId, collectionId));
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organizationId).Returns(organization);
+        SetupProviderUser(sutProvider, organizationId, providerType, providerEnabled);
+
+        Assert.False(await sutProvider.Sut.AuthorizeUpdateAsync(organizationId, collectionId));
+        Assert.Empty(await sutProvider.Sut.AuthorizeModifyUserAccessAsync(organizationId, [collectionId]));
+        Assert.Empty(await sutProvider.Sut.AuthorizeModifyGroupAccessAsync(organizationId, [collectionId]));
     }
 
     [Theory, BitAutoData]
@@ -496,6 +574,17 @@ public class CollectionAuthorizationServiceTests
                 .Select(id => collections.FirstOrDefault(c => c.Id == id))
                 .Where(c => c is not null)
                 .ToList()!);
+
+    private static void SetupProviderUser(
+        SutProvider<CollectionAuthorizationService> sutProvider,
+        Guid organizationId,
+        ProviderType providerType,
+        bool enabled)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(organizationId).Returns(true);
+        sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organizationId)
+            .Returns(new Provider { Type = providerType, Enabled = enabled });
+    }
 
     private static CollectionAdminDetails Details(
         Guid organizationId,

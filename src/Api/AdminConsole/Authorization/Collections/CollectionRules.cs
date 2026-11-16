@@ -1,4 +1,6 @@
-﻿using Bit.Core.Context;
+﻿using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
@@ -6,50 +8,38 @@ using Bit.Core.Models.Data.Organizations;
 namespace Bit.Api.AdminConsole.Authorization.Collections;
 
 /// <summary>
-/// Business rules for collection authorization. These rules do not read the database.
-/// <see cref="OrganizationRole"/> holds the permissions that apply to every collection in the organization.
-/// <see cref="CollectionAssignment"/> holds the permissions that apply to one collection.
-/// <see cref="CollectionAuthorizationService"/> reads the data these rules need and calls both sets.
+/// Business rules for collection authorization. They do not read the database;
+/// <see cref="CollectionAuthorizationService"/> loads the data they need.
 /// </summary>
 public static class CollectionRules
 {
     /// <summary>
-    /// Rules that authorize an operation on one collection, without an organization-wide permission.
-    /// A false result does not deny the operation. The caller can still be authorized by
-    /// <see cref="OrganizationRole"/>.
+    /// Permissions that apply to one collection. A false result does not deny the operation;
+    /// <see cref="OrganizationRole"/> can still authorize it.
     /// </summary>
     public static class CollectionAssignment
     {
         /// <summary>
-        /// Returns true if the caller can manage one collection without an organization-wide permission.
-        /// This is true if the caller has Manage access to the collection, or if the caller is an Owner or
-        /// Admin and the collection is orphaned.
+        /// Returns true if the caller has Manage on the collection, or is an Owner or Admin and the collection is
+        /// orphaned.
         /// </summary>
-        /// <remarks>Being assigned to the collection is not enough. The caller needs Manage.</remarks>
         public static bool CanManage(CurrentContextOrganization? organizationClaims, CollectionAdminDetails details) =>
             details.Manage ||
             (details.Unmanaged && CanManageOrphanedCollections(organizationClaims));
 
-        /// <summary>
-        /// Returns true if the caller can manage orphaned collections.
-        /// </summary>
         private static bool CanManageOrphanedCollections(CurrentContextOrganization? organizationClaims) =>
             organizationClaims is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin };
     }
 
     /// <summary>
-    /// Permissions that authorize an operation on every collection in the organization, including the collections
-    /// that the caller is not assigned to. A false result does not deny the operation. The caller can still be
-    /// authorized for one collection by <see cref="CollectionAssignment.CanManage"/>.
+    /// Permissions that apply to every collection in the organization. A false result does not deny the operation;
+    /// <see cref="CollectionAssignment"/> can still authorize it.
     /// </summary>
-    /// <remarks>
-    /// These rules apply to the collection itself, not to its items, including the items in a default user collection.
-    /// </remarks>
+    /// <remarks>These rules cover the collection itself, not its items.</remarks>
     public static class OrganizationRole
     {
         /// <summary>
-        /// Returns true if the caller can update the metadata (name, externalId) of every collection in the
-        /// organization.
+        /// Returns true if the caller can update the name and external ID of every collection.
         /// </summary>
         public static bool CanUpdate(CurrentContextOrganization? organizationClaims, OrganizationAbility? organizationAbility) =>
             organizationClaims is { Permissions.EditAnyCollection: true } ||
@@ -57,8 +47,7 @@ public static class CollectionRules
              organizationClaims is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin });
 
         /// <summary>
-        /// Returns true if the caller can add, change, or remove the user access of every collection in the
-        /// organization.
+        /// Returns true if the caller can modify the user access of every collection.
         /// </summary>
         public static bool CanModifyUserAccess(CurrentContextOrganization? organizationClaims, OrganizationAbility? organizationAbility) =>
             CanUpdate(organizationClaims, organizationAbility) ||
@@ -66,8 +55,7 @@ public static class CollectionRules
              organizationClaims is { Permissions.ManageUsers: true });
 
         /// <summary>
-        /// Returns true if the caller can add, change, or remove the group access of every collection in the
-        /// organization.
+        /// Returns true if the caller can modify the group access of every collection.
         /// </summary>
         public static bool CanModifyGroupAccess(CurrentContextOrganization? organizationClaims, OrganizationAbility? organizationAbility) =>
             CanUpdate(organizationClaims, organizationAbility) ||
@@ -76,5 +64,17 @@ public static class CollectionRules
 
         private static bool AllowsAdminAccessToAllCollectionItems(OrganizationAbility? organizationAbility) =>
             organizationAbility is { AllowAdminAccessToAllCollectionItems: true };
+    }
+
+    /// <summary>
+    /// Permissions of a user of the provider that manages the organization. They apply to every collection.
+    /// </summary>
+    public static class ManagingProvider
+    {
+        /// <summary>
+        /// Returns true if users of <paramref name="provider"/> can manage the collections of its organizations.
+        /// </summary>
+        public static bool CanManageCollections(Provider? provider) =>
+            provider is { Enabled: true, Type: ProviderType.Msp or ProviderType.BusinessUnit };
     }
 }

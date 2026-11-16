@@ -1,4 +1,6 @@
 ﻿using Bit.Api.AdminConsole.Authorization.Collections;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -315,6 +317,43 @@ public class CollectionRulesTests
     {
         var result = CollectionRules.CollectionAssignment.CanManage(
             null, Details(manage: false, unmanaged: true));
+
+        Assert.False(result);
+    }
+
+    [Theory]
+    [InlineData(ProviderType.Msp)]
+    [InlineData(ProviderType.BusinessUnit)]
+    public void CanManageCollections_WhenProviderIsEnabledMspOrBusinessUnit_Success(ProviderType type)
+    {
+        var result = CollectionRules.ManagingProvider.CanManageCollections(new Provider { Type = type, Enabled = true });
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void CanManageCollections_WhenProviderIsReseller_Failure()
+    {
+        var result = CollectionRules.ManagingProvider.CanManageCollections(
+            new Provider { Type = ProviderType.Reseller, Enabled = true });
+
+        Assert.False(result);
+    }
+
+    [Theory]
+    [InlineData(ProviderType.Msp)]
+    [InlineData(ProviderType.BusinessUnit)]
+    public void CanManageCollections_WhenProviderIsDisabled_Failure(ProviderType type)
+    {
+        var result = CollectionRules.ManagingProvider.CanManageCollections(new Provider { Type = type, Enabled = false });
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void CanManageCollections_WhenProviderIsMissing_Failure()
+    {
+        var result = CollectionRules.ManagingProvider.CanManageCollections(null);
 
         Assert.False(result);
     }
