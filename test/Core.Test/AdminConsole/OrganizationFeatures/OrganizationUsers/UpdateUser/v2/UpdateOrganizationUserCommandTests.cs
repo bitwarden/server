@@ -9,7 +9,6 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
-using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -292,9 +291,10 @@ public class UpdateOrganizationUserCommandTests
         sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>()
             .CountNewSmSeatsRequiredAsync(organization.Id, 1)
             .Returns(1);
-        sutProvider.GetDependency<IValidatePrivilegedControlsSeatReservationQuery>()
-            .RunAsync(organization, 1, 0)
-            .Returns(new PrivilegedControlsSeatLimitReachedError());
+        sutProvider.GetDependency<IUpdateOrganizationUserValidator>()
+            .ValidateAsync(Arg.Any<UpdateOrganizationUserRequest>())
+            .Returns(ci => ValidationResultHelpers.Invalid(ci.Arg<UpdateOrganizationUserRequest>(),
+                new PrivilegedControlsSeatLimitReachedError()));
 
         var result = await sutProvider.Sut.UpdateUserAsync(request);
 
@@ -309,40 +309,6 @@ public class UpdateOrganizationUserCommandTests
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .ReplaceAsync(Arg.Any<OrganizationUser>(), Arg.Any<IEnumerable<CollectionAccessSelection>>());
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task UpdateUserAsync_EnablingPrivilegedControls_ConfirmedMember_ValidatesOneSeatWithNoPasswordManagerSeatsAdded(
-        SutProvider<UpdateOrganizationUserCommand> sutProvider,
-        Organization organization,
-        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
-    {
-        organizationUser.AccessPam = false;
-        var request = Setup(sutProvider, organization, organizationUser, targetAccessPam: true);
-
-        await sutProvider.Sut.UpdateUserAsync(request);
-
-        await sutProvider.GetDependency<IValidatePrivilegedControlsSeatReservationQuery>()
-            .Received(1)
-            .RunAsync(organization, 1, 0);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task UpdateUserAsync_EnablingPrivilegedControls_StagedMember_DoesNotValidate(
-        SutProvider<UpdateOrganizationUserCommand> sutProvider,
-        Organization organization,
-        [OrganizationUser(OrganizationUserStatusType.Staged, OrganizationUserType.User)] OrganizationUser organizationUser)
-    {
-        organizationUser.AccessPam = false;
-        var request = Setup(sutProvider, organization, organizationUser, targetAccessPam: true);
-
-        await sutProvider.Sut.UpdateUserAsync(request);
-
-        await sutProvider.GetDependency<IValidatePrivilegedControlsSeatReservationQuery>()
-            .DidNotReceiveWithAnyArgs()
-            .RunAsync(default!, default, default);
     }
 
     [Theory]

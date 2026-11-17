@@ -6,6 +6,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationU
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
+using Bit.Core.Billing.Organizations.Helpers;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -23,7 +25,8 @@ public class UpdateOrganizationUserValidator(
     IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery,
     IOrganizationDomainRepository organizationDomainRepository,
     IUserRepository userRepository,
-    IOrganizationUserRepository organizationUserRepository)
+    IOrganizationUserRepository organizationUserRepository,
+    IValidatePrivilegedControlsSeatReservationQuery validatePrivilegedControlsSeatReservationQuery)
     : IUpdateOrganizationUserValidator
 {
     public async Task<ValidationResult<UpdateOrganizationUserRequest>> ValidateAsync(
@@ -112,6 +115,16 @@ public class UpdateOrganizationUserValidator(
         if (accountChangeError is not null)
         {
             return Invalid(request, accountChangeError);
+        }
+
+        if (request.IsEnablingPam() && PrivilegedControlsSeatOccupancy.OccupiesSeat(organizationUser.Status))
+        {
+            var privilegedControlsSeatError =
+                await validatePrivilegedControlsSeatReservationQuery.RunAsync(request.Organization, 1, 0);
+            if (privilegedControlsSeatError is not null)
+            {
+                return Invalid(request, privilegedControlsSeatError);
+            }
         }
 
         return Valid(request);

@@ -6,6 +6,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationU
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -232,6 +234,83 @@ public class UpdateOrganizationUserValidatorTests
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         Assert.True(result.IsValid);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenGrantingPamAndSeatCannotBeReserved_ReturnsTheReservationError(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        orgUser.AccessPam = false;
+        var organization = CreateOrganization(orgUser.OrganizationId, PlanType.EnterpriseAnnually, usePam: true);
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User, organization: organization,
+            newAccessPam: true);
+        sutProvider.GetDependency<IValidatePrivilegedControlsSeatReservationQuery>()
+            .RunAsync(organization, 1, 0)
+            .Returns(new PrivilegedControlsSeatLimitReachedError());
+
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<PrivilegedControlsSeatLimitReachedError>(result.AsError);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenGrantingPamToConfirmedMember_ChecksOneSeatWithNoPasswordManagerSeatsAdded(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        orgUser.AccessPam = false;
+        var organization = CreateOrganization(orgUser.OrganizationId, PlanType.EnterpriseAnnually, usePam: true);
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User, organization: organization,
+            newAccessPam: true);
+
+        await sutProvider.Sut.ValidateAsync(request);
+
+        await sutProvider.GetDependency<IValidatePrivilegedControlsSeatReservationQuery>()
+            .Received(1)
+            .RunAsync(organization, 1, 0);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenGrantingPamToStagedMember_DoesNotCheckSeats(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Staged, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        // A staged member does not occupy a Privileged Controls seat until invited.
+        orgUser.AccessPam = false;
+        var organization = CreateOrganization(orgUser.OrganizationId, PlanType.EnterpriseAnnually, usePam: true);
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User, organization: organization,
+            newAccessPam: true);
+
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        Assert.True(result.IsValid);
+        await sutProvider.GetDependency<IValidatePrivilegedControlsSeatReservationQuery>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default, default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenMemberAlreadyHasPam_DoesNotCheckSeats(
+        SutProvider<UpdateOrganizationUserValidator> sutProvider,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        orgUser.AccessPam = true;
+        var organization = CreateOrganization(orgUser.OrganizationId, PlanType.EnterpriseAnnually, usePam: true);
+        var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.User, organization: organization,
+            newAccessPam: true);
+
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        Assert.True(result.IsValid);
+        await sutProvider.GetDependency<IValidatePrivilegedControlsSeatReservationQuery>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default, default, default);
     }
 
     [Theory]
