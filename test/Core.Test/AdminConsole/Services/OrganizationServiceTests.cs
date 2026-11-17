@@ -67,6 +67,8 @@ public class OrganizationServiceTests
                 [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     {
+        organization.Seats = 100;
+
         // Setup FakeDataProtectorTokenFactory for creating new tokens - this must come first in order to avoid resetting mocks
         sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
         sutProvider.Create();
@@ -393,6 +395,8 @@ public class OrganizationServiceTests
     public async Task InviteUsers_NoPermissionsObject_Passes(Organization organization, OrganizationUserInvite invite,
         OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
     {
+        organization.Seats = 100;
+
         invite.Permissions = null;
         invitor.Status = OrganizationUserStatusType.Confirmed;
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
@@ -426,6 +430,8 @@ public class OrganizationServiceTests
         OrganizationUser invitor,
         SutProvider<OrganizationService> sutProvider)
     {
+        organization.Seats = 100;
+
         // This method is only used to invite 1 user at a time
         invite.Emails = new[] { invite.Emails.First() };
 
@@ -501,6 +507,8 @@ public class OrganizationServiceTests
         OrganizationUser invitor,
         SutProvider<OrganizationService> sutProvider)
     {
+        organization.Seats = 100;
+
         // This method is only used to invite 1 user at a time
         invite.Emails = new[] { invite.Emails.First() };
 
@@ -578,6 +586,8 @@ public class OrganizationServiceTests
         OrganizationUser invitor,
         SutProvider<OrganizationService> sutProvider)
     {
+        organization.Seats = 100;
+
         // Setup FakeDataProtectorTokenFactory for creating new tokens - this must come first in order to avoid resetting mocks
         sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
         sutProvider.Create();
@@ -620,6 +630,8 @@ public class OrganizationServiceTests
         OrganizationUser invitor,
         SutProvider<OrganizationService> sutProvider)
     {
+        organization.Seats = 100;
+
         // Setup FakeDataProtectorTokenFactory for creating new tokens - this must come first in order to avoid resetting mocks
         sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
         sutProvider.Create();
@@ -1750,6 +1762,8 @@ public class OrganizationServiceTests
     private void InviteUser_ArrangeExistingOrgUsers(Organization organization, OrganizationUserInvite invite,
         List<OrganizationUser> existingOrgUsers, SutProvider<OrganizationService> sutProvider)
     {
+        organization.Seats = 100;
+
         invite.Emails = existingOrgUsers
             .Select((_, index) => $"existing-{index}-{Guid.NewGuid()}@example.com")
             .ToList();
