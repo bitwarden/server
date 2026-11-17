@@ -83,15 +83,28 @@ public class AccessRuleRepository : Repository<CoreEntity, EfModel, Guid>, IAcce
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
+        var now = DateTime.UtcNow;
+
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        // Lock the rule row before reading Enabled, so a concurrent toggle waits until this delete commits.
+        await dbContext.AccessRules
+            .Where(r => r.Id == accessRule.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.RevisionDate, r => r.RevisionDate));
+
+        var stored = await dbContext.AccessRules
+            .Where(r => r.Id == accessRule.Id)
+            .Select(r => new { r.OrganizationId, r.Enabled })
+            .FirstOrDefaultAsync();
 
         // Detach collections first: FK Collection.AccessRuleId does not cascade (RESTRICT here, NO ACTION on SQL
         // Server), so the delete fails while any collection points at the rule.
-        await dbContext.Collections
-            .Where(c => c.AccessRuleId == accessRule.Id)
+        var governed = dbContext.Collections.Where(c => c.AccessRuleId == accessRule.Id);
+        var clearedCollectionIds = await governed.Select(c => c.Id).ToListAsync();
+        await governed
             .ExecuteUpdateAsync(s => s
                 .SetProperty(c => c.AccessRuleId, (Guid?)null)
-                .SetProperty(c => c.RevisionDate, DateTime.UtcNow));
+                .SetProperty(c => c.RevisionDate, now));
 
         // Detach the requests that pinned this rule, since FK_AccessRequest_AccessRule does not cascade either. RuleId
         // is provenance, not authority, so clearing it changes no grant.
@@ -103,8 +116,49 @@ public class AccessRuleRepository : Repository<CoreEntity, EfModel, Guid>, IAcce
             .Where(r => r.Id == accessRule.Id)
             .ExecuteDeleteAsync();
 
-        await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(accessRule.OrganizationId);
+        // Only an enabled rule gated its collections, so only then do their members see a change.
+        if (stored is { Enabled: true } && clearedCollectionIds.Count > 0)
+        {
+            await dbContext.UserBumpAccountRevisionDateByCollectionIdsAsync(clearedCollectionIds, stored.OrganizationId);
+        }
+
+        await transaction.CommitAsync();
+    }
+
+    /// <remarks>
+    /// Members sync whether each collection is governed by an enabled rule, so toggling <c>Enabled</c> makes the
+    /// members of every collection the rule governs resync. Any other field change is invisible to sync. The toggle
+    /// is detected by the conditional update itself, so of two saves racing on the same toggle only one bumps.
+    /// </remarks>
+    public override async Task ReplaceAsync(CoreEntity accessRule)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        var toggled = await dbContext.AccessRules
+            .Where(r => r.Id == accessRule.Id && r.Enabled != accessRule.Enabled)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.Enabled, accessRule.Enabled)) > 0;
+
+        var entity = await dbContext.AccessRules.FindAsync(accessRule.Id);
+        if (entity is null)
+        {
+            return;
+        }
+
+        dbContext.Entry(entity).CurrentValues.SetValues(Mapper.Map<EfModel>(accessRule));
         await dbContext.SaveChangesAsync();
+
+        if (toggled)
+        {
+            var collectionIds = await dbContext.Collections
+                .Where(c => c.AccessRuleId == accessRule.Id)
+                .Select(c => c.Id)
+                .ToListAsync();
+            await dbContext.UserBumpAccountRevisionDateByCollectionIdsAsync(collectionIds, accessRule.OrganizationId);
+        }
+
         await transaction.CommitAsync();
     }
 }

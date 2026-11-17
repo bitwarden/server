@@ -2432,6 +2432,12 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasIndex("OrganizationId", "OccurredDate", "Id")
                         .IsDescending(false, true, true);
 
+                    b.HasIndex("OrganizationId", "AccessRuleId", "OccurredDate", "Id")
+                        .IsDescending(false, false, true, true);
+
+                    b.HasIndex("OrganizationId", "CipherId", "OccurredDate", "Id")
+                        .IsDescending(false, false, true, true);
+
                     b.ToTable("AccessAuditEvent", (string)null);
                 });
 
@@ -2516,12 +2522,12 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasIndex("OrganizationId");
 
-                    b.HasIndex("CollectionId", "Action");
-
                     b.HasIndex("NotAfter", "Action");
 
                     b.HasIndex("CipherId", "Action", "NotAfter")
                         .IsDescending(false, false, true);
+
+                    b.HasIndex("CollectionId", "Action", "NotAfter");
 
                     b.HasIndex("RequesterId", "CipherId", "Action");
 
