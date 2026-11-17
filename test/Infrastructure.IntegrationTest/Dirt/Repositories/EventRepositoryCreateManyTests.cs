@@ -1,4 +1,4 @@
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Xunit;
 using Event = Bit.Core.Entities.Event;
