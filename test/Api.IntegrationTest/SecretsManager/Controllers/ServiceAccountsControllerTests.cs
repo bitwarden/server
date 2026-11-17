@@ -616,16 +616,20 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
             ExpireAt = mockExpiresAt,
         };
 
+        // The dates are stamped while the request is handled, so bound them by the test's own clock instead of
+        // a fixed skew, which a slow CI runner can exceed between the request and the assertion.
+        var requestStart = DateTime.UtcNow;
         var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens", request);
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<AccessTokenCreationResponseModel>();
+        var requestEnd = DateTime.UtcNow;
 
         Assert.NotNull(result);
         Assert.Equal(request.Name, result.Name);
         Assert.NotNull(result.ClientSecret);
         Assert.Equal(mockExpiresAt, result.ExpireAt);
-        AssertHelper.AssertRecent(result.RevisionDate);
-        AssertHelper.AssertRecent(result.CreationDate);
+        Assert.InRange(result.RevisionDate, requestStart, requestEnd);
+        Assert.InRange(result.CreationDate, requestStart, requestEnd);
     }
 
     [Fact]
@@ -652,16 +656,20 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
             ExpireAt = mockExpiresAt,
         };
 
+        // The dates are stamped while the request is handled, so bound them by the test's own clock instead of
+        // a fixed skew, which a slow CI runner can exceed between the request and the assertion.
+        var requestStart = DateTime.UtcNow;
         var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens", request);
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<AccessTokenCreationResponseModel>();
+        var requestEnd = DateTime.UtcNow;
 
         Assert.NotNull(result);
         Assert.Equal(request.Name, result.Name);
         Assert.NotNull(result.ClientSecret);
         Assert.Equal(mockExpiresAt, result.ExpireAt);
-        AssertHelper.AssertRecent(result.RevisionDate);
-        AssertHelper.AssertRecent(result.CreationDate);
+        Assert.InRange(result.RevisionDate, requestStart, requestEnd);
+        Assert.InRange(result.CreationDate, requestStart, requestEnd);
     }
 
     [Fact]
@@ -710,16 +718,20 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
             ExpireAt = null,
         };
 
+        // The dates are stamped while the request is handled, so bound them by the test's own clock instead of
+        // a fixed skew, which a slow CI runner can exceed between the request and the assertion.
+        var requestStart = DateTime.UtcNow;
         var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens", request);
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<AccessTokenCreationResponseModel>();
+        var requestEnd = DateTime.UtcNow;
 
         Assert.NotNull(result);
         Assert.Equal(request.Name, result.Name);
         Assert.NotNull(result.ClientSecret);
         Assert.Null(result.ExpireAt);
-        AssertHelper.AssertRecent(result.RevisionDate);
-        AssertHelper.AssertRecent(result.CreationDate);
+        Assert.InRange(result.RevisionDate, requestStart, requestEnd);
+        Assert.InRange(result.CreationDate, requestStart, requestEnd);
     }
 
     [Theory]

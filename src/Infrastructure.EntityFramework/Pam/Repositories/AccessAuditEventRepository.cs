@@ -178,8 +178,8 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
             .Where(e => e.OrganizationId == organizationId && e.OccurredDate >= since && e.OccurredDate <= until)
             .AsNoTracking();
 
-        // GroupBy + First where the procedure uses ROW_NUMBER, because that is what translates across the three
-        // providers; the answer is the same.
+        // GroupBy + First where the procedure uses DISTINCT + CROSS APPLY TOP 1, because that is what translates
+        // across the three providers; the answer is the same.
         var ciphers = await inRange
             .Where(e => e.CipherId != null)
             .GroupBy(e => e.CipherId!.Value)

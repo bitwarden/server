@@ -70,243 +70,6 @@ curl -X POST http://localhost:5000/seed \
 The `result` contains the data returned by the scene, and `mangleMap` contains ID mappings if ID mangling is enabled.
 Use the `X-Play-Id` header value to later destroy the seeded data.
 
-### Seeding a Parameterized Organization
-
-`SingleOrganizationScene` seeds an organization on a chosen plan and links an existing user as a confirmed owner
-(seed the owner first via `SingleUserScene` and pass its `userId` as `ownerUserId`).
-
-Beyond `planType` and `seats`, the request accepts:
-
-- `overrides`: optional capability/collection-management flags applied **on top of** the plan defaults. Any flag left
-  unset keeps the plan default. This includes `useSecretsManager`: to seed an SM-off Enterprise org, send
-  `overrides.useSecretsManager: false` together with `enableSecretsManager: false`. If both
-  `enableSecretsManager: true` and `overrides.useSecretsManager: false` are sent, Secrets Manager stays on. Seat
-  provisioning (`smSeats` / `smServiceAccounts`) applies only when `enableSecretsManager: true`.
-- `gateway`, `gatewayCustomerId`, `gatewaySubscriptionId` — billing gateway identity, so the seeded org resembles a
-  real billed org.
-
-Enum fields (`planType`, `gateway`) must be sent as their **numeric value**. In the example
-below, `planType: 0` is `Free` and `gateway: 0` is `Stripe`.
-
-```bash
-curl -X POST http://localhost:5000/seed \
-  -H "Content-Type: application/json" \
-  -H "X-Play-Id: test-run-123" \
-  -d '{
-    "template": "SingleOrganizationScene",
-    "arguments": {
-      "ownerUserId": "42bcf05d-7ad0-4e27-8b53-b3b700acc664",
-      "planType": 0,
-      "name": "Acme",
-      "domain": "acme.example",
-      "seats": 5,
-      "overrides": {
-        "useSso": true,
-        "useGroups": true
-      },
-      "gateway": 0,
-      "gatewayCustomerId": "cus_123",
-      "gatewaySubscriptionId": "sub_456"
-    }
-  }'
-```
-
-### Seeding a User with Billing Gateway Identity
-
-`SingleUserScene` seeds a standalone user. Beyond `email` and `password`, the request accepts:
-
-- `premium` — when true, marks the account premium (enables 1 GB storage and sets a premium expiration).
-- `gateway`, `gatewayCustomerId`, `gatewaySubscriptionId` — billing gateway identity, so the seeded user resembles a
-  real premium cloud user linked to a Stripe (or other gateway) customer/subscription. Any field left unset leaves the
-  user's existing value unchanged.
-- `kdfIterations`: PBKDF2 iteration count, from 5,000 to 2,000,000. Defaults to 5,000 for fast seeding; use 600,000
-  for production-realistic logins.
-- `enrollInEmail2Fa` — when true, enrolls the user in email two-factor authentication, delivered to the (mangled)
-  account email. The response includes `twoFactorRecoveryCode` so the recovery login flow can be tested.
-- `corruptPrivateKey` — when true, stores an undecryptable private key. The web Data Recovery tool only flags it
-  when the user also has at least one personal cipher (seed one with `UserLoginCipherScene`).
-
-Enum fields (`gateway`) must be sent as their **numeric value**. In the example below, `gateway: 0` is `Stripe`.
-
-```bash
-curl -X POST http://localhost:5000/seed \
-  -H "Content-Type: application/json" \
-  -H "X-Play-Id: test-run-123" \
-  -d '{
-    "template": "SingleUserScene",
-    "arguments": {
-      "email": "premium@example.com",
-      "password": "REPLACE_ME",
-      "premium": true,
-      "gateway": 0,
-      "gatewayCustomerId": "cus_123",
-      "gatewaySubscriptionId": "sub_456"
-    }
-  }'
-```
-
-### Seeding a PAM Access Rule
-
-`OrganizationAccessRuleScene` creates a PAM access rule in an existing organization and makes it govern the given
-collections (seed them with `OrganizationCollectionScene`). The response contains `accessRuleId`.
-
-To see seeded rules in the web vault, the organization must have `usePam: true` (pass `overrides.usePam: true` to
-`SingleOrganizationScene`; it defaults to false) and the viewing user must be an organization admin. In the example
-below, `planType: 20` is `EnterpriseAnnually`.
-
-```bash
-curl -X POST http://localhost:5000/seed \
-  -H "Content-Type: application/json" \
-  -d '{
-    "template": "SingleOrganizationScene",
-    "arguments": {
-      "ownerUserId": "<userId>",
-      "planType": 20,
-      "name": "Acme",
-      "domain": "acme.example",
-      "seats": 5,
-      "overrides": {
-        "usePam": true
-      }
-    }
-  }'
-```
-
-Rule request fields:
-
-- `organizationId`, `name` (required). Names must be unique within the organization; the database's unique index
-  rejects a duplicate.
-- `collectionIds`: collections the rule governs; each must belong to the organization and must not already be governed
-  by another access rule (a collection belongs to at most one rule).
-- `ipAllowlistCidrs`: adds an `ip_allowlist` condition with these CIDRs. An invalid CIDR or an empty list is rejected;
-  omit the field for no IP condition.
-- `requireHumanApproval`: adds a `human_approval` condition. With neither condition, requests auto-approve.
-- `description`, `enabled` (default true), `singleActiveLease`, `defaultLeaseDurationSeconds`,
-  `maxLeaseDurationSeconds`, `allowsExtensions`, `maxExtensionDurationSeconds` (required and positive when
-  `allowsExtensions` is true).
-
-Duration fields are in seconds. The web vault edit form only offers these presets:
-
-- `defaultLeaseDurationSeconds`, `maxLeaseDurationSeconds`: 900, 1800, 3600, 14400, 28800, 86400, 172800, 604800,
-  2592000
-- `maxExtensionDurationSeconds`: 1800, 3600, 7200, 14400, 28800
-
-Any other value is accepted by the seeder, but the edit form displays it snapped to the nearest preset and overwrites it
-if an admin saves the rule there.
-
-```bash
-curl -X POST http://localhost:5000/seed \
-  -H "Content-Type: application/json" \
-  -d '{
-    "template": "OrganizationAccessRuleScene",
-    "arguments": {
-      "organizationId": "<organizationId>",
-      "name": "Office network only",
-      "collectionIds": ["<collectionId>"],
-      "ipAllowlistCidrs": ["10.0.0.0/8"],
-      "requireHumanApproval": true
-    }
-  }'
-```
-
-### Creating Real Stripe Billing for a Seeded Organization or User
-
-By default the SeederApi makes no Stripe calls. The `gateway*` fields above link identifiers the caller created
-itself. Two opt-in scenes instead create the Stripe customer and subscription in the shared test account, the same
-way the CLI's `--stripe-billing` does. Seed the organization or user first, then post its ID to the billing scene.
-
-Each scene refuses an organization or user that already has a gateway ID, so it bills once. The organization scene
-also refuses a provider-managed client, which its provider bills. The arguments mirror the CLI flags; see the
-[card and address catalogs](../SeederUtility/README.md#cards) for the valid names.
-
-| Scene                            | Argument                                 | Effect                                                              |
-| -------------------------------- | ---------------------------------------- | ------------------------------------------------------------------- |
-| `OrganizationStripeBillingScene` | `organizationId` (required)              | Organization to bill. Not a Free plan; no gateway ID set.           |
-|                                  | `skipTrial` (default `false`)            | Subscription starts `active` and charges the test card immediately. |
-|                                  | `trialDays` (default `30`)               | Trial length, 1–30. Not valid with `skipTrial`.                     |
-|                                  | `card`, `address` (default `visa`, `us`) | Test card and billing address.                                      |
-| `UserStripeBillingScene`         | `userId` (required)                      | User to bill as premium. No gateway ID set.                         |
-|                                  | `card`, `address` (default `visa`, `us`) | Test card and billing address. An address with a tax ID is refused. |
-
-```bash
-curl -X POST http://localhost:5000/seed \
-  -H "Content-Type: application/json" \
-  -H "X-Play-Id: test-run-123" \
-  -d '{
-    "template": "OrganizationStripeBillingScene",
-    "arguments": {
-      "organizationId": "<organizationId from SingleOrganizationScene>",
-      "trialDays": 7,
-      "card": "mastercard",
-      "address": "de-vat"
-    }
-  }'
-```
-
-**Response:**
-
-```json
-{
-  "mangleMap": {},
-  "result": {
-    "organizationId": "0f5a3c3e-6d1b-4a7e-9b8e-b3b700acc664",
-    "gatewayCustomerId": "cus_QxYz123",
-    "gatewaySubscriptionId": "sub_1PqRs456"
-  }
-}
-```
-
-```bash
-curl -X POST http://localhost:5000/seed \
-  -H "Content-Type: application/json" \
-  -H "X-Play-Id: test-run-123" \
-  -d '{
-    "template": "UserStripeBillingScene",
-    "arguments": {
-      "userId": "<userId from SingleUserScene>"
-    }
-  }'
-```
-
-**Response:**
-
-```json
-{
-  "mangleMap": {},
-  "result": {
-    "userId": "42bcf05d-7ad0-4e27-8b53-b3b700acc664",
-    "gatewayCustomerId": "cus_QxYz789",
-    "gatewaySubscriptionId": "sub_1PqRs012",
-    "premiumExpirationDate": "2027-10-20T14:03:11Z"
-  }
-}
-```
-
-**Prerequisites.** The same three checks as the [CLI](../SeederUtility/README.md#prerequisites) run before any
-Stripe call: a `sk_test_` key at `globalSettings:stripe:apiKey` in the `bitwarden-seeder-api` user secrets,
-`globalSettings:pricingUri` (shipped in `appsettings.Development.json`), and `globalSettings:selfHosted` false.
-
-**Caveats.** `DELETE /seed/{playId}` removes database rows only; the Stripe customer and subscription stay until
-Stripe's test-mode auto-cancel, about 90 days. The shared account has rate limits, so bill only what a test needs.
-When Stripe fails part-way, the error's `details` names any customer already created; cancel it in Stripe. A user
-can then be billed again. An organization keeps that customer ID, so the scene refuses it; seed a fresh organization
-instead.
-
-### Cloud-only and Self-hosted-only Scenes
-
-Scenes refuse to seed data that cannot exist on the instance type the Seeder API runs as
-(`globalSettings:selfHosted`). A refused request returns HTTP 400 and writes nothing.
-
-| Scene | Rejected on a self-hosted Seeder API |
-| --- | --- |
-| `SingleProviderScene`, `ProviderUserScene` | Always: providers are cloud-only |
-| `MigrationCohortExportScene` | Always: plan migration cohorts are cloud-only |
-| `SingleOrganizationScene`, `SingleUserScene` | When `gatewayCustomerId` or `gatewaySubscriptionId` is set |
-| `OrganizationStripeBillingScene`, `UserStripeBillingScene` | Always: Stripe billing requires cloud mode |
-
-In the other direction, `SingleUserScene` with `selfHosted: true` and `premium: true` is rejected on a cloud Seeder
-API, because a self-hosted premium license can only be written on a self-hosted instance.
-
 ### Querying Data
 
 Send a POST request to `/query` to execute read-only queries:
@@ -457,3 +220,257 @@ Without the `X-Play-Id` header, entities will not be tracked and cannot be clean
 > [!WARNING]
 > The SeederApi is intended for **development and testing environments only**. Never deploy this API to production
 > environments.
+
+## Scene Reference
+
+<details>
+<summary>Seeding a Parameterized Organization</summary>
+
+`SingleOrganizationScene` seeds an organization on a chosen plan and links an existing user as a confirmed owner
+(seed the owner first via `SingleUserScene` and pass its `userId` as `ownerUserId`).
+
+Beyond `planType` and `seats`, the request accepts:
+
+- `overrides`: optional capability/collection-management flags applied **on top of** the plan defaults. Any flag left
+  unset keeps the plan default. This includes `useSecretsManager`: to seed an SM-off Enterprise org, send
+  `overrides.useSecretsManager: false` together with `enableSecretsManager: false`. If both
+  `enableSecretsManager: true` and `overrides.useSecretsManager: false` are sent, Secrets Manager stays on. Seat
+  provisioning (`smSeats` / `smServiceAccounts`) applies only when `enableSecretsManager: true`.
+- `gateway`, `gatewayCustomerId`, `gatewaySubscriptionId` — billing gateway identity, so the seeded org resembles a
+  real billed org.
+
+Enum fields (`planType`, `gateway`) must be sent as their **numeric value**. In the example
+below, `planType: 0` is `Free` and `gateway: 0` is `Stripe`.
+
+```bash
+curl -X POST http://localhost:5000/seed \
+  -H "Content-Type: application/json" \
+  -H "X-Play-Id: test-run-123" \
+  -d '{
+    "template": "SingleOrganizationScene",
+    "arguments": {
+      "ownerUserId": "42bcf05d-7ad0-4e27-8b53-b3b700acc664",
+      "planType": 0,
+      "name": "Acme",
+      "domain": "acme.example",
+      "seats": 5,
+      "overrides": {
+        "useSso": true,
+        "useGroups": true
+      },
+      "gateway": 0,
+      "gatewayCustomerId": "cus_123",
+      "gatewaySubscriptionId": "sub_456"
+    }
+  }'
+```
+
+</details>
+
+<details>
+<summary>Seeding a User with Billing Gateway Identity</summary>
+
+`SingleUserScene` seeds a standalone user. Beyond `email` and `password`, the request accepts:
+
+- `premium` — when true, marks the account premium (enables 1 GB storage and sets a premium expiration).
+- `gateway`, `gatewayCustomerId`, `gatewaySubscriptionId` — billing gateway identity, so the seeded user resembles a
+  real premium cloud user linked to a Stripe (or other gateway) customer/subscription. Any field left unset leaves the
+  user's existing value unchanged.
+- `kdfIterations`: PBKDF2 iteration count, from 5,000 to 2,000,000. Defaults to 5,000 for fast seeding; use 600,000
+  for production-realistic logins.
+- `enrollInEmail2Fa` — when true, enrolls the user in email two-factor authentication, delivered to the (mangled)
+  account email. The response includes `twoFactorRecoveryCode` so the recovery login flow can be tested.
+- `corruptPrivateKey` — when true, stores an undecryptable private key. The web Data Recovery tool only flags it
+  when the user also has at least one personal cipher (seed one with `UserLoginCipherScene`).
+
+Enum fields (`gateway`) must be sent as their **numeric value**. In the example below, `gateway: 0` is `Stripe`.
+
+```bash
+curl -X POST http://localhost:5000/seed \
+  -H "Content-Type: application/json" \
+  -H "X-Play-Id: test-run-123" \
+  -d '{
+    "template": "SingleUserScene",
+    "arguments": {
+      "email": "premium@example.com",
+      "password": "REPLACE_ME",
+      "premium": true,
+      "gateway": 0,
+      "gatewayCustomerId": "cus_123",
+      "gatewaySubscriptionId": "sub_456"
+    }
+  }'
+```
+
+</details>
+
+<details>
+<summary>Seeding a PAM Access Rule</summary>
+
+`OrganizationAccessRuleScene` creates a PAM access rule in an existing organization and makes it govern the given
+collections (seed them with `OrganizationCollectionScene`). The response contains `accessRuleId`.
+
+To see seeded rules in the web vault, the organization must have `usePam: true` (pass `overrides.usePam: true` to
+`SingleOrganizationScene`; it defaults to false) and the viewing user must be an organization admin. In the example
+below, `planType: 20` is `EnterpriseAnnually`.
+
+```bash
+curl -X POST http://localhost:5000/seed \
+  -H "Content-Type: application/json" \
+  -d '{
+    "template": "SingleOrganizationScene",
+    "arguments": {
+      "ownerUserId": "<userId>",
+      "planType": 20,
+      "name": "Acme",
+      "domain": "acme.example",
+      "seats": 5,
+      "overrides": {
+        "usePam": true
+      }
+    }
+  }'
+```
+
+Rule request fields:
+
+- `organizationId`, `name` (required). Names must be unique within the organization; the database's unique index
+  rejects a duplicate.
+- `collectionIds`: collections the rule governs; each must belong to the organization and must not already be governed
+  by another access rule (a collection belongs to at most one rule).
+- `ipAllowlistCidrs`: adds an `ip_allowlist` condition with these CIDRs. An invalid CIDR or an empty list is rejected;
+  omit the field for no IP condition.
+- `requireHumanApproval`: adds a `human_approval` condition. With neither condition, requests auto-approve.
+- `description`, `enabled` (default true), `singleActiveLease`, `defaultLeaseDurationSeconds`,
+  `maxLeaseDurationSeconds`, `allowsExtensions`, `maxExtensionDurationSeconds` (required and positive when
+  `allowsExtensions` is true).
+
+Duration fields are in seconds. The web vault edit form only offers these presets:
+
+- `defaultLeaseDurationSeconds`, `maxLeaseDurationSeconds`: 900, 1800, 3600, 14400, 28800, 86400, 172800, 604800,
+  2592000
+- `maxExtensionDurationSeconds`: 1800, 3600, 7200, 14400, 28800
+
+Any other value is accepted by the seeder, but the edit form displays it snapped to the nearest preset and overwrites it
+if an admin saves the rule there.
+
+```bash
+curl -X POST http://localhost:5000/seed \
+  -H "Content-Type: application/json" \
+  -d '{
+    "template": "OrganizationAccessRuleScene",
+    "arguments": {
+      "organizationId": "<organizationId>",
+      "name": "Office network only",
+      "collectionIds": ["<collectionId>"],
+      "ipAllowlistCidrs": ["10.0.0.0/8"],
+      "requireHumanApproval": true
+    }
+  }'
+```
+
+</details>
+
+<details>
+<summary>Creating Real Stripe Billing for a Seeded Organization or User</summary>
+
+By default the SeederApi makes no Stripe calls. The `gateway*` fields above link identifiers the caller created
+itself. Two opt-in scenes instead create the Stripe customer and subscription in the shared test account, the same
+way the CLI's `--stripe-billing` does. Seed the organization or user first, then post its ID to the billing scene.
+
+Each scene refuses an organization or user that already has a gateway ID, so it bills once. The organization scene
+also refuses a provider-managed client, which its provider bills. The arguments mirror the CLI flags; see the
+[card and address catalogs](../SeederUtility/README.md#cards) for the valid names.
+
+| Scene                            | Argument                                 | Effect                                                              |
+| -------------------------------- | ---------------------------------------- | ------------------------------------------------------------------- |
+| `OrganizationStripeBillingScene` | `organizationId` (required)              | Organization to bill. Not a Free plan; no gateway ID set.           |
+|                                  | `skipTrial` (default `false`)            | Subscription starts `active` and charges the test card immediately. |
+|                                  | `trialDays` (default `30`)               | Trial length, 1–30. Not valid with `skipTrial`.                     |
+|                                  | `card`, `address` (default `visa`, `us`) | Test card and billing address.                                      |
+| `UserStripeBillingScene`         | `userId` (required)                      | User to bill as premium. No gateway ID set.                         |
+|                                  | `card`, `address` (default `visa`, `us`) | Test card and billing address. An address with a tax ID is refused. |
+
+```bash
+curl -X POST http://localhost:5000/seed \
+  -H "Content-Type: application/json" \
+  -H "X-Play-Id: test-run-123" \
+  -d '{
+    "template": "OrganizationStripeBillingScene",
+    "arguments": {
+      "organizationId": "<organizationId from SingleOrganizationScene>",
+      "trialDays": 7,
+      "card": "mastercard",
+      "address": "de-vat"
+    }
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "mangleMap": {},
+  "result": {
+    "organizationId": "0f5a3c3e-6d1b-4a7e-9b8e-b3b700acc664",
+    "gatewayCustomerId": "cus_QxYz123",
+    "gatewaySubscriptionId": "sub_1PqRs456"
+  }
+}
+```
+
+```bash
+curl -X POST http://localhost:5000/seed \
+  -H "Content-Type: application/json" \
+  -H "X-Play-Id: test-run-123" \
+  -d '{
+    "template": "UserStripeBillingScene",
+    "arguments": {
+      "userId": "<userId from SingleUserScene>"
+    }
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "mangleMap": {},
+  "result": {
+    "userId": "42bcf05d-7ad0-4e27-8b53-b3b700acc664",
+    "gatewayCustomerId": "cus_QxYz789",
+    "gatewaySubscriptionId": "sub_1PqRs012",
+    "premiumExpirationDate": "2027-10-20T14:03:11Z"
+  }
+}
+```
+
+**Prerequisites.** The same three checks as the [CLI](../SeederUtility/README.md#prerequisites) run before any
+Stripe call: a `sk_test_` key at `globalSettings:stripe:apiKey` in the `bitwarden-seeder-api` user secrets,
+`globalSettings:pricingUri` (shipped in `appsettings.Development.json`), and `globalSettings:selfHosted` false.
+
+**Caveats.** `DELETE /seed/{playId}` removes database rows only; the Stripe customer and subscription stay until
+Stripe's test-mode auto-cancel, about 90 days. The shared account has rate limits, so bill only what a test needs.
+When Stripe fails part-way, the error's `details` names any customer already created; cancel it in Stripe. A user
+can then be billed again. An organization keeps that customer ID, so the scene refuses it; seed a fresh organization
+instead.
+
+</details>
+
+<details>
+<summary>Cloud-only and Self-hosted-only Scenes</summary>
+
+Scenes refuse to seed data that cannot exist on the instance type the Seeder API runs as
+(`globalSettings:selfHosted`). A refused request returns HTTP 400 and writes nothing.
+
+| Scene                                                      | Rejected on a self-hosted Seeder API                       |
+| ---------------------------------------------------------- | ---------------------------------------------------------- |
+| `SingleProviderScene`, `ProviderUserScene`                 | Always: providers are cloud-only                           |
+| `MigrationCohortExportScene`                               | Always: plan migration cohorts are cloud-only              |
+| `SingleOrganizationScene`, `SingleUserScene`               | When `gatewayCustomerId` or `gatewaySubscriptionId` is set |
+| `OrganizationStripeBillingScene`, `UserStripeBillingScene` | Always: Stripe billing requires cloud mode                 |
+
+In the other direction, `SingleUserScene` with `selfHosted: true` and `premium: true` is rejected on a cloud Seeder
+API, because a self-hosted premium license can only be written on a self-hosted instance.
+
+</details>
