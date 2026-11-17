@@ -1081,23 +1081,23 @@
       },
       "Quartz": {
         "type": "Transitive",
-        "resolved": "3.15.1",
-        "contentHash": "XIbhzUAKSm3xdl1ORLPnK7mc5XANP3cuvYQhCtuX/8888IN41e9OXJak4R9OlmAGRnyAMqHE40yojVa89NS1wg=="
+        "resolved": "4.7.3",
+        "contentHash": "/eX2Xo6eJAfupXGRjmcCy5Jpn/6NOBXDuUKTK2tY228yQ23tYUv0eeejwEbNlyxEJITIv1ajddTmYib+mMBxmQ=="
       },
       "Quartz.Extensions.DependencyInjection": {
         "type": "Transitive",
-        "resolved": "3.15.1",
-        "contentHash": "LinB9z54aPn49C/DGM1v3OflX2nosrEo4zNz10vfYqcCndFJ8MNU9k++Ap9T7vxeZc355WStPDggpX60TYj1Lg==",
+        "resolved": "4.7.3",
+        "contentHash": "FBcB6/UGiRJ/GTWG7X5pMFlmrqRiBrmbzzB4oWfkm39IEN1qImEkJAT1BiobcFsdDqhueBBX1Dwhn6g0Kar6Ow==",
         "dependencies": {
-          "Quartz": "3.15.1"
+          "Quartz": "4.7.3"
         }
       },
       "Quartz.Extensions.Hosting": {
         "type": "Transitive",
-        "resolved": "3.15.1",
-        "contentHash": "svqLTEnVLb0VPUcNCd/khRqagwxM/yybUZ2sEOd7HFdPO+5dAOttL+ARtXSyBeaGWPWAaxY4VvU7pJTZzYhORw==",
+        "resolved": "4.7.3",
+        "contentHash": "/bibWhxtp2Xzyqzs6ve5SVQATP9CEZzdJeaL3hq7L5PYjm71tGB9j14DyegB/LQb2OX2lBCKBLDDLaZjca1vVw==",
         "dependencies": {
-          "Quartz.Extensions.DependencyInjection": "3.15.1"
+          "Quartz": "4.7.3"
         }
       },
       "RabbitMQ.Client": {
@@ -1423,9 +1423,9 @@
           "OneOf": "[3.0.271, 3.0.271]",
           "Otp.NET": "[1.4.0, 1.4.0]",
           "Push.Infrastructure": "[0.0.1, )",
-          "Quartz": "[3.15.1, 3.15.1]",
-          "Quartz.Extensions.DependencyInjection": "[3.15.1, 3.15.1]",
-          "Quartz.Extensions.Hosting": "[3.15.1, 3.15.1]",
+          "Quartz": "[4.7.3, 4.7.3]",
+          "Quartz.Extensions.DependencyInjection": "[4.7.3, 4.7.3]",
+          "Quartz.Extensions.Hosting": "[4.7.3, 4.7.3]",
           "RabbitMQ.Client": "[7.1.2, 7.1.2]",
           "SerilogFileLogging": "[0.0.1, )",
           "SsrfProtection": "[0.0.1, )",
