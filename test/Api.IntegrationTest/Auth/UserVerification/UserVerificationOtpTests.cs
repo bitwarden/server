@@ -19,7 +19,7 @@ namespace Bit.Api.IntegrationTest.Auth.UserVerification;
 /// token provider, and distributed cache. Only the mail service is substituted, so tests can read the OTP it
 /// would have emailed.
 /// </summary>
-public class AccountsControllerOtpTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class UserVerificationOtpTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
@@ -32,7 +32,7 @@ public class AccountsControllerOtpTests : IClassFixture<ApiApplicationFactory>, 
 
     private string _ownerEmail = null!;
 
-    public AccountsControllerOtpTests(ApiApplicationFactory factory)
+    public UserVerificationOtpTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         _factory.SubstituteService<IMailService>(_ => { });
