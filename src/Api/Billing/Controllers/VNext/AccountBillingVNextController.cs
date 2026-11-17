@@ -1,8 +1,10 @@
-﻿using Bit.Api.Billing.Attributes;
+﻿using System.Net;
+using Bit.Api.Billing.Attributes;
 using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Api.Billing.Models.Requests.Premium;
 using Bit.Api.Billing.Models.Requests.Storage;
 using Bit.Api.Billing.Models.Responses.Portal;
+using Bit.Api.Billing.Models.Responses.Premium;
 using Bit.Core;
 using Bit.Core.Billing.Licenses.Queries;
 using Bit.Core.Billing.Payment.Commands;
@@ -148,13 +150,14 @@ public class AccountBillingVNextController(
 
     [HttpPost("upgrade")]
     [InjectUser]
+    [ProducesResponseType(typeof(UpgradePremiumToOrganizationResponseModel), (int)HttpStatusCode.OK)]
     public async Task<IResult> UpgradePremiumToOrganizationAsync(
         [BindNever] User user,
         [FromBody] UpgradePremiumToOrganizationRequest request)
     {
         var (organizationName, key, publicKey, encryptedPrivateKey, collectionName, planType, billingAddress) = request.ToDomain();
         var result = await upgradePremiumToOrganizationCommand.Run(user, organizationName, key, publicKey, encryptedPrivateKey, collectionName, planType, billingAddress);
-        return Handle(result);
+        return Handle(result, organizationId => TypedResults.Ok(new UpgradePremiumToOrganizationResponseModel(organizationId)));
     }
 
     [HttpGet("discounts")]

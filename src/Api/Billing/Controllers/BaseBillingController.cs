@@ -30,6 +30,20 @@ public abstract class BaseBillingController : Controller
             conflict => Error.Conflict(conflict.Response),
             unhandled => Error.ServerError(unhandled.Response, unhandled.Exception, IncludeExceptionDetail));
 
+    /// <summary>
+    /// Processes the result of a billing command and converts it to an appropriate HTTP result response.
+    /// On success, delegates to <paramref name="success"/> so the caller can choose the response shape.
+    /// </summary>
+    /// <typeparam name="T">The type of the successful result.</typeparam>
+    /// <param name="result">The result of executing the billing command.</param>
+    /// <param name="success">Maps the successful result value to an <see cref="IResult"/>.</param>
+    protected IResult Handle<T>(BillingCommandResult<T> result, Func<T, IResult> success) =>
+        result.Match<IResult>(
+            success,
+            badRequest => Error.BadRequest(badRequest.Response),
+            conflict => Error.Conflict(conflict.Response),
+            unhandled => Error.ServerError(unhandled.Response, unhandled.Exception, IncludeExceptionDetail));
+
     private bool IncludeExceptionDetail =>
         HttpContext?.RequestServices.GetService<IWebHostEnvironment>()?.IsDevelopment() == true;
 
