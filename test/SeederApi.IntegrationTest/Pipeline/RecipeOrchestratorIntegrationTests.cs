@@ -239,7 +239,7 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
     public async Task Execute_Options_BillingAccepted_GatewayIdsReachTheResultAsync()
     {
         // The one test in this fixture that runs the real pipeline to completion: proves the DI
-        // registration (RecipeOrchestrator) and resolution (RecipeBuilderExtensions.WithStripeOrganizationBilling)
+        // registration (RecipeOrchestrator) and resolution (RecipeBuilderOrganizationExtensions.WithStripeOrganizationBilling)
         // seam actually works, and that CreateOrganizationBillingStep's gateway IDs reach the result.
         var billingService = new RecordingOrganizationStripeBillingService(throwOnValidate: false);
         var orchestrator = NewOrchestrator(
