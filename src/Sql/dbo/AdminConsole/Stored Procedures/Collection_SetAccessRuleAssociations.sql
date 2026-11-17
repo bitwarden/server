@@ -13,46 +13,93 @@ BEGIN
 
     DECLARE @RevisionDate DATETIME2(7) = SYSUTCDATETIME()
 
-    BEGIN TRANSACTION
+    DECLARE @Changed TABLE (
+        [Id] UNIQUEIDENTIFIER NOT NULL,
+        [PreviousAccessRuleId] UNIQUEIDENTIFIER NULL,
+        [AccessRuleId] UNIQUEIDENTIFIER NULL
+    )
 
-    UPDATE
-        C
-    SET
-        C.[AccessRuleId] = NULL,
-        C.[RevisionDate] = @RevisionDate
-    FROM
-        [dbo].[Collection] C
-    INNER JOIN
-        @ToClear T ON T.[Id] = C.[Id]
-    WHERE
-        C.[OrganizationId] = @OrganizationId
-        AND C.[AccessRuleId] = @AccessRuleId
+    DECLARE @FlippedCollectionIds AS [dbo].[GuidIdArray]
 
-    UPDATE
-        C
-    SET
-        C.[AccessRuleId] = @AccessRuleId,
-        C.[RevisionDate] = @RevisionDate
-    FROM
-        [dbo].[Collection] C
-    INNER JOIN
-        @ToAssign T ON T.[Id] = C.[Id]
-    WHERE
-        C.[OrganizationId] = @OrganizationId
-        -- The foreign key only proves the rule exists, not that it belongs to this organization. Without
-        -- this the caller could govern its own collections with another organization's rule, handing that
-        -- organization control of the conditions gating access to data it cannot see.
-        AND EXISTS (
-            SELECT
-                1
-            FROM
-                [dbo].[AccessRule] AR
-            WHERE
-                AR.[Id] = @AccessRuleId
-                AND AR.[OrganizationId] = @OrganizationId
-        )
+    BEGIN TRY
+        BEGIN TRANSACTION
 
-    COMMIT TRANSACTION
+        UPDATE
+            C
+        SET
+            C.[AccessRuleId] = NULL,
+            C.[RevisionDate] = @RevisionDate
+        OUTPUT
+            INSERTED.[Id],
+            DELETED.[AccessRuleId],
+            INSERTED.[AccessRuleId]
+        INTO @Changed
+        FROM
+            [dbo].[Collection] C
+        INNER JOIN
+            @ToClear T ON T.[Id] = C.[Id]
+        WHERE
+            C.[OrganizationId] = @OrganizationId
+            AND C.[AccessRuleId] = @AccessRuleId
 
-    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
+        UPDATE
+            C
+        SET
+            C.[AccessRuleId] = @AccessRuleId,
+            C.[RevisionDate] = @RevisionDate
+        OUTPUT
+            INSERTED.[Id],
+            DELETED.[AccessRuleId],
+            INSERTED.[AccessRuleId]
+        INTO @Changed
+        FROM
+            [dbo].[Collection] C
+        INNER JOIN
+            @ToAssign T ON T.[Id] = C.[Id]
+        WHERE
+            C.[OrganizationId] = @OrganizationId
+            AND (C.[AccessRuleId] IS NULL OR C.[AccessRuleId] <> @AccessRuleId)
+            -- The foreign key only proves the rule exists, not that it belongs to this organization. Without
+            -- this the caller could govern its own collections with another organization's rule, handing that
+            -- organization control of the conditions gating access to data it cannot see.
+            AND EXISTS (
+                SELECT
+                    1
+                FROM
+                    [dbo].[AccessRule] AR
+                WHERE
+                    AR.[Id] = @AccessRuleId
+                    AND AR.[OrganizationId] = @OrganizationId
+            )
+
+        -- Members sync a collection's "governed by an enabled rule" state, so only collections where that state
+        -- flipped need their members to resync. REPEATABLEREAD holds the rule rows until COMMIT, so a concurrent
+        -- AccessRule_Update toggle waits and then reads the new associations.
+        INSERT INTO @FlippedCollectionIds
+        SELECT DISTINCT
+            CH.[Id]
+        FROM
+            @Changed CH
+        LEFT JOIN
+            [dbo].[AccessRule] PAR WITH (REPEATABLEREAD) ON PAR.[Id] = CH.[PreviousAccessRuleId]
+        LEFT JOIN
+            [dbo].[AccessRule] AR WITH (REPEATABLEREAD) ON AR.[Id] = CH.[AccessRuleId]
+        WHERE
+            ISNULL(PAR.[Enabled], 0) <> ISNULL(AR.[Enabled], 0)
+
+        COMMIT TRANSACTION
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+        BEGIN
+            ROLLBACK TRANSACTION
+        END;
+
+        THROW
+    END CATCH
+
+    IF EXISTS (SELECT 1 FROM @FlippedCollectionIds)
+    BEGIN
+        EXEC [dbo].[User_BumpAccountRevisionDateByCollectionIds] @FlippedCollectionIds, @OrganizationId
+    END
 END
