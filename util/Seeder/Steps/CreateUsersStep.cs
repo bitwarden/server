@@ -34,11 +34,11 @@ internal sealed class CreateUsersStep(
                 ? UserStatusDistributions.Realistic
                 : UserStatusDistributions.AllConfirmed);
 
-        var password = context.GetPassword();
-        var kdfIterations = context.GetKdfIterations();
-        var mangler = context.GetMangler();
-        var passwordHasher = context.GetPasswordHasher();
-        var progress = context.GetProgress();
+        var password = context.Password;
+        var kdfIterations = context.KdfIterations;
+        var mangler = context.Mangler;
+        var passwordHasher = context.PasswordHasher;
+        var progress = context.Progress;
 
         // Pre-compute mangled emails and statuses (ManglerService is not thread-safe)
         var mangledEmails = new string[count];

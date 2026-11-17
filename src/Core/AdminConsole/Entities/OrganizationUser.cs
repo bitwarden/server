@@ -167,8 +167,55 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
 
     public void SetNewId()
     {
-        Id = CoreHelpers.GenerateComb();
+        Id = CombGuid.Generate();
     }
+
+    /// <summary>
+    /// Creates an Invited member with <see cref="Email"/> set and <see cref="UserId"/>/<see cref="Key"/> null.
+    /// Performs no validation (e.g. policies, seats); callers are responsible for that.
+    /// </summary>
+    public static OrganizationUser CreateInvited(Guid organizationId, string email, OrganizationUserType type,
+        string? externalId = null)
+        => Create(organizationId, OrganizationUserStatusType.Invited, type, externalId, email: email);
+
+    /// <summary>
+    /// Creates an Accepted member with <see cref="UserId"/> set and <see cref="Email"/>/<see cref="Key"/> null.
+    /// Performs no validation (e.g. policies, seats); callers are responsible for that.
+    /// </summary>
+    public static OrganizationUser CreateAccepted(Guid organizationId, Guid userId, OrganizationUserType type,
+        string? externalId = null)
+        => Create(organizationId, OrganizationUserStatusType.Accepted, type, externalId, userId: userId);
+
+    /// <summary>
+    /// Creates a Confirmed member with <see cref="UserId"/>/<see cref="Key"/> set and <see cref="Email"/> null.
+    /// Performs no validation (e.g. policies, seats); callers are responsible for that.
+    /// </summary>
+    public static OrganizationUser CreateConfirmed(Guid organizationId, Guid userId, string key,
+        OrganizationUserType type, string? externalId = null)
+        => Create(organizationId, OrganizationUserStatusType.Confirmed, type, externalId, userId: userId, key: key);
+
+    /// <summary>
+    /// Creates a Staged member with <see cref="Email"/>/<see cref="ExternalId"/> set and
+    /// <see cref="UserId"/>/<see cref="Key"/> null.
+    /// Performs no validation (e.g. policies, seats); callers are responsible for that.
+    /// </summary>
+    public static OrganizationUser CreateStaged(Guid organizationId, string email, string externalId,
+        OrganizationUserType type)
+        => Create(organizationId, OrganizationUserStatusType.Staged, type, externalId, email: email);
+
+    private static OrganizationUser Create(Guid organizationId, OrganizationUserStatusType status,
+        OrganizationUserType type, string? externalId, string? email = null, Guid? userId = null, string? key = null)
+        => new()
+        {
+            Id = CombGuid.Generate(),
+            OrganizationId = organizationId,
+            Status = status,
+            Type = type,
+            ExternalId = externalId,
+            Email = email?.ToLowerInvariant(),
+            UserId = userId,
+            Key = key,
+        };
 
     public Permissions? GetPermissions()
     {

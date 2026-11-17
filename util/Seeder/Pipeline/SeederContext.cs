@@ -15,7 +15,7 @@ namespace Bit.Seeder.Pipeline;
 /// <remarks>
 /// <para>
 /// Steps resolve services from <see cref="Services"/> instead of accessing fixed properties.
-/// Use the convenience extension methods in <see cref="SeederContextExtensions"/> for common services.
+/// Use the convenience extension members in <see cref="SeederContextExtensions"/> for common services.
 /// </para>
 /// <para>
 /// <strong>Context Lifecycle:</strong>
@@ -36,7 +36,7 @@ namespace Bit.Seeder.Pipeline;
 /// </remarks>
 /// <param name="services">
 /// Service provider for resolving dependencies. Steps access services via
-/// <see cref="SeederContextExtensions"/> convenience methods.
+/// <see cref="SeederContextExtensions"/> convenience members.
 /// </param>
 /// <seealso cref="EntityRegistry"/>
 /// <seealso cref="BulkCommitter"/>
