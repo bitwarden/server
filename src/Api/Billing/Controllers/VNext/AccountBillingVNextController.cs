@@ -157,7 +157,7 @@ public class AccountBillingVNextController(
     {
         var (organizationName, key, publicKey, encryptedPrivateKey, collectionName, planType, billingAddress) = request.ToDomain();
         var result = await upgradePremiumToOrganizationCommand.Run(user, organizationName, key, publicKey, encryptedPrivateKey, collectionName, planType, billingAddress);
-        return Handle(result, organizationId => TypedResults.Ok(new UpgradePremiumToOrganizationResponseModel(organizationId)));
+        return Handle(result.Map(organizationId => new UpgradePremiumToOrganizationResponseModel(organizationId)));
     }
 
     [HttpGet("discounts")]
