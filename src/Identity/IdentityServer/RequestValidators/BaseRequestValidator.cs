@@ -447,15 +447,7 @@ public abstract class BaseRequestValidator<T> where T : class
 
         await ResetFailedAuthDetailsAsync(user);
 
-        // Populate CurrentContext for the LD bucketing decision below. user.Id and
-        // device.Identifier are post-validation Bitwarden entities — not raw client input.
-        // TODO: PM-34091 - delete when cleaning up the feature flag; the bump call reads
-        // user.Id / device.Identifier directly.
-        CurrentContext.UserId ??= user.Id;
-        CurrentContext.DeviceIdentifier ??= device?.Identifier;
-
-        // TODO: PM-34091 - remove feature flag check when cleaning up
-        if (device != null && _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate))
+        if (device != null)
         {
             try
             {
