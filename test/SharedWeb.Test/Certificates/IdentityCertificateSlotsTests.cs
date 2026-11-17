@@ -1,7 +1,6 @@
 ﻿using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Settings;
 using Bit.SharedWeb.Certificates;
-using Bit.SharedWeb.Utilities;
 using Bit.Test.Common.Helpers;
 
 namespace Bit.SharedWeb.Test.Certificates;

@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Enums;
 using Bit.SharedWeb.Certificates;
-using Bit.SharedWeb.Utilities;
 
 namespace Bit.SharedWeb.Test.Certificates;
 
