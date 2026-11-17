@@ -324,6 +324,8 @@ public class DatabaseContext : DbContext
         ePamRotationJob.HasIndex(p => new { p.RotationConfigId, p.Action });
         ePamRotationJob.HasIndex(p => new { p.Action, p.ExpirationDate });
         ePamRotationJob.HasIndex(p => new { p.ClaimedByAccessConnectorId, p.Action });
+        // Backs the newest-job lookup the config details read performs.
+        ePamRotationJob.HasIndex(p => new { p.RotationConfigId, p.CreationDate, p.Id });
         ePamRotationJob
             .HasOne<PamRotationConfig>()
             .WithMany()

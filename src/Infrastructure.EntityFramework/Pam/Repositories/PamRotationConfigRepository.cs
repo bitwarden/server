@@ -132,6 +132,16 @@ public class PamRotationConfigRepository : Repository<CoreEntity, EfModel, Guid>
                 HasActiveJob = dbContext.PamRotationJobs.Any(j => j.RotationConfigId == c.Id
                     && (j.Action == PamRotationJobAction.None || j.Action == PamRotationJobAction.Claimed)
                     && !dbContext.PamRotationJobTimeoutSweeps.Any(s => s.RotationJobId == j.Id)),
+                // Mirrors PamRotationConfigDetailsView: the newest job counts as failed when it reported Failed, or
+                // when it is unresolved and the sweep already recorded its timeout. No jobs yields false.
+                LastJobFailed = dbContext.PamRotationJobs
+                    .Where(j => j.RotationConfigId == c.Id)
+                    .OrderByDescending(j => j.CreationDate)
+                    .ThenByDescending(j => j.Id)
+                    .Select(j => j.Action == PamRotationJobAction.Failed
+                        || ((j.Action == PamRotationJobAction.None || j.Action == PamRotationJobAction.Claimed)
+                            && dbContext.PamRotationJobTimeoutSweeps.Any(s => s.RotationJobId == j.Id)))
+                    .FirstOrDefault(),
             })
             .AsNoTracking();
 }
