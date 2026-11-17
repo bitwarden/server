@@ -12,6 +12,14 @@ The server uses three certificate roles. Each role can rotate to a new certifica
 
 Each certificate must have an RSA key and its private key, in a password-protected PKCS#12 (`.pfx`) file.
 
+## Terms
+
+| Term | Meaning | Code types |
+|---|---|---|
+| Role | What a certificate does: Identity signing, SSO signing, or SSO encryption. | |
+| Slot | A place where one settings section configures a certificate. The active slot is the root fields, or `futureCertificate` after promotion. The staged slot is a `futureCertificate` that is enabled and not active. The retired slot is `validationCertificates` or `decryptionCertificates`. | `IdentityCertificateSlots`, `SsoCertificateSlots` |
+| Set | The certificates that one role uses, after the Identity fallback. A set records whether the role uses the Identity fallback. | `SigningCertificateSet`, `EncryptionCertificateSet` |
+
 ## Where a certificate loads from
 
 Every certificate reference has the same four fields. The host uses the first source that applies:
@@ -113,12 +121,26 @@ Keep the outgoing certificate file or blob until the rotation is complete.
 
 A self-hosted or Development `/sso` host can leave an SSO role unset. The role then uses the Identity certificates:
 
-- SSO signing uses the Identity active, staged, and validation certificates.
+- SSO signing uses the Identity active, staged, and retired certificates.
 - SSO encryption uses the Identity active and staged certificates only.
 
 So one `identity.pfx` serves all three roles, and an Identity rotation also rotates SSO. One extra step keeps SAML sign-in working: in the Prepare step, also add A to `ssoServer:encryption:decryptionCertificates`. Without it, SAML sign-in fails after Promote for each identity provider that still encrypts to A.
 
 A cloud `/sso` host must set both SSO roles. If a role is not set, `/sso` does not start.
+
+## When certificates load
+
+Each host loads its certificates at startup. The hosts do not load the same slots.
+
+| Host | Slots that the host loads |
+|---|---|
+| `/identity` | All Identity slots: active, staged, and retired. |
+| `/sso` | All slots of both SSO roles. |
+| `/sso`, for an SSO role with no active source of its own | Also the Identity slots that the role falls back to. SSO signing reads the Identity active, staged, and retired slots. SSO encryption reads the Identity active and staged slots only. |
+
+A certificate that does not load stops the host. Each Identity certificate loads at most one time, and both SSO roles get the same loaded object.
+
+When both SSO roles have their own active source, `/sso` does not use the Identity certificates. A bad Identity certificate then does not stop `/sso`. It stops `/identity`, which uses it.
 
 ## At startup
 
