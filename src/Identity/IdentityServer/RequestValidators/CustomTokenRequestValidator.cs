@@ -73,13 +73,10 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         _updateInstallationCommand = updateInstallationCommand;
     }
 
-    // NOTE: Feature flags with progressive rollout (device-keyed or user-keyed) cannot be
-    // evaluated from inside this validator without first populating CurrentContext.UserId /
-    // CurrentContext.DeviceIdentifier. CurrentContextMiddleware only sees /connect/token
-    // headers, which do not carry either value. For refresh, populate CurrentContext inline
-    // immediately before the flag check from the server-signed Subject claims. Do not
-    // populate CurrentContext from raw form-body input before validation — pre-validation
-    // client values would become visible to any downstream reader in the same request.
+    // NOTE: CurrentContextMiddleware reads only /connect/token headers, so CurrentContext.UserId
+    // and CurrentContext.DeviceIdentifier are unset in this validator. LaunchDarkly cannot bucket
+    // a user- or device-targeted feature flag here unless code first sets those values manually
+    // from the validated refresh-token Subject claims.
     public async Task ValidateAsync(CustomTokenRequestValidationContext context)
     {
         Debug.Assert(context.Result is not null);

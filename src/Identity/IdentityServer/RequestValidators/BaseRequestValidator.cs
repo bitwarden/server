@@ -94,14 +94,10 @@ public abstract class BaseRequestValidator<T> where T : class
         _updateDeviceLastActivityCommand = updateDeviceLastActivityCommand;
     }
 
-    // NOTE: Feature flags with progressive rollout (device-keyed or user-keyed) cannot be
-    // evaluated from inside this validator without first populating CurrentContext.UserId /
-    // CurrentContext.DeviceIdentifier. CurrentContextMiddleware only sees /connect/token
-    // headers, which do not carry either value. Prefer flag-gating in BuildSuccessResultAsync
-    // (where validation is complete and User/Device entities are available) and populate
-    // CurrentContext inline immediately before the flag check. Do not populate CurrentContext
-    // from raw form-body input before the grant-specific validator finishes — pre-validation
-    // client values would become visible to any downstream reader in the same request.
+    // NOTE: CurrentContextMiddleware reads only /connect/token headers, so CurrentContext.UserId
+    // and CurrentContext.DeviceIdentifier are unset in this validator. LaunchDarkly cannot bucket
+    // a user- or device-targeted feature flag here unless code first sets those values manually
+    // from the validated User and Device entities.
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
         CustomValidatorRequestContext validatorContext)
     {
