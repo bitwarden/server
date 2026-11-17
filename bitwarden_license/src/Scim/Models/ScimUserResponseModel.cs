@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Scim.Utilities;
 
 namespace Bit.Scim.Models;
 
@@ -16,7 +17,7 @@ public class ScimUserResponseModel : BaseScimUserModel
     {
         Id = orgUser.Id;
         ExternalId = orgUser.ExternalId;
-        UserName = orgUser.Email;
+        UserName = orgUser.ScimUserName();
         DisplayName = orgUser.Name;
         Emails = new List<EmailModel> { new EmailModel(orgUser.Email) };
         Name = new NameModel(orgUser.Name);
