@@ -10,6 +10,7 @@ using CoreEntity = Bit.Pam.Entities.AccessLease;
 using EfDecision = Bit.Infrastructure.EntityFramework.Pam.Models.AccessDecision;
 using EfLeaseExpirySweep = Bit.Infrastructure.EntityFramework.Pam.Models.PamLeaseExpirySweep;
 using EfModel = Bit.Infrastructure.EntityFramework.Pam.Models.AccessLease;
+using EfPendingAccessEnd = Bit.Infrastructure.EntityFramework.Pam.Models.PamPendingAccessEnd;
 
 #nullable enable
 
@@ -266,6 +267,23 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
             decisionEntity.CreationDate = now;
 
             await dbContext.AccessDecisions.AddAsync(decisionEntity);
+
+            // The access-end trigger runs after commit; this row lets the rotation sweep retry it if it fails.
+            var configId = await dbContext.PamRotationConfigs
+                .Where(c => c.RotateOnAccessEnd && c.Enabled
+                    && dbContext.AccessLeases.Any(l => l.Id == lease.Id && l.CipherId == c.CipherId))
+                .Select(c => (Guid?)c.Id)
+                .FirstOrDefaultAsync();
+            if (configId is not null)
+            {
+                await dbContext.PamPendingAccessEnds.AddAsync(new EfPendingAccessEnd
+                {
+                    AccessLeaseId = lease.Id,
+                    RotationConfigId = configId.Value,
+                    CreationDate = now,
+                });
+            }
+
             await dbContext.SaveChangesAsync();
         }
 
@@ -298,6 +316,19 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         {
             dbContext.PamLeaseExpirySweeps.AddRange(due.Select(l =>
                 new EfLeaseExpirySweep { AccessLeaseId = l.Id, SweptDate = now }));
+
+            // The caller runs the access-end trigger after this commits; these rows let the rotation sweep retry it
+            // if it fails.
+            var cipherIds = due.Select(l => l.CipherId).Distinct().ToList();
+            var configs = await dbContext.PamRotationConfigs
+                .Where(c => cipherIds.Contains(c.CipherId) && c.RotateOnAccessEnd && c.Enabled)
+                .Select(c => new { c.Id, c.CipherId })
+                .ToListAsync();
+            dbContext.PamPendingAccessEnds.AddRange(
+                from l in due
+                join c in configs on l.CipherId equals c.CipherId
+                select new EfPendingAccessEnd { AccessLeaseId = l.Id, RotationConfigId = c.Id, CreationDate = now });
+
             try
             {
                 await dbContext.SaveChangesAsync();

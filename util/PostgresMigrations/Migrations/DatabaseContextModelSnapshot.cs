@@ -2746,6 +2746,24 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("PamLeaseExpirySweep", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamPendingAccessEnd", b =>
+                {
+                    b.Property<Guid>("AccessLeaseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RotationConfigId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("AccessLeaseId");
+
+                    b.HasIndex("RotationConfigId");
+
+                    b.ToTable("PamPendingAccessEnd", (string)null);
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationAttempt", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4264,6 +4282,15 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.AccessLease", null)
                         .WithMany()
                         .HasForeignKey("AccessLeaseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamPendingAccessEnd", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationConfig", null)
+                        .WithMany()
+                        .HasForeignKey("RotationConfigId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

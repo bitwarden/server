@@ -52,7 +52,7 @@ public class HandleAccessGrantEndedCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleAsync_NotOptedIn_NoOp(PamRotationConfig config)
+    public async Task HandleAsync_NotOptedIn_DropsPendingAccessEnd(PamRotationConfig config)
     {
         var sutProvider = Setup();
         config.RotateOnAccessEnd = false;
@@ -63,12 +63,14 @@ public class HandleAccessGrantEndedCommandTests
 
         await sutProvider.GetDependency<IOfferRotationCommand>().DidNotReceiveWithAnyArgs()
             .OfferAsync(default, default);
+        await sutProvider.GetDependency<IPamRotationConfigRepository>().Received(1)
+            .DeletePendingAccessEndAsync(config.Id);
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs()
             .EmitAsync(default!);
     }
 
     [Theory, BitAutoData]
-    public async Task HandleAsync_Paused_NoOp(PamRotationConfig config)
+    public async Task HandleAsync_Paused_DropsPendingAccessEnd(PamRotationConfig config)
     {
         var sutProvider = Setup();
         config.RotateOnAccessEnd = true;
@@ -81,13 +83,15 @@ public class HandleAccessGrantEndedCommandTests
         await sutProvider.GetDependency<IOfferRotationCommand>().DidNotReceiveWithAnyArgs()
             .OfferAsync(default, default);
         await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs()
-            .ReplaceAsync(default!);
+            .RaiseManualObligationOnAccessEndAsync(default, default);
+        await sutProvider.GetDependency<IPamRotationConfigRepository>().Received(1)
+            .DeletePendingAccessEndAsync(config.Id);
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs()
             .EmitAsync(default!);
     }
 
     [Theory, BitAutoData]
-    public async Task HandleAsync_AutomaticOptedIn_OffersWithAccessEndSource(
+    public async Task HandleAsync_AutomaticOptedIn_OffersWithAccessEndSourceThenClearsPending(
         PamRotationConfig config, PamTargetSystem target)
     {
         var sutProvider = Setup();
@@ -101,8 +105,11 @@ public class HandleAccessGrantEndedCommandTests
 
         await sutProvider.Sut.HandleAsync(config.CipherId);
 
-        await sutProvider.GetDependency<IOfferRotationCommand>().Received(1)
-            .OfferAsync(config.Id, PamRotationSource.AccessEnd);
+        Received.InOrder(() =>
+        {
+            sutProvider.GetDependency<IOfferRotationCommand>().OfferAsync(config.Id, PamRotationSource.AccessEnd);
+            sutProvider.GetDependency<IPamRotationConfigRepository>().DeletePendingAccessEndAsync(config.Id);
+        });
         await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs()
             .ReplaceAsync(default!);
         // OfferRotationCommand audits the offer itself.
@@ -110,8 +117,30 @@ public class HandleAccessGrantEndedCommandTests
             .EmitAsync(default!);
     }
 
+    // The pending access end must outlive a failed offer, so the rotation sweep can retry it.
     [Theory, BitAutoData]
-    public async Task HandleAsync_ManualOptedInEnabled_SetsNextRotationAtNowAndEmitsManualRotationDueAudit(
+    public async Task HandleAsync_AutomaticOfferThrows_KeepsPendingAccessEnd(
+        PamRotationConfig config, PamTargetSystem target)
+    {
+        var sutProvider = Setup();
+        config.RotateOnAccessEnd = true;
+        config.Enabled = true;
+        target.Id = config.TargetSystemId;
+        target.Method = PamTargetSystemMethod.Automatic;
+        sutProvider.GetDependency<IPamRotationConfigRepository>().GetByCipherIdAsync(config.CipherId)
+            .Returns(config);
+        sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(config.TargetSystemId).Returns(target);
+        sutProvider.GetDependency<IOfferRotationCommand>().OfferAsync(config.Id, PamRotationSource.AccessEnd)
+            .Returns(Task.FromException<PamRotationJobCreateOutcome>(new InvalidOperationException("boom")));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.HandleAsync(config.CipherId));
+
+        await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs()
+            .DeletePendingAccessEndAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleAsync_ManualOptedInEnabled_RaisesObligationAndEmitsManualRotationDueAudit(
         PamRotationConfig config, PamTargetSystem target)
     {
         var sutProvider = Setup();
@@ -122,13 +151,15 @@ public class HandleAccessGrantEndedCommandTests
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetByCipherIdAsync(config.CipherId)
             .Returns(config);
         sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(config.TargetSystemId).Returns(target);
+        sutProvider.GetDependency<IPamRotationConfigRepository>().RaiseManualObligationOnAccessEndAsync(config.Id, _now)
+            .Returns(true);
 
         await sutProvider.Sut.HandleAsync(config.CipherId);
 
         await sutProvider.GetDependency<IOfferRotationCommand>().DidNotReceiveWithAnyArgs()
             .OfferAsync(default, default);
-        await sutProvider.GetDependency<IPamRotationConfigRepository>().Received(1).ReplaceAsync(
-            Arg.Is<PamRotationConfig>(c => c.Id == config.Id && c.NextRotationDate == _now));
+        await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default!);
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.ManualRotationDue
                 && a.OrganizationId == config.OrganizationId
@@ -136,6 +167,27 @@ public class HandleAccessGrantEndedCommandTests
                 && a.CipherId == config.CipherId
                 && a.RotationConfigId == config.Id
                 && a.RotationSource == PamRotationSource.AccessEnd));
+    }
+
+    // A concurrent call (the inline trigger or a sweep retry) already raised it, so the audit is not repeated.
+    [Theory, BitAutoData]
+    public async Task HandleAsync_ManualNothingPending_EmitsNoAudit(PamRotationConfig config, PamTargetSystem target)
+    {
+        var sutProvider = Setup();
+        config.RotateOnAccessEnd = true;
+        config.Enabled = true;
+        target.Id = config.TargetSystemId;
+        target.Method = PamTargetSystemMethod.Manual;
+        sutProvider.GetDependency<IPamRotationConfigRepository>().GetByCipherIdAsync(config.CipherId)
+            .Returns(config);
+        sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(config.TargetSystemId).Returns(target);
+        sutProvider.GetDependency<IPamRotationConfigRepository>().RaiseManualObligationOnAccessEndAsync(config.Id, _now)
+            .Returns(false);
+
+        await sutProvider.Sut.HandleAsync(config.CipherId);
+
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs()
+            .EmitAsync(default!);
     }
 
     private static SutProvider<HandleAccessGrantEndedCommand> Setup()
