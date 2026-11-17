@@ -432,8 +432,10 @@ public class PatchUserCommandTests
     }
 
     [Theory]
-    [BitAutoData]
-    public async Task PatchUser_UserNameEmpty_ClearsExternalName(SutProvider<PatchUserCommand> sutProvider, OrganizationUser organizationUser)
+    [BitAutoData("\"\"")]
+    [BitAutoData("\" \"")]
+    [BitAutoData("null")]
+    public async Task PatchUser_UserNameEmpty_ThrowsBadRequest(string value, SutProvider<PatchUserCommand> sutProvider, OrganizationUser organizationUser)
     {
         organizationUser.ExternalName = "jane.doe@tenant.onmicrosoft.com";
 
@@ -441,11 +443,11 @@ public class PatchUserCommandTests
             .GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
 
-        await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id,
-            ReplaceModel(path: "userName", value: "\"\""));
+        await Assert.ThrowsAsync<BadRequestException>(async () =>
+            await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id,
+                ReplaceModel(path: "userName", value: value)));
 
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
-            Arg.Is<OrganizationUser>(ou => ou.ExternalName == null));
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
     }
 
     [Theory]

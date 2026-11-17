@@ -152,19 +152,18 @@ public class PatchUserCommand : IPatchUserCommand
     {
         if (string.IsNullOrWhiteSpace(newUserName))
         {
-            newUserName = null;
+            throw new BadRequestException("UserName is required.");
         }
-        else if (newUserName.Length > 300)
+
+        if (newUserName.Length > 300)
         {
             throw new BadRequestException("UserName cannot exceed 300 characters.");
         }
-        else
+
+        var existingUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgUser.OrganizationId);
+        if (existingUsers.Any(u => u.Id != orgUser.Id && u.HasScimUserName(newUserName)))
         {
-            var existingUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgUser.OrganizationId);
-            if (existingUsers.Any(u => u.Id != orgUser.Id && u.HasScimUserName(newUserName)))
-            {
-                throw new ConflictException("UserName already exists for another user.");
-            }
+            throw new ConflictException("UserName already exists for another user.");
         }
 
         orgUser.ExternalName = newUserName;

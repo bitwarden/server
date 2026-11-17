@@ -567,7 +567,19 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
     public override async Task ReplaceAsync(Core.Entities.OrganizationUser organizationUser)
     {
-        await base.ReplaceAsync(organizationUser);
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var entity = await GetDbSet(dbContext).FindAsync(organizationUser.Id);
+        if (entity != null)
+        {
+            dbContext.Entry(entity).CurrentValues.SetValues(Mapper.Map<OrganizationUser>(organizationUser));
+            if (organizationUser.ExternalName == null)
+            {
+                dbContext.Entry(entity).Property(e => e.ExternalName).IsModified = false;
+            }
+            await dbContext.SaveChangesAsync();
+        }
 
         // Only bump the account revision date if linked to a user account
         if (!organizationUser.UserId.HasValue)
@@ -575,8 +587,6 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             return;
         }
 
-        using var scope = ServiceScopeFactory.CreateScope();
-        var dbContext = GetDatabaseContext(scope);
         await dbContext.UserBumpAccountRevisionDateAsync(organizationUser.UserId.Value);
         await dbContext.SaveChangesAsync();
     }
@@ -646,6 +656,10 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         {
             var dbContext = GetDatabaseContext(scope);
             dbContext.UpdateRange(organizationUsers);
+            foreach (var organizationUser in organizationUsers.Where(ou => ou.ExternalName == null))
+            {
+                dbContext.Entry(organizationUser).Property(ou => ou.ExternalName).IsModified = false;
+            }
             await dbContext.SaveChangesAsync();
             await dbContext.UserBumpManyAccountRevisionDatesAsync(organizationUsers
                 .Where(ou => ou.UserId.HasValue)
