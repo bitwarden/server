@@ -632,7 +632,8 @@ public static class CoreHelpers
     /// the root has no source that loads.
     /// </summary>
     /// <exception cref="InvalidOperationException">The future slot is enabled and active, and its certificate did
-    /// not load. Or the certificate does not have an RSA key.</exception>
+    /// not load. Or a configured source of the root throws while it loads. Or the certificate does not have an RSA
+    /// key.</exception>
     public static X509Certificate2? GetIdentityServerCertificate(GlobalSettings globalSettings)
     {
         var identityServer = globalSettings.IdentityServer;
@@ -653,8 +654,9 @@ public static class CoreHelpers
     /// Gets the active certificate of a role. An enabled and active future slot replaces the root. When
     /// <paramref name="required"/> is false, returns null when the root has no source that loads.
     /// </summary>
-    /// <exception cref="InvalidOperationException">A required certificate did not load. Or the certificate does
-    /// not have an RSA key.</exception>
+    /// <exception cref="InvalidOperationException">A required certificate did not load. Or, when
+    /// <paramref name="required"/> is false, a configured source of the root throws while it loads. Or the
+    /// certificate does not have an RSA key.</exception>
     public static X509Certificate2? GetActiveCertificate(GlobalSettings globalSettings, ICertificateSettings root,
         GlobalSettings.FutureCertificateSettings future, string rootPath, bool required)
     {
@@ -668,7 +670,16 @@ public static class CoreHelpers
             return LoadRequiredCertificate(globalSettings, root, rootPath);
         }
 
-        var certificate = LoadCertificate(globalSettings, root);
+        X509Certificate2? certificate;
+        try
+        {
+            certificate = LoadCertificate(globalSettings, root);
+        }
+        catch (Exception ex)
+        {
+            throw CertificateNotLoaded(rootPath, ex);
+        }
+
         return certificate == null ? null : RequireRsaKey(certificate, rootPath);
     }
 

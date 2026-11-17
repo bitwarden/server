@@ -616,13 +616,13 @@ public static class ServiceCollectionExtensions
         }
         else
         {
-            AddDeveloperSigningCredential(identityServerBuilder, env, globalSettings);
+            AddDeveloperSigningCredential(identityServerBuilder, env, globalSettings, role);
         }
         return identityServerBuilder;
     }
 
     private static void AddDeveloperSigningCredential(IIdentityServerBuilder identityServerBuilder,
-        IWebHostEnvironment env, GlobalSettings globalSettings)
+        IWebHostEnvironment env, GlobalSettings globalSettings, CertificateRole role)
     {
         if (env.IsDevelopment() && !string.IsNullOrEmpty(globalSettings.DevelopmentDirectory))
         {
@@ -635,7 +635,12 @@ public static class ServiceCollectionExtensions
         }
         else
         {
-            throw new Exception("No identity certificate to use.");
+            throw new InvalidOperationException(
+                $"No {Bit.Core.Enums.EnumExtensions.GetDisplayName(role)} certificate loaded from " +
+                "globalSettings:identityServer. " +
+                "A self-hosted host must set certificateLocation and certificatePassword, and the file must exist. " +
+                "A cloud host must set blobName and certificatePassword, and the blob must exist. " +
+                "Check that the password is correct.");
         }
     }
 

@@ -147,6 +147,7 @@ When both SSO roles have their own active source, `/sso` does not use the Identi
 The host stops at startup if a configured certificate cannot be used. Causes:
 
 - An enabled entry that does not load: a missing file, blob, or thumbprint, or a wrong password. The error names the setting path.
+- An Identity root certificate that does not load: a missing file or blob, or a wrong password. The error names `globalSettings:identityServer`. A host in the Development environment uses a developer signing key instead.
 - A certificate with no RSA key. The error names the setting path.
 - A certificate with no private key, if the host signs with it or SAML uses it. For SAML, the error names the role and the thumbprint. For token signing, the error is the message of the token library.
 

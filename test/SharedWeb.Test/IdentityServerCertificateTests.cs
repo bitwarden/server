@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography.X509Certificates;
+﻿using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using Azure.Storage.Blobs;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -226,9 +227,11 @@ public class IdentityServerCertificateTests : IClassFixture<IdentityServerCertif
             var globalSettings = NoCertificateSettings();
             globalSettings.DevelopmentDirectory = directory;
 
-            var exception = Assert.Throws<Exception>(() => BuildProvider(environmentName, globalSettings));
+            var exception = Assert.Throws<InvalidOperationException>(() => BuildProvider(environmentName, globalSettings));
 
-            Assert.Equal("No identity certificate to use.", exception.Message);
+            Assert.Equal(
+            "No Identity signing certificate loaded from globalSettings:identityServer. A self-hosted host must set certificateLocation and certificatePassword, and the file must exist. A cloud host must set blobName and certificatePassword, and the blob must exist. Check that the password is correct.",
+            exception.Message);
             Assert.False(File.Exists(Path.Combine(directory, "signingkey.jwk")));
         }
         finally
@@ -242,9 +245,24 @@ public class IdentityServerCertificateTests : IClassFixture<IdentityServerCertif
     {
         var globalSettings = NoCertificateSettings();
 
-        var exception = Assert.Throws<Exception>(() => BuildProvider("Production", globalSettings));
+        var exception = Assert.Throws<InvalidOperationException>(() => BuildProvider("Production", globalSettings));
 
-        Assert.Equal("No identity certificate to use.", exception.Message);
+        Assert.Equal(
+            "No Identity signing certificate loaded from globalSettings:identityServer. A self-hosted host must set certificateLocation and certificatePassword, and the file must exist. A cloud host must set blobName and certificatePassword, and the blob must exist. Check that the password is correct.",
+            exception.Message);
+    }
+
+    [Fact]
+    public void AddIdentityServerCertificate_ProductionWithRootFileWithWrongPassword_ThrowsWithPath()
+    {
+        using var certificate = TestCertificates.Create();
+        var globalSettings = SelfHostedSettings(certificate);
+        globalSettings.IdentityServer.CertificatePassword = "Wrong-Certificate-Password1";
+
+        var exception = Assert.Throws<InvalidOperationException>(() => BuildProvider("Production", globalSettings));
+
+        Assert.Contains("globalSettings:identityServer did not load", exception.Message);
+        Assert.IsType<CryptographicException>(exception.InnerException);
     }
 
     [Fact]

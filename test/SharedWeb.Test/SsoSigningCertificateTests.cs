@@ -254,9 +254,11 @@ public class SsoSigningCertificateTests : IClassFixture<IdentityServerCertificat
         var globalSettings = NoCertificateSettings();
         globalSettings.SelfHosted = true;
 
-        var exception = Assert.Throws<Exception>(() => BuildProvider("Production", globalSettings));
+        var exception = Assert.Throws<InvalidOperationException>(() => BuildProvider("Production", globalSettings));
 
-        Assert.Equal("No identity certificate to use.", exception.Message);
+        Assert.Equal(
+            "No SSO signing certificate loaded from globalSettings:identityServer. A self-hosted host must set certificateLocation and certificatePassword, and the file must exist. A cloud host must set blobName and certificatePassword, and the blob must exist. Check that the password is correct.",
+            exception.Message);
     }
 
     [Fact]

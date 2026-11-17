@@ -116,11 +116,15 @@ public class IdentityServerCertificateTests
         };
         globalSettings.Storage.ConnectionString = null;
 
-        Assert.Throws<CryptographicException>(() => CoreHelpers.GetIdentityServerCertificate(globalSettings));
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            CoreHelpers.GetIdentityServerCertificate(globalSettings));
+
+        Assert.Contains("globalSettings:identityServer did not load", exception.Message);
+        Assert.IsType<CryptographicException>(exception.InnerException);
     }
 
     [Fact]
-    public void SelfHosted_RootFileWithWrongPassword_ThrowsCryptographicException_NoPasswordInExceptionChain()
+    public void SelfHosted_RootFileWithWrongPassword_ThrowsWithPath_NoPasswordInExceptionChain()
     {
         const string correctPassword = "Correct-Root-Pfx-Password-7Q3Z";
         const string configuredPassword = "Configured-Root-Pfx-Password-9K4X";
@@ -137,7 +141,7 @@ public class IdentityServerCertificateTests
         };
         globalSettings.Storage.ConnectionString = null;
 
-        var exception = Assert.Throws<CryptographicException>(() =>
+        var exception = Assert.Throws<InvalidOperationException>(() =>
             CoreHelpers.GetIdentityServerCertificate(globalSettings));
 
         Assert.DoesNotContain(configuredPassword, exception.ToString());
