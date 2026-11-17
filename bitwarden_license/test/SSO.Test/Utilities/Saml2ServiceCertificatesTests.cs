@@ -297,6 +297,40 @@ public class Saml2ServiceCertificatesTests
     }
 
     [Fact]
+    public void GetEncryptionCertificates_EncryptionAndSigningHaveActiveSources_DoNotReadIdentitySlots()
+    {
+        using var ssoSigning = TestCertificates.Create("CN=Bitwarden Test SSO Signing");
+        using var ssoEncryption = TestCertificates.Create("CN=Bitwarden Test SSO Encryption");
+        var globalSettings = new GlobalSettings { SelfHosted = true };
+        globalSettings.IdentityServer.FutureCertificate = new GlobalSettings.FutureCertificateSettings
+        {
+            CertificateLocation = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}-missing.pfx"),
+            CertificatePassword = Password,
+            Enabled = true,
+            Active = true,
+        };
+        globalSettings.IdentityServer.ValidationCertificates = [UnloadableEntry()];
+        globalSettings.SsoServer.CertificateLocation = TestCertificates.WritePfx(ssoSigning, Password);
+        globalSettings.SsoServer.CertificatePassword = Password;
+        globalSettings.SsoServer.Encryption.CertificateLocation = TestCertificates.WritePfx(ssoEncryption, Password);
+        globalSettings.SsoServer.Encryption.CertificatePassword = Password;
+        var identityCertificates = new IdentityCertificateSlots(globalSettings);
+
+        var encryption = Saml2ServiceCertificates.GetEncryptionCertificates(Environment("Production"),
+            globalSettings, identityCertificates);
+        var signing = SharedWeb.Utilities.ServiceCollectionExtensions.GetSsoSigningCertificates(
+            Environment("Production"), globalSettings, identityCertificates);
+
+        Assert.False(encryption.IsFallback);
+        Assert.Equal(ssoEncryption.Thumbprint, encryption.Active?.Thumbprint);
+        Assert.False(signing.IsFallback);
+        Assert.Equal(ssoSigning.Thumbprint, signing.Active?.Thumbprint);
+        // Reading the Identity active or retired slot throws, so the calls above did not read either slot.
+        Assert.Throws<InvalidOperationException>(() => identityCertificates.Active);
+        Assert.Throws<InvalidOperationException>(() => identityCertificates.Retired);
+    }
+
+    [Fact]
     public void GetEncryptionCertificates_EncryptionAndSigningFallBack_UnloadableIdentityValidation_SigningThrows()
     {
         using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");
