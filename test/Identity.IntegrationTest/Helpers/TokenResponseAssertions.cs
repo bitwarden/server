@@ -5,7 +5,7 @@ using Xunit;
 namespace Bit.Identity.IntegrationTest.Helpers;
 
 /// <summary>
-/// Assertions on the body of a successful token endpoint response.
+/// Assertions on the body of a token endpoint response.
 /// </summary>
 public static class TokenResponseAssertions
 {
@@ -48,6 +48,21 @@ public static class TokenResponseAssertions
     {
         return AssertHelper.AssertJsonProperty(tokenResponse, "refresh_token", JsonValueKind.String).GetString();
     }
+
+    /// <summary>
+    /// Asserts a 400 response whose body holds only the given OAuth error code.
+    /// </summary>
+    public static async Task AssertErrorAsync(HttpContext httpContext, string expectedError)
+    {
+        Assert.Equal(StatusCodes.Status400BadRequest, httpContext.Response.StatusCode);
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(httpContext);
+        var root = body.RootElement;
+        Assert.Equal(new[] { "error" }, root.EnumerateObject().Select(p => p.Name).ToArray());
+        Assert.Equal(expectedError, AssertHelper.AssertJsonProperty(root, "error", JsonValueKind.String).GetString());
+    }
+
+    public static Task AssertInvalidGrantAsync(HttpContext httpContext) =>
+        AssertErrorAsync(httpContext, "invalid_grant");
 
     private static string AssertScopeExists(JsonElement tokenResponse)
     {
