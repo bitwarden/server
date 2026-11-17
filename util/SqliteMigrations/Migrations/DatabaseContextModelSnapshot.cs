@@ -1774,6 +1774,10 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ExternalName")
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("InviteReminderDueDate")
                         .HasColumnType("TEXT");
 
