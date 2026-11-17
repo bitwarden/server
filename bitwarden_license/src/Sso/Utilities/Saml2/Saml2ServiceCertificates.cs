@@ -22,7 +22,7 @@ public static class Saml2ServiceCertificates
     /// <exception cref="InvalidOperationException">A cloud host has no SSO encryption active source, or a configured
     /// certificate did not load, or a configured certificate does not have an RSA key.</exception>
     public static EncryptionCertificateSet GetEncryptionCertificates(IWebHostEnvironment env,
-        GlobalSettings globalSettings, IdentityCertificates identity)
+        GlobalSettings globalSettings, IdentityCertificateSlots identity)
     {
         const string encryptionPath = "globalSettings:ssoServer:encryption";
         var encryption = globalSettings.SsoServer.Encryption;

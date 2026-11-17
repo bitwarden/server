@@ -506,7 +506,7 @@ public static class ServiceCollectionExtensions
         this IIdentityServerBuilder identityServerBuilder, IWebHostEnvironment env, GlobalSettings globalSettings)
     {
         return AddSigningCertificateSet(identityServerBuilder, env, globalSettings,
-            GetIdentitySigningCertificates(new IdentityCertificates(globalSettings)),
+            GetIdentitySigningCertificates(new IdentityCertificateSlots(globalSettings)),
             CertificateRole.IdentitySigning);
     }
 
@@ -532,7 +532,7 @@ public static class ServiceCollectionExtensions
     /// <exception cref="InvalidOperationException">A cloud host has no SSO active source, or a configured
     /// certificate did not load, or a configured certificate does not have an RSA key.</exception>
     public static SigningCertificateSet GetSsoSigningCertificates(IWebHostEnvironment env,
-        GlobalSettings globalSettings, IdentityCertificates identity)
+        GlobalSettings globalSettings, IdentityCertificateSlots identity)
     {
         const string ssoServerPath = "globalSettings:ssoServer";
         var ssoServer = globalSettings.SsoServer;
@@ -544,7 +544,7 @@ public static class ServiceCollectionExtensions
         }
 
         return new SigningCertificateSet(identity.Active, [.. identity.Staged, .. sso.Staged],
-            [.. identity.Validation, .. sso.Retired], IsFallback: true);
+            [.. identity.Retired, .. sso.Retired], IsFallback: true);
     }
 
     /// <summary>
@@ -639,8 +639,8 @@ public static class ServiceCollectionExtensions
         }
     }
 
-    private static SigningCertificateSet GetIdentitySigningCertificates(IdentityCertificates identity) =>
-        new(identity.Active, identity.Staged, identity.Validation, IsFallback: false);
+    private static SigningCertificateSet GetIdentitySigningCertificates(IdentityCertificateSlots identity) =>
+        new(identity.Active, identity.Staged, identity.Retired, IsFallback: false);
 
     private static IIdentityServerBuilder AddSigningCertificates(IIdentityServerBuilder identityServerBuilder,
         X509Certificate2 active, IEnumerable<X509Certificate2> published)

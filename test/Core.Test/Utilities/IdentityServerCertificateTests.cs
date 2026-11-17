@@ -450,7 +450,8 @@ public class IdentityServerCertificateTests
             },
         };
 
-        Assert.Equal(expected, CoreHelpers.HasActiveSource(ssoServer, ssoServer.FutureCertificate));
+        Assert.Equal(expected,
+            CoreHelpers.HasActiveCertificateSettingsSource(ssoServer, ssoServer.FutureCertificate));
     }
 
     [Theory]

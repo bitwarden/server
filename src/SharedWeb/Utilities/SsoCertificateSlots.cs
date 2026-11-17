@@ -35,7 +35,7 @@ public sealed record SsoCertificateSlots(
         IEnumerable<GlobalSettings.RetiredCertificateSettings> retired, string rootPath, string retiredPath,
         CertificateRole role)
     {
-        var hasActiveSource = CoreHelpers.HasActiveSource(root, future);
+        var hasActiveSource = CoreHelpers.HasActiveCertificateSettingsSource(root, future);
         if (!hasActiveSource && !globalSettings.SelfHosted && !env.IsDevelopment())
         {
             throw new InvalidOperationException(

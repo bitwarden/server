@@ -319,7 +319,7 @@ public class SsoSigningCertificateTests : IClassFixture<IdentityServerCertificat
 
     private static SigningCertificateSet GetCertificates(string environmentName, GlobalSettings globalSettings) =>
         SharedWeb.Utilities.ServiceCollectionExtensions.GetSsoSigningCertificates(Environment(environmentName),
-            globalSettings, new IdentityCertificates(globalSettings));
+            globalSettings, new IdentityCertificateSlots(globalSettings));
 
     private static string KeyId(X509Certificate2 certificate) => certificate.Thumbprint + "RS256";
 

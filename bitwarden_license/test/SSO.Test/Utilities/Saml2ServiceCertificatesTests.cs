@@ -182,7 +182,7 @@ public class Saml2ServiceCertificatesTests
         globalSettings.SsoServer.Encryption.DecryptionCertificates = [RetiredEntry(decryption)];
 
         var certificates = Saml2ServiceCertificates.GetEncryptionCertificates(Environment("Production"),
-            globalSettings, new IdentityCertificates(globalSettings));
+            globalSettings, new IdentityCertificateSlots(globalSettings));
 
         Assert.True(certificates.IsFallback);
         Assert.Equal(identity.Thumbprint, certificates.Active?.Thumbprint);
@@ -206,7 +206,7 @@ public class Saml2ServiceCertificatesTests
         globalSettings.SsoServer.Encryption.DecryptionCertificates = [RetiredEntry(decryption)];
 
         var certificates = Saml2ServiceCertificates.GetEncryptionCertificates(Environment("Production"),
-            globalSettings, new IdentityCertificates(globalSettings));
+            globalSettings, new IdentityCertificateSlots(globalSettings));
 
         Assert.False(certificates.IsFallback);
         Assert.Equal(encryption.Thumbprint, certificates.Active?.Thumbprint);
@@ -224,7 +224,7 @@ public class Saml2ServiceCertificatesTests
         globalSettings.SsoServer.Encryption.FutureCertificate.Active = true;
 
         var certificates = Saml2ServiceCertificates.GetEncryptionCertificates(Environment("Production"),
-            globalSettings, new IdentityCertificates(globalSettings));
+            globalSettings, new IdentityCertificateSlots(globalSettings));
 
         Assert.False(certificates.IsFallback);
         Assert.Equal(promoted.Thumbprint, certificates.Active?.Thumbprint);
@@ -246,7 +246,7 @@ public class Saml2ServiceCertificatesTests
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
             Saml2ServiceCertificates.GetEncryptionCertificates(Environment("Production"), globalSettings,
-                new IdentityCertificates(globalSettings)));
+                new IdentityCertificateSlots(globalSettings)));
 
         Assert.Equal(
             "No SSO encryption certificate is configured. A cloud host must set globalSettings:ssoServer:encryption.",
@@ -260,7 +260,7 @@ public class Saml2ServiceCertificatesTests
         using var identityStaged = TestCertificates.Create("CN=Bitwarden Test Identity Staged");
         var globalSettings = SelfHostedSettings(identity);
         globalSettings.IdentityServer.FutureCertificate = FutureSlot(identityStaged);
-        var identityCertificates = new IdentityCertificates(globalSettings);
+        var identityCertificates = new IdentityCertificateSlots(globalSettings);
 
         var encryption = Saml2ServiceCertificates.GetEncryptionCertificates(Environment("Production"),
             globalSettings, identityCertificates);
@@ -283,7 +283,7 @@ public class Saml2ServiceCertificatesTests
         globalSettings.IdentityServer.ValidationCertificates = [UnloadableEntry()];
         globalSettings.SsoServer.CertificateLocation = TestCertificates.WritePfx(ssoSigning, Password);
         globalSettings.SsoServer.CertificatePassword = Password;
-        var identityCertificates = new IdentityCertificates(globalSettings);
+        var identityCertificates = new IdentityCertificateSlots(globalSettings);
 
         var encryption = Saml2ServiceCertificates.GetEncryptionCertificates(Environment("Production"),
             globalSettings, identityCertificates);
@@ -302,7 +302,7 @@ public class Saml2ServiceCertificatesTests
         using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");
         var globalSettings = SelfHostedSettings(identity);
         globalSettings.IdentityServer.ValidationCertificates = [UnloadableEntry()];
-        var identityCertificates = new IdentityCertificates(globalSettings);
+        var identityCertificates = new IdentityCertificateSlots(globalSettings);
 
         Saml2ServiceCertificates.GetEncryptionCertificates(Environment("Production"), globalSettings,
             identityCertificates);

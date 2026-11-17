@@ -5,7 +5,7 @@ using Bit.Test.Common.Helpers;
 
 namespace Bit.SharedWeb.Test;
 
-public class IdentityCertificatesTests
+public class IdentityCertificateSlotsTests
 {
     private const string Password = "Test-Certificate-Password1";
 
@@ -31,22 +31,22 @@ public class IdentityCertificatesTests
                 CertificatePassword = Password,
             },
         ];
-        var certificates = new IdentityCertificates(globalSettings);
+        var certificates = new IdentityCertificateSlots(globalSettings);
 
         var active = certificates.Active;
         var staged = certificates.Staged;
-        var validation = certificates.Validation;
+        var validation = certificates.Retired;
 
         Assert.Equal(identity.Thumbprint, active?.Thumbprint);
         Assert.Equal(identityStaged.Thumbprint, Assert.Single(staged).Thumbprint);
         Assert.Equal(identityRetired.Thumbprint, Assert.Single(validation).Thumbprint);
         Assert.Same(active, certificates.Active);
         Assert.Same(staged, certificates.Staged);
-        Assert.Same(validation, certificates.Validation);
+        Assert.Same(validation, certificates.Retired);
     }
 
     [Fact]
-    public void ValidationNotRead_UnloadableValidationEntry_DoesNotThrow()
+    public void RetiredNotRead_UnloadableValidationEntry_DoesNotThrow()
     {
         using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");
         var globalSettings = SelfHostedSettings(identity);
@@ -58,11 +58,11 @@ public class IdentityCertificatesTests
                 CertificatePassword = Password,
             },
         ];
-        var certificates = new IdentityCertificates(globalSettings);
+        var certificates = new IdentityCertificateSlots(globalSettings);
 
         Assert.Equal(identity.Thumbprint, certificates.Active?.Thumbprint);
         Assert.Empty(certificates.Staged);
-        var exception = Assert.Throws<InvalidOperationException>(() => certificates.Validation);
+        var exception = Assert.Throws<InvalidOperationException>(() => certificates.Retired);
         Assert.Contains("globalSettings:identityServer:validationCertificates:0 ", exception.Message);
     }
 

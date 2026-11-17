@@ -72,7 +72,7 @@ public class Startup
         services.AddDistributedIdentityServices();
         services.AddAuthentication()
             .AddCookie(AuthenticationSchemes.SsoExternalCookie);
-        var identityCertificates = new IdentityCertificates(globalSettings);
+        var identityCertificates = new IdentityCertificateSlots(globalSettings);
         var encryptionCertificates =
             Saml2ServiceCertificates.GetEncryptionCertificates(Environment, globalSettings, identityCertificates);
         var signingCertificates = SharedWeb.Utilities.ServiceCollectionExtensions.GetSsoSigningCertificates(

@@ -23,7 +23,7 @@ public class OidcBackchannelHttpClientTests
         var environment = Substitute.For<IWebHostEnvironment>();
         environment.EnvironmentName.Returns("Development");
         var globalSettings = new GlobalSettings { SelfHosted = selfHosted };
-        var identityCertificates = new IdentityCertificates(globalSettings);
+        var identityCertificates = new IdentityCertificateSlots(globalSettings);
         services.AddSsoServices(globalSettings,
             SharedWeb.Utilities.ServiceCollectionExtensions.GetSsoSigningCertificates(environment, globalSettings,
                 identityCertificates),

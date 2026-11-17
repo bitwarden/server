@@ -640,7 +640,8 @@ public static class CoreHelpers
             "globalSettings:identityServer", required: false);
     }
 
-    public static bool HasActiveSource(ICertificateSettings root, GlobalSettings.FutureCertificateSettings future)
+    public static bool HasActiveCertificateSettingsSource(ICertificateSettings root,
+        GlobalSettings.FutureCertificateSettings future)
     {
         return SettingHasValue(root.CertificateLocation) ||
             SettingHasValue(root.CertificateThumbprint) ||
