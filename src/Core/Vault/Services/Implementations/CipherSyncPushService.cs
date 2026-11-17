@@ -14,7 +14,9 @@ namespace Bit.Core.Vault.Services;
 public class CipherSyncPushService : ICipherSyncPushService
 {
     /// <summary>
-    /// Above this many ciphers, one <see cref="PushType.SyncCiphers"/> costs less than a push per cipher.
+    /// Above this many ciphers, send one <see cref="PushType.SyncCiphers"/> instead of a push per cipher.
+    /// This is a starting value, not a measured break-even. It covers single-cipher changes and small
+    /// bulk actions.
     /// </summary>
     public const int MaxSyncCipherUserFieldsPushes = 10;
 
