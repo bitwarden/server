@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Runtime.CompilerServices;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Interfaces;
@@ -216,6 +217,90 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
             UserId = userId,
             Key = key,
         };
+
+    /// <summary>
+    /// Moves a Staged member to Invited.
+    /// Performs no validation (e.g. policies, seats); callers are responsible for that.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The member is not Staged.</exception>
+    public void Invite()
+    {
+        EnsureStatus(OrganizationUserStatusType.Staged);
+
+        Status = OrganizationUserStatusType.Invited;
+    }
+
+    /// <summary>
+    /// Moves an Invited member to Accepted and links it to <paramref name="userId"/>.
+    /// Performs no validation (e.g. policies, seats); callers are responsible for that.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The member is not Invited.</exception>
+    public void Accept(Guid userId)
+    {
+        EnsureStatus(OrganizationUserStatusType.Invited);
+
+        Status = OrganizationUserStatusType.Accepted;
+        UserId = userId;
+        Email = null;
+        ClearInviteReminders();
+    }
+
+    /// <summary>
+    /// Moves an Accepted member to Confirmed with the encrypted organization <paramref name="key"/>.
+    /// Performs no validation (e.g. policies, seats); callers are responsible for that.
+    /// </summary>
+    /// <exception cref="ArgumentException"><paramref name="key"/> is null or whitespace.</exception>
+    /// <exception cref="InvalidOperationException">The member is not Accepted.</exception>
+    public void Confirm(string key)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        EnsureStatus(OrganizationUserStatusType.Accepted);
+
+        Status = OrganizationUserStatusType.Confirmed;
+        Key = key;
+        Email = null;
+    }
+
+    /// <summary>
+    /// Moves a member to Revoked, saving its current status in <see cref="StatusNew"/> for <see cref="Restore"/>.
+    /// Performs no validation (e.g. last confirmed owner); callers are responsible for that.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The member is already Revoked.</exception>
+    public void Revoke(RevocationReason reason)
+    {
+        if (Status == OrganizationUserStatusType.Revoked)
+        {
+            throw new InvalidOperationException(
+                $"Cannot {nameof(Revoke)} an organization user that is already {OrganizationUserStatusType.Revoked}.");
+        }
+
+        StatusNew = Status.ToOrganizationUserStatusTypeNew();
+        Status = OrganizationUserStatusType.Revoked;
+        RevocationReason = reason;
+    }
+
+    /// <summary>
+    /// Moves a Revoked member back to its prior status (see <see cref="GetPriorActiveOrganizationUserStatusType"/>).
+    /// Performs no validation (e.g. policies, seats); callers are responsible for that.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The member is not Revoked.</exception>
+    public void Restore()
+    {
+        EnsureStatus(OrganizationUserStatusType.Revoked);
+
+        Status = GetPriorActiveOrganizationUserStatusType();
+        StatusNew = null;
+        RevocationReason = null;
+    }
+
+    private void EnsureStatus(OrganizationUserStatusType expected, [CallerMemberName] string transition = "")
+    {
+        if (Status != expected)
+        {
+            throw new InvalidOperationException(
+                $"Cannot {transition} an organization user with status {Status}; expected {expected}.");
+        }
+    }
 
     public Permissions? GetPermissions()
     {
