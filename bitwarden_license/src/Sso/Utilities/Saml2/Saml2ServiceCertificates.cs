@@ -29,7 +29,7 @@ public static class Saml2ServiceCertificates
         var sso = SsoCertificateSlots.Load(env, globalSettings, encryption, encryption.FutureCertificate,
             encryption.DecryptionCertificates, encryptionPath, $"{encryptionPath}:decryptionCertificates",
             CertificateRole.SsoEncryption);
-        if (!sso.IsFallback)
+        if (sso.HasActiveCertificateSettingsSource)
         {
             return new EncryptionCertificateSet(sso.Active, sso.Staged, sso.Retired, IsFallback: false);
         }

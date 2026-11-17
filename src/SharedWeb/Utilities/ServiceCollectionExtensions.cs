@@ -538,7 +538,7 @@ public static class ServiceCollectionExtensions
         var ssoServer = globalSettings.SsoServer;
         var sso = SsoCertificateSlots.Load(env, globalSettings, ssoServer, ssoServer.FutureCertificate,
             ssoServer.ValidationCertificates, ssoServerPath, $"{ssoServerPath}:validationCertificates", CertificateRole.SsoSigning);
-        if (!sso.IsFallback)
+        if (sso.HasActiveCertificateSettingsSource)
         {
             return new SigningCertificateSet(sso.Active, sso.Staged, sso.Retired, IsFallback: false);
         }

@@ -8,19 +8,19 @@ using Microsoft.Extensions.Hosting;
 namespace Bit.SharedWeb.Utilities;
 
 /// <summary>
-/// The certificates that one SSO role loads from its own settings. <see cref="Active"/> is null when
-/// <see cref="IsFallback"/> is true. <see cref="IsFallback"/> is true when the role has no active source, and the
-/// caller must use the Identity certificates as the active certificate.
+/// The certificates that the settings of one SSO role configure in each slot.
+/// <see cref="HasActiveCertificateSettingsSource"/> is true when the role's root fields or promoted future slot name a
+/// certificate. <see cref="Active"/> is null when <see cref="HasActiveCertificateSettingsSource"/> is false.
 /// </summary>
 public sealed record SsoCertificateSlots(
     X509Certificate2? Active,
     IReadOnlyList<X509Certificate2> Staged,
     IReadOnlyList<X509Certificate2> Retired,
-    bool IsFallback)
+    bool HasActiveCertificateSettingsSource)
 {
     /// <summary>
     /// Loads the staged certificate, then the retired certificates, then the active certificate of one SSO role.
-    /// With no active source, does not load an active certificate and sets <see cref="IsFallback"/> to true.
+    /// With no active source, does not load an active certificate.
     /// </summary>
     /// <param name="root">The root settings of the role.</param>
     /// <param name="future">The future slot of the role.</param>
@@ -48,10 +48,11 @@ public sealed record SsoCertificateSlots(
 
         if (!hasActiveSource)
         {
-            return new SsoCertificateSlots(null, stagedList, retiredList, IsFallback: true);
+            return new SsoCertificateSlots(null, stagedList, retiredList,
+                HasActiveCertificateSettingsSource: false);
         }
 
         var active = CoreHelpers.GetActiveCertificate(globalSettings, root, future, rootPath, required: true);
-        return new SsoCertificateSlots(active, stagedList, retiredList, IsFallback: false);
+        return new SsoCertificateSlots(active, stagedList, retiredList, HasActiveCertificateSettingsSource: true);
     }
 }
