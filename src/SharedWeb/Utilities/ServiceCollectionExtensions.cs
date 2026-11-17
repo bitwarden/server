@@ -61,6 +61,7 @@ using Bit.Core.Vault;
 using Bit.Core.Vault.Services;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
+using Bit.SharedWeb.Certificates;
 using Bit.SharedWeb.Play;
 using DnsClient;
 using Duende.IdentityModel;

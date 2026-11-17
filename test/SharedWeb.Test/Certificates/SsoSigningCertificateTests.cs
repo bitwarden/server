@@ -1,5 +1,6 @@
 ﻿using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Settings;
+using Bit.SharedWeb.Certificates;
 using Bit.SharedWeb.Utilities;
 using Bit.Test.Common.Helpers;
 using Duende.IdentityServer.Stores;
@@ -7,7 +8,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 
-namespace Bit.SharedWeb.Test;
+namespace Bit.SharedWeb.Test.Certificates;
 
 public class SsoSigningCertificateTests : IClassFixture<IdentityServerCertificateTests.AzuriteFixture>
 {

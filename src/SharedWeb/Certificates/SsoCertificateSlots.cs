@@ -5,7 +5,7 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 
-namespace Bit.SharedWeb.Utilities;
+namespace Bit.SharedWeb.Certificates;
 
 /// <summary>
 /// The certificates that the settings of one SSO role configure in each slot.

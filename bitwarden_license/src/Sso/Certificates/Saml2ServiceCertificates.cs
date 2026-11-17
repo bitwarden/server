@@ -1,11 +1,11 @@
 ﻿using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Enums;
 using Bit.Core.Settings;
-using Bit.SharedWeb.Utilities;
+using Bit.SharedWeb.Certificates;
 using Sustainsys.Saml2;
 using Sustainsys.Saml2.Configuration;
 
-namespace Bit.Sso.Utilities.Saml2;
+namespace Bit.Sso.Certificates;
 
 /// <summary>
 /// Gets the SSO encryption certificates, and builds the SAML service provider certificates of the SSO host

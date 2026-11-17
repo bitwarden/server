@@ -3,6 +3,7 @@ using System.Security.Cryptography.X509Certificates;
 using Azure.Storage.Blobs;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.SharedWeb.Certificates;
 using Bit.SharedWeb.Utilities;
 using Bit.Test.Common.Helpers;
 using DotNet.Testcontainers.Builders;
@@ -12,7 +13,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 
-namespace Bit.SharedWeb.Test;
+namespace Bit.SharedWeb.Test.Certificates;
 
 public class IdentityServerCertificateTests : IClassFixture<IdentityServerCertificateTests.AzuriteFixture>
 {

@@ -2,12 +2,13 @@
 using Bit.Core;
 using Bit.Core.Enums;
 using Bit.Core.Settings;
+using Bit.SharedWeb.Certificates;
 using Bit.SharedWeb.Utilities;
 using Bit.Test.Common.Helpers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
 
-namespace Bit.SharedWeb.Test;
+namespace Bit.SharedWeb.Test.Certificates;
 
 public class CertificateSourceLogTests
 {

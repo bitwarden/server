@@ -1,6 +1,8 @@
 ﻿using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Settings;
+using Bit.SharedWeb.Certificates;
 using Bit.SharedWeb.Utilities;
+using Bit.Sso.Certificates;
 using Bit.Sso.Utilities.Saml2;
 using Bit.Test.Common.Helpers;
 using Microsoft.AspNetCore.Hosting;
@@ -8,7 +10,7 @@ using NSubstitute;
 using Sustainsys.Saml2;
 using Sustainsys.Saml2.Configuration;
 
-namespace Bit.SSO.Test.Utilities;
+namespace Bit.SSO.Test.Certificates;
 
 public class Saml2ServiceCertificatesTests
 {

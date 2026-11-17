@@ -2,7 +2,7 @@
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 
-namespace Bit.SharedWeb.Utilities;
+namespace Bit.SharedWeb.Certificates;
 
 /// <summary>
 /// The certificates that the Identity settings configure in each slot. Each certificate loads on first read, at most

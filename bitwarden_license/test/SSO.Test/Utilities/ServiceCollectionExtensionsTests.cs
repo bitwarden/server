@@ -1,8 +1,8 @@
 ﻿using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Settings;
-using Bit.SharedWeb.Utilities;
+using Bit.SharedWeb.Certificates;
+using Bit.Sso.Certificates;
 using Bit.Sso.Utilities;
-using Bit.Sso.Utilities.Saml2;
 using Bit.Test.Common.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 

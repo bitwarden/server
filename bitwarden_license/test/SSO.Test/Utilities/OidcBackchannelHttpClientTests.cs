@@ -1,9 +1,9 @@
 ﻿using Bit.Core.Business.Sso;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Bit.SharedWeb.Utilities;
+using Bit.SharedWeb.Certificates;
+using Bit.Sso.Certificates;
 using Bit.Sso.Utilities;
-using Bit.Sso.Utilities.Saml2;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;

@@ -11,6 +11,7 @@ using Bit.Core.SecretsManager.Repositories.Noop;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
+using Bit.SharedWeb.Certificates;
 using Bit.SharedWeb.Swagger;
 using Bit.SharedWeb.Utilities;
 using Bit.Subscriptions.Organization;

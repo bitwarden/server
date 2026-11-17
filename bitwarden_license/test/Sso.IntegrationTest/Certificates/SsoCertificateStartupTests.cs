@@ -1,7 +1,7 @@
 ﻿using System.Security.Cryptography.X509Certificates;
 using Azure.Storage.Blobs;
 using Bit.IntegrationTestCommon;
-using Bit.SharedWeb.Utilities;
+using Bit.SharedWeb.Certificates;
 using Bit.Sso.IntegrationTest.Helpers;
 using Bit.Sso.Models;
 using Bit.Test.Common.Helpers;

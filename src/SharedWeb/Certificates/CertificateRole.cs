@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.SharedWeb.Utilities;
+namespace Bit.SharedWeb.Certificates;
 
 /// <summary>
 /// The role that a certificate has in a host.

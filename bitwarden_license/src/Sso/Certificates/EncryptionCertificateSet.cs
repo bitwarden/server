@@ -1,6 +1,6 @@
 ﻿using System.Security.Cryptography.X509Certificates;
 
-namespace Bit.Sso.Utilities.Saml2;
+namespace Bit.Sso.Certificates;
 
 /// <summary>
 /// The certificates that the SSO encryption role uses, after the Identity fallback. <see cref="Active"/> decrypts
