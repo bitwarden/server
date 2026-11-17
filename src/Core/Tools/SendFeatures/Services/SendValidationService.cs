@@ -144,17 +144,20 @@ public class SendValidationService : ISendValidationService
     /// 1. Ensure the Send owner has access to the item being shared
     /// 2. Ensure the item being shared is not archived, deleted, or an SSH key
     /// Only a new or changed item id is checked, so saves that keep it (e.g. removing auth after
-    /// the item was deleted) still succeed.
+    /// the item was deleted) still succeed. A validated item id is also recorded in
+    /// <see cref="Send.CipherId"/>, the indexed column item Sends are looked up by.
     /// </summary>
     private async Task ValidateItemSendAsync(Guid? userId, Send send)
     {
         var itemId = ItemIdOf(send);
         if (!itemId.HasValue)
         {
+            send.CipherId = null;
             return;
         }
 
         // `send` already carries the incoming data; compare against the persisted Send.
+        // An unchanged item keeps the persisted CipherId, which may be null for Sends whose item was already gone.
         if (send.Id != default)
         {
             var stored = await _sendRepository.GetByIdAsync(send.Id);
@@ -179,6 +182,8 @@ public class SendValidationService : ISendValidationService
         {
             throw new BadRequestException("Item not found.");
         }
+
+        send.CipherId = itemId.Value;
     }
 
     private static Guid? ItemIdOf(Send send)

@@ -23,6 +23,8 @@ using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
 using Bit.Core.Tools.SendFeatures.Services.Interfaces;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Repositories;
 using Bit.HttpExtensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -47,6 +49,7 @@ public class SendsControllerTests : IDisposable
     private readonly IEventService _eventService;
     private readonly ISendEventClassifier _sendEventClassifier;
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
+    private readonly ICipherRepository _cipherRepository;
 
     public SendsControllerTests()
     {
@@ -62,6 +65,7 @@ public class SendsControllerTests : IDisposable
         _eventService = Substitute.For<IEventService>();
         _sendEventClassifier = Substitute.For<ISendEventClassifier>();
         _featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
+        _cipherRepository = Substitute.For<ICipherRepository>();
 
         _sut = new SendsController(
             _sendRepository,
@@ -75,7 +79,8 @@ public class SendsControllerTests : IDisposable
             _hasPremiumAccessQuery,
             _eventService,
             _sendEventClassifier,
-            _featureService
+            _featureService,
+            _cipherRepository
         );
     }
 
@@ -917,6 +922,66 @@ public class SendsControllerTests : IDisposable
     }
 
     [Theory, AutoData]
+    public async Task AccessUsingAuth_ItemSendWithDeletedCipher_ThrowsNotFound(Guid sendId, Guid itemId)
+    {
+        var send = CreateItemSendForAccess(sendId, itemId, cipherId: itemId);
+        _sut.ControllerContext = CreateControllerContextWithUser(CreateUserWithSendIdClaim(sendId));
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing).Returns(true);
+        _cipherRepository.GetByIdAsync(itemId).Returns((Cipher)null);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.AccessUsingAuth());
+        await _sendRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(default);
+    }
+
+    [Theory, AutoData]
+    public async Task AccessUsingAuth_LegacyItemSendWithoutCipherId_ReadsItemIdFromData_ThrowsNotFound(Guid sendId, Guid itemId)
+    {
+        // Sends created before CipherId was populated still have the item id in their data.
+        var send = CreateItemSendForAccess(sendId, itemId, cipherId: null);
+        _sut.ControllerContext = CreateControllerContextWithUser(CreateUserWithSendIdClaim(sendId));
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing).Returns(true);
+        _cipherRepository.GetByIdAsync(itemId).Returns((Cipher)null);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.AccessUsingAuth());
+        await _cipherRepository.Received(1).GetByIdAsync(itemId);
+    }
+
+    [Theory, AutoData]
+    public async Task AccessUsingAuth_ItemSendWithMalformedData_ThrowsNotFound(Guid sendId)
+    {
+        var send = CreateItemSendForAccess(sendId, Guid.NewGuid(), cipherId: null);
+        send.Data = "{ \"metadata\": ";
+        _sut.ControllerContext = CreateControllerContextWithUser(CreateUserWithSendIdClaim(sendId));
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing).Returns(true);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.AccessUsingAuth());
+        await _cipherRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(default);
+    }
+
+    private static Send CreateItemSendForAccess(Guid sendId, Guid itemId, Guid? cipherId)
+    {
+        return new Send
+        {
+            Id = sendId,
+            Type = SendType.Item,
+            CipherId = cipherId,
+            Data = JsonSerializer.Serialize(new SendItemData
+            {
+                Data = "ENCRYPTED_DATA",
+                EncryptionVersion = SendEncryptionType.V1,
+                Metadata = new SendItemMetadata { ItemId = itemId },
+            }),
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            Disabled = false,
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+    }
+
+    [Theory, AutoData]
     public async Task AccessUsingAuth_WithHideEmail_DoesNotIncludeCreatorIdentifier(Guid sendId, User creator)
     {
         var send = new Send
@@ -1658,18 +1723,21 @@ public class SendsControllerTests : IDisposable
         _featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing).Returns(true);
         var sendId = Guid.NewGuid();
         var userId = Guid.NewGuid();
+        var itemId = Guid.NewGuid();
+        _cipherRepository.GetByIdAsync(itemId).Returns(new Cipher { Id = itemId });
         var send = new Send
         {
             Id = sendId,
             UserId = userId,
             Type = SendType.Item,
+            CipherId = itemId,
             Data = JsonSerializer.Serialize(new SendItemData
             {
                 Data = "ENCRYPTED_DATA",
                 EncryptionVersion = SendEncryptionType.V1,
                 Metadata = new SendItemMetadata
                 {
-                    ItemId = Guid.NewGuid(),
+                    ItemId = itemId,
                 }
             }),
             AuthType = AuthType.Email,

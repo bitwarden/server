@@ -20,6 +20,5 @@ public static class SendServiceCollectionExtension
         services.AddScoped<ISendAuthenticationQuery, SendAuthenticationQuery>();
         services.AddScoped<ISendOwnerQuery, SendOwnerQuery>();
         services.AddScoped<ISendEventClassifier, SendEventClassifier>();
-        services.AddScoped<IItemSendCleanupService, ItemSendCleanupService>();
     }
 }

@@ -99,15 +99,11 @@ public interface ISendRepository : IRepository<Send, Guid>
     Task<ICollection<Send>> GetManyByIdsAsync(IEnumerable<Guid> ids);
 
     /// <summary>
-    /// Loads item-type <see cref="Send"/>s, regardless of owner, whose data references any of the given vault items.
+    /// Loads item-type <see cref="Send"/>s whose <see cref="Send.CipherId"/> references a cipher that no longer exists.
     /// </summary>
-    /// <param name="itemIds">
-    /// Identifies the vault items (ciphers) the <see cref="Send"/>s may share.
-    /// </param>
     /// <returns>
-    /// A task that completes once the <see cref="Send"/>s have been loaded.
-    /// The task's result contains the loaded item-type <see cref="Send"/>s. Candidates are matched on the
-    /// item id appearing in the <see cref="Send.Data"/> JSON, so callers must confirm the metadata item id.
+    /// A task that completes once the <see cref="Send"/>s have been loaded. The <see cref="Send"/>s are not decrypted,
+    /// because the caller only deletes them.
     /// </returns>
-    Task<ICollection<Send>> GetManyItemSendsByItemIdsAsync(IEnumerable<Guid> itemIds);
+    Task<ICollection<Send>> GetManyItemSendsWithDeletedCipherAsync();
 }

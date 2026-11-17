@@ -26,14 +26,21 @@ public class DeleteSendsJob : BaseJob
     {
         var sends = await _sendRepository.GetManyByDeletionDateAsync(DateTime.UtcNow);
         _logger.LogInformation(Constants.BypassFiltersEventId, "Deleting {0} sends.", sends.Count);
-        if (!sends.Any())
+
+        // Item Sends are kept while their vault item exists, so ones whose item was deleted are removed here.
+        var itemSendsWithDeletedCipher = await _sendRepository.GetManyItemSendsWithDeletedCipherAsync();
+        _logger.LogInformation(Constants.BypassFiltersEventId, "Deleting {0} item sends whose item was deleted.",
+            itemSendsWithDeletedCipher.Count);
+
+        var sendsToDelete = sends.Concat(itemSendsWithDeletedCipher).DistinctBy(s => s.Id).ToList();
+        if (sendsToDelete.Count == 0)
         {
             return;
         }
         using (var scope = _serviceProvider.CreateScope())
         {
             var nonAnonymousSendCommand = scope.ServiceProvider.GetRequiredService<INonAnonymousSendCommand>();
-            foreach (var send in sends)
+            foreach (var send in sendsToDelete)
             {
                 await nonAnonymousSendCommand.DeleteSendAsync(send);
             }

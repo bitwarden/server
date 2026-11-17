@@ -229,16 +229,15 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
     }
 
     /// <inheritdoc />
-    public async Task<ICollection<Send>> GetManyItemSendsByItemIdsAsync(IEnumerable<Guid> itemIds)
+    public async Task<ICollection<Send>> GetManyItemSendsWithDeletedCipherAsync()
     {
         using var connection = new SqlConnection(ConnectionString);
         var results = await connection.QueryAsync<Send>(
-            $"[{Schema}].[Send_ReadByItemIds]",
-            new { ItemIds = itemIds.ToGuidIdArrayTVP() },
+            $"[{Schema}].[Send_ReadItemSendsWithDeletedCipher]",
             commandType: CommandType.StoredProcedure);
 
         // Not decrypted here: the caller only deletes these Sends, so a Send whose Emails cannot be
-        // unprotected must still be removed along with the item.
+        // unprotected must still be removed.
         return results.ToList();
     }
 

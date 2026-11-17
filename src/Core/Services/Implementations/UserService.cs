@@ -73,7 +73,6 @@ public class UserService : UserManager<User>, IUserService
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
     private readonly ISubscriberService _subscriberService;
     private readonly ISendFileStorageService _sendFileStorageService;
-    private readonly IItemSendCleanupService _itemSendCleanupService;
     private readonly IUserVerificationOtpStore _userVerificationOtpStore;
 
     public UserService(
@@ -108,8 +107,7 @@ public class UserService : UserManager<User>, IUserService
         IHasPremiumAccessQuery hasPremiumAccessQuery,
         ISubscriberService subscriberService,
         ISendFileStorageService sendFileStorageService,
-        IUserVerificationOtpStore userVerificationOtpStore,
-        IItemSendCleanupService itemSendCleanupService)
+        IUserVerificationOtpStore userVerificationOtpStore)
         : base(
               store,
               optionsAccessor,
@@ -148,7 +146,6 @@ public class UserService : UserManager<User>, IUserService
         _subscriberService = subscriberService;
         _sendFileStorageService = sendFileStorageService;
         _userVerificationOtpStore = userVerificationOtpStore;
-        _itemSendCleanupService = itemSendCleanupService;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -253,7 +250,6 @@ public class UserService : UserManager<User>, IUserService
                         await _sendFileStorageService.DeleteFilesForUserAsync(user.Id);
                         // This is a right-to-erasure flow, so the organization's event logs have to
                         // be purged from storage too, not just its database rows.
-                        await _itemSendCleanupService.DeleteItemSendsForOrganizationAsync(org.Id);
                         await _organizationRepository.DeleteAndCreateDeleteTasksAsync(
                             org, [OrganizationDeleteTaskType.EventsCleanup]);
                         deletedOrg = true;

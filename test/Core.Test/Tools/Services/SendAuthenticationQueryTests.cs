@@ -3,6 +3,8 @@ using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.SendFeatures.Queries;
+using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Repositories;
 using NSubstitute;
 using Xunit;
 
@@ -11,20 +13,110 @@ namespace Bit.Core.Test.Tools.Services;
 public class SendAuthenticationQueryTests
 {
     private readonly ISendRepository _sendRepository;
+    private readonly ICipherRepository _cipherRepository;
     private readonly SendAuthenticationQuery _sendAuthenticationQuery;
 
     public SendAuthenticationQueryTests()
     {
         _sendRepository = Substitute.For<ISendRepository>();
-        _sendAuthenticationQuery = new SendAuthenticationQuery(_sendRepository);
+        _cipherRepository = Substitute.For<ICipherRepository>();
+        _sendAuthenticationQuery = new SendAuthenticationQuery(_sendRepository, _cipherRepository);
     }
 
     [Fact]
     public void Constructor_WithNullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() => new SendAuthenticationQuery(null));
+        var exception = Assert.Throws<ArgumentNullException>(() => new SendAuthenticationQuery(null, _cipherRepository));
         Assert.Equal("sendRepository", exception.ParamName);
+    }
+
+    [Fact]
+    public async Task GetAuthenticationMethod_ItemSendWithDeletedCipher_ReturnsSendInaccessible()
+    {
+        // Arrange
+        var sendId = Guid.NewGuid();
+        var itemId = Guid.NewGuid();
+        _sendRepository.GetByIdAsync(sendId).Returns(CreateItemSend(sendId, itemId));
+        _cipherRepository.GetByIdAsync(itemId).Returns((Cipher)null);
+
+        // Act
+        var result = await _sendAuthenticationQuery.GetAuthenticationMethod(sendId);
+
+        // Assert
+        Assert.IsType<SendInaccessible>(result);
+    }
+
+    [Fact]
+    public async Task GetAuthenticationMethod_ItemSendWithExistingCipher_ReturnsAuthenticationMethod()
+    {
+        // Arrange
+        var sendId = Guid.NewGuid();
+        var itemId = Guid.NewGuid();
+        _sendRepository.GetByIdAsync(sendId).Returns(CreateItemSend(sendId, itemId));
+        _cipherRepository.GetByIdAsync(itemId).Returns(new Cipher { Id = itemId });
+
+        // Act
+        var result = await _sendAuthenticationQuery.GetAuthenticationMethod(sendId);
+
+        // Assert
+        Assert.IsType<NotAuthenticated>(result);
+    }
+
+    [Fact]
+    public async Task GetAuthenticationMethod_LegacyItemSendWithoutCipherId_ReadsItemIdFromData()
+    {
+        // Arrange: Sends created before CipherId was populated have no CipherId, but their data still names the item.
+        var sendId = Guid.NewGuid();
+        var itemId = Guid.NewGuid();
+        _sendRepository.GetByIdAsync(sendId).Returns(CreateItemSend(sendId, itemId, cipherId: null));
+        _cipherRepository.GetByIdAsync(itemId).Returns(new Cipher { Id = itemId });
+
+        // Act
+        var result = await _sendAuthenticationQuery.GetAuthenticationMethod(sendId);
+
+        // Assert
+        Assert.IsType<NotAuthenticated>(result);
+        await _cipherRepository.Received(1).GetByIdAsync(itemId);
+    }
+
+    [Fact]
+    public async Task GetAuthenticationMethod_LegacyItemSendWithDeletedItem_ReturnsSendInaccessible()
+    {
+        var sendId = Guid.NewGuid();
+        var itemId = Guid.NewGuid();
+        _sendRepository.GetByIdAsync(sendId).Returns(CreateItemSend(sendId, itemId, cipherId: null));
+        _cipherRepository.GetByIdAsync(itemId).Returns((Cipher)null);
+
+        var result = await _sendAuthenticationQuery.GetAuthenticationMethod(sendId);
+
+        Assert.IsType<SendInaccessible>(result);
+    }
+
+    [Fact]
+    public async Task GetAuthenticationMethod_ItemSendWithMalformedData_ReturnsSendInaccessible()
+    {
+        var sendId = Guid.NewGuid();
+        var send = CreateItemSend(sendId, itemId: null);
+        send.Data = "{ \"metadata\": ";
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        var result = await _sendAuthenticationQuery.GetAuthenticationMethod(sendId);
+
+        Assert.IsType<SendInaccessible>(result);
+        await _cipherRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(default);
+    }
+
+    [Fact]
+    public async Task GetAuthenticationMethod_ItemSendWithoutItemId_ReturnsSendInaccessible()
+    {
+        var sendId = Guid.NewGuid();
+        _sendRepository.GetByIdAsync(sendId).Returns(CreateItemSend(sendId, itemId: null));
+
+        var result = await _sendAuthenticationQuery.GetAuthenticationMethod(sendId);
+
+        Assert.IsType<SendInaccessible>(result);
+        await _cipherRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(default);
     }
 
     [Theory]
@@ -303,6 +395,29 @@ public class SendAuthenticationQueryTests
         yield return new object[] { " person1@company.com , person2@company.com ", new[] { "person1@company.com", "person2@company.com" } };
         yield return new object[] { "person1@company.com,,person2@company.com", new[] { "person1@company.com", "person2@company.com" } };
         yield return new object[] { " , person1@company.com,  ,person2@company.com, ", new[] { "person1@company.com", "person2@company.com" } };
+    }
+
+    private static Send CreateItemSend(Guid sendId, Guid? itemId, Guid? cipherId = null)
+    {
+        return new Send
+        {
+            Id = sendId,
+            Type = SendType.Item,
+            CipherId = cipherId,
+            Data = itemId.HasValue
+                ? System.Text.Json.JsonSerializer.Serialize(new SendItemData
+                {
+                    Data = "ENCRYPTED_DATA",
+                    EncryptionVersion = SendEncryptionType.V1,
+                    Metadata = new SendItemMetadata { ItemId = itemId.Value },
+                })
+                : "{}",
+            AccessCount = 0,
+            MaxAccessCount = 10,
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null
+        };
     }
 
     private static Send CreateSend(int accessCount, int? maxAccessCount, string? emails, string? password, AuthType? authType)

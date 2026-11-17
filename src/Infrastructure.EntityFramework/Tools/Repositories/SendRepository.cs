@@ -1,6 +1,5 @@
 ﻿#nullable enable
 
-using System.Linq.Expressions;
 using System.Security.Cryptography;
 using AutoMapper;
 using Bit.Core;
@@ -217,30 +216,12 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
     }
 
     /// <inheritdoc />
-    public async Task<ICollection<Core.Tools.Entities.Send>> GetManyItemSendsByItemIdsAsync(IEnumerable<Guid> itemIds)
+    public async Task<ICollection<Core.Tools.Entities.Send>> GetManyItemSendsWithDeletedCipherAsync()
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        var itemIdTexts = itemIds.Select(id => id.ToString()).ToList();
-        if (itemIdTexts.Count == 0)
-        {
-            return [];
-        }
-
-        // Builds one OR'd Contains per item id so the whole batch is a single query.
-        var parameter = Expression.Parameter(typeof(Send), "s");
-        var dataProperty = Expression.Property(parameter, nameof(Send.Data));
-        var containsMethod = typeof(string).GetMethod(nameof(string.Contains), [typeof(string)])!;
-        Expression anyMatch = Expression.Constant(false);
-        foreach (var text in itemIdTexts)
-        {
-            anyMatch = Expression.OrElse(anyMatch, Expression.Call(dataProperty, containsMethod, Expression.Constant(text)));
-        }
-        var matchesAnyItem = Expression.Lambda<Func<Send, bool>>(anyMatch, parameter);
-
         var results = await dbContext.Sends
-            .Where(s => s.Type == SendType.Item)
-            .Where(matchesAnyItem)
+            .Where(s => s.Type == SendType.Item && s.CipherId != null && !dbContext.Ciphers.Any(c => c.Id == s.CipherId))
             .ToListAsync();
         // Not decrypted here, matching the Dapper implementation: the caller only deletes these Sends.
         return Mapper.Map<List<Core.Tools.Entities.Send>>(results);

@@ -396,6 +396,37 @@ public class SendValidationServiceTests
 
         // No exception implies success
         await sutProvider.Sut.ValidateUserCanSaveAsync(userId, send);
+
+        Assert.Equal(cipherDetails.Id, send.CipherId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_ItemIdUnchanged_KeepsStoredCipherId(
+        SutProvider<SendValidationService> sutProvider, Send send, Send stored, Guid userId, Guid itemId)
+    {
+        SetItemMetadata(send, itemId);
+        SetItemMetadata(stored, itemId);
+        stored.CipherId = itemId;
+        send.CipherId = itemId;
+        sutProvider.GetDependency<ISendRepository>().GetByIdAsync(send.Id).Returns(stored);
+        StubPolicies(sutProvider, userId);
+
+        await sutProvider.Sut.ValidateUserCanSaveAsync(userId, send);
+
+        Assert.Equal(itemId, send.CipherId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_NonItemSend_ClearsCipherId(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId)
+    {
+        send.Type = SendType.Text;
+        send.CipherId = Guid.NewGuid();
+        StubPolicies(sutProvider, userId);
+
+        await sutProvider.Sut.ValidateUserCanSaveAsync(userId, send);
+
+        Assert.Null(send.CipherId);
     }
 
     [Theory, BitAutoData]
