@@ -35,14 +35,14 @@ public class IdentityCertificateSlotsTests
 
         var active = certificates.Active;
         var staged = certificates.Staged;
-        var validation = certificates.Retired;
+        var retired = certificates.Retired;
 
         Assert.Equal(identity.Thumbprint, active?.Thumbprint);
         Assert.Equal(identityStaged.Thumbprint, Assert.Single(staged).Thumbprint);
-        Assert.Equal(identityRetired.Thumbprint, Assert.Single(validation).Thumbprint);
+        Assert.Equal(identityRetired.Thumbprint, Assert.Single(retired).Thumbprint);
         Assert.Same(active, certificates.Active);
         Assert.Same(staged, certificates.Staged);
-        Assert.Same(validation, certificates.Retired);
+        Assert.Same(retired, certificates.Retired);
     }
 
     [Fact]

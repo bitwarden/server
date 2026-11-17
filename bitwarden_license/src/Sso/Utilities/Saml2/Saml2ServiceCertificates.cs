@@ -41,7 +41,7 @@ public static class Saml2ServiceCertificates
     /// <summary>
     /// Builds the SAML service certificates. Only the active signing certificate signs. A staged signing certificate
     /// is published as a future signing certificate, only when an active signing certificate exists. Only the active
-    /// encryption certificate is published for encryption. The staged and decryption encryption certificates decrypt,
+    /// encryption certificate is published for encryption. The staged and retired encryption certificates decrypt,
     /// and are not published.
     /// </summary>
     /// <exception cref="InvalidOperationException">The SAML library rejects a certificate, for example a certificate
@@ -67,7 +67,7 @@ public static class Saml2ServiceCertificates
             Add(entries, certificate, CertificateUse.Signing, CertificateStatus.Future);
         }
 
-        foreach (var certificate in UniqueExcept(encryption.Staged.Concat(encryption.Decryption), encryption.Active))
+        foreach (var certificate in UniqueExcept(encryption.Staged.Concat(encryption.Retired), encryption.Active))
         {
             Add(entries, certificate, CertificateUse.Encryption, CertificateStatus.Current,
                 MetadataPublishOverrideType.DoNotPublish);

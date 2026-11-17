@@ -113,34 +113,34 @@ public class Saml2ServiceCertificatesTests
     }
 
     [Fact]
-    public void Build_StagedAndDecryptionEncryption_AddsUnpublishedCurrentEncryptionEntries_UniqueAndNotTheActive()
+    public void Build_StagedAndRetiredEncryption_AddsUnpublishedCurrentEncryptionEntries_UniqueAndNotTheActive()
     {
         using var signing = TestCertificates.Create("CN=Bitwarden Test Signing");
         using var encryption = TestCertificates.Create("CN=Bitwarden Test Encryption");
         using var staged = TestCertificates.Create("CN=Bitwarden Test Staged");
-        using var decryption = TestCertificates.Create("CN=Bitwarden Test Decryption");
+        using var retired = TestCertificates.Create("CN=Bitwarden Test Decryption");
 
         var entries = Saml2ServiceCertificates.Build(Signing(signing),
-            Encryption(encryption, staged: [staged, encryption], decryption: [decryption, staged, encryption]));
+            Encryption(encryption, staged: [staged, encryption], retired: [retired, staged, encryption]));
 
         Assert.Equal(
         [
             Entry(signing, CertificateUse.Signing, CertificateStatus.Current),
             Entry(encryption, CertificateUse.Encryption, CertificateStatus.Current),
             Entry(staged, CertificateUse.Encryption, CertificateStatus.Current, MetadataPublishOverrideType.DoNotPublish),
-            Entry(decryption, CertificateUse.Encryption, CertificateStatus.Current,
+            Entry(retired, CertificateUse.Encryption, CertificateStatus.Current,
                 MetadataPublishOverrideType.DoNotPublish),
         ], Shape(entries));
     }
 
     [Fact]
-    public void Build_NeverAddsAFutureEncryptionEntryOrAValidationCertificate()
+    public void Build_NeverAddsAFutureEncryptionEntryOrARetiredSigningCertificate()
     {
         using var active = TestCertificates.Create("CN=Bitwarden Test Active");
-        using var validation = TestCertificates.Create("CN=Bitwarden Test Validation");
+        using var retired = TestCertificates.Create("CN=Bitwarden Test Validation");
         using var stagedEncryption = TestCertificates.Create("CN=Bitwarden Test Staged Encryption");
 
-        var entries = Saml2ServiceCertificates.Build(Signing(active, validation: [validation]),
+        var entries = Saml2ServiceCertificates.Build(Signing(active, retired: [retired]),
             Encryption(active, staged: [stagedEncryption]));
 
         Assert.Equal(
@@ -175,11 +175,11 @@ public class Saml2ServiceCertificatesTests
         using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");
         using var identityStaged = TestCertificates.Create("CN=Bitwarden Test Identity Staged");
         using var ssoStaged = TestCertificates.Create("CN=Bitwarden Test SSO Staged");
-        using var decryption = TestCertificates.Create("CN=Bitwarden Test Decryption");
+        using var retired = TestCertificates.Create("CN=Bitwarden Test Decryption");
         var globalSettings = SelfHostedSettings(identity);
         globalSettings.IdentityServer.FutureCertificate = FutureSlot(identityStaged);
         globalSettings.SsoServer.Encryption.FutureCertificate = FutureSlot(ssoStaged);
-        globalSettings.SsoServer.Encryption.DecryptionCertificates = [RetiredEntry(decryption)];
+        globalSettings.SsoServer.Encryption.DecryptionCertificates = [RetiredEntry(retired)];
 
         var certificates = Saml2ServiceCertificates.GetEncryptionCertificates(Environment("Production"),
             globalSettings, new IdentityCertificateSlots(globalSettings));
@@ -187,7 +187,7 @@ public class Saml2ServiceCertificatesTests
         Assert.True(certificates.IsFallback);
         Assert.Equal(identity.Thumbprint, certificates.Active?.Thumbprint);
         Assert.Equal([identityStaged.Thumbprint, ssoStaged.Thumbprint], Thumbprints(certificates.Staged));
-        Assert.Equal([decryption.Thumbprint], Thumbprints(certificates.Decryption));
+        Assert.Equal([retired.Thumbprint], Thumbprints(certificates.Retired));
     }
 
     [Fact]
@@ -197,13 +197,13 @@ public class Saml2ServiceCertificatesTests
         using var identityStaged = TestCertificates.Create("CN=Bitwarden Test Identity Staged");
         using var encryption = TestCertificates.Create("CN=Bitwarden Test Encryption");
         using var ssoStaged = TestCertificates.Create("CN=Bitwarden Test SSO Staged");
-        using var decryption = TestCertificates.Create("CN=Bitwarden Test Decryption");
+        using var retired = TestCertificates.Create("CN=Bitwarden Test Decryption");
         var globalSettings = SelfHostedSettings(identity);
         globalSettings.IdentityServer.FutureCertificate = FutureSlot(identityStaged);
         globalSettings.SsoServer.Encryption.CertificateLocation = TestCertificates.WritePfx(encryption, Password);
         globalSettings.SsoServer.Encryption.CertificatePassword = Password;
         globalSettings.SsoServer.Encryption.FutureCertificate = FutureSlot(ssoStaged);
-        globalSettings.SsoServer.Encryption.DecryptionCertificates = [RetiredEntry(decryption)];
+        globalSettings.SsoServer.Encryption.DecryptionCertificates = [RetiredEntry(retired)];
 
         var certificates = Saml2ServiceCertificates.GetEncryptionCertificates(Environment("Production"),
             globalSettings, new IdentityCertificateSlots(globalSettings));
@@ -211,7 +211,7 @@ public class Saml2ServiceCertificatesTests
         Assert.False(certificates.IsFallback);
         Assert.Equal(encryption.Thumbprint, certificates.Active?.Thumbprint);
         Assert.Equal([ssoStaged.Thumbprint], Thumbprints(certificates.Staged));
-        Assert.Equal([decryption.Thumbprint], Thumbprints(certificates.Decryption));
+        Assert.Equal([retired.Thumbprint], Thumbprints(certificates.Retired));
     }
 
     [Fact]
@@ -354,12 +354,12 @@ public class Saml2ServiceCertificatesTests
     };
 
     private static SigningCertificateSet Signing(X509Certificate2? active, X509Certificate2[]? staged = null,
-        X509Certificate2[]? validation = null, bool isFallback = false) =>
-        new(active, staged ?? [], validation ?? [], isFallback);
+        X509Certificate2[]? retired = null, bool isFallback = false) =>
+        new(active, staged ?? [], retired ?? [], isFallback);
 
     private static EncryptionCertificateSet Encryption(X509Certificate2? active, X509Certificate2[]? staged = null,
-        X509Certificate2[]? decryption = null, bool isFallback = false) =>
-        new(active, staged ?? [], decryption ?? [], isFallback);
+        X509Certificate2[]? retired = null, bool isFallback = false) =>
+        new(active, staged ?? [], retired ?? [], isFallback);
 
     private static (string Thumbprint, CertificateUse Use, CertificateStatus Status,
         MetadataPublishOverrideType PublishOverride) Entry(X509Certificate2 certificate, CertificateUse use,

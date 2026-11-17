@@ -198,20 +198,20 @@ public class SsoCertificateStartupTests
     }
 
     [Fact]
-    public void Startup_FallbackWithStagedAndDecryptionCertificates_LogsEachCertificateInItsField()
+    public void Startup_FallbackWithStagedAndRetiredCertificates_LogsEachCertificateInItsField()
     {
         // Arrange
         using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");
         using var signingStaged = TestCertificates.Create("CN=Bitwarden Test SSO Signing Staged");
         using var encryptionStaged = TestCertificates.Create("CN=Bitwarden Test SSO Encryption Staged");
-        using var decryption = TestCertificates.Create("CN=Bitwarden Test SSO Decryption");
+        using var retired = TestCertificates.Create("CN=Bitwarden Test SSO Decryption");
         var logs = new CollectingLoggerProvider();
         using var loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs));
         using var factory = new SsoApplicationFactory();
         foreach (var (key, value) in CertificateTestConfiguration.SelfHosted(identity)
                      .WithSsoStagedSigningCertificate(signingStaged)
                      .WithSsoEncryptionFutureCertificate(encryptionStaged, active: false)
-                     .WithSsoDecryptionCertificates(decryption))
+                     .WithSsoDecryptionCertificates(retired))
         {
             factory.UpdateConfiguration(key, value);
         }
@@ -224,7 +224,7 @@ public class SsoCertificateStartupTests
         Assert.Equal(
             [
                 ("SSO encryption", "Identity fallback", identity.Thumbprint,
-                    encryptionStaged.Thumbprint, decryption.Thumbprint),
+                    encryptionStaged.Thumbprint, retired.Thumbprint),
                 ("SSO signing", "Identity fallback", identity.Thumbprint,
                     signingStaged.Thumbprint, "none"),
             ],

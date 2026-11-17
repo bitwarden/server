@@ -155,11 +155,11 @@ public class SsoSigningCertificateTests : IClassFixture<IdentityServerCertificat
 
         Assert.Equal(sso.Thumbprint, certificates.Active?.Thumbprint);
         Assert.Equal(ssoStaged.Thumbprint, Assert.Single(certificates.Staged).Thumbprint);
-        Assert.Equal(ssoRetired.Thumbprint, Assert.Single(certificates.Validation).Thumbprint);
+        Assert.Equal(ssoRetired.Thumbprint, Assert.Single(certificates.Retired).Thumbprint);
     }
 
     [Fact]
-    public void GetSsoSigningCertificates_Fallback_IncludesIdentityStagedAndValidation_AndSsoSlots()
+    public void GetSsoSigningCertificates_Fallback_IncludesIdentityStagedAndRetired_AndSsoSlots()
     {
         using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");
         using var identityStaged = TestCertificates.Create("CN=Bitwarden Test Identity Staged");
@@ -179,7 +179,7 @@ public class SsoSigningCertificateTests : IClassFixture<IdentityServerCertificat
         Assert.Equivalent(new[] { identityStaged.Thumbprint, ssoStaged.Thumbprint },
             certificates.Staged.Select(certificate => certificate.Thumbprint), strict: true);
         Assert.Equivalent(new[] { identityRetired.Thumbprint, ssoRetired.Thumbprint },
-            certificates.Validation.Select(certificate => certificate.Thumbprint), strict: true);
+            certificates.Retired.Select(certificate => certificate.Thumbprint), strict: true);
     }
 
     [Fact]

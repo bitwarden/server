@@ -672,7 +672,7 @@ public class GlobalSettings : IGlobalSettings
     /// the SAML requests, and the SAML metadata.
     /// In cloud, the SSO host must set this role, or startup fails, unless it is a Development host.
     /// A self-hosted or Development SSO host may leave this role not set. The role then uses the Identity active,
-    /// staged, and validation certificates, in addition to its own staged and retired certificates.
+    /// staged, and retired certificates, in addition to its own staged and retired certificates.
     /// The root fields have no default value.
     /// </summary>
     public class SsoServerSettings : ICertificateSettings

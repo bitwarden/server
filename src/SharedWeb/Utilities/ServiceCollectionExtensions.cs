@@ -511,7 +511,7 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers the loaded SSO signing certificates: the active certificate signs, and the staged and validation
+    /// Registers the loaded SSO signing certificates: the active certificate signs, and the staged and retired
     /// certificates are published for token validation. With no active certificate, a Development host uses a
     /// developer signing key.
     /// </summary>
@@ -607,12 +607,12 @@ public static class ServiceCollectionExtensions
         IWebHostEnvironment env, GlobalSettings globalSettings, SigningCertificateSet certificates, CertificateRole role)
     {
         identityServerBuilder.Services.AddSingleton(new CertificateSourceReport(role, certificates.Active,
-            certificates.Staged, certificates.Validation, certificates.IsFallback));
+            certificates.Staged, certificates.Retired, certificates.IsFallback));
 
         if (certificates.Active != null)
         {
             AddSigningCertificates(identityServerBuilder, certificates.Active,
-                certificates.Staged.Concat(certificates.Validation));
+                certificates.Staged.Concat(certificates.Retired));
         }
         else
         {

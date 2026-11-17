@@ -248,7 +248,7 @@ public class IdentityServerCertificateTests : IClassFixture<IdentityServerCertif
     }
 
     [Fact]
-    public async Task AddIdentityServerCertificate_StagedAndValidation_ArePublished_ActiveSigns()
+    public async Task AddIdentityServerCertificate_StagedAndRetired_ArePublished_ActiveSigns()
     {
         using var active = TestCertificates.Create("CN=Bitwarden Test Active");
         using var staged = TestCertificates.Create("CN=Bitwarden Test Staged");
