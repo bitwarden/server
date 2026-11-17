@@ -4,13 +4,13 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
 using Bit.Core.Auth.Models.Data;
-using Bit.Sso.IntegrationTest.Utilities;
+using Bit.Sso.IntegrationTest.Helpers;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Net.Http.Headers;
 using Sustainsys.Saml2;
 using Xunit;
 
-namespace Bit.Sso.IntegrationTest.Endpoints;
+namespace Bit.Sso.IntegrationTest.Flows.Saml2SpInitiatedLogin;
 
 /// <summary>
 /// Checks that a login that starts at the service provider (SP) succeeds, with the PM42283_Rsa15Deprecation
@@ -20,7 +20,7 @@ namespace Bit.Sso.IntegrationTest.Endpoints;
 /// Sustainsys.Saml2 handler for the same request. The handler reads the cookie.
 /// The test host mocks the authentication service, so the test starts the login on the handler directly.
 /// </summary>
-public class Saml2SpInitiatedLoginTests
+public class Saml2SpInitiatedLoginFlowTests
 {
     private const string ExternalCallbackPath = "/Account/ExternalCallback";
 

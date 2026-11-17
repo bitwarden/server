@@ -5,11 +5,16 @@ using System.Xml.Linq;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Utilities;
-using Bit.Sso.IntegrationTest.Utilities;
+using Bit.Sso.IntegrationTest.Helpers;
 using Xunit;
 
-namespace Bit.Sso.IntegrationTest.Endpoints;
+namespace Bit.Sso.IntegrationTest.Saml2.Metadata;
 
+/// <summary>
+/// The SAML metadata at <c>/saml2/{organizationId}</c> exists only for an organization with a SAML 2.0
+/// configuration. Its one key descriptor advertises both accepted RSA-OAEP key transport algorithms, MGF1P first.
+/// An organization with an OpenID Connect configuration and an unknown scheme each get 404.
+/// </summary>
 public class Saml2AcsMetadataEndpointTests(SsoApplicationFactory factory) : IClassFixture<SsoApplicationFactory>
 {
     private static readonly XNamespace Md = "urn:oasis:names:tc:SAML:2.0:metadata";

@@ -3,7 +3,7 @@ using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.IntegrationTestCommon;
 using Bit.IntegrationTestCommon.Factories;
-using Bit.Sso.IntegrationTest.Utilities;
+using Bit.Sso.IntegrationTest.Helpers;
 using Duende.IdentityModel;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
@@ -12,7 +12,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Xunit;
 
-namespace Bit.Sso.IntegrationTest.Endpoints;
+namespace Bit.Sso.IntegrationTest.Authentication.ExternalCookie;
 
 /// <summary>
 /// Runs the Sso and Identity hosts side by side with one persistent distributed cache and one data protection

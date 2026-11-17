@@ -2,10 +2,10 @@
 using System.Net.Sockets;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
-using Bit.Sso.IntegrationTest.Utilities;
+using Bit.Sso.IntegrationTest.Helpers;
 using Xunit;
 
-namespace Bit.Sso.IntegrationTest.Controllers;
+namespace Bit.Sso.IntegrationTest.PreValidate;
 
 /// <summary>
 /// An organization's OpenID Connect Authority is a URL the organization chooses, and PreValidate
@@ -17,7 +17,7 @@ namespace Bit.Sso.IntegrationTest.Controllers;
 /// Each test points the Authority at a loopback listener owned by the test, which stands in for an
 /// internal host, and checks whether the SSO server opened a connection to it.
 /// </remarks>
-public class AccountControllerPreValidateTests
+public class PreValidateTests
 {
     /// <summary>
     /// The request to the internal address must be refused before any connection opens. PreValidate
