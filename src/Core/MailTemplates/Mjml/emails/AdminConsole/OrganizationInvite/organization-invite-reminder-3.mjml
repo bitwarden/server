@@ -20,7 +20,7 @@
       <mj-section background-color="#fff" padding="10px 10px 16px 10px">
         <mj-column>
           <mj-text
-            css-class="ac-text"
+            mj-class="ac-text"
             padding="15px 15px 0px 15px"
           >
             This is your final reminder to join the <b>{{OrganizationName}}</b>
@@ -29,7 +29,7 @@
             access.
           </mj-text>
           <mj-text
-            css-class="ac-text"
+            mj-class="ac-text"
             padding="15px 15px 0px 15px"
           >
             Accept now to keep your access to shared logins, passkeys, and

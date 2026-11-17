@@ -1018,15 +1018,20 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
+        var changed = new List<(Guid CollectionId, Guid? PreviousAccessRuleId, Guid? AccessRuleId)>();
+
         if (clearIds.Count > 0)
         {
-            await dbContext.Collections
+            var toClear = dbContext.Collections
                 .Where(c => c.OrganizationId == organizationId
                     && c.AccessRuleId == accessRuleId
-                    && clearIds.Contains(c.Id))
-                .ExecuteUpdateAsync(s => s
-                    .SetProperty(c => c.AccessRuleId, (Guid?)null)
-                    .SetProperty(c => c.RevisionDate, now));
+                    && clearIds.Contains(c.Id));
+            var clearedIds = await toClear.Select(c => c.Id).ToListAsync();
+
+            await toClear.ExecuteUpdateAsync(s => s
+                .SetProperty(c => c.AccessRuleId, (Guid?)null)
+                .SetProperty(c => c.RevisionDate, now));
+            changed.AddRange(clearedIds.Select(id => (id, (Guid?)accessRuleId, (Guid?)null)));
         }
 
         if (assignIds.Count > 0)
@@ -1034,19 +1039,59 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             // The foreign key only proves the rule exists, not that it belongs to this organization. Without this
             // the caller could govern its own collections with another organization's rule, handing that
             // organization control of the conditions gating access to data it cannot see.
-            await dbContext.Collections
+            var toAssign = dbContext.Collections
                 .Where(c => c.OrganizationId == organizationId
                     && assignIds.Contains(c.Id)
+                    && c.AccessRuleId != accessRuleId
                     && dbContext.AccessRules.Any(ar => ar.Id == accessRuleId
-                        && ar.OrganizationId == organizationId))
-                .ExecuteUpdateAsync(s => s
-                    .SetProperty(c => c.AccessRuleId, accessRuleId)
-                    .SetProperty(c => c.RevisionDate, now));
+                        && ar.OrganizationId == organizationId));
+            var assigned = await toAssign.Select(c => new { c.Id, c.AccessRuleId }).ToListAsync();
+
+            await toAssign.ExecuteUpdateAsync(s => s
+                .SetProperty(c => c.AccessRuleId, accessRuleId)
+                .SetProperty(c => c.RevisionDate, now));
+            changed.AddRange(assigned.Select(c => (c.Id, c.AccessRuleId, (Guid?)accessRuleId)));
         }
 
-        await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId);
-        await dbContext.SaveChangesAsync();
+        var flippedCollectionIds = await GetGatingFlippedCollectionIdsAsync(dbContext, changed);
+        if (flippedCollectionIds.Count > 0)
+        {
+            await dbContext.UserBumpAccountRevisionDateByCollectionIdsAsync(flippedCollectionIds, organizationId);
+        }
+
         await transaction.CommitAsync();
+    }
+
+    /// <remarks>
+    /// Members sync whether each collection is governed by an enabled rule, so only the collections where that state
+    /// differs between the previous and the new rule need their members to resync.
+    /// </remarks>
+    private static async Task<List<Guid>> GetGatingFlippedCollectionIdsAsync(DatabaseContext dbContext,
+        List<(Guid CollectionId, Guid? PreviousAccessRuleId, Guid? AccessRuleId)> changed)
+    {
+        if (changed.Count == 0)
+        {
+            return [];
+        }
+
+        var ruleIds = changed
+            .SelectMany(c => new[] { c.PreviousAccessRuleId, c.AccessRuleId })
+            .OfType<Guid>()
+            .Distinct()
+            .ToList();
+        var enabledRuleIds = (await dbContext.AccessRules
+                .Where(ar => ruleIds.Contains(ar.Id) && ar.Enabled)
+                .Select(ar => ar.Id)
+                .ToListAsync())
+            .ToHashSet();
+
+        bool IsGating(Guid? ruleId) => ruleId.HasValue && enabledRuleIds.Contains(ruleId.Value);
+
+        return changed
+            .Where(c => IsGating(c.PreviousAccessRuleId) != IsGating(c.AccessRuleId))
+            .Select(c => c.CollectionId)
+            .Distinct()
+            .ToList();
     }
 
     private static async Task ReplaceCollectionGroupsAsync(DatabaseContext dbContext, Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection> groups)

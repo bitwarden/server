@@ -26,8 +26,11 @@ CREATE NONCLUSTERED INDEX [IX_AccessLease_NotAfter_Action]
 GO
 
 -- Supports the governance lease lists filtered by the caller's manageable collection ids.
-CREATE NONCLUSTERED INDEX [IX_AccessLease_CollectionId_Action]
-    ON [dbo].[AccessLease] ([CollectionId] ASC, [Action] ASC);
+-- AccessLease_ReadManyActiveByCollectionIds seeks on all three keys. The INCLUDE names every other column so
+-- neither list needs a clustered lookup: add any new AccessLease column here too, or SELECT L.* stops being covered.
+CREATE NONCLUSTERED INDEX [IX_AccessLease_CollectionId_Action_NotAfter]
+    ON [dbo].[AccessLease] ([CollectionId] ASC, [Action] ASC, [NotAfter] ASC)
+    INCLUDE ([AccessRequestId], [OrganizationId], [CipherId], [RequesterId], [NotBefore], [RevokedDate], [RevokedBy], [CreationDate]);
 GO
 
 -- Supports the per-cipher singleton guard, which locks by CipherId alone.
