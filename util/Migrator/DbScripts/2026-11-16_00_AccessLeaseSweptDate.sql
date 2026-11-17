@@ -1,6 +1,7 @@
 -- Replaces the PamLeaseExpirySweep journal with [AccessLease].[SweptDate], so the expiry sweep is one atomic UPDATE
 -- over unswept rows instead of an anti-join across every lease in the lookback window. Also appends [NotAfter] to
--- the requester lookup indexes so the clock check seeks past expired history.
+-- the requester lookup indexes so the clock check seeks past expired history, and adds [SweptDate] to the governance
+-- list index's INCLUDE so SELECT L.* stays covered.
 IF COL_LENGTH('[dbo].[AccessLease]', 'SweptDate') IS NULL
 BEGIN
     ALTER TABLE [dbo].[AccessLease] ADD [SweptDate] DATETIME2(7) NULL;
@@ -23,9 +24,32 @@ BEGIN
 END
 GO
 
+IF EXISTS (
+    SELECT
+        1
+    FROM
+        sys.indexes
+    WHERE
+        [name] = 'IX_AccessLease_CollectionId_Action_NotAfter'
+        AND object_id = OBJECT_ID('[dbo].[AccessLease]')
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_AccessLease_CollectionId_Action_NotAfter]
+    ON [dbo].[AccessLease] ([CollectionId] ASC, [Action] ASC, [NotAfter] ASC)
+    INCLUDE ([AccessRequestId], [OrganizationId], [CipherId], [RequesterId], [NotBefore], [RevokedDate], [RevokedBy], [CreationDate], [SweptDate])
+    WITH (DROP_EXISTING = ON);
+END
+ELSE
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_AccessLease_CollectionId_Action_NotAfter]
+    ON [dbo].[AccessLease] ([CollectionId] ASC, [Action] ASC, [NotAfter] ASC)
+    INCLUDE ([AccessRequestId], [OrganizationId], [CipherId], [RequesterId], [NotBefore], [RevokedDate], [RevokedBy], [CreationDate], [SweptDate]);
+END
+GO
+
 IF NOT EXISTS (
     SELECT
-        NULL
+        1
     FROM
         sys.indexes
     WHERE
@@ -40,7 +64,7 @@ GO
 
 IF EXISTS (
     SELECT
-        NULL
+        1
     FROM
         sys.indexes
     WHERE
@@ -54,7 +78,7 @@ GO
 
 IF NOT EXISTS (
     SELECT
-        NULL
+        1
     FROM
         sys.indexes
     WHERE
@@ -70,7 +94,7 @@ GO
 
 IF EXISTS (
     SELECT
-        NULL
+        1
     FROM
         sys.indexes
     WHERE
@@ -84,7 +108,7 @@ GO
 
 IF NOT EXISTS (
     SELECT
-        NULL
+        1
     FROM
         sys.indexes
     WHERE
@@ -100,7 +124,7 @@ GO
 
 IF EXISTS (
     SELECT
-        NULL
+        1
     FROM
         sys.indexes
     WHERE

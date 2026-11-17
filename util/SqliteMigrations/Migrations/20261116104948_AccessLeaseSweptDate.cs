@@ -10,18 +10,6 @@ public partial class AccessLeaseSweptDate : Migration
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropIndex(
-            name: "IX_AccessRequest_RequesterId_CipherId_Action",
-            table: "AccessRequest");
-
-        migrationBuilder.DropIndex(
-            name: "IX_AccessLease_NotAfter_Action",
-            table: "AccessLease");
-
-        migrationBuilder.DropIndex(
-            name: "IX_AccessLease_RequesterId_CipherId_Action",
-            table: "AccessLease");
-
         migrationBuilder.AddColumn<DateTime>(
             name: "SweptDate",
             table: "AccessLease",
@@ -31,9 +19,6 @@ public partial class AccessLeaseSweptDate : Migration
         // Carries the journal over so already-swept leases are not swept again.
         migrationBuilder.Sql(
             @"UPDATE ""AccessLease"" SET ""SweptDate"" = (SELECT s.""SweptDate"" FROM ""PamLeaseExpirySweep"" AS s WHERE s.""AccessLeaseId"" = ""AccessLease"".""Id"") WHERE EXISTS (SELECT 1 FROM ""PamLeaseExpirySweep"" AS s WHERE s.""AccessLeaseId"" = ""AccessLease"".""Id"");");
-
-        migrationBuilder.DropTable(
-            name: "PamLeaseExpirySweep");
 
         migrationBuilder.CreateIndex(
             name: "IX_AccessRequest_RequesterId_CipherId_Action_NotAfter",
@@ -49,27 +34,26 @@ public partial class AccessLeaseSweptDate : Migration
             name: "IX_AccessLease_SweptDate_Action_NotAfter",
             table: "AccessLease",
             columns: new[] { "SweptDate", "Action", "NotAfter" });
+
+        migrationBuilder.DropIndex(
+            name: "IX_AccessRequest_RequesterId_CipherId_Action",
+            table: "AccessRequest");
+
+        migrationBuilder.DropIndex(
+            name: "IX_AccessLease_NotAfter_Action",
+            table: "AccessLease");
+
+        migrationBuilder.DropIndex(
+            name: "IX_AccessLease_RequesterId_CipherId_Action",
+            table: "AccessLease");
+
+        migrationBuilder.DropTable(
+            name: "PamLeaseExpirySweep");
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropIndex(
-            name: "IX_AccessRequest_RequesterId_CipherId_Action_NotAfter",
-            table: "AccessRequest");
-
-        migrationBuilder.DropIndex(
-            name: "IX_AccessLease_RequesterId_Action_NotAfter",
-            table: "AccessLease");
-
-        migrationBuilder.DropIndex(
-            name: "IX_AccessLease_SweptDate_Action_NotAfter",
-            table: "AccessLease");
-
-        migrationBuilder.DropColumn(
-            name: "SweptDate",
-            table: "AccessLease");
-
         migrationBuilder.CreateTable(
             name: "PamLeaseExpirySweep",
             columns: table => new
@@ -102,5 +86,21 @@ public partial class AccessLeaseSweptDate : Migration
             name: "IX_AccessLease_RequesterId_CipherId_Action",
             table: "AccessLease",
             columns: new[] { "RequesterId", "CipherId", "Action" });
+
+        migrationBuilder.DropIndex(
+            name: "IX_AccessRequest_RequesterId_CipherId_Action_NotAfter",
+            table: "AccessRequest");
+
+        migrationBuilder.DropIndex(
+            name: "IX_AccessLease_RequesterId_Action_NotAfter",
+            table: "AccessLease");
+
+        migrationBuilder.DropIndex(
+            name: "IX_AccessLease_SweptDate_Action_NotAfter",
+            table: "AccessLease");
+
+        migrationBuilder.DropColumn(
+            name: "SweptDate",
+            table: "AccessLease");
     }
 }
