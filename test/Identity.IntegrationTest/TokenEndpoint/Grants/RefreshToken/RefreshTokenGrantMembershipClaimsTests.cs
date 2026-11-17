@@ -17,41 +17,18 @@ using static Bit.Identity.IntegrationTest.Helpers.TokenResponseAssertions;
 namespace Bit.Identity.IntegrationTest.TokenEndpoint.Grants.RefreshToken;
 
 /// <summary>
-/// Integration tests for the <c>refresh_token</c> grant: redeeming a refresh token at <c>/connect/token</c> to
-/// obtain a new access token. On this flow IdentityServer re-invokes the Profile Service, which rebuilds the
-/// user's membership claims from the database, so a refreshed token always reflects the member's current state.
+/// Integration tests for the membership claims on a refreshed access token. On the <c>refresh_token</c> grant,
+/// IdentityServer re-invokes the Profile Service, which rebuilds the user's membership claims from the database, so
+/// a refreshed token always reflects the member's current state.
 /// </summary>
-public class RefreshTokenGrantTests : IClassFixture<IdentityApplicationFactory>
+public class RefreshTokenGrantMembershipClaimsTests : IClassFixture<IdentityApplicationFactory>
 {
     private readonly IdentityApplicationFactory _factory;
 
-    public RefreshTokenGrantTests(IdentityApplicationFactory factory)
+    public RefreshTokenGrantMembershipClaimsTests(IdentityApplicationFactory factory)
     {
         _factory = factory;
         InitializeSharedFactory(_factory);
-    }
-
-    [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
-    public async Task RefreshToken_Success(RegisterFinishRequestModel requestModel)
-    {
-        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
-        var localFactory = new IdentityApplicationFactory();
-
-        await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
-
-        var (_, refreshToken) = await localFactory.TokenFromPasswordAsync(
-            requestModel.Email, requestModel.MasterPasswordHash);
-
-        using var formContent = new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "grant_type", "refresh_token" },
-            { "client_id", "web" },
-            { "refresh_token", refreshToken },
-        });
-        var context = await localFactory.Server.PostAsync("/connect/token", formContent);
-
-        using var body = await AssertDefaultTokenBodyAsync(context);
-        AssertRefreshTokenExists(body.RootElement);
     }
 
     /// <summary>
