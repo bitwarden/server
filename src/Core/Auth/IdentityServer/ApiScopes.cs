@@ -13,6 +13,8 @@ public static class ApiScopes
     public const string ApiPamCredentialRotation = "api.pam.rotation";
     public const string Internal = "internal";
     public const string ApiSendAccess = "api.send.access";
+    /// <summary>Identity's internal account deletion, and nothing else (<c>deletion.{service}</c> clients).</summary>
+    public const string InternalAccountDeletion = "internal.account-deletion";
 
     public static IEnumerable<ApiScope> GetApiScopes()
     {
@@ -27,6 +29,7 @@ public static class ApiScopes
             new(ApiSecrets, "Secrets Manager Access"),
             new(ApiPamCredentialRotation, "AccessConnector Credential Rotation"),
             new(ApiSendAccess, "API Send Access"),
+            new(InternalAccountDeletion, "Internal Account Deletion"),
         };
     }
 }

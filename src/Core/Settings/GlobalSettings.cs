@@ -44,6 +44,19 @@ public class GlobalSettings : IGlobalSettings
     public string LicenseCertificatePath { get; set; }
     public virtual string PushRelayBaseUri { get; set; }
     public virtual string InternalIdentityKey { get; set; }
+    /// <summary>
+    /// The secret of the internal account deletion's clients (<c>deletion.{service}</c>): a service of
+    /// another platform sharing this install's people, deleting this install's copy of an account by its
+    /// identifier once the account has been deleted there. Unset, the clients don't exist and the
+    /// deletion answers <c>404</c>. Never logged.
+    /// </summary>
+    public virtual string AccountDeletionClientSecret { get; set; }
+    /// <summary>
+    /// The local port of the internal listener the account deletion answers on, and on no other: one
+    /// that only the install's own network reaches, never the public one. Unset, the deletion answers
+    /// <c>404</c>.
+    /// </summary>
+    public virtual int? AccountDeletionPort { get; set; }
     public virtual string OidcIdentityClientKey { get; set; }
     public virtual string HibpApiKey { get; set; }
     public virtual bool DisableUserRegistration { get; set; }
@@ -460,6 +473,7 @@ public class GlobalSettings : IGlobalSettings
             get => _queueName;
             set => _queueName = value?.Trim('"');
         }
+
     }
 
     public class ConnectionStringSettings : IConnectionStringSettings
