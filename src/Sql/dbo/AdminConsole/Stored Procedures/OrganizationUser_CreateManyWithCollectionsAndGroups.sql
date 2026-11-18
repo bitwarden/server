@@ -26,7 +26,8 @@ BEGIN
         [StatusNew],
         [AccessPam],
         [InviteReminderDueDate],
-        [InviteRemindersSentCount]
+        [InviteRemindersSentCount],
+        [ExternalName]
     )
     SELECT
         OUI.[Id],
@@ -46,7 +47,8 @@ BEGIN
         OUI.[StatusNew],
         ISNULL(OUI.[AccessPam], 0),
         OUI.[InviteReminderDueDate],
-        OUI.[InviteRemindersSentCount]
+        OUI.[InviteRemindersSentCount],
+        OUI.[ExternalName]
     FROM
         OPENJSON(@organizationUserData)
                  WITH (
@@ -67,7 +69,8 @@ BEGIN
                      [StatusNew] SMALLINT '$.StatusNew',
                      [AccessPam] BIT '$.AccessPam',
                      [InviteReminderDueDate] DATETIME2(7) '$.InviteReminderDueDate',
-                     [InviteRemindersSentCount] TINYINT '$.InviteRemindersSentCount'
+                     [InviteRemindersSentCount] TINYINT '$.InviteRemindersSentCount',
+                     [ExternalName] NVARCHAR(300) '$.ExternalName'
                      ) OUI
 
     -- Only groups in the user's organization may be attached
