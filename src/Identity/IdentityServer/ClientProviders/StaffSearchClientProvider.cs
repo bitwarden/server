@@ -8,8 +8,8 @@ using Duende.IdentityServer.Models;
 namespace Bit.Identity.IdentityServer.ClientProviders;
 
 /// <summary>
-/// The internal staff search's clients, <c>search.{service}</c>: a service of another platform that
-/// shares this install's people, holding <see cref="GlobalSettings.StaffSearchClientSecret"/>.
+/// The internal staff search's clients, <c>search.{service}</c>: internal clients holding
+/// <see cref="GlobalSettings.StaffSearchClientSecret"/>.
 /// </summary>
 /// <remarks>
 /// Client credentials only, for <see cref="ApiScopes.InternalStaffSearch"/> alone, so a token obtained

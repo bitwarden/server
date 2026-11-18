@@ -45,10 +45,9 @@ public class GlobalSettings : IGlobalSettings
     public virtual string PushRelayBaseUri { get; set; }
     public virtual string InternalIdentityKey { get; set; }
     /// <summary>
-    /// The secret of the internal staff search's clients (<c>search.{service}</c>): a service of another
-    /// platform sharing this install's people, searching organizations, providers and users as the Admin
-    /// Portal's index pages do. Unset, the clients don't exist and the search answers <c>404</c>. Never
-    /// logged.
+    /// The secret of the internal staff search's clients (<c>search.{service}</c>): internal clients that
+    /// search organizations, providers and users as the Admin Portal's index pages do. Unset, the clients
+    /// don't exist and the search answers <c>404</c>. Never logged.
     /// </summary>
     public virtual string StaffSearchClientSecret { get; set; }
     /// <summary>

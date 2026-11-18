@@ -20,7 +20,7 @@ using Microsoft.Net.Http.Headers;
 namespace Bit.Identity.Controllers;
 
 /// <summary>
-/// An internal staff search for a service of another platform that shares this install's people: the
+/// An internal staff search for internal clients holding a <c>search.{service}</c> token: the
 /// organizations, providers and users the Admin Portal's index pages would list for the same search, and
 /// the organizations its add-existing-organization list would offer a reseller, found by the same repository
 /// calls, and only what those pages show of each. The users search differs from its page: the address is
