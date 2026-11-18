@@ -44,6 +44,17 @@ public class GlobalSettings : IGlobalSettings
     public string LicenseCertificatePath { get; set; }
     public virtual string PushRelayBaseUri { get; set; }
     public virtual string InternalIdentityKey { get; set; }
+    /// <summary>
+    /// The secret of the internal cohort assignment sync's clients (<c>cohorts.{service}</c>): a service of another
+    /// platform sharing this install's tenants, running the Admin Portal's bulk cohort assignment upload for the rows
+    /// this install holds. Unset, the clients don't exist and the sync answers <c>404</c>. Never logged.
+    /// </summary>
+    public virtual string CohortAssignmentSyncClientSecret { get; set; }
+    /// <summary>
+    /// The local port of the internal listener the cohort assignment sync answers on, and on no other: one that only
+    /// the install's own network reaches, never the public one. Unset, the sync answers <c>404</c>.
+    /// </summary>
+    public virtual int? CohortAssignmentSyncPort { get; set; }
     public virtual string OidcIdentityClientKey { get; set; }
     public virtual string HibpApiKey { get; set; }
     public virtual bool DisableUserRegistration { get; set; }
@@ -460,6 +471,7 @@ public class GlobalSettings : IGlobalSettings
             get => _queueName;
             set => _queueName = value?.Trim('"');
         }
+
     }
 
     public class ConnectionStringSettings : IConnectionStringSettings

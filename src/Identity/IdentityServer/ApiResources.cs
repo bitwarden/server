@@ -39,6 +39,7 @@ public class ApiResources
             new(ApiScopes.ApiInstallation, new[] { JwtClaimTypes.Subject }),
             new(ApiScopes.ApiSecrets, new[] { JwtClaimTypes.Subject, Claims.Organization }),
             new(ApiScopes.ApiPamCredentialRotation, new[] { JwtClaimTypes.Subject, Claims.Organization, Claims.Type }),
+            new(ApiScopes.InternalCohortAssignmentSync, new[] { JwtClaimTypes.Subject }),
         };
     }
 }

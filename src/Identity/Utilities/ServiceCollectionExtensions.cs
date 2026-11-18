@@ -75,6 +75,11 @@ public static class ServiceCollectionExtensions
             services.AddClientProvider<InternalClientProvider>("internal");
         }
 
+        if (CoreHelpers.SettingHasValue(globalSettings.CohortAssignmentSyncClientSecret))
+        {
+            services.AddClientProvider<CohortAssignmentSyncClientProvider>(CohortAssignmentSyncClientProvider.Prefix);
+        }
+
         services.AddClientProvider<UserClientProvider>("user");
         services.AddClientProvider<OrganizationClientProvider>("organization");
         services.AddClientProvider<SecretsManagerApiKeyProvider>(SecretsManagerApiKeyProvider.ApiKeyPrefix);
