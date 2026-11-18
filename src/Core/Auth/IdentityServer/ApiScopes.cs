@@ -13,6 +13,8 @@ public static class ApiScopes
     public const string ApiPamCredentialRotation = "api.pam.rotation";
     public const string Internal = "internal";
     public const string ApiSendAccess = "api.send.access";
+    /// <summary>Identity's internal account lookup, and nothing else (<c>lookup.{service}</c> clients).</summary>
+    public const string InternalAccountLookup = "internal.account-lookup";
 
     public static IEnumerable<ApiScope> GetApiScopes()
     {
@@ -27,6 +29,7 @@ public static class ApiScopes
             new(ApiSecrets, "Secrets Manager Access"),
             new(ApiPamCredentialRotation, "AccessConnector Credential Rotation"),
             new(ApiSendAccess, "API Send Access"),
+            new(InternalAccountLookup, "Internal Account Lookup"),
         };
     }
 }
