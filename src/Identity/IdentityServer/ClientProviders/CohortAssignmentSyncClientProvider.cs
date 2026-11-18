@@ -8,8 +8,8 @@ using Duende.IdentityServer.Models;
 namespace Bit.Identity.IdentityServer.ClientProviders;
 
 /// <summary>
-/// The internal cohort assignment sync's clients, <c>cohorts.{service}</c>: a service of another platform that
-/// shares this install's tenants, holding <see cref="GlobalSettings.CohortAssignmentSyncClientSecret"/>.
+/// The internal cohort assignment sync's clients, <c>cohorts.{service}</c>: internal clients holding
+/// <see cref="GlobalSettings.CohortAssignmentSyncClientSecret"/>.
 /// </summary>
 /// <remarks>
 /// Client credentials only, for <see cref="ApiScopes.InternalCohortAssignmentSync"/> alone, so a token obtained this

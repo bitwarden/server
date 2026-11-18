@@ -45,9 +45,10 @@ public class GlobalSettings : IGlobalSettings
     public virtual string PushRelayBaseUri { get; set; }
     public virtual string InternalIdentityKey { get; set; }
     /// <summary>
-    /// The secret of the internal cohort assignment sync's clients (<c>cohorts.{service}</c>): a service of another
-    /// platform sharing this install's tenants, running the Admin Portal's bulk cohort assignment upload for the rows
-    /// this install holds. Unset, the clients don't exist and the sync answers <c>404</c>. Never logged.
+    /// The secret of the internal cohort assignment sync's clients (<c>cohorts.{service}</c>): internal clients that
+    /// run the Admin Portal's bulk cohort assignment upload with a client-credentials token for
+    /// <c>internal.cohort-assignment-sync</c>. Unset, the clients don't exist and the sync answers <c>404</c>. Never
+    /// logged.
     /// </summary>
     public virtual string CohortAssignmentSyncClientSecret { get; set; }
     /// <summary>

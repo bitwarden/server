@@ -19,8 +19,8 @@ namespace Bit.Identity.Controllers;
 
 /// <summary>
 /// The Admin Portal's bulk cohort assignment upload (<c>OrganizationPlanMigrationCohortAssignmentsController</c>), for
-/// a service of another platform that shares this install's tenants: the same command, given the same file, and the
-/// command's answer in the command's order (the page sorts line errors by line number; this does not).
+/// an internal client: the same command, given the same file, and the command's answer in the command's order (the
+/// page sorts line errors by line number; this does not).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -37,7 +37,7 @@ namespace Bit.Identity.Controllers;
 /// </para>
 /// </remarks>
 [Route("internal/staff/plan-migration-cohort-assignments")]
-// A trusted service's endpoint, not a client's: kept out of the OpenAPI the SDK is generated from.
+// For internal clients only, not Bitwarden's apps: kept out of the OpenAPI the SDK is generated from.
 [ApiExplorerSettings(IgnoreApi = true)]
 [ExceptionHandlerFilter]
 public class CohortAssignmentSyncController : Controller
