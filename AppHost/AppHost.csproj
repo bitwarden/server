@@ -26,8 +26,6 @@
     <PackageReference Include="Aspire.Hosting.MySql" Version="[13.6.5]" />
     <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="[13.6.5]" />
     <PackageReference Include="Aspire.Hosting.SqlServer" Version="[13.6.5]" />
-    <!-- Temporary: remove when Aspire is upgraded to 13.6.5, which fixes this advisory. -->
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-4g86-54fm-h9h8" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(EnableNgrokCommunityPlugin)' == 'true'">

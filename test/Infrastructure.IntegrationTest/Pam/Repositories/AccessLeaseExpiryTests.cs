@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
+using Bit.Infrastructure.IntegrationTest.Comparers;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Repositories;
@@ -38,9 +39,10 @@ public class AccessLeaseExpiryTests
         Assert.Equal(lease.NotBefore, row.NotBefore);
         Assert.Equal(lease.NotAfter, row.NotAfter);
 
-        // The sweep records nothing on the lease itself; Expired is derived from the closed window.
+        // The sweep only stamps SweptDate; Expired is still derived from the closed window.
         var persisted = await accessLeaseRepository.GetByIdAsync(lease.Id);
-        Assert.Equal(AccessLeaseAction.None, persisted!.Action);
+        Assert.Equal(now, persisted!.SweptDate!.Value, new LaxDateTimeComparer(TimeSpan.FromMilliseconds(10)));
+        Assert.Equal(AccessLeaseAction.None, persisted.Action);
         Assert.Null(persisted.RevokedDate);
         Assert.Null(persisted.RevokedBy);
         Assert.Equal(AccessLeaseStatus.Expired,
@@ -78,11 +80,13 @@ public class AccessLeaseExpiryTests
 
         Assert.DoesNotContain(expired, r => r.Id == active.Id);
         Assert.DoesNotContain(expired, r => r.Id == revoked.Id);
+        Assert.Null((await accessLeaseRepository.GetByIdAsync(active.Id))!.SweptDate);
+        Assert.Null((await accessLeaseRepository.GetByIdAsync(revoked.Id))!.SweptDate);
         Assert.Equal(AccessLeaseAction.None, (await accessLeaseRepository.GetByIdAsync(active.Id))!.Action);
         Assert.Equal(AccessLeaseAction.Revoked, (await accessLeaseRepository.GetByIdAsync(revoked.Id))!.Action);
     }
 
-    // A returned lease is journaled in the same call, so a second run can't return it again.
+    // A returned lease is stamped swept in the same call, so a second run can't return it again.
     [DatabaseTheory, DatabaseData]
     public async Task ExpireDueAsync_SecondRun_DoesNotReturnAlreadySweptLease(
         IOrganizationRepository organizationRepository,
@@ -99,6 +103,31 @@ public class AccessLeaseExpiryTests
 
         var secondRun = await accessLeaseRepository.ExpireDueAsync(now.AddMinutes(1), now - _sweepWindow);
         Assert.DoesNotContain(secondRun, r => r.Id == lease.Id);
+    }
+
+    // The stamp is the claim: overlapping sweeps split the due leases between them and never share one.
+    [DatabaseTheory, DatabaseData]
+    public async Task ExpireDueAsync_ConcurrentRuns_NeverReturnTheSameLease(
+        IOrganizationRepository organizationRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+        var leaseIds = new HashSet<Guid>();
+        for (var i = 0; i < 5; i++)
+        {
+            var lease = await SeedActiveLeaseAsync(
+                accessRequestRepository, accessLeaseRepository, organization.Id, now.AddHours(-2), now.AddHours(-1));
+            leaseIds.Add(lease.Id);
+        }
+
+        var runs = await Task.WhenAll(Enumerable.Range(0, 4)
+            .Select(_ => Task.Run(() => accessLeaseRepository.ExpireDueAsync(now, now - _sweepWindow))));
+
+        var returnedIds = runs.SelectMany(r => r).Select(r => r.Id).Where(leaseIds.Contains).ToList();
+        Assert.Equal(leaseIds.Count, returnedIds.Count);
+        Assert.Equal(leaseIds, returnedIds.ToHashSet());
     }
 
     [DatabaseTheory, DatabaseData]
