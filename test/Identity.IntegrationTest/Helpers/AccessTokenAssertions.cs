@@ -32,6 +32,21 @@ public static class AccessTokenAssertions
     }
 
     /// <summary>
+    /// A claim may be serialized on the token as a single value or as an array of values, so both shapes are checked.
+    /// </summary>
+    public static bool PayloadContainsClaimValue(JsonElement payload, string claimType, string value)
+    {
+        if (!payload.TryGetProperty(claimType, out var claim))
+        {
+            return false;
+        }
+
+        return claim.ValueKind == JsonValueKind.Array
+            ? claim.EnumerateArray().Any(element => element.GetString() == value)
+            : claim.GetString() == value;
+    }
+
+    /// <summary>
     /// Asserts the access token names the device the user logged in on. API endpoints read the requesting device
     /// from these claims.
     /// </summary>
