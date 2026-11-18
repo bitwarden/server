@@ -31,7 +31,7 @@ public class ResellerClientOrganizationSignUpCommandTests
         Assert.False(result.Organization.Enabled);
         Assert.Equal(OrganizationStatusType.Pending, result.Organization.Status);
         Assert.NotNull(result.OwnerOrganizationUser);
-        Assert.Equal(ownerEmail, result.OwnerOrganizationUser.Email);
+        Assert.Equal(ownerEmail.ToLowerInvariant(), result.OwnerOrganizationUser.Email);
         Assert.Equal(OrganizationUserType.Owner, result.OwnerOrganizationUser.Type);
         Assert.Equal(OrganizationUserStatusType.Invited, result.OwnerOrganizationUser.Status);
 
@@ -62,7 +62,7 @@ public class ResellerClientOrganizationSignUpCommandTests
             .CreateAsync(
                 Arg.Is<OrganizationUser>(u =>
                     u.OrganizationId == result.Organization.Id &&
-                    u.Email == ownerEmail &&
+                    u.Email == ownerEmail.ToLowerInvariant() &&
                     u.Type == OrganizationUserType.Owner &&
                     u.Status == OrganizationUserStatusType.Invited &&
                     u.UserId == null
@@ -73,7 +73,7 @@ public class ResellerClientOrganizationSignUpCommandTests
             .SendInvitesAsync(
                 Arg.Is<SendInvitesRequest>(r =>
                     r.Users.Count() == 1 &&
-                    r.Users.First().Email == ownerEmail &&
+                    r.Users.First().Email == ownerEmail.ToLowerInvariant() &&
                     r.Organization.Id == result.Organization.Id &&
                     r.InitOrganization == true
                 )
@@ -81,7 +81,7 @@ public class ResellerClientOrganizationSignUpCommandTests
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
             .LogOrganizationUserEventAsync(
-                Arg.Is<OrganizationUser>(u => u.Email == ownerEmail),
+                Arg.Is<OrganizationUser>(u => u.Email == ownerEmail.ToLowerInvariant()),
                 EventType.OrganizationUser_Invited
             );
     }
